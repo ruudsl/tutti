@@ -14,6 +14,7 @@ export interface Instrument {
   id: string;
   name: string;
   tuning: string | null;
+  clef?: string | null;
   aliases?: { id: string; name: string }[];
 }
 
@@ -32,6 +33,8 @@ export interface MusicList {
   position?: number;
   pieceCount?: number;
   titleCount?: number;
+  isActive?: boolean;
+  totalDuration?: number;
 }
 
 export interface MusicTitle {
@@ -39,6 +42,8 @@ export interface MusicTitle {
   arranger: string | null;
   pieceCount: number;
   youtubeUrl: string | null;
+  description: string | null;
+  durationSeconds: number;
   instruments: string[];
   onList?: boolean;
 }

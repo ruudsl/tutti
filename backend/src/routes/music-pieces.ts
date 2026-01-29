@@ -440,10 +440,16 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
         let query = `
             SELECT mp.title, mp.arranger,
                    COUNT(*) as piece_count,
-                   MAX(mp.youtube_url) as youtube_url,
-                   GROUP_CONCAT(DISTINCT i.name) as instruments
+                   GROUP_CONCAT(DISTINCT i.name) as instruments,
+                   mt.id as title_id,
+                   mt.youtube_url,
+                   mt.description,
+                   mt.duration_seconds
             FROM music_pieces mp
             LEFT JOIN instruments i ON mp.instrument_id = i.id
+            LEFT JOIN music_titles mt ON mp.title = mt.title
+                AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                AND mt.association_id = mp.association_id
             WHERE mp.association_id = ?
         `;
         const params: any[] = [req.user!.associationId];
@@ -475,11 +481,108 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             arranger: t.arranger,
             pieceCount: t.piece_count,
             youtubeUrl: t.youtube_url,
+            description: t.description,
+            durationSeconds: t.duration_seconds || 0,
             instruments: t.instruments ? t.instruments.split(',') : [],
             onList: listId ? titlesOnList.has(t.title) : undefined,
         })));
     } catch (error) {
         console.error('Get titles error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Get or create title metadata
+router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const title = decodeURIComponent(req.params.title);
+        const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
+
+        const meta = db.prepare(`
+            SELECT id, title, arranger, youtube_url, description, duration_seconds
+            FROM music_titles
+            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
+        `).get(title, arranger, req.user!.associationId) as any;
+
+        if (meta) {
+            res.json({
+                id: meta.id,
+                title: meta.title,
+                arranger: meta.arranger,
+                youtubeUrl: meta.youtube_url,
+                description: meta.description,
+                durationSeconds: meta.duration_seconds || 0,
+            });
+        } else {
+            res.json({
+                title,
+                arranger,
+                youtubeUrl: null,
+                description: null,
+                durationSeconds: 0,
+            });
+        }
+    } catch (error) {
+        console.error('Get title meta error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Update title metadata (YouTube, description, duration)
+router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const { title, arranger, youtubeUrl, description, durationSeconds } = req.body;
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Titel is verplicht.' });
+        }
+
+        // Check if title metadata already exists
+        const existing = db.prepare(`
+            SELECT id FROM music_titles
+            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
+        `).get(title.trim(), arranger || null, req.user!.associationId) as { id: string } | undefined;
+
+        if (existing) {
+            // Update existing
+            db.prepare(`
+                UPDATE music_titles
+                SET youtube_url = ?, description = ?, duration_seconds = ?
+                WHERE id = ?
+            `).run(
+                youtubeUrl || null,
+                description || null,
+                durationSeconds || 0,
+                existing.id
+            );
+
+            res.json({
+                id: existing.id,
+                message: 'Titel metadata bijgewerkt.',
+            });
+        } else {
+            // Create new
+            const id = uuidv4();
+            db.prepare(`
+                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, association_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                id,
+                title.trim(),
+                arranger || null,
+                youtubeUrl || null,
+                description || null,
+                durationSeconds || 0,
+                req.user!.associationId
+            );
+
+            res.status(201).json({
+                id,
+                message: 'Titel metadata aangemaakt.',
+            });
+        }
+    } catch (error) {
+        console.error('Update title meta error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
     }
 });

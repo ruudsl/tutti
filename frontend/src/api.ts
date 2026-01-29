@@ -90,13 +90,13 @@ export const getInstruments = async (): Promise<Instrument[]> => {
   return data;
 };
 
-export const createInstrument = async (name: string, tuning?: string, aliases?: string[]): Promise<{ id: string }> => {
-  const { data } = await api.post('/instruments', { name, tuning, aliases });
+export const createInstrument = async (name: string, tuning?: string, clef?: string, aliases?: string[]): Promise<{ id: string }> => {
+  const { data } = await api.post('/instruments', { name, tuning, clef, aliases });
   return data;
 };
 
-export const updateInstrument = async (id: string, name: string, tuning?: string): Promise<void> => {
-  await api.put(`/instruments/${id}`, { name, tuning });
+export const updateInstrument = async (id: string, name: string, tuning?: string, clef?: string): Promise<void> => {
+  await api.put(`/instruments/${id}`, { name, tuning, clef });
 };
 
 export const deleteInstrument = async (id: string): Promise<void> => {
@@ -185,6 +185,11 @@ export const removeTitleFromList = async (listId: string, title: string): Promis
 
 export const reorderMusicLists = async (orchestraId: string, listIds: string[]): Promise<void> => {
   await api.put('/music-lists/reorder', { orchestraId, listIds });
+};
+
+export const toggleMusicListActive = async (listId: string): Promise<{ isActive: boolean }> => {
+  const { data } = await api.patch(`/music-lists/${listId}/toggle-active`);
+  return data;
 };
 
 // Music Pieces
@@ -283,6 +288,29 @@ export const shareMusicPiece = async (id: string, associationId: string): Promis
 
 export const getSharedMusicPieces = async (): Promise<MusicPiece[]> => {
   const { data } = await api.get('/music-pieces/shared');
+  return data;
+};
+
+export const getTitleMeta = async (title: string, arranger?: string | null): Promise<{
+  title: string;
+  arranger: string | null;
+  youtubeUrl: string | null;
+  description: string | null;
+  durationSeconds: number;
+}> => {
+  const params = arranger ? `?arranger=${encodeURIComponent(arranger)}` : '';
+  const { data } = await api.get(`/music-pieces/title-meta/${encodeURIComponent(title)}${params}`);
+  return data;
+};
+
+export const updateTitleMeta = async (titleData: {
+  title: string;
+  arranger?: string | null;
+  youtubeUrl?: string | null;
+  description?: string | null;
+  durationSeconds?: number;
+}): Promise<{ id: string }> => {
+  const { data } = await api.put('/music-pieces/title-meta', titleData);
   return data;
 };
 

@@ -18,11 +18,19 @@ router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res:
         }
 
         const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.position, ml.created_at,
+            SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
                    (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
                    (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                     JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                    WHERE mlp.music_list_id = ml.id) as title_count
+                    WHERE mlp.music_list_id = ml.id) as title_count,
+                   (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
+                    WHERE EXISTS (
+                        SELECT 1 FROM music_pieces mp
+                        JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                        WHERE mlp.music_list_id = ml.id
+                        AND mp.title = mt.title
+                        AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                    )) as total_duration
             FROM music_lists ml
             WHERE ml.orchestra_id = ?
             ORDER BY ml.position, ml.name
@@ -32,9 +40,11 @@ router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res:
             id: l.id,
             name: l.name,
             position: l.position,
+            isActive: l.is_active === 1,
             createdAt: l.created_at,
             pieceCount: l.piece_count,
             titleCount: l.title_count,
+            totalDuration: l.total_duration,
         })));
     } catch (error) {
         console.error('Get music lists error:', error);
@@ -45,16 +55,28 @@ router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res:
 // Get all music lists user has access to (through orchestras)
 router.get('/my-lists', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        // For regular members, only show active lists
+        const isPrivileged = req.user!.role === 'admin' || req.user!.role === 'music_committee';
+        const activeFilter = isPrivileged ? '' : 'AND ml.is_active = 1';
+
         const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.position, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
+            SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
                    (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
                    (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                     JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                    WHERE mlp.music_list_id = ml.id) as title_count
+                    WHERE mlp.music_list_id = ml.id) as title_count,
+                   (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
+                    WHERE EXISTS (
+                        SELECT 1 FROM music_pieces mp
+                        JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                        WHERE mlp.music_list_id = ml.id
+                        AND mp.title = mt.title
+                        AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                    )) as total_duration
             FROM music_lists ml
             JOIN orchestras o ON ml.orchestra_id = o.id
             JOIN user_orchestras uo ON o.id = uo.orchestra_id
-            WHERE uo.user_id = ?
+            WHERE uo.user_id = ? ${activeFilter}
             ORDER BY o.name, ml.position, ml.name
         `).all(req.user!.id);
 
@@ -62,11 +84,13 @@ router.get('/my-lists', authenticateToken, (req: AuthRequest, res: Response) => 
             id: l.id,
             name: l.name,
             position: l.position,
+            isActive: l.is_active === 1,
             createdAt: l.created_at,
             orchestraId: l.orchestra_id,
             orchestraName: l.orchestra_name,
             pieceCount: l.piece_count,
             titleCount: l.title_count,
+            totalDuration: l.total_duration,
         })));
     } catch (error) {
         console.error('Get my lists error:', error);
@@ -244,6 +268,33 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
         res.json({ message: 'Muzieklijst succesvol bijgewerkt.' });
     } catch (error) {
         console.error('Update music list error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Toggle list active status (admin or music_committee)
+router.patch('/:id/toggle-active', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const list = db.prepare(`
+            SELECT ml.id, ml.is_active
+            FROM music_lists ml
+            JOIN orchestras o ON ml.orchestra_id = o.id
+            WHERE ml.id = ? AND o.association_id = ?
+        `).get(req.params.id, req.user!.associationId) as any;
+
+        if (!list) {
+            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
+        }
+
+        const newStatus = list.is_active === 1 ? 0 : 1;
+        db.prepare('UPDATE music_lists SET is_active = ? WHERE id = ?').run(newStatus, req.params.id);
+
+        res.json({
+            message: newStatus === 1 ? 'Lijst is nu actief.' : 'Lijst is nu inactief.',
+            isActive: newStatus === 1,
+        });
+    } catch (error) {
+        console.error('Toggle list active error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
     }
 });

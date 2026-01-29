@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
         const instruments = db.prepare(`
-            SELECT id, name, tuning, created_at
+            SELECT id, name, tuning, clef, created_at
             FROM instruments
             ORDER BY name, tuning
         `).all();
@@ -26,6 +26,7 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
                 id: instrument.id,
                 name: instrument.name,
                 tuning: instrument.tuning,
+                clef: instrument.clef || 'sol',
                 createdAt: instrument.created_at,
                 aliases: aliases.map((a: any) => ({ id: a.id, name: a.alias })),
             };
@@ -41,7 +42,7 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
 // Create new instrument (admin or music_committee)
 router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { name, tuning, aliases } = req.body;
+        const { name, tuning, clef, aliases } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: 'Instrumentnaam is verplicht.' });
@@ -57,10 +58,11 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
         }
 
         const instrumentId = uuidv4();
-        db.prepare('INSERT INTO instruments (id, name, tuning) VALUES (?, ?, ?)').run(
+        db.prepare('INSERT INTO instruments (id, name, tuning, clef) VALUES (?, ?, ?, ?)').run(
             instrumentId,
             name,
-            tuning || null
+            tuning || null,
+            clef || 'sol'
         );
 
         // Add aliases
@@ -79,6 +81,7 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
             id: instrumentId,
             name,
             tuning,
+            clef: clef || 'sol',
             message: 'Instrument succesvol aangemaakt.',
         });
     } catch (error) {
@@ -90,7 +93,7 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
 // Update instrument (admin or music_committee)
 router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { name, tuning } = req.body;
+        const { name, tuning, clef } = req.body;
 
         const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
         if (!instrument) {
@@ -108,9 +111,10 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
             }
         }
 
-        db.prepare('UPDATE instruments SET name = ?, tuning = ? WHERE id = ?').run(
+        db.prepare('UPDATE instruments SET name = ?, tuning = ?, clef = ? WHERE id = ?').run(
             name,
             tuning || null,
+            clef || 'sol',
             req.params.id
         );
 

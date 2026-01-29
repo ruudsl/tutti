@@ -22,8 +22,9 @@ CREATE TABLE IF NOT EXISTS instruments (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tuning TEXT, -- Stemming bijv. Bb, Eb, C
+    clef TEXT DEFAULT 'sol', -- Muzieksleutel: sol, fa, ut
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(name, tuning)
+    UNIQUE(name, tuning, clef)
 );
 
 -- Subnamen/aliassen voor instrumenten
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS music_lists (
     name TEXT NOT NULL,
     orchestra_id TEXT NOT NULL,
     position INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1, -- 0 = verborgen voor leden, 1 = zichtbaar
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );
@@ -108,6 +110,20 @@ CREATE TABLE IF NOT EXISTS music_list_pieces (
     FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
 );
 
+-- Titel metadata (YouTube, beschrijving, speelduur per titel)
+CREATE TABLE IF NOT EXISTS music_titles (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    arranger TEXT,
+    youtube_url TEXT,
+    description TEXT,
+    duration_seconds INTEGER DEFAULT 0,
+    association_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(title, arranger, association_id)
+);
+
 -- Toegang tot gedeelde muziekstukken per vereniging
 CREATE TABLE IF NOT EXISTS shared_music_access (
     music_piece_id TEXT NOT NULL,
@@ -126,4 +142,6 @@ CREATE INDEX IF NOT EXISTS idx_music_pieces_instrument ON music_pieces(instrumen
 CREATE INDEX IF NOT EXISTS idx_music_pieces_association ON music_pieces(association_id);
 CREATE INDEX IF NOT EXISTS idx_music_pieces_title ON music_pieces(title);
 CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(alias);
+CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title);
+CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id);
 `;

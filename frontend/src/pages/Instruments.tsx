@@ -19,6 +19,7 @@ export default function Instruments() {
   // Form state
   const [formName, setFormName] = useState('');
   const [formTuning, setFormTuning] = useState('');
+  const [formClef, setFormClef] = useState('sol');
   const [formAliases, setFormAliases] = useState('');
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function Instruments() {
         .map((a) => a.trim())
         .filter((a) => a);
 
-      await createInstrument(formName, formTuning || undefined, aliases);
+      await createInstrument(formName, formTuning || undefined, formClef, aliases);
       await loadInstruments();
       setShowAddModal(false);
       resetForm();
@@ -59,7 +60,7 @@ export default function Instruments() {
     if (!editingInstrument) return;
 
     try {
-      await updateInstrument(editingInstrument.id, formName, formTuning || undefined);
+      await updateInstrument(editingInstrument.id, formName, formTuning || undefined, formClef);
       await loadInstruments();
       setEditingInstrument(null);
       resetForm();
@@ -104,6 +105,7 @@ export default function Instruments() {
   const resetForm = () => {
     setFormName('');
     setFormTuning('');
+    setFormClef('sol');
     setFormAliases('');
   };
 
@@ -111,6 +113,7 @@ export default function Instruments() {
     setEditingInstrument(instrument);
     setFormName(instrument.name);
     setFormTuning(instrument.tuning || '');
+    setFormClef(instrument.clef || 'sol');
   };
 
   if (isLoading) {
@@ -137,6 +140,7 @@ export default function Instruments() {
               <tr>
                 <th>Instrument</th>
                 <th>Stemming</th>
+                <th>Sleutel</th>
                 <th>Aliassen</th>
                 <th></th>
               </tr>
@@ -148,6 +152,7 @@ export default function Instruments() {
                     <strong>{instrument.name}</strong>
                   </td>
                   <td>{instrument.tuning || '-'}</td>
+                  <td>{instrument.clef === 'fa' ? 'Fa (bas)' : instrument.clef === 'ut' ? 'Ut (alt)' : 'Sol (viool)'}</td>
                   <td>
                     <div className="tags">
                       {instrument.aliases?.map((alias) => (
@@ -225,6 +230,18 @@ export default function Instruments() {
                   />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Sleutel</label>
+                  <select
+                    className="form-control"
+                    value={formClef}
+                    onChange={(e) => setFormClef(e.target.value)}
+                  >
+                    <option value="sol">Sol (vioolsleutel)</option>
+                    <option value="fa">Fa (bassleutel)</option>
+                    <option value="ut">Ut (altsleutel)</option>
+                  </select>
+                </div>
+                <div className="form-group">
                   <label className="form-label">Aliassen (komma gescheiden)</label>
                   <input
                     type="text"
@@ -277,6 +294,18 @@ export default function Instruments() {
                     onChange={(e) => setFormTuning(e.target.value)}
                     placeholder="Bijv. Bb, Eb, C"
                   />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Sleutel</label>
+                  <select
+                    className="form-control"
+                    value={formClef}
+                    onChange={(e) => setFormClef(e.target.value)}
+                  >
+                    <option value="sol">Sol (vioolsleutel)</option>
+                    <option value="fa">Fa (bassleutel)</option>
+                    <option value="ut">Ut (altsleutel)</option>
+                  </select>
                 </div>
               </div>
               <div className="modal-footer">

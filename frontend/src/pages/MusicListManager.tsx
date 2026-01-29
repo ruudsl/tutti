@@ -11,8 +11,34 @@ import {
   removeTitleFromList,
   reorderMusicLists,
   getOrchestras,
+  toggleMusicListActive,
+  updateTitleMeta,
 } from '../api';
 import type { MusicList, MusicPiece, MusicTitle, Orchestra } from '../types';
+
+// Format duration from seconds to mm:ss or h:mm:ss
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return '-';
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Parse duration string (mm:ss or h:mm:ss) to seconds
+function parseDuration(str: string): number {
+  if (!str) return 0;
+  const parts = str.split(':').map(Number);
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  } else if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+  return 0;
+}
 
 export default function MusicListManager() {
   const { orchestraId, listId } = useParams();
@@ -30,6 +56,14 @@ export default function MusicListManager() {
   const [showAddListModal, setShowAddListModal] = useState(false);
   const [editingList, setEditingList] = useState<MusicList | null>(null);
   const [listFormName, setListFormName] = useState('');
+
+  // Title metadata modal
+  const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
+  const [titleMetaForm, setTitleMetaForm] = useState({
+    youtubeUrl: '',
+    description: '',
+    durationStr: '',
+  });
 
   useEffect(() => {
     loadOrchestras();
@@ -201,6 +235,46 @@ export default function MusicListManager() {
     setListFormName(list.name);
   };
 
+  const handleToggleActive = async (list: MusicList) => {
+    try {
+      await toggleMusicListActive(list.id);
+      await loadLists(selectedOrchestra);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Fout bij wijzigen status');
+    }
+  };
+
+  const openTitleMetaModal = (title: MusicTitle) => {
+    setEditingTitle(title);
+    setTitleMetaForm({
+      youtubeUrl: title.youtubeUrl || '',
+      description: title.description || '',
+      durationStr: title.durationSeconds ? formatDuration(title.durationSeconds).replace(/^0:/, '') : '',
+    });
+  };
+
+  const handleSaveTitleMeta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTitle) return;
+
+    try {
+      await updateTitleMeta({
+        title: editingTitle.title,
+        arranger: editingTitle.arranger,
+        youtubeUrl: titleMetaForm.youtubeUrl || null,
+        description: titleMetaForm.description || null,
+        durationSeconds: parseDuration(titleMetaForm.durationStr),
+      });
+      setEditingTitle(null);
+      if (listId) {
+        await loadTitles(listId);
+        await loadLists(selectedOrchestra);
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Fout bij opslaan metadata');
+    }
+  };
+
   // Group pieces by title for display
   const titlesOnList = selectedList?.pieces
     ? [...new Set(selectedList.pieces.map(p => p.title))]
@@ -260,6 +334,7 @@ export default function MusicListManager() {
                     padding: '0.5rem 1rem',
                     borderBottom: '1px solid var(--border)',
                     background: selectedList?.id === list.id ? 'var(--background)' : undefined,
+                    opacity: list.isActive === false ? 0.6 : 1,
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -268,11 +343,24 @@ export default function MusicListManager() {
                       style={{ cursor: 'pointer', flex: 1 }}
                     >
                       <strong>{list.name}</strong>
+                      {list.isActive === false && (
+                        <span className="badge badge-secondary" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                          Inactief
+                        </span>
+                      )}
                       <div className="piece-meta">
-                        {list.titleCount || 0} titels • {list.pieceCount || 0} partijen
+                        {list.titleCount || 0} titels • {formatDuration(list.totalDuration || 0)}
                       </div>
                     </div>
                     <div className="flex gap-1">
+                      <button
+                        className={`btn btn-sm ${list.isActive !== false ? 'btn-success' : 'btn-outline'}`}
+                        onClick={() => handleToggleActive(list)}
+                        title={list.isActive !== false ? 'Actief - klik om te deactiveren' : 'Inactief - klik om te activeren'}
+                        style={{ minWidth: '2rem' }}
+                      >
+                        {list.isActive !== false ? '✓' : '○'}
+                      </button>
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => handleMoveList(index, 'up')}
@@ -338,11 +426,12 @@ export default function MusicListManager() {
                 <div className="mb-2">
                   <h3 className="mb-1">Op deze lijst ({titlesOnList.length} titels)</h3>
                   <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                    {titlesOnList.map((title) => {
-                      const piecesForTitle = selectedList.pieces.filter(p => p.title === title);
+                    {titlesOnList.map((titleName) => {
+                      const piecesForTitle = selectedList.pieces.filter(p => p.title === titleName);
+                      const titleData = titles.find(t => t.title === titleName);
                       return (
                         <div
-                          key={title}
+                          key={titleName}
                           className="flex justify-between items-center"
                           style={{
                             padding: '0.5rem',
@@ -351,12 +440,15 @@ export default function MusicListManager() {
                             marginBottom: '0.25rem',
                           }}
                         >
-                          <div>
-                            <strong>{title}</strong>
-                            <span className="piece-meta"> ({piecesForTitle.length} partijen)</span>
-                            {piecesForTitle[0]?.youtubeUrl && (
+                          <div style={{ flex: 1 }}>
+                            <strong>{titleName}</strong>
+                            <span className="piece-meta">
+                              {' '}({piecesForTitle.length} partijen)
+                              {titleData?.durationSeconds ? ` • ${formatDuration(titleData.durationSeconds)}` : ''}
+                            </span>
+                            {titleData?.youtubeUrl && (
                               <a
-                                href={piecesForTitle[0].youtubeUrl}
+                                href={titleData.youtubeUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-outline btn-sm"
@@ -365,13 +457,29 @@ export default function MusicListManager() {
                                 ▶
                               </a>
                             )}
+                            {titleData?.description && (
+                              <div className="piece-meta" style={{ fontStyle: 'italic' }}>
+                                {titleData.description}
+                              </div>
+                            )}
                           </div>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleRemoveTitle(title)}
-                          >
-                            Verwijderen
-                          </button>
+                          <div className="flex gap-1">
+                            {titleData && (
+                              <button
+                                className="btn btn-outline btn-sm"
+                                onClick={() => openTitleMetaModal(titleData)}
+                                title="Bewerk metadata"
+                              >
+                                ✏
+                              </button>
+                            )}
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleRemoveTitle(titleName)}
+                            >
+                              Verwijderen
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -394,19 +502,42 @@ export default function MusicListManager() {
                           borderBottom: '1px solid var(--border)',
                         }}
                       >
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <strong>{title.title}</strong>
                           {title.arranger && <span className="piece-meta"> - {title.arranger}</span>}
+                          {title.durationSeconds > 0 && (
+                            <span className="piece-meta"> • {formatDuration(title.durationSeconds)}</span>
+                          )}
+                          {title.youtubeUrl && (
+                            <a
+                              href={title.youtubeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline btn-sm"
+                              style={{ marginLeft: '0.5rem' }}
+                            >
+                              ▶
+                            </a>
+                          )}
                           <div className="piece-meta">
                             {title.pieceCount} partijen • {title.instruments.join(', ')}
                           </div>
                         </div>
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleAddTitle(title.title)}
-                        >
-                          Toevoegen
-                        </button>
+                        <div className="flex gap-1">
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => openTitleMetaModal(title)}
+                            title="Bewerk metadata"
+                          >
+                            ✏
+                          </button>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleAddTitle(title.title)}
+                          >
+                            Toevoegen
+                          </button>
+                        </div>
                       </div>
                     ))
                 ) : (
@@ -488,6 +619,81 @@ export default function MusicListManager() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={() => setEditingList(null)}>
+                  Annuleren
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Opslaan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Title Metadata Modal */}
+      {editingTitle && (
+        <div className="modal-overlay" onClick={() => setEditingTitle(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Titel metadata bewerken</h3>
+              <button className="modal-close" onClick={() => setEditingTitle(null)}>×</button>
+            </div>
+            <form onSubmit={handleSaveTitleMeta}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Titel</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={editingTitle.title}
+                    disabled
+                  />
+                </div>
+                {editingTitle.arranger && (
+                  <div className="form-group">
+                    <label className="form-label">Arrangeur</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingTitle.arranger}
+                      disabled
+                    />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">YouTube URL</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    value={titleMetaForm.youtubeUrl}
+                    onChange={(e) => setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Speelduur (mm:ss)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={titleMetaForm.durationStr}
+                    onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
+                    placeholder="3:45"
+                    pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Omschrijving</label>
+                  <textarea
+                    className="form-control"
+                    value={titleMetaForm.description}
+                    onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Optionele omschrijving of notities..."
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
                   Annuleren
                 </button>
                 <button type="submit" className="btn btn-primary">
