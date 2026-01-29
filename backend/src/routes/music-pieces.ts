@@ -432,6 +432,58 @@ router.post('/:id/share', authenticateToken, requireRole('admin'), (req: AuthReq
     }
 });
 
+// Get all unique titles with piece counts (grouped view)
+router.get('/titles', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const { search, listId } = req.query;
+
+        let query = `
+            SELECT mp.title, mp.arranger,
+                   COUNT(*) as piece_count,
+                   MAX(mp.youtube_url) as youtube_url,
+                   GROUP_CONCAT(DISTINCT i.name) as instruments
+            FROM music_pieces mp
+            LEFT JOIN instruments i ON mp.instrument_id = i.id
+            WHERE mp.association_id = ?
+        `;
+        const params: any[] = [req.user!.associationId];
+
+        if (search) {
+            query += ' AND (LOWER(mp.title) LIKE ? OR LOWER(mp.arranger) LIKE ?)';
+            const searchTerm = `%${(search as string).toLowerCase()}%`;
+            params.push(searchTerm, searchTerm);
+        }
+
+        query += ' GROUP BY mp.title, mp.arranger ORDER BY mp.title';
+
+        const titles = db.prepare(query).all(...params);
+
+        // If listId is provided, also get which titles are on that list
+        let titlesOnList: Set<string> = new Set();
+        if (listId) {
+            const onList = db.prepare(`
+                SELECT DISTINCT mp.title
+                FROM music_pieces mp
+                JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                WHERE mlp.music_list_id = ?
+            `).all(listId) as { title: string }[];
+            titlesOnList = new Set(onList.map(t => t.title));
+        }
+
+        res.json(titles.map((t: any) => ({
+            title: t.title,
+            arranger: t.arranger,
+            pieceCount: t.piece_count,
+            youtubeUrl: t.youtube_url,
+            instruments: t.instruments ? t.instruments.split(',') : [],
+            onList: listId ? titlesOnList.has(t.title) : undefined,
+        })));
+    } catch (error) {
+        console.error('Get titles error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
 // Get shared music pieces (pieces shared with my association)
 router.get('/shared', authenticateToken, (req: AuthRequest, res: Response) => {
     try {

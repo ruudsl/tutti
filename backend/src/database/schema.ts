@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS music_lists (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     orchestra_id TEXT NOT NULL,
+    position INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );

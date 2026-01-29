@@ -9,6 +9,7 @@ import Upload from './pages/Upload';
 import Instruments from './pages/Instruments';
 import Users from './pages/Users';
 import Orchestras from './pages/Orchestras';
+import MusicListManager from './pages/MusicListManager';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -108,6 +109,22 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={['admin']}>
               <Orchestras />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="lists"
+          element={
+            <PrivateRoute roles={['admin', 'music_committee']}>
+              <MusicListManager />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="lists/:orchestraId/:listId"
+          element={
+            <PrivateRoute roles={['admin', 'music_committee']}>
+              <MusicListManager />
             </PrivateRoute>
           }
         />

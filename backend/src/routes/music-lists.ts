@@ -18,18 +18,23 @@ router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res:
         }
 
         const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.created_at,
-                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count
+            SELECT ml.id, ml.name, ml.position, ml.created_at,
+                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+                   (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
+                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                    WHERE mlp.music_list_id = ml.id) as title_count
             FROM music_lists ml
             WHERE ml.orchestra_id = ?
-            ORDER BY ml.name
+            ORDER BY ml.position, ml.name
         `).all(req.params.orchestraId);
 
         res.json(lists.map((l: any) => ({
             id: l.id,
             name: l.name,
+            position: l.position,
             createdAt: l.created_at,
             pieceCount: l.piece_count,
+            titleCount: l.title_count,
         })));
     } catch (error) {
         console.error('Get music lists error:', error);
@@ -41,22 +46,27 @@ router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res:
 router.get('/my-lists', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
         const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
-                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count
+            SELECT ml.id, ml.name, ml.position, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
+                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+                   (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
+                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                    WHERE mlp.music_list_id = ml.id) as title_count
             FROM music_lists ml
             JOIN orchestras o ON ml.orchestra_id = o.id
             JOIN user_orchestras uo ON o.id = uo.orchestra_id
             WHERE uo.user_id = ?
-            ORDER BY o.name, ml.name
+            ORDER BY o.name, ml.position, ml.name
         `).all(req.user!.id);
 
         res.json(lists.map((l: any) => ({
             id: l.id,
             name: l.name,
+            position: l.position,
             createdAt: l.created_at,
             orchestraId: l.orchestra_id,
             orchestraName: l.orchestra_name,
             pieceCount: l.piece_count,
+            titleCount: l.title_count,
         })));
     } catch (error) {
         console.error('Get my lists error:', error);
@@ -175,11 +185,17 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
             return res.status(400).json({ error: 'Muzieklijst met deze naam bestaat al voor dit orkest.' });
         }
 
+        // Get next position
+        const maxPos = db.prepare(
+            'SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM music_lists WHERE orchestra_id = ?'
+        ).get(orchestraId) as { next_pos: number };
+
         const listId = uuidv4();
-        db.prepare('INSERT INTO music_lists (id, name, orchestra_id) VALUES (?, ?, ?)').run(
+        db.prepare('INSERT INTO music_lists (id, name, orchestra_id, position) VALUES (?, ?, ?, ?)').run(
             listId,
             name.trim(),
-            orchestraId
+            orchestraId,
+            maxPos.next_pos
         );
 
         res.status(201).json({
@@ -331,6 +347,137 @@ router.delete('/:id/pieces/:pieceId', authenticateToken, requireRole('admin', 'm
         res.json({ message: 'Muziekstuk succesvol verwijderd van lijst.' });
     } catch (error) {
         console.error('Remove piece from list error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Add all pieces of a title to list (admin or music_committee)
+router.post('/:id/titles', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const { title } = req.body;
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Titel is verplicht.' });
+        }
+
+        // Verify list belongs to user's association
+        const list = db.prepare(`
+            SELECT ml.id
+            FROM music_lists ml
+            JOIN orchestras o ON ml.orchestra_id = o.id
+            WHERE ml.id = ? AND o.association_id = ?
+        `).get(req.params.id, req.user!.associationId);
+
+        if (!list) {
+            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
+        }
+
+        // Get all pieces with this title
+        const pieces = db.prepare(
+            'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
+        ).all(title.trim(), req.user!.associationId) as { id: string }[];
+
+        if (pieces.length === 0) {
+            return res.status(404).json({ error: 'Geen muziekstukken gevonden met deze titel.' });
+        }
+
+        // Add all pieces to list (ignore if already exists)
+        const insert = db.prepare(
+            'INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
+        );
+
+        let added = 0;
+        for (const piece of pieces) {
+            const result = insert.run(req.params.id, piece.id);
+            if (result.changes > 0) added++;
+        }
+
+        res.status(201).json({
+            message: `${added} van ${pieces.length} partijen toegevoegd aan de lijst.`,
+            added,
+            total: pieces.length,
+        });
+    } catch (error) {
+        console.error('Add title to list error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Remove all pieces of a title from list (admin or music_committee)
+router.delete('/:id/titles/:title', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const title = decodeURIComponent(req.params.title);
+
+        // Verify list belongs to user's association
+        const list = db.prepare(`
+            SELECT ml.id
+            FROM music_lists ml
+            JOIN orchestras o ON ml.orchestra_id = o.id
+            WHERE ml.id = ? AND o.association_id = ?
+        `).get(req.params.id, req.user!.associationId);
+
+        if (!list) {
+            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
+        }
+
+        // Get all pieces with this title
+        const pieces = db.prepare(
+            'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
+        ).all(title, req.user!.associationId) as { id: string }[];
+
+        if (pieces.length === 0) {
+            return res.status(404).json({ error: 'Geen muziekstukken gevonden met deze titel.' });
+        }
+
+        // Remove all pieces from list
+        const remove = db.prepare(
+            'DELETE FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
+        );
+
+        let removed = 0;
+        for (const piece of pieces) {
+            const result = remove.run(req.params.id, piece.id);
+            if (result.changes > 0) removed++;
+        }
+
+        res.json({
+            message: `${removed} partijen verwijderd van de lijst.`,
+            removed,
+        });
+    } catch (error) {
+        console.error('Remove title from list error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Update list positions (admin or music_committee)
+router.put('/reorder', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const { orchestraId, listIds } = req.body;
+
+        if (!orchestraId || !listIds || !Array.isArray(listIds)) {
+            return res.status(400).json({ error: 'Orkest ID en lijst IDs zijn verplicht.' });
+        }
+
+        // Verify orchestra belongs to user's association
+        const orchestra = db.prepare(
+            'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
+        ).get(orchestraId, req.user!.associationId);
+
+        if (!orchestra) {
+            return res.status(404).json({ error: 'Orkest niet gevonden.' });
+        }
+
+        // Update positions
+        const update = db.prepare('UPDATE music_lists SET position = ? WHERE id = ? AND orchestra_id = ?');
+
+        for (let i = 0; i < listIds.length; i++) {
+            update.run(i, listIds[i], orchestraId);
+        }
+
+        res.json({ message: 'Volgorde succesvol bijgewerkt.' });
+    } catch (error) {
+        console.error('Reorder lists error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
     }
 });

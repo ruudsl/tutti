@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, Association, AuthResponse } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AuthResponse } from './types';
 
 const API_BASE = '/api';
 
@@ -173,6 +173,20 @@ export const removePieceFromList = async (listId: string, pieceId: string): Prom
   await api.delete(`/music-lists/${listId}/pieces/${pieceId}`);
 };
 
+export const addTitleToList = async (listId: string, title: string): Promise<{ added: number; total: number }> => {
+  const { data } = await api.post(`/music-lists/${listId}/titles`, { title });
+  return data;
+};
+
+export const removeTitleFromList = async (listId: string, title: string): Promise<{ removed: number }> => {
+  const { data } = await api.delete(`/music-lists/${listId}/titles/${encodeURIComponent(title)}`);
+  return data;
+};
+
+export const reorderMusicLists = async (orchestraId: string, listIds: string[]): Promise<void> => {
+  await api.put('/music-lists/reorder', { orchestraId, listIds });
+};
+
 // Music Pieces
 export const getMusicPieces = async (filters?: {
   search?: string;
@@ -185,6 +199,14 @@ export const getMusicPieces = async (filters?: {
 
 export const getMyMusicPieces = async (): Promise<MusicPiece[]> => {
   const { data } = await api.get('/music-pieces/my-pieces');
+  return data;
+};
+
+export const getMusicTitles = async (filters?: {
+  search?: string;
+  listId?: string;
+}): Promise<MusicTitle[]> => {
+  const { data } = await api.get('/music-pieces/titles', { params: filters });
   return data;
 };
 

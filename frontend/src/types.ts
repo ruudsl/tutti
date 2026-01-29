@@ -29,7 +29,18 @@ export interface MusicList {
   name: string;
   orchestraId: string;
   orchestraName?: string;
+  position?: number;
   pieceCount?: number;
+  titleCount?: number;
+}
+
+export interface MusicTitle {
+  title: string;
+  arranger: string | null;
+  pieceCount: number;
+  youtubeUrl: string | null;
+  instruments: string[];
+  onList?: boolean;
 }
 
 export interface MusicPiece {

@@ -35,6 +35,11 @@ export default function Layout() {
             {isMusicCommittee && (
               <>
                 <li>
+                  <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Lijsten
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/music-pieces" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     Muziekstukken
                   </NavLink>
