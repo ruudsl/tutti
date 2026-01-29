@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS orchestras (
 -- Instrumenten met hoofdnaam
 CREATE TABLE IF NOT EXISTS instruments (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    tuning TEXT, -- Stemming bijv. Bb, Eb
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    name TEXT NOT NULL,
+    tuning TEXT, -- Stemming bijv. Bb, Eb, C
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(name, tuning)
 );
 
 -- Subnamen/aliassen voor instrumenten

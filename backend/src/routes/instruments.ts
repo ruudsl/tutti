@@ -11,7 +11,7 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
         const instruments = db.prepare(`
             SELECT id, name, tuning, created_at
             FROM instruments
-            ORDER BY name
+            ORDER BY name, tuning
         `).all();
 
         const result = instruments.map((instrument: any) => {
@@ -47,10 +47,13 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
             return res.status(400).json({ error: 'Instrumentnaam is verplicht.' });
         }
 
-        // Check if instrument already exists
-        const existing = db.prepare('SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)').get(name);
+        // Check if instrument with same name and tuning already exists
+        const tuningValue = tuning || null;
+        const existing = db.prepare(
+            'SELECT id FROM instruments WHERE LOWER(name) = LOWER(?) AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))'
+        ).get(name, tuningValue, tuningValue);
         if (existing) {
-            return res.status(400).json({ error: 'Instrument bestaat al.' });
+            return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" bestaat al.` });
         }
 
         const instrumentId = uuidv4();
@@ -94,13 +97,14 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
             return res.status(404).json({ error: 'Instrument niet gevonden.' });
         }
 
-        // Check name uniqueness if changed
+        // Check name+tuning uniqueness if changed
         if (name) {
+            const tuningValue = tuning || null;
             const existing = db.prepare(
-                'SELECT id FROM instruments WHERE LOWER(name) = LOWER(?) AND id != ?'
-            ).get(name, req.params.id);
+                'SELECT id FROM instruments WHERE LOWER(name) = LOWER(?) AND (tuning = ? OR (tuning IS NULL AND ? IS NULL)) AND id != ?'
+            ).get(name, tuningValue, tuningValue, req.params.id);
             if (existing) {
-                return res.status(400).json({ error: 'Instrumentnaam bestaat al.' });
+                return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" bestaat al.` });
             }
         }
 

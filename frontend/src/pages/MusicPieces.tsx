@@ -5,6 +5,7 @@ import {
   updateMusicPiece,
   deleteMusicPiece,
   downloadMusicPiece,
+  refreshInstrumentLinks,
 } from '../api';
 import type { MusicPiece, Instrument } from '../types';
 
@@ -16,6 +17,7 @@ export default function MusicPieces() {
   const [filterInstrument, setFilterInstrument] = useState('');
   const [editingPiece, setEditingPiece] = useState<MusicPiece | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -52,6 +54,20 @@ export default function MusicPieces() {
       setPieces(data);
     } catch (error) {
       console.error('Error loading pieces:', error);
+    }
+  };
+
+  const handleRefreshInstruments = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await refreshInstrumentLinks();
+      await loadPieces();
+      alert(`Instrumenten bijgewerkt!\n\n${result.updated} stukken gekoppeld\n${result.alreadyLinked} waren al gekoppeld\n${result.notFound} instrumenten niet gevonden`);
+    } catch (error) {
+      console.error('Error refreshing instruments:', error);
+      alert('Fout bij vernieuwen van instrumentkoppelingen.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -112,7 +128,17 @@ export default function MusicPieces() {
 
   return (
     <div>
-      <h1 className="mb-3">Muziekstukken</h1>
+      <div className="flex justify-between items-center mb-3">
+        <h1>Muziekstukken</h1>
+        <button
+          className="btn btn-secondary"
+          onClick={handleRefreshInstruments}
+          disabled={isRefreshing}
+          title="Koppel instrumenten opnieuw aan muziekstukken op basis van bestandsnamen"
+        >
+          {isRefreshing ? 'Bezig...' : '🔄 Instrumenten opnieuw koppelen'}
+        </button>
+      </div>
 
       <div className="card mb-2">
         <div className="card-body">

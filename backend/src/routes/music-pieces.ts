@@ -484,6 +484,54 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
     }
 });
 
+// Refresh instrument links for all pieces (re-parse filenames)
+router.post('/refresh-instruments', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        // Get all pieces without instrument_id or where we want to re-check
+        const pieces = db.prepare(`
+            SELECT id, original_filename, instrument_id
+            FROM music_pieces
+            WHERE association_id = ?
+        `).all(req.user!.associationId) as { id: string; original_filename: string; instrument_id: string | null }[];
+
+        let updated = 0;
+        let alreadyLinked = 0;
+        let notFound = 0;
+
+        const updateStmt = db.prepare('UPDATE music_pieces SET instrument_id = ? WHERE id = ?');
+
+        for (const piece of pieces) {
+            const parsed = parseFilename(piece.original_filename);
+
+            if (parsed.instrument) {
+                const instrumentId = findInstrumentId(parsed.instrument);
+
+                if (instrumentId) {
+                    if (piece.instrument_id !== instrumentId) {
+                        updateStmt.run(instrumentId, piece.id);
+                        updated++;
+                    } else {
+                        alreadyLinked++;
+                    }
+                } else {
+                    notFound++;
+                }
+            }
+        }
+
+        res.json({
+            message: `Instrumenten bijgewerkt.`,
+            updated,
+            alreadyLinked,
+            notFound,
+            total: pieces.length,
+        });
+    } catch (error) {
+        console.error('Refresh instruments error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
 // Get shared music pieces (pieces shared with my association)
 router.get('/shared', authenticateToken, (req: AuthRequest, res: Response) => {
     try {

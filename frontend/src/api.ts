@@ -226,6 +226,16 @@ export const uploadMusicPieces = async (
   return data;
 };
 
+export const refreshInstrumentLinks = async (): Promise<{
+  updated: number;
+  alreadyLinked: number;
+  notFound: number;
+  total: number;
+}> => {
+  const { data } = await api.post('/music-pieces/refresh-instruments');
+  return data;
+};
+
 export const updateMusicPiece = async (id: string, pieceData: {
   title?: string;
   arranger?: string;
