@@ -48,13 +48,16 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (re
             return res.status(400).json({ error: 'Instrumentnaam is verplicht.' });
         }
 
-        // Check if instrument with same name and tuning already exists
+        // Check if instrument with same name, tuning and clef already exists
         const tuningValue = tuning || null;
+        const clefValue = clef || 'sol';
         const existing = db.prepare(
-            'SELECT id FROM instruments WHERE LOWER(name) = LOWER(?) AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))'
-        ).get(name, tuningValue, tuningValue);
+            `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
+             AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
+             AND clef = ?`
+        ).get(name, tuningValue, tuningValue, clefValue);
         if (existing) {
-            return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" bestaat al.` });
+            return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.` });
         }
 
         const instrumentId = uuidv4();
@@ -100,14 +103,18 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
             return res.status(404).json({ error: 'Instrument niet gevonden.' });
         }
 
-        // Check name+tuning uniqueness if changed
+        // Check name+tuning+clef uniqueness if changed
         if (name) {
             const tuningValue = tuning || null;
+            const clefValue = clef || 'sol';
             const existing = db.prepare(
-                'SELECT id FROM instruments WHERE LOWER(name) = LOWER(?) AND (tuning = ? OR (tuning IS NULL AND ? IS NULL)) AND id != ?'
-            ).get(name, tuningValue, tuningValue, req.params.id);
+                `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
+                 AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
+                 AND clef = ?
+                 AND id != ?`
+            ).get(name, tuningValue, tuningValue, clefValue, req.params.id);
             if (existing) {
-                return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" bestaat al.` });
+                return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.` });
             }
         }
 

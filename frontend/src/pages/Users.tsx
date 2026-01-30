@@ -185,9 +185,15 @@ export default function Users() {
                   <td>{getRoleBadge(user.role)}</td>
                   <td>
                     <div className="tags">
-                      {user.instruments?.map((i) => (
-                        <span key={i.id} className="tag">{i.name}</span>
-                      )) || '-'}
+                      {user.instruments?.map((i) => {
+                        const clefLabel = i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol';
+                        const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
+                        return (
+                          <span key={i.id} className="tag">
+                            {i.name}{details && ` (${details})`}
+                          </span>
+                        );
+                      }) || '-'}
                     </div>
                   </td>
                   <td>
@@ -310,16 +316,26 @@ export default function Users() {
                 <div className="form-group">
                   <label className="form-label">Instrumenten</label>
                   <div className="checkbox-group">
-                    {instruments.map((instrument) => (
-                      <label key={instrument.id} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={formInstruments.includes(instrument.id)}
-                          onChange={() => toggleInstrument(instrument.id)}
-                        />
-                        <span>{instrument.name}</span>
-                      </label>
-                    ))}
+                    {instruments.map((instrument) => {
+                      const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
+                      const details = [
+                        instrument.tuning,
+                        clefLabel
+                      ].filter(Boolean).join(', ');
+                      return (
+                        <label key={instrument.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={formInstruments.includes(instrument.id)}
+                            onChange={() => toggleInstrument(instrument.id)}
+                          />
+                          <span>
+                            {instrument.name}
+                            {details && <span className="text-light"> ({details})</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -2,9 +2,8 @@ import { useState, useEffect, useRef, type DragEvent, type ChangeEvent } from 'r
 import { getOrchestras, getMusicLists, uploadMusicPieces } from '../api';
 import type { Orchestra, MusicList } from '../types';
 
-interface FileWithMeta {
+interface FileItem {
   file: File;
-  youtubeUrl: string;
 }
 
 export default function Upload() {
@@ -12,7 +11,7 @@ export default function Upload() {
   const [lists, setLists] = useState<MusicList[]>([]);
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
-  const [files, setFiles] = useState<FileWithMeta[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ success: number; errors: string[] } | null>(null);
@@ -80,26 +79,17 @@ export default function Upload() {
   };
 
   const addFiles = (newFiles: File[]) => {
-    const newFilesWithMeta = newFiles.map((file) => ({
-      file,
-      youtubeUrl: '',
-    }));
+    const newFileItems = newFiles.map((file) => ({ file }));
 
     setFiles((prev) => {
       const existingNames = new Set(prev.map((f) => f.file.name));
-      const uniqueNew = newFilesWithMeta.filter((f) => !existingNames.has(f.file.name));
+      const uniqueNew = newFileItems.filter((f) => !existingNames.has(f.file.name));
       return [...prev, ...uniqueNew];
     });
   };
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateYoutubeUrl = (index: number, url: string) => {
-    setFiles((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, youtubeUrl: url } : f))
-    );
   };
 
   const handleUpload = async () => {
@@ -109,17 +99,9 @@ export default function Upload() {
     setUploadResult(null);
 
     try {
-      const youtubeUrls: Record<string, string> = {};
-      files.forEach((f) => {
-        if (f.youtubeUrl) {
-          youtubeUrls[f.file.name] = f.youtubeUrl;
-        }
-      });
-
       const result = await uploadMusicPieces(
         files.map((f) => f.file),
-        selectedList || undefined,
-        Object.keys(youtubeUrls).length > 0 ? youtubeUrls : undefined
+        selectedList || undefined
       );
 
       setUploadResult({
@@ -218,20 +200,10 @@ export default function Upload() {
           {files.length > 0 && (
             <div className="upload-list">
               <h4 className="mb-1">{files.length} bestanden geselecteerd</h4>
-              {files.map((fileWithMeta, index) => (
+              {files.map((fileItem, index) => (
                 <div key={index} className="upload-item">
                   <div style={{ flex: 1 }}>
-                    <strong>{fileWithMeta.file.name}</strong>
-                    <div className="mt-1">
-                      <input
-                        type="url"
-                        className="form-control"
-                        placeholder="YouTube URL (optioneel)"
-                        value={fileWithMeta.youtubeUrl}
-                        onChange={(e) => updateYoutubeUrl(index, e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
+                    <strong>{fileItem.file.name}</strong>
                   </div>
                   <button
                     className="btn btn-danger btn-sm"
@@ -241,6 +213,9 @@ export default function Upload() {
                   </button>
                 </div>
               ))}
+              <p className="piece-meta mt-1">
+                YouTube links, speelduur en beschrijving kunnen na upload worden toegevoegd via Lijstbeheer.
+              </p>
             </div>
           )}
         </div>

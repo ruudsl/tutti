@@ -334,7 +334,7 @@ export default function MusicPieces() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">YouTube URL</label>
+                  <label className="form-label">YouTube URL (legacy)</label>
                   <input
                     type="url"
                     className="form-control"
@@ -342,6 +342,9 @@ export default function MusicPieces() {
                     onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
                     placeholder="https://youtube.com/watch?v=..."
                   />
+                  <small className="text-light">
+                    Tip: YouTube links worden nu per titel beheerd via Lijstbeheer.
+                  </small>
                 </div>
                 <div className="form-group">
                   <label className="form-check">
