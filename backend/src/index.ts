@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Import database
+import db from './database/connection';
+
 // Import routes
 import authRoutes from './routes/auth';
 import usersRoutes from './routes/users';
@@ -14,9 +17,6 @@ import orchestrasRoutes from './routes/orchestras';
 import musicListsRoutes from './routes/music-lists';
 import musicPiecesRoutes from './routes/music-pieces';
 import associationsRoutes from './routes/associations';
-
-// Initialize database (this creates tables if they don't exist)
-import './database/connection';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,10 +65,27 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     res.status(500).json({ error: 'Interne serverfout.' });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🎵 Harmonie Muziek Server draait op http://localhost:${PORT}`);
-    console.log(`   API beschikbaar op http://localhost:${PORT}/api`);
-});
+// Start server (after database initialization)
+async function startServer() {
+    try {
+        // Initialize database
+        await db.init();
+        console.log('Database initialized successfully');
+
+        // Initialize default data
+        const { initializeDatabase } = await import('./database/init');
+        await initializeDatabase();
+
+        app.listen(PORT, () => {
+            console.log(`🎵 Harmonie Muziek Server draait op http://localhost:${PORT}`);
+            console.log(`   API beschikbaar op http://localhost:${PORT}/api`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 export default app;

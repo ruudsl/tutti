@@ -93,4 +93,4 @@ async function initializeDatabase() {
     console.log('Database initialization complete!');
 }
 
-initializeDatabase();
+export { initializeDatabase };
