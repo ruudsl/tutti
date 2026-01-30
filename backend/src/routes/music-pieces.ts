@@ -435,7 +435,7 @@ router.post('/:id/share', authenticateToken, requireRole('admin'), (req: AuthReq
 // Get all unique titles with piece counts (grouped view)
 router.get('/titles', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { search, listId } = req.query;
+        const { search, listId, genreId } = req.query;
 
         let query = `
             SELECT mp.title, mp.arranger,
@@ -460,6 +460,14 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             params.push(searchTerm, searchTerm);
         }
 
+        // Filter by genre
+        if (genreId) {
+            query += ` AND mt.id IN (
+                SELECT music_title_id FROM music_title_genres WHERE genre_id = ?
+            )`;
+            params.push(genreId);
+        }
+
         query += ' GROUP BY mp.title, mp.arranger ORDER BY mp.title';
 
         const titles = db.prepare(query).all(...params);
@@ -476,16 +484,33 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             titlesOnList = new Set(onList.map(t => t.title));
         }
 
-        res.json(titles.map((t: any) => ({
-            title: t.title,
-            arranger: t.arranger,
-            pieceCount: t.piece_count,
-            youtubeUrl: t.youtube_url,
-            description: t.description,
-            durationSeconds: t.duration_seconds || 0,
-            instruments: t.instruments ? t.instruments.split(',') : [],
-            onList: listId ? titlesOnList.has(t.title) : undefined,
-        })));
+        // Get genres for each title
+        const titlesWithGenres = titles.map((t: any) => {
+            let genres: { id: string; name: string }[] = [];
+            if (t.title_id) {
+                genres = db.prepare(`
+                    SELECT g.id, g.name
+                    FROM genres g
+                    JOIN music_title_genres mtg ON g.id = mtg.genre_id
+                    WHERE mtg.music_title_id = ?
+                    ORDER BY g.name
+                `).all(t.title_id) as { id: string; name: string }[];
+            }
+
+            return {
+                title: t.title,
+                arranger: t.arranger,
+                pieceCount: t.piece_count,
+                youtubeUrl: t.youtube_url,
+                description: t.description,
+                durationSeconds: t.duration_seconds || 0,
+                instruments: t.instruments ? t.instruments.split(',') : [],
+                onList: listId ? titlesOnList.has(t.title) : undefined,
+                genres,
+            };
+        });
+
+        res.json(titlesWithGenres);
     } catch (error) {
         console.error('Get titles error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
@@ -505,6 +530,15 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
         `).get(title, arranger, req.user!.associationId) as any;
 
         if (meta) {
+            // Get genres for this title
+            const genres = db.prepare(`
+                SELECT g.id, g.name
+                FROM genres g
+                JOIN music_title_genres mtg ON g.id = mtg.genre_id
+                WHERE mtg.music_title_id = ?
+                ORDER BY g.name
+            `).all(meta.id) as { id: string; name: string }[];
+
             res.json({
                 id: meta.id,
                 title: meta.title,
@@ -512,6 +546,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
                 youtubeUrl: meta.youtube_url,
                 description: meta.description,
                 durationSeconds: meta.duration_seconds || 0,
+                genres,
             });
         } else {
             res.json({
@@ -520,6 +555,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
                 youtubeUrl: null,
                 description: null,
                 durationSeconds: 0,
+                genres: [],
             });
         }
     } catch (error) {
@@ -528,14 +564,16 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
     }
 });
 
-// Update title metadata (YouTube, description, duration)
+// Update title metadata (YouTube, description, duration, genres)
 router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { title, arranger, youtubeUrl, description, durationSeconds } = req.body;
+        const { title, arranger, youtubeUrl, description, durationSeconds, genreIds } = req.body;
 
         if (!title || !title.trim()) {
             return res.status(400).json({ error: 'Titel is verplicht.' });
         }
+
+        let titleId: string;
 
         // Check if title metadata already exists
         const existing = db.prepare(`
@@ -555,19 +593,15 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 durationSeconds || 0,
                 existing.id
             );
-
-            res.json({
-                id: existing.id,
-                message: 'Titel metadata bijgewerkt.',
-            });
+            titleId = existing.id;
         } else {
             // Create new
-            const id = uuidv4();
+            titleId = uuidv4();
             db.prepare(`
                 INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, association_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             `).run(
-                id,
+                titleId,
                 title.trim(),
                 arranger || null,
                 youtubeUrl || null,
@@ -575,12 +609,28 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 durationSeconds || 0,
                 req.user!.associationId
             );
-
-            res.status(201).json({
-                id,
-                message: 'Titel metadata aangemaakt.',
-            });
         }
+
+        // Update genres if provided
+        if (Array.isArray(genreIds)) {
+            // Remove existing genre associations
+            db.prepare('DELETE FROM music_title_genres WHERE music_title_id = ?').run(titleId);
+
+            // Add new genre associations
+            const insertGenre = db.prepare(
+                'INSERT INTO music_title_genres (music_title_id, genre_id) VALUES (?, ?)'
+            );
+            for (const genreId of genreIds) {
+                if (genreId) {
+                    insertGenre.run(titleId, genreId);
+                }
+            }
+        }
+
+        res.json({
+            id: titleId,
+            message: existing ? 'Titel metadata bijgewerkt.' : 'Titel metadata aangemaakt.',
+        });
     } catch (error) {
         console.error('Update title meta error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
@@ -632,6 +682,52 @@ router.post('/refresh-instruments', authenticateToken, requireRole('admin', 'mus
     } catch (error) {
         console.error('Refresh instruments error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Fetch YouTube video metadata via oEmbed
+router.get('/youtube-meta', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const { url } = req.query;
+
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({ error: 'YouTube URL is verplicht.' });
+        }
+
+        // Validate YouTube URL
+        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const match = url.match(youtubeRegex);
+
+        if (!match) {
+            return res.status(400).json({ error: 'Ongeldige YouTube URL.' });
+        }
+
+        const videoId = match[4];
+
+        // Fetch oEmbed data
+        const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+
+        const response = await fetch(oEmbedUrl);
+
+        if (!response.ok) {
+            return res.status(404).json({ error: 'Video niet gevonden.' });
+        }
+
+        const data = await response.json() as {
+            title: string;
+            author_name: string;
+            thumbnail_url: string;
+        };
+
+        res.json({
+            title: data.title,
+            author: data.author_name,
+            thumbnailUrl: data.thumbnail_url,
+            videoId,
+        });
+    } catch (error) {
+        console.error('YouTube meta error:', error);
+        res.status(500).json({ error: 'Kon YouTube metadata niet ophalen.' });
     }
 });
 

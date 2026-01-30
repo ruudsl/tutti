@@ -2,6 +2,26 @@ import db from './connection';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
+// Standaard genres voor muziekstukken
+const defaultGenres = [
+    'Pop',
+    'Rock',
+    'Jazz',
+    'Klassiek',
+    'Film',
+    'Musical',
+    'Mars',
+    'Traditie',
+    'Kerstmis',
+    'Volksmuziek',
+    'Latin',
+    'Swing',
+    'Ballad',
+    'Feest',
+    'Religieus',
+    'Origineel',
+];
+
 // Seed data voor instrumenten met aliassen
 const instrumentsWithAliases = [
     { name: 'Alto Saxophone', tuning: 'Eb', aliases: ['Altsax', 'altsax', 'Alt Sax', 'Alt Saxofoon'] },
@@ -88,6 +108,20 @@ async function initializeDatabase() {
 
         console.log('Created default association, orchestra, and admin user');
         console.log('Admin login: admin@harmonie.nl / admin123');
+    }
+
+    // Seed genres if they don't exist
+    const existingGenres = db.prepare('SELECT COUNT(*) as count FROM genres').get() as { count: number };
+
+    if (existingGenres.count === 0) {
+        console.log('Seeding genres...');
+        const insertGenre = db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)');
+
+        for (const genre of defaultGenres) {
+            insertGenre.run(uuidv4(), genre);
+        }
+
+        console.log(`Seeded ${defaultGenres.length} genres`);
     }
 
     console.log('Database initialization complete!');

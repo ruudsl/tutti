@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AuthResponse } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AuthResponse, Genre } from './types';
 
 const API_BASE = '/api';
 
@@ -210,6 +210,7 @@ export const getMyMusicPieces = async (): Promise<MusicPiece[]> => {
 export const getMusicTitles = async (filters?: {
   search?: string;
   listId?: string;
+  genreId?: string;
 }): Promise<MusicTitle[]> => {
   const { data } = await api.get('/music-pieces/titles', { params: filters });
   return data;
@@ -291,12 +292,23 @@ export const getSharedMusicPieces = async (): Promise<MusicPiece[]> => {
   return data;
 };
 
+export const getYouTubeMeta = async (url: string): Promise<{
+  title: string;
+  author: string;
+  thumbnailUrl: string;
+  videoId: string;
+}> => {
+  const { data } = await api.get('/music-pieces/youtube-meta', { params: { url } });
+  return data;
+};
+
 export const getTitleMeta = async (title: string, arranger?: string | null): Promise<{
   title: string;
   arranger: string | null;
   youtubeUrl: string | null;
   description: string | null;
   durationSeconds: number;
+  genres: Genre[];
 }> => {
   const params = arranger ? `?arranger=${encodeURIComponent(arranger)}` : '';
   const { data } = await api.get(`/music-pieces/title-meta/${encodeURIComponent(title)}${params}`);
@@ -309,6 +321,7 @@ export const updateTitleMeta = async (titleData: {
   youtubeUrl?: string | null;
   description?: string | null;
   durationSeconds?: number;
+  genreIds?: string[];
 }): Promise<{ id: string }> => {
   const { data } = await api.put('/music-pieces/title-meta', titleData);
   return data;
@@ -332,6 +345,25 @@ export const updateCurrentAssociation = async (name: string): Promise<void> => {
 export const createAssociation = async (name: string): Promise<{ id: string }> => {
   const { data } = await api.post('/associations', { name });
   return data;
+};
+
+// Genres
+export const getGenres = async (): Promise<Genre[]> => {
+  const { data } = await api.get('/genres');
+  return data;
+};
+
+export const createGenre = async (name: string): Promise<{ id: string }> => {
+  const { data } = await api.post('/genres', { name });
+  return data;
+};
+
+export const updateGenre = async (id: string, name: string): Promise<void> => {
+  await api.put(`/genres/${id}`, { name });
+};
+
+export const deleteGenre = async (id: string): Promise<void> => {
+  await api.delete(`/genres/${id}`);
 };
 
 export default api;

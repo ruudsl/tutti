@@ -13,8 +13,10 @@ import {
   getOrchestras,
   toggleMusicListActive,
   updateTitleMeta,
+  getGenres,
+  getYouTubeMeta,
 } from '../api';
-import type { MusicList, MusicPiece, MusicTitle, Orchestra } from '../types';
+import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
 
 // Format duration from seconds to mm:ss or h:mm:ss
 function formatDuration(seconds: number): string {
@@ -63,11 +65,30 @@ export default function MusicListManager() {
     youtubeUrl: '',
     description: '',
     durationStr: '',
+    genreIds: [] as string[],
   });
+
+  // Genres
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [genreFilter, setGenreFilter] = useState<string>('');
+
+  // YouTube metadata
+  const [fetchingYouTube, setFetchingYouTube] = useState(false);
+  const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
 
   useEffect(() => {
     loadOrchestras();
+    loadGenres();
   }, []);
+
+  const loadGenres = async () => {
+    try {
+      const data = await getGenres();
+      setGenres(data);
+    } catch (error) {
+      console.error('Error loading genres:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedOrchestra) {
@@ -89,7 +110,7 @@ export default function MusicListManager() {
       const timer = setTimeout(() => loadTitles(listId), 300);
       return () => clearTimeout(timer);
     }
-  }, [search]);
+  }, [search, genreFilter]);
 
   const loadOrchestras = async () => {
     try {
@@ -125,7 +146,11 @@ export default function MusicListManager() {
 
   const loadTitles = async (id: string) => {
     try {
-      const data = await getMusicTitles({ search: search || undefined, listId: id });
+      const data = await getMusicTitles({
+        search: search || undefined,
+        listId: id,
+        genreId: genreFilter || undefined,
+      });
       setTitles(data);
     } catch (error) {
       console.error('Error loading titles:', error);
@@ -250,7 +275,23 @@ export default function MusicListManager() {
       youtubeUrl: title.youtubeUrl || '',
       description: title.description || '',
       durationStr: title.durationSeconds ? formatDuration(title.durationSeconds).replace(/^0:/, '') : '',
+      genreIds: title.genres?.map(g => g.id) || [],
     });
+    setYoutubeMeta(null);
+  };
+
+  const fetchYouTubeMetadata = async () => {
+    if (!titleMetaForm.youtubeUrl) return;
+
+    setFetchingYouTube(true);
+    try {
+      const meta = await getYouTubeMeta(titleMetaForm.youtubeUrl);
+      setYoutubeMeta({ title: meta.title, author: meta.author });
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Kon YouTube metadata niet ophalen');
+    } finally {
+      setFetchingYouTube(false);
+    }
   };
 
   const handleSaveTitleMeta = async (e: React.FormEvent) => {
@@ -264,6 +305,7 @@ export default function MusicListManager() {
         youtubeUrl: titleMetaForm.youtubeUrl || null,
         description: titleMetaForm.description || null,
         durationSeconds: parseDuration(titleMetaForm.durationStr),
+        genreIds: titleMetaForm.genreIds,
       });
       setEditingTitle(null);
       if (listId) {
@@ -273,6 +315,28 @@ export default function MusicListManager() {
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij opslaan metadata');
     }
+  };
+
+  const toggleGenre = (genreId: string) => {
+    setTitleMetaForm(f => ({
+      ...f,
+      genreIds: f.genreIds.includes(genreId)
+        ? f.genreIds.filter(id => id !== genreId)
+        : [...f.genreIds, genreId],
+    }));
+  };
+
+  // Search helper - open sheet music websites
+  const searchSheetMusicWebsites = (title: string) => {
+    const encodedTitle = encodeURIComponent(title);
+    const websites = [
+      { name: 'De Haske', url: `https://www.dehaske.com/en-gb/search?q=${encodedTitle}` },
+      { name: 'Molenaar Edition', url: `https://www.molenaar.com/search?q=${encodedTitle}` },
+      { name: 'Hal Leonard', url: `https://www.halleonard.com/search/search.action?_requestid=2&subsiteid=1&seriesfeature=CONCERTBAND&keywords=${encodedTitle}` },
+      { name: 'Beriato Music', url: `https://www.beriato.com/search?q=${encodedTitle}` },
+      { name: 'YouTube', url: `https://www.youtube.com/results?search_query=${encodedTitle}+concert+band` },
+    ];
+    return websites;
   };
 
   // Group pieces by title for display
@@ -410,15 +474,29 @@ export default function MusicListManager() {
               <h2 className="card-title">{selectedList.name}</h2>
             </div>
             <div className="card-body">
-              {/* Search */}
-              <div className="form-group">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Zoek muziekstukken..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+              {/* Search and Genre Filter */}
+              <div className="flex gap-2 mb-2">
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Zoek muziekstukken..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ width: '200px', marginBottom: 0 }}>
+                  <select
+                    className="form-control"
+                    value={genreFilter}
+                    onChange={(e) => setGenreFilter(e.target.value)}
+                  >
+                    <option value="">Alle genres</option>
+                    {genres.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Titles on list */}
@@ -456,6 +534,19 @@ export default function MusicListManager() {
                               >
                                 ▶
                               </a>
+                            )}
+                            {titleData?.genres && titleData.genres.length > 0 && (
+                              <div style={{ marginTop: '0.25rem' }}>
+                                {titleData.genres.map(g => (
+                                  <span
+                                    key={g.id}
+                                    className="badge badge-secondary"
+                                    style={{ marginRight: '0.25rem', fontSize: '0.7rem' }}
+                                  >
+                                    {g.name}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                             {titleData?.description && (
                               <div className="piece-meta" style={{ fontStyle: 'italic' }}>
@@ -522,6 +613,19 @@ export default function MusicListManager() {
                           <div className="piece-meta">
                             {title.pieceCount} partijen • {title.instruments.join(', ')}
                           </div>
+                          {title.genres && title.genres.length > 0 && (
+                            <div style={{ marginTop: '0.25rem' }}>
+                              {title.genres.map(g => (
+                                <span
+                                  key={g.id}
+                                  className="badge badge-secondary"
+                                  style={{ marginRight: '0.25rem', fontSize: '0.7rem' }}
+                                >
+                                  {g.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-1">
                           <button
@@ -642,12 +746,65 @@ export default function MusicListManager() {
               <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label">Titel</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editingTitle.title}
-                    disabled
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingTitle.title}
+                      disabled
+                      style={{ flex: 1 }}
+                    />
+                    <div className="dropdown" style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={(e) => {
+                          const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                        }}
+                        title="Zoek info op bladmuziek websites"
+                      >
+                        🔍
+                      </button>
+                      <div
+                        style={{
+                          display: 'none',
+                          position: 'absolute',
+                          right: 0,
+                          top: '100%',
+                          background: 'white',
+                          border: '1px solid var(--border)',
+                          borderRadius: '0.25rem',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          zIndex: 1000,
+                          minWidth: '200px',
+                        }}
+                      >
+                        <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                          Zoek op:
+                        </div>
+                        {searchSheetMusicWebsites(editingTitle.title).map((site) => (
+                          <a
+                            key={site.name}
+                            href={site.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'block',
+                              padding: '0.5rem 1rem',
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              borderBottom: '1px solid var(--border)',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                          >
+                            {site.name}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 {editingTitle.arranger && (
                   <div className="form-group">
@@ -662,13 +819,34 @@ export default function MusicListManager() {
                 )}
                 <div className="form-group">
                   <label className="form-label">YouTube URL</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    value={titleMetaForm.youtubeUrl}
-                    onChange={(e) => setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={titleMetaForm.youtubeUrl}
+                      onChange={(e) => {
+                        setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
+                        setYoutubeMeta(null);
+                      }}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={fetchYouTubeMetadata}
+                      disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
+                      title="Haal video info op"
+                    >
+                      {fetchingYouTube ? '...' : '📥'}
+                    </button>
+                  </div>
+                  {youtubeMeta && (
+                    <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                      <strong>{youtubeMeta.title}</strong>
+                      <div>Door: {youtubeMeta.author}</div>
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Speelduur (mm:ss)</label>
@@ -690,6 +868,35 @@ export default function MusicListManager() {
                     rows={3}
                     placeholder="Optionele omschrijving of notities..."
                   />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Genres</label>
+                  <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {genres.map((genre) => (
+                      <label
+                        key={genre.id}
+                        className="checkbox-item"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0.25rem 0.5rem',
+                          background: titleMetaForm.genreIds.includes(genre.id) ? 'var(--primary)' : 'var(--background)',
+                          color: titleMetaForm.genreIds.includes(genre.id) ? 'white' : 'inherit',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={titleMetaForm.genreIds.includes(genre.id)}
+                          onChange={() => toggleGenre(genre.id)}
+                          style={{ display: 'none' }}
+                        />
+                        {genre.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

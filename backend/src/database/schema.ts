@@ -124,6 +124,22 @@ CREATE TABLE IF NOT EXISTS music_titles (
     UNIQUE(title, arranger, association_id)
 );
 
+-- Genres voor muziekstukken
+CREATE TABLE IF NOT EXISTS genres (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Koppeltabel: titel heeft genre(s)
+CREATE TABLE IF NOT EXISTS music_title_genres (
+    music_title_id TEXT NOT NULL,
+    genre_id TEXT NOT NULL,
+    PRIMARY KEY (music_title_id, genre_id),
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE
+);
+
 -- Toegang tot gedeelde muziekstukken per vereniging
 CREATE TABLE IF NOT EXISTS shared_music_access (
     music_piece_id TEXT NOT NULL,
@@ -144,4 +160,5 @@ CREATE INDEX IF NOT EXISTS idx_music_pieces_title ON music_pieces(title);
 CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(alias);
 CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title);
 CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id);
+CREATE INDEX IF NOT EXISTS idx_genres_name ON genres(name);
 `;

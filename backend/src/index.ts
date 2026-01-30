@@ -17,6 +17,7 @@ import orchestrasRoutes from './routes/orchestras';
 import musicListsRoutes from './routes/music-lists';
 import musicPiecesRoutes from './routes/music-pieces';
 import associationsRoutes from './routes/associations';
+import genresRoutes from './routes/genres';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +37,7 @@ app.use('/api/orchestras', orchestrasRoutes);
 app.use('/api/music-lists', musicListsRoutes);
 app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/associations', associationsRoutes);
+app.use('/api/genres', genresRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

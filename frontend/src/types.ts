@@ -37,6 +37,11 @@ export interface MusicList {
   totalDuration?: number;
 }
 
+export interface Genre {
+  id: string;
+  name: string;
+}
+
 export interface MusicTitle {
   title: string;
   arranger: string | null;
@@ -45,6 +50,7 @@ export interface MusicTitle {
   description: string | null;
   durationSeconds: number;
   instruments: string[];
+  genres?: Genre[];
   onList?: boolean;
 }
 
