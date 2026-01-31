@@ -54,6 +54,11 @@ export default function Layout() {
                     Instrumenten
                   </NavLink>
                 </li>
+                <li>
+                  <NavLink to="/genres" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Genres
+                  </NavLink>
+                </li>
               </>
             )}
             {isAdmin && (

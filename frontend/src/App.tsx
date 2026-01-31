@@ -7,6 +7,7 @@ import MyMusic from './pages/MyMusic';
 import MusicPieces from './pages/MusicPieces';
 import Upload from './pages/Upload';
 import Instruments from './pages/Instruments';
+import Genres from './pages/Genres';
 import Users from './pages/Users';
 import Orchestras from './pages/Orchestras';
 import MusicListManager from './pages/MusicListManager';
@@ -93,6 +94,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={['admin', 'music_committee']}>
               <Instruments />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="genres"
+          element={
+            <PrivateRoute roles={['admin', 'music_committee']}>
+              <Genres />
             </PrivateRoute>
           }
         />
