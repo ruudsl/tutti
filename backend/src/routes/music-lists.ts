@@ -2,127 +2,238 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { createMusicListSchema, updateMusicListSchema, reorderMusicListsSchema, addPieceToListSchema, addTitleToListSchema } from '../validation/schemas';
+import { withTransaction } from '../utils/database';
+import logger from '../utils/logger';
 
 const router = Router();
 
-// Get all music lists for an orchestra
-router.get('/orchestra/:orchestraId', authenticateToken, (req: AuthRequest, res: Response) => {
-    try {
-        // Verify orchestra belongs to user's association
-        const orchestra = db.prepare(
-            'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
-        ).get(req.params.orchestraId, req.user!.associationId);
+/**
+ * @swagger
+ * /music-lists/orchestra/{orchestraId}:
+ *   get:
+ *     summary: Get all music lists for an orchestra
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orchestraId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of music lists
+ *       404:
+ *         description: Orchestra not found
+ */
+router.get('/orchestra/:orchestraId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify orchestra belongs to user's association
+    const orchestra = db.prepare(
+        'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
+    ).get(req.params.orchestraId, req.user!.associationId);
 
-        if (!orchestra) {
-            return res.status(404).json({ error: 'Orkest niet gevonden.' });
-        }
-
-        const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
-                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
-                   (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
-                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                    WHERE mlp.music_list_id = ml.id) as title_count,
-                   (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
-                    WHERE EXISTS (
-                        SELECT 1 FROM music_pieces mp
-                        JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                        WHERE mlp.music_list_id = ml.id
-                        AND mp.title = mt.title
-                        AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
-                    )) as total_duration
-            FROM music_lists ml
-            WHERE ml.orchestra_id = ?
-            ORDER BY ml.position, ml.name
-        `).all(req.params.orchestraId);
-
-        res.json(lists.map((l: any) => ({
-            id: l.id,
-            name: l.name,
-            position: l.position,
-            isActive: l.is_active === 1,
-            createdAt: l.created_at,
-            pieceCount: l.piece_count,
-            titleCount: l.title_count,
-            totalDuration: l.total_duration,
-        })));
-    } catch (error) {
-        console.error('Get music lists error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (!orchestra) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
     }
-});
 
-// Get all music lists user has access to (through orchestras)
-router.get('/my-lists', authenticateToken, (req: AuthRequest, res: Response) => {
-    try {
-        // For regular members, only show active lists
-        const isPrivileged = req.user!.role === 'admin' || req.user!.role === 'music_committee';
-        const activeFilter = isPrivileged ? '' : 'AND ml.is_active = 1';
-
-        const lists = db.prepare(`
-            SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
-                   (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
-                   (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
+    const lists = db.prepare(`
+        SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
+               (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+               (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
+                JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                WHERE mlp.music_list_id = ml.id) as title_count,
+               (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
+                WHERE EXISTS (
+                    SELECT 1 FROM music_pieces mp
                     JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                    WHERE mlp.music_list_id = ml.id) as title_count,
-                   (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
-                    WHERE EXISTS (
-                        SELECT 1 FROM music_pieces mp
-                        JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                        WHERE mlp.music_list_id = ml.id
-                        AND mp.title = mt.title
-                        AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
-                    )) as total_duration
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            JOIN user_orchestras uo ON o.id = uo.orchestra_id
-            WHERE uo.user_id = ? ${activeFilter}
-            ORDER BY o.name, ml.position, ml.name
-        `).all(req.user!.id);
+                    WHERE mlp.music_list_id = ml.id
+                    AND mp.title = mt.title
+                    AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                )) as total_duration
+        FROM music_lists ml
+        WHERE ml.orchestra_id = ?
+        ORDER BY ml.position, ml.name
+    `).all(req.params.orchestraId);
 
-        res.json(lists.map((l: any) => ({
-            id: l.id,
-            name: l.name,
-            position: l.position,
-            isActive: l.is_active === 1,
-            createdAt: l.created_at,
-            orchestraId: l.orchestra_id,
-            orchestraName: l.orchestra_name,
-            pieceCount: l.piece_count,
-            titleCount: l.title_count,
-            totalDuration: l.total_duration,
-        })));
-    } catch (error) {
-        console.error('Get my lists error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    res.json(lists.map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        position: l.position,
+        isActive: l.is_active === 1,
+        createdAt: l.created_at,
+        pieceCount: l.piece_count,
+        titleCount: l.title_count,
+        totalDuration: l.total_duration,
+    })));
+}));
+
+/**
+ * @swagger
+ * /music-lists/my-lists:
+ *   get:
+ *     summary: Get all music lists user has access to (through orchestras)
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's music lists
+ */
+router.get('/my-lists', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    // For regular members, only show active lists
+    const isPrivileged = req.user!.role === 'admin' || req.user!.role === 'music_committee';
+    const activeFilter = isPrivileged ? '' : 'AND ml.is_active = 1';
+
+    const lists = db.prepare(`
+        SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
+               (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+               (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
+                JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                WHERE mlp.music_list_id = ml.id) as title_count,
+               (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
+                WHERE EXISTS (
+                    SELECT 1 FROM music_pieces mp
+                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                    WHERE mlp.music_list_id = ml.id
+                    AND mp.title = mt.title
+                    AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                )) as total_duration
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        JOIN user_orchestras uo ON o.id = uo.orchestra_id
+        WHERE uo.user_id = ? ${activeFilter}
+        ORDER BY o.name, ml.position, ml.name
+    `).all(req.user!.id);
+
+    res.json(lists.map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        position: l.position,
+        isActive: l.is_active === 1,
+        createdAt: l.created_at,
+        orchestraId: l.orchestra_id,
+        orchestraName: l.orchestra_name,
+        pieceCount: l.piece_count,
+        titleCount: l.title_count,
+        totalDuration: l.total_duration,
+    })));
+}));
+
+/**
+ * @swagger
+ * /music-lists/reorder:
+ *   put:
+ *     summary: Update list positions
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orchestraId
+ *               - listIds
+ *             properties:
+ *               orchestraId:
+ *                 type: string
+ *               listIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Order updated successfully
+ */
+router.put('/reorder', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = reorderMusicListsSchema.parse(req.body);
+
+    // Verify orchestra belongs to user's association
+    const orchestra = db.prepare(
+        'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
+    ).get(data.orchestraId, req.user!.associationId);
+
+    if (!orchestra) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
     }
-});
 
-// Get single music list with pieces
-router.get('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
-    try {
-        const list = db.prepare(`
-            SELECT ml.id, ml.name, ml.created_at, ml.orchestra_id, o.name as orchestra_name
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId) as any;
-
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
+    // Update positions in transaction
+    withTransaction(() => {
+        const update = db.prepare('UPDATE music_lists SET position = ? WHERE id = ? AND orchestra_id = ?');
+        for (let i = 0; i < data.listIds.length; i++) {
+            update.run(i, data.listIds[i], data.orchestraId);
         }
+    });
 
-        // Get user's instruments for filtering
-        const userInstruments = db.prepare(`
-            SELECT instrument_id FROM user_instruments WHERE user_id = ?
-        `).all(req.user!.id) as { instrument_id: string }[];
+    logger.info(`Music lists reordered for orchestra ${data.orchestraId}`, { reorderedBy: req.user!.id });
 
-        const instrumentIds = userInstruments.map(i => i.instrument_id);
+    res.json({ message: 'Volgorde succesvol bijgewerkt.' });
+}));
 
-        // Get pieces in this list, filtered by user's instruments for regular members
-        let pieces: any[];
-        if (req.user!.role === 'admin' || req.user!.role === 'music_committee') {
-            // Admins and music committee see all pieces
+/**
+ * @swagger
+ * /music-lists/{id}:
+ *   get:
+ *     summary: Get single music list with pieces
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Music list details with pieces
+ *       404:
+ *         description: Music list not found
+ */
+router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const list = db.prepare(`
+        SELECT ml.id, ml.name, ml.created_at, ml.orchestra_id, o.name as orchestra_name
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId) as any;
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
+    // Get user's instruments for filtering
+    const userInstruments = db.prepare(`
+        SELECT instrument_id FROM user_instruments WHERE user_id = ?
+    `).all(req.user!.id) as { instrument_id: string }[];
+
+    const instrumentIds = userInstruments.map(i => i.instrument_id);
+
+    // Get pieces in this list, filtered by user's instruments for regular members
+    let pieces: any[];
+    if (req.user!.role === 'admin' || req.user!.role === 'music_committee') {
+        // Admins and music committee see all pieces
+        pieces = db.prepare(`
+            SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
+                   mp.youtube_url, mp.original_filename, mp.created_at,
+                   i.id as instrument_id, i.name as instrument_name
+            FROM music_pieces mp
+            JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+            LEFT JOIN instruments i ON mp.instrument_id = i.id
+            WHERE mlp.music_list_id = ?
+            ORDER BY mp.title, i.name, mp.group_number
+        `).all(req.params.id);
+    } else {
+        // Regular members only see pieces for their instruments
+        if (instrumentIds.length === 0) {
+            pieces = [];
+        } else {
+            const placeholders = instrumentIds.map(() => '?').join(',');
             pieces = db.prepare(`
                 SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
                        mp.youtube_url, mp.original_filename, mp.created_at,
@@ -130,407 +241,494 @@ router.get('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
                 FROM music_pieces mp
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
                 LEFT JOIN instruments i ON mp.instrument_id = i.id
-                WHERE mlp.music_list_id = ?
+                WHERE mlp.music_list_id = ? AND mp.instrument_id IN (${placeholders})
                 ORDER BY mp.title, i.name, mp.group_number
-            `).all(req.params.id);
-        } else {
-            // Regular members only see pieces for their instruments
-            if (instrumentIds.length === 0) {
-                pieces = [];
-            } else {
-                const placeholders = instrumentIds.map(() => '?').join(',');
-                pieces = db.prepare(`
-                    SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
-                           mp.youtube_url, mp.original_filename, mp.created_at,
-                           i.id as instrument_id, i.name as instrument_name
-                    FROM music_pieces mp
-                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                    LEFT JOIN instruments i ON mp.instrument_id = i.id
-                    WHERE mlp.music_list_id = ? AND mp.instrument_id IN (${placeholders})
-                    ORDER BY mp.title, i.name, mp.group_number
-                `).all(req.params.id, ...instrumentIds);
-            }
+            `).all(req.params.id, ...instrumentIds);
         }
-
-        res.json({
-            id: list.id,
-            name: list.name,
-            createdAt: list.created_at,
-            orchestraId: list.orchestra_id,
-            orchestraName: list.orchestra_name,
-            pieces: pieces.map((p: any) => ({
-                id: p.id,
-                title: p.title,
-                arranger: p.arranger,
-                tuning: p.tuning,
-                groupNumber: p.group_number,
-                clef: p.clef,
-                youtubeUrl: p.youtube_url,
-                originalFilename: p.original_filename,
-                createdAt: p.created_at,
-                instrumentId: p.instrument_id,
-                instrumentName: p.instrument_name,
-            })),
-        });
-    } catch (error) {
-        console.error('Get music list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
     }
-});
 
-// Create music list (admin or music_committee)
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { name, orchestraId } = req.body;
+    res.json({
+        id: list.id,
+        name: list.name,
+        createdAt: list.created_at,
+        orchestraId: list.orchestra_id,
+        orchestraName: list.orchestra_name,
+        pieces: pieces.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            arranger: p.arranger,
+            tuning: p.tuning,
+            groupNumber: p.group_number,
+            clef: p.clef,
+            youtubeUrl: p.youtube_url,
+            originalFilename: p.original_filename,
+            createdAt: p.created_at,
+            instrumentId: p.instrument_id,
+            instrumentName: p.instrument_name,
+        })),
+    });
+}));
 
-        if (!name || !name.trim()) {
-            return res.status(400).json({ error: 'Lijstnaam is verplicht.' });
-        }
+/**
+ * @swagger
+ * /music-lists:
+ *   post:
+ *     summary: Create music list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - orchestraId
+ *             properties:
+ *               name:
+ *                 type: string
+ *               orchestraId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Music list created successfully
+ */
+router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = createMusicListSchema.parse(req.body);
 
-        if (!orchestraId) {
-            return res.status(400).json({ error: 'Orkest is verplicht.' });
-        }
+    // Verify orchestra belongs to user's association
+    const orchestra = db.prepare(
+        'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
+    ).get(data.orchestraId, req.user!.associationId);
 
-        // Verify orchestra belongs to user's association
-        const orchestra = db.prepare(
-            'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
-        ).get(orchestraId, req.user!.associationId);
-
-        if (!orchestra) {
-            return res.status(404).json({ error: 'Orkest niet gevonden.' });
-        }
-
-        // Check if list name already exists for this orchestra
-        const existing = db.prepare(
-            'SELECT id FROM music_lists WHERE LOWER(name) = LOWER(?) AND orchestra_id = ?'
-        ).get(name.trim(), orchestraId);
-
-        if (existing) {
-            return res.status(400).json({ error: 'Muzieklijst met deze naam bestaat al voor dit orkest.' });
-        }
-
-        // Get next position
-        const maxPos = db.prepare(
-            'SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM music_lists WHERE orchestra_id = ?'
-        ).get(orchestraId) as { next_pos: number };
-
-        const listId = uuidv4();
-        db.prepare('INSERT INTO music_lists (id, name, orchestra_id, position) VALUES (?, ?, ?, ?)').run(
-            listId,
-            name.trim(),
-            orchestraId,
-            maxPos.next_pos
-        );
-
-        res.status(201).json({
-            id: listId,
-            name: name.trim(),
-            orchestraId,
-            message: 'Muzieklijst succesvol aangemaakt.',
-        });
-    } catch (error) {
-        console.error('Create music list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (!orchestra) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
     }
-});
 
-// Update music list (admin or music_committee)
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { name } = req.body;
+    // Check if list name already exists for this orchestra
+    const existing = db.prepare(
+        'SELECT id FROM music_lists WHERE LOWER(name) = LOWER(?) AND orchestra_id = ?'
+    ).get(data.name.trim(), data.orchestraId);
 
-        if (!name || !name.trim()) {
-            return res.status(400).json({ error: 'Lijstnaam is verplicht.' });
-        }
-
-        const list = db.prepare(`
-            SELECT ml.id, ml.orchestra_id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId) as any;
-
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
-
-        // Check name uniqueness
-        const existing = db.prepare(
-            'SELECT id FROM music_lists WHERE LOWER(name) = LOWER(?) AND orchestra_id = ? AND id != ?'
-        ).get(name.trim(), list.orchestra_id, req.params.id);
-
-        if (existing) {
-            return res.status(400).json({ error: 'Muzieklijst met deze naam bestaat al voor dit orkest.' });
-        }
-
-        db.prepare('UPDATE music_lists SET name = ? WHERE id = ?').run(name.trim(), req.params.id);
-
-        res.json({ message: 'Muzieklijst succesvol bijgewerkt.' });
-    } catch (error) {
-        console.error('Update music list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (existing) {
+        throw new ApiError(409, 'Muzieklijst met deze naam bestaat al voor dit orkest.');
     }
-});
 
-// Toggle list active status (admin or music_committee)
-router.patch('/:id/toggle-active', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const list = db.prepare(`
-            SELECT ml.id, ml.is_active
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId) as any;
+    // Get next position
+    const maxPos = db.prepare(
+        'SELECT COALESCE(MAX(position), -1) + 1 as next_pos FROM music_lists WHERE orchestra_id = ?'
+    ).get(data.orchestraId) as { next_pos: number };
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
+    const listId = uuidv4();
+    db.prepare('INSERT INTO music_lists (id, name, orchestra_id, position) VALUES (?, ?, ?, ?)').run(
+        listId,
+        data.name.trim(),
+        data.orchestraId,
+        maxPos.next_pos
+    );
 
-        const newStatus = list.is_active === 1 ? 0 : 1;
-        db.prepare('UPDATE music_lists SET is_active = ? WHERE id = ?').run(newStatus, req.params.id);
+    logger.info(`Music list created: ${data.name}`, { listId, orchestraId: data.orchestraId, createdBy: req.user!.id });
 
-        res.json({
-            message: newStatus === 1 ? 'Lijst is nu actief.' : 'Lijst is nu inactief.',
-            isActive: newStatus === 1,
-        });
-    } catch (error) {
-        console.error('Toggle list active error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    res.status(201).json({
+        id: listId,
+        name: data.name.trim(),
+        orchestraId: data.orchestraId,
+        message: 'Muzieklijst succesvol aangemaakt.',
+    });
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}:
+ *   put:
+ *     summary: Update music list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Music list updated successfully
+ */
+router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = updateMusicListSchema.parse(req.body);
+
+    const list = db.prepare(`
+        SELECT ml.id, ml.orchestra_id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId) as any;
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
     }
-});
 
-// Delete music list (admin or music_committee)
-router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const list = db.prepare(`
-            SELECT ml.id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId);
+    // Check name uniqueness
+    const existing = db.prepare(
+        'SELECT id FROM music_lists WHERE LOWER(name) = LOWER(?) AND orchestra_id = ? AND id != ?'
+    ).get(data.name.trim(), list.orchestra_id, req.params.id);
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
-
-        db.prepare('DELETE FROM music_lists WHERE id = ?').run(req.params.id);
-
-        res.json({ message: 'Muzieklijst succesvol verwijderd.' });
-    } catch (error) {
-        console.error('Delete music list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (existing) {
+        throw new ApiError(409, 'Muzieklijst met deze naam bestaat al voor dit orkest.');
     }
-});
 
-// Add piece to list (admin or music_committee)
-router.post('/:id/pieces', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { pieceId } = req.body;
+    db.prepare('UPDATE music_lists SET name = ? WHERE id = ?').run(data.name.trim(), req.params.id);
 
-        if (!pieceId) {
-            return res.status(400).json({ error: 'Muziekstuk ID is verplicht.' });
-        }
+    logger.info(`Music list updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
-        // Verify list belongs to user's association
-        const list = db.prepare(`
-            SELECT ml.id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId);
+    res.json({ message: 'Muzieklijst succesvol bijgewerkt.' });
+}));
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
+/**
+ * @swagger
+ * /music-lists/{id}/toggle-active:
+ *   patch:
+ *     summary: Toggle list active status
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Status toggled successfully
+ */
+router.patch('/:id/toggle-active', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const list = db.prepare(`
+        SELECT ml.id, ml.is_active
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId) as any;
 
-        // Verify piece exists and belongs to same association
-        const piece = db.prepare(
-            'SELECT id FROM music_pieces WHERE id = ? AND association_id = ?'
-        ).get(pieceId, req.user!.associationId);
-
-        if (!piece) {
-            return res.status(404).json({ error: 'Muziekstuk niet gevonden.' });
-        }
-
-        // Check if already in list
-        const existing = db.prepare(
-            'SELECT * FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
-        ).get(req.params.id, pieceId);
-
-        if (existing) {
-            return res.status(400).json({ error: 'Muziekstuk staat al op deze lijst.' });
-        }
-
-        db.prepare(
-            'INSERT INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
-        ).run(req.params.id, pieceId);
-
-        res.status(201).json({ message: 'Muziekstuk succesvol toegevoegd aan lijst.' });
-    } catch (error) {
-        console.error('Add piece to list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
     }
-});
 
-// Remove piece from list (admin or music_committee)
-router.delete('/:id/pieces/:pieceId', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        // Verify list belongs to user's association
-        const list = db.prepare(`
-            SELECT ml.id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId);
+    const newStatus = list.is_active === 1 ? 0 : 1;
+    db.prepare('UPDATE music_lists SET is_active = ? WHERE id = ?').run(newStatus, req.params.id);
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
+    logger.info(`Music list ${req.params.id} toggled to ${newStatus === 1 ? 'active' : 'inactive'}`, { toggledBy: req.user!.id });
 
-        const result = db.prepare(
-            'DELETE FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
-        ).run(req.params.id, req.params.pieceId);
+    res.json({
+        message: newStatus === 1 ? 'Lijst is nu actief.' : 'Lijst is nu inactief.',
+        isActive: newStatus === 1,
+    });
+}));
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Muziekstuk niet gevonden op deze lijst.' });
-        }
+/**
+ * @swagger
+ * /music-lists/{id}:
+ *   delete:
+ *     summary: Delete music list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Music list deleted successfully
+ */
+router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
 
-        res.json({ message: 'Muziekstuk succesvol verwijderd van lijst.' });
-    } catch (error) {
-        console.error('Remove piece from list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
     }
-});
 
-// Add all pieces of a title to list (admin or music_committee)
-router.post('/:id/titles', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { title } = req.body;
+    db.prepare('DELETE FROM music_lists WHERE id = ?').run(req.params.id);
 
-        if (!title || !title.trim()) {
-            return res.status(400).json({ error: 'Titel is verplicht.' });
-        }
+    logger.info(`Music list deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
-        // Verify list belongs to user's association
-        const list = db.prepare(`
-            SELECT ml.id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId);
+    res.json({ message: 'Muzieklijst succesvol verwijderd.' });
+}));
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
+/**
+ * @swagger
+ * /music-lists/{id}/pieces:
+ *   post:
+ *     summary: Add piece to list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pieceId
+ *             properties:
+ *               pieceId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Piece added successfully
+ */
+router.post('/:id/pieces', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = addPieceToListSchema.parse(req.body);
 
-        // Get all pieces with this title
-        const pieces = db.prepare(
-            'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
-        ).all(title.trim(), req.user!.associationId) as { id: string }[];
+    // Verify list belongs to user's association
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
 
-        if (pieces.length === 0) {
-            return res.status(404).json({ error: 'Geen muziekstukken gevonden met deze titel.' });
-        }
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
 
-        // Add all pieces to list (ignore if already exists)
+    // Verify piece exists and belongs to same association
+    const piece = db.prepare(
+        'SELECT id FROM music_pieces WHERE id = ? AND association_id = ?'
+    ).get(data.pieceId, req.user!.associationId);
+
+    if (!piece) {
+        throw new ApiError(404, 'Muziekstuk niet gevonden.');
+    }
+
+    // Check if already in list
+    const existing = db.prepare(
+        'SELECT * FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
+    ).get(req.params.id, data.pieceId);
+
+    if (existing) {
+        throw new ApiError(409, 'Muziekstuk staat al op deze lijst.');
+    }
+
+    db.prepare(
+        'INSERT INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
+    ).run(req.params.id, data.pieceId);
+
+    res.status(201).json({ message: 'Muziekstuk succesvol toegevoegd aan lijst.' });
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}/pieces/{pieceId}:
+ *   delete:
+ *     summary: Remove piece from list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: pieceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Piece removed successfully
+ */
+router.delete('/:id/pieces/:pieceId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify list belongs to user's association
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
+    const result = db.prepare(
+        'DELETE FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
+    ).run(req.params.id, req.params.pieceId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Muziekstuk niet gevonden op deze lijst.');
+    }
+
+    res.json({ message: 'Muziekstuk succesvol verwijderd van lijst.' });
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}/titles:
+ *   post:
+ *     summary: Add all pieces of a title to list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Pieces added successfully
+ */
+router.post('/:id/titles', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = addTitleToListSchema.parse(req.body);
+
+    // Verify list belongs to user's association
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
+    // Get all pieces with this title
+    const pieces = db.prepare(
+        'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
+    ).all(data.title.trim(), req.user!.associationId) as { id: string }[];
+
+    if (pieces.length === 0) {
+        throw new ApiError(404, 'Geen muziekstukken gevonden met deze titel.');
+    }
+
+    // Add all pieces to list in transaction (ignore if already exists)
+    let added = 0;
+    withTransaction(() => {
         const insert = db.prepare(
             'INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
         );
 
-        let added = 0;
         for (const piece of pieces) {
             const result = insert.run(req.params.id, piece.id);
             if (result.changes > 0) added++;
         }
+    });
 
-        res.status(201).json({
-            message: `${added} van ${pieces.length} partijen toegevoegd aan de lijst.`,
-            added,
-            total: pieces.length,
-        });
-    } catch (error) {
-        console.error('Add title to list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    res.status(201).json({
+        message: `${added} van ${pieces.length} partijen toegevoegd aan de lijst.`,
+        added,
+        total: pieces.length,
+    });
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}/titles/{title}:
+ *   delete:
+ *     summary: Remove all pieces of a title from list
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: title
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pieces removed successfully
+ */
+router.delete('/:id/titles/:title', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const title = decodeURIComponent(req.params.title);
+
+    // Verify list belongs to user's association
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
     }
-});
 
-// Remove all pieces of a title from list (admin or music_committee)
-router.delete('/:id/titles/:title', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const title = decodeURIComponent(req.params.title);
+    // Get all pieces with this title
+    const pieces = db.prepare(
+        'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
+    ).all(title, req.user!.associationId) as { id: string }[];
 
-        // Verify list belongs to user's association
-        const list = db.prepare(`
-            SELECT ml.id
-            FROM music_lists ml
-            JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE ml.id = ? AND o.association_id = ?
-        `).get(req.params.id, req.user!.associationId);
+    if (pieces.length === 0) {
+        throw new ApiError(404, 'Geen muziekstukken gevonden met deze titel.');
+    }
 
-        if (!list) {
-            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
-        }
-
-        // Get all pieces with this title
-        const pieces = db.prepare(
-            'SELECT id FROM music_pieces WHERE title = ? AND association_id = ?'
-        ).all(title, req.user!.associationId) as { id: string }[];
-
-        if (pieces.length === 0) {
-            return res.status(404).json({ error: 'Geen muziekstukken gevonden met deze titel.' });
-        }
-
-        // Remove all pieces from list
+    // Remove all pieces from list in transaction
+    let removed = 0;
+    withTransaction(() => {
         const remove = db.prepare(
             'DELETE FROM music_list_pieces WHERE music_list_id = ? AND music_piece_id = ?'
         );
 
-        let removed = 0;
         for (const piece of pieces) {
             const result = remove.run(req.params.id, piece.id);
             if (result.changes > 0) removed++;
         }
+    });
 
-        res.json({
-            message: `${removed} partijen verwijderd van de lijst.`,
-            removed,
-        });
-    } catch (error) {
-        console.error('Remove title from list error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
-    }
-});
-
-// Update list positions (admin or music_committee)
-router.put('/reorder', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { orchestraId, listIds } = req.body;
-
-        if (!orchestraId || !listIds || !Array.isArray(listIds)) {
-            return res.status(400).json({ error: 'Orkest ID en lijst IDs zijn verplicht.' });
-        }
-
-        // Verify orchestra belongs to user's association
-        const orchestra = db.prepare(
-            'SELECT id FROM orchestras WHERE id = ? AND association_id = ?'
-        ).get(orchestraId, req.user!.associationId);
-
-        if (!orchestra) {
-            return res.status(404).json({ error: 'Orkest niet gevonden.' });
-        }
-
-        // Update positions
-        const update = db.prepare('UPDATE music_lists SET position = ? WHERE id = ? AND orchestra_id = ?');
-
-        for (let i = 0; i < listIds.length; i++) {
-            update.run(i, listIds[i], orchestraId);
-        }
-
-        res.json({ message: 'Volgorde succesvol bijgewerkt.' });
-    } catch (error) {
-        console.error('Reorder lists error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
-    }
-});
+    res.json({
+        message: `${removed} partijen verwijderd van de lijst.`,
+        removed,
+    });
+}));
 
 export default router;

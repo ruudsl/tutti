@@ -112,6 +112,11 @@ export const updateTitleMetaSchema = z.object({
     genreIds: z.array(z.string().uuid()).optional(),
 });
 
+// Share music piece schema
+export const shareMusicPieceSchema = z.object({
+    associationId: z.string().uuid('Ongeldig vereniging ID.'),
+});
+
 // Association schemas
 export const createAssociationSchema = z.object({
     name: z.string().min(1, 'Naam is verplicht.'),

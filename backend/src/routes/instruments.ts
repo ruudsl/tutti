@@ -2,248 +2,364 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { createInstrumentSchema, updateInstrumentSchema, addAliasSchema } from '../validation/schemas';
+import { withTransaction } from '../utils/database';
+import logger from '../utils/logger';
 
 const router = Router();
 
-// Get all instruments with aliases
-router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
-    try {
-        const instruments = db.prepare(`
-            SELECT id, name, tuning, clef, created_at
-            FROM instruments
-            ORDER BY name, tuning
-        `).all();
+/**
+ * @swagger
+ * /instruments:
+ *   get:
+ *     summary: Get all instruments with aliases
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of instruments
+ */
+router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const instruments = db.prepare(`
+        SELECT id, name, tuning, clef, created_at
+        FROM instruments
+        ORDER BY name, tuning
+    `).all();
 
-        const result = instruments.map((instrument: any) => {
-            const aliases = db.prepare(`
-                SELECT id, alias
-                FROM instrument_aliases
-                WHERE instrument_id = ?
-                ORDER BY alias
-            `).all(instrument.id);
+    const result = instruments.map((instrument: any) => {
+        const aliases = db.prepare(`
+            SELECT id, alias
+            FROM instrument_aliases
+            WHERE instrument_id = ?
+            ORDER BY alias
+        `).all(instrument.id);
 
-            return {
-                id: instrument.id,
-                name: instrument.name,
-                tuning: instrument.tuning,
-                clef: instrument.clef || 'sol',
-                createdAt: instrument.created_at,
-                aliases: aliases.map((a: any) => ({ id: a.id, name: a.alias })),
-            };
-        });
+        return {
+            id: instrument.id,
+            name: instrument.name,
+            tuning: instrument.tuning,
+            clef: instrument.clef || 'sol',
+            createdAt: instrument.created_at,
+            aliases: aliases.map((a: any) => ({ id: a.id, name: a.alias })),
+        };
+    });
 
-        res.json(result);
-    } catch (error) {
-        console.error('Get instruments error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    res.json(result);
+}));
+
+/**
+ * @swagger
+ * /instruments:
+ *   post:
+ *     summary: Create new instrument
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *               tuning:
+ *                 type: string
+ *               clef:
+ *                 type: string
+ *                 enum: [sol, fa, ut]
+ *               aliases:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Instrument created successfully
+ */
+router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = createInstrumentSchema.parse(req.body);
+
+    const tuningValue = data.tuning || null;
+    const clefValue = data.clef || 'sol';
+
+    // Check if instrument with same name, tuning and clef already exists
+    const existing = db.prepare(
+        `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
+         AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
+         AND clef = ?`
+    ).get(data.name, tuningValue, tuningValue, clefValue);
+
+    if (existing) {
+        throw new ApiError(409, `Instrument "${data.name}" met stemming "${data.tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.`);
     }
-});
 
-// Create new instrument (admin or music_committee)
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { name, tuning, clef, aliases } = req.body;
+    const instrumentId = uuidv4();
 
-        if (!name) {
-            return res.status(400).json({ error: 'Instrumentnaam is verplicht.' });
-        }
-
-        // Check if instrument with same name, tuning and clef already exists
-        const tuningValue = tuning || null;
-        const clefValue = clef || 'sol';
-        const existing = db.prepare(
-            `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
-             AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
-             AND clef = ?`
-        ).get(name, tuningValue, tuningValue, clefValue);
-        if (existing) {
-            return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.` });
-        }
-
-        const instrumentId = uuidv4();
+    withTransaction(() => {
         db.prepare('INSERT INTO instruments (id, name, tuning, clef) VALUES (?, ?, ?, ?)').run(
             instrumentId,
-            name,
-            tuning || null,
-            clef || 'sol'
+            data.name,
+            tuningValue,
+            clefValue
         );
 
         // Add aliases
-        if (aliases && Array.isArray(aliases)) {
+        if (data.aliases && data.aliases.length > 0) {
             const insertAlias = db.prepare(
                 'INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)'
             );
-            for (const alias of aliases) {
+            for (const alias of data.aliases) {
                 if (alias && alias.trim()) {
                     insertAlias.run(uuidv4(), instrumentId, alias.trim());
                 }
             }
         }
+    });
 
-        res.status(201).json({
-            id: instrumentId,
-            name,
-            tuning,
-            clef: clef || 'sol',
-            message: 'Instrument succesvol aangemaakt.',
-        });
-    } catch (error) {
-        console.error('Create instrument error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    logger.info(`Instrument created: ${data.name}`, { instrumentId, createdBy: req.user!.id });
+
+    res.status(201).json({
+        id: instrumentId,
+        name: data.name,
+        tuning: data.tuning,
+        clef: clefValue,
+        message: 'Instrument succesvol aangemaakt.',
+    });
+}));
+
+/**
+ * @swagger
+ * /instruments/{id}:
+ *   put:
+ *     summary: Update instrument
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Instrument updated successfully
+ */
+router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = updateInstrumentSchema.parse(req.body);
+
+    const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
+    if (!instrument) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
     }
-});
 
-// Update instrument (admin or music_committee)
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { name, tuning, clef } = req.body;
+    // Check name+tuning+clef uniqueness if changed
+    const tuningValue = data.tuning || null;
+    const clefValue = data.clef || 'sol';
+    const existing = db.prepare(
+        `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
+         AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
+         AND clef = ?
+         AND id != ?`
+    ).get(data.name, tuningValue, tuningValue, clefValue, req.params.id);
 
-        const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
-        if (!instrument) {
-            return res.status(404).json({ error: 'Instrument niet gevonden.' });
-        }
-
-        // Check name+tuning+clef uniqueness if changed
-        if (name) {
-            const tuningValue = tuning || null;
-            const clefValue = clef || 'sol';
-            const existing = db.prepare(
-                `SELECT id FROM instruments WHERE LOWER(name) = LOWER(?)
-                 AND (tuning = ? OR (tuning IS NULL AND ? IS NULL))
-                 AND clef = ?
-                 AND id != ?`
-            ).get(name, tuningValue, tuningValue, clefValue, req.params.id);
-            if (existing) {
-                return res.status(400).json({ error: `Instrument "${name}" met stemming "${tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.` });
-            }
-        }
-
-        db.prepare('UPDATE instruments SET name = ?, tuning = ?, clef = ? WHERE id = ?').run(
-            name,
-            tuning || null,
-            clef || 'sol',
-            req.params.id
-        );
-
-        res.json({ message: 'Instrument succesvol bijgewerkt.' });
-    } catch (error) {
-        console.error('Update instrument error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (existing) {
+        throw new ApiError(409, `Instrument "${data.name}" met stemming "${data.tuning || 'geen'}" en sleutel "${clefValue}" bestaat al.`);
     }
-});
 
-// Delete instrument (admin only)
-router.delete('/:id', authenticateToken, requireRole('admin'), (req: AuthRequest, res: Response) => {
-    try {
-        const result = db.prepare('DELETE FROM instruments WHERE id = ?').run(req.params.id);
+    db.prepare('UPDATE instruments SET name = ?, tuning = ?, clef = ? WHERE id = ?').run(
+        data.name,
+        tuningValue,
+        clefValue,
+        req.params.id
+    );
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Instrument niet gevonden.' });
-        }
+    logger.info(`Instrument updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
-        res.json({ message: 'Instrument succesvol verwijderd.' });
-    } catch (error) {
-        console.error('Delete instrument error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    res.json({ message: 'Instrument succesvol bijgewerkt.' });
+}));
+
+/**
+ * @swagger
+ * /instruments/{id}:
+ *   delete:
+ *     summary: Delete instrument
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Instrument deleted successfully
+ */
+router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare('DELETE FROM instruments WHERE id = ?').run(req.params.id);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
     }
-});
 
-// Add alias to instrument (admin or music_committee)
-router.post('/:id/aliases', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { alias } = req.body;
+    logger.info(`Instrument deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
-        if (!alias || !alias.trim()) {
-            return res.status(400).json({ error: 'Alias is verplicht.' });
-        }
+    res.json({ message: 'Instrument succesvol verwijderd.' });
+}));
 
-        const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
-        if (!instrument) {
-            return res.status(404).json({ error: 'Instrument niet gevonden.' });
-        }
+/**
+ * @swagger
+ * /instruments/{id}/aliases:
+ *   post:
+ *     summary: Add alias to instrument
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - alias
+ *             properties:
+ *               alias:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Alias added successfully
+ */
+router.post('/:id/aliases', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = addAliasSchema.parse(req.body);
 
-        // Check if alias already exists for this instrument
-        const existing = db.prepare(
-            'SELECT id FROM instrument_aliases WHERE instrument_id = ? AND LOWER(alias) = LOWER(?)'
-        ).get(req.params.id, alias.trim());
-
-        if (existing) {
-            return res.status(400).json({ error: 'Alias bestaat al voor dit instrument.' });
-        }
-
-        const aliasId = uuidv4();
-        db.prepare('INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)').run(
-            aliasId,
-            req.params.id,
-            alias.trim()
-        );
-
-        res.status(201).json({
-            id: aliasId,
-            alias: alias.trim(),
-            message: 'Alias succesvol toegevoegd.',
-        });
-    } catch (error) {
-        console.error('Add alias error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
+    if (!instrument) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
     }
-});
 
-// Delete alias (admin or music_committee)
-router.delete('/:id/aliases/:aliasId', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const result = db.prepare(
-            'DELETE FROM instrument_aliases WHERE id = ? AND instrument_id = ?'
-        ).run(req.params.aliasId, req.params.id);
+    // Check if alias already exists for this instrument
+    const existing = db.prepare(
+        'SELECT id FROM instrument_aliases WHERE instrument_id = ? AND LOWER(alias) = LOWER(?)'
+    ).get(req.params.id, data.alias.trim());
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Alias niet gevonden.' });
-        }
-
-        res.json({ message: 'Alias succesvol verwijderd.' });
-    } catch (error) {
-        console.error('Delete alias error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+    if (existing) {
+        throw new ApiError(409, 'Alias bestaat al voor dit instrument.');
     }
-});
 
-// Find instrument by name or alias
-router.get('/find/:name', authenticateToken, (req: AuthRequest, res: Response) => {
-    try {
-        const searchName = req.params.name.toLowerCase();
+    const aliasId = uuidv4();
+    db.prepare('INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)').run(
+        aliasId,
+        req.params.id,
+        data.alias.trim()
+    );
 
-        // First try exact match on instrument name
-        let instrument = db.prepare(`
-            SELECT id, name, tuning
-            FROM instruments
-            WHERE LOWER(name) = ?
+    res.status(201).json({
+        id: aliasId,
+        alias: data.alias.trim(),
+        message: 'Alias succesvol toegevoegd.',
+    });
+}));
+
+/**
+ * @swagger
+ * /instruments/{id}/aliases/{aliasId}:
+ *   delete:
+ *     summary: Delete alias from instrument
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: aliasId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alias deleted successfully
+ */
+router.delete('/:id/aliases/:aliasId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare(
+        'DELETE FROM instrument_aliases WHERE id = ? AND instrument_id = ?'
+    ).run(req.params.aliasId, req.params.id);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Alias niet gevonden.');
+    }
+
+    res.json({ message: 'Alias succesvol verwijderd.' });
+}));
+
+/**
+ * @swagger
+ * /instruments/find/{name}:
+ *   get:
+ *     summary: Find instrument by name or alias
+ *     tags: [Instruments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Instrument found
+ *       404:
+ *         description: Instrument not found
+ */
+router.get('/find/:name', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const searchName = req.params.name.toLowerCase();
+
+    // First try exact match on instrument name
+    let instrument = db.prepare(`
+        SELECT id, name, tuning
+        FROM instruments
+        WHERE LOWER(name) = ?
+    `).get(searchName) as any;
+
+    // If not found, try alias
+    if (!instrument) {
+        const alias = db.prepare(`
+            SELECT i.id, i.name, i.tuning
+            FROM instruments i
+            JOIN instrument_aliases ia ON i.id = ia.instrument_id
+            WHERE LOWER(ia.alias) = ?
         `).get(searchName) as any;
 
-        // If not found, try alias
-        if (!instrument) {
-            const alias = db.prepare(`
-                SELECT i.id, i.name, i.tuning
-                FROM instruments i
-                JOIN instrument_aliases ia ON i.id = ia.instrument_id
-                WHERE LOWER(ia.alias) = ?
-            `).get(searchName) as any;
-
-            instrument = alias;
-        }
-
-        if (!instrument) {
-            return res.status(404).json({ error: 'Instrument niet gevonden.' });
-        }
-
-        res.json({
-            id: instrument.id,
-            name: instrument.name,
-            tuning: instrument.tuning,
-        });
-    } catch (error) {
-        console.error('Find instrument error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
+        instrument = alias;
     }
-});
+
+    if (!instrument) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
+    }
+
+    res.json({
+        id: instrument.id,
+        name: instrument.name,
+        tuning: instrument.tuning,
+    });
+}));
 
 export default router;

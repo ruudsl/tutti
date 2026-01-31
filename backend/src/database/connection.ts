@@ -136,6 +136,27 @@ class DatabaseWrapper {
         stmt.free();
         return results;
     }
+
+    /**
+     * Execute multiple operations in a transaction.
+     * If the function throws, the transaction is rolled back.
+     * Compatible with better-sqlite3 transaction API.
+     */
+    transaction<T>(fn: () => T): () => T {
+        return () => {
+            const db = this.ensureInit();
+            db.run('BEGIN TRANSACTION');
+            try {
+                const result = fn();
+                db.run('COMMIT');
+                this.save();
+                return result;
+            } catch (error) {
+                db.run('ROLLBACK');
+                throw error;
+            }
+        };
+    }
 }
 
 class PreparedStatement {

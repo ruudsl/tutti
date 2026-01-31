@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import swaggerUi from 'swagger-ui-express';
 
 // Import configuration
 import config from './config';
@@ -12,6 +13,12 @@ import db from './database/connection';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+
+// Import Swagger
+import { swaggerSpec } from './swagger';
+
+// Import logger
+import logger from './utils/logger';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -76,6 +83,18 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Swagger API documentation
+if (config.isDevelopment) {
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'Harmonie API Docs',
+    }));
+    app.get('/api/docs.json', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(swaggerSpec);
+    });
+}
+
 // Serve static files in production
 if (config.isProduction) {
     const frontendPath = path.join(__dirname, '../../frontend/dist');
@@ -101,21 +120,21 @@ async function startServer() {
     try {
         // Initialize database
         await db.init();
-        console.log('Database initialized successfully');
+        logger.info('Database initialized successfully');
 
         // Initialize default data
         const { initializeDatabase } = await import('./database/init');
         await initializeDatabase();
 
         app.listen(config.port, () => {
-            console.log(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
-            console.log(`   API beschikbaar op http://localhost:${config.port}/api`);
+            logger.info(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
+            logger.info(`   API beschikbaar op http://localhost:${config.port}/api`);
             if (config.isDevelopment) {
-                console.log(`   Mode: development`);
+                logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
             }
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 }
