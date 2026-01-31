@@ -292,6 +292,126 @@ router.post('/upload', authenticateToken, requireRole('admin', 'music_committee'
     }
 });
 
+// Get or create title metadata - MUST be before /:id routes!
+router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const title = decodeURIComponent(req.params.title);
+        const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
+
+        const meta = db.prepare(`
+            SELECT id, title, arranger, youtube_url, description, duration_seconds
+            FROM music_titles
+            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
+        `).get(title, arranger, req.user!.associationId) as any;
+
+        if (meta) {
+            // Get genres for this title
+            const genres = db.prepare(`
+                SELECT g.id, g.name
+                FROM genres g
+                JOIN music_title_genres mtg ON g.id = mtg.genre_id
+                WHERE mtg.music_title_id = ?
+                ORDER BY g.name
+            `).all(meta.id) as { id: string; name: string }[];
+
+            res.json({
+                id: meta.id,
+                title: meta.title,
+                arranger: meta.arranger,
+                youtubeUrl: meta.youtube_url,
+                description: meta.description,
+                durationSeconds: meta.duration_seconds || 0,
+                genres,
+            });
+        } else {
+            res.json({
+                title,
+                arranger,
+                youtubeUrl: null,
+                description: null,
+                durationSeconds: 0,
+                genres: [],
+            });
+        }
+    } catch (error) {
+        console.error('Get title meta error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
+// Update title metadata (YouTube, description, duration, genres) - MUST be before /:id routes!
+router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
+    try {
+        const { title, arranger, youtubeUrl, description, durationSeconds, genreIds } = req.body;
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Titel is verplicht.' });
+        }
+
+        let titleId: string;
+
+        // Check if title metadata already exists
+        const existing = db.prepare(`
+            SELECT id FROM music_titles
+            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
+        `).get(title.trim(), arranger || null, req.user!.associationId) as { id: string } | undefined;
+
+        if (existing) {
+            // Update existing
+            db.prepare(`
+                UPDATE music_titles
+                SET youtube_url = ?, description = ?, duration_seconds = ?
+                WHERE id = ?
+            `).run(
+                youtubeUrl || null,
+                description || null,
+                durationSeconds || 0,
+                existing.id
+            );
+            titleId = existing.id;
+        } else {
+            // Create new
+            titleId = uuidv4();
+            db.prepare(`
+                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, association_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                titleId,
+                title.trim(),
+                arranger || null,
+                youtubeUrl || null,
+                description || null,
+                durationSeconds || 0,
+                req.user!.associationId
+            );
+        }
+
+        // Update genres if provided
+        if (Array.isArray(genreIds)) {
+            // Remove existing genre associations
+            db.prepare('DELETE FROM music_title_genres WHERE music_title_id = ?').run(titleId);
+
+            // Add new genre associations
+            const insertGenre = db.prepare(
+                'INSERT INTO music_title_genres (music_title_id, genre_id) VALUES (?, ?)'
+            );
+            for (const genreId of genreIds) {
+                if (genreId) {
+                    insertGenre.run(titleId, genreId);
+                }
+            }
+        }
+
+        res.json({
+            id: titleId,
+            message: existing ? 'Titel metadata bijgewerkt.' : 'Titel metadata aangemaakt.',
+        });
+    } catch (error) {
+        console.error('Update title meta error:', error);
+        res.status(500).json({ error: 'Interne serverfout.' });
+    }
+});
+
 // Update music piece (admin or music_committee)
 router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
@@ -513,126 +633,6 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
         res.json(titlesWithGenres);
     } catch (error) {
         console.error('Get titles error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
-    }
-});
-
-// Get or create title metadata
-router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const title = decodeURIComponent(req.params.title);
-        const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
-
-        const meta = db.prepare(`
-            SELECT id, title, arranger, youtube_url, description, duration_seconds
-            FROM music_titles
-            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
-        `).get(title, arranger, req.user!.associationId) as any;
-
-        if (meta) {
-            // Get genres for this title
-            const genres = db.prepare(`
-                SELECT g.id, g.name
-                FROM genres g
-                JOIN music_title_genres mtg ON g.id = mtg.genre_id
-                WHERE mtg.music_title_id = ?
-                ORDER BY g.name
-            `).all(meta.id) as { id: string; name: string }[];
-
-            res.json({
-                id: meta.id,
-                title: meta.title,
-                arranger: meta.arranger,
-                youtubeUrl: meta.youtube_url,
-                description: meta.description,
-                durationSeconds: meta.duration_seconds || 0,
-                genres,
-            });
-        } else {
-            res.json({
-                title,
-                arranger,
-                youtubeUrl: null,
-                description: null,
-                durationSeconds: 0,
-                genres: [],
-            });
-        }
-    } catch (error) {
-        console.error('Get title meta error:', error);
-        res.status(500).json({ error: 'Interne serverfout.' });
-    }
-});
-
-// Update title metadata (YouTube, description, duration, genres)
-router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
-    try {
-        const { title, arranger, youtubeUrl, description, durationSeconds, genreIds } = req.body;
-
-        if (!title || !title.trim()) {
-            return res.status(400).json({ error: 'Titel is verplicht.' });
-        }
-
-        let titleId: string;
-
-        // Check if title metadata already exists
-        const existing = db.prepare(`
-            SELECT id FROM music_titles
-            WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
-        `).get(title.trim(), arranger || null, req.user!.associationId) as { id: string } | undefined;
-
-        if (existing) {
-            // Update existing
-            db.prepare(`
-                UPDATE music_titles
-                SET youtube_url = ?, description = ?, duration_seconds = ?
-                WHERE id = ?
-            `).run(
-                youtubeUrl || null,
-                description || null,
-                durationSeconds || 0,
-                existing.id
-            );
-            titleId = existing.id;
-        } else {
-            // Create new
-            titleId = uuidv4();
-            db.prepare(`
-                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, association_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(
-                titleId,
-                title.trim(),
-                arranger || null,
-                youtubeUrl || null,
-                description || null,
-                durationSeconds || 0,
-                req.user!.associationId
-            );
-        }
-
-        // Update genres if provided
-        if (Array.isArray(genreIds)) {
-            // Remove existing genre associations
-            db.prepare('DELETE FROM music_title_genres WHERE music_title_id = ?').run(titleId);
-
-            // Add new genre associations
-            const insertGenre = db.prepare(
-                'INSERT INTO music_title_genres (music_title_id, genre_id) VALUES (?, ?)'
-            );
-            for (const genreId of genreIds) {
-                if (genreId) {
-                    insertGenre.run(titleId, genreId);
-                }
-            }
-        }
-
-        res.json({
-            id: titleId,
-            message: existing ? 'Titel metadata bijgewerkt.' : 'Titel metadata aangemaakt.',
-        });
-    } catch (error) {
-        console.error('Update title meta error:', error);
         res.status(500).json({ error: 'Interne serverfout.' });
     }
 });
