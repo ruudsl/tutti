@@ -128,3 +128,17 @@ async function initializeDatabase() {
 }
 
 export { initializeDatabase };
+
+// Run when executed directly (npm run db:init)
+if (require.main === module) {
+    (async () => {
+        try {
+            await db.init();
+            await initializeDatabase();
+            process.exit(0);
+        } catch (error) {
+            console.error('Database initialization failed:', error);
+            process.exit(1);
+        }
+    })();
+}
