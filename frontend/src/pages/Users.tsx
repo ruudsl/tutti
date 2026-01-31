@@ -186,7 +186,14 @@ export default function Users() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>Leden</h1>
+        <h1>
+          Leden
+          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+            {filteredUsers.length === users.length
+              ? users.length
+              : `${filteredUsers.length} / ${users.length}`}
+          </span>
+        </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
           + Nieuw lid
         </button>
@@ -252,12 +259,7 @@ export default function Users() {
               </button>
             )}
           </div>
-          {(filterSearch || filterOrchestra || filterInstrument) && (
-            <div className="piece-meta" style={{ marginTop: '0.5rem' }}>
-              {filteredUsers.length} van {users.length} leden getoond
-            </div>
-          )}
-        </div>
+                  </div>
       </div>
 
       <div className="card">
