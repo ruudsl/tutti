@@ -123,8 +123,13 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
         }
 
         if (instrumentId) {
-            query += ' AND mp.instrument_id = ?';
-            params.push(instrumentId);
+            if (instrumentId === '__none__') {
+                // Special filter: pieces without instrument assigned
+                query += ' AND mp.instrument_id IS NULL';
+            } else {
+                query += ' AND mp.instrument_id = ?';
+                params.push(instrumentId);
+            }
         }
 
         if (listId) {

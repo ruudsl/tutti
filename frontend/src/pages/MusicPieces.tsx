@@ -159,6 +159,7 @@ export default function MusicPieces() {
                 onChange={(e) => setFilterInstrument(e.target.value)}
               >
                 <option value="">Alle instrumenten</option>
+                <option value="__none__">Zonder instrument</option>
                 {instruments.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
