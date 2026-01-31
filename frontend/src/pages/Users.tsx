@@ -17,6 +17,11 @@ export default function Users() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
+  // Filter state
+  const [filterOrchestra, setFilterOrchestra] = useState<string>('');
+  const [filterInstrument, setFilterInstrument] = useState<string>('');
+  const [filterSearch, setFilterSearch] = useState<string>('');
+
   // Form state
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
@@ -145,6 +150,31 @@ export default function Users() {
     }
   };
 
+  // Filter users
+  const filteredUsers = users.filter((user) => {
+    // Search filter
+    if (filterSearch) {
+      const searchLower = filterSearch.toLowerCase();
+      const nameMatch = `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower);
+      const emailMatch = user.email.toLowerCase().includes(searchLower);
+      if (!nameMatch && !emailMatch) return false;
+    }
+
+    // Orchestra filter
+    if (filterOrchestra) {
+      const hasOrchestra = user.orchestras?.some((o) => o.id === filterOrchestra);
+      if (!hasOrchestra) return false;
+    }
+
+    // Instrument filter
+    if (filterInstrument) {
+      const hasInstrument = user.instruments?.some((i) => i.id === filterInstrument);
+      if (!hasInstrument) return false;
+    }
+
+    return true;
+  });
+
   if (isLoading) {
     return (
       <div className="loading">
@@ -162,6 +192,74 @@ export default function Users() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="card mb-2">
+        <div className="card-body">
+          <div className="flex gap-2 items-end" style={{ flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: '200px', flex: 1 }}>
+              <label className="form-label">Zoeken</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Naam of email..."
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: '180px' }}>
+              <label className="form-label">Orkest</label>
+              <select
+                className="form-control"
+                value={filterOrchestra}
+                onChange={(e) => setFilterOrchestra(e.target.value)}
+              >
+                <option value="">Alle orkesten</option>
+                {orchestras.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
+              <label className="form-label">Instrument</label>
+              <select
+                className="form-control"
+                value={filterInstrument}
+                onChange={(e) => setFilterInstrument(e.target.value)}
+              >
+                <option value="">Alle instrumenten</option>
+                {instruments.map((i) => {
+                  const details = [i.tuning, i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol'].filter(Boolean).join(', ');
+                  return (
+                    <option key={i.id} value={i.id}>
+                      {i.name}{details ? ` (${details})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            {(filterSearch || filterOrchestra || filterInstrument) && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  setFilterSearch('');
+                  setFilterOrchestra('');
+                  setFilterInstrument('');
+                }}
+                style={{ marginBottom: 0 }}
+              >
+                Wis filters
+              </button>
+            )}
+          </div>
+          {(filterSearch || filterOrchestra || filterInstrument) && (
+            <div className="piece-meta" style={{ marginTop: '0.5rem' }}>
+              {filteredUsers.length} van {users.length} leden getoond
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
           <table className="table mb-0">
@@ -176,7 +274,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr key={user.id}>
                   <td>
                     <strong>{user.firstName} {user.lastName}</strong>
