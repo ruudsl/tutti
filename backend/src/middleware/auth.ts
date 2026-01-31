@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import db from '../database/connection';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'harmonie-secret-key-change-in-production';
+import config from '../config';
 
 export interface UserPayload {
     id: string;
@@ -24,7 +22,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+        const decoded = jwt.verify(token, config.jwtSecret) as UserPayload;
         req.user = decoded;
         next();
     } catch (error) {
@@ -54,7 +52,7 @@ export function generateToken(user: { id: string; email: string; role: string; a
             role: user.role,
             associationId: user.association_id,
         },
-        JWT_SECRET,
-        { expiresIn: '7d' }
+        config.jwtSecret,
+        { expiresIn: config.jwtExpiresIn as jwt.SignOptions['expiresIn'] }
     );
 }

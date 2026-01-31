@@ -1,0 +1,88 @@
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+
+// Custom error class for API errors
+export class ApiError extends Error {
+    statusCode: number;
+    isOperational: boolean;
+
+    constructor(statusCode: number, message: string, isOperational = true) {
+        super(message);
+        this.statusCode = statusCode;
+        this.isOperational = isOperational;
+
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+// Common API errors
+export const errors = {
+    badRequest: (message = 'Ongeldige aanvraag.') => new ApiError(400, message),
+    unauthorized: (message = 'Niet geautoriseerd.') => new ApiError(401, message),
+    forbidden: (message = 'Geen toegang.') => new ApiError(403, message),
+    notFound: (message = 'Niet gevonden.') => new ApiError(404, message),
+    conflict: (message = 'Conflict.') => new ApiError(409, message),
+    internal: (message = 'Interne serverfout.') => new ApiError(500, message, false),
+};
+
+// Async handler wrapper to catch errors automatically
+export function asyncHandler<T extends Request = Request>(
+    fn: (req: T, res: Response, next: NextFunction) => Promise<any>
+): RequestHandler {
+    return (req, res, next) => {
+        Promise.resolve(fn(req as T, res, next)).catch(next);
+    };
+}
+
+// Central error handling middleware
+export function errorHandler(
+    err: Error | ApiError,
+    req: Request,
+    res: Response,
+    next: NextFunction
+): void {
+    // Log the error
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
+    if (process.env.NODE_ENV !== 'production') {
+        console.error(err.stack);
+    }
+
+    // Handle known API errors
+    if (err instanceof ApiError) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+    }
+
+    // Handle multer file upload errors
+    if (err.message === 'Alleen PDF bestanden zijn toegestaan.') {
+        res.status(400).json({ error: err.message });
+        return;
+    }
+
+    // Handle validation errors (from Zod)
+    if (err.name === 'ZodError') {
+        res.status(400).json({
+            error: 'Validatiefout.',
+            details: (err as any).errors,
+        });
+        return;
+    }
+
+    // Handle SQLite constraint errors
+    if (err.message?.includes('UNIQUE constraint failed')) {
+        res.status(409).json({ error: 'Dit item bestaat al.' });
+        return;
+    }
+
+    if (err.message?.includes('FOREIGN KEY constraint failed')) {
+        res.status(400).json({ error: 'Ongeldige referentie.' });
+        return;
+    }
+
+    // Default to 500 Internal Server Error
+    res.status(500).json({ error: 'Interne serverfout.' });
+}
+
+// 404 handler for unknown routes
+export function notFoundHandler(req: Request, res: Response): void {
+    res.status(404).json({ error: `Route ${req.method} ${req.path} niet gevonden.` });
+}
