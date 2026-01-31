@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     youtube_url TEXT,
     description TEXT,
     duration_seconds INTEGER DEFAULT 0,
+    is_shared BOOLEAN DEFAULT 0, -- Mag gedeeld worden met andere verenigingen
     association_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -140,13 +141,23 @@ CREATE TABLE IF NOT EXISTS music_title_genres (
     FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE
 );
 
--- Toegang tot gedeelde muziekstukken per vereniging
+-- Toegang tot gedeelde muziekstukken per vereniging (legacy, niet meer gebruikt)
 CREATE TABLE IF NOT EXISTS shared_music_access (
     music_piece_id TEXT NOT NULL,
     association_id TEXT NOT NULL,
     granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (music_piece_id, association_id),
     FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Toegang tot gedeelde titels per vereniging
+CREATE TABLE IF NOT EXISTS shared_title_access (
+    music_title_id TEXT NOT NULL,
+    association_id TEXT NOT NULL,
+    granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (music_title_id, association_id),
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
 );
 

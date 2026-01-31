@@ -66,6 +66,7 @@ export default function MusicListManager() {
     description: '',
     durationStr: '',
     genreIds: [] as string[],
+    isShared: false,
   });
 
   // Genres
@@ -276,6 +277,7 @@ export default function MusicListManager() {
       description: title.description || '',
       durationStr: title.durationSeconds ? formatDuration(title.durationSeconds).replace(/^0:/, '') : '',
       genreIds: title.genres?.map(g => g.id) || [],
+      isShared: title.isShared || false,
     });
     setYoutubeMeta(null);
   };
@@ -306,6 +308,7 @@ export default function MusicListManager() {
         description: titleMetaForm.description || null,
         durationSeconds: parseDuration(titleMetaForm.durationStr),
         genreIds: titleMetaForm.genreIds,
+        isShared: titleMetaForm.isShared,
       });
       setEditingTitle(null);
       if (listId) {
@@ -897,6 +900,19 @@ export default function MusicListManager() {
                       </label>
                     ))}
                   </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-check" style={{ cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={titleMetaForm.isShared}
+                      onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
+                    />
+                    <span style={{ marginLeft: '0.5rem' }}>
+                      Delen met andere verenigingen toegestaan
+                    </span>
+                  </label>
                 </div>
               </div>
               <div className="modal-footer">

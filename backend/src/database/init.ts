@@ -124,6 +124,19 @@ async function initializeDatabase() {
         console.log(`Seeded ${defaultGenres.length} genres`);
     }
 
+    // Migration: Add is_shared column to music_titles if it doesn't exist
+    try {
+        const tableInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasIsShared = tableInfo.some(col => col.name === 'is_shared');
+        if (!hasIsShared) {
+            console.log('Migration: Adding is_shared column to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN is_shared BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet, which is fine
+    }
+
     console.log('Database initialization complete!');
 }
 

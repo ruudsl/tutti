@@ -92,7 +92,7 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
 
         let query = `
             SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
-                   mp.youtube_url, mp.original_filename, mp.is_shared, mp.created_at,
+                   mp.youtube_url, mp.original_filename, mp.created_at,
                    i.id as instrument_id, i.name as instrument_name
             FROM music_pieces mp
             LEFT JOIN instruments i ON mp.instrument_id = i.id
@@ -150,7 +150,6 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
             clef: p.clef,
             youtubeUrl: p.youtube_url,
             originalFilename: p.original_filename,
-            isShared: Boolean(p.is_shared),
             createdAt: p.created_at,
             instrumentId: p.instrument_id,
             instrumentName: p.instrument_name,
@@ -304,7 +303,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
         const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
 
         const meta = db.prepare(`
-            SELECT id, title, arranger, youtube_url, description, duration_seconds
+            SELECT id, title, arranger, youtube_url, description, duration_seconds, is_shared
             FROM music_titles
             WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
         `).get(title, arranger, req.user!.associationId) as any;
@@ -326,6 +325,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
                 youtubeUrl: meta.youtube_url,
                 description: meta.description,
                 durationSeconds: meta.duration_seconds || 0,
+                isShared: Boolean(meta.is_shared),
                 genres,
             });
         } else {
@@ -335,6 +335,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
                 youtubeUrl: null,
                 description: null,
                 durationSeconds: 0,
+                isShared: false,
                 genres: [],
             });
         }
@@ -344,10 +345,10 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
     }
 });
 
-// Update title metadata (YouTube, description, duration, genres) - MUST be before /:id routes!
+// Update title metadata (YouTube, description, duration, genres, sharing) - MUST be before /:id routes!
 router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { title, arranger, youtubeUrl, description, durationSeconds, genreIds } = req.body;
+        const { title, arranger, youtubeUrl, description, durationSeconds, genreIds, isShared } = req.body;
 
         if (!title || !title.trim()) {
             return res.status(400).json({ error: 'Titel is verplicht.' });
@@ -365,12 +366,13 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Update existing
             db.prepare(`
                 UPDATE music_titles
-                SET youtube_url = ?, description = ?, duration_seconds = ?
+                SET youtube_url = ?, description = ?, duration_seconds = ?, is_shared = ?
                 WHERE id = ?
             `).run(
                 youtubeUrl || null,
                 description || null,
                 durationSeconds || 0,
+                isShared ? 1 : 0,
                 existing.id
             );
             titleId = existing.id;
@@ -378,8 +380,8 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Create new
             titleId = uuidv4();
             db.prepare(`
-                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, association_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, is_shared, association_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 titleId,
                 title.trim(),
@@ -387,6 +389,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 youtubeUrl || null,
                 description || null,
                 durationSeconds || 0,
+                isShared ? 1 : 0,
                 req.user!.associationId
             );
         }
@@ -420,7 +423,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
 // Update music piece (admin or music_committee)
 router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (req: AuthRequest, res: Response) => {
     try {
-        const { title, arranger, instrumentId, tuning, groupNumber, clef, youtubeUrl, isShared } = req.body;
+        const { title, arranger, instrumentId, tuning, groupNumber, clef, youtubeUrl } = req.body;
 
         const piece = db.prepare(
             'SELECT id FROM music_pieces WHERE id = ? AND association_id = ?'
@@ -433,7 +436,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
         db.prepare(`
             UPDATE music_pieces
             SET title = ?, arranger = ?, instrument_id = ?, tuning = ?, group_number = ?,
-                clef = ?, youtube_url = ?, is_shared = ?
+                clef = ?, youtube_url = ?
             WHERE id = ?
         `).run(
             title,
@@ -443,7 +446,6 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), (
             groupNumber || null,
             clef || null,
             youtubeUrl || null,
-            isShared ? 1 : 0,
             req.params.id
         );
 
@@ -569,7 +571,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
                    mt.id as title_id,
                    mt.youtube_url,
                    mt.description,
-                   mt.duration_seconds
+                   mt.duration_seconds,
+                   mt.is_shared
             FROM music_pieces mp
             LEFT JOIN instruments i ON mp.instrument_id = i.id
             LEFT JOIN music_titles mt ON mp.title = mt.title
@@ -629,6 +632,7 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
                 youtubeUrl: t.youtube_url,
                 description: t.description,
                 durationSeconds: t.duration_seconds || 0,
+                isShared: Boolean(t.is_shared),
                 instruments: t.instruments ? t.instruments.split(',') : [],
                 onList: listId ? titlesOnList.has(t.title) : undefined,
                 genres,

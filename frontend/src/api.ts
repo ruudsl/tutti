@@ -308,6 +308,7 @@ export const getTitleMeta = async (title: string, arranger?: string | null): Pro
   youtubeUrl: string | null;
   description: string | null;
   durationSeconds: number;
+  isShared: boolean;
   genres: Genre[];
 }> => {
   const params = arranger ? `?arranger=${encodeURIComponent(arranger)}` : '';
@@ -321,6 +322,7 @@ export const updateTitleMeta = async (titleData: {
   youtubeUrl?: string | null;
   description?: string | null;
   durationSeconds?: number;
+  isShared?: boolean;
   genreIds?: string[];
 }): Promise<{ id: string }> => {
   const { data } = await api.put('/music-pieces/title-meta', titleData);

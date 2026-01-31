@@ -49,6 +49,7 @@ export interface MusicTitle {
   youtubeUrl: string | null;
   description: string | null;
   durationSeconds: number;
+  isShared?: boolean;
   instruments: string[];
   genres?: Genre[];
   onList?: boolean;
@@ -63,7 +64,6 @@ export interface MusicPiece {
   clef: string | null;
   youtubeUrl: string | null;
   originalFilename: string;
-  isShared?: boolean;
   instrumentId: string | null;
   instrumentName: string | null;
   listName?: string;
