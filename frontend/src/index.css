@@ -757,3 +757,193 @@ body {
     flex-wrap: wrap;
   }
 }
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--border) 25%,
+    #f0f0f0 50%,
+    var(--border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error Boundary */
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--background);
+}
+
+.error-boundary-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.error-boundary-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.error-boundary-content h1 {
+  margin-bottom: 1rem;
+  color: var(--danger);
+}
+
+.error-boundary-content p {
+  color: var(--text-light);
+  margin-bottom: 1.5rem;
+}
+
+.error-boundary-details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.error-boundary-details pre {
+  font-size: 0.75rem;
+  color: var(--danger);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* Not Found / 404 */
+.not-found {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.not-found-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+.not-found-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.not-found-content h1 {
+  margin-bottom: 0.5rem;
+}
+
+.not-found-content p {
+  color: var(--text-light);
+  margin-bottom: 1.5rem;
+}
+
+.not-found-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* Dropzone */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface);
+}
+
+.dropzone:hover,
+.dropzone.drag-active {
+  border-color: var(--primary);
+  background: #dbeafe;
+}
+
+.dropzone.drag-active {
+  transform: scale(1.02);
+}
+
+.dropzone-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.dropzone-text {
+  color: var(--text-light);
+}
+
+.dropzone-text strong {
+  color: var(--primary);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 1.5rem;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--background);
+  border-color: var(--primary);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.pagination-info {
+  color: var(--text-light);
+  font-size: 0.875rem;
+  margin: 0 0.5rem;
+}

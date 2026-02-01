@@ -1,111 +1,70 @@
-import { useState, useEffect } from 'react';
-import {
-  getGenres,
-  createGenre,
-  updateGenre,
-  deleteGenre,
-  getMusicTitles,
-} from '../api';
-import type { Genre, MusicTitle } from '../types';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getMusicTitles } from '../api';
+import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '../hooks/useGenres';
+import { queryKeys } from '../lib/queryClient';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
+import { formatDuration } from '../utils/format';
+import type { Genre } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 export default function Genres() {
   const { user } = useAuth();
-  const [genres, setGenres] = useState<Genre[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
+  const [deletingGenre, setDeletingGenre] = useState<Genre | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
-  const [titlesForGenre, setTitlesForGenre] = useState<MusicTitle[]>([]);
-  const [loadingTitles, setLoadingTitles] = useState(false);
-
-  // Form state
   const [formName, setFormName] = useState('');
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadGenres();
-  }, []);
+  // TanStack Query hooks
+  const { data: genres = [], isLoading } = useGenres();
+  const createGenreMutation = useCreateGenre();
+  const updateGenreMutation = useUpdateGenre();
+  const deleteGenreMutation = useDeleteGenre();
 
-  useEffect(() => {
-    if (selectedGenre) {
-      loadTitlesForGenre(selectedGenre.id);
-    } else {
-      setTitlesForGenre([]);
-    }
-  }, [selectedGenre]);
-
-  const loadGenres = async () => {
-    try {
-      const data = await getGenres();
-      setGenres(data);
-    } catch (error) {
-      console.error('Error loading genres:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadTitlesForGenre = async (genreId: string) => {
-    setLoadingTitles(true);
-    try {
-      const data = await getMusicTitles({ genreId });
-      setTitlesForGenre(data);
-    } catch (error) {
-      console.error('Error loading titles for genre:', error);
-    } finally {
-      setLoadingTitles(false);
-    }
-  };
+  // Query for titles of selected genre
+  const { data: titlesForGenre = [], isLoading: loadingTitles } = useQuery({
+    queryKey: queryKeys.musicTitles({ genreId: selectedGenre?.id || '' }),
+    queryFn: () => getMusicTitles({ genreId: selectedGenre!.id }),
+    enabled: !!selectedGenre,
+  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    try {
-      await createGenre(formName);
-      await loadGenres();
-      setShowAddModal(false);
-      resetForm();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij aanmaken genre');
-    }
+    await createGenreMutation.mutateAsync(formName);
+    setShowAddModal(false);
+    setFormName('');
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingGenre) return;
 
-    try {
-      await updateGenre(editingGenre.id, formName);
-      await loadGenres();
-      setEditingGenre(null);
-      resetForm();
-      // Update selected genre if it was edited
-      if (selectedGenre?.id === editingGenre.id) {
-        setSelectedGenre({ ...selectedGenre, name: formName });
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij bijwerken genre');
+    await updateGenreMutation.mutateAsync({ id: editingGenre.id, name: formName });
+
+    // Update selected genre name if it was edited
+    if (selectedGenre?.id === editingGenre.id) {
+      setSelectedGenre({ ...selectedGenre, name: formName });
     }
-  };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Weet je zeker dat je dit genre wilt verwijderen? De koppelingen met muziekstukken worden ook verwijderd.')) return;
-
-    try {
-      await deleteGenre(id);
-      await loadGenres();
-      if (selectedGenre?.id === id) {
-        setSelectedGenre(null);
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen genre');
-    }
-  };
-
-  const resetForm = () => {
+    setEditingGenre(null);
     setFormName('');
+  };
+
+  const handleDelete = async () => {
+    if (!deletingGenre) return;
+
+    await deleteGenreMutation.mutateAsync(deletingGenre.id);
+
+    if (selectedGenre?.id === deletingGenre.id) {
+      setSelectedGenre(null);
+    }
+
+    setDeletingGenre(null);
   };
 
   const openEditModal = (genre: Genre) => {
@@ -113,17 +72,24 @@ export default function Genres() {
     setFormName(genre.name);
   };
 
-  const formatDuration = (seconds: number): string => {
-    if (!seconds) return '-';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>Genres</h1>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card">
+            <div className="card-body">
+              <SkeletonTable rows={5} columns={2} />
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body">
+              <SkeletonTable rows={5} columns={4} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -177,7 +143,7 @@ export default function Genres() {
                         {isAdmin && (
                           <button
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(genre.id)}
+                            onClick={() => setDeletingGenre(genre)}
                             title="Verwijderen"
                           >
                             🗑
@@ -215,8 +181,8 @@ export default function Genres() {
                 Klik op een genre om de bijbehorende titels te zien
               </div>
             ) : loadingTitles ? (
-              <div className="loading" style={{ padding: '2rem' }}>
-                <div className="spinner"></div>
+              <div style={{ padding: '1rem' }}>
+                <SkeletonTable rows={3} columns={4} />
               </div>
             ) : titlesForGenre.length === 0 ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
@@ -263,73 +229,67 @@ export default function Genres() {
 
       {/* Add Genre Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Nieuw genre</h3>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                    placeholder="Bijv. Pop, Rock, Klassiek"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAddModal(false)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Toevoegen
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Nieuw genre"
+          onClose={() => {
+            setShowAddModal(false);
+            setFormName('');
+          }}
+          onSubmit={handleCreate}
+          submitLabel="Toevoegen"
+          isSubmitting={createGenreMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              placeholder="Bijv. Pop, Rock, Klassiek"
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
       )}
 
       {/* Edit Genre Modal */}
       {editingGenre && (
-        <div className="modal-overlay" onClick={() => setEditingGenre(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Genre bewerken</h3>
-              <button className="modal-close" onClick={() => setEditingGenre(null)}>×</button>
-            </div>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingGenre(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Opslaan
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Genre bewerken"
+          onClose={() => {
+            setEditingGenre(null);
+            setFormName('');
+          }}
+          onSubmit={handleUpdate}
+          isSubmitting={updateGenreMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingGenre && (
+        <ConfirmDialog
+          title="Genre verwijderen"
+          message={`Weet je zeker dat je "${deletingGenre.name}" wilt verwijderen? De koppelingen met muziekstukken worden ook verwijderd.`}
+          confirmLabel="Verwijderen"
+          onConfirm={handleDelete}
+          onCancel={() => setDeletingGenre(null)}
+          isLoading={deleteGenreMutation.isPending}
+          variant="danger"
+        />
       )}
     </div>
   );
