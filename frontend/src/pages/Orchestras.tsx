@@ -18,9 +18,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Skeleton, SkeletonListItem } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
-import type { Orchestra, MusicList, User } from '../types';
-
-type OrchestraDetail = Orchestra & { members: User[]; lists: MusicList[] };
+import type { Orchestra, MusicList } from '../types';
 
 export default function Orchestras() {
   const queryClient = useQueryClient();

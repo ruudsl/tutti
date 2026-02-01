@@ -1,126 +1,82 @@
-import { useState, useEffect, useRef, type DragEvent, type ChangeEvent } from 'react';
-import { getOrchestras, getMusicLists, uploadMusicPieces } from '../api';
-import type { Orchestra, MusicList } from '../types';
+import { useState, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOrchestras } from '../hooks/useOrchestras';
+import { useMusicLists } from '../hooks/useMusicLists';
+import { uploadMusicPieces } from '../api';
+import { FileDropzone } from '../components/FileDropzone';
+import { SkeletonCard } from '../components/Skeleton';
+import { showSuccess, showError } from '../utils/toast';
+import { getErrorMessage } from '../utils/errors';
 
 interface FileItem {
   file: File;
 }
 
 export default function Upload() {
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
-  const [lists, setLists] = useState<MusicList[]>([]);
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{ success: number; errors: string[] } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadOrchestras();
-  }, []);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (selectedOrchestra) {
-      loadLists(selectedOrchestra);
-    } else {
-      setLists([]);
-      setSelectedList('');
-    }
-  }, [selectedOrchestra]);
+  // TanStack Query hooks
+  const { data: orchestras = [], isLoading: orchestrasLoading } = useOrchestras();
+  const { data: lists = [] } = useMusicLists(selectedOrchestra || undefined);
 
-  const loadOrchestras = async () => {
-    try {
-      const data = await getOrchestras();
-      setOrchestras(data);
-    } catch (error) {
-      console.error('Error loading orchestras:', error);
-    }
-  };
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: (uploadFiles: File[]) =>
+      uploadMusicPieces(uploadFiles, selectedList || undefined),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
 
-  const loadLists = async (orchestraId: string) => {
-    try {
-      const data = await getMusicLists(orchestraId);
-      setLists(data);
-    } catch (error) {
-      console.error('Error loading lists:', error);
-    }
-  };
+      if (result.errors && result.errors.length > 0) {
+        showError(`${result.errors.length} bestand(en) mislukt:\n${result.errors.map((e: any) => e.filename).join(', ')}`);
+      }
 
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+      if (result.uploaded.length > 0) {
+        showSuccess(`${result.uploaded.length} bestand(en) succesvol geüpload`);
+        setFiles([]);
+      }
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
 
-  const handleDragLeave = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(
-      (file) => file.type === 'application/pdf'
-    );
-
-    addFiles(droppedFiles);
-  };
-
-  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files).filter(
-        (file) => file.type === 'application/pdf'
-      );
-      addFiles(selectedFiles);
-    }
-  };
-
-  const addFiles = (newFiles: File[]) => {
-    const newFileItems = newFiles.map((file) => ({ file }));
+  const handleFilesAccepted = useCallback((acceptedFiles: File[]) => {
+    const newFileItems = acceptedFiles.map((file) => ({ file }));
 
     setFiles((prev) => {
       const existingNames = new Set(prev.map((f) => f.file.name));
       const uniqueNew = newFileItems.filter((f) => !existingNames.has(f.file.name));
       return [...prev, ...uniqueNew];
     });
-  };
+  }, []);
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (files.length === 0) return;
-
-    setIsUploading(true);
-    setUploadResult(null);
-
-    try {
-      const result = await uploadMusicPieces(
-        files.map((f) => f.file),
-        selectedList || undefined
-      );
-
-      setUploadResult({
-        success: result.uploaded.length,
-        errors: result.errors?.map((e: any) => `${e.filename}: ${e.error}`) || [],
-      });
-
-      if (result.errors?.length === 0 || !result.errors) {
-        setFiles([]);
-      }
-    } catch (error: any) {
-      setUploadResult({
-        success: 0,
-        errors: [error.response?.data?.error || 'Upload mislukt'],
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    uploadMutation.mutate(files.map((f) => f.file));
   };
+
+  const handleOrchestraChange = (orchestraId: string) => {
+    setSelectedOrchestra(orchestraId);
+    setSelectedList('');
+  };
+
+  if (orchestrasLoading) {
+    return (
+      <div>
+        <h1 className="mb-3">Muziekstukken uploaden</h1>
+        <SkeletonCard />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -137,7 +93,7 @@ export default function Upload() {
               <select
                 className="form-control form-select"
                 value={selectedOrchestra}
-                onChange={(e) => setSelectedOrchestra(e.target.value)}
+                onChange={(e) => handleOrchestraChange(e.target.value)}
               >
                 <option value="">Selecteer orkest...</option>
                 {orchestras.map((orchestra) => (
@@ -172,30 +128,18 @@ export default function Upload() {
           <h2 className="card-title">2. Selecteer bestanden</h2>
         </div>
         <div className="card-body">
-          <div
-            className={`upload-area ${isDragging ? 'dragover' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+          <FileDropzone
+            onFilesAccepted={handleFilesAccepted}
+            disabled={uploadMutation.isPending}
           >
-            <div className="upload-icon">📄</div>
-            <p className="upload-text">
-              Sleep PDF bestanden hierheen of klik om te selecteren
+            <div className="dropzone-icon">📄</div>
+            <p className="dropzone-text">
+              Sleep PDF bestanden hierheen of <strong>klik om te selecteren</strong>
             </p>
-            <p className="upload-text" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            <p className="dropzone-text" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
               Bestandsnaam format: Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf
             </p>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf"
-            multiple
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
+          </FileDropzone>
 
           {files.length > 0 && (
             <div className="upload-list">
@@ -208,6 +152,7 @@ export default function Upload() {
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={() => removeFile(index)}
+                    disabled={uploadMutation.isPending}
                   >
                     ×
                   </button>
@@ -221,27 +166,14 @@ export default function Upload() {
         </div>
       </div>
 
-      {uploadResult && (
-        <div className={`alert ${uploadResult.errors.length > 0 ? 'alert-warning' : 'alert-success'}`}>
-          <strong>{uploadResult.success} bestand(en) succesvol geüpload.</strong>
-          {uploadResult.errors.length > 0 && (
-            <ul className="mt-1 mb-0">
-              {uploadResult.errors.map((error, i) => (
-                <li key={i}>{error}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       <div className="card">
         <div className="card-body">
           <button
             className="btn btn-primary btn-lg"
             onClick={handleUpload}
-            disabled={files.length === 0 || isUploading}
+            disabled={files.length === 0 || uploadMutation.isPending}
           >
-            {isUploading ? 'Bezig met uploaden...' : `Upload ${files.length} bestand(en)`}
+            {uploadMutation.isPending ? 'Bezig met uploaden...' : `Upload ${files.length} bestand(en)`}
           </button>
         </div>
       </div>

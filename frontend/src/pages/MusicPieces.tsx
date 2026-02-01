@@ -1,106 +1,73 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  getMusicPieces,
-  getInstruments,
-  updateMusicPiece,
-  deleteMusicPiece,
-  downloadMusicPiece,
-  refreshInstrumentLinks,
-} from '../api';
-import type { MusicPiece, Instrument } from '../types';
+  useMusicPieces,
+  useUpdateMusicPiece,
+  useDeleteMusicPiece,
+  useRefreshInstrumentLinks,
+} from '../hooks/useMusicPieces';
+import { useInstruments } from '../hooks/useInstruments';
+import { downloadMusicPiece } from '../api';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
+import { showError } from '../utils/toast';
+import { useDebounce } from '../hooks/useDebounce';
+import type { MusicPiece } from '../types';
 
 export default function MusicPieces() {
-  const [pieces, setPieces] = useState<MusicPiece[]>([]);
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterInstrument, setFilterInstrument] = useState('');
   const [editingPiece, setEditingPiece] = useState<MusicPiece | null>(null);
+  const [deletingPiece, setDeletingPiece] = useState<MusicPiece | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Debounce search for API calls
+  const debouncedSearch = useDebounce(search, 300);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadPieces();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search, filterInstrument]);
+  // Build filters object
+  const filters = useMemo(() => ({
+    search: debouncedSearch || undefined,
+    instrumentId: filterInstrument || undefined,
+  }), [debouncedSearch, filterInstrument]);
 
-  const loadData = async () => {
-    try {
-      const [piecesData, instrumentsData] = await Promise.all([
-        getMusicPieces(),
-        getInstruments(),
-      ]);
-      setPieces(piecesData);
-      setInstruments(instrumentsData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // TanStack Query hooks
+  const { data: pieces = [], isLoading: piecesLoading } = useMusicPieces(filters);
+  const { data: instruments = [], isLoading: instrumentsLoading } = useInstruments();
 
-  const loadPieces = async () => {
-    try {
-      const data = await getMusicPieces({
-        search: search || undefined,
-        instrumentId: filterInstrument || undefined,
-      });
-      setPieces(data);
-    } catch (error) {
-      console.error('Error loading pieces:', error);
-    }
-  };
+  const updateMutation = useUpdateMusicPiece();
+  const deleteMutation = useDeleteMusicPiece();
+  const refreshMutation = useRefreshInstrumentLinks();
 
-  const handleRefreshInstruments = async () => {
-    setIsRefreshing(true);
-    try {
-      const result = await refreshInstrumentLinks();
-      await loadPieces();
-      alert(`Instrumenten bijgewerkt!\n\n${result.updated} stukken gekoppeld\n${result.alreadyLinked} waren al gekoppeld\n${result.notFound} instrumenten niet gevonden`);
-    } catch (error) {
-      console.error('Error refreshing instruments:', error);
-      alert('Fout bij vernieuwen van instrumentkoppelingen.');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  const isLoading = piecesLoading || instrumentsLoading;
 
   const handleDownload = async (pieceId: string) => {
     setDownloading(pieceId);
     try {
       await downloadMusicPiece(pieceId);
     } catch (error) {
-      console.error('Error downloading:', error);
-      alert('Fout bij downloaden van het bestand.');
+      showError('Fout bij downloaden van het bestand.');
     } finally {
       setDownloading(null);
     }
   };
 
-  const handleDelete = async (pieceId: string) => {
-    if (!confirm('Weet je zeker dat je dit muziekstuk wilt verwijderen?')) return;
+  const handleDelete = () => {
+    if (!deletingPiece) return;
 
-    try {
-      await deleteMusicPiece(pieceId);
-      setPieces(pieces.filter((p) => p.id !== pieceId));
-    } catch (error) {
-      console.error('Error deleting:', error);
-      alert('Fout bij verwijderen van het muziekstuk.');
-    }
+    deleteMutation.mutate(deletingPiece.id, {
+      onSuccess: () => {
+        setDeletingPiece(null);
+      },
+    });
   };
 
   const handleUpdatePiece = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPiece) return;
 
-    try {
-      await updateMusicPiece(editingPiece.id, {
+    updateMutation.mutate({
+      id: editingPiece.id,
+      data: {
         title: editingPiece.title,
         arranger: editingPiece.arranger || undefined,
         instrumentId: editingPiece.instrumentId || undefined,
@@ -108,19 +75,21 @@ export default function MusicPieces() {
         groupNumber: editingPiece.groupNumber || undefined,
         clef: editingPiece.clef || undefined,
         youtubeUrl: editingPiece.youtubeUrl || undefined,
-      });
-      await loadPieces();
-      setEditingPiece(null);
-    } catch (error) {
-      console.error('Error updating piece:', error);
-      alert('Fout bij bijwerken van het muziekstuk.');
-    }
+      },
+    }, {
+      onSuccess: () => {
+        setEditingPiece(null);
+      },
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>Muziekstukken</h1>
+        </div>
+        <SkeletonTable rows={10} columns={6} />
       </div>
     );
   }
@@ -131,11 +100,11 @@ export default function MusicPieces() {
         <h1>Muziekstukken</h1>
         <button
           className="btn btn-secondary"
-          onClick={handleRefreshInstruments}
-          disabled={isRefreshing}
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
           title="Koppel instrumenten opnieuw aan muziekstukken op basis van bestandsnamen"
         >
-          {isRefreshing ? 'Bezig...' : '🔄 Instrumenten opnieuw koppelen'}
+          {refreshMutation.isPending ? 'Bezig...' : '🔄 Instrumenten opnieuw koppelen'}
         </button>
       </div>
 
@@ -222,14 +191,14 @@ export default function MusicPieces() {
                         </button>
                         <button
                           className="btn btn-outline btn-sm"
-                          onClick={() => setEditingPiece(piece)}
+                          onClick={() => setEditingPiece({ ...piece })}
                           title="Bewerken"
                         >
                           ✏
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
-                          onClick={() => handleDelete(piece.id)}
+                          onClick={() => setDeletingPiece(piece)}
                           title="Verwijderen"
                         >
                           🗑
@@ -251,105 +220,107 @@ export default function MusicPieces() {
 
       {/* Edit Modal */}
       {editingPiece && (
-        <div className="modal-overlay" onClick={() => setEditingPiece(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Muziekstuk bewerken</h3>
-              <button className="modal-close" onClick={() => setEditingPiece(null)}>×</button>
+        <FormModal
+          onClose={() => setEditingPiece(null)}
+          onSubmit={handleUpdatePiece}
+          title="Muziekstuk bewerken"
+          submitLabel="Opslaan"
+          isSubmitting={updateMutation.isPending}
+        >
+          <>
+            <div className="form-group">
+              <label className="form-label">Titel</label>
+              <input
+                type="text"
+                className="form-control"
+                value={editingPiece.title}
+                onChange={(e) => setEditingPiece({ ...editingPiece, title: e.target.value })}
+                required
+              />
             </div>
-            <form onSubmit={handleUpdatePiece}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Titel</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editingPiece.title}
-                    onChange={(e) => setEditingPiece({ ...editingPiece, title: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Arrangeur</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editingPiece.arranger || ''}
-                    onChange={(e) => setEditingPiece({ ...editingPiece, arranger: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Instrument</label>
-                  <select
-                    className="form-control form-select"
-                    value={editingPiece.instrumentId || ''}
-                    onChange={(e) => setEditingPiece({ ...editingPiece, instrumentId: e.target.value })}
-                  >
-                    <option value="">Selecteer instrument</option>
-                    {instruments.map((instrument) => (
-                      <option key={instrument.id} value={instrument.id}>
-                        {instrument.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Stemming</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingPiece.tuning || ''}
-                      onChange={(e) => setEditingPiece({ ...editingPiece, tuning: e.target.value })}
-                      placeholder="Bijv. Bb, Eb, C"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Groepnummer</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingPiece.groupNumber || ''}
-                      onChange={(e) => setEditingPiece({ ...editingPiece, groupNumber: e.target.value })}
-                      placeholder="Bijv. 1, 2"
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Muzieksleutel</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={editingPiece.clef || ''}
-                    onChange={(e) => setEditingPiece({ ...editingPiece, clef: e.target.value })}
-                    placeholder="Bijv. sol, fa"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">YouTube URL (legacy)</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    value={editingPiece.youtubeUrl || ''}
-                    onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
-                    placeholder="https://youtube.com/watch?v=..."
-                  />
-                  <small className="text-light">
-                    Tip: YouTube links en delen worden nu per titel beheerd via Lijstbeheer.
-                  </small>
-                </div>
+            <div className="form-group">
+              <label className="form-label">Arrangeur</label>
+              <input
+                type="text"
+                className="form-control"
+                value={editingPiece.arranger || ''}
+                onChange={(e) => setEditingPiece({ ...editingPiece, arranger: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Instrument</label>
+              <select
+                className="form-control form-select"
+                value={editingPiece.instrumentId || ''}
+                onChange={(e) => setEditingPiece({ ...editingPiece, instrumentId: e.target.value })}
+              >
+                <option value="">Selecteer instrument</option>
+                {instruments.map((instrument) => (
+                  <option key={instrument.id} value={instrument.id}>
+                    {instrument.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label">Stemming</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editingPiece.tuning || ''}
+                  onChange={(e) => setEditingPiece({ ...editingPiece, tuning: e.target.value })}
+                  placeholder="Bijv. Bb, Eb, C"
+                />
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingPiece(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Opslaan
-                </button>
+              <div className="form-group">
+                <label className="form-label">Groepnummer</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editingPiece.groupNumber || ''}
+                  onChange={(e) => setEditingPiece({ ...editingPiece, groupNumber: e.target.value })}
+                  placeholder="Bijv. 1, 2"
+                />
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Muzieksleutel</label>
+              <input
+                type="text"
+                className="form-control"
+                value={editingPiece.clef || ''}
+                onChange={(e) => setEditingPiece({ ...editingPiece, clef: e.target.value })}
+                placeholder="Bijv. sol, fa"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">YouTube URL (legacy)</label>
+              <input
+                type="url"
+                className="form-control"
+                value={editingPiece.youtubeUrl || ''}
+                onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+              <small className="text-light">
+                Tip: YouTube links en delen worden nu per titel beheerd via Lijstbeheer.
+              </small>
+            </div>
+          </>
+        </FormModal>
+      )}
+
+      {/* Delete Confirmation */}
+      {deletingPiece && (
+        <ConfirmDialog
+          onCancel={() => setDeletingPiece(null)}
+          onConfirm={handleDelete}
+          title="Muziekstuk verwijderen"
+          message={`Weet je zeker dat je "${deletingPiece.title}" wilt verwijderen?`}
+          confirmLabel="Verwijderen"
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   );

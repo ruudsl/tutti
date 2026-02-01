@@ -1,21 +1,16 @@
-import { useState, useEffect } from 'react';
-import {
-  getUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  getInstruments,
-  getOrchestras,
-} from '../api';
-import type { User, Instrument, Orchestra } from '../types';
+import { useState } from 'react';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
+import { useInstruments } from '../hooks/useInstruments';
+import { useOrchestras } from '../hooks/useOrchestras';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
+import type { User } from '../types';
 
 export default function Users() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   // Filter state
   const [filterOrchestra, setFilterOrchestra] = useState<string>('');
@@ -31,54 +26,43 @@ export default function Users() {
   const [formInstruments, setFormInstruments] = useState<string[]>([]);
   const [formOrchestras, setFormOrchestras] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // TanStack Query hooks
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: instruments = [], isLoading: instrumentsLoading } = useInstruments();
+  const { data: orchestras = [], isLoading: orchestrasLoading } = useOrchestras();
 
-  const loadData = async () => {
-    try {
-      const [usersData, instrumentsData, orchestrasData] = await Promise.all([
-        getUsers(),
-        getInstruments(),
-        getOrchestras(),
-      ]);
-      setUsers(usersData);
-      setInstruments(instrumentsData);
-      setOrchestras(orchestrasData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const createMutation = useCreateUser();
+  const updateMutation = useUpdateUser();
+  const deleteMutation = useDeleteUser();
+
+  const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    try {
-      await createUser({
-        email: formEmail,
-        password: formPassword,
-        firstName: formFirstName,
-        lastName: formLastName,
-        role: formRole,
-        instrumentIds: formInstruments,
-        orchestraIds: formOrchestras,
-      });
-      await loadData();
-      setShowAddModal(false);
-      resetForm();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij aanmaken gebruiker');
-    }
+    createMutation.mutate({
+      email: formEmail,
+      password: formPassword,
+      firstName: formFirstName,
+      lastName: formLastName,
+      role: formRole,
+      instrumentIds: formInstruments,
+      orchestraIds: formOrchestras,
+    }, {
+      onSuccess: () => {
+        setShowAddModal(false);
+        resetForm();
+      },
+    });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
 
-    try {
-      await updateUser(editingUser.id, {
+    updateMutation.mutate({
+      id: editingUser.id,
+      data: {
         email: formEmail,
         firstName: formFirstName,
         lastName: formLastName,
@@ -86,24 +70,23 @@ export default function Users() {
         password: formPassword || undefined,
         instrumentIds: formInstruments,
         orchestraIds: formOrchestras,
-      });
-      await loadData();
-      setEditingUser(null);
-      resetForm();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij bijwerken gebruiker');
-    }
+      },
+    }, {
+      onSuccess: () => {
+        setEditingUser(null);
+        resetForm();
+      },
+    });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Weet je zeker dat je deze gebruiker wilt verwijderen?')) return;
+  const handleDelete = () => {
+    if (!deletingUser) return;
 
-    try {
-      await deleteUser(id);
-      await loadData();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen gebruiker');
-    }
+    deleteMutation.mutate(deletingUser.id, {
+      onSuccess: () => {
+        setDeletingUser(null);
+      },
+    });
   };
 
   const resetForm = () => {
@@ -177,8 +160,11 @@ export default function Users() {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>Leden</h1>
+        </div>
+        <SkeletonTable rows={8} columns={6} />
       </div>
     );
   }
@@ -259,7 +245,7 @@ export default function Users() {
               </button>
             )}
           </div>
-                  </div>
+        </div>
       </div>
 
       <div className="card">
@@ -313,7 +299,7 @@ export default function Users() {
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => setDeletingUser(user)}
                       >
                         🗑
                       </button>
@@ -326,155 +312,233 @@ export default function Users() {
         </div>
       </div>
 
-      {/* Add/Edit User Modal */}
-      {(showAddModal || editingUser) && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
+      {/* Add User Modal */}
+      {showAddModal && (
+        <FormModal
+          onClose={() => {
             setShowAddModal(false);
+            resetForm();
+          }}
+          onSubmit={handleCreate}
+          title="Nieuw lid"
+          submitLabel="Toevoegen"
+          isSubmitting={createMutation.isPending}
+        >
+          <UserForm
+            formEmail={formEmail}
+            setFormEmail={setFormEmail}
+            formPassword={formPassword}
+            setFormPassword={setFormPassword}
+            formFirstName={formFirstName}
+            setFormFirstName={setFormFirstName}
+            formLastName={formLastName}
+            setFormLastName={setFormLastName}
+            formRole={formRole}
+            setFormRole={setFormRole}
+            formInstruments={formInstruments}
+            toggleInstrument={toggleInstrument}
+            formOrchestras={formOrchestras}
+            toggleOrchestra={toggleOrchestra}
+            instruments={instruments}
+            orchestras={orchestras}
+            isEditing={false}
+          />
+        </FormModal>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <FormModal
+          onClose={() => {
             setEditingUser(null);
             resetForm();
           }}
+          onSubmit={handleUpdate}
+          title="Lid bewerken"
+          submitLabel="Opslaan"
+          isSubmitting={updateMutation.isPending}
         >
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">{editingUser ? 'Lid bewerken' : 'Nieuw lid'}</h3>
-              <button
-                className="modal-close"
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingUser(null);
-                  resetForm();
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <form onSubmit={editingUser ? handleUpdate : handleCreate}>
-              <div className="modal-body">
-                <div className="grid grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Voornaam</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formFirstName}
-                      onChange={(e) => setFormFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Achternaam</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formLastName}
-                      onChange={(e) => setFormLastName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
+          <UserForm
+            formEmail={formEmail}
+            setFormEmail={setFormEmail}
+            formPassword={formPassword}
+            setFormPassword={setFormPassword}
+            formFirstName={formFirstName}
+            setFormFirstName={setFormFirstName}
+            formLastName={formLastName}
+            setFormLastName={setFormLastName}
+            formRole={formRole}
+            setFormRole={setFormRole}
+            formInstruments={formInstruments}
+            toggleInstrument={toggleInstrument}
+            formOrchestras={formOrchestras}
+            toggleOrchestra={toggleOrchestra}
+            instruments={instruments}
+            orchestras={orchestras}
+            isEditing={true}
+          />
+        </FormModal>
+      )}
 
-                <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    Wachtwoord {editingUser && '(laat leeg om niet te wijzigen)'}
-                  </label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    required={!editingUser}
-                    minLength={6}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Rol</label>
-                  <select
-                    className="form-control form-select"
-                    value={formRole}
-                    onChange={(e) => setFormRole(e.target.value)}
-                  >
-                    <option value="member">Lid</option>
-                    <option value="music_committee">Muziekcommissie</option>
-                    <option value="admin">Beheerder</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Instrumenten</label>
-                  <div className="checkbox-group">
-                    {instruments.map((instrument) => {
-                      const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
-                      const details = [
-                        instrument.tuning,
-                        clefLabel
-                      ].filter(Boolean).join(', ');
-                      return (
-                        <label key={instrument.id} className="checkbox-item">
-                          <input
-                            type="checkbox"
-                            checked={formInstruments.includes(instrument.id)}
-                            onChange={() => toggleInstrument(instrument.id)}
-                          />
-                          <span>
-                            {instrument.name}
-                            {details && <span className="text-light"> ({details})</span>}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Orkesten</label>
-                  <div className="checkbox-group">
-                    {orchestras.map((orchestra) => (
-                      <label key={orchestra.id} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          checked={formOrchestras.includes(orchestra.id)}
-                          onChange={() => toggleOrchestra(orchestra.id)}
-                        />
-                        <span>{orchestra.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setEditingUser(null);
-                    resetForm();
-                  }}
-                >
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingUser ? 'Opslaan' : 'Toevoegen'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Delete Confirmation */}
+      {deletingUser && (
+        <ConfirmDialog
+          onCancel={() => setDeletingUser(null)}
+          onConfirm={handleDelete}
+          title="Lid verwijderen"
+          message={`Weet je zeker dat je ${deletingUser.firstName} ${deletingUser.lastName} wilt verwijderen?`}
+          confirmLabel="Verwijderen"
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
+  );
+}
+
+// Extracted form component for reuse
+interface UserFormProps {
+  formEmail: string;
+  setFormEmail: (value: string) => void;
+  formPassword: string;
+  setFormPassword: (value: string) => void;
+  formFirstName: string;
+  setFormFirstName: (value: string) => void;
+  formLastName: string;
+  setFormLastName: (value: string) => void;
+  formRole: string;
+  setFormRole: (value: string) => void;
+  formInstruments: string[];
+  toggleInstrument: (id: string) => void;
+  formOrchestras: string[];
+  toggleOrchestra: (id: string) => void;
+  instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
+  orchestras: { id: string; name: string }[];
+  isEditing: boolean;
+}
+
+function UserForm({
+  formEmail,
+  setFormEmail,
+  formPassword,
+  setFormPassword,
+  formFirstName,
+  setFormFirstName,
+  formLastName,
+  setFormLastName,
+  formRole,
+  setFormRole,
+  formInstruments,
+  toggleInstrument,
+  formOrchestras,
+  toggleOrchestra,
+  instruments,
+  orchestras,
+  isEditing,
+}: UserFormProps) {
+  return (
+    <>
+      <div className="grid grid-2">
+        <div className="form-group">
+          <label className="form-label">Voornaam</label>
+          <input
+            type="text"
+            className="form-control"
+            value={formFirstName}
+            onChange={(e) => setFormFirstName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Achternaam</label>
+          <input
+            type="text"
+            className="form-control"
+            value={formLastName}
+            onChange={(e) => setFormLastName(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Email</label>
+        <input
+          type="email"
+          className="form-control"
+          value={formEmail}
+          onChange={(e) => setFormEmail(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">
+          Wachtwoord {isEditing && '(laat leeg om niet te wijzigen)'}
+        </label>
+        <input
+          type="password"
+          className="form-control"
+          value={formPassword}
+          onChange={(e) => setFormPassword(e.target.value)}
+          required={!isEditing}
+          minLength={6}
+        />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Rol</label>
+        <select
+          className="form-control form-select"
+          value={formRole}
+          onChange={(e) => setFormRole(e.target.value)}
+        >
+          <option value="member">Lid</option>
+          <option value="music_committee">Muziekcommissie</option>
+          <option value="admin">Beheerder</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Instrumenten</label>
+        <div className="checkbox-group">
+          {instruments.map((instrument) => {
+            const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
+            const details = [
+              instrument.tuning,
+              clefLabel
+            ].filter(Boolean).join(', ');
+            return (
+              <label key={instrument.id} className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={formInstruments.includes(instrument.id)}
+                  onChange={() => toggleInstrument(instrument.id)}
+                />
+                <span>
+                  {instrument.name}
+                  {details && <span className="text-light"> ({details})</span>}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Orkesten</label>
+        <div className="checkbox-group">
+          {orchestras.map((orchestra) => (
+            <label key={orchestra.id} className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={formOrchestras.includes(orchestra.id)}
+                onChange={() => toggleOrchestra(orchestra.id)}
+              />
+              <span>{orchestra.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
