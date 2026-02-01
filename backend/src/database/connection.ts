@@ -86,15 +86,21 @@ class DatabaseWrapper {
             this.save();
         }
 
-        const changesResult = db.exec('SELECT changes() as changes');
-        const changes = changesResult.length > 0 && changesResult[0].values.length > 0
-            ? Number(changesResult[0].values[0][0])
-            : 0;
+        // Use prepared statements instead of exec() to preserve transaction state
+        let changes = 0;
+        let lastInsertRowid = 0;
 
-        const lastIdResult = db.exec('SELECT last_insert_rowid() as id');
-        const lastInsertRowid = lastIdResult.length > 0 && lastIdResult[0].values.length > 0
-            ? Number(lastIdResult[0].values[0][0])
-            : 0;
+        const changesStmt = db.prepare('SELECT changes() as changes');
+        if (changesStmt.step()) {
+            changes = Number(changesStmt.get()[0]) || 0;
+        }
+        changesStmt.free();
+
+        const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
+        if (lastIdStmt.step()) {
+            lastInsertRowid = Number(lastIdStmt.get()[0]) || 0;
+        }
+        lastIdStmt.free();
 
         return { changes, lastInsertRowid };
     }
