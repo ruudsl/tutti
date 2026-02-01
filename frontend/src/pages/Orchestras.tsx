@@ -1,139 +1,145 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getOrchestras,
   getOrchestra,
-  createOrchestra,
-  updateOrchestra,
-  deleteOrchestra,
   createMusicList,
   updateMusicList,
   deleteMusicList,
 } from '../api';
+import {
+  useOrchestras,
+  useCreateOrchestra,
+  useUpdateOrchestra,
+  useDeleteOrchestra,
+} from '../hooks/useOrchestras';
+import { queryKeys } from '../lib/queryClient';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Skeleton, SkeletonListItem } from '../components/Skeleton';
+import { showSuccess, showError } from '../utils/toast';
+import { getErrorMessage } from '../utils/errors';
 import type { Orchestra, MusicList, User } from '../types';
 
+type OrchestraDetail = Orchestra & { members: User[]; lists: MusicList[] };
+
 export default function Orchestras() {
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
-  const [selectedOrchestra, setSelectedOrchestra] = useState<
-    (Orchestra & { members: User[]; lists: MusicList[] }) | null
-  >(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [selectedOrchestraId, setSelectedOrchestraId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingOrchestra, setEditingOrchestra] = useState<Orchestra | null>(null);
+  const [deletingOrchestra, setDeletingOrchestra] = useState<Orchestra | null>(null);
   const [showAddListModal, setShowAddListModal] = useState(false);
   const [editingList, setEditingList] = useState<MusicList | null>(null);
+  const [deletingList, setDeletingList] = useState<MusicList | null>(null);
 
   // Form state
   const [formName, setFormName] = useState('');
   const [listFormName, setListFormName] = useState('');
 
-  useEffect(() => {
-    loadOrchestras();
-  }, []);
+  // TanStack Query hooks
+  const { data: orchestras = [], isLoading } = useOrchestras();
+  const createMutation = useCreateOrchestra();
+  const updateMutation = useUpdateOrchestra();
+  const deleteMutation = useDeleteOrchestra();
 
-  const loadOrchestras = async () => {
-    try {
-      const data = await getOrchestras();
-      setOrchestras(data);
-    } catch (error) {
-      console.error('Error loading orchestras:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Query for selected orchestra details
+  const { data: selectedOrchestra, isLoading: loadingDetails } = useQuery({
+    queryKey: queryKeys.orchestra(selectedOrchestraId || ''),
+    queryFn: () => getOrchestra(selectedOrchestraId!),
+    enabled: !!selectedOrchestraId,
+  });
 
-  const loadOrchestra = async (id: string) => {
-    try {
-      const data = await getOrchestra(id);
-      setSelectedOrchestra(data);
-    } catch (error) {
-      console.error('Error loading orchestra:', error);
-    }
-  };
+  // Music list mutations
+  const createListMutation = useMutation({
+    mutationFn: ({ name, orchestraId }: { name: string; orchestraId: string }) =>
+      createMusicList(name, orchestraId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
+      showSuccess('Muzieklijst aangemaakt');
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const updateListMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => updateMusicList(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
+      showSuccess('Muzieklijst bijgewerkt');
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const deleteListMutation = useMutation({
+    mutationFn: (id: string) => deleteMusicList(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
+      showSuccess('Muzieklijst verwijderd');
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    try {
-      await createOrchestra(formName);
-      await loadOrchestras();
-      setShowAddModal(false);
-      setFormName('');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij aanmaken orkest');
-    }
+    await createMutation.mutateAsync(formName);
+    setShowAddModal(false);
+    setFormName('');
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrchestra) return;
 
-    try {
-      await updateOrchestra(editingOrchestra.id, formName);
-      await loadOrchestras();
-      if (selectedOrchestra?.id === editingOrchestra.id) {
-        await loadOrchestra(editingOrchestra.id);
-      }
-      setEditingOrchestra(null);
-      setFormName('');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij bijwerken orkest');
+    await updateMutation.mutateAsync({ id: editingOrchestra.id, name: formName });
+
+    // Refresh selected orchestra if it was updated
+    if (selectedOrchestraId === editingOrchestra.id) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(editingOrchestra.id) });
     }
+
+    setEditingOrchestra(null);
+    setFormName('');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Weet je zeker dat je dit orkest wilt verwijderen? Alle muzieklijsten worden ook verwijderd.')) return;
+  const handleDelete = async () => {
+    if (!deletingOrchestra) return;
 
-    try {
-      await deleteOrchestra(id);
-      await loadOrchestras();
-      if (selectedOrchestra?.id === id) {
-        setSelectedOrchestra(null);
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen orkest');
+    await deleteMutation.mutateAsync(deletingOrchestra.id);
+
+    if (selectedOrchestraId === deletingOrchestra.id) {
+      setSelectedOrchestraId(null);
     }
+
+    setDeletingOrchestra(null);
   };
 
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedOrchestra) return;
+    if (!selectedOrchestraId) return;
 
-    try {
-      await createMusicList(listFormName, selectedOrchestra.id);
-      await loadOrchestra(selectedOrchestra.id);
-      await loadOrchestras();
-      setShowAddListModal(false);
-      setListFormName('');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij aanmaken lijst');
-    }
+    await createListMutation.mutateAsync({
+      name: listFormName,
+      orchestraId: selectedOrchestraId,
+    });
+
+    setShowAddListModal(false);
+    setListFormName('');
   };
 
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingList || !selectedOrchestra) return;
+    if (!editingList) return;
 
-    try {
-      await updateMusicList(editingList.id, listFormName);
-      await loadOrchestra(selectedOrchestra.id);
-      setEditingList(null);
-      setListFormName('');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij bijwerken lijst');
-    }
+    await updateListMutation.mutateAsync({ id: editingList.id, name: listFormName });
+    setEditingList(null);
+    setListFormName('');
   };
 
-  const handleDeleteList = async (id: string) => {
-    if (!confirm('Weet je zeker dat je deze lijst wilt verwijderen?')) return;
-    if (!selectedOrchestra) return;
-
-    try {
-      await deleteMusicList(id);
-      await loadOrchestra(selectedOrchestra.id);
-      await loadOrchestras();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen lijst');
-    }
+  const handleDeleteList = async () => {
+    if (!deletingList) return;
+    await deleteListMutation.mutateAsync(deletingList.id);
+    setDeletingList(null);
   };
 
   const openEditModal = (orchestra: Orchestra) => {
@@ -148,8 +154,25 @@ export default function Orchestras() {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>Orkesten</h1>
+        </div>
+        <div className="grid grid-cols-2">
+          <div className="card">
+            <div className="card-body">
+              {[1, 2, 3].map((i) => (
+                <SkeletonListItem key={i} />
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body">
+              <Skeleton height="2rem" width="60%" style={{ marginBottom: '1rem' }} />
+              <Skeleton height="1rem" width="80%" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -157,13 +180,16 @@ export default function Orchestras() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>Orkesten</h1>
+        <h1>
+          Orkesten
+          <span className="badge badge-primary ml-2">{orchestras.length}</span>
+        </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
           + Nieuw orkest
         </button>
       </div>
 
-      <div className="grid grid-2">
+      <div className="grid grid-cols-2">
         <div className="card">
           <div className="card-header">
             <h2 className="card-title">Orkesten</h2>
@@ -178,10 +204,10 @@ export default function Orchestras() {
                     style={{
                       padding: '1rem',
                       borderBottom: '1px solid var(--border)',
-                      background: selectedOrchestra?.id === orchestra.id ? 'var(--background)' : undefined,
+                      background: selectedOrchestraId === orchestra.id ? 'var(--background)' : undefined,
                       cursor: 'pointer',
                     }}
-                    onClick={() => loadOrchestra(orchestra.id)}
+                    onClick={() => setSelectedOrchestraId(orchestra.id)}
                   >
                     <div>
                       <strong>{orchestra.name}</strong>
@@ -189,22 +215,18 @@ export default function Orchestras() {
                         {orchestra.memberCount} leden • {orchestra.listCount} lijsten
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         className="btn btn-outline btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(orchestra);
-                        }}
+                        onClick={() => openEditModal(orchestra)}
+                        title="Bewerken"
                       >
                         ✏
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(orchestra.id);
-                        }}
+                        onClick={() => setDeletingOrchestra(orchestra)}
+                        title="Verwijderen"
                       >
                         🗑
                       </button>
@@ -220,70 +242,82 @@ export default function Orchestras() {
           </div>
         </div>
 
-        {selectedOrchestra ? (
+        {selectedOrchestraId ? (
           <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">{selectedOrchestra.name}</h2>
-            </div>
-            <div className="card-body">
-              <h3 className="mb-1">Leden ({selectedOrchestra.members.length})</h3>
-              {selectedOrchestra.members.length > 0 ? (
-                <div className="tags mb-2">
-                  {selectedOrchestra.members.map((member: any) => (
-                    <span key={member.id} className="tag">
-                      {member.firstName} {member.lastName}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="piece-meta mb-2">Geen leden toegewezen.</p>
-              )}
-
-              <div className="flex justify-between items-center mb-1">
-                <h3>Muzieklijsten ({selectedOrchestra.lists.length})</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowAddListModal(true)}>
-                  + Lijst
-                </button>
+            {loadingDetails ? (
+              <div className="card-body">
+                <Skeleton height="2rem" width="60%" style={{ marginBottom: '1rem' }} />
+                <Skeleton height="1rem" width="80%" style={{ marginBottom: '0.5rem' }} />
+                <Skeleton height="1rem" width="60%" />
               </div>
-
-              {selectedOrchestra.lists.length > 0 ? (
-                <div>
-                  {selectedOrchestra.lists.map((list: any) => (
-                    <div
-                      key={list.id}
-                      className="flex justify-between items-center"
-                      style={{
-                        padding: '0.5rem',
-                        background: 'var(--background)',
-                        borderRadius: '0.25rem',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
-                      <div>
-                        <strong>{list.name}</strong>
-                        <span className="piece-meta"> ({list.pieceCount} stukken)</span>
-                      </div>
-                      <div className="flex gap-1">
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => openEditListModal(list)}
-                        >
-                          ✏
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDeleteList(list.id)}
-                        >
-                          🗑
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            ) : selectedOrchestra ? (
+              <>
+                <div className="card-header">
+                  <h2 className="card-title">{selectedOrchestra.name}</h2>
                 </div>
-              ) : (
-                <p className="piece-meta">Geen muzieklijsten.</p>
-              )}
-            </div>
+                <div className="card-body">
+                  <h3 className="mb-1">Leden ({selectedOrchestra.members?.length || 0})</h3>
+                  {selectedOrchestra.members?.length > 0 ? (
+                    <div className="tags mb-2">
+                      {selectedOrchestra.members.map((member: any) => (
+                        <span key={member.id} className="tag">
+                          {member.firstName} {member.lastName}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="piece-meta mb-2">Geen leden toegewezen.</p>
+                  )}
+
+                  <div className="flex justify-between items-center mb-1">
+                    <h3>Muzieklijsten ({selectedOrchestra.lists?.length || 0})</h3>
+                    <button className="btn btn-primary btn-sm" onClick={() => setShowAddListModal(true)}>
+                      + Lijst
+                    </button>
+                  </div>
+
+                  {selectedOrchestra.lists?.length > 0 ? (
+                    <div>
+                      {selectedOrchestra.lists.map((list: any) => (
+                        <div
+                          key={list.id}
+                          className="flex justify-between items-center"
+                          style={{
+                            padding: '0.5rem',
+                            background: 'var(--background)',
+                            borderRadius: '0.25rem',
+                            marginBottom: '0.5rem',
+                          }}
+                        >
+                          <div>
+                            <strong>{list.name}</strong>
+                            <span className="piece-meta"> ({list.pieceCount} stukken)</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => openEditListModal(list)}
+                              title="Bewerken"
+                            >
+                              ✏
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => setDeletingList(list)}
+                              title="Verwijderen"
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="piece-meta">Geen muzieklijsten.</p>
+                  )}
+                </div>
+              </>
+            ) : null}
           </div>
         ) : (
           <div className="card">
@@ -299,141 +333,135 @@ export default function Orchestras() {
 
       {/* Add Orchestra Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Nieuw orkest</h3>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAddModal(false)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Toevoegen
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Nieuw orkest"
+          size="small"
+          onClose={() => {
+            setShowAddModal(false);
+            setFormName('');
+          }}
+          onSubmit={handleCreate}
+          submitLabel="Toevoegen"
+          isSubmitting={createMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
       )}
 
       {/* Edit Orchestra Modal */}
       {editingOrchestra && (
-        <div className="modal-overlay" onClick={() => setEditingOrchestra(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Orkest bewerken</h3>
-              <button className="modal-close" onClick={() => setEditingOrchestra(null)}>×</button>
-            </div>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingOrchestra(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Opslaan
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Orkest bewerken"
+          size="small"
+          onClose={() => {
+            setEditingOrchestra(null);
+            setFormName('');
+          }}
+          onSubmit={handleUpdate}
+          isSubmitting={updateMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
+      )}
+
+      {/* Delete Orchestra Confirmation */}
+      {deletingOrchestra && (
+        <ConfirmDialog
+          title="Orkest verwijderen"
+          message={`Weet je zeker dat je "${deletingOrchestra.name}" wilt verwijderen? Alle muzieklijsten worden ook verwijderd.`}
+          confirmLabel="Verwijderen"
+          onConfirm={handleDelete}
+          onCancel={() => setDeletingOrchestra(null)}
+          isLoading={deleteMutation.isPending}
+          variant="danger"
+        />
       )}
 
       {/* Add List Modal */}
       {showAddListModal && (
-        <div className="modal-overlay" onClick={() => setShowAddListModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Nieuwe muzieklijst</h3>
-              <button className="modal-close" onClick={() => setShowAddListModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreateList}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={listFormName}
-                    onChange={(e) => setListFormName(e.target.value)}
-                    required
-                    autoFocus
-                    placeholder="Bijv. Najaarsconcert 2024"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAddListModal(false)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Toevoegen
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Nieuwe muzieklijst"
+          size="small"
+          onClose={() => {
+            setShowAddListModal(false);
+            setListFormName('');
+          }}
+          onSubmit={handleCreateList}
+          submitLabel="Toevoegen"
+          isSubmitting={createListMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={listFormName}
+              onChange={(e) => setListFormName(e.target.value)}
+              required
+              autoFocus
+              placeholder="Bijv. Najaarsconcert 2024"
+            />
           </div>
-        </div>
+        </FormModal>
       )}
 
       {/* Edit List Modal */}
       {editingList && (
-        <div className="modal-overlay" onClick={() => setEditingList(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Muzieklijst bewerken</h3>
-              <button className="modal-close" onClick={() => setEditingList(null)}>×</button>
-            </div>
-            <form onSubmit={handleUpdateList}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={listFormName}
-                    onChange={(e) => setListFormName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingList(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Opslaan
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Muzieklijst bewerken"
+          size="small"
+          onClose={() => {
+            setEditingList(null);
+            setListFormName('');
+          }}
+          onSubmit={handleUpdateList}
+          isSubmitting={updateListMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={listFormName}
+              onChange={(e) => setListFormName(e.target.value)}
+              required
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
+      )}
+
+      {/* Delete List Confirmation */}
+      {deletingList && (
+        <ConfirmDialog
+          title="Muzieklijst verwijderen"
+          message={`Weet je zeker dat je "${deletingList.name}" wilt verwijderen?`}
+          confirmLabel="Verwijderen"
+          onConfirm={handleDeleteList}
+          onCancel={() => setDeletingList(null)}
+          isLoading={deleteListMutation.isPending}
+          variant="danger"
+        />
       )}
     </div>
   );

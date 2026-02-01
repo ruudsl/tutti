@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
-  getInstruments,
-  createInstrument,
-  updateInstrument,
-  deleteInstrument,
-  addInstrumentAlias,
-  deleteInstrumentAlias,
-} from '../api';
+  useInstruments,
+  useCreateInstrument,
+  useUpdateInstrument,
+  useDeleteInstrument,
+  useAddInstrumentAlias,
+  useDeleteInstrumentAlias,
+} from '../hooks/useInstruments';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { SkeletonTable } from '../components/Skeleton';
 import type { Instrument } from '../types';
 
 export default function Instruments() {
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState<Instrument | null>(null);
+  const [deletingInstrument, setDeletingInstrument] = useState<Instrument | null>(null);
   const [newAlias, setNewAlias] = useState<{ instrumentId: string; alias: string } | null>(null);
 
   // Form state
@@ -22,84 +24,70 @@ export default function Instruments() {
   const [formClef, setFormClef] = useState('sol');
   const [formAliases, setFormAliases] = useState('');
 
-  useEffect(() => {
-    loadInstruments();
-  }, []);
-
-  const loadInstruments = async () => {
-    try {
-      const data = await getInstruments();
-      setInstruments(data);
-    } catch (error) {
-      console.error('Error loading instruments:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // TanStack Query hooks
+  const { data: instruments = [], isLoading } = useInstruments();
+  const createMutation = useCreateInstrument();
+  const updateMutation = useUpdateInstrument();
+  const deleteMutation = useDeleteInstrument();
+  const addAliasMutation = useAddInstrumentAlias();
+  const deleteAliasMutation = useDeleteInstrumentAlias();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    try {
-      const aliases = formAliases
-        .split(',')
-        .map((a) => a.trim())
-        .filter((a) => a);
+    const aliases = formAliases
+      .split(',')
+      .map((a) => a.trim())
+      .filter((a) => a);
 
-      await createInstrument(formName, formTuning || undefined, formClef, aliases);
-      await loadInstruments();
-      setShowAddModal(false);
-      resetForm();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij aanmaken instrument');
-    }
+    await createMutation.mutateAsync({
+      name: formName,
+      tuning: formTuning || undefined,
+      clef: formClef,
+      aliases: aliases.length > 0 ? aliases : undefined,
+    });
+
+    setShowAddModal(false);
+    resetForm();
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingInstrument) return;
 
-    try {
-      await updateInstrument(editingInstrument.id, formName, formTuning || undefined, formClef);
-      await loadInstruments();
-      setEditingInstrument(null);
-      resetForm();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij bijwerken instrument');
-    }
+    await updateMutation.mutateAsync({
+      id: editingInstrument.id,
+      data: {
+        name: formName,
+        tuning: formTuning || undefined,
+        clef: formClef,
+      },
+    });
+
+    setEditingInstrument(null);
+    resetForm();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Weet je zeker dat je dit instrument wilt verwijderen?')) return;
-
-    try {
-      await deleteInstrument(id);
-      await loadInstruments();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen instrument');
-    }
+  const handleDelete = async () => {
+    if (!deletingInstrument) return;
+    await deleteMutation.mutateAsync(deletingInstrument.id);
+    setDeletingInstrument(null);
   };
 
   const handleAddAlias = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAlias) return;
 
-    try {
-      await addInstrumentAlias(newAlias.instrumentId, newAlias.alias);
-      await loadInstruments();
-      setNewAlias(null);
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij toevoegen alias');
-    }
+    await addAliasMutation.mutateAsync({
+      instrumentId: newAlias.instrumentId,
+      alias: newAlias.alias,
+    });
+
+    setNewAlias(null);
   };
 
   const handleDeleteAlias = async (instrumentId: string, aliasId: string) => {
-    try {
-      await deleteInstrumentAlias(instrumentId, aliasId);
-      await loadInstruments();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen alias');
-    }
+    await deleteAliasMutation.mutateAsync({ instrumentId, aliasId });
   };
 
   const resetForm = () => {
@@ -118,8 +106,15 @@ export default function Instruments() {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>Instrumenten</h1>
+        </div>
+        <div className="card">
+          <div className="card-body">
+            <SkeletonTable rows={8} columns={5} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -127,7 +122,10 @@ export default function Instruments() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>Instrumenten</h1>
+        <h1>
+          Instrumenten
+          <span className="badge badge-primary ml-2">{instruments.length}</span>
+        </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
           + Nieuw instrument
         </button>
@@ -180,12 +178,14 @@ export default function Instruments() {
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(instrument)}
+                        title="Bewerken"
                       >
                         ✏
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(instrument.id)}
+                        onClick={() => setDeletingInstrument(instrument)}
+                        title="Verwijderen"
                       >
                         🗑
                       </button>
@@ -193,6 +193,13 @@ export default function Instruments() {
                   </td>
                 </tr>
               ))}
+              {instruments.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
+                    Geen instrumenten gevonden
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -200,161 +207,146 @@ export default function Instruments() {
 
       {/* Add Instrument Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Nieuw instrument</h3>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                    placeholder="Bijv. Alto Saxophone"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Stemming</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formTuning}
-                    onChange={(e) => setFormTuning(e.target.value)}
-                    placeholder="Bijv. Bb, Eb, C"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Sleutel</label>
-                  <select
-                    className="form-control"
-                    value={formClef}
-                    onChange={(e) => setFormClef(e.target.value)}
-                  >
-                    <option value="sol">Sol (vioolsleutel)</option>
-                    <option value="fa">Fa (bassleutel)</option>
-                    <option value="ut">Ut (altsleutel)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Aliassen (komma gescheiden)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formAliases}
-                    onChange={(e) => setFormAliases(e.target.value)}
-                    placeholder="Bijv. Altsax, altsax, Alt Sax"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAddModal(false)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Toevoegen
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Nieuw instrument"
+          onClose={() => {
+            setShowAddModal(false);
+            resetForm();
+          }}
+          onSubmit={handleCreate}
+          submitLabel="Toevoegen"
+          isSubmitting={createMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              placeholder="Bijv. Alto Saxophone"
+              autoFocus
+            />
           </div>
-        </div>
+          <div className="form-group">
+            <label className="form-label">Stemming</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formTuning}
+              onChange={(e) => setFormTuning(e.target.value)}
+              placeholder="Bijv. Bb, Eb, C"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Sleutel</label>
+            <select
+              className="form-control"
+              value={formClef}
+              onChange={(e) => setFormClef(e.target.value)}
+            >
+              <option value="sol">Sol (vioolsleutel)</option>
+              <option value="fa">Fa (bassleutel)</option>
+              <option value="ut">Ut (altsleutel)</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Aliassen (komma gescheiden)</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formAliases}
+              onChange={(e) => setFormAliases(e.target.value)}
+              placeholder="Bijv. Altsax, altsax, Alt Sax"
+            />
+          </div>
+        </FormModal>
       )}
 
       {/* Edit Instrument Modal */}
       {editingInstrument && (
-        <div className="modal-overlay" onClick={() => setEditingInstrument(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Instrument bewerken</h3>
-              <button className="modal-close" onClick={() => setEditingInstrument(null)}>×</button>
-            </div>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Naam</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Stemming</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formTuning}
-                    onChange={(e) => setFormTuning(e.target.value)}
-                    placeholder="Bijv. Bb, Eb, C"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Sleutel</label>
-                  <select
-                    className="form-control"
-                    value={formClef}
-                    onChange={(e) => setFormClef(e.target.value)}
-                  >
-                    <option value="sol">Sol (vioolsleutel)</option>
-                    <option value="fa">Fa (bassleutel)</option>
-                    <option value="ut">Ut (altsleutel)</option>
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingInstrument(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Opslaan
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Instrument bewerken"
+          onClose={() => {
+            setEditingInstrument(null);
+            resetForm();
+          }}
+          onSubmit={handleUpdate}
+          isSubmitting={updateMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Naam</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+              autoFocus
+            />
           </div>
-        </div>
+          <div className="form-group">
+            <label className="form-label">Stemming</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formTuning}
+              onChange={(e) => setFormTuning(e.target.value)}
+              placeholder="Bijv. Bb, Eb, C"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Sleutel</label>
+            <select
+              className="form-control"
+              value={formClef}
+              onChange={(e) => setFormClef(e.target.value)}
+            >
+              <option value="sol">Sol (vioolsleutel)</option>
+              <option value="fa">Fa (bassleutel)</option>
+              <option value="ut">Ut (altsleutel)</option>
+            </select>
+          </div>
+        </FormModal>
       )}
 
       {/* Add Alias Modal */}
       {newAlias && (
-        <div className="modal-overlay" onClick={() => setNewAlias(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Alias toevoegen</h3>
-              <button className="modal-close" onClick={() => setNewAlias(null)}>×</button>
-            </div>
-            <form onSubmit={handleAddAlias}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Alias</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={newAlias.alias}
-                    onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
-                    required
-                    placeholder="Bijv. Altsax"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setNewAlias(null)}>
-                  Annuleren
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Toevoegen
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title="Alias toevoegen"
+          size="small"
+          onClose={() => setNewAlias(null)}
+          onSubmit={handleAddAlias}
+          submitLabel="Toevoegen"
+          isSubmitting={addAliasMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">Alias</label>
+            <input
+              type="text"
+              className="form-control"
+              value={newAlias.alias}
+              onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
+              required
+              placeholder="Bijv. Altsax"
+              autoFocus
+            />
           </div>
-        </div>
+        </FormModal>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingInstrument && (
+        <ConfirmDialog
+          title="Instrument verwijderen"
+          message={`Weet je zeker dat je "${deletingInstrument.name}" wilt verwijderen?`}
+          confirmLabel="Verwijderen"
+          onConfirm={handleDelete}
+          onCancel={() => setDeletingInstrument(null)}
+          isLoading={deleteMutation.isPending}
+          variant="danger"
+        />
       )}
     </div>
   );
