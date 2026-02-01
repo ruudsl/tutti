@@ -47,7 +47,8 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 // Users
 export const getUsers = async (): Promise<User[]> => {
   const { data } = await api.get('/users');
-  return data;
+  // Backend returns paginated data, extract the data array
+  return Array.isArray(data) ? data : data.data || [];
 };
 
 export const getUser = async (id: string): Promise<User> => {
