@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { Toaster } from './utils/toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { NotFound } from './components/NotFound';
+import { ROLES } from './utils/constants';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -76,7 +80,7 @@ function AppRoutes() {
         <Route
           path="music-pieces"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <MusicPieces />
             </PrivateRoute>
           }
@@ -84,7 +88,7 @@ function AppRoutes() {
         <Route
           path="upload"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Upload />
             </PrivateRoute>
           }
@@ -92,7 +96,7 @@ function AppRoutes() {
         <Route
           path="instruments"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Instruments />
             </PrivateRoute>
           }
@@ -100,7 +104,7 @@ function AppRoutes() {
         <Route
           path="genres"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Genres />
             </PrivateRoute>
           }
@@ -108,7 +112,7 @@ function AppRoutes() {
         <Route
           path="users"
           element={
-            <PrivateRoute roles={['admin']}>
+            <PrivateRoute roles={[ROLES.ADMIN]}>
               <Users />
             </PrivateRoute>
           }
@@ -116,7 +120,7 @@ function AppRoutes() {
         <Route
           path="orchestras"
           element={
-            <PrivateRoute roles={['admin']}>
+            <PrivateRoute roles={[ROLES.ADMIN]}>
               <Orchestras />
             </PrivateRoute>
           }
@@ -124,7 +128,7 @@ function AppRoutes() {
         <Route
           path="lists"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <MusicListManager />
             </PrivateRoute>
           }
@@ -132,12 +136,15 @@ function AppRoutes() {
         <Route
           path="lists/:orchestraId/:listId"
           element={
-            <PrivateRoute roles={['admin', 'music_committee']}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <MusicListManager />
             </PrivateRoute>
           }
         />
+        {/* 404 for unmatched routes within authenticated area */}
+        <Route path="*" element={<NotFound />} />
       </Route>
+      {/* Global 404 */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
@@ -145,10 +152,32 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+          <Toaster
+            toastOptions={{
+              style: {
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+              },
+              success: {
+                iconTheme: {
+                  primary: 'var(--success)',
+                  secondary: 'white',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: 'var(--danger)',
+                  secondary: 'white',
+                },
+              },
+            }}
+          />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

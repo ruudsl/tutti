@@ -108,7 +108,6 @@ export default function MusicPieces() {
         groupNumber: editingPiece.groupNumber || undefined,
         clef: editingPiece.clef || undefined,
         youtubeUrl: editingPiece.youtubeUrl || undefined,
-        isShared: editingPiece.isShared,
       });
       await loadPieces();
       setEditingPiece(null);
@@ -185,7 +184,6 @@ export default function MusicPieces() {
                   <th>Instrument</th>
                   <th>Stemming</th>
                   <th>Nr.</th>
-                  <th>Gedeeld</th>
                   <th></th>
                 </tr>
               </thead>
@@ -201,13 +199,6 @@ export default function MusicPieces() {
                     <td>{piece.instrumentName || '-'}</td>
                     <td>{piece.tuning || '-'}</td>
                     <td>{piece.groupNumber || '-'}</td>
-                    <td>
-                      {piece.isShared ? (
-                        <span className="badge badge-success">Ja</span>
-                      ) : (
-                        <span className="badge badge-warning">Nee</span>
-                      )}
-                    </td>
                     <td>
                       <div className="flex gap-1">
                         {piece.youtubeUrl && (
@@ -344,19 +335,8 @@ export default function MusicPieces() {
                     placeholder="https://youtube.com/watch?v=..."
                   />
                   <small className="text-light">
-                    Tip: YouTube links worden nu per titel beheerd via Lijstbeheer.
+                    Tip: YouTube links en delen worden nu per titel beheerd via Lijstbeheer.
                   </small>
-                </div>
-                <div className="form-group">
-                  <label className="form-check">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={editingPiece.isShared || false}
-                      onChange={(e) => setEditingPiece({ ...editingPiece, isShared: e.target.checked })}
-                    />
-                    <span>Delen met andere verenigingen</span>
-                  </label>
                 </div>
               </div>
               <div className="modal-footer">
