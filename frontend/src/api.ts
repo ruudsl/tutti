@@ -180,7 +180,7 @@ export const addTitleToList = async (listId: string, title: string): Promise<{ a
 };
 
 export const removeTitleFromList = async (listId: string, title: string): Promise<{ removed: number }> => {
-  const { data } = await api.delete(`/music-lists/${listId}/titles/${encodeURIComponent(title)}`);
+  const { data } = await api.delete(`/music-lists/${listId}/titles`, { data: { title } });
   return data;
 };
 

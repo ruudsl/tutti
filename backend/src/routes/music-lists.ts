@@ -667,7 +667,7 @@ router.post('/:id/titles', authenticateToken, requireRole('admin', 'music_commit
 
 /**
  * @swagger
- * /music-lists/{id}/titles/{title}:
+ * /music-lists/{id}/titles:
  *   delete:
  *     summary: Remove all pieces of a title from list
  *     tags: [Music Lists]
@@ -679,17 +679,27 @@ router.post('/:id/titles', authenticateToken, requireRole('admin', 'music_commit
  *         required: true
  *         schema:
  *           type: string
- *       - in: path
- *         name: title
- *         required: true
- *         schema:
- *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Pieces removed successfully
  */
-router.delete('/:id/titles/:title', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const title = decodeURIComponent(req.params.title);
+router.delete('/:id/titles', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { title } = req.body;
+
+    if (!title) {
+        throw new ApiError(400, 'Titel is verplicht.');
+    }
 
     // Verify list belongs to user's association
     const list = db.prepare(`
