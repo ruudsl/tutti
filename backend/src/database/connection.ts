@@ -18,6 +18,7 @@ class DatabaseWrapper {
     private dbPath: string;
     private initialized: boolean = false;
     private initPromise: Promise<void> | null = null;
+    private inTransaction: boolean = false;
 
     constructor(dbPath: string) {
         this.dbPath = dbPath;
@@ -80,7 +81,10 @@ class DatabaseWrapper {
     runStatement(sql: string, params: any[] = []): { changes: number; lastInsertRowid: number } {
         const db = this.ensureInit();
         db.run(sql, params);
-        this.save();
+        // Only save if not inside a transaction (transaction will save on commit)
+        if (!this.inTransaction) {
+            this.save();
+        }
 
         const changesResult = db.exec('SELECT changes() as changes');
         const changes = changesResult.length > 0 && changesResult[0].values.length > 0
@@ -145,14 +149,17 @@ class DatabaseWrapper {
     transaction<T>(fn: () => T): () => T {
         return () => {
             const db = this.ensureInit();
+            this.inTransaction = true;
             db.run('BEGIN TRANSACTION');
             try {
                 const result = fn();
                 db.run('COMMIT');
+                this.inTransaction = false;
                 this.save();
                 return result;
             } catch (error) {
                 db.run('ROLLBACK');
+                this.inTransaction = false;
                 throw error;
             }
         };

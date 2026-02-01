@@ -40,11 +40,16 @@ export function errorHandler(
     res: Response,
     next: NextFunction
 ): void {
-    // Log the error
-    console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
-    if (process.env.NODE_ENV !== 'production') {
-        console.error(err.stack);
+    // Log the error with full details for debugging
+    console.error('=== ERROR DETAILS ===');
+    console.error(`[ERROR] ${req.method} ${req.path}`);
+    console.error('Message:', err.message);
+    console.error('Name:', err.name);
+    console.error('Stack:', err.stack);
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.error('Request body:', JSON.stringify(req.body, null, 2));
     }
+    console.error('=====================');
 
     // Handle known API errors
     if (err instanceof ApiError) {
