@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMyMusicLists } from '../api';
 import type { MusicList } from '../types';
+import MfaSettings from '../components/MfaSettings';
 
 // Format duration from seconds to mm:ss or h:mm:ss
 function formatDuration(seconds: number): string {
@@ -185,6 +186,11 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <div className="mt-3">
+        <h2 className="mb-2">Accountbeveiliging</h2>
+        <MfaSettings />
+      </div>
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User } from '../types';
+import type { User, LoginResponse } from '../types';
 import { login as apiLogin, getProfile } from '../api';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, mfaCode?: string) => Promise<LoginResponse>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
 }
@@ -31,11 +31,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await apiLogin(email, password);
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setUser(response.user);
+  const login = async (email: string, password: string, mfaCode?: string): Promise<LoginResponse> => {
+    const response = await apiLogin(email, password, mfaCode);
+
+    // If MFA is required, return the response without setting user
+    if (response.requiresMfa) {
+      return response;
+    }
+
+    // Successful login
+    if (response.token && response.user) {
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      setUser(response.user);
+    }
+
+    return response;
   };
 
   const logout = () => {

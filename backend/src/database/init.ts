@@ -137,6 +137,20 @@ async function initializeDatabase() {
         // Table might not exist yet, which is fine
     }
 
+    // Migration: Add MFA columns to users if they don't exist
+    try {
+        const userTableInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasMfaSecret = userTableInfo.some(col => col.name === 'mfa_secret');
+        if (!hasMfaSecret) {
+            console.log('Migration: Adding MFA columns to users...');
+            db.prepare('ALTER TABLE users ADD COLUMN mfa_secret TEXT').run();
+            db.prepare('ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet, which is fine
+    }
+
     console.log('Database initialization complete!');
 }
 

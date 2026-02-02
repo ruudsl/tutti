@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, member
     association_id TEXT,
+    mfa_secret TEXT, -- TOTP secret for MFA
+    mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );

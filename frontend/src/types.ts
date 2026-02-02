@@ -6,8 +6,22 @@ export interface User {
   role: 'admin' | 'music_committee' | 'member';
   associationId: string | null;
   associationName?: string;
+  mfaEnabled?: boolean;
   instruments?: Instrument[];
   orchestras?: Orchestra[];
+}
+
+export interface MfaSetupResponse {
+  secret: string;
+  qrCode: string;
+  message: string;
+}
+
+export interface LoginResponse {
+  token?: string;
+  user?: User;
+  requiresMfa?: boolean;
+  message?: string;
 }
 
 export interface Instrument {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AuthResponse, Genre } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, Genre, MfaSetupResponse, LoginResponse } from './types';
 
 const API_BASE = '/api';
 
@@ -30,8 +30,8 @@ api.interceptors.response.use(
 );
 
 // Auth
-export const login = async (email: string, password: string): Promise<AuthResponse> => {
-  const { data } = await api.post('/auth/login', { email, password });
+export const login = async (email: string, password: string, mfaCode?: string): Promise<LoginResponse> => {
+  const { data } = await api.post('/auth/login', { email, password, mfaCode });
   return data;
 };
 
@@ -42,6 +42,27 @@ export const getProfile = async (): Promise<User> => {
 
 export const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
   await api.post('/auth/change-password', { currentPassword, newPassword });
+};
+
+// MFA
+export const setupMfa = async (): Promise<MfaSetupResponse> => {
+  const { data } = await api.post('/auth/mfa/setup');
+  return data;
+};
+
+export const enableMfa = async (code: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+  const { data } = await api.post('/auth/mfa/enable', { code });
+  return data;
+};
+
+export const disableMfa = async (password: string, code?: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+  const { data } = await api.post('/auth/mfa/disable', { password, code });
+  return data;
+};
+
+export const getMfaStatus = async (): Promise<{ mfaEnabled: boolean }> => {
+  const { data } = await api.get('/auth/mfa/status');
+  return data;
 };
 
 // Users
