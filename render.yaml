@@ -1,0 +1,32 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Deploy: https://dashboard.render.com/select-repo?type=blueprint
+
+services:
+  - type: web
+    name: harmonie-backend
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /opt/render/project/data/harmonie.db
+      - key: UPLOAD_DIR
+        value: /opt/render/project/data/uploads
+      - key: MP3_UPLOAD_DIR
+        value: /opt/render/project/data/uploads/mp3
+      - key: FRONTEND_URL
+        sync: false  # Set this manually in Render dashboard after deploying frontend
+    disk:
+      name: harmonie-data
+      mountPath: /opt/render/project/data
+      sizeGB: 1

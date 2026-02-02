@@ -44,6 +44,39 @@ const upload = multer({
     },
 });
 
+// Setup MP3 upload directory
+const MP3_UPLOAD_DIR = process.env.MP3_UPLOAD_DIR || path.join(__dirname, '../../uploads/mp3');
+if (!fs.existsSync(MP3_UPLOAD_DIR)) {
+    fs.mkdirSync(MP3_UPLOAD_DIR, { recursive: true });
+}
+
+// Configure multer for MP3 uploads
+const mp3Storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, MP3_UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `${uniqueSuffix}${ext}`);
+    },
+});
+
+const mp3Upload = multer({
+    storage: mp3Storage,
+    limits: {
+        fileSize: 30 * 1024 * 1024, // 30MB limit for MP3
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['audio/mpeg', 'audio/mp3', 'audio/mpeg3', 'audio/x-mpeg-3'];
+        if (allowedMimes.includes(file.mimetype) || file.originalname.toLowerCase().endsWith('.mp3')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen MP3 bestanden zijn toegestaan.'));
+        }
+    },
+});
+
 // Parse filename to extract metadata
 // Format: Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel
 function parseFilename(filename: string): {
@@ -301,6 +334,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
                mt.youtube_url,
                mt.description,
                mt.duration_seconds,
+               mt.grade,
+               mt.mp3_file_path,
                mt.is_shared
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
@@ -372,6 +407,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             youtubeUrl: t.youtube_url,
             description: t.description,
             durationSeconds: t.duration_seconds || 0,
+            grade: t.grade,
+            mp3FilePath: t.mp3_file_path,
             isShared: Boolean(t.is_shared),
             instruments: t.instruments ? t.instruments.split(',') : [],
             onList: listId ? titlesOnList.has(t.title) : undefined,
@@ -410,7 +447,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
     const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
 
     const meta = db.prepare(`
-        SELECT id, title, arranger, youtube_url, description, duration_seconds, is_shared
+        SELECT id, title, arranger, youtube_url, description, duration_seconds, grade, mp3_file_path, is_shared
         FROM music_titles
         WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
     `).get(title, arranger, req.user!.associationId) as any;
@@ -432,6 +469,8 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
             youtubeUrl: meta.youtube_url,
             description: meta.description,
             durationSeconds: meta.duration_seconds || 0,
+            grade: meta.grade,
+            mp3FilePath: meta.mp3_file_path,
             isShared: Boolean(meta.is_shared),
             genres,
         });
@@ -442,6 +481,8 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
             youtubeUrl: null,
             description: null,
             durationSeconds: 0,
+            grade: null,
+            mp3FilePath: null,
             isShared: false,
             genres: [],
         });
@@ -482,12 +523,13 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Update existing
             db.prepare(`
                 UPDATE music_titles
-                SET youtube_url = ?, description = ?, duration_seconds = ?, is_shared = ?
+                SET youtube_url = ?, description = ?, duration_seconds = ?, grade = ?, is_shared = ?
                 WHERE id = ?
             `).run(
                 data.youtubeUrl || null,
                 data.description || null,
                 data.durationSeconds || 0,
+                data.grade || null,
                 data.isShared ? 1 : 0,
                 existing.id
             );
@@ -496,8 +538,8 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Create new
             titleId = uuidv4();
             db.prepare(`
-                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, is_shared, association_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, grade, is_shared, association_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 titleId,
                 data.title.trim(),
@@ -505,6 +547,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 data.youtubeUrl || null,
                 data.description || null,
                 data.durationSeconds || 0,
+                data.grade || null,
                 data.isShared ? 1 : 0,
                 req.user!.associationId
             );
@@ -533,6 +576,161 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
         id: titleId!,
         message: existing ? 'Titel metadata bijgewerkt.' : 'Titel metadata aangemaakt.',
     });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/title-mp3/{titleId}:
+ *   post:
+ *     summary: Upload MP3 file for a title
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               mp3:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: MP3 uploaded successfully
+ */
+router.post('/title-mp3/:titleId', authenticateToken, requireRole('admin', 'music_committee'), mp3Upload.single('mp3'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    if (!req.file) {
+        throw new ApiError(400, 'MP3 bestand is verplicht.');
+    }
+
+    // Check if title exists and belongs to user's association
+    const title = db.prepare(`
+        SELECT id, mp3_file_path FROM music_titles WHERE id = ? AND association_id = ?
+    `).get(titleId, req.user!.associationId) as { id: string; mp3_file_path: string | null } | undefined;
+
+    if (!title) {
+        // Delete uploaded file
+        await deleteFile(req.file.path);
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    // Delete old MP3 file if exists
+    if (title.mp3_file_path) {
+        const oldPath = path.join(MP3_UPLOAD_DIR, title.mp3_file_path);
+        await deleteFile(oldPath);
+    }
+
+    // Update title with new MP3 path
+    db.prepare('UPDATE music_titles SET mp3_file_path = ? WHERE id = ?').run(req.file.filename, titleId);
+
+    logger.info(`MP3 uploaded for title: ${titleId}`, { filename: req.file.filename, uploadedBy: req.user!.id });
+
+    res.json({
+        message: 'MP3 bestand geüpload.',
+        mp3FilePath: req.file.filename,
+    });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/title-mp3/{titleId}:
+ *   delete:
+ *     summary: Delete MP3 file for a title
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: MP3 deleted successfully
+ */
+router.delete('/title-mp3/:titleId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    // Check if title exists and belongs to user's association
+    const title = db.prepare(`
+        SELECT id, mp3_file_path FROM music_titles WHERE id = ? AND association_id = ?
+    `).get(titleId, req.user!.associationId) as { id: string; mp3_file_path: string | null } | undefined;
+
+    if (!title) {
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    if (!title.mp3_file_path) {
+        throw new ApiError(404, 'Geen MP3 bestand gevonden.');
+    }
+
+    // Delete MP3 file
+    const filePath = path.join(MP3_UPLOAD_DIR, title.mp3_file_path);
+    await deleteFile(filePath);
+
+    // Clear MP3 path from database
+    db.prepare('UPDATE music_titles SET mp3_file_path = NULL WHERE id = ?').run(titleId);
+
+    logger.info(`MP3 deleted for title: ${titleId}`, { deletedBy: req.user!.id });
+
+    res.json({
+        message: 'MP3 bestand verwijderd.',
+    });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/mp3/{filename}:
+ *   get:
+ *     summary: Stream/download MP3 file
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: MP3 file stream
+ */
+router.get('/mp3/:filename', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { filename } = req.params;
+
+    // Validate filename to prevent path traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        throw new ApiError(400, 'Ongeldige bestandsnaam.');
+    }
+
+    const filePath = path.join(MP3_UPLOAD_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+        throw new ApiError(404, 'MP3 bestand niet gevonden.');
+    }
+
+    // Get file stats for Content-Length
+    const stat = fs.statSync(filePath);
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    // Stream the file
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
 }));
 
 /**

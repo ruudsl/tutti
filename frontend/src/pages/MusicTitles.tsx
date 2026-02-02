@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { useGenres } from '../hooks/useGenres';
-import { updateTitleMeta, getYouTubeMeta } from '../api';
+import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { formatDuration } from '../utils/format';
@@ -32,6 +32,7 @@ interface TitleMetaForm {
   youtubeUrl: string;
   description: string;
   durationStr: string;
+  grade: string;
   genreIds: string[];
   isShared: boolean;
 }
@@ -47,12 +48,16 @@ export default function MusicTitles() {
     youtubeUrl: '',
     description: '',
     durationStr: '',
+    grade: '',
     genreIds: [],
     isShared: false,
   });
   const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
   const [fetchingYouTube, setFetchingYouTube] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingMp3, setUploadingMp3] = useState(false);
+  const [currentMp3Path, setCurrentMp3Path] = useState<string | null>(null);
+  const mp3InputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -79,9 +84,11 @@ export default function MusicTitles() {
       youtubeUrl: title.youtubeUrl || '',
       description: title.description || '',
       durationStr: formatDurationForForm(title.durationSeconds),
+      grade: title.grade || '',
       genreIds: title.genres?.map(g => g.id) || [],
       isShared: title.isShared || false,
     });
+    setCurrentMp3Path(title.mp3FilePath || null);
     setYoutubeMeta(null);
   };
 
@@ -111,6 +118,7 @@ export default function MusicTitles() {
         youtubeUrl: titleMetaForm.youtubeUrl || null,
         description: titleMetaForm.description || null,
         durationSeconds: parseDuration(titleMetaForm.durationStr),
+        grade: titleMetaForm.grade || null,
         genreIds: titleMetaForm.genreIds,
         isShared: titleMetaForm.isShared,
       });
@@ -121,6 +129,39 @@ export default function MusicTitles() {
       showError(error.response?.data?.error || 'Fout bij opslaan metadata');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleMp3Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingTitle?.id) return;
+
+    setUploadingMp3(true);
+    try {
+      const result = await uploadTitleMp3(editingTitle.id, file);
+      setCurrentMp3Path(result.mp3FilePath);
+      showSuccess('MP3 geüpload');
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Fout bij uploaden MP3');
+    } finally {
+      setUploadingMp3(false);
+      if (mp3InputRef.current) {
+        mp3InputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleMp3Delete = async () => {
+    if (!editingTitle?.id || !currentMp3Path) return;
+
+    if (!confirm('Weet je zeker dat je het MP3 bestand wilt verwijderen?')) return;
+
+    try {
+      await deleteTitleMp3(editingTitle.id);
+      setCurrentMp3Path(null);
+      showSuccess('MP3 verwijderd');
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Fout bij verwijderen MP3');
     }
   };
 
@@ -220,6 +261,7 @@ export default function MusicTitles() {
                   <th>Titel</th>
                   <th>Arrangeur</th>
                   <th>Genres</th>
+                  <th>Grade</th>
                   <th>Duur</th>
                   <th>Partijen</th>
                   <th>Lijsten</th>
@@ -361,16 +403,71 @@ export default function MusicTitles() {
                     </div>
                   )}
                 </div>
+                <div className="grid grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Speelduur (mm:ss)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={titleMetaForm.durationStr}
+                      onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
+                      placeholder="3:45"
+                      pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Moeilijkheidsgraad</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={titleMetaForm.grade}
+                      onChange={(e) => setTitleMetaForm(f => ({ ...f, grade: e.target.value }))}
+                      placeholder="Bijv. 3, 2.5, 4+"
+                    />
+                  </div>
+                </div>
                 <div className="form-group">
-                  <label className="form-label">Speelduur (mm:ss)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={titleMetaForm.durationStr}
-                    onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
-                    placeholder="3:45"
-                    pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
-                  />
+                  <label className="form-label">MP3 Preview</label>
+                  {currentMp3Path ? (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <audio
+                        controls
+                        src={getMp3Url(currentMp3Path)}
+                        style={{ flex: 1, height: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={handleMp3Delete}
+                        title="MP3 verwijderen"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  ) : editingTitle?.id ? (
+                    <div>
+                      <input
+                        ref={mp3InputRef}
+                        type="file"
+                        accept=".mp3,audio/mpeg"
+                        onChange={handleMp3Upload}
+                        disabled={uploadingMp3}
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => mp3InputRef.current?.click()}
+                        disabled={uploadingMp3}
+                      >
+                        {uploadingMp3 ? 'Uploaden...' : '📤 MP3 uploaden'}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-light" style={{ margin: 0, fontSize: '0.875rem' }}>
+                      Sla eerst op om een MP3 te kunnen uploaden.
+                    </p>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Omschrijving</label>
@@ -451,6 +548,7 @@ interface TitleRowProps {
 function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
   const hasDetails = (title.lists && title.lists.length > 0) ||
                      title.youtubeUrl ||
+                     title.mp3FilePath ||
                      title.description ||
                      (title.instruments && title.instruments.length > 0);
 
@@ -485,6 +583,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
             )}
           </div>
         </td>
+        <td>{title.grade || '-'}</td>
         <td>
           {title.durationSeconds > 0
             ? formatDuration(title.durationSeconds)
@@ -513,7 +612,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
       {isExpanded && hasDetails && (
         <tr className="expanded-row">
           <td></td>
-          <td colSpan={7}>
+          <td colSpan={8}>
             <div className="expanded-content" style={{
               padding: '1rem',
               backgroundColor: 'var(--bg-secondary)',
@@ -524,6 +623,17 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
                 <div style={{ marginBottom: '0.75rem' }}>
                   <strong>Instrumenten:</strong>{' '}
                   {title.instruments.join(', ')}
+                </div>
+              )}
+
+              {title.mp3FilePath && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <strong>MP3 Preview:</strong>
+                  <audio
+                    controls
+                    src={getMp3Url(title.mp3FilePath)}
+                    style={{ display: 'block', marginTop: '0.5rem', maxWidth: '400px' }}
+                  />
                 </div>
               )}
 

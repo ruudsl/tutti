@@ -108,6 +108,7 @@ export const updateTitleMetaSchema = z.object({
     youtubeUrl: z.string().url().nullable().optional().or(z.literal('')),
     description: z.string().nullable().optional(),
     durationSeconds: z.number().int().min(0).optional(),
+    grade: z.string().nullable().optional(),
     isShared: z.boolean().optional(),
     genreIds: z.array(z.string().uuid()).optional(),
 });

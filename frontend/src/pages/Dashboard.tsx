@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getMyMusicLists } from '../api';
 import type { MusicList } from '../types';
 import MfaSettings from '../components/MfaSettings';
+import BackupSettings from '../components/BackupSettings';
 
 // Format duration from seconds to mm:ss or h:mm:ss
 function formatDuration(seconds: number): string {
@@ -191,6 +192,13 @@ export default function Dashboard() {
         <h2 className="mb-2">Accountbeveiliging</h2>
         <MfaSettings />
       </div>
+
+      {user?.role === 'admin' && (
+        <div className="mt-3">
+          <h2 className="mb-2">Beheer</h2>
+          <BackupSettings />
+        </div>
+      )}
     </div>
   );
 }

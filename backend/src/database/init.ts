@@ -151,6 +151,20 @@ async function initializeDatabase() {
         // Table might not exist yet, which is fine
     }
 
+    // Migration: Add grade and mp3_file_path columns to music_titles if they don't exist
+    try {
+        const titleTableInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasGrade = titleTableInfo.some(col => col.name === 'grade');
+        if (!hasGrade) {
+            console.log('Migration: Adding grade and mp3_file_path columns to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN grade TEXT').run();
+            db.prepare('ALTER TABLE music_titles ADD COLUMN mp3_file_path TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet, which is fine
+    }
+
     console.log('Database initialization complete!');
 }
 

@@ -57,12 +57,15 @@ export interface Genre {
 }
 
 export interface MusicTitle {
+  id?: string;
   title: string;
   arranger: string | null;
   pieceCount: number;
   youtubeUrl: string | null;
   description: string | null;
   durationSeconds: number;
+  grade?: string | null;
+  mp3FilePath?: string | null;
   isShared?: boolean;
   instruments: string[];
   genres?: Genre[];

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, Genre, MfaSetupResponse, LoginResponse } from './types';
 
-const API_BASE = '/api';
+// Use environment variable for API URL in production, fallback to /api for development proxy
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -344,11 +345,32 @@ export const updateTitleMeta = async (titleData: {
   youtubeUrl?: string | null;
   description?: string | null;
   durationSeconds?: number;
+  grade?: string | null;
   isShared?: boolean;
   genreIds?: string[];
 }): Promise<{ id: string }> => {
   const { data } = await api.put('/music-pieces/title-meta', titleData);
   return data;
+};
+
+// MP3 upload for titles
+export const uploadTitleMp3 = async (titleId: string, file: File): Promise<{ message: string; mp3FilePath: string }> => {
+  const formData = new FormData();
+  formData.append('mp3', file);
+  const { data } = await api.post(`/music-pieces/title-mp3/${titleId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
+  await api.delete(`/music-pieces/title-mp3/${titleId}`);
+};
+
+export const getMp3Url = (filename: string): string => {
+  const baseUrl = api.defaults.baseURL || '';
+  const token = localStorage.getItem('token');
+  return `${baseUrl}/music-pieces/mp3/${filename}?token=${token}`;
 };
 
 // Associations
@@ -388,6 +410,44 @@ export const updateGenre = async (id: string, name: string): Promise<void> => {
 
 export const deleteGenre = async (id: string): Promise<void> => {
   await api.delete(`/genres/${id}`);
+};
+
+// Backup
+export interface BackupInfo {
+  database: { size: number; sizeFormatted: string };
+  pdfFiles: { count: number; size: number; sizeFormatted: string };
+  mp3Files: { count: number; size: number; sizeFormatted: string };
+  total: { size: number; sizeFormatted: string };
+}
+
+export const getBackupInfo = async (): Promise<BackupInfo> => {
+  const { data } = await api.get('/backup/info');
+  return data;
+};
+
+export const downloadBackup = async (): Promise<void> => {
+  const response = await api.get('/backup', {
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+
+  // Get filename from Content-Disposition header or generate one
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = `harmonie-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="(.+)"/);
+    if (match) filename = match[1];
+  }
+
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 export default api;

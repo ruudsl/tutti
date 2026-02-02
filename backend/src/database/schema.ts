@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS music_titles (
     youtube_url TEXT,
     description TEXT,
     duration_seconds INTEGER DEFAULT 0,
+    grade TEXT, -- Moeilijkheidsgraad (bijv. 1, 2, 3, 4, 5 of 1.5, 2+, etc.)
+    mp3_file_path TEXT, -- Pad naar MP3 preview bestand
     is_shared BOOLEAN DEFAULT 0, -- Mag gedeeld worden met andere verenigingen
     association_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

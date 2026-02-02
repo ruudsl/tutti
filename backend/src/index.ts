@@ -29,6 +29,7 @@ import musicListsRoutes from './routes/music-lists';
 import musicPiecesRoutes from './routes/music-pieces';
 import associationsRoutes from './routes/associations';
 import genresRoutes from './routes/genres';
+import backupRoutes from './routes/backup';
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/music-lists', musicListsRoutes);
 app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/associations', associationsRoutes);
 app.use('/api/genres', genresRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
