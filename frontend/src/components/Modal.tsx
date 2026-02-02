@@ -1,4 +1,4 @@
-import { useEffect, useRef, ReactNode, useCallback } from 'react';
+import { useEffect, useRef, ReactNode } from 'react';
 
 interface ModalProps {
   title: string;
@@ -17,21 +17,25 @@ interface ModalProps {
 export function Modal({ title, children, onClose, footer, size = 'medium' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
+  const onCloseRef = useRef(onClose);
 
-  // Handle Escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+  // Keep onClose ref updated
+  onCloseRef.current = onClose;
 
-  // Focus trap and cleanup
+  // Focus trap and cleanup - run only once on mount
   useEffect(() => {
     // Store currently focused element
     previousActiveElement.current = document.activeElement;
 
-    // Focus the modal
+    // Focus the modal only on initial mount
     modalRef.current?.focus();
+
+    // Handle Escape key using ref to avoid re-running effect
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+      }
+    };
 
     // Add event listener
     document.addEventListener('keydown', handleKeyDown);
@@ -51,7 +55,7 @@ export function Modal({ title, children, onClose, footer, size = 'medium' }: Mod
         previousActiveElement.current.focus();
       }
     };
-  }, [handleKeyDown]);
+  }, []); // Empty dependency - only run on mount/unmount
 
   const sizeClass = {
     small: 'modal-small',
