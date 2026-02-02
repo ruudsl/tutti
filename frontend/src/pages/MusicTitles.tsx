@@ -1,15 +1,58 @@
 import { useState, useMemo } from 'react';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { useGenres } from '../hooks/useGenres';
+import { updateTitleMeta, getYouTubeMeta } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { formatDuration } from '../utils/format';
+import { showSuccess, showError } from '../utils/toast';
 import type { MusicTitle } from '../types';
+
+// Parse duration string (mm:ss or h:mm:ss) to seconds
+function parseDuration(str: string): number {
+  if (!str) return 0;
+  const parts = str.split(':').map(Number);
+  if (parts.length === 2) {
+    return (parts[0] * 60) + parts[1];
+  } else if (parts.length === 3) {
+    return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+  }
+  return 0;
+}
+
+// Format seconds to mm:ss string for form input
+function formatDurationForForm(seconds: number): string {
+  if (!seconds || seconds <= 0) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+interface TitleMetaForm {
+  youtubeUrl: string;
+  description: string;
+  durationStr: string;
+  genreIds: string[];
+  isShared: boolean;
+}
 
 export default function MusicTitles() {
   const [search, setSearch] = useState('');
   const [filterGenre, setFilterGenre] = useState('');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
+
+  // Edit state
+  const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
+  const [titleMetaForm, setTitleMetaForm] = useState<TitleMetaForm>({
+    youtubeUrl: '',
+    description: '',
+    durationStr: '',
+    genreIds: [],
+    isShared: false,
+  });
+  const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
+  const [fetchingYouTube, setFetchingYouTube] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -21,13 +64,86 @@ export default function MusicTitles() {
   }), [debouncedSearch, filterGenre]);
 
   // TanStack Query hooks
-  const { data: titles = [], isLoading: titlesLoading } = useMusicTitles(filters);
+  const { data: titles = [], isLoading: titlesLoading, refetch } = useMusicTitles(filters);
   const { data: genres = [], isLoading: genresLoading } = useGenres();
 
   const isLoading = titlesLoading || genresLoading;
 
   const toggleExpand = (title: string) => {
     setExpandedTitle(expandedTitle === title ? null : title);
+  };
+
+  const openTitleMetaModal = (title: MusicTitle) => {
+    setEditingTitle(title);
+    setTitleMetaForm({
+      youtubeUrl: title.youtubeUrl || '',
+      description: title.description || '',
+      durationStr: formatDurationForForm(title.durationSeconds),
+      genreIds: title.genres?.map(g => g.id) || [],
+      isShared: title.isShared || false,
+    });
+    setYoutubeMeta(null);
+  };
+
+  const fetchYouTubeMetadata = async () => {
+    if (!titleMetaForm.youtubeUrl) return;
+
+    setFetchingYouTube(true);
+    try {
+      const meta = await getYouTubeMeta(titleMetaForm.youtubeUrl);
+      setYoutubeMeta({ title: meta.title, author: meta.author });
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Kon YouTube metadata niet ophalen');
+    } finally {
+      setFetchingYouTube(false);
+    }
+  };
+
+  const handleSaveTitleMeta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTitle) return;
+
+    setSaving(true);
+    try {
+      await updateTitleMeta({
+        title: editingTitle.title,
+        arranger: editingTitle.arranger,
+        youtubeUrl: titleMetaForm.youtubeUrl || null,
+        description: titleMetaForm.description || null,
+        durationSeconds: parseDuration(titleMetaForm.durationStr),
+        genreIds: titleMetaForm.genreIds,
+        isShared: titleMetaForm.isShared,
+      });
+      setEditingTitle(null);
+      showSuccess('Metadata opgeslagen');
+      refetch();
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Fout bij opslaan metadata');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleGenre = (genreId: string) => {
+    setTitleMetaForm(f => ({
+      ...f,
+      genreIds: f.genreIds.includes(genreId)
+        ? f.genreIds.filter(id => id !== genreId)
+        : [...f.genreIds, genreId],
+    }));
+  };
+
+  // Search helper - open sheet music websites
+  const searchSheetMusicWebsites = (title: string) => {
+    const encodedTitle = encodeURIComponent(title);
+    const websites = [
+      { name: 'De Haske', url: `https://www.dehaske.com/en-gb/search?q=${encodedTitle}` },
+      { name: 'Molenaar Edition', url: `https://www.molenaar.com/search?q=${encodedTitle}` },
+      { name: 'Hal Leonard', url: `https://www.halleonard.com/search/search.action?_requestid=2&subsiteid=1&seriesfeature=CONCERTBAND&keywords=${encodedTitle}` },
+      { name: 'Beriato Music', url: `https://www.beriato.com/search?q=${encodedTitle}` },
+      { name: 'YouTube', url: `https://www.youtube.com/results?search_query=${encodedTitle}+concert+band` },
+    ];
+    return websites;
   };
 
   if (isLoading) {
@@ -107,6 +223,7 @@ export default function MusicTitles() {
                   <th>Duur</th>
                   <th>Partijen</th>
                   <th>Lijsten</th>
+                  <th style={{ width: '50px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -116,6 +233,7 @@ export default function MusicTitles() {
                     title={title}
                     isExpanded={expandedTitle === `${title.title}-${title.arranger}`}
                     onToggle={() => toggleExpand(`${title.title}-${title.arranger}`)}
+                    onEdit={() => openTitleMetaModal(title)}
                   />
                 ))}
               </tbody>
@@ -128,6 +246,197 @@ export default function MusicTitles() {
           )}
         </div>
       </div>
+
+      {/* Edit Title Metadata Modal */}
+      {editingTitle && (
+        <div className="modal-overlay" onClick={() => setEditingTitle(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Titel metadata bewerken</h3>
+              <button className="modal-close" onClick={() => setEditingTitle(null)}>×</button>
+            </div>
+            <form onSubmit={handleSaveTitleMeta}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Titel</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingTitle.title}
+                      disabled
+                      style={{ flex: 1 }}
+                    />
+                    <div className="dropdown" style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={(e) => {
+                          const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                        }}
+                        title="Zoek info op bladmuziek websites"
+                      >
+                        🔍
+                      </button>
+                      <div
+                        style={{
+                          display: 'none',
+                          position: 'absolute',
+                          right: 0,
+                          top: '100%',
+                          background: 'white',
+                          border: '1px solid var(--border)',
+                          borderRadius: '0.25rem',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          zIndex: 1000,
+                          minWidth: '200px',
+                        }}
+                      >
+                        <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                          Zoek op:
+                        </div>
+                        {searchSheetMusicWebsites(editingTitle.title).map((site) => (
+                          <a
+                            key={site.name}
+                            href={site.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'block',
+                              padding: '0.5rem 1rem',
+                              color: 'inherit',
+                              textDecoration: 'none',
+                              borderBottom: '1px solid var(--border)',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                          >
+                            {site.name}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {editingTitle.arranger && (
+                  <div className="form-group">
+                    <label className="form-label">Arrangeur</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingTitle.arranger}
+                      disabled
+                    />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">YouTube URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={titleMetaForm.youtubeUrl}
+                      onChange={(e) => {
+                        setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
+                        setYoutubeMeta(null);
+                      }}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={fetchYouTubeMetadata}
+                      disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
+                      title="Haal video info op"
+                    >
+                      {fetchingYouTube ? '...' : '📥'}
+                    </button>
+                  </div>
+                  {youtubeMeta && (
+                    <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                      <strong>{youtubeMeta.title}</strong>
+                      <div>Door: {youtubeMeta.author}</div>
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Speelduur (mm:ss)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={titleMetaForm.durationStr}
+                    onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
+                    placeholder="3:45"
+                    pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Omschrijving</label>
+                  <textarea
+                    className="form-control"
+                    value={titleMetaForm.description}
+                    onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Optionele omschrijving of notities..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Genres</label>
+                  <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {genres.map((genre) => (
+                      <label
+                        key={genre.id}
+                        className="checkbox-item"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0.25rem 0.5rem',
+                          background: titleMetaForm.genreIds.includes(genre.id) ? 'var(--primary)' : 'var(--background)',
+                          color: titleMetaForm.genreIds.includes(genre.id) ? 'white' : 'inherit',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={titleMetaForm.genreIds.includes(genre.id)}
+                          onChange={() => toggleGenre(genre.id)}
+                          style={{ display: 'none' }}
+                        />
+                        {genre.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-check" style={{ cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={titleMetaForm.isShared}
+                      onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
+                    />
+                    <span style={{ marginLeft: '0.5rem' }}>
+                      Delen met andere verenigingen toegestaan
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
+                  Annuleren
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Opslaan...' : 'Opslaan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -136,9 +445,10 @@ interface TitleRowProps {
   title: MusicTitle;
   isExpanded: boolean;
   onToggle: () => void;
+  onEdit: () => void;
 }
 
-function TitleRow({ title, isExpanded, onToggle }: TitleRowProps) {
+function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
   const hasDetails = (title.lists && title.lists.length > 0) ||
                      title.youtubeUrl ||
                      title.description ||
@@ -190,11 +500,20 @@ function TitleRow({ title, isExpanded, onToggle }: TitleRowProps) {
             <span style={{ color: 'var(--text-light)' }}>-</span>
           )}
         </td>
+        <td onClick={(e) => e.stopPropagation()}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={onEdit}
+            title="Bewerk metadata"
+          >
+            ✏
+          </button>
+        </td>
       </tr>
       {isExpanded && hasDetails && (
         <tr className="expanded-row">
           <td></td>
-          <td colSpan={6}>
+          <td colSpan={7}>
             <div className="expanded-content" style={{
               padding: '1rem',
               backgroundColor: 'var(--bg-secondary)',
