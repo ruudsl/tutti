@@ -354,6 +354,17 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             `).all(t.title_id) as { id: string; name: string }[];
         }
 
+        // Get lists where this title appears
+        const lists = db.prepare(`
+            SELECT DISTINCT ml.id, ml.name, o.name as orchestra_name
+            FROM music_lists ml
+            JOIN music_list_pieces mlp ON ml.id = mlp.music_list_id
+            JOIN music_pieces mp ON mlp.music_piece_id = mp.id
+            JOIN orchestras o ON ml.orchestra_id = o.id
+            WHERE mp.title = ? AND mp.association_id = ?
+            ORDER BY o.name, ml.name
+        `).all(t.title, req.user!.associationId) as { id: string; name: string; orchestra_name: string }[];
+
         return {
             title: t.title,
             arranger: t.arranger,
@@ -365,6 +376,7 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             instruments: t.instruments ? t.instruments.split(',') : [],
             onList: listId ? titlesOnList.has(t.title) : undefined,
             genres,
+            lists,
         };
     });
 

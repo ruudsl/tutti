@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MyMusic from './pages/MyMusic';
 import MusicPieces from './pages/MusicPieces';
+import MusicTitles from './pages/MusicTitles';
 import Upload from './pages/Upload';
 import Instruments from './pages/Instruments';
 import Genres from './pages/Genres';
@@ -84,6 +85,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <MusicPieces />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="titles"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <MusicTitles />
             </PrivateRoute>
           }
         />

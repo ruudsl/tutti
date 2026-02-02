@@ -53,6 +53,7 @@ export interface MusicTitle {
   instruments: string[];
   genres?: Genre[];
   onList?: boolean;
+  lists?: { id: string; name: string; orchestra_name: string }[];
 }
 
 export interface MusicPiece {

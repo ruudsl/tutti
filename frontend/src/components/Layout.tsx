@@ -45,6 +45,11 @@ export default function Layout() {
                   </NavLink>
                 </li>
                 <li>
+                  <NavLink to="/titles" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Titels
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/upload" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     Uploaden
                   </NavLink>
