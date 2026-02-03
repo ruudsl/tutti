@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -133,6 +133,14 @@ export default function Login() {
           >
             {isLoading ? 'Bezig...' : showMfa ? 'Verifiëren' : 'Inloggen'}
           </button>
+
+          {!showMfa && (
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <Link to="/forgot-password" style={{ color: 'var(--primary)', fontSize: '0.875rem' }}>
+                Wachtwoord vergeten?
+              </Link>
+            </div>
+          )}
         </form>
       </div>
     </div>

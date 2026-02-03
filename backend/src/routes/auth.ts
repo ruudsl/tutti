@@ -1,11 +1,15 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
 import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { loginSchema, changePasswordSchema } from '../validation/schemas';
+import { sendPasswordResetEmail } from '../utils/email';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -262,6 +266,113 @@ router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthReques
     res.json({
         mfaEnabled: Boolean(user.mfa_enabled),
     });
+}));
+
+// Password Reset: Request reset token
+router.post('/forgot-password', asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, 'E-mailadres is verplicht.');
+    }
+
+    // Always return success to prevent email enumeration
+    const successMessage = 'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
+
+    const user = db.prepare('SELECT id, first_name, last_name FROM users WHERE email = ?').get(email) as { id: string; first_name: string; last_name: string } | undefined;
+
+    if (!user) {
+        // Don't reveal that email doesn't exist
+        logger.info(`Password reset requested for unknown email: ${email}`);
+        return res.json({ message: successMessage });
+    }
+
+    // Invalidate any existing tokens for this user
+    db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0').run(user.id);
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenId = uuidv4();
+
+    // Token expires in 1 hour
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    // Store token
+    db.prepare(`
+        INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
+        VALUES (?, ?, ?, ?)
+    `).run(tokenId, user.id, token, expiresAt.toISOString());
+
+    // Send email
+    const userName = `${user.first_name} ${user.last_name}`;
+    const emailSent = await sendPasswordResetEmail(email, token, userName);
+
+    if (!emailSent) {
+        logger.error(`Failed to send password reset email to ${email}`);
+    }
+
+    logger.info(`Password reset token generated for user ${user.id}`);
+
+    res.json({ message: successMessage });
+}));
+
+// Password Reset: Reset password with token
+router.post('/reset-password', asyncHandler(async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        throw new ApiError(400, 'Token en nieuw wachtwoord zijn verplicht.');
+    }
+
+    if (newPassword.length < 8) {
+        throw new ApiError(400, 'Wachtwoord moet minimaal 8 tekens bevatten.');
+    }
+
+    // Find valid token
+    const resetToken = db.prepare(`
+        SELECT prt.*, u.email
+        FROM password_reset_tokens prt
+        JOIN users u ON prt.user_id = u.id
+        WHERE prt.token = ? AND prt.used = 0 AND prt.expires_at > datetime('now')
+    `).get(token) as { id: string; user_id: string; email: string } | undefined;
+
+    if (!resetToken) {
+        throw new ApiError(400, 'Ongeldige of verlopen reset link. Vraag een nieuwe aan.');
+    }
+
+    // Hash new password
+    const passwordHash = bcrypt.hashSync(newPassword, 10);
+
+    // Update password
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, resetToken.user_id);
+
+    // Mark token as used
+    db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
+
+    logger.info(`Password reset successful for user ${resetToken.user_id}`);
+
+    res.json({ message: 'Wachtwoord succesvol gewijzigd. Je kunt nu inloggen met je nieuwe wachtwoord.' });
+}));
+
+// Password Reset: Validate token (check if token is still valid)
+router.get('/reset-password/validate', asyncHandler(async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        throw new ApiError(400, 'Token is verplicht.');
+    }
+
+    const resetToken = db.prepare(`
+        SELECT id FROM password_reset_tokens
+        WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+    `).get(token);
+
+    if (!resetToken) {
+        throw new ApiError(400, 'Ongeldige of verlopen reset link.');
+    }
+
+    res.json({ valid: true });
 }));
 
 export default router;

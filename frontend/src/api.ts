@@ -45,6 +45,22 @@ export const changePassword = async (currentPassword: string, newPassword: strin
   await api.post('/auth/change-password', { currentPassword, newPassword });
 };
 
+// Password Reset
+export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
+  const { data } = await api.post('/auth/forgot-password', { email });
+  return data;
+};
+
+export const validateResetToken = async (token: string): Promise<{ valid: boolean }> => {
+  const { data } = await api.get(`/auth/reset-password/validate?token=${token}`);
+  return data;
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<{ message: string }> => {
+  const { data } = await api.post('/auth/reset-password', { token, newPassword });
+  return data;
+};
+
 // MFA
 export const setupMfa = async (): Promise<MfaSetupResponse> => {
   const { data } = await api.post('/auth/mfa/setup');
