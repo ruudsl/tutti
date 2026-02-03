@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 
 // Import configuration
@@ -97,18 +98,25 @@ if (config.isDevelopment) {
     });
 }
 
-// Serve static files in production
+// Serve static files in production (only if frontend is bundled with backend)
 if (config.isProduction) {
     const frontendPath = path.join(__dirname, '../../frontend/dist');
-    app.use(express.static(frontendPath));
+    const frontendExists = fs.existsSync(path.join(frontendPath, 'index.html'));
 
-    app.get('*', (req, res, next) => {
-        if (!req.path.startsWith('/api')) {
-            res.sendFile(path.join(frontendPath, 'index.html'));
-        } else {
-            next();
-        }
-    });
+    if (frontendExists) {
+        logger.info('Serving frontend from ' + frontendPath);
+        app.use(express.static(frontendPath));
+
+        app.get('*', (req, res, next) => {
+            if (!req.path.startsWith('/api')) {
+                res.sendFile(path.join(frontendPath, 'index.html'));
+            } else {
+                next();
+            }
+        });
+    } else {
+        logger.info('Frontend not bundled - running as API-only backend');
+    }
 }
 
 // 404 handler for unknown API routes
