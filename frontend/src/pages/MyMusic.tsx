@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity } from '../api';
+import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
+import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 
 export default function MyMusic() {
@@ -9,6 +10,13 @@ export default function MyMusic() {
   const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  // Issue reporting state
+  const [reportingPiece, setReportingPiece] = useState<MusicPiece | null>(null);
+  const [issueDescription, setIssueDescription] = useState('');
+  const [issuePageNumber, setIssuePageNumber] = useState('');
+  const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
 
   useEffect(() => {
     loadLists();
@@ -77,6 +85,37 @@ export default function MyMusic() {
     setSelectedList(null);
   };
 
+  const handleReportIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingPiece || !issueDescription.trim()) return;
+
+    setIsSubmittingIssue(true);
+    try {
+      await createIssue({
+        musicPieceId: reportingPiece.id,
+        pageNumber: issuePageNumber ? parseInt(issuePageNumber) : undefined,
+        measureNumber: issueMeasureNumber || undefined,
+        description: issueDescription.trim(),
+      });
+      showSuccess('Melding succesvol ingediend');
+      setReportingPiece(null);
+      setIssueDescription('');
+      setIssuePageNumber('');
+      setIssueMeasureNumber('');
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Fout bij indienen van melding');
+    } finally {
+      setIsSubmittingIssue(false);
+    }
+  };
+
+  const openReportModal = (piece: MusicPiece) => {
+    setReportingPiece(piece);
+    setIssueDescription('');
+    setIssuePageNumber('');
+    setIssueMeasureNumber('');
+  };
+
   if (isLoading && !selectedList) {
     return (
       <div className="loading">
@@ -88,6 +127,7 @@ export default function MyMusic() {
   // Show single list view
   if (selectedList) {
     return (
+      <>
       <div>
         <button className="btn btn-outline mb-2" onClick={handleBack}>
           ← Terug naar overzicht
@@ -143,13 +183,22 @@ export default function MyMusic() {
                         )}
                       </td>
                       <td>
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleDownload(piece)}
-                          disabled={downloading === piece.id}
-                        >
-                          {downloading === piece.id ? 'Bezig...' : '⬇ Download'}
-                        </button>
+                        <div className="flex gap-1">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleDownload(piece)}
+                            disabled={downloading === piece.id}
+                          >
+                            {downloading === piece.id ? 'Bezig...' : '⬇ Download'}
+                          </button>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => openReportModal(piece)}
+                            title="Fout melden"
+                          >
+                            📝
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -164,6 +213,80 @@ export default function MyMusic() {
           </div>
         </div>
       </div>
+
+      {/* Issue Report Modal */}
+      {reportingPiece && (
+        <div className="modal-overlay" onClick={() => setReportingPiece(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Fout melden</h3>
+              <button className="modal-close" onClick={() => setReportingPiece(null)}>×</button>
+            </div>
+            <form onSubmit={handleReportIssue}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Muziekstuk</label>
+                  <p>
+                    <strong>{reportingPiece.title}</strong>
+                    {reportingPiece.instrumentName && ` - ${reportingPiece.instrumentName}`}
+                  </p>
+                </div>
+                <div className="grid grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Paginanummer (optioneel)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={issuePageNumber}
+                      onChange={(e) => setIssuePageNumber(e.target.value)}
+                      min="1"
+                      placeholder="Bijv. 2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Maatnummer (optioneel)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={issueMeasureNumber}
+                      onChange={(e) => setIssueMeasureNumber(e.target.value)}
+                      placeholder="Bijv. 24-28"
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Beschrijving van de fout *</label>
+                  <textarea
+                    className="form-control"
+                    value={issueDescription}
+                    onChange={(e) => setIssueDescription(e.target.value)}
+                    rows={4}
+                    placeholder="Beschrijf de fout die je hebt gevonden, bijv. 'Verkeerde noot in maat 24' of 'Pagina ontbreekt'"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setReportingPiece(null)}
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmittingIssue || !issueDescription.trim()}
+                >
+                  {isSubmittingIssue ? 'Bezig...' : 'Melding versturen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
     );
   }
 
