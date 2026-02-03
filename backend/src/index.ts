@@ -33,6 +33,8 @@ import genresRoutes from './routes/genres';
 import backupRoutes from './routes/backup';
 import issuesRoutes from './routes/issues';
 import pdfToolsRoutes from './routes/pdf-tools';
+import loansRoutes from './routes/loans';
+import activityRoutes from './routes/activity';
 
 const app = express();
 
@@ -84,6 +86,8 @@ app.use('/api/genres', genresRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/pdf-tools', pdfToolsRoutes);
+app.use('/api/loans', loansRoutes);
+app.use('/api/activity', activityRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -79,6 +79,16 @@ export default function Layout() {
                     Genres
                   </NavLink>
                 </li>
+                <li>
+                  <NavLink to="/loans" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Uitleningen
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/statistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Statistieken
+                  </NavLink>
+                </li>
               </>
             )}
             {isAdmin && (

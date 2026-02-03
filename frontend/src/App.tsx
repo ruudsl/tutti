@@ -21,6 +21,8 @@ import MusicListManager from './pages/MusicListManager';
 import Tools from './pages/Tools';
 import Issues from './pages/Issues';
 import PdfTools from './pages/PdfTools';
+import Loans from './pages/Loans';
+import Statistics from './pages/Statistics';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -130,6 +132,22 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Genres />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="loans"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <Loans />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="statistics"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <Statistics />
             </PrivateRoute>
           }
         />

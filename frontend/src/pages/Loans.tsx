@@ -1,0 +1,474 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getLoans, createLoan, returnLoan, deleteLoan, type Loan } from '../api';
+import { showSuccess, showError } from '../utils/toast';
+import { SkeletonTable } from '../components/Skeleton';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Uitgeleend',
+  overdue: 'Te laat',
+  returned: 'Geretourneerd',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'badge-info',
+  overdue: 'badge-danger',
+  returned: 'badge-success',
+};
+
+interface LoanStats {
+  total: number;
+  active: number;
+  overdue: number;
+  returned: number;
+}
+
+interface TitleOption {
+  id: string;
+  title: string;
+  arranger: string | null;
+  active_loans: number;
+}
+
+export default function Loans() {
+  const queryClient = useQueryClient();
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [titleSearch, setTitleSearch] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState<TitleOption | null>(null);
+  const [borrowerName, setBorrowerName] = useState('');
+  const [borrowerEmail, setBorrowerEmail] = useState('');
+  const [borrowerOrganization, setBorrowerOrganization] = useState('');
+  const [notes, setNotes] = useState('');
+  const [expectedReturn, setExpectedReturn] = useState('');
+
+  // Fetch loans
+  const { data: loans = [], isLoading } = useQuery({
+    queryKey: ['loans', filterStatus],
+    queryFn: () => getLoans({ status: filterStatus || undefined }),
+  });
+
+  // Fetch stats
+  const { data: stats } = useQuery<LoanStats>({
+    queryKey: ['loan-stats'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/loans/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+  });
+
+  // Search titles
+  const { data: titleOptions = [] } = useQuery<TitleOption[]>({
+    queryKey: ['available-titles', titleSearch],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/loans/available-titles?search=${encodeURIComponent(titleSearch)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: showNewLoanModal,
+  });
+
+  // Create loan mutation
+  const createMutation = useMutation({
+    mutationFn: createLoan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
+      showSuccess('Uitlening aangemaakt');
+      resetForm();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || 'Fout bij aanmaken uitlening');
+    },
+  });
+
+  // Return loan mutation
+  const returnMutation = useMutation({
+    mutationFn: returnLoan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
+      showSuccess('Uitlening geretourneerd');
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || 'Fout bij retourneren');
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteLoan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
+      showSuccess('Uitlening verwijderd');
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || 'Fout bij verwijderen');
+    },
+  });
+
+  const resetForm = () => {
+    setShowNewLoanModal(false);
+    setTitleSearch('');
+    setSelectedTitle(null);
+    setBorrowerName('');
+    setBorrowerEmail('');
+    setBorrowerOrganization('');
+    setNotes('');
+    setExpectedReturn('');
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTitle || !borrowerName.trim()) {
+      showError('Selecteer een titel en vul de naam van de lener in');
+      return;
+    }
+    createMutation.mutate({
+      musicTitleId: selectedTitle.id,
+      borrowerName: borrowerName.trim(),
+      borrowerEmail: borrowerEmail.trim() || undefined,
+      borrowerOrganization: borrowerOrganization.trim() || undefined,
+      notes: notes.trim() || undefined,
+      expectedReturn: expectedReturn || undefined,
+    });
+  };
+
+  const handleReturn = (loan: Loan) => {
+    if (confirm(`Weet je zeker dat "${loan.title_name}" is geretourneerd door ${loan.borrower_name}?`)) {
+      returnMutation.mutate(loan.id);
+    }
+  };
+
+  const handleDelete = (loan: Loan) => {
+    if (confirm('Weet je zeker dat je deze uitlening wilt verwijderen?')) {
+      deleteMutation.mutate(loan.id);
+    }
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const isOverdue = (loan: Loan) => {
+    if (loan.status === 'returned' || !loan.expected_return) return false;
+    return new Date(loan.expected_return) < new Date();
+  };
+
+  if (isLoading) {
+    return (
+      <div>
+        <h1>Uitleningen</h1>
+        <SkeletonTable rows={5} columns={7} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-3">
+        <h1>
+          Uitleningen
+          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+            {loans.length}
+          </span>
+        </h1>
+        <button className="btn btn-primary" onClick={() => setShowNewLoanModal(true)}>
+          + Nieuwe uitlening
+        </button>
+      </div>
+
+      {stats && (
+        <div className="grid grid-4 mb-3" style={{ gap: '1rem' }}>
+          <div className="card">
+            <div className="card-body" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>{stats.active}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Uitgeleend</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{stats.overdue}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Te laat</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.returned}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Geretourneerd</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.total}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Totaal</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card mb-2">
+        <div className="card-body">
+          <div className="flex gap-2">
+            <select
+              className="form-control form-select"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{ maxWidth: '200px' }}
+            >
+              <option value="">Alle statussen</option>
+              <option value="active">Uitgeleend</option>
+              <option value="overdue">Te laat</option>
+              <option value="returned">Geretourneerd</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-body" style={{ padding: 0 }}>
+          {loans.length > 0 ? (
+            <table className="table mb-0">
+              <thead>
+                <tr>
+                  <th>Titel</th>
+                  <th>Geleend door</th>
+                  <th>Organisatie</th>
+                  <th>Uitgeleend</th>
+                  <th>Verwacht retour</th>
+                  <th>Status</th>
+                  <th style={{ width: '120px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {loans.map((loan) => (
+                  <tr key={loan.id} style={isOverdue(loan) ? { backgroundColor: 'var(--danger-light)' } : undefined}>
+                    <td>
+                      <strong>{loan.title_name}</strong>
+                      {loan.title_arranger && (
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                          {loan.title_arranger}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div>{loan.borrower_name}</div>
+                      {loan.borrower_email && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                          {loan.borrower_email}
+                        </div>
+                      )}
+                    </td>
+                    <td>{loan.borrower_organization || '-'}</td>
+                    <td>{formatDate(loan.date_out)}</td>
+                    <td style={isOverdue(loan) ? { color: 'var(--danger)', fontWeight: 'bold' } : undefined}>
+                      {formatDate(loan.expected_return)}
+                    </td>
+                    <td>
+                      <span className={`badge ${STATUS_COLORS[loan.status]}`}>
+                        {STATUS_LABELS[loan.status]}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex gap-1">
+                        {loan.status !== 'returned' && (
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => handleReturn(loan)}
+                            title="Markeer als geretourneerd"
+                          >
+                            Retour
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleDelete(loan)}
+                          title="Verwijderen"
+                        >
+                          X
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">📦</div>
+              <p>Geen uitleningen gevonden.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* New Loan Modal */}
+      {showNewLoanModal && (
+        <div className="modal-overlay" onClick={resetForm}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Nieuwe uitlening</h3>
+              <button className="modal-close" onClick={resetForm}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Muziekstuk *</label>
+                  {selectedTitle ? (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.75rem',
+                      background: 'var(--background)',
+                      borderRadius: '0.25rem'
+                    }}>
+                      <div>
+                        <strong>{selectedTitle.title}</strong>
+                        {selectedTitle.arranger && (
+                          <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
+                            - {selectedTitle.arranger}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setSelectedTitle(null)}
+                      >
+                        Wijzig
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={titleSearch}
+                        onChange={(e) => setTitleSearch(e.target.value)}
+                        placeholder="Zoek op titel..."
+                      />
+                      {titleOptions.length > 0 && (
+                        <div style={{
+                          maxHeight: '200px',
+                          overflow: 'auto',
+                          border: '1px solid var(--border)',
+                          borderRadius: '0.25rem',
+                          marginTop: '0.5rem'
+                        }}>
+                          {titleOptions.map((title) => (
+                            <div
+                              key={title.id}
+                              style={{
+                                padding: '0.5rem 0.75rem',
+                                cursor: 'pointer',
+                                borderBottom: '1px solid var(--border)'
+                              }}
+                              onClick={() => setSelectedTitle(title)}
+                              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                            >
+                              <strong>{title.title}</strong>
+                              {title.arranger && (
+                                <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
+                                  - {title.arranger}
+                                </span>
+                              )}
+                              {title.active_loans > 0 && (
+                                <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
+                                  {title.active_loans}x uitgeleend
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Naam lener *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={borrowerName}
+                    onChange={(e) => setBorrowerName(e.target.value)}
+                    placeholder="Naam van de persoon of vereniging"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-2" style={{ gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">E-mail</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={borrowerEmail}
+                      onChange={(e) => setBorrowerEmail(e.target.value)}
+                      placeholder="email@voorbeeld.nl"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Organisatie</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={borrowerOrganization}
+                      onChange={(e) => setBorrowerOrganization(e.target.value)}
+                      placeholder="Naam vereniging"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Verwachte retourdatum</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={expectedReturn}
+                    onChange={(e) => setExpectedReturn(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Notities</label>
+                  <textarea
+                    className="form-control"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder="Extra informatie over de uitlening..."
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={resetForm}>
+                  Annuleren
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Aanmaken...' : 'Uitlening aanmaken'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
