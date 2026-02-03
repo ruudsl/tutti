@@ -1,5 +1,19 @@
-# Render Blueprint - https://render.com/docs/blueprint-spec
-# Deploy: https://dashboard.render.com/select-repo?type=blueprint
+# Render Infrastructure as Code - https://render.com/docs/infrastructure-as-code
+#
+# Deployment stappen:
+# 1. Ga naar https://dashboard.render.com
+# 2. Klik op "New" → "Web Service"
+# 3. Connect je GitHub repository
+# 4. Selecteer de repository en kies "backend" als Root Directory
+# 5. Render detecteert automatisch deze render.yaml
+#
+# Of handmatig:
+# 1. New → Web Service → Connect repo
+# 2. Root Directory: backend
+# 3. Build Command: npm install && npm run build
+# 4. Start Command: npm start
+# 5. Voeg Environment Variables toe (zie onder)
+# 6. Voeg een Disk toe: /opt/render/project/data (1 GB)
 
 services:
   - type: web
