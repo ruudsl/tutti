@@ -57,6 +57,7 @@ export default function MusicTitles() {
   const [saving, setSaving] = useState(false);
   const [uploadingMp3, setUploadingMp3] = useState(false);
   const [currentMp3Path, setCurrentMp3Path] = useState<string | null>(null);
+  const [pendingMp3File, setPendingMp3File] = useState<File | null>(null);
   const mp3InputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search for API calls
@@ -89,6 +90,7 @@ export default function MusicTitles() {
       isShared: title.isShared || false,
     });
     setCurrentMp3Path(title.mp3FilePath || null);
+    setPendingMp3File(null);
     setYoutubeMeta(null);
   };
 
@@ -112,7 +114,8 @@ export default function MusicTitles() {
 
     setSaving(true);
     try {
-      await updateTitleMeta({
+      // First save metadata and get the title ID
+      const result = await updateTitleMeta({
         title: editingTitle.title,
         arranger: editingTitle.arranger,
         youtubeUrl: titleMetaForm.youtubeUrl || null,
@@ -122,8 +125,22 @@ export default function MusicTitles() {
         genreIds: titleMetaForm.genreIds,
         isShared: titleMetaForm.isShared,
       });
+
+      // If there's a pending MP3 file, upload it now
+      if (pendingMp3File && result.id) {
+        try {
+          await uploadTitleMp3(result.id, pendingMp3File);
+          showSuccess('Metadata en MP3 opgeslagen');
+        } catch (mp3Error: any) {
+          showSuccess('Metadata opgeslagen');
+          showError('MP3 upload mislukt: ' + (mp3Error.response?.data?.error || 'Onbekende fout'));
+        }
+      } else {
+        showSuccess('Metadata opgeslagen');
+      }
+
       setEditingTitle(null);
-      showSuccess('Metadata opgeslagen');
+      setPendingMp3File(null);
       refetch();
     } catch (error: any) {
       showError(error.response?.data?.error || 'Fout bij opslaan metadata');
@@ -444,13 +461,44 @@ export default function MusicTitles() {
                         🗑
                       </button>
                     </div>
-                  ) : editingTitle?.id ? (
+                  ) : pendingMp3File ? (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                      <span style={{ flex: 1 }}>
+                        📎 {pendingMp3File.name}
+                        <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                          ({(pendingMp3File.size / 1024 / 1024).toFixed(1)} MB)
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => {
+                          setPendingMp3File(null);
+                          if (mp3InputRef.current) mp3InputRef.current.value = '';
+                        }}
+                        title="MP3 verwijderen"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
                     <div>
                       <input
                         ref={mp3InputRef}
                         type="file"
                         accept=".mp3,audio/mpeg"
-                        onChange={handleMp3Upload}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // If title already has an ID, upload immediately
+                            if (editingTitle?.id) {
+                              handleMp3Upload(e);
+                            } else {
+                              // Otherwise store for later upload
+                              setPendingMp3File(file);
+                            }
+                          }
+                        }}
                         disabled={uploadingMp3}
                         style={{ display: 'none' }}
                       />
@@ -460,13 +508,14 @@ export default function MusicTitles() {
                         onClick={() => mp3InputRef.current?.click()}
                         disabled={uploadingMp3}
                       >
-                        {uploadingMp3 ? 'Uploaden...' : '📤 MP3 uploaden'}
+                        {uploadingMp3 ? 'Uploaden...' : '📤 MP3 selecteren'}
                       </button>
+                      {!editingTitle?.id && (
+                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                          Wordt geüpload bij opslaan
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-light" style={{ margin: 0, fontSize: '0.875rem' }}>
-                      Sla eerst op om een MP3 te kunnen uploaden.
-                    </p>
                   )}
                 </div>
                 <div className="form-group">

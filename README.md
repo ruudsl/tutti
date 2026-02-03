@@ -146,13 +146,113 @@ harmonie/
 | `music_committee` | Muziekcommissie, kan muziekstukken en instrumenten beheren |
 | `admin` | Beheerder, volledige toegang tot alle functionaliteiten |
 
+## Deployment
+
+De applicatie kan worden gedeployed met Vercel (frontend) en Render.com (backend).
+
+### Backend deployen op Render.com
+
+1. **Maak een account** op [render.com](https://render.com) en log in
+
+2. **Klik op "New" → "Web Service"**
+
+3. **Connect je GitHub repository**
+   - Selecteer de repository waar deze code staat
+   - Geef Render toegang tot de repository
+
+4. **Configureer de service:**
+   - **Name:** `harmonie-backend` (of een andere naam)
+   - **Region:** Frankfurt (EU Central) - dichtstbij voor Nederland
+   - **Root Directory:** `backend`
+   - **Runtime:** Node
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+
+5. **Voeg Environment Variables toe** (klik op "Advanced" → "Add Environment Variable"):
+   | Key | Value |
+   |-----|-------|
+   | `NODE_ENV` | `production` |
+   | `PORT` | `10000` |
+   | `JWT_SECRET` | *(genereer een lange random string, bijv. met `openssl rand -hex 32`)* |
+   | `DB_PATH` | `/opt/render/project/data/harmonie.db` |
+   | `UPLOAD_DIR` | `/opt/render/project/data/uploads` |
+   | `MP3_UPLOAD_DIR` | `/opt/render/project/data/uploads/mp3` |
+   | `FRONTEND_URL` | *(vul later in na frontend deployment)* |
+
+6. **Voeg een Disk toe** voor persistente opslag:
+   - Klik op "Add Disk"
+   - **Name:** `harmonie-data`
+   - **Mount Path:** `/opt/render/project/data`
+   - **Size:** 1 GB (of meer indien nodig)
+
+7. **Klik op "Create Web Service"**
+
+8. **Wacht tot de deployment klaar is** - noteer de URL (bijv. `https://harmonie-backend.onrender.com`)
+
+### Frontend deployen op Vercel
+
+1. **Maak een account** op [vercel.com](https://vercel.com) en log in
+
+2. **Klik op "Add New..." → "Project"**
+
+3. **Import je GitHub repository**
+   - Selecteer de repository waar deze code staat
+
+4. **Configureer het project:**
+   - **Framework Preset:** Vite
+   - **Root Directory:** `frontend`
+
+5. **Voeg Environment Variables toe:**
+   | Key | Value |
+   |-----|-------|
+   | `VITE_API_URL` | De Render backend URL + `/api`, bijv. `https://harmonie-backend.onrender.com/api` |
+
+6. **Klik op "Deploy"**
+
+7. **Noteer de frontend URL** (bijv. `https://harmonie-frontend.vercel.app`)
+
+### Na beide deployments: CORS configureren
+
+Ga terug naar **Render.com** en voeg de frontend URL toe aan de environment variables:
+
+1. Ga naar je backend service → "Environment"
+2. Voeg toe of update: `FRONTEND_URL` = `https://harmonie-frontend.vercel.app` (jouw Vercel URL)
+3. Klik op "Save Changes" - de service herstart automatisch
+
+### Verificatie
+
+1. Open de frontend URL in je browser
+2. Log in met:
+   - **Email:** `admin@harmonie.nl`
+   - **Wachtwoord:** `admin123`
+3. **Wijzig direct je wachtwoord** via Profiel → Wachtwoord wijzigen
+
+### Troubleshooting
+
+**"Cannot GET /api" foutmelding:**
+- Check of je de juiste backend URL hebt in `VITE_API_URL`
+- De URL moet eindigen op `/api`, bijv. `https://harmonie-backend.onrender.com/api`
+
+**CORS errors (login mislukt):**
+- Zorg dat `FRONTEND_URL` correct is ingesteld op Render
+- De URL moet exact overeenkomen (inclusief https://, zonder trailing slash)
+
+**Backend start niet:**
+- Check de logs in Render dashboard
+- Verifieer dat alle environment variables correct zijn ingesteld
+
+**Database of uploads kwijt na redeploy:**
+- Zorg dat je een Disk hebt toegevoegd met het juiste mount path
+- Zonder Disk gaan alle gegevens verloren bij elke redeploy
+
 ## Technologieën
 
-- **Frontend:** React 18, TypeScript, React Router, Axios
+- **Frontend:** React 18, TypeScript, React Router, Axios, TanStack Query
 - **Backend:** Node.js, Express, TypeScript
 - **Database:** SQLite (better-sqlite3)
-- **Authenticatie:** JWT tokens
+- **Authenticatie:** JWT tokens, TOTP MFA
 - **Build tools:** Vite, tsx
+- **Deployment:** Vercel (frontend), Render.com (backend)
 
 ## Licentie
 
