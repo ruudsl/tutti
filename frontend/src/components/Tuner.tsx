@@ -91,7 +91,7 @@ export function Tuner({ compact = false }: TunerProps) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | null>(null);
-  const bufferRef = useRef<Float32Array | null>(null);
+  const bufferRef = useRef<Float32Array<ArrayBuffer> | null>(null);
 
   const analyze = useCallback(() => {
     if (!analyserRef.current || !bufferRef.current || !audioContextRef.current) return;

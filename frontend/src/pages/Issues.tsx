@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue, type IssueStats } from '../api';
+import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -79,15 +79,6 @@ export default function Issues() {
     } else {
       updateStatusMutation.mutate({ id: issue.id, status: newStatus });
     }
-  };
-
-  const handleResolve = () => {
-    if (!selectedIssue) return;
-    updateStatusMutation.mutate({
-      id: selectedIssue.id,
-      status: selectedIssue.status === 'rejected' ? 'rejected' : 'resolved',
-      notes: resolutionNotes,
-    });
   };
 
   const handleDelete = (issue: PieceIssue) => {

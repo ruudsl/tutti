@@ -190,7 +190,7 @@ export default function PdfTools() {
     }
   };
 
-  const downloadFile = (filepath: string, filename: string) => {
+  const downloadFile = (filepath: string, _filename: string) => {
     const token = localStorage.getItem('token');
     window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${token}`, '_blank');
   };
