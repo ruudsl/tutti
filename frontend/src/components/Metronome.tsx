@@ -15,6 +15,17 @@ export function Metronome({ compact = false }: MetronomeProps) {
   const currentBeatRef = useRef(0);
   const timerIdRef = useRef<number | null>(null);
   const isPlayingRef = useRef(false);
+  const bpmRef = useRef(bpm);
+  const beatsPerMeasureRef = useRef(beatsPerMeasure);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    bpmRef.current = bpm;
+  }, [bpm]);
+
+  useEffect(() => {
+    beatsPerMeasureRef.current = beatsPerMeasure;
+  }, [beatsPerMeasure]);
 
   // Audio scheduling constants
   const scheduleAheadTime = 0.1; // How far ahead to schedule audio (sec)
@@ -48,14 +59,15 @@ export function Metronome({ compact = false }: MetronomeProps) {
   const scheduler = useCallback(() => {
     if (!audioContextRef.current || !isPlayingRef.current) return;
 
-    const secondsPerBeat = 60.0 / bpm;
+    // Use refs to always get current values
+    const secondsPerBeat = 60.0 / bpmRef.current;
 
     while (nextNoteTimeRef.current < audioContextRef.current.currentTime + scheduleAheadTime) {
       scheduleNote(currentBeatRef.current, nextNoteTimeRef.current);
       nextNoteTimeRef.current += secondsPerBeat;
-      currentBeatRef.current = (currentBeatRef.current + 1) % beatsPerMeasure;
+      currentBeatRef.current = (currentBeatRef.current + 1) % beatsPerMeasureRef.current;
     }
-  }, [bpm, beatsPerMeasure, scheduleNote]);
+  }, [scheduleNote]);
 
   const startMetronome = useCallback(() => {
     if (!audioContextRef.current) {
