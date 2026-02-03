@@ -42,17 +42,17 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     // Top 10 most viewed/downloaded pieces
     const topPieces = db.prepare(`
       SELECT
-        mt.id,
-        mt.title,
-        mt.arranger,
+        mp.id,
+        mp.title,
+        mp.arranger,
         COUNT(*) as count
       FROM activity_log al
-      JOIN music_titles mt ON al.entity_id = mt.id
-      WHERE al.entity_type = 'music_title'
+      JOIN music_pieces mp ON al.entity_id = mp.id
+      WHERE al.entity_type = 'music_piece'
         AND al.action_type IN ('view', 'download')
         AND al.created_at >= ?
-        AND mt.association_id = ?
-      GROUP BY mt.id
+        AND mp.association_id = ?
+      GROUP BY mp.id
       ORDER BY count DESC
       LIMIT 10
     `).all(startDateStr, authReq.user!.associationId);

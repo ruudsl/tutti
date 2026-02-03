@@ -6,7 +6,7 @@ import {
   useRefreshInstrumentLinks,
 } from '../hooks/useMusicPieces';
 import { useInstruments } from '../hooks/useInstruments';
-import { downloadMusicPiece } from '../api';
+import { downloadMusicPiece, logActivity } from '../api';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -44,6 +44,8 @@ export default function MusicPieces() {
     setDownloading(pieceId);
     try {
       await downloadMusicPiece(pieceId);
+      // Log activity for statistics
+      logActivity('download', 'music_piece', pieceId).catch(() => {});
     } catch (error) {
       showError('Fout bij downloaden van het bestand.');
     } finally {

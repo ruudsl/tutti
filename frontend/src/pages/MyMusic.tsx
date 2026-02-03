@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getMyMusicLists, getMusicList, downloadMusicPiece } from '../api';
+import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity } from '../api';
 import type { MusicList, MusicPiece } from '../types';
 
 export default function MyMusic() {
@@ -45,6 +45,8 @@ export default function MyMusic() {
     try {
       const data = await getMusicList(listId);
       setSelectedList(data);
+      // Log activity for statistics
+      logActivity('view', 'music_list', listId).catch(() => {});
     } catch (error) {
       console.error('Error loading list:', error);
     } finally {
@@ -56,10 +58,12 @@ export default function MyMusic() {
     setSearchParams({ listId });
   };
 
-  const handleDownload = async (pieceId: string) => {
-    setDownloading(pieceId);
+  const handleDownload = async (piece: MusicPiece) => {
+    setDownloading(piece.id);
     try {
-      await downloadMusicPiece(pieceId);
+      await downloadMusicPiece(piece.id);
+      // Log activity for statistics
+      logActivity('download', 'music_piece', piece.id).catch(() => {});
     } catch (error) {
       console.error('Error downloading:', error);
       alert('Fout bij downloaden van het bestand.');
@@ -141,7 +145,7 @@ export default function MyMusic() {
                       <td>
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={() => handleDownload(piece.id)}
+                          onClick={() => handleDownload(piece)}
                           disabled={downloading === piece.id}
                         >
                           {downloading === piece.id ? 'Bezig...' : '⬇ Download'}
