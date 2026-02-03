@@ -164,14 +164,14 @@ export default function Layout() {
           </ul>
 
           <div className="navbar-user">
-            <div className="user-info">
+            <Link to="/profile" className="user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="user-name">{user?.firstName} {user?.lastName}</div>
               <div className="user-role">
                 {user?.role === 'admin' && 'Beheerder'}
                 {user?.role === 'music_committee' && 'Muziekcommissie'}
                 {user?.role === 'member' && 'Lid'}
               </div>
-            </div>
+            </Link>
             <button className="btn btn-outline btn-sm" onClick={handleLogout}>
               Uitloggen
             </button>

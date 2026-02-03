@@ -23,6 +23,7 @@ import Issues from './pages/Issues';
 import PdfTools from './pages/PdfTools';
 import Loans from './pages/Loans';
 import Statistics from './pages/Statistics';
+import Profile from './pages/Profile';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -84,6 +85,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="profile" element={<Profile />} />
         <Route path="my-music" element={<MyMusic />} />
         <Route path="tools" element={<Tools />} />
         <Route path="issues" element={<Issues />} />
