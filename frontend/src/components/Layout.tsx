@@ -32,6 +32,16 @@ export default function Layout() {
                 Mijn Muziek
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                Tools
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/issues" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                Meldkamer
+              </NavLink>
+            </li>
             {isMusicCommittee && (
               <>
                 <li>
@@ -52,6 +62,11 @@ export default function Layout() {
                 <li>
                   <NavLink to="/upload" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     Uploaden
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/pdf-tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    PDF Tools
                   </NavLink>
                 </li>
                 <li>

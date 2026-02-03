@@ -18,6 +18,9 @@ import Genres from './pages/Genres';
 import Users from './pages/Users';
 import Orchestras from './pages/Orchestras';
 import MusicListManager from './pages/MusicListManager';
+import Tools from './pages/Tools';
+import Issues from './pages/Issues';
+import PdfTools from './pages/PdfTools';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -80,6 +83,8 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="my-music" element={<MyMusic />} />
+        <Route path="tools" element={<Tools />} />
+        <Route path="issues" element={<Issues />} />
         <Route
           path="music-pieces"
           element={
@@ -101,6 +106,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Upload />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="pdf-tools"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <PdfTools />
             </PrivateRoute>
           }
         />

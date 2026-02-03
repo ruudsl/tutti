@@ -165,6 +165,54 @@ CREATE TABLE IF NOT EXISTS shared_title_access (
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
 );
 
+-- Foutmeldingen voor bladmuziek (Meldkamer)
+CREATE TABLE IF NOT EXISTS piece_issues (
+    id TEXT PRIMARY KEY,
+    music_piece_id TEXT NOT NULL,
+    reported_by TEXT NOT NULL,
+    page_number INTEGER,
+    measure_number TEXT,
+    description TEXT NOT NULL,
+    status TEXT DEFAULT 'open', -- open, in_review, resolved, rejected
+    resolution_notes TEXT,
+    resolved_by TEXT,
+    resolved_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE,
+    FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Uitleningen (Leen-systeem)
+CREATE TABLE IF NOT EXISTS loans (
+    id TEXT PRIMARY KEY,
+    music_title_id TEXT NOT NULL,
+    borrower_name TEXT NOT NULL,
+    borrower_email TEXT,
+    borrower_organization TEXT,
+    notes TEXT,
+    date_out DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expected_return DATETIME,
+    date_returned DATETIME,
+    status TEXT DEFAULT 'active', -- active, returned, overdue
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Activiteitenlog voor statistieken
+CREATE TABLE IF NOT EXISTS activity_log (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    action_type TEXT NOT NULL, -- view, download, play_audio, etc.
+    entity_type TEXT NOT NULL, -- music_piece, music_title, etc.
+    entity_id TEXT NOT NULL,
+    metadata TEXT, -- JSON met extra info
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Indexen voor betere performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_association ON users(association_id);
@@ -176,4 +224,11 @@ CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(al
 CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title);
 CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id);
 CREATE INDEX IF NOT EXISTS idx_genres_name ON genres(name);
+CREATE INDEX IF NOT EXISTS idx_piece_issues_piece ON piece_issues(music_piece_id);
+CREATE INDEX IF NOT EXISTS idx_piece_issues_status ON piece_issues(status);
+CREATE INDEX IF NOT EXISTS idx_loans_title ON loans(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
+CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at);
 `;

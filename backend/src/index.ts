@@ -31,6 +31,8 @@ import musicPiecesRoutes from './routes/music-pieces';
 import associationsRoutes from './routes/associations';
 import genresRoutes from './routes/genres';
 import backupRoutes from './routes/backup';
+import issuesRoutes from './routes/issues';
+import pdfToolsRoutes from './routes/pdf-tools';
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/associations', associationsRoutes);
 app.use('/api/genres', genresRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/issues', issuesRoutes);
+app.use('/api/pdf-tools', pdfToolsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

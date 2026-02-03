@@ -450,4 +450,140 @@ export const downloadBackup = async (): Promise<void> => {
   window.URL.revokeObjectURL(url);
 };
 
+// Issues (Meldkamer)
+export interface PieceIssue {
+  id: string;
+  music_piece_id: string;
+  page_number: number | null;
+  measure_number: string | null;
+  description: string;
+  status: 'open' | 'in_review' | 'resolved' | 'rejected';
+  resolution_notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  piece_title: string;
+  piece_arranger: string | null;
+  instrument_name: string | null;
+  reported_by_name: string;
+  reported_by_email?: string;
+  resolved_by_name?: string | null;
+}
+
+export interface IssueStats {
+  total: number;
+  open: number;
+  in_review: number;
+  resolved: number;
+  rejected: number;
+}
+
+export const getIssues = async (filters?: { status?: string; pieceId?: string }): Promise<PieceIssue[]> => {
+  const { data } = await api.get('/issues', { params: filters });
+  return data;
+};
+
+export const getMyIssues = async (): Promise<PieceIssue[]> => {
+  const { data } = await api.get('/issues/my-issues');
+  return data;
+};
+
+export const getIssueStats = async (): Promise<IssueStats> => {
+  const { data } = await api.get('/issues/stats');
+  return data;
+};
+
+export const createIssue = async (issue: {
+  musicPieceId: string;
+  pageNumber?: number;
+  measureNumber?: string;
+  description: string;
+}): Promise<PieceIssue> => {
+  const { data } = await api.post('/issues', issue);
+  return data;
+};
+
+export const updateIssueStatus = async (
+  id: string,
+  status: string,
+  resolutionNotes?: string
+): Promise<PieceIssue> => {
+  const { data } = await api.patch(`/issues/${id}/status`, { status, resolutionNotes });
+  return data;
+};
+
+export const deleteIssue = async (id: string): Promise<void> => {
+  await api.delete(`/issues/${id}`);
+};
+
+// Loans (Leen-systeem)
+export interface Loan {
+  id: string;
+  music_title_id: string;
+  borrower_name: string;
+  borrower_email: string | null;
+  borrower_organization: string | null;
+  notes: string | null;
+  date_out: string;
+  expected_return: string | null;
+  date_returned: string | null;
+  status: 'active' | 'returned' | 'overdue';
+  created_at: string;
+  title_name?: string;
+  title_arranger?: string;
+  created_by_name?: string;
+}
+
+export const getLoans = async (filters?: { status?: string }): Promise<Loan[]> => {
+  const { data } = await api.get('/loans', { params: filters });
+  return data;
+};
+
+export const createLoan = async (loan: {
+  musicTitleId: string;
+  borrowerName: string;
+  borrowerEmail?: string;
+  borrowerOrganization?: string;
+  notes?: string;
+  expectedReturn?: string;
+}): Promise<Loan> => {
+  const { data } = await api.post('/loans', loan);
+  return data;
+};
+
+export const updateLoan = async (id: string, updates: {
+  borrowerName?: string;
+  borrowerEmail?: string;
+  borrowerOrganization?: string;
+  notes?: string;
+  expectedReturn?: string;
+}): Promise<Loan> => {
+  const { data } = await api.put(`/loans/${id}`, updates);
+  return data;
+};
+
+export const returnLoan = async (id: string): Promise<Loan> => {
+  const { data } = await api.post(`/loans/${id}/return`);
+  return data;
+};
+
+export const deleteLoan = async (id: string): Promise<void> => {
+  await api.delete(`/loans/${id}`);
+};
+
+// Activity Log (Statistieken)
+export interface ActivityStats {
+  topPieces: { id: string; title: string; arranger: string | null; count: number }[];
+  recentActivity: { date: string; downloads: number; views: number }[];
+  userActivity: { id: string; name: string; downloads: number; views: number }[];
+}
+
+export const getActivityStats = async (period?: string): Promise<ActivityStats> => {
+  const { data } = await api.get('/activity/stats', { params: { period } });
+  return data;
+};
+
+export const logActivity = async (actionType: string, entityType: string, entityId: string): Promise<void> => {
+  await api.post('/activity/log', { actionType, entityType, entityId });
+};
+
 export default api;
