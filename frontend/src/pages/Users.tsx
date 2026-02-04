@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { useInstruments } from '../hooks/useInstruments';
 import { useOrchestras } from '../hooks/useOrchestras';
@@ -8,6 +9,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import type { User } from '../types';
 
 export default function Users() {
+  const { t } = useTranslation();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -125,11 +127,11 @@ export default function Users() {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
-        return <span className="badge badge-danger">Beheerder</span>;
+        return <span className="badge badge-danger">{t('roles.admin')}</span>;
       case 'music_committee':
-        return <span className="badge badge-warning">Muziekcommissie</span>;
+        return <span className="badge badge-warning">{t('roles.music_committee')}</span>;
       default:
-        return <span className="badge badge-primary">Lid</span>;
+        return <span className="badge badge-primary">{t('roles.member')}</span>;
     }
   };
 
@@ -162,7 +164,7 @@ export default function Users() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Leden</h1>
+          <h1>{t('users.title')}</h1>
         </div>
         <SkeletonTable rows={8} columns={6} />
       </div>
@@ -173,7 +175,7 @@ export default function Users() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Leden
+          {t('users.title')}
           <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
             {filteredUsers.length === users.length
               ? users.length
@@ -181,7 +183,7 @@ export default function Users() {
           </span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          + Nieuw lid
+          + {t('users.newMember')}
         </button>
       </div>
 
@@ -190,36 +192,36 @@ export default function Users() {
         <div className="card-body">
           <div className="flex gap-2 items-end" style={{ flexWrap: 'wrap' }}>
             <div className="form-group" style={{ marginBottom: 0, minWidth: '200px', flex: 1 }}>
-              <label className="form-label">Zoeken</label>
+              <label className="form-label">{t('common.search')}</label>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Naam of email..."
+                placeholder={t('users.searchPlaceholder')}
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0, minWidth: '180px' }}>
-              <label className="form-label">Orkest</label>
+              <label className="form-label">{t('orchestras.title')}</label>
               <select
                 className="form-control"
                 value={filterOrchestra}
                 onChange={(e) => setFilterOrchestra(e.target.value)}
               >
-                <option value="">Alle orkesten</option>
+                <option value="">{t('users.allOrchestras')}</option>
                 {orchestras.map((o) => (
                   <option key={o.id} value={o.id}>{o.name}</option>
                 ))}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
-              <label className="form-label">Instrument</label>
+              <label className="form-label">{t('instruments.title')}</label>
               <select
                 className="form-control"
                 value={filterInstrument}
                 onChange={(e) => setFilterInstrument(e.target.value)}
               >
-                <option value="">Alle instrumenten</option>
+                <option value="">{t('users.allInstruments')}</option>
                 {instruments.map((i) => {
                   const details = [i.tuning, i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol'].filter(Boolean).join(', ');
                   return (
@@ -241,7 +243,7 @@ export default function Users() {
                 }}
                 style={{ marginBottom: 0 }}
               >
-                Wis filters
+                {t('users.clearFilters')}
               </button>
             )}
           </div>
@@ -253,11 +255,11 @@ export default function Users() {
           <table className="table mb-0">
             <thead>
               <tr>
-                <th>Naam</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Instrumenten</th>
-                <th>Orkesten</th>
+                <th>{t('users.table.name')}</th>
+                <th>{t('users.table.email')}</th>
+                <th>{t('users.table.role')}</th>
+                <th>{t('users.table.instruments')}</th>
+                <th>{t('users.table.orchestras')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -320,8 +322,8 @@ export default function Users() {
             resetForm();
           }}
           onSubmit={handleCreate}
-          title="Nieuw lid"
-          submitLabel="Toevoegen"
+          title={t('users.newMember')}
+          submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <UserForm
@@ -354,8 +356,8 @@ export default function Users() {
             resetForm();
           }}
           onSubmit={handleUpdate}
-          title="Lid bewerken"
-          submitLabel="Opslaan"
+          title={t('users.edit')}
+          submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
         >
           <UserForm
@@ -385,9 +387,9 @@ export default function Users() {
         <ConfirmDialog
           onCancel={() => setDeletingUser(null)}
           onConfirm={handleDelete}
-          title="Lid verwijderen"
-          message={`Weet je zeker dat je ${deletingUser.firstName} ${deletingUser.lastName} wilt verwijderen?`}
-          confirmLabel="Verwijderen"
+          title={t('users.delete.title')}
+          message={t('users.delete.confirm', { name: `${deletingUser.firstName} ${deletingUser.lastName}` })}
+          confirmLabel={t('common.delete')}
           isLoading={deleteMutation.isPending}
         />
       )}
@@ -435,11 +437,13 @@ function UserForm({
   orchestras,
   isEditing,
 }: UserFormProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="grid grid-2">
         <div className="form-group">
-          <label className="form-label">Voornaam</label>
+          <label className="form-label">{t('users.firstName')}</label>
           <input
             type="text"
             className="form-control"
@@ -449,7 +453,7 @@ function UserForm({
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Achternaam</label>
+          <label className="form-label">{t('users.lastName')}</label>
           <input
             type="text"
             className="form-control"
@@ -461,7 +465,7 @@ function UserForm({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Email</label>
+        <label className="form-label">{t('users.email')}</label>
         <input
           type="email"
           className="form-control"
@@ -473,7 +477,7 @@ function UserForm({
 
       <div className="form-group">
         <label className="form-label">
-          Wachtwoord {isEditing && '(laat leeg om niet te wijzigen)'}
+          {isEditing ? t('users.passwordHint') : t('users.password')}
         </label>
         <input
           type="password"
@@ -486,20 +490,20 @@ function UserForm({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Rol</label>
+        <label className="form-label">{t('users.role')}</label>
         <select
           className="form-control form-select"
           value={formRole}
           onChange={(e) => setFormRole(e.target.value)}
         >
-          <option value="member">Lid</option>
-          <option value="music_committee">Muziekcommissie</option>
-          <option value="admin">Beheerder</option>
+          <option value="member">{t('roles.member')}</option>
+          <option value="music_committee">{t('roles.music_committee')}</option>
+          <option value="admin">{t('roles.admin')}</option>
         </select>
       </div>
 
       <div className="form-group">
-        <label className="form-label">Instrumenten</label>
+        <label className="form-label">{t('users.instruments')}</label>
         <div className="checkbox-group">
           {instruments.map((instrument) => {
             const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
@@ -525,7 +529,7 @@ function UserForm({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Orkesten</label>
+        <label className="form-label">{t('users.orchestras')}</label>
         <div className="checkbox-group">
           {orchestras.map((orchestra) => (
             <label key={orchestra.id} className="checkbox-item">

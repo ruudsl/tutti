@@ -1,16 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLoans, createLoan, returnLoan, deleteLoan, type Loan } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-const STATUS_LABELS: Record<string, string> = {
-  active: 'Uitgeleend',
-  overdue: 'Te laat',
-  returned: 'Geretourneerd',
-};
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'badge-info',
@@ -33,6 +28,7 @@ interface TitleOption {
 }
 
 export default function Loans() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
@@ -81,11 +77,11 @@ export default function Loans() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
-      showSuccess('Uitlening aangemaakt');
+      showSuccess(t('loans.loanCreated'));
       resetForm();
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij aanmaken uitlening');
+      showError(error.response?.data?.error || t('loans.errorCreatingLoan'));
     },
   });
 
@@ -95,10 +91,10 @@ export default function Loans() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
-      showSuccess('Uitlening geretourneerd');
+      showSuccess(t('loans.loanReturned'));
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij retourneren');
+      showError(error.response?.data?.error || t('loans.errorReturning'));
     },
   });
 
@@ -108,10 +104,10 @@ export default function Loans() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] });
       queryClient.invalidateQueries({ queryKey: ['loan-stats'] });
-      showSuccess('Uitlening verwijderd');
+      showSuccess(t('loans.loanDeleted'));
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij verwijderen');
+      showError(error.response?.data?.error || t('loans.errorDeleting'));
     },
   });
 
@@ -129,7 +125,7 @@ export default function Loans() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTitle || !borrowerName.trim()) {
-      showError('Selecteer een titel en vul de naam van de lener in');
+      showError(t('loans.selectTitleAndBorrower'));
       return;
     }
     createMutation.mutate({
@@ -143,13 +139,13 @@ export default function Loans() {
   };
 
   const handleReturn = (loan: Loan) => {
-    if (confirm(`Weet je zeker dat "${loan.title_name}" is geretourneerd door ${loan.borrower_name}?`)) {
+    if (confirm(t('loans.confirmReturn', { title: loan.title_name, borrower: loan.borrower_name }))) {
       returnMutation.mutate(loan.id);
     }
   };
 
   const handleDelete = (loan: Loan) => {
-    if (confirm('Weet je zeker dat je deze uitlening wilt verwijderen?')) {
+    if (confirm(t('loans.confirmDelete'))) {
       deleteMutation.mutate(loan.id);
     }
   };
@@ -171,7 +167,7 @@ export default function Loans() {
   if (isLoading) {
     return (
       <div>
-        <h1>Uitleningen</h1>
+        <h1>{t('loans.title')}</h1>
         <SkeletonTable rows={5} columns={7} />
       </div>
     );
@@ -181,13 +177,13 @@ export default function Loans() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Uitleningen
+          {t('loans.title')}
           <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
             {loans.length}
           </span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowNewLoanModal(true)}>
-          + Nieuwe uitlening
+          + {t('loans.newLoan')}
         </button>
       </div>
 
@@ -196,25 +192,25 @@ export default function Loans() {
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>{stats.active}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Uitgeleend</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.active')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{stats.overdue}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Te laat</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.overdue')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.returned}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Geretourneerd</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.returned')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.total}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Totaal</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.total')}</div>
             </div>
           </div>
         </div>
@@ -229,10 +225,10 @@ export default function Loans() {
               onChange={(e) => setFilterStatus(e.target.value)}
               style={{ maxWidth: '200px' }}
             >
-              <option value="">Alle statussen</option>
-              <option value="active">Uitgeleend</option>
-              <option value="overdue">Te laat</option>
-              <option value="returned">Geretourneerd</option>
+              <option value="">{t('loans.allStatuses')}</option>
+              <option value="active">{t('loans.status.active')}</option>
+              <option value="overdue">{t('loans.status.overdue')}</option>
+              <option value="returned">{t('loans.status.returned')}</option>
             </select>
           </div>
         </div>
@@ -244,12 +240,12 @@ export default function Loans() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>Titel</th>
-                  <th>Geleend door</th>
-                  <th>Organisatie</th>
-                  <th>Uitgeleend</th>
-                  <th>Verwacht retour</th>
-                  <th>Status</th>
+                  <th>{t('titles.title')}</th>
+                  <th>{t('loans.borrowedBy')}</th>
+                  <th>{t('loans.borrowerOrganization')}</th>
+                  <th>{t('loans.dateOut')}</th>
+                  <th>{t('loans.expectedReturn')}</th>
+                  <th>{t('common.status')}</th>
                   <th style={{ width: '120px' }}></th>
                 </tr>
               </thead>
@@ -279,7 +275,7 @@ export default function Loans() {
                     </td>
                     <td>
                       <span className={`badge ${STATUS_COLORS[loan.status]}`}>
-                        {STATUS_LABELS[loan.status]}
+                        {t(`loans.status.${loan.status}`)}
                       </span>
                     </td>
                     <td>
@@ -288,15 +284,15 @@ export default function Loans() {
                           <button
                             className="btn btn-success btn-sm"
                             onClick={() => handleReturn(loan)}
-                            title="Markeer als geretourneerd"
+                            title={t('loans.markAsReturned')}
                           >
-                            Retour
+                            {t('loans.return')}
                           </button>
                         )}
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(loan)}
-                          title="Verwijderen"
+                          title={t('common.delete')}
                         >
                           X
                         </button>
@@ -309,7 +305,7 @@ export default function Loans() {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📦</div>
-              <p>Geen uitleningen gevonden.</p>
+              <p>{t('loans.noLoans')}</p>
             </div>
           )}
         </div>
@@ -320,13 +316,13 @@ export default function Loans() {
         <div className="modal-overlay" onClick={resetForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h3 className="modal-title">Nieuwe uitlening</h3>
+              <h3 className="modal-title">{t('loans.newLoan')}</h3>
               <button className="modal-close" onClick={resetForm}>×</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Muziekstuk *</label>
+                  <label className="form-label">{t('loans.musicPiece')} *</label>
                   {selectedTitle ? (
                     <div style={{
                       display: 'flex',
@@ -349,7 +345,7 @@ export default function Loans() {
                         className="btn btn-outline btn-sm"
                         onClick={() => setSelectedTitle(null)}
                       >
-                        Wijzig
+                        {t('loans.change')}
                       </button>
                     </div>
                   ) : (
@@ -359,7 +355,7 @@ export default function Loans() {
                         className="form-control"
                         value={titleSearch}
                         onChange={(e) => setTitleSearch(e.target.value)}
-                        placeholder="Zoek op titel..."
+                        placeholder={t('loans.searchTitle')}
                       />
                       {titleOptions.length > 0 && (
                         <div style={{
@@ -389,7 +385,7 @@ export default function Loans() {
                               )}
                               {title.active_loans > 0 && (
                                 <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
-                                  {title.active_loans}x uitgeleend
+                                  {t('loans.timesLoaned', { count: title.active_loans })}
                                 </span>
                               )}
                             </div>
@@ -401,42 +397,42 @@ export default function Loans() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Naam lener *</label>
+                  <label className="form-label">{t('loans.borrowerName')} *</label>
                   <input
                     type="text"
                     className="form-control"
                     value={borrowerName}
                     onChange={(e) => setBorrowerName(e.target.value)}
-                    placeholder="Naam van de persoon of vereniging"
+                    placeholder={t('loans.borrowerNamePlaceholder')}
                     required
                   />
                 </div>
 
                 <div className="grid grid-2" style={{ gap: '1rem' }}>
                   <div className="form-group">
-                    <label className="form-label">E-mail</label>
+                    <label className="form-label">{t('loans.borrowerEmail')}</label>
                     <input
                       type="email"
                       className="form-control"
                       value={borrowerEmail}
                       onChange={(e) => setBorrowerEmail(e.target.value)}
-                      placeholder="email@voorbeeld.nl"
+                      placeholder={t('loans.borrowerEmailPlaceholder')}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Organisatie</label>
+                    <label className="form-label">{t('loans.borrowerOrganization')}</label>
                     <input
                       type="text"
                       className="form-control"
                       value={borrowerOrganization}
                       onChange={(e) => setBorrowerOrganization(e.target.value)}
-                      placeholder="Naam vereniging"
+                      placeholder={t('loans.borrowerOrgPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Verwachte retourdatum</label>
+                  <label className="form-label">{t('loans.expectedReturnDate')}</label>
                   <input
                     type="date"
                     className="form-control"
@@ -447,22 +443,22 @@ export default function Loans() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Notities</label>
+                  <label className="form-label">{t('loans.notes')}</label>
                   <textarea
                     className="form-control"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
-                    placeholder="Extra informatie over de uitlening..."
+                    placeholder={t('loans.notesPlaceholder')}
                   />
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={resetForm}>
-                  Annuleren
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Aanmaken...' : 'Uitlening aanmaken'}
+                  {createMutation.isPending ? t('loans.creating') : t('loans.createLoan')}
                 </button>
               </div>
             </form>

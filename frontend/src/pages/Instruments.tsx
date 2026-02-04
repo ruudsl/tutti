@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useInstruments,
   useCreateInstrument,
@@ -13,6 +14,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import type { Instrument } from '../types';
 
 export default function Instruments() {
+  const { t } = useTranslation();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState<Instrument | null>(null);
   const [deletingInstrument, setDeletingInstrument] = useState<Instrument | null>(null);
@@ -108,7 +110,7 @@ export default function Instruments() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Instrumenten</h1>
+          <h1>{t('instruments.title')}</h1>
         </div>
         <div className="card">
           <div className="card-body">
@@ -123,11 +125,11 @@ export default function Instruments() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Instrumenten
+          {t('instruments.title')}
           <span className="badge badge-primary ml-2">{instruments.length}</span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          + Nieuw instrument
+          + {t('instruments.newInstrument')}
         </button>
       </div>
 
@@ -136,10 +138,10 @@ export default function Instruments() {
           <table className="table mb-0">
             <thead>
               <tr>
-                <th>Instrument</th>
-                <th>Stemming</th>
-                <th>Sleutel</th>
-                <th>Aliassen</th>
+                <th>{t('instruments.name')}</th>
+                <th>{t('instruments.tuning')}</th>
+                <th>{t('instruments.clef')}</th>
+                <th>{t('instruments.aliases')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -150,7 +152,7 @@ export default function Instruments() {
                     <strong>{instrument.name}</strong>
                   </td>
                   <td>{instrument.tuning || '-'}</td>
-                  <td>{instrument.clef === 'fa' ? 'Fa (bas)' : instrument.clef === 'ut' ? 'Ut (alt)' : 'Sol (viool)'}</td>
+                  <td>{t(`instruments.clefLabels.${instrument.clef || 'sol'}`)}</td>
                   <td>
                     <div className="tags">
                       {instrument.aliases?.map((alias) => (
@@ -159,7 +161,7 @@ export default function Instruments() {
                           <button
                             className="tag-remove"
                             onClick={() => handleDeleteAlias(instrument.id, alias.id)}
-                            title="Verwijder alias"
+                            title={t('instruments.removeAlias')}
                           >
                             ×
                           </button>
@@ -169,7 +171,7 @@ export default function Instruments() {
                         className="btn btn-outline btn-sm"
                         onClick={() => setNewAlias({ instrumentId: instrument.id, alias: '' })}
                       >
-                        + Alias
+                        {t('instruments.addAlias')}
                       </button>
                     </div>
                   </td>
@@ -178,14 +180,14 @@ export default function Instruments() {
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(instrument)}
-                        title="Bewerken"
+                        title={t('common.edit')}
                       >
                         ✏
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeletingInstrument(instrument)}
-                        title="Verwijderen"
+                        title={t('common.delete')}
                       >
                         🗑
                       </button>
@@ -196,7 +198,7 @@ export default function Instruments() {
               {instruments.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
-                    Geen instrumenten gevonden
+                    {t('instruments.noInstruments')}
                   </td>
                 </tr>
               )}
@@ -208,57 +210,57 @@ export default function Instruments() {
       {/* Add Instrument Modal */}
       {showAddModal && (
         <FormModal
-          title="Nieuw instrument"
+          title={t('instruments.newInstrument')}
           onClose={() => {
             setShowAddModal(false);
             resetForm();
           }}
           onSubmit={handleCreate}
-          submitLabel="Toevoegen"
+          submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('instruments.name')}</label>
             <input
               type="text"
               className="form-control"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               required
-              placeholder="Bijv. Alto Saxophone"
+              placeholder={t('instruments.namePlaceholder')}
               autoFocus
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Stemming</label>
+            <label className="form-label">{t('instruments.tuning')}</label>
             <input
               type="text"
               className="form-control"
               value={formTuning}
               onChange={(e) => setFormTuning(e.target.value)}
-              placeholder="Bijv. Bb, Eb, C"
+              placeholder={t('instruments.tuningPlaceholder')}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Sleutel</label>
+            <label className="form-label">{t('instruments.clef')}</label>
             <select
               className="form-control"
               value={formClef}
               onChange={(e) => setFormClef(e.target.value)}
             >
-              <option value="sol">Sol (vioolsleutel)</option>
-              <option value="fa">Fa (bassleutel)</option>
-              <option value="ut">Ut (altsleutel)</option>
+              <option value="sol">{t('instruments.clefOptions.sol')}</option>
+              <option value="fa">{t('instruments.clefOptions.fa')}</option>
+              <option value="ut">{t('instruments.clefOptions.ut')}</option>
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">Aliassen (komma gescheiden)</label>
+            <label className="form-label">{t('instruments.aliasesSeparated')}</label>
             <input
               type="text"
               className="form-control"
               value={formAliases}
               onChange={(e) => setFormAliases(e.target.value)}
-              placeholder="Bijv. Altsax, altsax, Alt Sax"
+              placeholder={t('instruments.aliasesPlaceholder')}
             />
           </div>
         </FormModal>
@@ -267,7 +269,7 @@ export default function Instruments() {
       {/* Edit Instrument Modal */}
       {editingInstrument && (
         <FormModal
-          title="Instrument bewerken"
+          title={t('instruments.edit')}
           onClose={() => {
             setEditingInstrument(null);
             resetForm();
@@ -276,7 +278,7 @@ export default function Instruments() {
           isSubmitting={updateMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('instruments.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -287,25 +289,25 @@ export default function Instruments() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Stemming</label>
+            <label className="form-label">{t('instruments.tuning')}</label>
             <input
               type="text"
               className="form-control"
               value={formTuning}
               onChange={(e) => setFormTuning(e.target.value)}
-              placeholder="Bijv. Bb, Eb, C"
+              placeholder={t('instruments.tuningPlaceholder')}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Sleutel</label>
+            <label className="form-label">{t('instruments.clef')}</label>
             <select
               className="form-control"
               value={formClef}
               onChange={(e) => setFormClef(e.target.value)}
             >
-              <option value="sol">Sol (vioolsleutel)</option>
-              <option value="fa">Fa (bassleutel)</option>
-              <option value="ut">Ut (altsleutel)</option>
+              <option value="sol">{t('instruments.clefOptions.sol')}</option>
+              <option value="fa">{t('instruments.clefOptions.fa')}</option>
+              <option value="ut">{t('instruments.clefOptions.ut')}</option>
             </select>
           </div>
         </FormModal>
@@ -314,22 +316,22 @@ export default function Instruments() {
       {/* Add Alias Modal */}
       {newAlias && (
         <FormModal
-          title="Alias toevoegen"
+          title={t('instruments.addAlias')}
           size="small"
           onClose={() => setNewAlias(null)}
           onSubmit={handleAddAlias}
-          submitLabel="Toevoegen"
+          submitLabel={t('common.add')}
           isSubmitting={addAliasMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Alias</label>
+            <label className="form-label">{t('instruments.aliases')}</label>
             <input
               type="text"
               className="form-control"
               value={newAlias.alias}
               onChange={(e) => setNewAlias({ ...newAlias, alias: e.target.value })}
               required
-              placeholder="Bijv. Altsax"
+              placeholder={t('instruments.aliasPlaceholder')}
               autoFocus
             />
           </div>
@@ -339,9 +341,9 @@ export default function Instruments() {
       {/* Delete Confirmation Dialog */}
       {deletingInstrument && (
         <ConfirmDialog
-          title="Instrument verwijderen"
-          message={`Weet je zeker dat je "${deletingInstrument.name}" wilt verwijderen?`}
-          confirmLabel="Verwijderen"
+          title={t('common.delete')}
+          message={t('instruments.deleteConfirm', { name: deletingInstrument.name })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDelete}
           onCancel={() => setDeletingInstrument(null)}
           isLoading={deleteMutation.isPending}

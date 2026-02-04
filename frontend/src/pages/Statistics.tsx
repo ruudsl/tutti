@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -27,13 +28,8 @@ interface ActivityFeedItem {
   entity_name: string | null;
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  view: 'Bekeken',
-  download: 'Gedownload',
-  play_audio: 'Audio afgespeeld',
-};
-
 export default function Statistics() {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState<string>('30');
 
   // Fetch statistics
@@ -80,7 +76,7 @@ export default function Statistics() {
   if (statsLoading || feedLoading) {
     return (
       <div>
-        <h1>Statistieken</h1>
+        <h1>{t('statistics.title')}</h1>
         <SkeletonTable rows={5} columns={4} />
       </div>
     );
@@ -89,17 +85,17 @@ export default function Statistics() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>Statistieken</h1>
+        <h1>{t('statistics.title')}</h1>
         <select
           className="form-control form-select"
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
           style={{ maxWidth: '200px' }}
         >
-          <option value="7">Laatste 7 dagen</option>
-          <option value="30">Laatste 30 dagen</option>
-          <option value="90">Laatste 90 dagen</option>
-          <option value="365">Laatste jaar</option>
+          <option value="7">{t('statistics.last7Days')}</option>
+          <option value="30">{t('statistics.last30Days')}</option>
+          <option value="90">{t('statistics.last90Days')}</option>
+          <option value="365">{t('statistics.lastYear')}</option>
         </select>
       </div>
 
@@ -111,7 +107,7 @@ export default function Statistics() {
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                 {stats.totals.total_downloads}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Downloads</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.downloads')}</div>
             </div>
           </div>
           <div className="card">
@@ -119,7 +115,7 @@ export default function Statistics() {
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>
                 {stats.totals.total_views}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Weergaven</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.views')}</div>
             </div>
           </div>
           <div className="card">
@@ -127,7 +123,7 @@ export default function Statistics() {
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
                 {stats.totals.active_users}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Actieve leden</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.activeMembers')}</div>
             </div>
           </div>
           <div className="card">
@@ -135,7 +131,7 @@ export default function Statistics() {
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
                 {stats.totals.total_activities}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Totaal acties</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.totalActions')}</div>
             </div>
           </div>
         </div>
@@ -145,14 +141,14 @@ export default function Statistics() {
         {/* Top 10 Most Played */}
         <div className="card">
           <div className="card-body">
-            <h4 style={{ marginBottom: '1rem' }}>Top 10 meest bekeken stukken</h4>
+            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.topPieces')}</h4>
             {stats?.topPieces && stats.topPieces.length > 0 ? (
               <table className="table mb-0">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Titel</th>
-                    <th style={{ textAlign: 'right' }}>Aantal</th>
+                    <th>{t('statistics.table.rank')}</th>
+                    <th>{t('statistics.table.title')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('statistics.table.count')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,7 +170,7 @@ export default function Statistics() {
               </table>
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                Nog geen activiteit geregistreerd
+                {t('statistics.noActivity')}
               </p>
             )}
           </div>
@@ -183,14 +179,14 @@ export default function Statistics() {
         {/* Top Users */}
         <div className="card">
           <div className="card-body">
-            <h4 style={{ marginBottom: '1rem' }}>Meest actieve leden</h4>
+            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.mostActiveMembers')}</h4>
             {stats?.userActivity && stats.userActivity.length > 0 ? (
               <table className="table mb-0">
                 <thead>
                   <tr>
-                    <th>Lid</th>
-                    <th style={{ textAlign: 'right' }}>Downloads</th>
-                    <th style={{ textAlign: 'right' }}>Weergaven</th>
+                    <th>{t('statistics.table.member')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('statistics.downloads')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('statistics.views')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,7 +201,7 @@ export default function Statistics() {
               </table>
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                Nog geen activiteit geregistreerd
+                {t('statistics.noActivity')}
               </p>
             )}
           </div>
@@ -214,15 +210,15 @@ export default function Statistics() {
         {/* Recent Activity Chart (simplified as table) */}
         <div className="card">
           <div className="card-body">
-            <h4 style={{ marginBottom: '1rem' }}>Activiteit per dag</h4>
+            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.activityPerDay')}</h4>
             {stats?.recentActivity && stats.recentActivity.length > 0 ? (
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 <table className="table mb-0">
                   <thead>
                     <tr>
-                      <th>Datum</th>
-                      <th style={{ textAlign: 'right' }}>Downloads</th>
-                      <th style={{ textAlign: 'right' }}>Weergaven</th>
+                      <th>{t('statistics.table.date')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('statistics.downloads')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('statistics.views')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -238,7 +234,7 @@ export default function Statistics() {
               </div>
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                Nog geen activiteit geregistreerd
+                {t('statistics.noActivity')}
               </p>
             )}
           </div>
@@ -247,7 +243,7 @@ export default function Statistics() {
         {/* Recent Activity Feed */}
         <div className="card">
           <div className="card-body">
-            <h4 style={{ marginBottom: '1rem' }}>Recente activiteit</h4>
+            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.recentActivity')}</h4>
             {feed.length > 0 ? (
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {feed.map((item) => (
@@ -262,7 +258,7 @@ export default function Statistics() {
                     <div>
                       <strong>{item.user_name}</strong>
                       <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem' }}>
-                        {ACTION_LABELS[item.action_type] || item.action_type}
+                        {t(`statistics.actions.${item.action_type}`, item.action_type)}
                       </span>
                     </div>
                     {item.entity_name && (
@@ -276,7 +272,7 @@ export default function Statistics() {
               </div>
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                Nog geen activiteit geregistreerd
+                {t('statistics.noActivity')}
               </p>
             )}
           </div>
@@ -286,9 +282,7 @@ export default function Statistics() {
       <div className="card mt-3">
         <div className="card-body">
           <p style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginBottom: 0 }}>
-            <strong>Tip voor de dirigent:</strong> Gebruik deze statistieken om te zien welke stukken
-            thuis veel worden bekeken of gedownload. Stukken die weinig bekeken worden, worden
-            mogelijk niet geoefend. Overweeg deze stukken extra aandacht te geven tijdens repetities.
+            <strong>{t('statistics.conductorTip')}</strong> {t('statistics.conductorTipText')}
           </p>
         </div>
       </div>

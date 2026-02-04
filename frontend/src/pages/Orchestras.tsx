@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getOrchestra,
@@ -21,6 +22,7 @@ import { getErrorMessage } from '../utils/errors';
 import type { Orchestra, MusicList } from '../types';
 
 export default function Orchestras() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -54,7 +56,7 @@ export default function Orchestras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
-      showSuccess('Muzieklijst aangemaakt');
+      showSuccess(t('orchestras.listCreated'));
     },
     onError: (error) => showError(getErrorMessage(error)),
   });
@@ -63,7 +65,7 @@ export default function Orchestras() {
     mutationFn: ({ id, name }: { id: string; name: string }) => updateMusicList(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
-      showSuccess('Muzieklijst bijgewerkt');
+      showSuccess(t('orchestras.listUpdated'));
     },
     onError: (error) => showError(getErrorMessage(error)),
   });
@@ -73,7 +75,7 @@ export default function Orchestras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
-      showSuccess('Muzieklijst verwijderd');
+      showSuccess(t('orchestras.listDeleted'));
     },
     onError: (error) => showError(getErrorMessage(error)),
   });
@@ -154,7 +156,7 @@ export default function Orchestras() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Orkesten</h1>
+          <h1>{t('orchestras.title')}</h1>
         </div>
         <div className="grid grid-cols-2">
           <div className="card">
@@ -179,18 +181,18 @@ export default function Orchestras() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Orkesten
+          {t('orchestras.title')}
           <span className="badge badge-primary ml-2">{orchestras.length}</span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          + Nieuw orkest
+          + {t('orchestras.newOrchestra')}
         </button>
       </div>
 
       <div className="grid grid-cols-2">
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Orkesten</h2>
+            <h2 className="card-title">{t('orchestras.title')}</h2>
           </div>
           <div className="card-body" style={{ padding: 0 }}>
             {orchestras.length > 0 ? (
@@ -210,21 +212,21 @@ export default function Orchestras() {
                     <div>
                       <strong>{orchestra.name}</strong>
                       <div className="piece-meta">
-                        {orchestra.memberCount} leden • {orchestra.listCount} lijsten
+                        {orchestra.memberCount} {t('orchestras.membersCount')} • {orchestra.listCount} {t('orchestras.listsCount')}
                       </div>
                     </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(orchestra)}
-                        title="Bewerken"
+                        title={t('common.edit')}
                       >
                         ✏
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeletingOrchestra(orchestra)}
-                        title="Verwijderen"
+                        title={t('common.delete')}
                       >
                         🗑
                       </button>
@@ -234,7 +236,7 @@ export default function Orchestras() {
               </div>
             ) : (
               <div className="empty-state">
-                <p>Geen orkesten aangemaakt.</p>
+                <p>{t('orchestras.noOrchestras')}</p>
               </div>
             )}
           </div>
@@ -254,7 +256,7 @@ export default function Orchestras() {
                   <h2 className="card-title">{selectedOrchestra.name}</h2>
                 </div>
                 <div className="card-body">
-                  <h3 className="mb-1">Leden ({selectedOrchestra.members?.length || 0})</h3>
+                  <h3 className="mb-1">{t('orchestras.members')} ({selectedOrchestra.members?.length || 0})</h3>
                   {selectedOrchestra.members?.length > 0 ? (
                     <div className="tags mb-2">
                       {selectedOrchestra.members.map((member: any) => (
@@ -264,13 +266,13 @@ export default function Orchestras() {
                       ))}
                     </div>
                   ) : (
-                    <p className="piece-meta mb-2">Geen leden toegewezen.</p>
+                    <p className="piece-meta mb-2">{t('orchestras.noMembersAssigned')}</p>
                   )}
 
                   <div className="flex justify-between items-center mb-1">
-                    <h3>Muzieklijsten ({selectedOrchestra.lists?.length || 0})</h3>
+                    <h3>{t('orchestras.musicLists')} ({selectedOrchestra.lists?.length || 0})</h3>
                     <button className="btn btn-primary btn-sm" onClick={() => setShowAddListModal(true)}>
-                      + Lijst
+                      {t('orchestras.addList')}
                     </button>
                   </div>
 
@@ -289,20 +291,20 @@ export default function Orchestras() {
                         >
                           <div>
                             <strong>{list.name}</strong>
-                            <span className="piece-meta"> ({list.pieceCount} stukken)</span>
+                            <span className="piece-meta"> ({list.pieceCount} {t('orchestras.pieces')})</span>
                           </div>
                           <div className="flex gap-1">
                             <button
                               className="btn btn-outline btn-sm"
                               onClick={() => openEditListModal(list)}
-                              title="Bewerken"
+                              title={t('common.edit')}
                             >
                               ✏
                             </button>
                             <button
                               className="btn btn-danger btn-sm"
                               onClick={() => setDeletingList(list)}
-                              title="Verwijderen"
+                              title={t('common.delete')}
                             >
                               🗑
                             </button>
@@ -311,7 +313,7 @@ export default function Orchestras() {
                       ))}
                     </div>
                   ) : (
-                    <p className="piece-meta">Geen muzieklijsten.</p>
+                    <p className="piece-meta">{t('orchestras.noMusicLists')}</p>
                   )}
                 </div>
               </>
@@ -322,7 +324,7 @@ export default function Orchestras() {
             <div className="card-body">
               <div className="empty-state">
                 <div className="empty-icon">🎺</div>
-                <p>Selecteer een orkest om details te bekijken.</p>
+                <p>{t('orchestras.selectToView')}</p>
               </div>
             </div>
           </div>
@@ -332,18 +334,18 @@ export default function Orchestras() {
       {/* Add Orchestra Modal */}
       {showAddModal && (
         <FormModal
-          title="Nieuw orkest"
+          title={t('orchestras.newOrchestra')}
           size="small"
           onClose={() => {
             setShowAddModal(false);
             setFormName('');
           }}
           onSubmit={handleCreate}
-          submitLabel="Toevoegen"
+          submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('orchestras.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -359,7 +361,7 @@ export default function Orchestras() {
       {/* Edit Orchestra Modal */}
       {editingOrchestra && (
         <FormModal
-          title="Orkest bewerken"
+          title={t('orchestras.edit')}
           size="small"
           onClose={() => {
             setEditingOrchestra(null);
@@ -369,7 +371,7 @@ export default function Orchestras() {
           isSubmitting={updateMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('orchestras.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -385,9 +387,9 @@ export default function Orchestras() {
       {/* Delete Orchestra Confirmation */}
       {deletingOrchestra && (
         <ConfirmDialog
-          title="Orkest verwijderen"
-          message={`Weet je zeker dat je "${deletingOrchestra.name}" wilt verwijderen? Alle muzieklijsten worden ook verwijderd.`}
-          confirmLabel="Verwijderen"
+          title={t('common.delete')}
+          message={t('orchestras.deleteConfirm', { name: deletingOrchestra.name })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDelete}
           onCancel={() => setDeletingOrchestra(null)}
           isLoading={deleteMutation.isPending}
@@ -398,18 +400,18 @@ export default function Orchestras() {
       {/* Add List Modal */}
       {showAddListModal && (
         <FormModal
-          title="Nieuwe muzieklijst"
+          title={t('orchestras.newMusicList')}
           size="small"
           onClose={() => {
             setShowAddListModal(false);
             setListFormName('');
           }}
           onSubmit={handleCreateList}
-          submitLabel="Toevoegen"
+          submitLabel={t('common.add')}
           isSubmitting={createListMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('orchestras.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -417,7 +419,7 @@ export default function Orchestras() {
               onChange={(e) => setListFormName(e.target.value)}
               required
               autoFocus
-              placeholder="Bijv. Najaarsconcert 2024"
+              placeholder={t('orchestras.listNamePlaceholder')}
             />
           </div>
         </FormModal>
@@ -426,7 +428,7 @@ export default function Orchestras() {
       {/* Edit List Modal */}
       {editingList && (
         <FormModal
-          title="Muzieklijst bewerken"
+          title={t('orchestras.editMusicList')}
           size="small"
           onClose={() => {
             setEditingList(null);
@@ -436,7 +438,7 @@ export default function Orchestras() {
           isSubmitting={updateListMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('orchestras.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -452,9 +454,9 @@ export default function Orchestras() {
       {/* Delete List Confirmation */}
       {deletingList && (
         <ConfirmDialog
-          title="Muzieklijst verwijderen"
-          message={`Weet je zeker dat je "${deletingList.name}" wilt verwijderen?`}
-          confirmLabel="Verwijderen"
+          title={t('orchestras.deleteMusicList')}
+          message={t('orchestras.deleteMusicListConfirm', { name: deletingList.name })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDeleteList}
           onCancel={() => setDeletingList(null)}
           isLoading={deleteListMutation.isPending}

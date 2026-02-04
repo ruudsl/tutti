@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -34,12 +35,13 @@ interface SplitResult {
 }
 
 export default function PdfTools() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'split' | 'a3' | 'merge'>('split');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfInfo, setPdfInfo] = useState<PdfInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([{ start: 1, end: 1, name: 'Deel 1' }]);
+  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([{ start: 1, end: 1, name: 'Part 1' }]);
   const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
   const [a3Result, setA3Result] = useState<{ filepath: string; filename: string; splitCount: number; newPageCount: number } | null>(null);
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
@@ -74,7 +76,7 @@ export default function PdfTools() {
       });
 
       if (!response.ok) {
-        throw new Error('Kon PDF niet lezen');
+        throw new Error(t('pdfTools.couldNotReadPdf'));
       }
 
       const info = await response.json();
@@ -82,10 +84,10 @@ export default function PdfTools() {
 
       // Initialize split ranges based on page count
       if (info.pageCount > 0) {
-        setSplitRanges([{ start: 1, end: info.pageCount, name: 'Deel 1' }]);
+        setSplitRanges([{ start: 1, end: info.pageCount, name: 'Part 1' }]);
       }
     } catch (error: any) {
-      showError(error.message || 'Fout bij lezen PDF');
+      showError(error.message || t('pdfTools.errorReadingPdf'));
     } finally {
       setLoading(false);
     }
@@ -109,14 +111,14 @@ export default function PdfTools() {
       });
 
       if (!response.ok) {
-        throw new Error('Splitsen mislukt');
+        throw new Error(t('pdfTools.splitFailed'));
       }
 
       const data = await response.json();
       setSplitResults(data.results);
-      showSuccess(`PDF gesplitst in ${data.results.length} delen`);
+      showSuccess(t('pdfTools.pdfSplitSuccess', { count: data.results.length }));
     } catch (error: any) {
-      showError(error.message || 'Fout bij splitsen');
+      showError(error.message || t('pdfTools.errorSplitting'));
     } finally {
       setProcessing(false);
     }
@@ -139,19 +141,19 @@ export default function PdfTools() {
       });
 
       if (!response.ok) {
-        throw new Error('A3 splitsen mislukt');
+        throw new Error(t('pdfTools.a3SplitFailed'));
       }
 
       const data = await response.json();
       setA3Result(data);
 
       if (data.splitCount > 0) {
-        showSuccess(`${data.splitCount} A3 pagina's gesplitst naar A4`);
+        showSuccess(t('pdfTools.a3SplitSuccess', { count: data.splitCount }));
       } else {
-        showSuccess('Geen A3 pagina\'s gevonden om te splitsen');
+        showSuccess(t('pdfTools.noA3Found'));
       }
     } catch (error: any) {
-      showError(error.message || 'Fout bij A3 splitsen');
+      showError(error.message || t('pdfTools.errorA3Split'));
     } finally {
       setProcessing(false);
     }
@@ -159,7 +161,7 @@ export default function PdfTools() {
 
   const handleMerge = async () => {
     if (mergeFiles.length < 2) {
-      showError('Selecteer minimaal 2 PDF bestanden');
+      showError(t('pdfTools.selectMinTwoFiles'));
       return;
     }
 
@@ -177,14 +179,14 @@ export default function PdfTools() {
       });
 
       if (!response.ok) {
-        throw new Error('Samenvoegen mislukt');
+        throw new Error(t('pdfTools.mergeFailed'));
       }
 
       const data = await response.json();
       setMergeResult(data);
-      showSuccess(`${mergeFiles.length} bestanden samengevoegd`);
+      showSuccess(t('pdfTools.mergeSuccess', { count: mergeFiles.length }));
     } catch (error: any) {
-      showError(error.message || 'Fout bij samenvoegen');
+      showError(error.message || t('pdfTools.errorMerging'));
     } finally {
       setProcessing(false);
     }
@@ -223,7 +225,7 @@ export default function PdfTools() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>PDF Tools</h1>
+        <h1>{t('pdfTools.title')}</h1>
       </div>
 
       <div className="card mb-3">
@@ -233,19 +235,19 @@ export default function PdfTools() {
               className={`btn ${activeTab === 'split' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setActiveTab('split')}
             >
-              Splitsen
+              {t('pdfTools.split')}
             </button>
             <button
               className={`btn ${activeTab === 'a3' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setActiveTab('a3')}
             >
-              A3 naar A4
+              {t('pdfTools.a3ToA4')}
             </button>
             <button
               className={`btn ${activeTab === 'merge' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setActiveTab('merge')}
             >
-              Samenvoegen
+              {t('pdfTools.merge')}
             </button>
           </div>
 
@@ -253,7 +255,7 @@ export default function PdfTools() {
           {activeTab === 'split' && (
             <>
               <div className="form-group">
-                <label className="form-label">PDF bestand</label>
+                <label className="form-label">{t('pdfTools.pdfFile')}</label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -266,7 +268,7 @@ export default function PdfTools() {
               {loading && (
                 <div className="text-center" style={{ padding: '2rem' }}>
                   <div className="spinner"></div>
-                  <p>PDF analyseren...</p>
+                  <p>{t('pdfTools.analyzing')}</p>
                 </div>
               )}
 
@@ -280,27 +282,27 @@ export default function PdfTools() {
                   }}>
                     <strong>{pdfInfo.filename}</strong>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                      {pdfInfo.pageCount} pagina's |{' '}
+                      {pdfInfo.pageCount} {t('pdfTools.pages')} |{' '}
                       {pdfInfo.pages.map(p => p.paperSize).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
                     </div>
                   </div>
 
-                  <h4 style={{ marginBottom: '1rem' }}>Splits in delen:</h4>
+                  <h4 style={{ marginBottom: '1rem' }}>{t('pdfTools.splitIntoParts')}</h4>
 
                   {splitRanges.map((range, index) => (
                     <div key={index} className="flex gap-2 mb-2 items-end">
                       <div className="form-group mb-0" style={{ flex: 1 }}>
-                        <label className="form-label">Naam</label>
+                        <label className="form-label">{t('pdfTools.partName')}</label>
                         <input
                           type="text"
                           className="form-control"
                           value={range.name}
                           onChange={(e) => updateSplitRange(index, 'name', e.target.value)}
-                          placeholder="Bijv. Fluit 1"
+                          placeholder={t('pdfTools.partNamePlaceholder')}
                         />
                       </div>
                       <div className="form-group mb-0" style={{ width: '100px' }}>
-                        <label className="form-label">Van</label>
+                        <label className="form-label">{t('pdfTools.from')}</label>
                         <input
                           type="number"
                           className="form-control"
@@ -311,7 +313,7 @@ export default function PdfTools() {
                         />
                       </div>
                       <div className="form-group mb-0" style={{ width: '100px' }}>
-                        <label className="form-label">Tot</label>
+                        <label className="form-label">{t('pdfTools.to')}</label>
                         <input
                           type="number"
                           className="form-control"
@@ -325,7 +327,7 @@ export default function PdfTools() {
                         className="btn btn-danger btn-sm"
                         onClick={() => removeSplitRange(index)}
                         disabled={splitRanges.length === 1}
-                        title="Verwijderen"
+                        title={t('common.delete')}
                       >
                         ×
                       </button>
@@ -334,20 +336,20 @@ export default function PdfTools() {
 
                   <div className="flex gap-2 mt-3">
                     <button className="btn btn-outline" onClick={addSplitRange}>
-                      + Deel toevoegen
+                      {t('pdfTools.addPart')}
                     </button>
                     <button
                       className="btn btn-primary"
                       onClick={handleSplit}
                       disabled={processing}
                     >
-                      {processing ? 'Splitsen...' : 'PDF Splitsen'}
+                      {processing ? t('pdfTools.splitting') : t('pdfTools.splitPdf')}
                     </button>
                   </div>
 
                   {splitResults.length > 0 && (
                     <div style={{ marginTop: '1.5rem' }}>
-                      <h4>Resultaten:</h4>
+                      <h4>{t('pdfTools.results')}</h4>
                       <div className="grid" style={{ gap: '0.5rem', marginTop: '0.5rem' }}>
                         {splitResults.map((result, index) => (
                           <div
@@ -365,7 +367,7 @@ export default function PdfTools() {
                               <strong>{result.name}</strong>
                               {result.pageCount && (
                                 <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                                  ({result.pageCount} pagina's)
+                                  ({result.pageCount} {t('pdfTools.pages')})
                                 </span>
                               )}
                               {result.error && (
@@ -377,7 +379,7 @@ export default function PdfTools() {
                                 className="btn btn-sm btn-primary"
                                 onClick={() => downloadFile(result.filepath!, result.filename!)}
                               >
-                                Download
+                                {t('pdfTools.download')}
                               </button>
                             )}
                           </div>
@@ -394,12 +396,11 @@ export default function PdfTools() {
           {activeTab === 'a3' && (
             <>
               <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-                Upload een PDF met A3 pagina's om deze automatisch te splitsen naar A4 formaat.
-                Elke A3 pagina wordt in twee A4 pagina's geknipt.
+                {t('pdfTools.a3Description')}
               </p>
 
               <div className="form-group">
-                <label className="form-label">PDF bestand</label>
+                <label className="form-label">{t('pdfTools.pdfFile')}</label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -412,7 +413,7 @@ export default function PdfTools() {
               {loading && (
                 <div className="text-center" style={{ padding: '2rem' }}>
                   <div className="spinner"></div>
-                  <p>PDF analyseren...</p>
+                  <p>{t('pdfTools.analyzing')}</p>
                 </div>
               )}
 
@@ -426,7 +427,7 @@ export default function PdfTools() {
                   }}>
                     <strong>{pdfInfo.filename}</strong>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>
-                      {pdfInfo.pageCount} pagina's
+                      {pdfInfo.pageCount} {t('pdfTools.pages')}
                     </div>
                     <div style={{ marginTop: '0.5rem' }}>
                       {pdfInfo.pages.map((page, i) => (
@@ -446,7 +447,7 @@ export default function PdfTools() {
                     onClick={handleA3Split}
                     disabled={processing}
                   >
-                    {processing ? 'Verwerken...' : 'A3 paginas splitsen naar A4'}
+                    {processing ? t('pdfTools.processing') : t('pdfTools.splitA3ToA4')}
                   </button>
 
                   {a3Result && (
@@ -456,17 +457,17 @@ export default function PdfTools() {
                       background: 'var(--success-light)',
                       borderRadius: '0.5rem'
                     }}>
-                      <strong>Klaar!</strong>
+                      <strong>{t('pdfTools.done')}</strong>
                       <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                        {a3Result.splitCount} A3 pagina's gesplitst
+                        {t('pdfTools.a3PagesSplit', { count: a3Result.splitCount })}
                         <br />
-                        Nieuw document: {a3Result.newPageCount} pagina's
+                        {t('pdfTools.newDocument', { count: a3Result.newPageCount })}
                       </div>
                       <button
                         className="btn btn-primary mt-2"
                         onClick={() => downloadFile(a3Result.filepath, a3Result.filename)}
                       >
-                        Download resultaat
+                        {t('pdfTools.downloadResult')}
                       </button>
                     </div>
                   )}
@@ -479,11 +480,11 @@ export default function PdfTools() {
           {activeTab === 'merge' && (
             <>
               <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-                Selecteer meerdere PDF bestanden om samen te voegen tot een enkel document.
+                {t('pdfTools.mergeDescription')}
               </p>
 
               <div className="form-group">
-                <label className="form-label">PDF bestanden (selecteer meerdere)</label>
+                <label className="form-label">{t('pdfTools.pdfFiles')}</label>
                 <input
                   ref={mergeInputRef}
                   type="file"
@@ -505,7 +506,7 @@ export default function PdfTools() {
                   borderRadius: '0.5rem',
                   marginBottom: '1rem'
                 }}>
-                  <strong>{mergeFiles.length} bestanden geselecteerd:</strong>
+                  <strong>{t('pdfTools.filesSelected', { count: mergeFiles.length })}</strong>
                   <ol style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
                     {mergeFiles.map((file, i) => (
                       <li key={i} style={{ fontSize: '0.875rem' }}>{file.name}</li>
@@ -519,7 +520,7 @@ export default function PdfTools() {
                 onClick={handleMerge}
                 disabled={processing || mergeFiles.length < 2}
               >
-                {processing ? 'Samenvoegen...' : 'Bestanden samenvoegen'}
+                {processing ? t('pdfTools.merging') : t('pdfTools.mergeFiles')}
               </button>
 
               {mergeResult && (
@@ -529,15 +530,15 @@ export default function PdfTools() {
                   background: 'var(--success-light)',
                   borderRadius: '0.5rem'
                 }}>
-                  <strong>Klaar!</strong>
+                  <strong>{t('pdfTools.done')}</strong>
                   <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                    Samengevoegd document: {mergeResult.pageCount} pagina's
+                    {t('pdfTools.mergedDocument', { count: mergeResult.pageCount })}
                   </div>
                   <button
                     className="btn btn-primary mt-2"
                     onClick={() => downloadFile(mergeResult.filepath, mergeResult.filename)}
                   >
-                    Download resultaat
+                    {t('pdfTools.downloadResult')}
                   </button>
                 </div>
               )}
