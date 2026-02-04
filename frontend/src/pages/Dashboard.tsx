@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getMyMusicLists } from '../api';
 import type { MusicList } from '../types';
@@ -29,6 +30,7 @@ interface OrchestraGroup {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [orchestraGroups, setOrchestraGroups] = useState<OrchestraGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,7 +53,7 @@ export default function Dashboard() {
         } else {
           groupMap.set(list.orchestraId, {
             orchestraId: list.orchestraId,
-            orchestraName: list.orchestraName || 'Onbekend orkest',
+            orchestraName: list.orchestraName || t('dashboard.unknownOrchestra'),
             lists: [list],
             totalTitles: list.titleCount || 0,
             totalDuration: list.totalDuration || 0,
@@ -81,31 +83,31 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="mb-3">Welkom, {user?.firstName}!</h1>
+      <h1 className="mb-3">{t('dashboard.welcome')}, {user?.firstName}!</h1>
 
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-value">{user?.orchestras?.length || 0}</div>
-          <div className="stat-label">Orkesten</div>
+          <div className="stat-label">{t('dashboard.orchestras')}</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{user?.instruments?.length || 0}</div>
-          <div className="stat-label">Instrumenten</div>
+          <div className="stat-label">{t('dashboard.instruments')}</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{totalLists}</div>
-          <div className="stat-label">Muzieklijsten</div>
+          <div className="stat-label">{t('dashboard.musicLists')}</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{totalTitles}</div>
-          <div className="stat-label">Titels</div>
+          <div className="stat-label">{t('dashboard.titles')}</div>
         </div>
       </div>
 
       <div className="grid grid-2">
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Mijn Instrumenten</h2>
+            <h2 className="card-title">{t('dashboard.myInstruments')}</h2>
           </div>
           <div className="card-body">
             {user?.instruments && user.instruments.length > 0 ? (
@@ -118,14 +120,14 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-light">Geen instrumenten toegewezen.</p>
+              <p className="text-light">{t('dashboard.noInstruments')}</p>
             )}
           </div>
         </div>
 
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Mijn Orkesten</h2>
+            <h2 className="card-title">{t('dashboard.myOrchestras')}</h2>
           </div>
           <div className="card-body">
             {user?.orchestras && user.orchestras.length > 0 ? (
@@ -137,7 +139,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-light">Niet lid van een orkest.</p>
+              <p className="text-light">{t('dashboard.notInOrchestra')}</p>
             )}
           </div>
         </div>
@@ -149,7 +151,7 @@ export default function Dashboard() {
             <div className="card-header">
               <h2 className="card-title">{group.orchestraName}</h2>
               <div className="text-light">
-                {group.totalTitles} titels • {formatDuration(group.totalDuration)}
+                {group.totalTitles} {t('dashboard.titles').toLowerCase()} • {formatDuration(group.totalDuration)}
               </div>
             </div>
             <div className="card-body">
@@ -163,7 +165,7 @@ export default function Dashboard() {
                   >
                     <div className="piece-title">{list.name}</div>
                     <div className="piece-meta">
-                      {list.titleCount || 0} titels • {formatDuration(list.totalDuration || 0)}
+                      {list.titleCount || 0} {t('dashboard.titles').toLowerCase()} • {formatDuration(list.totalDuration || 0)}
                     </div>
                   </Link>
                 ))}
@@ -174,28 +176,28 @@ export default function Dashboard() {
       ) : (
         <div className="card mt-2">
           <div className="card-header">
-            <h2 className="card-title">Mijn Muzieklijsten</h2>
+            <h2 className="card-title">{t('dashboard.myMusicLists')}</h2>
             <Link to="/my-music" className="btn btn-primary btn-sm">
-              Bekijk alle muziek
+              {t('dashboard.viewAllMusic')}
             </Link>
           </div>
           <div className="card-body">
             <div className="empty-state">
               <div className="empty-icon">📋</div>
-              <p>Je bent nog niet toegevoegd aan muzieklijsten.</p>
+              <p>{t('dashboard.notAddedToLists')}</p>
             </div>
           </div>
         </div>
       )}
 
       <div className="mt-3">
-        <h2 className="mb-2">Accountbeveiliging</h2>
+        <h2 className="mb-2">{t('dashboard.accountSecurity')}</h2>
         <MfaSettings />
       </div>
 
       {user?.role === 'admin' && (
         <div className="mt-3">
-          <h2 className="mb-2">Beheer</h2>
+          <h2 className="mb-2">{t('dashboard.administration')}</h2>
           <BackupSettings />
         </div>
       )}

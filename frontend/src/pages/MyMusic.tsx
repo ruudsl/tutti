@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 
 export default function MyMusic() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [lists, setLists] = useState<MusicList[]>([]);
   const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);
@@ -74,7 +76,7 @@ export default function MyMusic() {
       logActivity('download', 'music_piece', piece.id).catch(() => {});
     } catch (error) {
       console.error('Error downloading:', error);
-      alert('Fout bij downloaden van het bestand.');
+      showError(t('errors.generic'));
     } finally {
       setDownloading(null);
     }
@@ -97,13 +99,13 @@ export default function MyMusic() {
         measureNumber: issueMeasureNumber || undefined,
         description: issueDescription.trim(),
       });
-      showSuccess('Melding succesvol ingediend');
+      showSuccess(t('myMusic.reportIssue.success'));
       setReportingPiece(null);
       setIssueDescription('');
       setIssuePageNumber('');
       setIssueMeasureNumber('');
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij indienen van melding');
+      showError(error.response?.data?.error || t('errors.generic'));
     } finally {
       setIsSubmittingIssue(false);
     }
@@ -130,7 +132,7 @@ export default function MyMusic() {
       <>
       <div>
         <button className="btn btn-outline mb-2" onClick={handleBack}>
-          ← Terug naar overzicht
+          ← {t('myMusic.backToOverview')}
         </button>
 
         <div className="card">
@@ -149,13 +151,13 @@ export default function MyMusic() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Titel</th>
-                    <th>Arrangeur</th>
-                    <th>Instrument</th>
-                    <th>Stemming</th>
-                    <th>Nr.</th>
-                    <th>Sleutel</th>
-                    <th>Preview</th>
+                    <th>{t('myMusic.table.title')}</th>
+                    <th>{t('myMusic.table.arranger')}</th>
+                    <th>{t('myMusic.table.instrument')}</th>
+                    <th>{t('myMusic.table.tuning')}</th>
+                    <th>{t('myMusic.table.number')}</th>
+                    <th>{t('myMusic.table.clef')}</th>
+                    <th>{t('myMusic.table.preview')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -189,12 +191,12 @@ export default function MyMusic() {
                             onClick={() => handleDownload(piece)}
                             disabled={downloading === piece.id}
                           >
-                            {downloading === piece.id ? 'Bezig...' : '⬇ Download'}
+                            {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
                           </button>
                           <button
                             className="btn btn-outline btn-sm"
                             onClick={() => openReportModal(piece)}
-                            title="Fout melden"
+                            title={t('myMusic.reportIssue.title')}
                           >
                             📝
                           </button>
@@ -207,7 +209,7 @@ export default function MyMusic() {
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">🎵</div>
-                <p>Geen muziekstukken beschikbaar voor jouw instrumenten op deze lijst.</p>
+                <p>{t('myMusic.noPieces')}</p>
               </div>
             )}
           </div>
@@ -219,13 +221,13 @@ export default function MyMusic() {
         <div className="modal-overlay" onClick={() => setReportingPiece(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Fout melden</h3>
+              <h3 className="modal-title">{t('myMusic.reportIssue.title')}</h3>
               <button className="modal-close" onClick={() => setReportingPiece(null)}>×</button>
             </div>
             <form onSubmit={handleReportIssue}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Muziekstuk</label>
+                  <label className="form-label">{t('myMusic.reportIssue.piece')}</label>
                   <p>
                     <strong>{reportingPiece.title}</strong>
                     {reportingPiece.instrumentName && ` - ${reportingPiece.instrumentName}`}
@@ -233,35 +235,35 @@ export default function MyMusic() {
                 </div>
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label className="form-label">Paginanummer (optioneel)</label>
+                    <label className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
                     <input
                       type="number"
                       className="form-control"
                       value={issuePageNumber}
                       onChange={(e) => setIssuePageNumber(e.target.value)}
                       min="1"
-                      placeholder="Bijv. 2"
+                      placeholder="2"
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Maatnummer (optioneel)</label>
+                    <label className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
                     <input
                       type="text"
                       className="form-control"
                       value={issueMeasureNumber}
                       onChange={(e) => setIssueMeasureNumber(e.target.value)}
-                      placeholder="Bijv. 24-28"
+                      placeholder="24-28"
                     />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Beschrijving van de fout *</label>
+                  <label className="form-label">{t('myMusic.reportIssue.description')} *</label>
                   <textarea
                     className="form-control"
                     value={issueDescription}
                     onChange={(e) => setIssueDescription(e.target.value)}
                     rows={4}
-                    placeholder="Beschrijf de fout die je hebt gevonden, bijv. 'Verkeerde noot in maat 24' of 'Pagina ontbreekt'"
+                    placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
                     required
                   />
                 </div>
@@ -272,14 +274,14 @@ export default function MyMusic() {
                   className="btn btn-outline"
                   onClick={() => setReportingPiece(null)}
                 >
-                  Annuleren
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={isSubmittingIssue || !issueDescription.trim()}
                 >
-                  {isSubmittingIssue ? 'Bezig...' : 'Melding versturen'}
+                  {isSubmittingIssue ? t('myMusic.reportIssue.submitting') : t('myMusic.reportIssue.submit')}
                 </button>
               </div>
             </form>
@@ -293,7 +295,7 @@ export default function MyMusic() {
   // Show lists overview
   return (
     <div>
-      <h1 className="mb-3">Mijn Muziek</h1>
+      <h1 className="mb-3">{t('myMusic.title')}</h1>
 
       {lists.length > 0 ? (
         <div className="grid grid-3">
@@ -302,13 +304,13 @@ export default function MyMusic() {
               <div className="card-body">
                 <h3 className="piece-title">{list.name}</h3>
                 <p className="piece-meta mb-2">
-                  {list.orchestraName} • {list.pieceCount || 0} stukken voor jou
+                  {list.orchestraName} • {list.pieceCount || 0} {t('myMusic.piecesForYou')}
                 </p>
                 <button
                   className="btn btn-primary"
                   onClick={() => handleSelectList(list.id)}
                 >
-                  Bekijk muziek
+                  {t('myMusic.viewMusic')}
                 </button>
               </div>
             </div>
@@ -319,8 +321,8 @@ export default function MyMusic() {
           <div className="card-body">
             <div className="empty-state">
               <div className="empty-icon">📋</div>
-              <h3>Geen muzieklijsten beschikbaar</h3>
-              <p>Je bent nog niet toegevoegd aan een orkest met muzieklijsten, of er zijn nog geen muziekstukken voor jouw instrumenten toegevoegd.</p>
+              <h3>{t('myMusic.noLists')}</h3>
+              <p>{t('myMusic.noListsDescription')}</p>
             </div>
           </div>
         </div>

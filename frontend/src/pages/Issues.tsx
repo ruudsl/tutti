@@ -1,16 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
-
-const STATUS_LABELS: Record<string, string> = {
-  open: 'Open',
-  in_review: 'In behandeling',
-  resolved: 'Opgelost',
-  rejected: 'Afgewezen',
-};
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'badge-warning',
@@ -21,6 +15,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Issues() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [selectedIssue, setSelectedIssue] = useState<PieceIssue | null>(null);
@@ -50,12 +45,12 @@ export default function Issues() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
-      showSuccess('Status bijgewerkt');
+      showSuccess(t('issues.statusUpdated'));
       setSelectedIssue(null);
       setResolutionNotes('');
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij bijwerken status');
+      showError(error.response?.data?.error || t('issues.errorUpdateStatus'));
     },
   });
 
@@ -65,10 +60,10 @@ export default function Issues() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['issue-stats'] });
-      showSuccess('Melding verwijderd');
+      showSuccess(t('issues.deleted'));
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij verwijderen');
+      showError(error.response?.data?.error || t('issues.errorDelete'));
     },
   });
 
@@ -82,7 +77,7 @@ export default function Issues() {
   };
 
   const handleDelete = (issue: PieceIssue) => {
-    if (confirm('Weet je zeker dat je deze melding wilt verwijderen?')) {
+    if (confirm(t('issues.confirmDelete'))) {
       deleteMutation.mutate(issue.id);
     }
   };
@@ -100,7 +95,7 @@ export default function Issues() {
   if (issuesLoading) {
     return (
       <div>
-        <h1>Meldkamer</h1>
+        <h1>{t('issues.title')}</h1>
         <SkeletonTable rows={5} columns={6} />
       </div>
     );
@@ -110,7 +105,7 @@ export default function Issues() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Meldkamer
+          {t('issues.title')}
           <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
             {issues.length}
           </span>
@@ -122,25 +117,25 @@ export default function Issues() {
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>{stats.open}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Open</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.open')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>{stats.in_review}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>In behandeling</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.in_review')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.resolved}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Opgelost</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.resolved')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{stats.rejected}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>Afgewezen</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.rejected')}</div>
             </div>
           </div>
         </div>
@@ -156,11 +151,11 @@ export default function Issues() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 style={{ maxWidth: '200px' }}
               >
-                <option value="">Alle statussen</option>
-                <option value="open">Open</option>
-                <option value="in_review">In behandeling</option>
-                <option value="resolved">Opgelost</option>
-                <option value="rejected">Afgewezen</option>
+                <option value="">{t('issues.allStatuses')}</option>
+                <option value="open">{t('issues.status.open')}</option>
+                <option value="in_review">{t('issues.status.in_review')}</option>
+                <option value="resolved">{t('issues.status.resolved')}</option>
+                <option value="rejected">{t('issues.status.rejected')}</option>
               </select>
             </div>
           </div>
@@ -173,12 +168,12 @@ export default function Issues() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>Muziekstuk</th>
-                  <th>Locatie</th>
-                  <th>Beschrijving</th>
-                  {isMusicCommittee && <th>Gemeld door</th>}
-                  <th>Datum</th>
-                  <th>Status</th>
+                  <th>{t('issues.table.piece')}</th>
+                  <th>{t('issues.table.location')}</th>
+                  <th>{t('issues.table.description')}</th>
+                  {isMusicCommittee && <th>{t('issues.table.reporter')}</th>}
+                  <th>{t('issues.table.date')}</th>
+                  <th>{t('issues.table.status')}</th>
                   <th style={{ width: '100px' }}></th>
                 </tr>
               </thead>
@@ -199,8 +194,8 @@ export default function Issues() {
                       )}
                     </td>
                     <td>
-                      {issue.page_number && <div>Pag. {issue.page_number}</div>}
-                      {issue.measure_number && <div>Maat {issue.measure_number}</div>}
+                      {issue.page_number && <div>{t('issues.page')} {issue.page_number}</div>}
+                      {issue.measure_number && <div>{t('issues.measure')} {issue.measure_number}</div>}
                       {!issue.page_number && !issue.measure_number && '-'}
                     </td>
                     <td style={{ maxWidth: '300px' }}>
@@ -213,7 +208,7 @@ export default function Issues() {
                           borderRadius: '0.25rem',
                           fontSize: '0.875rem'
                         }}>
-                          <strong>Reactie:</strong> {issue.resolution_notes}
+                          <strong>{t('issues.response')}:</strong> {issue.resolution_notes}
                         </div>
                       )}
                     </td>
@@ -238,14 +233,14 @@ export default function Issues() {
                           onChange={(e) => handleStatusChange(issue, e.target.value)}
                           style={{ minWidth: '140px' }}
                         >
-                          <option value="open">Open</option>
-                          <option value="in_review">In behandeling</option>
-                          <option value="resolved">Opgelost</option>
-                          <option value="rejected">Afgewezen</option>
+                          <option value="open">{t('issues.status.open')}</option>
+                          <option value="in_review">{t('issues.status.in_review')}</option>
+                          <option value="resolved">{t('issues.status.resolved')}</option>
+                          <option value="rejected">{t('issues.status.rejected')}</option>
                         </select>
                       ) : (
                         <span className={`badge ${STATUS_COLORS[issue.status]}`}>
-                          {STATUS_LABELS[issue.status]}
+                          {t(`issues.status.${issue.status}`)}
                         </span>
                       )}
                     </td>
@@ -254,7 +249,7 @@ export default function Issues() {
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(issue)}
-                          title="Verwijderen"
+                          title={t('common.delete')}
                         >
                           🗑
                         </button>
@@ -267,7 +262,7 @@ export default function Issues() {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📋</div>
-              <p>Geen meldingen gevonden.</p>
+              <p>{t('issues.noIssuesDescription')}</p>
             </div>
           )}
         </div>
@@ -279,33 +274,33 @@ export default function Issues() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {selectedIssue.status === 'rejected' ? 'Melding afwijzen' : 'Melding oplossen'}
+                {selectedIssue.status === 'rejected' ? t('issues.rejectIssue') : t('issues.resolveIssue')}
               </h3>
               <button className="modal-close" onClick={() => setSelectedIssue(null)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">Muziekstuk</label>
+                <label className="form-label">{t('issues.table.piece')}</label>
                 <p><strong>{selectedIssue.piece_title}</strong></p>
               </div>
               <div className="form-group">
-                <label className="form-label">Originele melding</label>
+                <label className="form-label">{t('issues.originalIssue')}</label>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{selectedIssue.description}</p>
               </div>
               <div className="form-group">
-                <label className="form-label">Reactie / Toelichting (optioneel)</label>
+                <label className="form-label">{t('issues.responseNotes')} ({t('common.optional')})</label>
                 <textarea
                   className="form-control"
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
                   rows={3}
-                  placeholder="Leg uit wat er is opgelost of waarom de melding is afgewezen..."
+                  placeholder={t('issues.responseNotesPlaceholder')}
                 />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setSelectedIssue(null)}>
-                Annuleren
+                {t('common.cancel')}
               </button>
               <div className="flex gap-2">
                 <button
@@ -318,7 +313,7 @@ export default function Issues() {
                     });
                   }}
                 >
-                  Afwijzen
+                  {t('issues.reject')}
                 </button>
                 <button
                   className="btn btn-success"
@@ -330,7 +325,7 @@ export default function Issues() {
                     });
                   }}
                 >
-                  Opgelost
+                  {t('issues.status.resolved')}
                 </button>
               </div>
             </div>
