@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { requestPasswordReset } from '../api';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +20,7 @@ export default function ForgotPassword() {
       await requestPasswordReset(email);
       setSubmitted(true);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Er is een fout opgetreden. Probeer het later opnieuw.');
+      setError(err.response?.data?.error || t('errors.generic'));
     } finally {
       setIsSubmitting(false);
     }
@@ -27,18 +30,21 @@ export default function ForgotPassword() {
     return (
       <div className="login-page">
         <div className="login-card">
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+            <LanguageSwitcher compact />
+          </div>
           <div className="login-header">
-            <h1>E-mail verzonden</h1>
+            <h1>{t('forgotPassword.successTitle')}</h1>
           </div>
           <div className="login-body">
             <div className="alert alert-success mb-2">
-              Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies om je wachtwoord te herstellen.
+              {t('forgotPassword.successMessage')}
             </div>
             <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>
-              Controleer ook je spam folder als je de e-mail niet binnen enkele minuten ontvangt.
+              {t('forgotPassword.checkSpam')}
             </p>
             <Link to="/login" className="btn btn-primary" style={{ width: '100%' }}>
-              Terug naar inloggen
+              {t('forgotPassword.backToLogin')}
             </Link>
           </div>
         </div>
@@ -49,9 +55,12 @@ export default function ForgotPassword() {
   return (
     <div className="login-page">
       <div className="login-card">
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+          <LanguageSwitcher compact />
+        </div>
         <div className="login-header">
-          <h1>Wachtwoord vergeten</h1>
-          <p>Vul je e-mailadres in om een herstel link te ontvangen</p>
+          <h1>{t('forgotPassword.title')}</h1>
+          <p>{t('forgotPassword.subtitle')}</p>
         </div>
         <div className="login-body">
           {error && (
@@ -59,13 +68,13 @@ export default function ForgotPassword() {
           )}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">E-mailadres</label>
+              <label className="form-label">{t('common.email')}</label>
               <input
                 type="email"
                 className="form-control"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="jouw@email.nl"
+                placeholder={t('forgotPassword.emailPlaceholder')}
                 required
                 autoFocus
               />
@@ -76,12 +85,12 @@ export default function ForgotPassword() {
               style={{ width: '100%' }}
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Bezig...' : 'Verstuur herstel link'}
+              {isSubmitting ? t('forgotPassword.sending') : t('forgotPassword.sendLink')}
             </button>
           </form>
           <div style={{ marginTop: '1rem', textAlign: 'center' }}>
             <Link to="/login" style={{ color: 'var(--primary)' }}>
-              Terug naar inloggen
+              {t('forgotPassword.backToLogin')}
             </Link>
           </div>
         </div>

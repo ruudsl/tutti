@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +13,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,17 +24,14 @@ export default function Login() {
       const response = await login(email, password, showMfa ? mfaCode : undefined);
 
       if (response.requiresMfa) {
-        // MFA is required, show MFA input
         setShowMfa(true);
         setIsLoading(false);
         return;
       }
 
-      // Successful login
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Inloggen mislukt. Controleer je gegevens.');
-      // Reset MFA code on error
+      setError(err.response?.data?.error || t('auth.loginFailed'));
       if (showMfa) {
         setMfaCode('');
       }
@@ -50,19 +50,21 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+          <LanguageSwitcher compact />
+        </div>
         <div className="login-logo">
           <h1>🎵 Harmonie Muziek</h1>
-          <p>Muziekbeheer voor orkestleden</p>
+          <p>Music management for orchestra members</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           {error && <div className="alert alert-danger">{error}</div>}
 
           {!showMfa ? (
-            // Normal login form
             <>
               <div className="form-group">
-                <label htmlFor="email" className="form-label">Email</label>
+                <label htmlFor="email" className="form-label">{t('auth.email')}</label>
                 <input
                   type="email"
                   id="email"
@@ -75,7 +77,7 @@ export default function Login() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="password" className="form-label">Wachtwoord</label>
+                <label htmlFor="password" className="form-label">{t('auth.password')}</label>
                 <input
                   type="password"
                   id="password"
@@ -87,17 +89,16 @@ export default function Login() {
               </div>
             </>
           ) : (
-            // MFA verification form
             <>
               <div className="alert alert-info" style={{ marginBottom: '1rem' }}>
-                <strong>Tweestapsverificatie</strong>
+                <strong>{t('auth.mfa.title')}</strong>
                 <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem' }}>
-                  Open je authenticator app en voer de 6-cijferige code in.
+                  {t('auth.mfa.description')}
                 </p>
               </div>
 
               <div className="form-group">
-                <label htmlFor="mfaCode" className="form-label">Verificatiecode</label>
+                <label htmlFor="mfaCode" className="form-label">{t('auth.mfa.code')}</label>
                 <input
                   type="text"
                   id="mfaCode"
@@ -120,7 +121,7 @@ export default function Login() {
                 onClick={handleBackToLogin}
                 style={{ width: '100%', marginBottom: '0.5rem' }}
               >
-                Terug naar inloggen
+                {t('auth.mfa.backToLogin')}
               </button>
             </>
           )}
@@ -131,13 +132,13 @@ export default function Login() {
             style={{ width: '100%' }}
             disabled={isLoading || (showMfa && mfaCode.length !== 6)}
           >
-            {isLoading ? 'Bezig...' : showMfa ? 'Verifiëren' : 'Inloggen'}
+            {isLoading ? t('auth.loggingIn') : showMfa ? t('auth.mfa.verify') : t('auth.loginButton')}
           </button>
 
           {!showMfa && (
             <div style={{ marginTop: '1rem', textAlign: 'center' }}>
               <Link to="/forgot-password" style={{ color: 'var(--primary)', fontSize: '0.875rem' }}>
-                Wachtwoord vergeten?
+                {t('auth.forgotPassword')}
               </Link>
             </div>
           )}

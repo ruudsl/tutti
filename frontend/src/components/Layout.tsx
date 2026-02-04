@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface DropdownProps {
   label: string;
@@ -44,6 +46,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -73,74 +76,74 @@ export default function Layout() {
           <ul className="navbar-nav">
             <li>
               <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
-                Dashboard
+                {t('nav.dashboard')}
               </NavLink>
             </li>
             <li>
               <NavLink to="/my-music" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Mijn Muziek
+                {t('nav.myMusic')}
               </NavLink>
             </li>
             <li>
               <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Tools
+                {t('nav.tools')}
               </NavLink>
             </li>
             <li>
               <NavLink to="/issues" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Meldkamer
+                {t('nav.issues')}
               </NavLink>
             </li>
 
             {isMusicCommittee && (
               <>
-                <NavDropdown label="Muziek" isActive={isMusicActive}>
+                <NavDropdown label={t('nav.music')} isActive={isMusicActive}>
                   <li>
                     <NavLink to="/lists" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Lijsten
+                      {t('nav.lists')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/music-pieces" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Muziekstukken
+                      {t('nav.pieces')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/titles" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Titels
+                      {t('nav.titles')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/upload" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Uploaden
+                      {t('nav.upload')}
                     </NavLink>
                   </li>
                 </NavDropdown>
 
-                <NavDropdown label="Beheer" isActive={isBeheerActive}>
+                <NavDropdown label={t('nav.management')} isActive={isBeheerActive}>
                   <li>
                     <NavLink to="/instruments" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Instrumenten
+                      {t('nav.instruments')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/genres" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Genres
+                      {t('nav.genres')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/pdf-tools" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      PDF Tools
+                      {t('nav.pdfTools')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/loans" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Uitleningen
+                      {t('nav.loans')}
                     </NavLink>
                   </li>
                   <li>
                     <NavLink to="/statistics" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                      Statistieken
+                      {t('nav.statistics')}
                     </NavLink>
                   </li>
                 </NavDropdown>
@@ -148,15 +151,15 @@ export default function Layout() {
             )}
 
             {isAdmin && (
-              <NavDropdown label="Admin" isActive={isAdminActive}>
+              <NavDropdown label={t('nav.admin')} isActive={isAdminActive}>
                 <li>
                   <NavLink to="/users" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                    Leden
+                    {t('nav.members')}
                   </NavLink>
                 </li>
                 <li>
                   <NavLink to="/orchestras" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                    Orkesten
+                    {t('nav.orchestras')}
                   </NavLink>
                 </li>
               </NavDropdown>
@@ -164,16 +167,15 @@ export default function Layout() {
           </ul>
 
           <div className="navbar-user">
+            <LanguageSwitcher compact />
             <Link to="/profile" className="user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="user-name">{user?.firstName} {user?.lastName}</div>
               <div className="user-role">
-                {user?.role === 'admin' && 'Beheerder'}
-                {user?.role === 'music_committee' && 'Muziekcommissie'}
-                {user?.role === 'member' && 'Lid'}
+                {user?.role && t(`roles.${user.role}`)}
               </div>
             </Link>
             <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-              Uitloggen
+              {t('nav.logout')}
             </button>
           </div>
         </div>
