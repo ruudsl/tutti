@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicLists } from '../hooks/useMusicLists';
@@ -13,6 +14,7 @@ interface FileItem {
 }
 
 export default function Upload() {
+  const { t } = useTranslation();
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -32,11 +34,11 @@ export default function Upload() {
       queryClient.invalidateQueries({ queryKey: ['musicLists'] });
 
       if (result.errors && result.errors.length > 0) {
-        showError(`${result.errors.length} bestand(en) mislukt:\n${result.errors.map((e: any) => e.filename).join(', ')}`);
+        showError(`${result.errors.length} ${t('upload.filesFailed')}:\n${result.errors.map((e: any) => e.filename).join(', ')}`);
       }
 
       if (result.uploaded.length > 0) {
-        showSuccess(`${result.uploaded.length} bestand(en) succesvol geüpload`);
+        showSuccess(`${result.uploaded.length} ${t('upload.filesUploaded')}`);
         setFiles([]);
       }
     },
@@ -72,7 +74,7 @@ export default function Upload() {
   if (orchestrasLoading) {
     return (
       <div>
-        <h1 className="mb-3">Muziekstukken uploaden</h1>
+        <h1 className="mb-3">{t('upload.title')}</h1>
         <SkeletonCard />
       </div>
     );
@@ -80,22 +82,22 @@ export default function Upload() {
 
   return (
     <div>
-      <h1 className="mb-3">Muziekstukken uploaden</h1>
+      <h1 className="mb-3">{t('upload.title')}</h1>
 
       <div className="card mb-2">
         <div className="card-header">
-          <h2 className="card-title">1. Selecteer orkest en lijst (optioneel)</h2>
+          <h2 className="card-title">{t('upload.step1')}</h2>
         </div>
         <div className="card-body">
           <div className="grid grid-2">
             <div className="form-group mb-0">
-              <label className="form-label">Orkest</label>
+              <label className="form-label">{t('upload.orchestra')}</label>
               <select
                 className="form-control form-select"
                 value={selectedOrchestra}
                 onChange={(e) => handleOrchestraChange(e.target.value)}
               >
-                <option value="">Selecteer orkest...</option>
+                <option value="">{t('upload.selectOrchestra')}</option>
                 {orchestras.map((orchestra) => (
                   <option key={orchestra.id} value={orchestra.id}>
                     {orchestra.name}
@@ -104,14 +106,14 @@ export default function Upload() {
               </select>
             </div>
             <div className="form-group mb-0">
-              <label className="form-label">Muzieklijst</label>
+              <label className="form-label">{t('upload.musicList')}</label>
               <select
                 className="form-control form-select"
                 value={selectedList}
                 onChange={(e) => setSelectedList(e.target.value)}
                 disabled={!selectedOrchestra}
               >
-                <option value="">Geen lijst (alleen uploaden)</option>
+                <option value="">{t('upload.noListUploadOnly')}</option>
                 {lists.map((list) => (
                   <option key={list.id} value={list.id}>
                     {list.name}
@@ -125,7 +127,7 @@ export default function Upload() {
 
       <div className="card mb-2">
         <div className="card-header">
-          <h2 className="card-title">2. Selecteer bestanden</h2>
+          <h2 className="card-title">{t('upload.step2')}</h2>
         </div>
         <div className="card-body">
           <FileDropzone
@@ -134,16 +136,16 @@ export default function Upload() {
           >
             <div className="dropzone-icon">📄</div>
             <p className="dropzone-text">
-              Sleep PDF bestanden hierheen of <strong>klik om te selecteren</strong>
+              {t('upload.dragPdfHere')} <strong>{t('upload.clickToSelect')}</strong>
             </p>
             <p className="dropzone-text" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-              Bestandsnaam format: Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf
+              {t('upload.filenameFormat')}: Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf
             </p>
           </FileDropzone>
 
           {files.length > 0 && (
             <div className="upload-list">
-              <h4 className="mb-1">{files.length} bestanden geselecteerd</h4>
+              <h4 className="mb-1">{files.length} {t('upload.filesSelected')}</h4>
               {files.map((fileItem, index) => (
                 <div key={index} className="upload-item">
                   <div style={{ flex: 1 }}>
@@ -159,7 +161,7 @@ export default function Upload() {
                 </div>
               ))}
               <p className="piece-meta mt-1">
-                YouTube links, speelduur en beschrijving kunnen na upload worden toegevoegd via Lijstbeheer.
+                {t('upload.metadataNote')}
               </p>
             </div>
           )}
@@ -173,20 +175,20 @@ export default function Upload() {
             onClick={handleUpload}
             disabled={files.length === 0 || uploadMutation.isPending}
           >
-            {uploadMutation.isPending ? 'Bezig met uploaden...' : `Upload ${files.length} bestand(en)`}
+            {uploadMutation.isPending ? t('upload.uploading2') : `${t('upload.uploadFiles')} ${files.length} ${t('upload.files')}`}
           </button>
         </div>
       </div>
 
       <div className="card mt-2">
         <div className="card-header">
-          <h2 className="card-title">Bestandsnaam formaat</h2>
+          <h2 className="card-title">{t('upload.filenameFormatTitle')}</h2>
         </div>
         <div className="card-body">
-          <p>De bestandsnaam wordt automatisch geparseerd om metadata te extraheren:</p>
+          <p>{t('upload.filenameFormatDesc')}</p>
           <code>Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel.pdf</code>
 
-          <h4 className="mt-2">Voorbeelden:</h4>
+          <h4 className="mt-2">{t('upload.examples')}:</h4>
           <ul>
             <li><code>The Pacific_Ted Ricketts_Bariton_Bb__sol.pdf</code></li>
             <li><code>Shannon Song_Rowwen Heze_Alto Saxophone_Eb_1.pdf</code></li>
@@ -195,8 +197,7 @@ export default function Upload() {
           </ul>
 
           <p className="mt-2">
-            <strong>Tip:</strong> Het instrument wordt automatisch herkend via de instrumentenlijst
-            en aliassen. "Altsax" wordt bijvoorbeeld automatisch gekoppeld aan "Alto Saxophone".
+            <strong>{t('upload.tip')}:</strong> {t('upload.instrumentTip')}
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useMusicPieces,
   useUpdateMusicPiece,
@@ -15,6 +16,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import type { MusicPiece } from '../types';
 
 export default function MusicPieces() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filterInstrument, setFilterInstrument] = useState('');
   const [editingPiece, setEditingPiece] = useState<MusicPiece | null>(null);
@@ -47,7 +49,7 @@ export default function MusicPieces() {
       // Log activity for statistics
       logActivity('download', 'music_piece', pieceId).catch(() => {});
     } catch (error) {
-      showError('Fout bij downloaden van het bestand.');
+      showError(t('errors.generic'));
     } finally {
       setDownloading(null);
     }
@@ -89,7 +91,7 @@ export default function MusicPieces() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Muziekstukken</h1>
+          <h1>{t('musicPieces.title')}</h1>
         </div>
         <SkeletonTable rows={10} columns={6} />
       </div>
@@ -99,14 +101,14 @@ export default function MusicPieces() {
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h1>Muziekstukken</h1>
+        <h1>{t('musicPieces.title')}</h1>
         <button
           className="btn btn-secondary"
           onClick={() => refreshMutation.mutate()}
           disabled={refreshMutation.isPending}
-          title="Koppel instrumenten opnieuw aan muziekstukken op basis van bestandsnamen"
+          title={t('musicPieces.refreshLinks')}
         >
-          {refreshMutation.isPending ? 'Bezig...' : '🔄 Instrumenten opnieuw koppelen'}
+          {refreshMutation.isPending ? t('musicPieces.refreshing') : `🔄 ${t('musicPieces.refreshLinks')}`}
         </button>
       </div>
 
@@ -117,7 +119,7 @@ export default function MusicPieces() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Zoeken op titel of arrangeur..."
+                placeholder={t('musicPieces.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -128,8 +130,8 @@ export default function MusicPieces() {
                 value={filterInstrument}
                 onChange={(e) => setFilterInstrument(e.target.value)}
               >
-                <option value="">Alle instrumenten</option>
-                <option value="__none__">Zonder instrument</option>
+                <option value="">{t('musicPieces.allInstruments')}</option>
+                <option value="__none__">{t('musicPieces.noInstrument')}</option>
                 {instruments.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
@@ -143,18 +145,18 @@ export default function MusicPieces() {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">{pieces.length} muziekstukken</span>
+          <span className="card-title">{pieces.length} {t('musicPieces.count')}</span>
         </div>
         <div className="card-body" style={{ padding: 0 }}>
           {pieces.length > 0 ? (
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>Titel</th>
-                  <th>Arrangeur</th>
-                  <th>Instrument</th>
-                  <th>Stemming</th>
-                  <th>Nr.</th>
+                  <th>{t('myMusic.table.title')}</th>
+                  <th>{t('myMusic.table.arranger')}</th>
+                  <th>{t('myMusic.table.instrument')}</th>
+                  <th>{t('myMusic.table.tuning')}</th>
+                  <th>{t('myMusic.table.number')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -187,21 +189,21 @@ export default function MusicPieces() {
                           className="btn btn-outline btn-sm"
                           onClick={() => handleDownload(piece.id)}
                           disabled={downloading === piece.id}
-                          title="Downloaden"
+                          title={t('common.download')}
                         >
                           ⬇
                         </button>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setEditingPiece({ ...piece })}
-                          title="Bewerken"
+                          title={t('common.edit')}
                         >
                           ✏
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => setDeletingPiece(piece)}
-                          title="Verwijderen"
+                          title={t('common.delete')}
                         >
                           🗑
                         </button>
@@ -214,7 +216,7 @@ export default function MusicPieces() {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">🎵</div>
-              <p>Geen muziekstukken gevonden.</p>
+              <p>{t('musicPieces.noPieces')}</p>
             </div>
           )}
         </div>
@@ -225,13 +227,13 @@ export default function MusicPieces() {
         <FormModal
           onClose={() => setEditingPiece(null)}
           onSubmit={handleUpdatePiece}
-          title="Muziekstuk bewerken"
-          submitLabel="Opslaan"
+          title={t('musicPieces.edit.title')}
+          submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
         >
           <>
             <div className="form-group">
-              <label className="form-label">Titel</label>
+              <label className="form-label">{t('musicPieces.edit.pieceTitle')}</label>
               <input
                 type="text"
                 className="form-control"
@@ -241,7 +243,7 @@ export default function MusicPieces() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Arrangeur</label>
+              <label className="form-label">{t('musicPieces.edit.arranger')}</label>
               <input
                 type="text"
                 className="form-control"
@@ -250,13 +252,13 @@ export default function MusicPieces() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Instrument</label>
+              <label className="form-label">{t('musicPieces.edit.instrument')}</label>
               <select
                 className="form-control form-select"
                 value={editingPiece.instrumentId || ''}
                 onChange={(e) => setEditingPiece({ ...editingPiece, instrumentId: e.target.value })}
               >
-                <option value="">Selecteer instrument</option>
+                <option value="">{t('musicPieces.edit.selectInstrument')}</option>
                 {instruments.map((instrument) => (
                   <option key={instrument.id} value={instrument.id}>
                     {instrument.name}
@@ -266,47 +268,47 @@ export default function MusicPieces() {
             </div>
             <div className="grid grid-2">
               <div className="form-group">
-                <label className="form-label">Stemming</label>
+                <label className="form-label">{t('musicPieces.edit.tuning')}</label>
                 <input
                   type="text"
                   className="form-control"
                   value={editingPiece.tuning || ''}
                   onChange={(e) => setEditingPiece({ ...editingPiece, tuning: e.target.value })}
-                  placeholder="Bijv. Bb, Eb, C"
+                  placeholder={t('musicPieces.edit.tuningPlaceholder')}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Groepnummer</label>
+                <label className="form-label">{t('musicPieces.edit.groupNumber')}</label>
                 <input
                   type="text"
                   className="form-control"
                   value={editingPiece.groupNumber || ''}
                   onChange={(e) => setEditingPiece({ ...editingPiece, groupNumber: e.target.value })}
-                  placeholder="Bijv. 1, 2"
+                  placeholder={t('musicPieces.edit.groupPlaceholder')}
                 />
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Muzieksleutel</label>
+              <label className="form-label">{t('musicPieces.edit.clef')}</label>
               <input
                 type="text"
                 className="form-control"
                 value={editingPiece.clef || ''}
                 onChange={(e) => setEditingPiece({ ...editingPiece, clef: e.target.value })}
-                placeholder="Bijv. sol, fa"
+                placeholder={t('musicPieces.edit.clefPlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">YouTube URL (legacy)</label>
+              <label className="form-label">{t('musicPieces.edit.youtubeUrl')}</label>
               <input
                 type="url"
                 className="form-control"
                 value={editingPiece.youtubeUrl || ''}
                 onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..."
+                placeholder={t('musicPieces.edit.youtubePlaceholder')}
               />
               <small className="text-light">
-                Tip: YouTube links en delen worden nu per titel beheerd via Lijstbeheer.
+                {t('musicPieces.edit.youtubeNote')}
               </small>
             </div>
           </>
@@ -318,9 +320,9 @@ export default function MusicPieces() {
         <ConfirmDialog
           onCancel={() => setDeletingPiece(null)}
           onConfirm={handleDelete}
-          title="Muziekstuk verwijderen"
-          message={`Weet je zeker dat je "${deletingPiece.title}" wilt verwijderen?`}
-          confirmLabel="Verwijderen"
+          title={t('musicPieces.delete.title')}
+          message={t('musicPieces.delete.confirm', { title: deletingPiece.title })}
+          confirmLabel={t('common.delete')}
           isLoading={deleteMutation.isPending}
         />
       )}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { useGenres } from '../hooks/useGenres';
 import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url } from '../api';
@@ -38,6 +39,7 @@ interface TitleMetaForm {
 }
 
 export default function MusicTitles() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filterGenre, setFilterGenre] = useState('');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function MusicTitles() {
       const meta = await getYouTubeMeta(titleMetaForm.youtubeUrl);
       setYoutubeMeta({ title: meta.title, author: meta.author });
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Kon YouTube metadata niet ophalen');
+      showError(error.response?.data?.error || t('titles.errorFetchYouTube'));
     } finally {
       setFetchingYouTube(false);
     }
@@ -130,20 +132,20 @@ export default function MusicTitles() {
       if (pendingMp3File && result.id) {
         try {
           await uploadTitleMp3(result.id, pendingMp3File);
-          showSuccess('Metadata en MP3 opgeslagen');
+          showSuccess(t('titles.metadataSaved') + ' + MP3');
         } catch (mp3Error: any) {
-          showSuccess('Metadata opgeslagen');
-          showError('MP3 upload mislukt: ' + (mp3Error.response?.data?.error || 'Onbekende fout'));
+          showSuccess(t('titles.metadataSaved'));
+          showError(t('titles.errorUploadMp3') + ': ' + (mp3Error.response?.data?.error || t('errors.generic')));
         }
       } else {
-        showSuccess('Metadata opgeslagen');
+        showSuccess(t('titles.metadataSaved'));
       }
 
       setEditingTitle(null);
       setPendingMp3File(null);
       refetch();
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij opslaan metadata');
+      showError(error.response?.data?.error || t('titles.errorSaveMetadata'));
     } finally {
       setSaving(false);
     }
@@ -157,9 +159,9 @@ export default function MusicTitles() {
     try {
       const result = await uploadTitleMp3(editingTitle.id, file);
       setCurrentMp3Path(result.mp3FilePath);
-      showSuccess('MP3 geüpload');
+      showSuccess(t('titles.mp3Uploaded'));
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij uploaden MP3');
+      showError(error.response?.data?.error || t('titles.errorUploadMp3'));
     } finally {
       setUploadingMp3(false);
       if (mp3InputRef.current) {
@@ -171,14 +173,14 @@ export default function MusicTitles() {
   const handleMp3Delete = async () => {
     if (!editingTitle?.id || !currentMp3Path) return;
 
-    if (!confirm('Weet je zeker dat je het MP3 bestand wilt verwijderen?')) return;
+    if (!confirm(t('titles.confirmDeleteMp3'))) return;
 
     try {
       await deleteTitleMp3(editingTitle.id);
       setCurrentMp3Path(null);
-      showSuccess('MP3 verwijderd');
+      showSuccess(t('titles.mp3Deleted'));
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij verwijderen MP3');
+      showError(error.response?.data?.error || t('titles.errorDeleteMp3'));
     }
   };
 
@@ -208,7 +210,7 @@ export default function MusicTitles() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Titels</h1>
+          <h1>{t('titles.title')}</h1>
         </div>
         <SkeletonTable rows={10} columns={5} />
       </div>
@@ -219,7 +221,7 @@ export default function MusicTitles() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Titels
+          {t('titles.title')}
           <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
             {titles.length}
           </span>
@@ -233,7 +235,7 @@ export default function MusicTitles() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Zoeken op titel of arrangeur..."
+                placeholder={t('titles.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -244,7 +246,7 @@ export default function MusicTitles() {
                 value={filterGenre}
                 onChange={(e) => setFilterGenre(e.target.value)}
               >
-                <option value="">Alle genres</option>
+                <option value="">{t('titles.allGenres')}</option>
                 {genres.map((genre) => (
                   <option key={genre.id} value={genre.id}>
                     {genre.name}
@@ -261,7 +263,7 @@ export default function MusicTitles() {
                   setFilterGenre('');
                 }}
               >
-                Wis filters
+                {t('titles.clearFilters')}
               </button>
             )}
           </div>
@@ -275,13 +277,13 @@ export default function MusicTitles() {
               <thead>
                 <tr>
                   <th style={{ width: '30px' }}></th>
-                  <th>Titel</th>
-                  <th>Arrangeur</th>
-                  <th>Genres</th>
-                  <th>Grade</th>
-                  <th>Duur</th>
-                  <th>Partijen</th>
-                  <th>Lijsten</th>
+                  <th>{t('myMusic.table.title')}</th>
+                  <th>{t('titles.arranger')}</th>
+                  <th>{t('titles.genres')}</th>
+                  <th>{t('titles.grade')}</th>
+                  <th>{t('titles.duration')}</th>
+                  <th>{t('titles.parts')}</th>
+                  <th>{t('titles.lists')}</th>
                   <th style={{ width: '50px' }}></th>
                 </tr>
               </thead>
@@ -300,7 +302,7 @@ export default function MusicTitles() {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">🎵</div>
-              <p>Geen titels gevonden.</p>
+              <p>{t('titles.noTitles')}</p>
             </div>
           )}
         </div>
@@ -311,13 +313,13 @@ export default function MusicTitles() {
         <div className="modal-overlay" onClick={() => setEditingTitle(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Titel metadata bewerken</h3>
+              <h3 className="modal-title">{t('titles.editMetadata')}</h3>
               <button className="modal-close" onClick={() => setEditingTitle(null)}>×</button>
             </div>
             <form onSubmit={handleSaveTitleMeta}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Titel</label>
+                  <label className="form-label">{t('myMusic.table.title')}</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -334,7 +336,7 @@ export default function MusicTitles() {
                           const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
                           dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
                         }}
-                        title="Zoek info op bladmuziek websites"
+                        title={t('titles.searchOnSites')}
                       >
                         🔍
                       </button>
@@ -353,7 +355,7 @@ export default function MusicTitles() {
                         }}
                       >
                         <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
-                          Zoek op:
+                          {t('titles.searchOnSites')}:
                         </div>
                         {searchSheetMusicWebsites(editingTitle.title).map((site) => (
                           <a
@@ -380,7 +382,7 @@ export default function MusicTitles() {
                 </div>
                 {editingTitle.arranger && (
                   <div className="form-group">
-                    <label className="form-label">Arrangeur</label>
+                    <label className="form-label">{t('titles.arranger')}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -390,7 +392,7 @@ export default function MusicTitles() {
                   </div>
                 )}
                 <div className="form-group">
-                  <label className="form-label">YouTube URL</label>
+                  <label className="form-label">{t('titles.youtubeUrl')}</label>
                   <div className="flex gap-2">
                     <input
                       type="url"
@@ -408,7 +410,7 @@ export default function MusicTitles() {
                       className="btn btn-outline"
                       onClick={fetchYouTubeMetadata}
                       disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
-                      title="Haal video info op"
+                      title={t('titles.fetchVideoInfo')}
                     >
                       {fetchingYouTube ? '...' : '📥'}
                     </button>
@@ -416,13 +418,13 @@ export default function MusicTitles() {
                   {youtubeMeta && (
                     <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
                       <strong>{youtubeMeta.title}</strong>
-                      <div>Door: {youtubeMeta.author}</div>
+                      <div>{t('titles.by')}: {youtubeMeta.author}</div>
                     </div>
                   )}
                 </div>
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label className="form-label">Speelduur (mm:ss)</label>
+                    <label className="form-label">{t('titles.durationFormat')}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -433,18 +435,18 @@ export default function MusicTitles() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Moeilijkheidsgraad</label>
+                    <label className="form-label">{t('titles.difficulty')}</label>
                     <input
                       type="text"
                       className="form-control"
                       value={titleMetaForm.grade}
                       onChange={(e) => setTitleMetaForm(f => ({ ...f, grade: e.target.value }))}
-                      placeholder="Bijv. 3, 2.5, 4+"
+                      placeholder={t('titles.difficultyPlaceholder')}
                     />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">MP3 Preview</label>
+                  <label className="form-label">{t('titles.mp3Preview')}</label>
                   {currentMp3Path ? (
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <audio
@@ -456,7 +458,7 @@ export default function MusicTitles() {
                         type="button"
                         className="btn btn-danger btn-sm"
                         onClick={handleMp3Delete}
-                        title="MP3 verwijderen"
+                        title={t('common.delete')}
                       >
                         🗑
                       </button>
@@ -476,7 +478,7 @@ export default function MusicTitles() {
                           setPendingMp3File(null);
                           if (mp3InputRef.current) mp3InputRef.current.value = '';
                         }}
-                        title="MP3 verwijderen"
+                        title={t('common.delete')}
                       >
                         ×
                       </button>
@@ -508,28 +510,28 @@ export default function MusicTitles() {
                         onClick={() => mp3InputRef.current?.click()}
                         disabled={uploadingMp3}
                       >
-                        {uploadingMp3 ? 'Uploaden...' : '📤 MP3 selecteren'}
+                        {uploadingMp3 ? t('upload.uploading') : `📤 ${t('titles.selectMp3')}`}
                       </button>
                       {!editingTitle?.id && (
                         <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                          Wordt geüpload bij opslaan
+                          {t('titles.uploadOnSave')}
                         </span>
                       )}
                     </div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Omschrijving</label>
+                  <label className="form-label">{t('titles.description')}</label>
                   <textarea
                     className="form-control"
                     value={titleMetaForm.description}
                     onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
                     rows={3}
-                    placeholder="Optionele omschrijving of notities..."
+                    placeholder={t('titles.descriptionPlaceholder')}
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Genres</label>
+                  <label className="form-label">{t('titles.genres')}</label>
                   <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {genres.map((genre) => (
                       <label
@@ -566,17 +568,17 @@ export default function MusicTitles() {
                       onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
                     />
                     <span style={{ marginLeft: '0.5rem' }}>
-                      Delen met andere verenigingen toegestaan
+                      {t('titles.sharingAllowed')}
                     </span>
                   </label>
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
-                  Annuleren
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Opslaan...' : 'Opslaan'}
+                  {saving ? `${t('common.save')}...` : t('common.save')}
                 </button>
               </div>
             </form>
