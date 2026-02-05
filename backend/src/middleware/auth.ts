@@ -26,7 +26,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
         req.user = decoded;
         next();
     } catch (error) {
-        return res.status(403).json({ error: 'Ongeldige token.' });
+        return res.status(401).json({ error: 'Token verlopen of ongeldig.' });
     }
 }
 

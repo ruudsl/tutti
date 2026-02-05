@@ -63,6 +63,7 @@ const generalLimiter = rateLimit({
     message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' },
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true, // Only count failed requests toward the limit
 });
 app.use('/api', generalLimiter);
 

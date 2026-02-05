@@ -45,8 +45,8 @@ export const config = {
 
     // Rate limiting
     rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000), // 15 minutes
-    rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
-    authRateLimitMaxRequests: getEnvNumber('AUTH_RATE_LIMIT_MAX_REQUESTS', 5), // Stricter for auth
+    rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 1000),
+    authRateLimitMaxRequests: getEnvNumber('AUTH_RATE_LIMIT_MAX_REQUESTS', 10), // Stricter for auth
 };
 
 // Warn in development about default JWT secret
