@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { setupMfa, enableMfa, disableMfa } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
 import { showSuccess, showError } from '../utils/toast';
 
 export function MfaSettings() {
+  const { t } = useTranslation();
   const { user, refreshProfile } = useAuth();
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showDisableModal, setShowDisableModal] = useState(false);
@@ -22,7 +24,7 @@ export function MfaSettings() {
       setSecret(response.secret);
       setShowSetupModal(true);
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij starten MFA setup');
+      showError(error.response?.data?.error || t('mfa.errorSetup'));
     } finally {
       setIsLoading(false);
     }
@@ -30,19 +32,19 @@ export function MfaSettings() {
 
   const handleEnableMfa = async () => {
     if (verificationCode.length !== 6) {
-      showError('Voer een 6-cijferige code in');
+      showError(t('mfa.enterCode'));
       return;
     }
 
     setIsLoading(true);
     try {
       await enableMfa(verificationCode);
-      showSuccess('MFA is succesvol ingeschakeld');
+      showSuccess(t('mfa.enableSuccess'));
       await refreshProfile();
       setShowSetupModal(false);
       resetSetupState();
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij inschakelen MFA');
+      showError(error.response?.data?.error || t('mfa.errorEnable'));
     } finally {
       setIsLoading(false);
     }
@@ -50,19 +52,19 @@ export function MfaSettings() {
 
   const handleDisableMfa = async () => {
     if (!disablePassword) {
-      showError('Voer je wachtwoord in');
+      showError(t('mfa.enterPassword'));
       return;
     }
 
     setIsLoading(true);
     try {
       await disableMfa(disablePassword);
-      showSuccess('MFA is uitgeschakeld');
+      showSuccess(t('mfa.disableSuccess'));
       await refreshProfile();
       setShowDisableModal(false);
       setDisablePassword('');
     } catch (error: any) {
-      showError(error.response?.data?.error || 'Fout bij uitschakelen MFA');
+      showError(error.response?.data?.error || t('mfa.errorDisable'));
     } finally {
       setIsLoading(false);
     }
@@ -79,23 +81,21 @@ export function MfaSettings() {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">Tweestapsverificatie (MFA)</h3>
+        <h3 className="card-title">{t('mfa.title')}</h3>
       </div>
       <div className="card-body">
         <div className="flex justify-between items-center">
           <div>
             <p style={{ margin: 0 }}>
-              <strong>Status: </strong>
+              <strong>{t('mfa.status')}: </strong>
               {mfaEnabled ? (
-                <span className="badge badge-success">Ingeschakeld</span>
+                <span className="badge badge-success">{t('mfa.enabled')}</span>
               ) : (
-                <span className="badge badge-secondary">Uitgeschakeld</span>
+                <span className="badge badge-secondary">{t('mfa.disabled')}</span>
               )}
             </p>
             <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: 'var(--text-light)' }}>
-              {mfaEnabled
-                ? 'Je account is beveiligd met tweestapsverificatie.'
-                : 'Beveilig je account met een authenticator app zoals Google Authenticator of Authy.'}
+              {mfaEnabled ? t('mfa.enabledDescription') : t('mfa.disabledDescription')}
             </p>
           </div>
           <div>
@@ -104,7 +104,7 @@ export function MfaSettings() {
                 className="btn btn-outline"
                 onClick={() => setShowDisableModal(true)}
               >
-                Uitschakelen
+                {t('mfa.disable')}
               </button>
             ) : (
               <button
@@ -112,7 +112,7 @@ export function MfaSettings() {
                 onClick={handleStartSetup}
                 disabled={isLoading}
               >
-                {isLoading ? 'Bezig...' : 'Inschakelen'}
+                {isLoading ? t('mfa.loading') : t('mfa.enable')}
               </button>
             )}
           </div>
@@ -122,7 +122,7 @@ export function MfaSettings() {
       {/* Setup Modal */}
       {showSetupModal && (
         <Modal
-          title="MFA Instellen"
+          title={t('mfa.setupTitle')}
           onClose={() => {
             setShowSetupModal(false);
             resetSetupState();
@@ -130,7 +130,7 @@ export function MfaSettings() {
         >
           <div style={{ textAlign: 'center' }}>
             <p style={{ marginBottom: '1rem' }}>
-              Scan de QR code met je authenticator app:
+              {t('mfa.scanQr')}
             </p>
 
             {qrCode && (
@@ -140,12 +140,12 @@ export function MfaSettings() {
             )}
 
             <p style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginBottom: '1rem' }}>
-              Of voer deze code handmatig in:<br />
+              {t('mfa.manualCode')}<br />
               <code style={{ userSelect: 'all', fontSize: '0.8rem' }}>{secret}</code>
             </p>
 
             <div className="form-group">
-              <label className="form-label">Verificatiecode</label>
+              <label className="form-label">{t('mfa.verificationCode')}</label>
               <input
                 type="text"
                 className="form-control"
@@ -166,14 +166,14 @@ export function MfaSettings() {
                   resetSetupState();
                 }}
               >
-                Annuleren
+                {t('common.cancel')}
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleEnableMfa}
                 disabled={isLoading || verificationCode.length !== 6}
               >
-                {isLoading ? 'Bezig...' : 'Activeren'}
+                {isLoading ? t('mfa.loading') : t('mfa.activate')}
               </button>
             </div>
           </div>
@@ -183,7 +183,7 @@ export function MfaSettings() {
       {/* Disable Modal */}
       {showDisableModal && (
         <Modal
-          title="MFA Uitschakelen"
+          title={t('mfa.disableTitle')}
           onClose={() => {
             setShowDisableModal(false);
             setDisablePassword('');
@@ -191,11 +191,11 @@ export function MfaSettings() {
           size="small"
         >
           <p style={{ marginBottom: '1rem' }}>
-            Voer je wachtwoord in om MFA uit te schakelen:
+            {t('mfa.disablePrompt')}
           </p>
 
           <div className="form-group">
-            <label className="form-label">Wachtwoord</label>
+            <label className="form-label">{t('mfa.password')}</label>
             <input
               type="password"
               className="form-control"
@@ -213,14 +213,14 @@ export function MfaSettings() {
                 setDisablePassword('');
               }}
             >
-              Annuleren
+              {t('common.cancel')}
             </button>
             <button
               className="btn btn-danger"
               onClick={handleDisableMfa}
               disabled={isLoading || !disablePassword}
             >
-              {isLoading ? 'Bezig...' : 'Uitschakelen'}
+              {isLoading ? t('mfa.loading') : t('mfa.disable')}
             </button>
           </div>
         </Modal>

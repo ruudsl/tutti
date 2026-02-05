@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const { user, refreshProfile } = useAuth();
 
   // Password change state
@@ -28,24 +30,24 @@ export default function Profile() {
     setPasswordSuccess('');
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Nieuwe wachtwoorden komen niet overeen.');
+      setPasswordError(t('profile.changePassword.mismatch'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError('Wachtwoord moet minimaal 8 tekens bevatten.');
+      setPasswordError(t('profile.changePassword.tooShort'));
       return;
     }
 
     setIsChangingPassword(true);
     try {
       await changePassword(currentPassword, newPassword);
-      setPasswordSuccess('Wachtwoord succesvol gewijzigd.');
+      setPasswordSuccess(t('profile.changePassword.success'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      setPasswordError(error.response?.data?.error || 'Fout bij wijzigen van wachtwoord.');
+      setPasswordError(error.response?.data?.error || t('profile.changePassword.wrongCurrent'));
     } finally {
       setIsChangingPassword(false);
     }
@@ -58,7 +60,7 @@ export default function Profile() {
       const data = await setupMfa();
       setMfaSetup({ qrCode: data.qrCode, secret: data.secret });
     } catch (error: any) {
-      setMfaError(error.response?.data?.error || 'Fout bij opzetten van MFA.');
+      setMfaError(error.response?.data?.error || t('mfa.errorSetup'));
     } finally {
       setIsSettingUpMfa(false);
     }
@@ -69,12 +71,12 @@ export default function Profile() {
     setMfaError('');
     try {
       await enableMfa(mfaCode);
-      setMfaSuccess('MFA is succesvol ingeschakeld.');
+      setMfaSuccess(t('profile.mfa.enableSuccess'));
       setMfaSetup(null);
       setMfaCode('');
       refreshProfile();
     } catch (error: any) {
-      setMfaError(error.response?.data?.error || 'Fout bij inschakelen van MFA.');
+      setMfaError(error.response?.data?.error || t('mfa.errorEnable'));
     }
   };
 
@@ -84,47 +86,38 @@ export default function Profile() {
     setIsDisablingMfa(true);
     try {
       await disableMfa(disablePassword);
-      setMfaSuccess('MFA is uitgeschakeld.');
+      setMfaSuccess(t('profile.mfa.disableSuccess'));
       setDisablePassword('');
       refreshProfile();
     } catch (error: any) {
-      setMfaError(error.response?.data?.error || 'Fout bij uitschakelen van MFA.');
+      setMfaError(error.response?.data?.error || t('mfa.errorDisable'));
     } finally {
       setIsDisablingMfa(false);
     }
   };
 
-  const getRoleName = (role: string) => {
-    switch (role) {
-      case 'admin': return 'Beheerder';
-      case 'music_committee': return 'Muziekcommissie';
-      case 'member': return 'Lid';
-      default: return role;
-    }
-  };
-
   return (
     <div>
-      <h1>Mijn Profiel</h1>
+      <h1>{t('profile.title')}</h1>
 
       <div className="grid grid-2">
         {/* Profile Info */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">Profielgegevens</span>
+            <span className="card-title">{t('profile.info')}</span>
           </div>
           <div className="card-body">
             <div className="mb-2">
-              <strong>Naam:</strong> {user?.firstName} {user?.lastName}
+              <strong>{t('profile.name')}:</strong> {user?.firstName} {user?.lastName}
             </div>
             <div className="mb-2">
-              <strong>E-mail:</strong> {user?.email}
+              <strong>{t('profile.email')}:</strong> {user?.email}
             </div>
             <div className="mb-2">
-              <strong>Rol:</strong> {user?.role ? getRoleName(user.role) : '-'}
+              <strong>{t('profile.role')}:</strong> {user?.role ? t(`roles.${user.role}`) : '-'}
             </div>
             <div className="mb-2">
-              <strong>MFA:</strong> {user?.mfaEnabled ? 'Ingeschakeld' : 'Uitgeschakeld'}
+              <strong>{t('profile.mfaStatus')}:</strong> {user?.mfaEnabled ? t('profile.mfaEnabled') : t('profile.mfaDisabled')}
             </div>
           </div>
         </div>
@@ -132,7 +125,7 @@ export default function Profile() {
         {/* Password Change */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">Wachtwoord wijzigen</span>
+            <span className="card-title">{t('profile.changePassword.title')}</span>
           </div>
           <div className="card-body">
             {passwordError && (
@@ -143,7 +136,7 @@ export default function Profile() {
             )}
             <form onSubmit={handlePasswordChange}>
               <div className="form-group">
-                <label className="form-label">Huidig wachtwoord</label>
+                <label className="form-label">{t('profile.changePassword.current')}</label>
                 <input
                   type="password"
                   className="form-control"
@@ -153,7 +146,7 @@ export default function Profile() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Nieuw wachtwoord</label>
+                <label className="form-label">{t('profile.changePassword.new')}</label>
                 <input
                   type="password"
                   className="form-control"
@@ -164,7 +157,7 @@ export default function Profile() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Bevestig nieuw wachtwoord</label>
+                <label className="form-label">{t('profile.changePassword.confirm')}</label>
                 <input
                   type="password"
                   className="form-control"
@@ -179,7 +172,7 @@ export default function Profile() {
                 className="btn btn-primary"
                 disabled={isChangingPassword}
               >
-                {isChangingPassword ? 'Bezig...' : 'Wachtwoord wijzigen'}
+                {isChangingPassword ? t('profile.changePassword.changing') : t('profile.changePassword.button')}
               </button>
             </form>
           </div>
@@ -189,7 +182,7 @@ export default function Profile() {
       {/* MFA Section */}
       <div className="card mt-2">
         <div className="card-header">
-          <span className="card-title">Twee-factor authenticatie (MFA)</span>
+          <span className="card-title">{t('profile.mfa.title')}</span>
         </div>
         <div className="card-body">
           {mfaError && (
@@ -205,28 +198,28 @@ export default function Profile() {
               {!mfaSetup ? (
                 <div>
                   <p className="mb-2">
-                    Beveilig je account met twee-factor authenticatie. Je hebt een authenticator app nodig zoals Google Authenticator of Authy.
+                    {t('profile.mfa.setupDescription')}
                   </p>
                   <button
                     className="btn btn-primary"
                     onClick={handleSetupMfa}
                     disabled={isSettingUpMfa}
                   >
-                    {isSettingUpMfa ? 'Bezig...' : 'MFA instellen'}
+                    {isSettingUpMfa ? t('profile.mfa.settingUp') : t('profile.mfa.setupButton')}
                   </button>
                 </div>
               ) : (
                 <div>
-                  <p className="mb-2">Scan de QR-code met je authenticator app:</p>
+                  <p className="mb-2">{t('profile.mfa.scanQr')}</p>
                   <div className="mb-2" style={{ textAlign: 'center' }}>
                     <img src={mfaSetup.qrCode} alt="MFA QR Code" style={{ maxWidth: '200px' }} />
                   </div>
                   <p className="mb-2">
-                    <small>Of voer deze code handmatig in: <code>{mfaSetup.secret}</code></small>
+                    <small>{t('profile.mfa.manualCode')} <code>{mfaSetup.secret}</code></small>
                   </p>
                   <form onSubmit={handleEnableMfa}>
                     <div className="form-group">
-                      <label className="form-label">Verificatiecode</label>
+                      <label className="form-label">{t('profile.mfa.verificationCode')}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -239,14 +232,14 @@ export default function Profile() {
                     </div>
                     <div className="flex gap-1">
                       <button type="submit" className="btn btn-primary">
-                        MFA inschakelen
+                        {t('profile.mfa.enableButton')}
                       </button>
                       <button
                         type="button"
                         className="btn btn-secondary"
                         onClick={() => setMfaSetup(null)}
                       >
-                        Annuleren
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </form>
@@ -257,11 +250,11 @@ export default function Profile() {
             // MFA enabled
             <div>
               <p className="mb-2" style={{ color: 'var(--success)' }}>
-                MFA is ingeschakeld voor je account.
+                {t('profile.mfa.disableTitle')}
               </p>
               <form onSubmit={handleDisableMfa}>
                 <div className="form-group">
-                  <label className="form-label">Wachtwoord om MFA uit te schakelen</label>
+                  <label className="form-label">{t('profile.mfa.disablePassword')}</label>
                   <input
                     type="password"
                     className="form-control"
@@ -275,7 +268,7 @@ export default function Profile() {
                   className="btn btn-danger"
                   disabled={isDisablingMfa}
                 >
-                  {isDisablingMfa ? 'Bezig...' : 'MFA uitschakelen'}
+                  {isDisablingMfa ? t('profile.mfa.disabling') : t('profile.mfa.disableButton')}
                 </button>
               </form>
             </div>

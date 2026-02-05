@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Metronome } from './Metronome';
 import { Tuner } from './Tuner';
 
@@ -7,6 +8,7 @@ interface MusicToolsProps {
 }
 
 export function MusicTools({ sidebar = false }: MusicToolsProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'metronome' | 'tuner'>('metronome');
 
   if (sidebar) {
@@ -24,14 +26,14 @@ export function MusicTools({ sidebar = false }: MusicToolsProps) {
             onClick={() => setActiveTab('metronome')}
             style={{ flex: 1 }}
           >
-            Metronoom
+            {t('tools.metronomeTab')}
           </button>
           <button
             className={`btn btn-sm ${activeTab === 'tuner' ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setActiveTab('tuner')}
             style={{ flex: 1 }}
           >
-            Stemmen
+            {t('tools.tunerTab')}
           </button>
         </div>
 
@@ -52,6 +54,7 @@ export function MusicTools({ sidebar = false }: MusicToolsProps) {
 
 // Compact toolbar version for embedding in other views
 export function MusicToolsBar() {
+  const { t } = useTranslation();
   const [showTools, setShowTools] = useState(false);
 
   return (
@@ -68,7 +71,7 @@ export function MusicToolsBar() {
         className="btn btn-outline btn-sm"
         onClick={() => setShowTools(!showTools)}
       >
-        {showTools ? 'Verberg tools' : 'Toon tools'}
+        {showTools ? t('tools.hideTools') : t('tools.showTools')}
       </button>
 
       {showTools && (

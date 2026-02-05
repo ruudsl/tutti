@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface TunerProps {
   compact?: boolean;
@@ -80,6 +81,7 @@ function autoCorrelate(buffer: Float32Array, sampleRate: number): number {
 }
 
 export function Tuner({ compact = false }: TunerProps) {
+  const { t } = useTranslation();
   const [isListening, setIsListening] = useState(false);
   const [frequency, setFrequency] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -146,10 +148,10 @@ export function Tuner({ compact = false }: TunerProps) {
       setIsListening(true);
       analyze();
     } catch (err: any) {
-      setError('Kon geen toegang krijgen tot de microfoon. Controleer je browser instellingen.');
+      setError(t('tools.tuner.micError'));
       console.error('Microphone error:', err);
     }
-  }, [analyze]);
+  }, [analyze, t]);
 
   const stopListening = useCallback(() => {
     if (animationRef.current) {
@@ -204,7 +206,7 @@ export function Tuner({ compact = false }: TunerProps) {
           <button
             className={`btn ${isListening ? 'btn-danger' : 'btn-primary'} btn-sm`}
             onClick={toggleListening}
-            title={isListening ? 'Stop stemapparaat' : 'Start stemapparaat'}
+            title={isListening ? t('tools.tuner.stopTitle') : t('tools.tuner.startTitle')}
           >
             {isListening ? '⏹' : '🎤'}
           </button>
@@ -248,7 +250,7 @@ export function Tuner({ compact = false }: TunerProps) {
               </div>
             </>
           ) : isListening ? (
-            <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>Luisteren...</span>
+            <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('tools.tuner.listening')}</span>
           ) : null}
         </div>
         {error && <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{error}</div>}
@@ -259,7 +261,7 @@ export function Tuner({ compact = false }: TunerProps) {
   return (
     <div className="tuner card">
       <div className="card-body">
-        <h4 style={{ marginBottom: '1rem' }}>Stemapparaat</h4>
+        <h4 style={{ marginBottom: '1rem' }}>{t('tools.tuner.title')}</h4>
 
         {error && (
           <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
@@ -353,7 +355,7 @@ export function Tuner({ compact = false }: TunerProps) {
               color: 'var(--text-light)',
               padding: '2rem 0'
             }}>
-              {isListening ? 'Luisteren...' : 'Klik Start om te stemmen'}
+              {isListening ? t('tools.tuner.listening') : t('tools.tuner.clickToStart')}
             </div>
           )}
         </div>
@@ -363,7 +365,7 @@ export function Tuner({ compact = false }: TunerProps) {
           onClick={toggleListening}
           style={{ width: '100%' }}
         >
-          {isListening ? '⏹ Stop' : '🎤 Start'}
+          {isListening ? `⏹ ${t('tools.tuner.stop')}` : `🎤 ${t('tools.tuner.start')}`}
         </button>
 
         {isListening && (
@@ -373,7 +375,7 @@ export function Tuner({ compact = false }: TunerProps) {
             color: 'var(--text-light)',
             textAlign: 'center'
           }}>
-            Groen = goed gestemd | Geel = bijna | Rood = te hoog/laag
+            {t('tools.tuner.tuningHelp')}
           </p>
         )}
       </div>

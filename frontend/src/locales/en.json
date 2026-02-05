@@ -201,6 +201,10 @@
   "tools": {
     "title": "Music Tools",
     "description": "Helpful tools for practicing and tuning your instrument.",
+    "showTools": "Show tools",
+    "hideTools": "Hide tools",
+    "metronomeTab": "Metronome",
+    "tunerTab": "Tuner",
     "metronome": {
       "title": "Metronome",
       "tempo": "Tempo",
@@ -208,7 +212,11 @@
       "timeSignature": "Time signature",
       "start": "Start",
       "stop": "Stop",
-      "tap": "Tap"
+      "tap": "Tap",
+      "tapTitle": "Tap the beat to set the tempo",
+      "tempoLabel": "Tempo: {{bpm}} BPM",
+      "startTitle": "Start metronome",
+      "stopTitle": "Stop metronome"
     },
     "tuner": {
       "title": "Tuner",
@@ -220,7 +228,12 @@
       "cents": "Cents",
       "tuned": "In tune!",
       "tooLow": "Too low",
-      "tooHigh": "Too high"
+      "tooHigh": "Too high",
+      "micError": "Could not access the microphone. Check your browser settings.",
+      "clickToStart": "Click Start to begin tuning",
+      "tuningHelp": "Green = in tune | Yellow = close | Red = too high/low",
+      "startTitle": "Start tuner",
+      "stopTitle": "Stop tuner"
     }
   },
   "issues": {
@@ -394,7 +407,24 @@
     "add": "Add genre",
     "edit": "Edit genre",
     "name": "Name",
-    "noGenres": "No genres found."
+    "noGenres": "No genres found.",
+    "newGenre": "New genre",
+    "allGenres": "All genres",
+    "genre": "Genre",
+    "deleteGenre": "Delete genre",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? The links with music pieces will also be removed.",
+    "namePlaceholder": "E.g. Pop, Rock, Classical",
+    "titlesIn": "Titles in \"{{name}}\"",
+    "selectGenre": "Select a genre",
+    "selectGenreHint": "Click on a genre to view its titles",
+    "noTitlesForGenre": "No titles found for this genre",
+    "viewOnYoutube": "View on YouTube",
+    "table": {
+      "title": "Title",
+      "arranger": "Arranger",
+      "duration": "Duration",
+      "parts": "Parts"
+    }
   },
   "pdfTools": {
     "title": "PDF Tools",
@@ -620,6 +650,53 @@
     "errorRemoveTitle": "Error removing title",
     "errorReorder": "Error changing order",
     "errorToggleStatus": "Error changing status"
+  },
+  "mfa": {
+    "title": "Two-Factor Authentication (MFA)",
+    "status": "Status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enabledDescription": "Your account is secured with two-factor authentication.",
+    "disabledDescription": "Secure your account with an authenticator app like Google Authenticator or Authy.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "loading": "Loading...",
+    "setupTitle": "Set Up MFA",
+    "scanQr": "Scan the QR code with your authenticator app:",
+    "manualCode": "Or enter this code manually:",
+    "verificationCode": "Verification code",
+    "activate": "Activate",
+    "disableTitle": "Disable MFA",
+    "disablePrompt": "Enter your password to disable MFA:",
+    "password": "Password",
+    "enterCode": "Enter a 6-digit code",
+    "enterPassword": "Enter your password",
+    "enableSuccess": "MFA has been successfully enabled",
+    "disableSuccess": "MFA has been disabled",
+    "errorSetup": "Error starting MFA setup",
+    "errorEnable": "Error enabling MFA",
+    "errorDisable": "Error disabling MFA"
+  },
+  "backup": {
+    "title": "Backup",
+    "description": "Create a complete backup of the database and all uploaded files (PDFs and MP3s).",
+    "database": "Database",
+    "pdfFiles": "PDF files",
+    "mp3Files": "MP3 files",
+    "total": "Total",
+    "download": "Download backup",
+    "downloading": "Downloading...",
+    "downloaded": "Backup downloaded",
+    "errorDownload": "Error downloading backup",
+    "restore": "Restore backup",
+    "restoreDescription": "Upload a previously downloaded backup ZIP file to restore the database and files.",
+    "restoreWarning": "Warning: This will overwrite the current database and all files!",
+    "selectFile": "Select backup file",
+    "restoreButton": "Restore backup",
+    "restoring": "Restoring...",
+    "restored": "Backup successfully restored. The page will reload.",
+    "errorRestore": "Error restoring backup",
+    "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!"
   },
   "errors": {
     "generic": "An error occurred. Please try again later.",

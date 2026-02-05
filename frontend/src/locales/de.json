@@ -201,6 +201,10 @@
   "tools": {
     "title": "Musik-Werkzeuge",
     "description": "Praktische Hilfsmittel zum Üben und Stimmen Ihres Instruments.",
+    "showTools": "Werkzeuge anzeigen",
+    "hideTools": "Werkzeuge ausblenden",
+    "metronomeTab": "Metronom",
+    "tunerTab": "Stimmen",
     "metronome": {
       "title": "Metronom",
       "tempo": "Tempo",
@@ -208,7 +212,11 @@
       "timeSignature": "Taktart",
       "start": "Start",
       "stop": "Stopp",
-      "tap": "Tap"
+      "tap": "Tap",
+      "tapTitle": "Tippen Sie im Takt, um das Tempo einzustellen",
+      "tempoLabel": "Tempo: {{bpm}} BPM",
+      "startTitle": "Metronom starten",
+      "stopTitle": "Metronom stoppen"
     },
     "tuner": {
       "title": "Stimmgerät",
@@ -220,7 +228,12 @@
       "cents": "Cent",
       "tuned": "Gestimmt!",
       "tooLow": "Zu tief",
-      "tooHigh": "Zu hoch"
+      "tooHigh": "Zu hoch",
+      "micError": "Zugriff auf das Mikrofon nicht möglich. Überprüfen Sie Ihre Browsereinstellungen.",
+      "clickToStart": "Klicken Sie auf Start zum Stimmen",
+      "tuningHelp": "Grün = gestimmt | Gelb = fast | Rot = zu hoch/tief",
+      "startTitle": "Stimmgerät starten",
+      "stopTitle": "Stimmgerät stoppen"
     }
   },
   "issues": {
@@ -394,7 +407,24 @@
     "add": "Genre hinzufügen",
     "edit": "Genre bearbeiten",
     "name": "Name",
-    "noGenres": "Keine Genres gefunden."
+    "noGenres": "Keine Genres gefunden.",
+    "newGenre": "Neues Genre",
+    "allGenres": "Alle Genres",
+    "genre": "Genre",
+    "deleteGenre": "Genre löschen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie \"{{name}}\" löschen möchten? Die Verknüpfungen mit Musikstücken werden ebenfalls entfernt.",
+    "namePlaceholder": "Z.B. Pop, Rock, Klassik",
+    "titlesIn": "Titel in \"{{name}}\"",
+    "selectGenre": "Genre auswählen",
+    "selectGenreHint": "Klicken Sie auf ein Genre, um die zugehörigen Titel anzuzeigen",
+    "noTitlesForGenre": "Keine Titel für dieses Genre gefunden",
+    "viewOnYoutube": "Auf YouTube ansehen",
+    "table": {
+      "title": "Titel",
+      "arranger": "Arrangeur",
+      "duration": "Dauer",
+      "parts": "Stimmen"
+    }
   },
   "pdfTools": {
     "title": "PDF-Tools",
@@ -620,6 +650,53 @@
     "errorRemoveTitle": "Fehler beim Entfernen des Titels",
     "errorReorder": "Fehler beim Ändern der Reihenfolge",
     "errorToggleStatus": "Fehler beim Ändern des Status"
+  },
+  "mfa": {
+    "title": "Zwei-Faktor-Authentifizierung (MFA)",
+    "status": "Status",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "enabledDescription": "Ihr Konto ist mit Zwei-Faktor-Authentifizierung gesichert.",
+    "disabledDescription": "Sichern Sie Ihr Konto mit einer Authenticator-App wie Google Authenticator oder Authy.",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "loading": "Laden...",
+    "setupTitle": "MFA einrichten",
+    "scanQr": "Scannen Sie den QR-Code mit Ihrer Authenticator-App:",
+    "manualCode": "Oder geben Sie diesen Code manuell ein:",
+    "verificationCode": "Bestätigungscode",
+    "activate": "Aktivieren",
+    "disableTitle": "MFA deaktivieren",
+    "disablePrompt": "Geben Sie Ihr Passwort ein, um MFA zu deaktivieren:",
+    "password": "Passwort",
+    "enterCode": "Geben Sie einen 6-stelligen Code ein",
+    "enterPassword": "Geben Sie Ihr Passwort ein",
+    "enableSuccess": "MFA wurde erfolgreich aktiviert",
+    "disableSuccess": "MFA wurde deaktiviert",
+    "errorSetup": "Fehler beim Starten der MFA-Einrichtung",
+    "errorEnable": "Fehler beim Aktivieren von MFA",
+    "errorDisable": "Fehler beim Deaktivieren von MFA"
+  },
+  "backup": {
+    "title": "Backup",
+    "description": "Erstellen Sie ein vollständiges Backup der Datenbank und aller hochgeladenen Dateien (PDFs und MP3s).",
+    "database": "Datenbank",
+    "pdfFiles": "PDF-Dateien",
+    "mp3Files": "MP3-Dateien",
+    "total": "Gesamt",
+    "download": "Backup herunterladen",
+    "downloading": "Wird heruntergeladen...",
+    "downloaded": "Backup heruntergeladen",
+    "errorDownload": "Fehler beim Herunterladen des Backups",
+    "restore": "Backup wiederherstellen",
+    "restoreDescription": "Laden Sie eine zuvor heruntergeladene Backup-ZIP-Datei hoch, um die Datenbank und Dateien wiederherzustellen.",
+    "restoreWarning": "Achtung: Dies überschreibt die aktuelle Datenbank und alle Dateien!",
+    "selectFile": "Backup-Datei auswählen",
+    "restoreButton": "Backup wiederherstellen",
+    "restoring": "Wird wiederhergestellt...",
+    "restored": "Backup erfolgreich wiederhergestellt. Die Seite wird neu geladen.",
+    "errorRestore": "Fehler beim Wiederherstellen des Backups",
+    "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!"
   },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",

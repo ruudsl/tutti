@@ -201,6 +201,10 @@
   "tools": {
     "title": "Muziek Tools",
     "description": "Handige hulpmiddelen voor het oefenen en stemmen van je instrument.",
+    "showTools": "Toon tools",
+    "hideTools": "Verberg tools",
+    "metronomeTab": "Metronoom",
+    "tunerTab": "Stemmen",
     "metronome": {
       "title": "Metronoom",
       "tempo": "Tempo",
@@ -208,7 +212,11 @@
       "timeSignature": "Maatsoort",
       "start": "Start",
       "stop": "Stop",
-      "tap": "Tap"
+      "tap": "Tap",
+      "tapTitle": "Tik op de maat om tempo te bepalen",
+      "tempoLabel": "Tempo: {{bpm}} BPM",
+      "startTitle": "Start metronoom",
+      "stopTitle": "Stop metronoom"
     },
     "tuner": {
       "title": "Stemapparaat",
@@ -220,7 +228,12 @@
       "cents": "Cent",
       "tuned": "Gestemd!",
       "tooLow": "Te laag",
-      "tooHigh": "Te hoog"
+      "tooHigh": "Te hoog",
+      "micError": "Kon geen toegang krijgen tot de microfoon. Controleer je browser instellingen.",
+      "clickToStart": "Klik Start om te stemmen",
+      "tuningHelp": "Groen = goed gestemd | Geel = bijna | Rood = te hoog/laag",
+      "startTitle": "Start stemapparaat",
+      "stopTitle": "Stop stemapparaat"
     }
   },
   "issues": {
@@ -384,7 +397,24 @@
     "add": "Genre toevoegen",
     "edit": "Genre bewerken",
     "name": "Naam",
-    "noGenres": "Geen genres gevonden."
+    "noGenres": "Geen genres gevonden.",
+    "newGenre": "Nieuw genre",
+    "allGenres": "Alle genres",
+    "genre": "Genre",
+    "deleteGenre": "Genre verwijderen",
+    "deleteConfirm": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? De koppelingen met muziekstukken worden ook verwijderd.",
+    "namePlaceholder": "Bijv. Pop, Rock, Klassiek",
+    "titlesIn": "Titels in \"{{name}}\"",
+    "selectGenre": "Selecteer een genre",
+    "selectGenreHint": "Klik op een genre om de bijbehorende titels te zien",
+    "noTitlesForGenre": "Geen titels gevonden voor dit genre",
+    "viewOnYoutube": "Bekijk op YouTube",
+    "table": {
+      "title": "Titel",
+      "arranger": "Arrangeur",
+      "duration": "Duur",
+      "parts": "Partijen"
+    }
   },
   "pdfTools": {
     "title": "PDF Tools",
@@ -610,6 +640,53 @@
     "errorRemoveTitle": "Fout bij verwijderen titel",
     "errorReorder": "Fout bij wijzigen volgorde",
     "errorToggleStatus": "Fout bij wijzigen status"
+  },
+  "mfa": {
+    "title": "Tweestapsverificatie (MFA)",
+    "status": "Status",
+    "enabled": "Ingeschakeld",
+    "disabled": "Uitgeschakeld",
+    "enabledDescription": "Je account is beveiligd met tweestapsverificatie.",
+    "disabledDescription": "Beveilig je account met een authenticator app zoals Google Authenticator of Authy.",
+    "enable": "Inschakelen",
+    "disable": "Uitschakelen",
+    "loading": "Bezig...",
+    "setupTitle": "MFA Instellen",
+    "scanQr": "Scan de QR code met je authenticator app:",
+    "manualCode": "Of voer deze code handmatig in:",
+    "verificationCode": "Verificatiecode",
+    "activate": "Activeren",
+    "disableTitle": "MFA Uitschakelen",
+    "disablePrompt": "Voer je wachtwoord in om MFA uit te schakelen:",
+    "password": "Wachtwoord",
+    "enterCode": "Voer een 6-cijferige code in",
+    "enterPassword": "Voer je wachtwoord in",
+    "enableSuccess": "MFA is succesvol ingeschakeld",
+    "disableSuccess": "MFA is uitgeschakeld",
+    "errorSetup": "Fout bij starten MFA setup",
+    "errorEnable": "Fout bij inschakelen MFA",
+    "errorDisable": "Fout bij uitschakelen MFA"
+  },
+  "backup": {
+    "title": "Backup",
+    "description": "Maak een complete backup van de database en alle geüploade bestanden (PDF's en MP3's).",
+    "database": "Database",
+    "pdfFiles": "PDF bestanden",
+    "mp3Files": "MP3 bestanden",
+    "total": "Totaal",
+    "download": "Download backup",
+    "downloading": "Bezig met downloaden...",
+    "downloaded": "Backup gedownload",
+    "errorDownload": "Fout bij downloaden backup",
+    "restore": "Backup herstellen",
+    "restoreDescription": "Upload een eerder gedownload backup ZIP-bestand om de database en bestanden te herstellen.",
+    "restoreWarning": "Let op: Dit overschrijft de huidige database en alle bestanden!",
+    "selectFile": "Selecteer backup bestand",
+    "restoreButton": "Backup herstellen",
+    "restoring": "Bezig met herstellen...",
+    "restored": "Backup succesvol hersteld. De pagina wordt herladen.",
+    "errorRestore": "Fout bij herstellen backup",
+    "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!"
   },
   "errors": {
     "generic": "Er is een fout opgetreden. Probeer het later opnieuw.",

@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import archiver from 'archiver';
+import multer from 'multer';
+import AdmZip from 'adm-zip';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
@@ -150,6 +152,118 @@ router.get('/info', authenticateToken, requireRole('admin'), asyncHandler(async 
             sizeFormatted: formatBytes(dbSize + pdfSize + mp3Size),
         },
     });
+}));
+
+// Configure multer for backup ZIP upload
+const backupUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 500 * 1024 * 1024, // 500MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/zip' || file.originalname.toLowerCase().endsWith('.zip')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen ZIP bestanden zijn toegestaan.'));
+        }
+    },
+});
+
+/**
+ * @swagger
+ * /backup/restore:
+ *   post:
+ *     summary: Restore a backup from a ZIP file
+ *     tags: [Backup]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               backup:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Backup restored successfully
+ *       400:
+ *         description: Invalid backup file
+ */
+router.post('/restore', authenticateToken, requireRole('admin'), backupUpload.single('backup'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+        throw new ApiError(400, 'Geen backup bestand ontvangen.');
+    }
+
+    logger.info(`Backup restore requested by user ${req.user!.id}`);
+
+    try {
+        const zip = new AdmZip(req.file.buffer);
+        const entries = zip.getEntries();
+
+        let restoredDb = false;
+        let restoredPdfs = 0;
+        let restoredMp3s = 0;
+
+        // Ensure directories exist
+        if (!fs.existsSync(UPLOAD_DIR)) {
+            fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        }
+        if (!fs.existsSync(MP3_UPLOAD_DIR)) {
+            fs.mkdirSync(MP3_UPLOAD_DIR, { recursive: true });
+        }
+
+        for (const entry of entries) {
+            if (entry.isDirectory) continue;
+
+            const entryName = entry.entryName;
+
+            // Prevent path traversal
+            const normalized = path.normalize(entryName);
+            if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
+                logger.warn(`Skipping suspicious path in backup: ${entryName}`);
+                continue;
+            }
+
+            if (entryName === 'database/harmonie.db') {
+                // Restore database
+                const dbDir = path.dirname(DB_PATH);
+                if (!fs.existsSync(dbDir)) {
+                    fs.mkdirSync(dbDir, { recursive: true });
+                }
+                fs.writeFileSync(DB_PATH, entry.getData());
+                restoredDb = true;
+                logger.info('Restored database from backup');
+            } else if (entryName.startsWith('uploads/mp3/') && entryName.endsWith('.mp3')) {
+                // Restore MP3 file
+                const filename = path.basename(entryName);
+                fs.writeFileSync(path.join(MP3_UPLOAD_DIR, filename), entry.getData());
+                restoredMp3s++;
+            } else if (entryName.startsWith('uploads/') && entryName.endsWith('.pdf')) {
+                // Restore PDF file
+                const filename = path.basename(entryName);
+                fs.writeFileSync(path.join(UPLOAD_DIR, filename), entry.getData());
+                restoredPdfs++;
+            }
+        }
+
+        logger.info(`Backup restore completed: db=${restoredDb}, pdfs=${restoredPdfs}, mp3s=${restoredMp3s}`);
+
+        res.json({
+            success: true,
+            restored: {
+                database: restoredDb,
+                pdfFiles: restoredPdfs,
+                mp3Files: restoredMp3s,
+            },
+        });
+    } catch (error: any) {
+        logger.error('Backup restore failed', { error: error.message });
+        throw new ApiError(500, 'Fout bij herstellen van backup.');
+    }
 }));
 
 function formatBytes(bytes: number): string {

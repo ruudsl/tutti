@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getMusicTitles } from '../api';
 import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '../hooks/useGenres';
@@ -11,6 +12,7 @@ import type { Genre } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 export default function Genres() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
@@ -76,7 +78,7 @@ export default function Genres() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1>Genres</h1>
+          <h1>{t('genres.title')}</h1>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="card">
@@ -98,11 +100,11 @@ export default function Genres() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>
-          Genres
+          {t('genres.title')}
           <span className="badge badge-primary ml-2">{genres.length}</span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          + Nieuw genre
+          + {t('genres.newGenre')}
         </button>
       </div>
 
@@ -110,13 +112,13 @@ export default function Genres() {
         {/* Genre List */}
         <div className="card">
           <div className="card-header">
-            <h3>Alle genres</h3>
+            <h3>{t('genres.allGenres')}</h3>
           </div>
           <div className="card-body" style={{ padding: 0 }}>
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>Genre</th>
+                  <th>{t('genres.genre')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -136,7 +138,7 @@ export default function Genres() {
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => openEditModal(genre)}
-                          title="Bewerken"
+                          title={t('common.edit')}
                         >
                           ✏
                         </button>
@@ -144,7 +146,7 @@ export default function Genres() {
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => setDeletingGenre(genre)}
-                            title="Verwijderen"
+                            title={t('common.delete')}
                           >
                             🗑
                           </button>
@@ -156,7 +158,7 @@ export default function Genres() {
                 {genres.length === 0 && (
                   <tr>
                     <td colSpan={2} style={{ textAlign: 'center', color: '#666' }}>
-                      Geen genres gevonden
+                      {t('genres.noGenres')}
                     </td>
                   </tr>
                 )}
@@ -169,7 +171,7 @@ export default function Genres() {
         <div className="card">
           <div className="card-header">
             <h3>
-              {selectedGenre ? `Titels in "${selectedGenre.name}"` : 'Selecteer een genre'}
+              {selectedGenre ? t('genres.titlesIn', { name: selectedGenre.name }) : t('genres.selectGenre')}
               {selectedGenre && (
                 <span className="badge badge-secondary ml-2">{titlesForGenre.length}</span>
               )}
@@ -178,7 +180,7 @@ export default function Genres() {
           <div className="card-body" style={{ padding: 0 }}>
             {!selectedGenre ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-                Klik op een genre om de bijbehorende titels te zien
+                {t('genres.selectGenreHint')}
               </div>
             ) : loadingTitles ? (
               <div style={{ padding: '1rem' }}>
@@ -186,16 +188,16 @@ export default function Genres() {
               </div>
             ) : titlesForGenre.length === 0 ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-                Geen titels gevonden voor dit genre
+                {t('genres.noTitlesForGenre')}
               </div>
             ) : (
               <table className="table mb-0">
                 <thead>
                   <tr>
-                    <th>Titel</th>
-                    <th>Arrangeur</th>
-                    <th>Duur</th>
-                    <th>Partijen</th>
+                    <th>{t('genres.table.title')}</th>
+                    <th>{t('genres.table.arranger')}</th>
+                    <th>{t('genres.table.duration')}</th>
+                    <th>{t('genres.table.parts')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,7 +211,7 @@ export default function Genres() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="ml-1"
-                            title="Bekijk op YouTube"
+                            title={t('genres.viewOnYoutube')}
                           >
                             ▶
                           </a>
@@ -230,24 +232,24 @@ export default function Genres() {
       {/* Add Genre Modal */}
       {showAddModal && (
         <FormModal
-          title="Nieuw genre"
+          title={t('genres.newGenre')}
           onClose={() => {
             setShowAddModal(false);
             setFormName('');
           }}
           onSubmit={handleCreate}
-          submitLabel="Toevoegen"
+          submitLabel={t('common.add')}
           isSubmitting={createGenreMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('genres.name')}</label>
             <input
               type="text"
               className="form-control"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               required
-              placeholder="Bijv. Pop, Rock, Klassiek"
+              placeholder={t('genres.namePlaceholder')}
               autoFocus
             />
           </div>
@@ -257,7 +259,7 @@ export default function Genres() {
       {/* Edit Genre Modal */}
       {editingGenre && (
         <FormModal
-          title="Genre bewerken"
+          title={t('genres.edit')}
           onClose={() => {
             setEditingGenre(null);
             setFormName('');
@@ -266,7 +268,7 @@ export default function Genres() {
           isSubmitting={updateGenreMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">Naam</label>
+            <label className="form-label">{t('genres.name')}</label>
             <input
               type="text"
               className="form-control"
@@ -282,9 +284,9 @@ export default function Genres() {
       {/* Delete Confirmation Dialog */}
       {deletingGenre && (
         <ConfirmDialog
-          title="Genre verwijderen"
-          message={`Weet je zeker dat je "${deletingGenre.name}" wilt verwijderen? De koppelingen met muziekstukken worden ook verwijderd.`}
-          confirmLabel="Verwijderen"
+          title={t('genres.deleteGenre')}
+          message={t('genres.deleteConfirm', { name: deletingGenre.name })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDelete}
           onCancel={() => setDeletingGenre(null)}
           isLoading={deleteGenreMutation.isPending}

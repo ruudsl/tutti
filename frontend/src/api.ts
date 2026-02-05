@@ -466,6 +466,15 @@ export const downloadBackup = async (): Promise<void> => {
   window.URL.revokeObjectURL(url);
 };
 
+export const restoreBackup = async (file: File): Promise<void> => {
+  const formData = new FormData();
+  formData.append('backup', file);
+  await api.post('/backup/restore', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000, // 5 minute timeout for large backups
+  });
+};
+
 // Issues (Meldkamer)
 export interface PieceIssue {
   id: string;

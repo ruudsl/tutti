@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface MetronomeProps {
   compact?: boolean;
 }
 
 export function Metronome({ compact = false }: MetronomeProps) {
+  const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(120);
   const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
@@ -150,7 +152,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
           <button
             className={`btn ${isPlaying ? 'btn-danger' : 'btn-primary'} btn-sm`}
             onClick={toggleMetronome}
-            title={isPlaying ? 'Stop metronoom' : 'Start metronoom'}
+            title={isPlaying ? t('tools.metronome.stopTitle') : t('tools.metronome.startTitle')}
           >
             {isPlaying ? '⏹' : '▶'}
           </button>
@@ -163,7 +165,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
             max={300}
             style={{ width: '70px', textAlign: 'center' }}
           />
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>BPM</span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('tools.metronome.bpm')}</span>
           <div className="beat-indicators" style={{ display: 'flex', gap: '4px', marginLeft: '0.5rem' }}>
             {Array.from({ length: beatsPerMeasure }).map((_, i) => (
               <div
@@ -188,7 +190,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
   return (
     <div className="metronome card">
       <div className="card-body">
-        <h4 style={{ marginBottom: '1rem' }}>Metronoom</h4>
+        <h4 style={{ marginBottom: '1rem' }}>{t('tools.metronome.title')}</h4>
 
         <div className="beat-display" style={{
           textAlign: 'center',
@@ -205,7 +207,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
           }}>
             {bpm}
           </div>
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>BPM</div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('tools.metronome.bpm')}</div>
 
           <div className="beat-indicators" style={{
             display: 'flex',
@@ -231,7 +233,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Tempo: {bpm} BPM</label>
+          <label className="form-label">{t('tools.metronome.tempoLabel', { bpm })}</label>
           <input
             type="range"
             className="form-control"
@@ -244,7 +246,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Maatsoort</label>
+          <label className="form-label">{t('tools.metronome.timeSignature')}</label>
           <div className="flex gap-2">
             {[2, 3, 4, 5, 6].map((beats) => (
               <button
@@ -264,14 +266,14 @@ export function Metronome({ compact = false }: MetronomeProps) {
             onClick={toggleMetronome}
             style={{ flex: 1 }}
           >
-            {isPlaying ? '⏹ Stop' : '▶ Start'}
+            {isPlaying ? `⏹ ${t('tools.metronome.stop')}` : `▶ ${t('tools.metronome.start')}`}
           </button>
           <button
             className="btn btn-outline"
             onClick={handleTapTempo}
-            title="Tik op de maat om tempo te bepalen"
+            title={t('tools.metronome.tapTitle')}
           >
-            Tap
+            {t('tools.metronome.tap')}
           </button>
         </div>
       </div>
