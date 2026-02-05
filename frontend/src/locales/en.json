@@ -828,7 +828,27 @@
       "description": "Connect with Spond to automatically sync attendance.",
       "notConfigured": "Spond is not configured yet.",
       "connected": "Connected to Spond",
-      "syncNow": "Sync now"
+      "syncNow": "Sync now",
+      "syncing": "Syncing...",
+      "syncAll": "Sync all",
+      "syncSuccess": "{{count}} rehearsals synced with Spond.",
+      "syncRehearsalSuccess": "Attendance synced.",
+      "configure": "Configure Spond",
+      "username": "Spond email address",
+      "password": "Spond password",
+      "selectGroup": "Select group",
+      "noGroup": "No group selected",
+      "loadingGroups": "Loading groups...",
+      "saveConfig": "Save configuration",
+      "removeConfig": "Remove Spond integration",
+      "removeConfirm": "Are you sure you want to remove the Spond integration?",
+      "configSaved": "Spond configuration saved.",
+      "configRemoved": "Spond integration removed.",
+      "loginFailed": "Could not log in to Spond. Check the credentials.",
+      "lastSync": "Last synced",
+      "never": "Never",
+      "enabled": "Integration active",
+      "disabled": "Integration inactive"
     }
   },
   "accessibility": {

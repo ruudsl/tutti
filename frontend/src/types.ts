@@ -164,6 +164,26 @@ export interface RehearsalDetail extends Rehearsal {
   attendance: RehearsalAttendance[];
 }
 
+export interface SpondConfig {
+  configured: boolean;
+  username?: string;
+  groupId?: string | null;
+  syncEnabled?: boolean;
+  lastSync?: string | null;
+}
+
+export interface SpondGroup {
+  id: string;
+  name: string;
+  memberCount: number;
+}
+
+export interface SpondSyncResult {
+  message: string;
+  synced: number;
+  total: number;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

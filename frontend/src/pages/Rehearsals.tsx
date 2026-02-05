@@ -8,8 +8,10 @@ import {
   getRehearsal, updateRehearsalPieces,
   getDefaultDays, addDefaultDay, deleteDefaultDay,
   generateRehearsals,
+  getSpondConfig, saveSpondConfig, removeSpondConfig,
+  getSpondGroups, syncSpond, syncSpondRehearsal,
 } from '../api';
-import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay } from '../types';
+import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup } from '../types';
 
 const MANAGER_ROLES = ['admin', 'music_committee', 'conductor'];
 
@@ -43,6 +45,15 @@ export default function Rehearsals() {
   const [editingPieces, setEditingPieces] = useState(false);
   const [pieces, setPieces] = useState<{ title: string; notes: string }[]>([]);
 
+  // Spond
+  const [spondConfig, setSpondConfig] = useState<SpondConfig | null>(null);
+  const [showSpondSetup, setShowSpondSetup] = useState(false);
+  const [spondForm, setSpondForm] = useState({ username: '', password: '', groupId: '' });
+  const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const isAdmin = user?.role === 'admin';
+
   useEffect(() => {
     loadData();
   }, []);
@@ -58,6 +69,13 @@ export default function Rehearsals() {
       ]);
       setRehearsals(reh);
       setDefaultDays(days);
+      // Load Spond config for admins
+      if (isAdmin) {
+        try {
+          const sc = await getSpondConfig();
+          setSpondConfig(sc);
+        } catch { /* Spond not available */ }
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -160,6 +178,77 @@ export default function Rehearsals() {
       handleOpenDetail(selectedRehearsal.id);
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    }
+  };
+
+  // Spond handlers
+  const handleSaveSpondConfig = async () => {
+    try {
+      await saveSpondConfig({
+        username: spondForm.username,
+        password: spondForm.password,
+        groupId: spondForm.groupId || undefined,
+        syncEnabled: true,
+      });
+      showSuccess(t('rehearsals.spond.configSaved'));
+      setShowSpondSetup(false);
+      setSpondForm({ username: '', password: '', groupId: '' });
+      const sc = await getSpondConfig();
+      setSpondConfig(sc);
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.spond.loginFailed'));
+    }
+  };
+
+  const handleRemoveSpondConfig = async () => {
+    if (!confirm(t('rehearsals.spond.removeConfirm'))) return;
+    try {
+      await removeSpondConfig();
+      showSuccess(t('rehearsals.spond.configRemoved'));
+      setSpondConfig({ configured: false });
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    }
+  };
+
+  const handleLoadGroups = async () => {
+    setLoadingGroups(true);
+    try {
+      const groups = await getSpondGroups();
+      setSpondGroups(groups);
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.spond.loginFailed'));
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncSpond();
+      showSuccess(t('rehearsals.spond.syncSuccess', { count: result.synced }));
+      loadData();
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleSyncRehearsal = async (rehearsalId: string) => {
+    setIsSyncing(true);
+    try {
+      await syncSpondRehearsal(rehearsalId);
+      showSuccess(t('rehearsals.spond.syncRehearsalSuccess'));
+      if (selectedRehearsal?.id === rehearsalId) {
+        handleOpenDetail(rehearsalId);
+      }
+      loadData();
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -292,12 +381,21 @@ export default function Rehearsals() {
         </div>
 
         {/* Attendance */}
-        {selectedRehearsal.attendance.length > 0 && (
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">{t('rehearsals.attendance')}</h2>
-            </div>
-            <div className="card-body">
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">{t('rehearsals.attendance')}</h2>
+            {isManager && spondConfig?.configured && spondConfig.groupId && (
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => handleSyncRehearsal(selectedRehearsal.id)}
+                disabled={isSyncing}
+              >
+                {isSyncing ? t('rehearsals.spond.syncing') : t('rehearsals.spond.syncNow')}
+              </button>
+            )}
+          </div>
+          <div className="card-body">
+            {selectedRehearsal.attendance.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
                 {selectedRehearsal.attendance.map(a => (
                   <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0' }}>
@@ -309,9 +407,15 @@ export default function Rehearsals() {
                   </div>
                 ))}
               </div>
-            </div>
+            ) : (
+              <p className="piece-meta">
+                {spondConfig?.configured && spondConfig.groupId
+                  ? t('rehearsals.spond.syncNow')
+                  : t('rehearsals.spond.notConfigured')}
+              </p>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -464,6 +568,119 @@ export default function Rehearsals() {
               </div>
             ) : (
               <p className="piece-meta">{t('rehearsals.noDefaultDays')}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Spond integration */}
+      {isAdmin && (
+        <div className="card mb-3">
+          <div className="card-header">
+            <h2 className="card-title">{t('rehearsals.spond.title')}</h2>
+            {spondConfig?.configured && spondConfig.groupId && (
+              <button className="btn btn-primary btn-sm" onClick={handleSyncAll} disabled={isSyncing}>
+                {isSyncing ? t('rehearsals.spond.syncing') : t('rehearsals.spond.syncAll')}
+              </button>
+            )}
+          </div>
+          <div className="card-body">
+            <p className="piece-meta mb-2">{t('rehearsals.spond.description')}</p>
+
+            {spondConfig?.configured ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                  <span className={`badge badge-${spondConfig.syncEnabled ? 'success' : 'secondary'}`}>
+                    {spondConfig.syncEnabled ? t('rehearsals.spond.enabled') : t('rehearsals.spond.disabled')}
+                  </span>
+                  <span style={{ fontSize: '0.875rem' }}>{spondConfig.username}</span>
+                  {spondConfig.groupId && (
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                      Groep: {spondConfig.groupId.slice(0, 8)}...
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                    {t('rehearsals.spond.lastSync')}: {spondConfig.lastSync ? new Date(spondConfig.lastSync).toLocaleString() : t('rehearsals.spond.never')}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-outline btn-sm" onClick={() => {
+                    setSpondForm({ username: spondConfig.username || '', password: '', groupId: spondConfig.groupId || '' });
+                    setShowSpondSetup(true);
+                    handleLoadGroups();
+                  }}>
+                    {t('common.edit')}
+                  </button>
+                  <button className="btn btn-outline btn-sm" onClick={handleRemoveSpondConfig} style={{ color: 'var(--danger)' }}>
+                    {t('rehearsals.spond.removeConfig')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ marginBottom: '0.5rem' }}>{t('rehearsals.spond.notConfigured')}</p>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowSpondSetup(true)}>
+                  {t('rehearsals.spond.configure')}
+                </button>
+              </div>
+            )}
+
+            {/* Spond setup form */}
+            {showSpondSetup && (
+              <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('rehearsals.spond.username')}</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={spondForm.username}
+                      onChange={e => setSpondForm({ ...spondForm, username: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('rehearsals.spond.password')}</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={spondForm.password}
+                      onChange={e => setSpondForm({ ...spondForm, password: e.target.value })}
+                      placeholder={spondConfig?.configured ? '••••••••' : ''}
+                    />
+                  </div>
+                </div>
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label className="form-label">{t('rehearsals.spond.selectGroup')}</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <select
+                      className="form-control form-select"
+                      value={spondForm.groupId}
+                      onChange={e => setSpondForm({ ...spondForm, groupId: e.target.value })}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">{t('rehearsals.spond.noGroup')}</option>
+                      {spondGroups.map(g => (
+                        <option key={g.id} value={g.id}>{g.name} ({g.memberCount} leden)</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-outline btn-sm" onClick={handleLoadGroups} disabled={loadingGroups || !spondForm.username || !spondForm.password}>
+                      {loadingGroups ? t('rehearsals.spond.loadingGroups') : t('rehearsals.spond.selectGroup')}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSaveSpondConfig}
+                    disabled={!spondForm.username || !spondForm.password}
+                  >
+                    {t('rehearsals.spond.saveConfig')}
+                  </button>
+                  <button className="btn btn-outline" onClick={() => setShowSpondSetup(false)}>
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

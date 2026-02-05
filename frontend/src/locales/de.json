@@ -828,7 +828,27 @@
       "description": "Verbinde mit Spond für automatische Anwesenheitssynchronisation.",
       "notConfigured": "Spond ist noch nicht konfiguriert.",
       "connected": "Mit Spond verbunden",
-      "syncNow": "Jetzt synchronisieren"
+      "syncNow": "Jetzt synchronisieren",
+      "syncing": "Synchronisieren...",
+      "syncAll": "Alles synchronisieren",
+      "syncSuccess": "{{count}} Proben mit Spond synchronisiert.",
+      "syncRehearsalSuccess": "Anwesenheit synchronisiert.",
+      "configure": "Spond einrichten",
+      "username": "Spond E-Mail-Adresse",
+      "password": "Spond Passwort",
+      "selectGroup": "Gruppe auswählen",
+      "noGroup": "Keine Gruppe ausgewählt",
+      "loadingGroups": "Gruppen werden geladen...",
+      "saveConfig": "Konfiguration speichern",
+      "removeConfig": "Spond-Verknüpfung entfernen",
+      "removeConfirm": "Bist du sicher, dass du die Spond-Verknüpfung entfernen möchtest?",
+      "configSaved": "Spond-Konfiguration gespeichert.",
+      "configRemoved": "Spond-Verknüpfung entfernt.",
+      "loginFailed": "Anmeldung bei Spond fehlgeschlagen. Überprüfe die Anmeldedaten.",
+      "lastSync": "Zuletzt synchronisiert",
+      "never": "Nie",
+      "enabled": "Verknüpfung aktiv",
+      "disabled": "Verknüpfung inaktiv"
     }
   },
   "accessibility": {

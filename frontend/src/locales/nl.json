@@ -818,7 +818,27 @@
       "description": "Koppel met Spond om aanwezigheid automatisch te synchroniseren.",
       "notConfigured": "Spond is nog niet geconfigureerd.",
       "connected": "Verbonden met Spond",
-      "syncNow": "Nu synchroniseren"
+      "syncNow": "Nu synchroniseren",
+      "syncing": "Synchroniseren...",
+      "syncAll": "Alles synchroniseren",
+      "syncSuccess": "{{count}} repetities gesynchroniseerd met Spond.",
+      "syncRehearsalSuccess": "Aanwezigheid gesynchroniseerd.",
+      "configure": "Spond instellen",
+      "username": "Spond e-mailadres",
+      "password": "Spond wachtwoord",
+      "selectGroup": "Selecteer groep",
+      "noGroup": "Geen groep geselecteerd",
+      "loadingGroups": "Groepen laden...",
+      "saveConfig": "Configuratie opslaan",
+      "removeConfig": "Spond-koppeling verwijderen",
+      "removeConfirm": "Weet je zeker dat je de Spond-koppeling wilt verwijderen?",
+      "configSaved": "Spond-configuratie opgeslagen.",
+      "configRemoved": "Spond-koppeling verwijderd.",
+      "loginFailed": "Kon niet inloggen bij Spond. Controleer de inloggegevens.",
+      "lastSync": "Laatst gesynchroniseerd",
+      "never": "Nooit",
+      "enabled": "Koppeling actief",
+      "disabled": "Koppeling inactief"
     }
   },
   "accessibility": {

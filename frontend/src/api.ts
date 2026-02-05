@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -699,6 +699,37 @@ export const deleteDefaultDay = async (id: string): Promise<void> => {
 
 export const generateRehearsals = async (startDate: string, endDate: string): Promise<{ count: number }> => {
   const { data } = await api.post('/rehearsals/generate', { startDate, endDate });
+  return data;
+};
+
+// Spond integration
+export const getSpondConfig = async (): Promise<SpondConfig> => {
+  const { data } = await api.get('/spond/config');
+  return data;
+};
+
+export const saveSpondConfig = async (config: {
+  username: string; password: string; groupId?: string; syncEnabled?: boolean;
+}): Promise<void> => {
+  await api.put('/spond/config', config);
+};
+
+export const removeSpondConfig = async (): Promise<void> => {
+  await api.delete('/spond/config');
+};
+
+export const getSpondGroups = async (): Promise<SpondGroup[]> => {
+  const { data } = await api.get('/spond/groups');
+  return data;
+};
+
+export const syncSpond = async (): Promise<SpondSyncResult> => {
+  const { data } = await api.post('/spond/sync');
+  return data;
+};
+
+export const syncSpondRehearsal = async (rehearsalId: string): Promise<{ message: string; attendanceCount: number }> => {
+  const { data } = await api.post(`/spond/sync/${rehearsalId}`);
   return data;
 };
 
