@@ -80,6 +80,13 @@
       "verify": "Bestätigen",
       "backToLogin": "Zurück zur Anmeldung",
       "invalidCode": "Ungültiger MFA-Code."
+    },
+    "microsoft": {
+      "loginButton": "Mit Microsoft anmelden",
+      "or": "oder",
+      "loginFailed": "Anmeldung mit Microsoft fehlgeschlagen.",
+      "processing": "Anmeldung läuft...",
+      "error": "Anmeldung fehlgeschlagen"
     }
   },
   "forgotPassword": {
@@ -734,7 +741,28 @@
     "logoRemoved": "Logo entfernt",
     "errorRemovingLogo": "Fehler beim Entfernen des Logos",
     "invalidFileType": "Ungültiger Dateityp. Verwenden Sie PNG, JPG, SVG oder WebP.",
-    "fileTooLarge": "Datei ist zu groß. Maximal 2 MB."
+    "fileTooLarge": "Datei ist zu groß. Maximal 2 MB.",
+    "microsoft": {
+      "title": "Microsoft 365 / Entra ID",
+      "description": "Konfigurieren Sie Microsoft Entra ID (ehemals Azure AD), damit Mitglieder sich mit ihrem Microsoft 365-Konto anmelden können.",
+      "tenantId": "Tenant-ID",
+      "tenantIdPlaceholder": "z.B. 12345678-abcd-efgh-ijkl-123456789012",
+      "clientId": "Client-ID (Application-ID)",
+      "clientIdPlaceholder": "z.B. abcdef12-3456-7890-abcd-ef1234567890",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Client Secret eingeben",
+      "secretUnchanged": "Leer lassen, um aktuelles Secret beizubehalten",
+      "redirectUri": "Redirect-URI",
+      "redirectUriHelp": "Fügen Sie diese URI als Redirect-URI in Ihrer Azure App-Registrierung hinzu.",
+      "enabled": "Microsoft-Anmeldung auf der Loginseite anzeigen",
+      "saved": "Microsoft-Konfiguration gespeichert",
+      "errorSaving": "Fehler beim Speichern der Microsoft-Konfiguration",
+      "remove": "Entfernen",
+      "removeConfirm": "Sind Sie sicher, dass Sie die Microsoft-Integration entfernen möchten?",
+      "removed": "Microsoft-Integration entfernt",
+      "errorRemoving": "Fehler beim Entfernen der Microsoft-Integration",
+      "clientIdRequired": "Bitte geben Sie mindestens die Tenant-ID und Client-ID ein"
+    }
   },
   "theme": {
     "title": "Design",

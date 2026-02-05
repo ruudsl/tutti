@@ -199,6 +199,23 @@ async function initializeDatabase() {
         // Tables might not exist yet
     }
 
+    // Migration: Add microsoft_id to users and microsoft_config to associations
+    try {
+        const usersTableInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasMicrosoftId = usersTableInfo.some(col => col.name === 'microsoft_id');
+        if (!hasMicrosoftId) {
+            console.log('Migration: Adding Microsoft Entra ID fields...');
+            db.prepare('ALTER TABLE users ADD COLUMN microsoft_id TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN microsoft_client_id TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN microsoft_client_secret TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN microsoft_tenant_id TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN microsoft_enabled BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

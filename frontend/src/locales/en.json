@@ -80,6 +80,13 @@
       "verify": "Verify",
       "backToLogin": "Back to login",
       "invalidCode": "Invalid MFA code."
+    },
+    "microsoft": {
+      "loginButton": "Sign in with Microsoft",
+      "or": "or",
+      "loginFailed": "Microsoft sign-in failed.",
+      "processing": "Signing in...",
+      "error": "Sign-in failed"
     }
   },
   "forgotPassword": {
@@ -734,7 +741,28 @@
     "logoRemoved": "Logo removed",
     "errorRemovingLogo": "Error removing logo",
     "invalidFileType": "Invalid file type. Use PNG, JPG, SVG or WebP.",
-    "fileTooLarge": "File is too large. Maximum 2 MB."
+    "fileTooLarge": "File is too large. Maximum 2 MB.",
+    "microsoft": {
+      "title": "Microsoft 365 / Entra ID",
+      "description": "Configure Microsoft Entra ID (formerly Azure AD) so members can sign in with their Microsoft 365 account.",
+      "tenantId": "Tenant ID",
+      "tenantIdPlaceholder": "e.g. 12345678-abcd-efgh-ijkl-123456789012",
+      "clientId": "Client ID (Application ID)",
+      "clientIdPlaceholder": "e.g. abcdef12-3456-7890-abcd-ef1234567890",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Enter the client secret",
+      "secretUnchanged": "Leave empty to keep current secret",
+      "redirectUri": "Redirect URI",
+      "redirectUriHelp": "Add this URI as a redirect URI in your Azure App Registration.",
+      "enabled": "Show Microsoft sign-in on login page",
+      "saved": "Microsoft configuration saved",
+      "errorSaving": "Error saving Microsoft configuration",
+      "remove": "Remove",
+      "removeConfirm": "Are you sure you want to remove the Microsoft integration?",
+      "removed": "Microsoft integration removed",
+      "errorRemoving": "Error removing Microsoft integration",
+      "clientIdRequired": "Please enter at least the Tenant ID and Client ID"
+    }
   },
   "theme": {
     "title": "Theme",

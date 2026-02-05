@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS associations (
     display_name TEXT,
     logo_path TEXT,
     theme_json TEXT,
+    microsoft_client_id TEXT,
+    microsoft_client_secret TEXT,
+    microsoft_tenant_id TEXT,
+    microsoft_enabled BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -51,6 +55,7 @@ CREATE TABLE IF NOT EXISTS users (
     association_id TEXT,
     mfa_secret TEXT, -- TOTP secret for MFA
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
+    microsoft_id TEXT, -- Microsoft Entra Object ID for SSO
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );

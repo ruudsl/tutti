@@ -32,6 +32,7 @@ import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
 import Rehearsals from './pages/Rehearsals';
+import MicrosoftCallback from './pages/MicrosoftCallback';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -101,6 +102,14 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <ResetPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/auth/microsoft/callback"
+        element={
+          <PublicRoute>
+            <MicrosoftCallback />
           </PublicRoute>
         }
       />

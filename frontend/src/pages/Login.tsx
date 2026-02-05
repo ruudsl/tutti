@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import api from '../api';
+import api, { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +13,8 @@ export default function Login() {
   const [showMfa, setShowMfa] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [microsoftEnabled, setMicrosoftEnabled] = useState(false);
+  const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({ displayName: 'Harmonie', logoUrl: null });
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +25,10 @@ export default function Login() {
     api.get('/settings/branding').then(({ data }) => {
       setBranding(data);
     }).catch(() => { /* fallback to defaults */ });
+
+    getMicrosoftEnabled()
+      .then(({ enabled }) => setMicrosoftEnabled(enabled))
+      .catch(() => { /* Microsoft not available */ });
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -47,6 +53,18 @@ export default function Login() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setError('');
+    setMicrosoftLoading(true);
+    try {
+      const { authUrl } = await getMicrosoftLoginUrl();
+      window.location.href = authUrl;
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('auth.microsoft.loginFailed'));
+      setMicrosoftLoading(false);
     }
   };
 
@@ -159,6 +177,37 @@ export default function Login() {
             </div>
           )}
         </form>
+
+        {microsoftEnabled && !showMfa && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.25rem 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{t('auth.microsoft.or')}</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline btn-lg"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}
+              onClick={handleMicrosoftLogin}
+              disabled={microsoftLoading}
+            >
+              <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+              </svg>
+              {microsoftLoading ? t('auth.loggingIn') : t('auth.microsoft.loginButton')}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

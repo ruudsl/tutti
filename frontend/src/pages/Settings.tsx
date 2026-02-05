@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getSettings, updateSettings, uploadLogo, removeLogo } from '../api';
+import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import type { AssociationSettings } from '../types';
+import type { AssociationSettings, MicrosoftConfig } from '../types';
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -15,8 +15,17 @@ export default function Settings() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Microsoft config state
+  const [msConfig, setMsConfig] = useState<MicrosoftConfig | null>(null);
+  const [msClientId, setMsClientId] = useState('');
+  const [msClientSecret, setMsClientSecret] = useState('');
+  const [msTenantId, setMsTenantId] = useState('');
+  const [msEnabled, setMsEnabled] = useState(false);
+  const [msSaving, setMsSaving] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadMicrosoftConfig();
   }, []);
 
   const loadSettings = async () => {
@@ -28,6 +37,18 @@ export default function Settings() {
       console.error('Error loading settings:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadMicrosoftConfig = async () => {
+    try {
+      const config = await getMicrosoftConfig();
+      setMsConfig(config);
+      setMsClientId(config.clientId || '');
+      setMsTenantId(config.tenantId || '');
+      setMsEnabled(config.enabled);
+    } catch {
+      // Not configured yet, that's fine
     }
   };
 
@@ -92,6 +113,45 @@ export default function Settings() {
     }
   };
 
+  const handleMicrosoftSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!msClientId.trim() || !msTenantId.trim()) {
+      showError(t('settings.microsoft.clientIdRequired'));
+      return;
+    }
+    setMsSaving(true);
+    try {
+      await saveMicrosoftConfig({
+        clientId: msClientId.trim(),
+        clientSecret: msClientSecret.trim() || undefined,
+        tenantId: msTenantId.trim(),
+        enabled: msEnabled,
+      });
+      showSuccess(t('settings.microsoft.saved'));
+      setMsClientSecret('');
+      await loadMicrosoftConfig();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.microsoft.errorSaving'));
+    } finally {
+      setMsSaving(false);
+    }
+  };
+
+  const handleMicrosoftRemove = async () => {
+    if (!confirm(t('settings.microsoft.removeConfirm'))) return;
+    try {
+      await removeMicrosoftConfig();
+      showSuccess(t('settings.microsoft.removed'));
+      setMsClientId('');
+      setMsClientSecret('');
+      setMsTenantId('');
+      setMsEnabled(false);
+      setMsConfig(null);
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.microsoft.errorRemoving'));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="loading" role="status" aria-label={t('accessibility.loadingContent')}>
@@ -136,7 +196,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card mb-3">
         <div className="card-header">
           <h2 className="card-title">{t('settings.logo')}</h2>
         </div>
@@ -193,6 +253,105 @@ export default function Settings() {
                   : t('settings.uploadLogo')}
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">{t('settings.microsoft.title')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('settings.microsoft.description')}</p>
+
+          <form onSubmit={handleMicrosoftSave}>
+            <div className="form-group">
+              <label htmlFor="msTenantId" className="form-label">
+                {t('settings.microsoft.tenantId')}
+              </label>
+              <input
+                type="text"
+                id="msTenantId"
+                className="form-control"
+                value={msTenantId}
+                onChange={(e) => setMsTenantId(e.target.value)}
+                placeholder={t('settings.microsoft.tenantIdPlaceholder')}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="msClientId" className="form-label">
+                {t('settings.microsoft.clientId')}
+              </label>
+              <input
+                type="text"
+                id="msClientId"
+                className="form-control"
+                value={msClientId}
+                onChange={(e) => setMsClientId(e.target.value)}
+                placeholder={t('settings.microsoft.clientIdPlaceholder')}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="msClientSecret" className="form-label">
+                {t('settings.microsoft.clientSecret')}
+              </label>
+              <input
+                type="password"
+                id="msClientSecret"
+                className="form-control"
+                value={msClientSecret}
+                onChange={(e) => setMsClientSecret(e.target.value)}
+                placeholder={msConfig?.configured ? t('settings.microsoft.secretUnchanged') : t('settings.microsoft.clientSecretPlaceholder')}
+              />
+            </div>
+
+            {msConfig?.configured && (
+              <div className="form-group">
+                <label className="form-label">{t('settings.microsoft.redirectUri')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={msConfig.redirectUri}
+                  readOnly
+                  style={{ background: 'var(--bg)', fontSize: '0.85rem' }}
+                />
+                <p className="piece-meta" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  {t('settings.microsoft.redirectUriHelp')}
+                </p>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={msEnabled}
+                  onChange={(e) => setMsEnabled(e.target.checked)}
+                />
+                {t('settings.microsoft.enabled')}
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={msSaving}
+              >
+                {msSaving ? t('common.loading') : t('common.save')}
+              </button>
+              {msConfig?.configured && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleMicrosoftRemove}
+                >
+                  {t('settings.microsoft.remove')}
+                </button>
+              )}
+            </div>
+          </form>
         </div>
       </div>
     </div>

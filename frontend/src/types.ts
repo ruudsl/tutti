@@ -192,3 +192,11 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+export interface MicrosoftConfig {
+  clientId: string;
+  tenantId: string;
+  enabled: boolean;
+  configured: boolean;
+  redirectUri: string;
+}

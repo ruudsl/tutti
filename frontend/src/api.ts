@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -736,6 +736,37 @@ export const syncSpond = async (): Promise<SpondSyncResult> => {
 export const syncSpondRehearsal = async (rehearsalId: string): Promise<{ message: string; attendanceCount: number }> => {
   const { data } = await api.post(`/spond/sync/${rehearsalId}`);
   return data;
+};
+
+// Microsoft Entra ID (SSO)
+export const getMicrosoftEnabled = async (): Promise<{ enabled: boolean }> => {
+  const { data } = await api.get('/auth/microsoft/enabled');
+  return data;
+};
+
+export const getMicrosoftLoginUrl = async (): Promise<{ authUrl: string }> => {
+  const { data } = await api.get('/auth/microsoft/login');
+  return data;
+};
+
+export const microsoftCallback = async (code: string, state: string): Promise<LoginResponse> => {
+  const { data } = await api.post('/auth/microsoft/callback', { code, state });
+  return data;
+};
+
+export const getMicrosoftConfig = async (): Promise<MicrosoftConfig> => {
+  const { data } = await api.get('/auth/microsoft/config');
+  return data;
+};
+
+export const saveMicrosoftConfig = async (config: {
+  clientId: string; clientSecret?: string; tenantId: string; enabled: boolean;
+}): Promise<void> => {
+  await api.put('/auth/microsoft/config', config);
+};
+
+export const removeMicrosoftConfig = async (): Promise<void> => {
+  await api.delete('/auth/microsoft/config');
 };
 
 export default api;

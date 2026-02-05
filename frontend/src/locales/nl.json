@@ -80,6 +80,13 @@
       "verify": "Verifiëren",
       "backToLogin": "Terug naar inloggen",
       "invalidCode": "Ongeldige MFA code."
+    },
+    "microsoft": {
+      "loginButton": "Inloggen met Microsoft",
+      "or": "of",
+      "loginFailed": "Inloggen met Microsoft mislukt.",
+      "processing": "Bezig met inloggen...",
+      "error": "Inloggen mislukt"
     }
   },
   "forgotPassword": {
@@ -724,7 +731,28 @@
     "logoRemoved": "Logo verwijderd",
     "errorRemovingLogo": "Fout bij verwijderen logo",
     "invalidFileType": "Ongeldig bestandstype. Gebruik PNG, JPG, SVG of WebP.",
-    "fileTooLarge": "Bestand is te groot. Maximaal 2 MB."
+    "fileTooLarge": "Bestand is te groot. Maximaal 2 MB.",
+    "microsoft": {
+      "title": "Microsoft 365 / Entra ID",
+      "description": "Configureer Microsoft Entra ID (voorheen Azure AD) zodat leden kunnen inloggen met hun Microsoft 365 account.",
+      "tenantId": "Tenant ID",
+      "tenantIdPlaceholder": "bijv. 12345678-abcd-efgh-ijkl-123456789012",
+      "clientId": "Client ID (Application ID)",
+      "clientIdPlaceholder": "bijv. abcdef12-3456-7890-abcd-ef1234567890",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Voer het client secret in",
+      "secretUnchanged": "Laat leeg om huidig secret te behouden",
+      "redirectUri": "Redirect URI",
+      "redirectUriHelp": "Voeg deze URI toe als redirect URI in je Azure App Registration.",
+      "enabled": "Microsoft-inlog tonen op loginpagina",
+      "saved": "Microsoft configuratie opgeslagen",
+      "errorSaving": "Fout bij opslaan Microsoft configuratie",
+      "remove": "Verwijderen",
+      "removeConfirm": "Weet je zeker dat je de Microsoft koppeling wilt verwijderen?",
+      "removed": "Microsoft koppeling verwijderd",
+      "errorRemoving": "Fout bij verwijderen Microsoft koppeling",
+      "clientIdRequired": "Vul tenminste de Tenant ID en Client ID in"
+    }
   },
   "theme": {
     "title": "Thema",
