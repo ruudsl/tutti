@@ -51,6 +51,7 @@
     "admin": "Admin",
     "members": "Leden",
     "orchestras": "Orkesten",
+    "settings": "Instellingen",
     "logout": "Uitloggen",
     "profile": "Profiel"
   },
@@ -173,10 +174,14 @@
     "backToOverview": "Terug naar overzicht",
     "viewMusic": "Bekijk muziek",
     "piecesForYou": "stukken voor jou",
+    "titlesForYou": "titels voor jou",
     "noLists": "Geen muzieklijsten beschikbaar",
     "noListsDescription": "Je bent nog niet toegevoegd aan een orkest met muzieklijsten, of er zijn nog geen muziekstukken voor jouw instrumenten toegevoegd.",
     "noPieces": "Geen muziekstukken beschikbaar voor jouw instrumenten op deze lijst.",
     "downloading": "Bezig...",
+    "pieces": "partijen",
+    "expandTitle": "Toon partijen",
+    "collapseTitle": "Verberg partijen",
     "table": {
       "title": "Titel",
       "arranger": "Arrangeur",
@@ -688,6 +693,27 @@
     "errorRestore": "Fout bij herstellen backup",
     "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!"
   },
+  "settings": {
+    "title": "Instellingen",
+    "organization": "Vereniging",
+    "organizationName": "Verenigingsnaam",
+    "organizationNamePlaceholder": "Bijv. Harmonie St. Cecilia",
+    "logo": "Logo",
+    "logoDescription": "Upload een logo voor je vereniging. Dit wordt weergegeven in de navigatiebalk.",
+    "logoRequirements": "Aanbevolen: vierkant formaat (bijv. 128x128), maximaal 2 MB, PNG of SVG voor beste kwaliteit.",
+    "uploadLogo": "Logo uploaden",
+    "changeLogo": "Logo wijzigen",
+    "removeLogo": "Logo verwijderen",
+    "removeLogoConfirm": "Weet je zeker dat je het logo wilt verwijderen?",
+    "saved": "Instellingen opgeslagen",
+    "errorSaving": "Fout bij opslaan instellingen",
+    "logoUploaded": "Logo geüpload",
+    "errorUploadingLogo": "Fout bij uploaden logo",
+    "logoRemoved": "Logo verwijderd",
+    "errorRemovingLogo": "Fout bij verwijderen logo",
+    "invalidFileType": "Ongeldig bestandstype. Gebruik PNG, JPG, SVG of WebP.",
+    "fileTooLarge": "Bestand is te groot. Maximaal 2 MB."
+  },
   "accessibility": {
     "skipToContent": "Ga naar inhoud",
     "mainNavigation": "Hoofdnavigatie",
@@ -722,7 +748,8 @@
     "users": "Leden - Harmonie",
     "orchestras": "Orkesten - Harmonie",
     "lists": "Muzieklijsten - Harmonie",
-    "notFound": "Pagina niet gevonden - Harmonie"
+    "notFound": "Pagina niet gevonden - Harmonie",
+    "settings": "Instellingen - Harmonie"
   },
   "errorBoundary": {
     "title": "Er is iets misgegaan",

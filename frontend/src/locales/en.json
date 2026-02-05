@@ -51,6 +51,7 @@
     "admin": "Admin",
     "members": "Members",
     "orchestras": "Orchestras",
+    "settings": "Settings",
     "logout": "Logout",
     "profile": "Profile"
   },
@@ -173,10 +174,14 @@
     "backToOverview": "Back to overview",
     "viewMusic": "View music",
     "piecesForYou": "pieces for you",
+    "titlesForYou": "titles for you",
     "noLists": "No music lists available",
     "noListsDescription": "You haven't been added to an orchestra with music lists yet, or no music pieces have been added for your instruments.",
     "noPieces": "No music pieces available for your instruments on this list.",
     "downloading": "Loading...",
+    "pieces": "parts",
+    "expandTitle": "Show parts",
+    "collapseTitle": "Hide parts",
     "table": {
       "title": "Title",
       "arranger": "Arranger",
@@ -698,6 +703,27 @@
     "errorRestore": "Error restoring backup",
     "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!"
   },
+  "settings": {
+    "title": "Settings",
+    "organization": "Organization",
+    "organizationName": "Organization name",
+    "organizationNamePlaceholder": "E.g. Harmonie St. Cecilia",
+    "logo": "Logo",
+    "logoDescription": "Upload a logo for your organization. It will be displayed in the navigation bar.",
+    "logoRequirements": "Recommended: square format (e.g. 128x128), max 2 MB, PNG or SVG for best quality.",
+    "uploadLogo": "Upload logo",
+    "changeLogo": "Change logo",
+    "removeLogo": "Remove logo",
+    "removeLogoConfirm": "Are you sure you want to remove the logo?",
+    "saved": "Settings saved",
+    "errorSaving": "Error saving settings",
+    "logoUploaded": "Logo uploaded",
+    "errorUploadingLogo": "Error uploading logo",
+    "logoRemoved": "Logo removed",
+    "errorRemovingLogo": "Error removing logo",
+    "invalidFileType": "Invalid file type. Use PNG, JPG, SVG or WebP.",
+    "fileTooLarge": "File is too large. Maximum 2 MB."
+  },
   "accessibility": {
     "skipToContent": "Skip to content",
     "mainNavigation": "Main navigation",
@@ -732,7 +758,8 @@
     "users": "Members - Harmonie",
     "orchestras": "Orchestras - Harmonie",
     "lists": "Music Lists - Harmonie",
-    "notFound": "Page Not Found - Harmonie"
+    "notFound": "Page Not Found - Harmonie",
+    "settings": "Settings - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",

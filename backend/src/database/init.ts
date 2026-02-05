@@ -165,6 +165,20 @@ async function initializeDatabase() {
         // Table might not exist yet, which is fine
     }
 
+    // Migration: Add display_name and logo_path columns to associations if they don't exist
+    try {
+        const assocTableInfo = db.prepare("PRAGMA table_info(associations)").all() as { name: string }[];
+        const hasDisplayName = assocTableInfo.some(col => col.name === 'display_name');
+        if (!hasDisplayName) {
+            console.log('Migration: Adding display_name and logo_path columns to associations...');
+            db.prepare('ALTER TABLE associations ADD COLUMN display_name TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN logo_path TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet, which is fine
+    }
+
     console.log('Database initialization complete!');
 }
 

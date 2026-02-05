@@ -1117,6 +1117,85 @@ select:focus-visible,
   outline: none;
 }
 
+/* Title accordion (MyMusic grouped view) */
+.title-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.title-group {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.title-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--text);
+  transition: background-color 0.15s;
+}
+
+.title-group-header:hover {
+  background: var(--bg-hover, #f1f5f9);
+}
+
+.title-group-header.expanded {
+  border-bottom: 1px solid var(--border);
+}
+
+.title-group-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.title-group-arrow {
+  font-size: 0.75rem;
+  width: 1rem;
+  flex-shrink: 0;
+}
+
+.title-group-name {
+  font-weight: 600;
+}
+
+.title-group-arranger {
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+.title-group-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.title-group-body {
+  padding: 0;
+}
+
+.title-group-body .table {
+  margin: 0;
+  border: none;
+}
+
+.title-group-body .table thead th {
+  background: var(--bg);
+}
+
 /* Reduced motion preference (WCAG 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, Genre, MfaSetupResponse, LoginResponse } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, Genre, MfaSetupResponse, LoginResponse } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -609,6 +609,29 @@ export const getActivityStats = async (period?: string): Promise<ActivityStats> 
 
 export const logActivity = async (actionType: string, entityType: string, entityId: string): Promise<void> => {
   await api.post('/activity/log', { actionType, entityType, entityId });
+};
+
+// Settings
+export const getSettings = async (): Promise<AssociationSettings> => {
+  const { data } = await api.get('/settings');
+  return data;
+};
+
+export const updateSettings = async (settings: { displayName?: string }): Promise<void> => {
+  await api.put('/settings', settings);
+};
+
+export const uploadLogo = async (file: File): Promise<{ logoUrl: string }> => {
+  const formData = new FormData();
+  formData.append('logo', file);
+  const { data } = await api.post('/settings/logo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const removeLogo = async (): Promise<void> => {
+  await api.delete('/settings/logo');
 };
 
 export default api;

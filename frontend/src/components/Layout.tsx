@@ -3,6 +3,8 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { getSettings } from '../api';
+import type { AssociationSettings } from '../types';
 
 interface DropdownProps {
   label: string;
@@ -60,6 +62,11 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
+
+  useEffect(() => {
+    getSettings().then(setBrandSettings).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -72,7 +79,7 @@ export default function Layout() {
   // Check if current path is in a dropdown group
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
-  const adminPaths = ['/users', '/orchestras'];
+  const adminPaths = ['/users', '/orchestras', '/settings'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
@@ -87,7 +94,16 @@ export default function Layout() {
       <nav className="navbar" aria-label={t('accessibility.mainNavigation')}>
         <div className="navbar-content">
           <Link to="/" className="navbar-brand">
-            <span aria-hidden="true">🎵</span> Harmonie
+            {brandSettings?.logoUrl ? (
+              <img
+                src={brandSettings.logoUrl}
+                alt=""
+                style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '4px' }}
+              />
+            ) : (
+              <span aria-hidden="true">🎵</span>
+            )}
+            {' '}{brandSettings?.displayName || 'Harmonie'}
           </Link>
 
           <ul className="navbar-nav">
@@ -177,6 +193,11 @@ export default function Layout() {
                 <li role="none">
                   <NavLink to="/orchestras" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                     {t('nav.orchestras')}
+                  </NavLink>
+                </li>
+                <li role="none">
+                  <NavLink to="/settings" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.settings')}
                   </NavLink>
                 </li>
               </NavDropdown>

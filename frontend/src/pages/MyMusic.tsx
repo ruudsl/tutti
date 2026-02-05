@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
+interface TitleGroup {
+  title: string;
+  arranger: string | null;
+  youtubeUrl: string | null;
+  pieces: MusicPiece[];
+}
 
 export default function MyMusic() {
   const { t } = useTranslation();
@@ -14,6 +21,7 @@ export default function MyMusic() {
   const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
 
   // Issue reporting state
   const [reportingPiece, setReportingPiece] = useState<MusicPiece | null>(null);
@@ -21,6 +29,32 @@ export default function MyMusic() {
   const [issuePageNumber, setIssuePageNumber] = useState('');
   const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
+  // Group pieces by title
+  const titleGroups = useMemo((): TitleGroup[] => {
+    if (!selectedList?.pieces) return [];
+
+    const groups = new Map<string, TitleGroup>();
+
+    for (const piece of selectedList.pieces) {
+      const key = `${piece.title}|||${piece.arranger || ''}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          title: piece.title,
+          arranger: piece.arranger,
+          youtubeUrl: piece.youtubeUrl,
+          pieces: [],
+        });
+      }
+      groups.get(key)!.pieces.push(piece);
+      // Use YouTube URL from any piece that has one
+      if (piece.youtubeUrl && !groups.get(key)!.youtubeUrl) {
+        groups.get(key)!.youtubeUrl = piece.youtubeUrl;
+      }
+    }
+
+    return Array.from(groups.values());
+  }, [selectedList?.pieces]);
 
   useEffect(() => {
     loadLists();
@@ -57,6 +91,7 @@ export default function MyMusic() {
     try {
       const data = await getMusicList(listId);
       setSelectedList(data);
+      setExpandedTitles(new Set());
       // Log activity for statistics
       logActivity('view', 'music_list', listId).catch(() => {});
     } catch (error) {
@@ -87,6 +122,18 @@ export default function MyMusic() {
   const handleBack = () => {
     setSearchParams({});
     setSelectedList(null);
+  };
+
+  const toggleTitle = (key: string) => {
+    setExpandedTitles(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   };
 
   const handleReportIssue = async (e: React.FormEvent) => {
@@ -122,13 +169,14 @@ export default function MyMusic() {
 
   if (isLoading && !selectedList) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div className="loading" role="status" aria-label={t('accessibility.loadingContent')}>
+        <div className="spinner" aria-hidden="true"></div>
+        <span className="sr-only">{t('common.loading')}</span>
       </div>
     );
   }
 
-  // Show single list view
+  // Show single list view with titles grouped as accordion
   if (selectedList) {
     return (
       <>
@@ -146,71 +194,105 @@ export default function MyMusic() {
           </div>
           <div className="card-body">
             {isLoading ? (
-              <div className="loading">
-                <div className="spinner"></div>
+              <div className="loading" role="status">
+                <div className="spinner" aria-hidden="true"></div>
+                <span className="sr-only">{t('common.loading')}</span>
               </div>
-            ) : selectedList.pieces.length > 0 ? (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('myMusic.table.title')}</th>
-                    <th>{t('myMusic.table.arranger')}</th>
-                    <th>{t('myMusic.table.instrument')}</th>
-                    <th>{t('myMusic.table.tuning')}</th>
-                    <th>{t('myMusic.table.number')}</th>
-                    <th>{t('myMusic.table.clef')}</th>
-                    <th>{t('myMusic.table.preview')}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedList.pieces.map((piece) => (
-                    <tr key={piece.id}>
-                      <td>
-                        <strong>{piece.title}</strong>
-                      </td>
-                      <td>{piece.arranger || '-'}</td>
-                      <td>{piece.instrumentName || '-'}</td>
-                      <td>{piece.tuning || '-'}</td>
-                      <td>{piece.groupNumber || '-'}</td>
-                      <td>{piece.clef || '-'}</td>
-                      <td>
-                        {piece.youtubeUrl && (
-                          <a
-                            href={piece.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-sm"
-                          >
-                            ▶ YouTube
-                          </a>
-                        )}
-                      </td>
-                      <td>
-                        <div className="flex gap-1">
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleDownload(piece)}
-                            disabled={downloading === piece.id}
-                          >
-                            {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
-                          </button>
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => openReportModal(piece)}
-                            title={t('myMusic.reportIssue.title')}
-                          >
-                            📝
-                          </button>
+            ) : titleGroups.length > 0 ? (
+              <div className="title-accordion">
+                {titleGroups.map((group) => {
+                  const key = `${group.title}|||${group.arranger || ''}`;
+                  const isExpanded = expandedTitles.has(key);
+
+                  return (
+                    <div key={key} className="title-group">
+                      <button
+                        className={`title-group-header ${isExpanded ? 'expanded' : ''}`}
+                        onClick={() => toggleTitle(key)}
+                        aria-expanded={isExpanded}
+                        type="button"
+                      >
+                        <div className="title-group-info">
+                          <span className="title-group-arrow" aria-hidden="true">
+                            {isExpanded ? '▼' : '▶'}
+                          </span>
+                          <div>
+                            <strong className="title-group-name">{group.title}</strong>
+                            {group.arranger && (
+                              <span className="title-group-arranger"> — {group.arranger}</span>
+                            )}
+                          </div>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="title-group-meta">
+                          {group.youtubeUrl && (
+                            <a
+                              href={group.youtubeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline btn-sm"
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`YouTube: ${group.title}`}
+                            >
+                              <span aria-hidden="true">▶</span> YouTube
+                            </a>
+                          )}
+                          <span className="badge badge-primary">
+                            {group.pieces.length} {t('myMusic.pieces')}
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="title-group-body">
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th scope="col">{t('myMusic.table.instrument')}</th>
+                                <th scope="col">{t('myMusic.table.tuning')}</th>
+                                <th scope="col">{t('myMusic.table.number')}</th>
+                                <th scope="col">{t('myMusic.table.clef')}</th>
+                                <th scope="col"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.pieces.map((piece) => (
+                                <tr key={piece.id}>
+                                  <td>{piece.instrumentName || '-'}</td>
+                                  <td>{piece.tuning || '-'}</td>
+                                  <td>{piece.groupNumber || '-'}</td>
+                                  <td>{piece.clef || '-'}</td>
+                                  <td>
+                                    <div className="flex gap-1">
+                                      <button
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => handleDownload(piece)}
+                                        disabled={downloading === piece.id}
+                                      >
+                                        {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
+                                      </button>
+                                      <button
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => openReportModal(piece)}
+                                        aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
+                                      >
+                                        <span aria-hidden="true">📝</span>
+                                        <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon">🎵</div>
+                <div className="empty-icon" aria-hidden="true">🎵</div>
                 <p>{t('myMusic.noPieces')}</p>
               </div>
             )}
@@ -220,11 +302,13 @@ export default function MyMusic() {
 
       {/* Issue Report Modal */}
       {reportingPiece && (
-        <div className="modal-overlay" onClick={() => setReportingPiece(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setReportingPiece(null)} role="presentation">
+          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="report-issue-title">
             <div className="modal-header">
-              <h3 className="modal-title">{t('myMusic.reportIssue.title')}</h3>
-              <button className="modal-close" onClick={() => setReportingPiece(null)}>×</button>
+              <h3 className="modal-title" id="report-issue-title">{t('myMusic.reportIssue.title')}</h3>
+              <button className="modal-close" onClick={() => setReportingPiece(null)} aria-label={t('accessibility.closeModal')} type="button">
+                <span aria-hidden="true">×</span>
+              </button>
             </div>
             <form onSubmit={handleReportIssue}>
               <div className="modal-body">
@@ -237,9 +321,10 @@ export default function MyMusic() {
                 </div>
                 <div className="grid grid-2">
                   <div className="form-group">
-                    <label className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
+                    <label htmlFor="issue-page" className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
                     <input
                       type="number"
+                      id="issue-page"
                       className="form-control"
                       value={issuePageNumber}
                       onChange={(e) => setIssuePageNumber(e.target.value)}
@@ -248,9 +333,10 @@ export default function MyMusic() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
+                    <label htmlFor="issue-measure" className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
                     <input
                       type="text"
+                      id="issue-measure"
                       className="form-control"
                       value={issueMeasureNumber}
                       onChange={(e) => setIssueMeasureNumber(e.target.value)}
@@ -259,14 +345,16 @@ export default function MyMusic() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('myMusic.reportIssue.description')} *</label>
+                  <label htmlFor="issue-description" className="form-label">{t('myMusic.reportIssue.description')} *</label>
                   <textarea
+                    id="issue-description"
                     className="form-control"
                     value={issueDescription}
                     onChange={(e) => setIssueDescription(e.target.value)}
                     rows={4}
                     placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
                     required
+                    aria-required="true"
                   />
                 </div>
               </div>
@@ -294,7 +382,7 @@ export default function MyMusic() {
     );
   }
 
-  // Show lists overview
+  // Show lists overview - use titleCount instead of pieceCount
   return (
     <div>
       <h1 className="mb-3">{t('myMusic.title')}</h1>
@@ -306,7 +394,7 @@ export default function MyMusic() {
               <div className="card-body">
                 <h3 className="piece-title">{list.name}</h3>
                 <p className="piece-meta mb-2">
-                  {list.orchestraName} • {list.pieceCount || 0} {t('myMusic.piecesForYou')}
+                  {list.orchestraName} • {list.titleCount || 0} {t('myMusic.titlesForYou')}
                 </p>
                 <button
                   className="btn btn-primary"
@@ -322,7 +410,7 @@ export default function MyMusic() {
         <div className="card">
           <div className="card-body">
             <div className="empty-state">
-              <div className="empty-icon">📋</div>
+              <div className="empty-icon" aria-hidden="true">📋</div>
               <h3>{t('myMusic.noLists')}</h3>
               <p>{t('myMusic.noListsDescription')}</p>
             </div>

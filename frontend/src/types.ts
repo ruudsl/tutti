@@ -95,6 +95,13 @@ export interface Association {
   orchestraCount?: number;
 }
 
+export interface AssociationSettings {
+  name: string;
+  displayName: string;
+  logoPath: string | null;
+  logoUrl: string | null;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

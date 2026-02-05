@@ -51,6 +51,7 @@
     "admin": "Admin",
     "members": "Mitglieder",
     "orchestras": "Orchester",
+    "settings": "Einstellungen",
     "logout": "Abmelden",
     "profile": "Profil"
   },
@@ -173,10 +174,14 @@
     "backToOverview": "Zurück zur Übersicht",
     "viewMusic": "Musik ansehen",
     "piecesForYou": "Stücke für Sie",
+    "titlesForYou": "Titel für Sie",
     "noLists": "Keine Musiklisten verfügbar",
     "noListsDescription": "Sie wurden noch keinem Orchester mit Musiklisten hinzugefügt, oder es wurden noch keine Musikstücke für Ihre Instrumente hinzugefügt.",
     "noPieces": "Keine Musikstücke für Ihre Instrumente auf dieser Liste verfügbar.",
     "downloading": "Laden...",
+    "pieces": "Stimmen",
+    "expandTitle": "Stimmen anzeigen",
+    "collapseTitle": "Stimmen ausblenden",
     "table": {
       "title": "Titel",
       "arranger": "Arrangeur",
@@ -698,6 +703,27 @@
     "errorRestore": "Fehler beim Wiederherstellen des Backups",
     "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!"
   },
+  "settings": {
+    "title": "Einstellungen",
+    "organization": "Organisation",
+    "organizationName": "Organisationsname",
+    "organizationNamePlaceholder": "Z.B. Musikverein St. Cäcilia",
+    "logo": "Logo",
+    "logoDescription": "Laden Sie ein Logo für Ihre Organisation hoch. Es wird in der Navigationsleiste angezeigt.",
+    "logoRequirements": "Empfohlen: quadratisches Format (z.B. 128x128), maximal 2 MB, PNG oder SVG für beste Qualität.",
+    "uploadLogo": "Logo hochladen",
+    "changeLogo": "Logo ändern",
+    "removeLogo": "Logo entfernen",
+    "removeLogoConfirm": "Sind Sie sicher, dass Sie das Logo entfernen möchten?",
+    "saved": "Einstellungen gespeichert",
+    "errorSaving": "Fehler beim Speichern der Einstellungen",
+    "logoUploaded": "Logo hochgeladen",
+    "errorUploadingLogo": "Fehler beim Hochladen des Logos",
+    "logoRemoved": "Logo entfernt",
+    "errorRemovingLogo": "Fehler beim Entfernen des Logos",
+    "invalidFileType": "Ungültiger Dateityp. Verwenden Sie PNG, JPG, SVG oder WebP.",
+    "fileTooLarge": "Datei ist zu groß. Maximal 2 MB."
+  },
   "accessibility": {
     "skipToContent": "Zum Inhalt springen",
     "mainNavigation": "Hauptnavigation",
@@ -732,7 +758,8 @@
     "users": "Mitglieder - Harmonie",
     "orchestras": "Orchester - Harmonie",
     "lists": "Musiklisten - Harmonie",
-    "notFound": "Seite nicht gefunden - Harmonie"
+    "notFound": "Seite nicht gefunden - Harmonie",
+    "settings": "Einstellungen - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

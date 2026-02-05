@@ -5,6 +5,8 @@ export const schema = `
 CREATE TABLE IF NOT EXISTS associations (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
+    display_name TEXT,
+    logo_path TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
