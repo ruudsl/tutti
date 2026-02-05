@@ -497,7 +497,8 @@
     "mergeFailed": "Merge failed",
     "errorMerging": "Error merging",
     "mergeSuccess": "{{count}} files merged",
-    "mergedDocument": "Merged document: {{count}} pages"
+    "mergedDocument": "Merged document: {{count}} pages",
+    "preview": "Page previews"
   },
   "loans": {
     "title": "Loans",

@@ -497,7 +497,8 @@
     "mergeFailed": "Zusammenfügen fehlgeschlagen",
     "errorMerging": "Fehler beim Zusammenfügen",
     "mergeSuccess": "{{count}} Dateien zusammengefügt",
-    "mergedDocument": "Zusammengefügtes Dokument: {{count}} Seiten"
+    "mergedDocument": "Zusammengefügtes Dokument: {{count}} Seiten",
+    "preview": "Seitenvorschau"
   },
   "loans": {
     "title": "Ausleihen",

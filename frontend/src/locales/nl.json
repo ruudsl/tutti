@@ -487,7 +487,8 @@
     "mergeFailed": "Samenvoegen mislukt",
     "errorMerging": "Fout bij samenvoegen",
     "mergeSuccess": "{{count}} bestanden samengevoegd",
-    "mergedDocument": "Samengevoegd document: {{count}} pagina's"
+    "mergedDocument": "Samengevoegd document: {{count}} pagina's",
+    "preview": "Pagina voorbeelden"
   },
   "loans": {
     "title": "Uitleningen",

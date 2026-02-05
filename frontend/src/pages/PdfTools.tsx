@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import PdfPagePreview from '../components/PdfPagePreview';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -274,7 +275,7 @@ export default function PdfTools() {
                 </div>
               )}
 
-              {pdfInfo && (
+              {pdfInfo && pdfFile && (
                 <>
                   <div style={{
                     padding: '1rem',
@@ -287,6 +288,15 @@ export default function PdfTools() {
                       {pdfInfo.pageCount} {t('pdfTools.pages')} |{' '}
                       {pdfInfo.pages.map(p => p.paperSize).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
                     </div>
+                  </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ marginBottom: '0.75rem' }}>{t('pdfTools.preview')}</h4>
+                    <PdfPagePreview
+                      file={pdfFile}
+                      selectedRanges={splitRanges}
+                      thumbnailWidth={100}
+                    />
                   </div>
 
                   <h4 style={{ marginBottom: '1rem' }}>{t('pdfTools.splitIntoParts')}</h4>
