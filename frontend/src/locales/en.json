@@ -920,5 +920,120 @@
     "unauthorized": "Unauthorized.",
     "forbidden": "Access denied.",
     "validation": "Please check the entered data."
+  },
+  "onboarding": {
+    "menuItem": "Guided tour",
+    "welcomeTitle": "Welcome!",
+    "welcomeDescription": "Would you like a quick tour of the application? We'll show you step by step how everything works.",
+    "startTour": "Yes, start tour",
+    "skip": "Skip",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "goToPage": "Go to this page",
+    "admin": {
+      "welcome": {
+        "title": "Welcome, administrator!",
+        "description": "As an administrator, you set up the entire application. Let's walk through the most important steps together."
+      },
+      "orchestras": {
+        "title": "Create orchestras",
+        "description": "Start by creating orchestras. Each orchestra has its own music lists and rehearsals. Members are linked to orchestras so they only see their own music."
+      },
+      "members": {
+        "title": "Add members",
+        "description": "Add members and link them to orchestras and instruments. Assign the right role: member, music committee, conductor or administrator."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Set your association's name and logo. These are shown on the login screen and in the navigation bar."
+      },
+      "rehearsals": {
+        "title": "Plan rehearsals",
+        "description": "Set default rehearsal days (e.g. every Tuesday) and automatically generate a schedule for a period. Optionally connect Spond for attendance tracking."
+      },
+      "done": {
+        "title": "Ready to go!",
+        "description": "You can now get started. Tip: the music committee can upload music pieces and organize them into lists. You can always restart this tour via the button in the navigation bar."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Welcome, music committee!",
+        "description": "As music committee, you manage the music library. We'll show you how to upload and organize music pieces."
+      },
+      "upload": {
+        "title": "Upload music pieces",
+        "description": "Upload PDF files of music pieces. The filename is automatically parsed: Title_arranger_instrument_tuning_groupnumber.pdf. You can create a new list directly when uploading."
+      },
+      "lists": {
+        "title": "List management",
+        "description": "Organize music pieces into lists per orchestra. Add titles, set YouTube links, manage the order and activate/deactivate lists."
+      },
+      "pieces": {
+        "title": "Manage music pieces",
+        "description": "View and edit all music pieces. You can search, filter by instrument, and bulk select and delete pieces."
+      },
+      "titles": {
+        "title": "Titles and metadata",
+        "description": "Manage titles with extra information: YouTube links, MP3 previews, duration, difficulty level and genres."
+      },
+      "instruments": {
+        "title": "Instruments and aliases",
+        "description": "Manage instruments and their aliases. Aliases ensure filenames are automatically linked to the right instrument (e.g. 'Altsax' → 'Alto Saxophone')."
+      },
+      "done": {
+        "title": "Ready to go!",
+        "description": "You can now start managing music. Members will automatically only see pieces for their instrument. You can always restart this tour via the button in the navigation bar."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Welcome, conductor!",
+        "description": "As conductor, you plan rehearsals and keep track of the music. We'll show you the most important features."
+      },
+      "rehearsals": {
+        "title": "Plan rehearsals",
+        "description": "Create rehearsals, set default days and automatically generate a schedule. For each rehearsal you can specify which pieces to rehearse and for which orchestra."
+      },
+      "pieces": {
+        "title": "Repertoire per rehearsal",
+        "description": "For each rehearsal you can add pieces to rehearse. Members see this in their overview so they can prepare."
+      },
+      "mymusic": {
+        "title": "View music",
+        "description": "Via 'My Music' you can view the music lists of your orchestras and download pieces."
+      },
+      "done": {
+        "title": "Ready to go!",
+        "description": "You can now start planning rehearsals. You can always restart this tour via the button in the navigation bar."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Welcome!",
+        "description": "Here you'll find all your music and the rehearsal schedule. We'll quickly show you where everything is."
+      },
+      "mymusic": {
+        "title": "My Music",
+        "description": "Here you'll find your music pieces, sorted by orchestra and list. Download the pieces you need for your instrument."
+      },
+      "rehearsals": {
+        "title": "Rehearsals",
+        "description": "View when the next rehearsals are, which pieces will be rehearsed and who will be attending."
+      },
+      "issues": {
+        "title": "Report issues",
+        "description": "See an error in a music piece? Wrong notes, missing measures? Report it here so the music committee can fix it."
+      },
+      "profile": {
+        "title": "Your profile",
+        "description": "Set your instruments so you automatically see the right pieces. You can also change your password and set up two-factor authentication here."
+      },
+      "done": {
+        "title": "All set!",
+        "description": "You now know where everything is. Enjoy making music! You can always restart this tour via the button in the navigation bar."
+      }
+    }
   }
 }

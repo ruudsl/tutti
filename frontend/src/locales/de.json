@@ -920,5 +920,120 @@
     "unauthorized": "Nicht autorisiert.",
     "forbidden": "Zugriff verweigert.",
     "validation": "Bitte überprüfen Sie die eingegebenen Daten."
+  },
+  "onboarding": {
+    "menuItem": "Rundgang",
+    "welcomeTitle": "Willkommen!",
+    "welcomeDescription": "Möchten Sie eine kurze Führung durch die Anwendung? Wir zeigen Ihnen Schritt für Schritt, wie alles funktioniert.",
+    "startTour": "Ja, Rundgang starten",
+    "skip": "Überspringen",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "finish": "Fertig",
+    "goToPage": "Zu dieser Seite gehen",
+    "admin": {
+      "welcome": {
+        "title": "Willkommen, Administrator!",
+        "description": "Als Administrator richten Sie die gesamte Anwendung ein. Wir gehen gemeinsam die wichtigsten Schritte durch."
+      },
+      "orchestras": {
+        "title": "Orchester anlegen",
+        "description": "Beginnen Sie mit dem Anlegen von Orchestern. Jedes Orchester hat eigene Musiklisten und Proben. Mitglieder werden Orchestern zugeordnet, damit sie nur ihre eigene Musik sehen."
+      },
+      "members": {
+        "title": "Mitglieder hinzufügen",
+        "description": "Fügen Sie Mitglieder hinzu und ordnen Sie sie Orchestern und Instrumenten zu. Weisen Sie die richtige Rolle zu: Mitglied, Musikkommission, Dirigent oder Administrator."
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "description": "Legen Sie den Namen und das Logo Ihres Vereins fest. Diese werden auf dem Anmeldebildschirm und in der Navigationsleiste angezeigt."
+      },
+      "rehearsals": {
+        "title": "Proben planen",
+        "description": "Legen Sie Standard-Probentage fest (z.B. jeden Dienstag) und generieren Sie automatisch einen Zeitplan. Optional können Sie Spond für die Anwesenheitsverfolgung verbinden."
+      },
+      "done": {
+        "title": "Bereit!",
+        "description": "Sie können jetzt loslegen. Tipp: Die Musikkommission kann Musikstücke hochladen und in Listen organisieren. Sie können diesen Rundgang jederzeit über die Schaltfläche in der Navigationsleiste neu starten."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Willkommen, Musikkommission!",
+        "description": "Als Musikkommission verwalten Sie die Musikbibliothek. Wir zeigen Ihnen, wie Sie Musikstücke hochladen und organisieren."
+      },
+      "upload": {
+        "title": "Musikstücke hochladen",
+        "description": "Laden Sie PDF-Dateien von Musikstücken hoch. Der Dateiname wird automatisch geparst: Titel_Arrangeur_Instrument_Stimmung_Gruppennummer.pdf. Sie können beim Hochladen direkt eine neue Liste erstellen."
+      },
+      "lists": {
+        "title": "Listenverwaltung",
+        "description": "Organisieren Sie Musikstücke in Listen pro Orchester. Fügen Sie Titel hinzu, legen Sie YouTube-Links fest, verwalten Sie die Reihenfolge und aktivieren/deaktivieren Sie Listen."
+      },
+      "pieces": {
+        "title": "Musikstücke verwalten",
+        "description": "Alle Musikstücke anzeigen und bearbeiten. Sie können suchen, nach Instrument filtern und Stücke in Masse auswählen und löschen."
+      },
+      "titles": {
+        "title": "Titel und Metadaten",
+        "description": "Verwalten Sie Titel mit Zusatzinformationen: YouTube-Links, MP3-Vorschauen, Dauer, Schwierigkeitsgrad und Genres."
+      },
+      "instruments": {
+        "title": "Instrumente und Aliasse",
+        "description": "Verwalten Sie Instrumente und deren Aliasse. Aliasse sorgen dafür, dass Dateinamen automatisch dem richtigen Instrument zugeordnet werden (z.B. 'Altsax' → 'Alto Saxophone')."
+      },
+      "done": {
+        "title": "Bereit!",
+        "description": "Sie können jetzt mit der Musikverwaltung beginnen. Mitglieder sehen automatisch nur die Stücke für ihr Instrument. Sie können diesen Rundgang jederzeit über die Schaltfläche in der Navigationsleiste neu starten."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Willkommen, Dirigent!",
+        "description": "Als Dirigent planen Sie Proben und behalten den Überblick über die Musik. Wir zeigen Ihnen die wichtigsten Funktionen."
+      },
+      "rehearsals": {
+        "title": "Proben planen",
+        "description": "Erstellen Sie Proben, legen Sie Standardtage fest und generieren Sie automatisch einen Zeitplan. Für jede Probe können Sie angeben, welche Stücke geprobt werden und für welches Orchester."
+      },
+      "pieces": {
+        "title": "Repertoire pro Probe",
+        "description": "Für jede Probe können Sie Stücke hinzufügen, die geprobt werden sollen. Mitglieder sehen dies in ihrer Übersicht, damit sie sich vorbereiten können."
+      },
+      "mymusic": {
+        "title": "Musik ansehen",
+        "description": "Über 'Meine Musik' können Sie die Musiklisten Ihrer Orchester einsehen und Stücke herunterladen."
+      },
+      "done": {
+        "title": "Bereit!",
+        "description": "Sie können jetzt mit der Probenplanung beginnen. Sie können diesen Rundgang jederzeit über die Schaltfläche in der Navigationsleiste neu starten."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Willkommen!",
+        "description": "Hier finden Sie all Ihre Musik und den Probenplan. Wir zeigen Ihnen schnell, wo alles zu finden ist."
+      },
+      "mymusic": {
+        "title": "Meine Musik",
+        "description": "Hier finden Sie Ihre Musikstücke, sortiert nach Orchester und Liste. Laden Sie die Stücke herunter, die Sie für Ihr Instrument benötigen."
+      },
+      "rehearsals": {
+        "title": "Proben",
+        "description": "Sehen Sie, wann die nächsten Proben sind, welche Stücke geprobt werden und wer anwesend sein wird."
+      },
+      "issues": {
+        "title": "Probleme melden",
+        "description": "Sehen Sie einen Fehler in einem Musikstück? Falsche Noten, fehlende Takte? Melden Sie es hier, damit die Musikkommission es beheben kann."
+      },
+      "profile": {
+        "title": "Ihr Profil",
+        "description": "Stellen Sie Ihre Instrumente ein, damit Sie automatisch die richtigen Stücke sehen. Sie können hier auch Ihr Passwort ändern und die Zwei-Faktor-Authentifizierung einrichten."
+      },
+      "done": {
+        "title": "Alles klar!",
+        "description": "Sie wissen jetzt, wo alles zu finden ist. Viel Spaß beim Musizieren! Sie können diesen Rundgang jederzeit über die Schaltfläche in der Navigationsleiste neu starten."
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
 
@@ -63,6 +64,14 @@ export default function Layout() {
   const location = useLocation();
   const { t } = useTranslation();
   const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const handleRestartOnboarding = () => {
+    if (user) {
+      resetOnboarding(user.id);
+      setShowOnboarding(true);
+    }
+  };
 
   const loadBrandSettings = () => {
     getSettings().then(setBrandSettings).catch(() => {});
@@ -225,6 +234,13 @@ export default function Layout() {
 
           <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
             <LanguageSwitcher compact />
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={handleRestartOnboarding}
+              title={t('onboarding.menuItem')}
+            >
+              {t('onboarding.menuItem')}
+            </button>
             <Link to="/profile" className="user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="user-name">{user?.firstName} {user?.lastName}</div>
               <div className="user-role">
@@ -241,6 +257,11 @@ export default function Layout() {
       <main id="main-content" className="main-content">
         <Outlet />
       </main>
+
+      <OnboardingTour
+        forceShow={showOnboarding || undefined}
+        onClose={() => setShowOnboarding(false)}
+      />
     </div>
   );
 }

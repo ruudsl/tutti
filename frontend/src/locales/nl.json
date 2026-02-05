@@ -910,5 +910,120 @@
     "unauthorized": "Niet geautoriseerd.",
     "forbidden": "Geen toegang.",
     "validation": "Controleer de ingevoerde gegevens."
+  },
+  "onboarding": {
+    "menuItem": "Rondleiding",
+    "welcomeTitle": "Welkom!",
+    "welcomeDescription": "Wil je een korte rondleiding door de applicatie? We laten je stap voor stap zien hoe alles werkt.",
+    "startTour": "Ja, start rondleiding",
+    "skip": "Overslaan",
+    "next": "Volgende",
+    "previous": "Vorige",
+    "finish": "Afronden",
+    "goToPage": "Ga naar deze pagina",
+    "admin": {
+      "welcome": {
+        "title": "Welkom, beheerder!",
+        "description": "Als beheerder richt je de hele applicatie in. We lopen samen door de belangrijkste stappen."
+      },
+      "orchestras": {
+        "title": "Orkesten aanmaken",
+        "description": "Begin met het aanmaken van orkesten. Elk orkest heeft eigen muzieklijsten en repetities. Leden worden aan orkesten gekoppeld zodat ze alleen hun eigen muziek zien."
+      },
+      "members": {
+        "title": "Leden toevoegen",
+        "description": "Voeg leden toe en koppel ze aan orkesten en instrumenten. Geef ze de juiste rol: lid, muziekcommissie, dirigent of beheerder."
+      },
+      "settings": {
+        "title": "Instellingen",
+        "description": "Stel de naam en het logo van je vereniging in. Deze worden getoond op het inlogscherm en in de navigatiebalk."
+      },
+      "rehearsals": {
+        "title": "Repetities plannen",
+        "description": "Stel standaard repetitiedagen in (bijv. elke dinsdag) en genereer automatisch een planning voor een periode. Optioneel kun je Spond koppelen voor aanwezigheid."
+      },
+      "done": {
+        "title": "Klaar om te beginnen!",
+        "description": "Je kunt nu aan de slag. Tip: de muziekcommissie kan muziekstukken uploaden en in lijsten organiseren. Deze rondleiding kun je altijd opnieuw starten via de knop in de navigatiebalk."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Welkom, muziekcommissie!",
+        "description": "Als muziekcommissie beheer je de muziekbibliotheek. We laten je zien hoe je muziekstukken uploadt en organiseert."
+      },
+      "upload": {
+        "title": "Muziekstukken uploaden",
+        "description": "Upload PDF-bestanden van muziekstukken. De bestandsnaam wordt automatisch geparseerd: Titel_arrangeur_instrument_stemming_groepnummer.pdf. Je kunt direct een nieuwe lijst aanmaken bij het uploaden."
+      },
+      "lists": {
+        "title": "Lijstbeheer",
+        "description": "Organiseer muziekstukken in lijsten per orkest. Voeg titels toe, stel YouTube-links in, beheer de volgorde en activeer/deactiveer lijsten."
+      },
+      "pieces": {
+        "title": "Muziekstukken beheren",
+        "description": "Bekijk en bewerk alle muziekstukken. Je kunt zoeken, filteren op instrument, en stukken in bulk selecteren en verwijderen."
+      },
+      "titles": {
+        "title": "Titels en metadata",
+        "description": "Beheer titels met extra informatie: YouTube-links, MP3-previews, speelduur, moeilijkheidsgraad en genres."
+      },
+      "instruments": {
+        "title": "Instrumenten en aliassen",
+        "description": "Beheer instrumenten en hun aliassen. Aliassen zorgen ervoor dat bestandsnamen automatisch aan het juiste instrument gekoppeld worden (bijv. 'Altsax' → 'Alto Saxophone')."
+      },
+      "done": {
+        "title": "Klaar om te beginnen!",
+        "description": "Je kunt nu muziek gaan beheren. Leden zien automatisch alleen de stukken voor hun instrument. Deze rondleiding kun je altijd opnieuw starten via de knop in de navigatiebalk."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Welkom, dirigent!",
+        "description": "Als dirigent plan je repetities en houd je overzicht over de muziek. We laten je de belangrijkste functies zien."
+      },
+      "rehearsals": {
+        "title": "Repetities plannen",
+        "description": "Maak repetities aan, stel standaarddagen in en genereer automatisch een planning. Per repetitie kun je aangeven welke stukken gerepeteerd worden en voor welk orkest de repetitie is."
+      },
+      "pieces": {
+        "title": "Repertoire per repetitie",
+        "description": "Bij elke repetitie kun je stukken toevoegen die gerepeteerd moeten worden. Leden zien dit in hun overzicht zodat ze zich kunnen voorbereiden."
+      },
+      "mymusic": {
+        "title": "Muziek bekijken",
+        "description": "Via 'Mijn Muziek' kun je de muzieklijsten van je orkesten bekijken en stukken downloaden."
+      },
+      "done": {
+        "title": "Klaar om te beginnen!",
+        "description": "Je kunt nu repetities gaan plannen. Deze rondleiding kun je altijd opnieuw starten via de knop in de navigatiebalk."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Welkom!",
+        "description": "Hier vind je al je muziek en de repetitieplanning. We laten je snel zien waar alles staat."
+      },
+      "mymusic": {
+        "title": "Mijn Muziek",
+        "description": "Hier vind je je muziekstukken, gesorteerd per orkest en lijst. Download de stukken die je nodig hebt voor je instrument."
+      },
+      "rehearsals": {
+        "title": "Repetities",
+        "description": "Bekijk wanneer de volgende repetities zijn, welke stukken gerepeteerd worden en wie er aanwezig is."
+      },
+      "issues": {
+        "title": "Meldkamer",
+        "description": "Zie je een fout in een muziekstuk? Verkeerde noten, ontbrekende maten? Meld het hier zodat de muziekcommissie het kan oplossen."
+      },
+      "profile": {
+        "title": "Je profiel",
+        "description": "Stel je instrumenten in zodat je automatisch de juiste stukken ziet. Je kunt hier ook je wachtwoord wijzigen en tweefactorauthenticatie instellen."
+      },
+      "done": {
+        "title": "Klaar!",
+        "description": "Je weet nu waar alles staat. Veel plezier met musiceren! Deze rondleiding kun je altijd opnieuw starten via de knop in de navigatiebalk."
+      }
+    }
   }
 }
