@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS associations (
     name TEXT NOT NULL UNIQUE,
     display_name TEXT,
     logo_path TEXT,
+    theme_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

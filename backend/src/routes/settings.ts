@@ -42,7 +42,7 @@ const logoUpload = multer({
  */
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const association = db.prepare(`
-        SELECT id, name, display_name, logo_path
+        SELECT id, name, display_name, logo_path, theme_json
         FROM associations
         WHERE id = ?
     `).get(req.user!.associationId) as any;
@@ -56,6 +56,7 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         displayName: association.display_name || association.name,
         logoPath: association.logo_path || null,
         logoUrl: association.logo_path ? `/api/settings/logo/${path.basename(association.logo_path)}` : null,
+        theme: association.theme_json ? JSON.parse(association.theme_json) : null,
     });
 }));
 
@@ -152,6 +153,95 @@ router.delete('/logo', authenticateToken, requireRole('admin'), asyncHandler(asy
     logger.info(`Logo removed for association`, { associationId: req.user!.associationId, removedBy: req.user!.id });
 
     res.json({ message: 'Logo succesvol verwijderd.' });
+}));
+
+// Allowed theme keys for validation
+const ALLOWED_THEME_KEYS = [
+    'primaryColor', 'primaryDarkColor', 'secondaryColor', 'successColor', 'dangerColor', 'warningColor',
+    'backgroundColor', 'surfaceColor', 'textColor', 'textLightColor', 'borderColor',
+    'fontFamily', 'fontSizeBase', 'borderRadius',
+];
+
+const FONT_FAMILIES: Record<string, string> = {
+    system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif",
+    inter: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    roboto: "'Roboto', -apple-system, BlinkMacSystemFont, sans-serif",
+    georgia: "Georgia, 'Times New Roman', serif",
+    mono: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+};
+
+/**
+ * GET /settings/theme - Get theme (public, needed before auth for login page styling)
+ */
+router.get('/theme', asyncHandler(async (_req: AuthRequest, res: Response) => {
+    // Get first association's theme (for login page before we know which user)
+    const association = db.prepare(`
+        SELECT theme_json FROM associations LIMIT 1
+    `).get() as any;
+
+    res.json({
+        theme: association?.theme_json ? JSON.parse(association.theme_json) : null,
+        fontFamilies: FONT_FAMILIES,
+    });
+}));
+
+/**
+ * PUT /settings/theme - Update theme (admin only)
+ */
+router.put('/theme', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { theme } = req.body;
+
+    if (theme !== null && typeof theme !== 'object') {
+        throw new ApiError(400, 'Ongeldig thema formaat.');
+    }
+
+    if (theme !== null) {
+        // Validate that only allowed keys are present
+        const keys = Object.keys(theme);
+        const invalidKeys = keys.filter(k => !ALLOWED_THEME_KEYS.includes(k));
+        if (invalidKeys.length > 0) {
+            throw new ApiError(400, `Ongeldige thema-instellingen: ${invalidKeys.join(', ')}`);
+        }
+
+        // Validate color values (must be valid hex colors)
+        const colorKeys = keys.filter(k => k.endsWith('Color'));
+        for (const key of colorKeys) {
+            if (theme[key] && !/^#[0-9a-fA-F]{6}$/.test(theme[key])) {
+                throw new ApiError(400, `Ongeldige kleurwaarde voor ${key}. Gebruik hex formaat (bijv. #2563eb).`);
+            }
+        }
+
+        // Validate fontFamily
+        if (theme.fontFamily && !Object.keys(FONT_FAMILIES).includes(theme.fontFamily)) {
+            throw new ApiError(400, 'Ongeldig lettertype.');
+        }
+
+        // Validate fontSizeBase (12-24px)
+        if (theme.fontSizeBase !== undefined) {
+            const size = Number(theme.fontSizeBase);
+            if (isNaN(size) || size < 12 || size > 24) {
+                throw new ApiError(400, 'Lettergrootte moet tussen 12 en 24 zijn.');
+            }
+        }
+
+        // Validate borderRadius (0-2rem)
+        if (theme.borderRadius !== undefined) {
+            const radius = Number(theme.borderRadius);
+            if (isNaN(radius) || radius < 0 || radius > 2) {
+                throw new ApiError(400, 'Hoekafronding moet tussen 0 en 2 zijn.');
+            }
+        }
+    }
+
+    const themeJson = theme ? JSON.stringify(theme) : null;
+    db.prepare('UPDATE associations SET theme_json = ? WHERE id = ?').run(
+        themeJson,
+        req.user!.associationId
+    );
+
+    logger.info(`Theme updated`, { associationId: req.user!.associationId, updatedBy: req.user!.id });
+
+    res.json({ message: 'Thema succesvol bijgewerkt.' });
 }));
 
 /**

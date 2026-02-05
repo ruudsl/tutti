@@ -88,7 +88,7 @@ export default function Layout() {
   // Check if current path is in a dropdown group
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
-  const adminPaths = ['/users', '/orchestras', '/settings'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/theme'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
@@ -207,6 +207,11 @@ export default function Layout() {
                 <li role="none">
                   <NavLink to="/settings" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                     {t('nav.settings')}
+                  </NavLink>
+                </li>
+                <li role="none">
+                  <NavLink to="/theme" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.theme')}
                   </NavLink>
                 </li>
               </NavDropdown>

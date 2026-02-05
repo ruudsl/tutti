@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTheme } from './hooks/useTheme';
 import { queryClient } from './lib/queryClient';
 import { Toaster } from './utils/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -29,6 +30,7 @@ import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
+import ThemeSettings from './pages/ThemeSettings';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -218,6 +220,14 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="theme"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <ThemeSettings />
+            </PrivateRoute>
+          }
+        />
         {/* 404 for unmatched routes within authenticated area */}
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -229,9 +239,11 @@ function AppRoutes() {
 
 /**
  * Syncs the HTML lang attribute with the current i18n language (WCAG 3.1.1)
+ * and loads the association theme.
  */
-function LanguageSync() {
+function AppInit() {
   const { i18n } = useTranslation();
+  useTheme();
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
@@ -246,7 +258,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <LanguageSync />
+            <AppInit />
             <AppRoutes />
             <Toaster
               toastOptions={{

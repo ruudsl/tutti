@@ -52,6 +52,7 @@
     "members": "Members",
     "orchestras": "Orchestras",
     "settings": "Settings",
+    "theme": "Theme",
     "logout": "Logout",
     "profile": "Profile"
   },
@@ -724,6 +725,45 @@
     "invalidFileType": "Invalid file type. Use PNG, JPG, SVG or WebP.",
     "fileTooLarge": "File is too large. Maximum 2 MB."
   },
+  "theme": {
+    "title": "Theme",
+    "description": "Customize the appearance of the application for your association.",
+    "colors": "Colors",
+    "primaryColor": "Primary color",
+    "primaryDarkColor": "Primary color (dark)",
+    "secondaryColor": "Secondary color",
+    "successColor": "Success color",
+    "dangerColor": "Error color",
+    "warningColor": "Warning color",
+    "backgroundColor": "Background color",
+    "surfaceColor": "Surface color",
+    "textColor": "Text color",
+    "textLightColor": "Light text color",
+    "borderColor": "Border color",
+    "typography": "Typography",
+    "fontFamily": "Font",
+    "fontSizeBase": "Base font size",
+    "fontSizeUnit": "px",
+    "layout": "Layout",
+    "borderRadius": "Corner rounding",
+    "borderRadiusSharp": "Sharp",
+    "borderRadiusRound": "Round",
+    "preview": "Preview",
+    "previewCard": "Preview card",
+    "previewText": "This is how the application looks with the current settings.",
+    "reset": "Reset to default theme",
+    "resetConfirm": "Are you sure you want to reset the theme to the default settings?",
+    "saved": "Theme saved",
+    "errorSaving": "Error saving theme",
+    "resetDone": "Theme reset to default",
+    "fonts": {
+      "system": "System (default)",
+      "inter": "Inter",
+      "roboto": "Roboto",
+      "georgia": "Georgia (serif)",
+      "mono": "Monospace"
+    }
+  },
   "accessibility": {
     "skipToContent": "Skip to content",
     "mainNavigation": "Main navigation",
@@ -759,7 +799,8 @@
     "orchestras": "Orchestras - Harmonie",
     "lists": "Music Lists - Harmonie",
     "notFound": "Page Not Found - Harmonie",
-    "settings": "Settings - Harmonie"
+    "settings": "Settings - Harmonie",
+    "theme": "Theme - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",

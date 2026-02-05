@@ -100,6 +100,24 @@ export interface AssociationSettings {
   displayName: string;
   logoPath: string | null;
   logoUrl: string | null;
+  theme: ThemeSettings | null;
+}
+
+export interface ThemeSettings {
+  primaryColor?: string;
+  primaryDarkColor?: string;
+  secondaryColor?: string;
+  successColor?: string;
+  dangerColor?: string;
+  warningColor?: string;
+  backgroundColor?: string;
+  surfaceColor?: string;
+  textColor?: string;
+  textLightColor?: string;
+  borderColor?: string;
+  fontFamily?: string;
+  fontSizeBase?: number;
+  borderRadius?: number;
 }
 
 export interface AuthResponse {

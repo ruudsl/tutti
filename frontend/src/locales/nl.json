@@ -52,6 +52,7 @@
     "members": "Leden",
     "orchestras": "Orkesten",
     "settings": "Instellingen",
+    "theme": "Thema",
     "logout": "Uitloggen",
     "profile": "Profiel"
   },
@@ -714,6 +715,45 @@
     "invalidFileType": "Ongeldig bestandstype. Gebruik PNG, JPG, SVG of WebP.",
     "fileTooLarge": "Bestand is te groot. Maximaal 2 MB."
   },
+  "theme": {
+    "title": "Thema",
+    "description": "Pas het uiterlijk van de applicatie aan voor je vereniging.",
+    "colors": "Kleuren",
+    "primaryColor": "Hoofdkleur",
+    "primaryDarkColor": "Hoofdkleur (donker)",
+    "secondaryColor": "Secundaire kleur",
+    "successColor": "Succeskleur",
+    "dangerColor": "Foutkleur",
+    "warningColor": "Waarschuwingskleur",
+    "backgroundColor": "Achtergrondkleur",
+    "surfaceColor": "Oppervlaktekleur",
+    "textColor": "Tekstkleur",
+    "textLightColor": "Lichte tekstkleur",
+    "borderColor": "Randkleur",
+    "typography": "Typografie",
+    "fontFamily": "Lettertype",
+    "fontSizeBase": "Basislettergrootte",
+    "fontSizeUnit": "px",
+    "layout": "Vorm",
+    "borderRadius": "Hoekafronding",
+    "borderRadiusSharp": "Scherp",
+    "borderRadiusRound": "Rond",
+    "preview": "Voorbeeld",
+    "previewCard": "Voorbeeldkaart",
+    "previewText": "Zo ziet de applicatie eruit met de huidige instellingen.",
+    "reset": "Standaardthema herstellen",
+    "resetConfirm": "Weet je zeker dat je het thema wilt herstellen naar de standaardinstellingen?",
+    "saved": "Thema opgeslagen",
+    "errorSaving": "Fout bij opslaan thema",
+    "resetDone": "Thema hersteld naar standaard",
+    "fonts": {
+      "system": "Systeem (standaard)",
+      "inter": "Inter",
+      "roboto": "Roboto",
+      "georgia": "Georgia (serif)",
+      "mono": "Monospace"
+    }
+  },
   "accessibility": {
     "skipToContent": "Ga naar inhoud",
     "mainNavigation": "Hoofdnavigatie",
@@ -749,7 +789,8 @@
     "orchestras": "Orkesten - Harmonie",
     "lists": "Muzieklijsten - Harmonie",
     "notFound": "Pagina niet gevonden - Harmonie",
-    "settings": "Instellingen - Harmonie"
+    "settings": "Instellingen - Harmonie",
+    "theme": "Thema - Harmonie"
   },
   "errorBoundary": {
     "title": "Er is iets misgegaan",

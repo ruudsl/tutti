@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, Genre, MfaSetupResponse, LoginResponse } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -632,6 +632,11 @@ export const uploadLogo = async (file: File): Promise<{ logoUrl: string }> => {
 
 export const removeLogo = async (): Promise<void> => {
   await api.delete('/settings/logo');
+};
+
+// Theme
+export const updateTheme = async (theme: ThemeSettings | null): Promise<void> => {
+  await api.put('/settings/theme', { theme });
 };
 
 export default api;

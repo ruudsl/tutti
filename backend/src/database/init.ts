@@ -175,6 +175,12 @@ async function initializeDatabase() {
             db.prepare('ALTER TABLE associations ADD COLUMN logo_path TEXT').run();
             console.log('Migration complete');
         }
+        const hasThemeJson = assocTableInfo.some(col => col.name === 'theme_json');
+        if (!hasThemeJson) {
+            console.log('Migration: Adding theme_json column to associations...');
+            db.prepare('ALTER TABLE associations ADD COLUMN theme_json TEXT').run();
+            console.log('Migration complete');
+        }
     } catch (e) {
         // Table might not exist yet, which is fine
     }

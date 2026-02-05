@@ -52,6 +52,7 @@
     "members": "Mitglieder",
     "orchestras": "Orchester",
     "settings": "Einstellungen",
+    "theme": "Design",
     "logout": "Abmelden",
     "profile": "Profil"
   },
@@ -724,6 +725,45 @@
     "invalidFileType": "Ungültiger Dateityp. Verwenden Sie PNG, JPG, SVG oder WebP.",
     "fileTooLarge": "Datei ist zu groß. Maximal 2 MB."
   },
+  "theme": {
+    "title": "Design",
+    "description": "Passe das Erscheinungsbild der Anwendung für deinen Verein an.",
+    "colors": "Farben",
+    "primaryColor": "Hauptfarbe",
+    "primaryDarkColor": "Hauptfarbe (dunkel)",
+    "secondaryColor": "Sekundärfarbe",
+    "successColor": "Erfolgsfarbe",
+    "dangerColor": "Fehlerfarbe",
+    "warningColor": "Warnfarbe",
+    "backgroundColor": "Hintergrundfarbe",
+    "surfaceColor": "Oberflächenfarbe",
+    "textColor": "Textfarbe",
+    "textLightColor": "Helle Textfarbe",
+    "borderColor": "Rahmenfarbe",
+    "typography": "Typografie",
+    "fontFamily": "Schriftart",
+    "fontSizeBase": "Grundschriftgröße",
+    "fontSizeUnit": "px",
+    "layout": "Form",
+    "borderRadius": "Eckabrundung",
+    "borderRadiusSharp": "Scharf",
+    "borderRadiusRound": "Rund",
+    "preview": "Vorschau",
+    "previewCard": "Vorschaukarte",
+    "previewText": "So sieht die Anwendung mit den aktuellen Einstellungen aus.",
+    "reset": "Standarddesign wiederherstellen",
+    "resetConfirm": "Bist du sicher, dass du das Design auf die Standardeinstellungen zurücksetzen möchtest?",
+    "saved": "Design gespeichert",
+    "errorSaving": "Fehler beim Speichern des Designs",
+    "resetDone": "Design auf Standard zurückgesetzt",
+    "fonts": {
+      "system": "System (Standard)",
+      "inter": "Inter",
+      "roboto": "Roboto",
+      "georgia": "Georgia (Serifen)",
+      "mono": "Monospace"
+    }
+  },
   "accessibility": {
     "skipToContent": "Zum Inhalt springen",
     "mainNavigation": "Hauptnavigation",
@@ -759,7 +799,8 @@
     "orchestras": "Orchester - Harmonie",
     "lists": "Musiklisten - Harmonie",
     "notFound": "Seite nicht gefunden - Harmonie",
-    "settings": "Einstellungen - Harmonie"
+    "settings": "Einstellungen - Harmonie",
+    "theme": "Design - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
