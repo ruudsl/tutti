@@ -386,7 +386,9 @@
     "tip": "Tipp",
     "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt.",
     "filesFailed": "Datei(en) fehlgeschlagen",
-    "filesUploaded": "Datei(en) erfolgreich hochgeladen"
+    "filesUploaded": "Datei(en) erfolgreich hochgeladen",
+    "newList": "Neue Liste",
+    "newListPlaceholder": "Name der neuen Liste..."
   },
   "instruments": {
     "title": "Instrumente",

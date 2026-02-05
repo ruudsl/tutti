@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrchestras } from '../hooks/useOrchestras';
-import { useMusicLists } from '../hooks/useMusicLists';
+import { useMusicLists, useCreateMusicList } from '../hooks/useMusicLists';
 import { uploadMusicPieces } from '../api';
 import { FileDropzone } from '../components/FileDropzone';
 import { SkeletonCard } from '../components/Skeleton';
@@ -20,12 +20,15 @@ export default function Upload() {
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [showNewList, setShowNewList] = useState(false);
+  const [newListName, setNewListName] = useState('');
 
   const queryClient = useQueryClient();
 
   // TanStack Query hooks
   const { data: orchestras = [], isLoading: orchestrasLoading } = useOrchestras();
   const { data: lists = [] } = useMusicLists(selectedOrchestra || undefined);
+  const createListMutation = useCreateMusicList();
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -71,6 +74,22 @@ export default function Upload() {
   const handleOrchestraChange = (orchestraId: string) => {
     setSelectedOrchestra(orchestraId);
     setSelectedList('');
+    setShowNewList(false);
+    setNewListName('');
+  };
+
+  const handleCreateList = () => {
+    if (!newListName.trim() || !selectedOrchestra) return;
+    createListMutation.mutate(
+      { name: newListName.trim(), orchestraId: selectedOrchestra },
+      {
+        onSuccess: (result) => {
+          setSelectedList(result.id);
+          setShowNewList(false);
+          setNewListName('');
+        },
+      }
+    );
   };
 
   if (orchestrasLoading) {
@@ -109,19 +128,62 @@ export default function Upload() {
             </div>
             <div className="form-group mb-0">
               <label className="form-label">{t('upload.musicList')}</label>
-              <select
-                className="form-control form-select"
-                value={selectedList}
-                onChange={(e) => setSelectedList(e.target.value)}
-                disabled={!selectedOrchestra}
-              >
-                <option value="">{t('upload.noListUploadOnly')}</option>
-                {lists.map((list) => (
-                  <option key={list.id} value={list.id}>
-                    {list.name}
-                  </option>
-                ))}
-              </select>
+              {showNewList ? (
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    placeholder={t('upload.newListPlaceholder')}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleCreateList(); }
+                      if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); }
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleCreateList}
+                    disabled={!newListName.trim() || createListMutation.isPending}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    {createListMutation.isPending ? '...' : t('common.save')}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => { setShowNewList(false); setNewListName(''); }}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <select
+                    className="form-control form-select"
+                    value={selectedList}
+                    onChange={(e) => setSelectedList(e.target.value)}
+                    disabled={!selectedOrchestra}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">{t('upload.noListUploadOnly')}</option>
+                    {lists.map((list) => (
+                      <option key={list.id} value={list.id}>
+                        {list.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setShowNewList(true)}
+                    disabled={!selectedOrchestra}
+                    title={t('upload.newList')}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    + {t('upload.newList')}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

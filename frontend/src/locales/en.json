@@ -386,7 +386,9 @@
     "tip": "Tip",
     "instrumentTip": "The instrument is automatically recognized via the instrument list and aliases.",
     "filesFailed": "file(s) failed",
-    "filesUploaded": "file(s) successfully uploaded"
+    "filesUploaded": "file(s) successfully uploaded",
+    "newList": "New list",
+    "newListPlaceholder": "Name of the new list..."
   },
   "instruments": {
     "title": "Instruments",

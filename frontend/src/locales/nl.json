@@ -376,7 +376,9 @@
     "filenameFormatDesc": "De bestandsnaam wordt automatisch geparseerd om metadata te extraheren:",
     "examples": "Voorbeelden",
     "tip": "Tip",
-    "instrumentTip": "Het instrument wordt automatisch herkend via de instrumentenlijst en aliassen."
+    "instrumentTip": "Het instrument wordt automatisch herkend via de instrumentenlijst en aliassen.",
+    "newList": "Nieuwe lijst",
+    "newListPlaceholder": "Naam van de nieuwe lijst..."
   },
   "instruments": {
     "title": "Instrumenten",
