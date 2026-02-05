@@ -252,18 +252,21 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_toke
 CREATE TABLE IF NOT EXISTS rehearsal_default_days (
     id TEXT PRIMARY KEY,
     association_id TEXT NOT NULL,
+    orchestra_id TEXT, -- NULL = alle orkesten
     day_of_week INTEGER NOT NULL, -- 0=zondag, 1=maandag, ..., 6=zaterdag
     start_time TEXT NOT NULL, -- HH:MM formaat
     end_time TEXT NOT NULL,   -- HH:MM formaat
     location TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL
 );
 
 -- Repetities (individuele afspraken, inclusief extra en vervallen)
 CREATE TABLE IF NOT EXISTS rehearsals (
     id TEXT PRIMARY KEY,
     association_id TEXT NOT NULL,
+    orchestra_id TEXT, -- NULL = alle orkesten
     date TEXT NOT NULL, -- YYYY-MM-DD formaat
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
@@ -274,6 +277,7 @@ CREATE TABLE IF NOT EXISTS rehearsals (
     created_by TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 

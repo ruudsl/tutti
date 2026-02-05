@@ -804,6 +804,8 @@
     "defaultDaysDescription": "Set the default days for weekly rehearsals.",
     "addDefaultDay": "Add day",
     "noDefaultDays": "No default rehearsal days configured.",
+    "orchestra": "Orchestra",
+    "allOrchestras": "All orchestras",
     "generate": "Generate rehearsals",
     "generateDescription": "Create rehearsals based on the default rehearsal days.",
     "generateFrom": "From date",

@@ -794,6 +794,8 @@
     "defaultDaysDescription": "Stel in op welke dagen er standaard gerepeteerd wordt.",
     "addDefaultDay": "Dag toevoegen",
     "noDefaultDays": "Geen standaard repetitiedagen ingesteld.",
+    "orchestra": "Orkest",
+    "allOrchestras": "Alle orkesten",
     "generate": "Repetities genereren",
     "generateDescription": "Maak repetities aan op basis van de standaard repetitiedagen.",
     "generateFrom": "Van datum",

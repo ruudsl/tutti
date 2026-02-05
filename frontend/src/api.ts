@@ -654,14 +654,14 @@ export const getRehearsal = async (id: string): Promise<RehearsalDetail> => {
 };
 
 export const createRehearsal = async (rehearsal: {
-  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string;
+  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string; orchestraId?: string;
 }): Promise<any> => {
   const { data } = await api.post('/rehearsals', rehearsal);
   return data;
 };
 
 export const updateRehearsal = async (id: string, rehearsal: {
-  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string;
+  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string; orchestraId?: string;
 }): Promise<void> => {
   await api.put(`/rehearsals/${id}`, rehearsal);
 };
@@ -681,7 +681,7 @@ export const getDefaultDays = async (): Promise<RehearsalDefaultDay[]> => {
 };
 
 export const addDefaultDay = async (day: {
-  dayOfWeek: number; startTime: string; endTime: string; location?: string;
+  dayOfWeek: number; startTime: string; endTime: string; location?: string; orchestraId?: string;
 }): Promise<RehearsalDefaultDay> => {
   const { data } = await api.post('/rehearsals/default-days', day);
   return data;

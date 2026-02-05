@@ -7,11 +7,11 @@ import {
   getRehearsals, createRehearsal, updateRehearsal, deleteRehearsal,
   getRehearsal, updateRehearsalPieces,
   getDefaultDays, addDefaultDay, deleteDefaultDay,
-  generateRehearsals,
+  generateRehearsals, getOrchestras,
   getSpondConfig, saveSpondConfig, removeSpondConfig,
   getSpondGroups, syncSpond, syncSpondRehearsal,
 } from '../api';
-import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup } from '../types';
+import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup } from '../types';
 
 const MANAGER_ROLES = ['admin', 'music_committee', 'conductor'];
 
@@ -24,17 +24,18 @@ export default function Rehearsals() {
 
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [defaultDays, setDefaultDays] = useState<RehearsalDefaultDay[]>([]);
+  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRehearsal, setSelectedRehearsal] = useState<RehearsalDetail | null>(null);
 
   // Form states
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: '', startTime: '19:30', endTime: '21:30', location: '', type: 'regular', notes: '' });
+  const [form, setForm] = useState({ date: '', startTime: '19:30', endTime: '21:30', location: '', type: 'regular', notes: '', orchestraId: '' });
 
   // Default day form
   const [showDefaultForm, setShowDefaultForm] = useState(false);
-  const [defaultForm, setDefaultForm] = useState({ dayOfWeek: 1, startTime: '19:30', endTime: '21:30', location: '' });
+  const [defaultForm, setDefaultForm] = useState({ dayOfWeek: 1, startTime: '19:30', endTime: '21:30', location: '', orchestraId: '' });
 
   // Generate form
   const [showGenerate, setShowGenerate] = useState(false);
@@ -63,12 +64,14 @@ export default function Rehearsals() {
       const today = new Date().toISOString().split('T')[0];
       const sixMonths = new Date();
       sixMonths.setMonth(sixMonths.getMonth() + 6);
-      const [reh, days] = await Promise.all([
+      const [reh, days, orch] = await Promise.all([
         getRehearsals(today, sixMonths.toISOString().split('T')[0]),
         isManager ? getDefaultDays() : Promise.resolve([]),
+        isManager ? getOrchestras() : Promise.resolve([]),
       ]);
       setRehearsals(reh);
       setDefaultDays(days);
+      setOrchestras(orch);
       // Load Spond config for admins
       if (isAdmin) {
         try {
@@ -128,7 +131,7 @@ export default function Rehearsals() {
   };
 
   const handleEdit = (r: Rehearsal) => {
-    setForm({ date: r.date, startTime: r.start_time, endTime: r.end_time, location: r.location || '', type: r.type, notes: r.notes || '' });
+    setForm({ date: r.date, startTime: r.start_time, endTime: r.end_time, location: r.location || '', type: r.type, notes: r.notes || '', orchestraId: r.orchestra_id || '' });
     setEditingId(r.id);
     setShowForm(true);
   };
@@ -287,6 +290,12 @@ export default function Rehearsals() {
               <span className={`badge badge-${selectedRehearsal.type === 'extra' ? 'warning' : selectedRehearsal.type === 'cancelled' ? 'danger' : 'primary'}`}>
                 {t(`rehearsals.types.${selectedRehearsal.type}`)}
               </span>
+              {selectedRehearsal.orchestra_name && (
+                <>
+                  {' · '}
+                  <span className="badge badge-secondary">{selectedRehearsal.orchestra_name}</span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -430,7 +439,7 @@ export default function Rehearsals() {
             <button className="btn btn-outline" onClick={() => setShowGenerate(!showGenerate)}>
               {t('rehearsals.generate')}
             </button>
-            <button className="btn btn-primary" onClick={() => { setForm({ date: '', startTime: '19:30', endTime: '21:30', location: '', type: 'regular', notes: '' }); setEditingId(null); setShowForm(true); }}>
+            <button className="btn btn-primary" onClick={() => { setForm({ date: '', startTime: '19:30', endTime: '21:30', location: '', type: 'regular', notes: '', orchestraId: '' }); setEditingId(null); setShowForm(true); }}>
               + {t('rehearsals.addRehearsal')}
             </button>
           </div>
@@ -483,7 +492,7 @@ export default function Rehearsals() {
                 <input type="time" className="form-control" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} />
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">{t('rehearsals.location')}</label>
                 <input type="text" className="form-control" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
@@ -494,6 +503,15 @@ export default function Rehearsals() {
                   <option value="regular">{t('rehearsals.types.regular')}</option>
                   <option value="extra">{t('rehearsals.types.extra')}</option>
                   <option value="cancelled">{t('rehearsals.types.cancelled')}</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.orchestra')}</label>
+                <select className="form-control form-select" value={form.orchestraId} onChange={e => setForm({ ...form, orchestraId: e.target.value })}>
+                  <option value="">{t('rehearsals.allOrchestras')}</option>
+                  {orchestras.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -546,6 +564,15 @@ export default function Rehearsals() {
                   <label className="form-label">{t('rehearsals.location')}</label>
                   <input type="text" className="form-control" value={defaultForm.location} onChange={e => setDefaultForm({ ...defaultForm, location: e.target.value })} />
                 </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">{t('rehearsals.orchestra')}</label>
+                  <select className="form-control form-select" value={defaultForm.orchestraId} onChange={e => setDefaultForm({ ...defaultForm, orchestraId: e.target.value })}>
+                    <option value="">{t('rehearsals.allOrchestras')}</option>
+                    {orchestras.map(o => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <button className="btn btn-primary" onClick={handleAddDefaultDay}>{t('common.save')}</button>
               </div>
             )}
@@ -560,6 +587,7 @@ export default function Rehearsals() {
                     <strong>{t(`rehearsals.days.${d.day_of_week}`)}</strong>
                     <span>{d.start_time} - {d.end_time}</span>
                     {d.location && <span style={{ color: 'var(--text-light)' }}>· {d.location}</span>}
+                    {d.orchestra_name && <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>{d.orchestra_name}</span>}
                     <button className="btn btn-outline btn-sm" onClick={() => handleDeleteDefaultDay(d.id)} style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem' }}>
                       &times;
                     </button>
@@ -711,6 +739,7 @@ export default function Rehearsals() {
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
                         {r.start_time} - {r.end_time}
                         {r.location && ` · ${r.location}`}
+                        {r.orchestra_name && ` · ${r.orchestra_name}`}
                       </div>
                     </div>
                     {r.type !== 'regular' && (

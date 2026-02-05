@@ -126,6 +126,8 @@ export interface RehearsalDefaultDay {
   start_time: string;
   end_time: string;
   location: string | null;
+  orchestra_id: string | null;
+  orchestra_name: string | null;
 }
 
 export interface Rehearsal {
@@ -136,6 +138,8 @@ export interface Rehearsal {
   location: string | null;
   type: 'regular' | 'extra' | 'cancelled';
   notes: string | null;
+  orchestra_id: string | null;
+  orchestra_name: string | null;
   spond_event_id: string | null;
   created_by: string | null;
   created_by_name: string | null;

@@ -10,6 +10,14 @@ const router = Router();
 // Roles that can manage rehearsals
 const REHEARSAL_MANAGERS = ['admin', 'music_committee', 'conductor'];
 
+/**
+ * Get orchestra IDs that a user belongs to
+ */
+function getUserOrchestraIds(userId: string): string[] {
+    const rows = db.prepare('SELECT orchestra_id FROM user_orchestras WHERE user_id = ?').all(userId) as { orchestra_id: string }[];
+    return rows.map(r => r.orchestra_id);
+}
+
 // ========================
 // DEFAULT DAYS (recurring schedule)
 // ========================
@@ -19,10 +27,12 @@ const REHEARSAL_MANAGERS = ['admin', 'music_committee', 'conductor'];
  */
 router.get('/default-days', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const days = db.prepare(`
-        SELECT id, day_of_week, start_time, end_time, location
-        FROM rehearsal_default_days
-        WHERE association_id = ?
-        ORDER BY day_of_week, start_time
+        SELECT dd.id, dd.day_of_week, dd.start_time, dd.end_time, dd.location, dd.orchestra_id,
+            o.name as orchestra_name
+        FROM rehearsal_default_days dd
+        LEFT JOIN orchestras o ON dd.orchestra_id = o.id
+        WHERE dd.association_id = ?
+        ORDER BY dd.day_of_week, dd.start_time
     `).all(req.user!.associationId);
 
     res.json(days);
@@ -32,7 +42,7 @@ router.get('/default-days', authenticateToken, asyncHandler(async (req: AuthRequ
  * POST /rehearsals/default-days - Add a default rehearsal day
  */
 router.post('/default-days', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { dayOfWeek, startTime, endTime, location } = req.body;
+    const { dayOfWeek, startTime, endTime, location, orchestraId } = req.body;
 
     if (dayOfWeek === undefined || dayOfWeek < 0 || dayOfWeek > 6) {
         throw new ApiError(400, 'Ongeldige dag van de week (0-6).');
@@ -41,15 +51,21 @@ router.post('/default-days', authenticateToken, requireRole(...REHEARSAL_MANAGER
         throw new ApiError(400, 'Begin- en eindtijd zijn verplicht.');
     }
 
+    // Validate orchestraId if provided
+    if (orchestraId) {
+        const orch = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?').get(orchestraId, req.user!.associationId) as any;
+        if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
+    }
+
     const id = uuidv4();
     db.prepare(`
-        INSERT INTO rehearsal_default_days (id, association_id, day_of_week, start_time, end_time, location)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, req.user!.associationId, dayOfWeek, startTime, endTime, location || null);
+        INSERT INTO rehearsal_default_days (id, association_id, orchestra_id, day_of_week, start_time, end_time, location)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, req.user!.associationId, orchestraId || null, dayOfWeek, startTime, endTime, location || null);
 
-    logger.info('Default rehearsal day added', { id, dayOfWeek, associationId: req.user!.associationId });
+    logger.info('Default rehearsal day added', { id, dayOfWeek, orchestraId, associationId: req.user!.associationId });
 
-    res.status(201).json({ id, dayOfWeek, startTime, endTime, location });
+    res.status(201).json({ id, dayOfWeek, startTime, endTime, location, orchestraId: orchestraId || null });
 }));
 
 /**
@@ -57,7 +73,7 @@ router.post('/default-days', authenticateToken, requireRole(...REHEARSAL_MANAGER
  */
 router.put('/default-days/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { dayOfWeek, startTime, endTime, location } = req.body;
+    const { dayOfWeek, startTime, endTime, location, orchestraId } = req.body;
 
     const existing = db.prepare('SELECT id FROM rehearsal_default_days WHERE id = ? AND association_id = ?').get(id, req.user!.associationId) as any;
     if (!existing) {
@@ -66,9 +82,9 @@ router.put('/default-days/:id', authenticateToken, requireRole(...REHEARSAL_MANA
 
     db.prepare(`
         UPDATE rehearsal_default_days
-        SET day_of_week = ?, start_time = ?, end_time = ?, location = ?
+        SET day_of_week = ?, start_time = ?, end_time = ?, location = ?, orchestra_id = ?
         WHERE id = ? AND association_id = ?
-    `).run(dayOfWeek, startTime, endTime, location || null, id, req.user!.associationId);
+    `).run(dayOfWeek, startTime, endTime, location || null, orchestraId || null, id, req.user!.associationId);
 
     res.json({ message: 'Standaard repetitiedag bijgewerkt.' });
 }));
@@ -98,7 +114,7 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
     }
 
     const defaults = db.prepare(`
-        SELECT day_of_week, start_time, end_time, location
+        SELECT day_of_week, start_time, end_time, location, orchestra_id
         FROM rehearsal_default_days
         WHERE association_id = ?
     `).all(req.user!.associationId) as any[];
@@ -107,13 +123,13 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
         throw new ApiError(400, 'Geen standaard repetitiedagen ingesteld.');
     }
 
-    // Get existing rehearsals in the range to avoid duplicates
-    const existingDates = new Set(
-        (db.prepare(`
-            SELECT date FROM rehearsals
-            WHERE association_id = ? AND date >= ? AND date <= ?
-        `).all(req.user!.associationId, startDate, endDate) as any[]).map(r => r.date)
-    );
+    // Get existing rehearsals in the range to avoid duplicates (check date + orchestra_id combo)
+    const existingRehearsals = db.prepare(`
+        SELECT date, orchestra_id FROM rehearsals
+        WHERE association_id = ? AND date >= ? AND date <= ?
+    `).all(req.user!.associationId, startDate, endDate) as any[];
+
+    const existingSet = new Set(existingRehearsals.map(r => `${r.date}|${r.orchestra_id || ''}`));
 
     const created: string[] = [];
     const start = new Date(startDate);
@@ -123,15 +139,16 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
         const dayOfWeek = d.getDay();
         const dateStr = d.toISOString().split('T')[0];
 
-        if (existingDates.has(dateStr)) continue;
-
         const matching = defaults.filter(def => def.day_of_week === dayOfWeek);
         for (const def of matching) {
+            const key = `${dateStr}|${def.orchestra_id || ''}`;
+            if (existingSet.has(key)) continue;
+
             const id = uuidv4();
             db.prepare(`
-                INSERT INTO rehearsals (id, association_id, date, start_time, end_time, location, type, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, 'regular', ?)
-            `).run(id, req.user!.associationId, dateStr, def.start_time, def.end_time, def.location, req.user!.id);
+                INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?)
+            `).run(id, req.user!.associationId, def.orchestra_id || null, dateStr, def.start_time, def.end_time, def.location, req.user!.id);
             created.push(dateStr);
         }
     }
@@ -147,20 +164,38 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
 
 /**
  * GET /rehearsals - Get rehearsals (optionally filtered by date range)
+ * Regular members only see rehearsals for their orchestras (or orchestra_id=NULL which are for everyone)
+ * Managers see all rehearsals
  */
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { startDate, endDate } = req.query;
+    const isManager = REHEARSAL_MANAGERS.includes(req.user!.role);
 
     let sql = `
         SELECT r.*, u.first_name || ' ' || u.last_name as created_by_name,
+            o.name as orchestra_name,
             (SELECT COUNT(*) FROM rehearsal_pieces rp WHERE rp.rehearsal_id = r.id) as piece_count,
             (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'accepted') as accepted_count,
             (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count
         FROM rehearsals r
         LEFT JOIN users u ON r.created_by = u.id
+        LEFT JOIN orchestras o ON r.orchestra_id = o.id
         WHERE r.association_id = ?
     `;
     const params: any[] = [req.user!.associationId];
+
+    // Filter by user's orchestras for non-managers
+    if (!isManager) {
+        const orchestraIds = getUserOrchestraIds(req.user!.id);
+        if (orchestraIds.length > 0) {
+            const placeholders = orchestraIds.map(() => '?').join(', ');
+            sql += ` AND (r.orchestra_id IS NULL OR r.orchestra_id IN (${placeholders}))`;
+            params.push(...orchestraIds);
+        } else {
+            // User not in any orchestra - only see rehearsals without orchestra
+            sql += ' AND r.orchestra_id IS NULL';
+        }
+    }
 
     if (startDate) {
         sql += ' AND r.date >= ?';
@@ -185,9 +220,11 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
     const { id } = req.params;
 
     const rehearsal = db.prepare(`
-        SELECT r.*, u.first_name || ' ' || u.last_name as created_by_name
+        SELECT r.*, u.first_name || ' ' || u.last_name as created_by_name,
+            o.name as orchestra_name
         FROM rehearsals r
         LEFT JOIN users u ON r.created_by = u.id
+        LEFT JOIN orchestras o ON r.orchestra_id = o.id
         WHERE r.id = ? AND r.association_id = ?
     `).get(id, req.user!.associationId) as any;
 
@@ -216,7 +253,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  * POST /rehearsals - Create a rehearsal
  */
 router.post('/', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { date, startTime, endTime, location, type, notes } = req.body;
+    const { date, startTime, endTime, location, type, notes, orchestraId } = req.body;
 
     if (!date || !startTime || !endTime) {
         throw new ApiError(400, 'Datum, begin- en eindtijd zijn verplicht.');
@@ -227,15 +264,20 @@ router.post('/', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHan
         throw new ApiError(400, 'Ongeldig type. Gebruik regular, extra of cancelled.');
     }
 
+    if (orchestraId) {
+        const orch = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?').get(orchestraId, req.user!.associationId) as any;
+        if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
+    }
+
     const id = uuidv4();
     db.prepare(`
-        INSERT INTO rehearsals (id, association_id, date, start_time, end_time, location, type, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, req.user!.associationId, date, startTime, endTime, location || null, type || 'regular', notes || null, req.user!.id);
+        INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, req.user!.associationId, orchestraId || null, date, startTime, endTime, location || null, type || 'regular', notes || null, req.user!.id);
 
-    logger.info('Rehearsal created', { id, date, type, associationId: req.user!.associationId });
+    logger.info('Rehearsal created', { id, date, type, orchestraId, associationId: req.user!.associationId });
 
-    res.status(201).json({ id, date, startTime, endTime, location, type: type || 'regular', notes });
+    res.status(201).json({ id, date, startTime, endTime, location, type: type || 'regular', notes, orchestraId: orchestraId || null });
 }));
 
 /**
@@ -243,7 +285,7 @@ router.post('/', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHan
  */
 router.put('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { date, startTime, endTime, location, type, notes } = req.body;
+    const { date, startTime, endTime, location, type, notes, orchestraId } = req.body;
 
     const existing = db.prepare('SELECT id FROM rehearsals WHERE id = ? AND association_id = ?').get(id, req.user!.associationId) as any;
     if (!existing) {
@@ -252,9 +294,9 @@ router.put('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncH
 
     db.prepare(`
         UPDATE rehearsals
-        SET date = ?, start_time = ?, end_time = ?, location = ?, type = ?, notes = ?
+        SET date = ?, start_time = ?, end_time = ?, location = ?, type = ?, notes = ?, orchestra_id = ?
         WHERE id = ? AND association_id = ?
-    `).run(date, startTime, endTime, location || null, type || 'regular', notes || null, id, req.user!.associationId);
+    `).run(date, startTime, endTime, location || null, type || 'regular', notes || null, orchestraId || null, id, req.user!.associationId);
 
     res.json({ message: 'Repetitie bijgewerkt.' });
 }));

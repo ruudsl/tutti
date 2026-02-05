@@ -804,6 +804,8 @@
     "defaultDaysDescription": "Lege die Standardtage für wöchentliche Proben fest.",
     "addDefaultDay": "Tag hinzufügen",
     "noDefaultDays": "Keine Standard-Probentage konfiguriert.",
+    "orchestra": "Orchester",
+    "allOrchestras": "Alle Orchester",
     "generate": "Proben generieren",
     "generateDescription": "Erstelle Proben basierend auf den Standard-Probentagen.",
     "generateFrom": "Von Datum",

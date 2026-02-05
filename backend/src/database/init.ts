@@ -185,6 +185,20 @@ async function initializeDatabase() {
         // Table might not exist yet, which is fine
     }
 
+    // Migration: Add orchestra_id to rehearsals and rehearsal_default_days
+    try {
+        const rehearsalTableInfo = db.prepare("PRAGMA table_info(rehearsals)").all() as { name: string }[];
+        const hasOrchestraId = rehearsalTableInfo.some(col => col.name === 'orchestra_id');
+        if (!hasOrchestraId) {
+            console.log('Migration: Adding orchestra_id to rehearsals and rehearsal_default_days...');
+            db.prepare('ALTER TABLE rehearsals ADD COLUMN orchestra_id TEXT REFERENCES orchestras(id) ON DELETE SET NULL').run();
+            db.prepare('ALTER TABLE rehearsal_default_days ADD COLUMN orchestra_id TEXT REFERENCES orchestras(id) ON DELETE SET NULL').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Tables might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 
