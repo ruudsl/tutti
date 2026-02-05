@@ -26,10 +26,10 @@ const defaultGenres = [
 const instrumentsWithAliases = [
     { name: 'Alto Saxophone', tuning: 'Eb', aliases: ['Altsax', 'altsax', 'Alt Sax', 'Alt Saxofoon'] },
     { name: 'Tenor Saxophone', tuning: 'Bb', aliases: ['Tenorsax', 'tenorsax', 'Tenor Sax', 'Tenor Saxofoon'] },
-    { name: 'Baritone Saxophone', tuning: 'Eb', aliases: ['Baritonsax', 'baritonsax', 'Bari Sax', 'Bariton Saxofoon'] },
+    { name: 'Baritone Saxophone', tuning: 'Eb', aliases: ['Baritonsax', 'baritonsax', 'Bari Sax', 'Bariton Saxofoon', 'Bariton Saxophone'] },
     { name: 'Soprano Saxophone', tuning: 'Bb', aliases: ['Sopraansax', 'sopraansax', 'Sopraan Saxofoon'] },
     { name: 'Clarinet', tuning: 'Bb', aliases: ['Klarinet', 'klarinet', 'Bb Klarinet'] },
-    { name: 'Bass Clarinet', tuning: 'Bb', aliases: ['Basklarinet', 'basklarinet', 'Bas Klarinet'] },
+    { name: 'Bass Clarinet', tuning: 'Bb', aliases: ['Basklarinet', 'basklarinet', 'Bas Klarinet', 'Bas Clarinet'] },
     { name: 'Eb Clarinet', tuning: 'Eb', aliases: ['Es Klarinet', 'Eb Klarinet', 'Kleine Klarinet'] },
     { name: 'Flute', tuning: 'C', aliases: ['Fluit', 'fluit', 'Dwarsfluit'] },
     { name: 'Piccolo', tuning: 'C', aliases: ['piccolo', 'Pikkolofluit'] },
@@ -38,14 +38,14 @@ const instrumentsWithAliases = [
     { name: 'Trumpet', tuning: 'Bb', aliases: ['Trompet', 'trompet', 'Bb Trompet'] },
     { name: 'Cornet', tuning: 'Bb', aliases: ['Kornet', 'kornet', 'Bb Kornet'] },
     { name: 'Flugelhorn', tuning: 'Bb', aliases: ['Bugel', 'bugel', 'Flugel'] },
-    { name: 'French Horn', tuning: 'F', aliases: ['Hoorn', 'hoorn', 'F Hoorn', 'Waldhoorn'] },
+    { name: 'French Horn', tuning: 'F', aliases: ['Hoorn', 'hoorn', 'F Hoorn', 'Waldhoorn', 'Horn'] },
     { name: 'Trombone', tuning: 'C', aliases: ['Schuiftrombone', 'trombone', 'Tenor Trombone'] },
     { name: 'Bass Trombone', tuning: 'C', aliases: ['Bastrombone', 'bastrombone'] },
-    { name: 'Euphonium', tuning: 'Bb', aliases: ['Bariton', 'bariton', 'Eufonium'] },
+    { name: 'Euphonium', tuning: 'Bb', aliases: ['Bariton', 'bariton', 'Eufonium', 'Baritone'] },
     { name: 'Tuba', tuning: 'C', aliases: ['tuba', 'Bas Tuba', 'C Tuba'] },
     { name: 'Tuba', tuning: 'Bb', aliases: ['BBb Tuba', 'Bb Tuba'] },
     { name: 'Tuba', tuning: 'Eb', aliases: ['Eb Tuba', 'Es Tuba'] },
-    { name: 'Percussion', tuning: null, aliases: ['Slagwerk', 'slagwerk', 'Drums', 'Percussie'] },
+    { name: 'Percussion', tuning: null, aliases: ['Slagwerk', 'slagwerk', 'Drums', 'Percussie', 'Drumset', 'Bongo', 'Glockenspiel', 'Mallet Percussion', 'Shaker', 'Vibraphone'] },
     { name: 'Timpani', tuning: null, aliases: ['Pauken', 'pauken'] },
     { name: 'Mallets', tuning: 'C', aliases: ['Klokkenspel', 'Xylofoon', 'Marimba', 'Vibrafoon'] },
     { name: 'String Bass', tuning: 'C', aliases: ['Contrabas', 'contrabas', 'Double Bass'] },
@@ -53,6 +53,9 @@ const instrumentsWithAliases = [
     { name: 'Guitar', tuning: null, aliases: ['Gitaar', 'gitaar'] },
     { name: 'Piano', tuning: 'C', aliases: ['piano', 'Keyboard'] },
     { name: 'Harp', tuning: 'C', aliases: ['harp'] },
+    { name: 'Conductor', tuning: null, aliases: ['Score', 'Full score', 'Full Score'] },
+    { name: 'Alto Clarinet', tuning: 'Eb', aliases: ['Altklarinet', 'Alt Klarinet'] },
+    { name: 'Vocals', tuning: null, aliases: ['Voice'] },
 ];
 
 async function initializeDatabase() {
@@ -197,6 +200,58 @@ async function initializeDatabase() {
         }
     } catch (e) {
         // Tables might not exist yet
+    }
+
+    // Migration: Add new instruments and aliases
+    try {
+        const addAliasIfNotExists = (instrumentName: string, tuning: string | null, alias: string) => {
+            const instrument = db.prepare(
+                tuning !== null
+                    ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
+                    : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL'
+            ).get(...(tuning !== null ? [instrumentName, tuning] : [instrumentName])) as { id: string } | undefined;
+            if (!instrument) return;
+            const existing = db.prepare(
+                'SELECT id FROM instrument_aliases WHERE instrument_id = ? AND alias = ?'
+            ).get(instrument.id, alias);
+            if (!existing) {
+                db.prepare('INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)').run(uuidv4(), instrument.id, alias);
+            }
+        };
+
+        const addInstrumentIfNotExists = (name: string, tuning: string | null, aliases: string[]) => {
+            const existing = db.prepare(
+                tuning !== null
+                    ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
+                    : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL'
+            ).get(...(tuning !== null ? [name, tuning] : [name])) as { id: string } | undefined;
+            if (existing) return;
+            const instrumentId = uuidv4();
+            db.prepare('INSERT INTO instruments (id, name, tuning) VALUES (?, ?, ?)').run(instrumentId, name, tuning);
+            for (const alias of aliases) {
+                db.prepare('INSERT INTO instrument_aliases (id, instrument_id, alias) VALUES (?, ?, ?)').run(uuidv4(), instrumentId, alias);
+            }
+            console.log(`Migration: Added instrument ${name}`);
+        };
+
+        // New aliases for existing instruments
+        addAliasIfNotExists('Baritone Saxophone', 'Eb', 'Bariton Saxophone');
+        addAliasIfNotExists('French Horn', 'F', 'Horn');
+        addAliasIfNotExists('Percussion', null, 'Drumset');
+        addAliasIfNotExists('Percussion', null, 'Bongo');
+        addAliasIfNotExists('Percussion', null, 'Glockenspiel');
+        addAliasIfNotExists('Percussion', null, 'Mallet Percussion');
+        addAliasIfNotExists('Percussion', null, 'Shaker');
+        addAliasIfNotExists('Percussion', null, 'Vibraphone');
+        addAliasIfNotExists('Bass Clarinet', 'Bb', 'Bas Clarinet');
+        addAliasIfNotExists('Euphonium', 'Bb', 'Baritone');
+
+        // New instruments
+        addInstrumentIfNotExists('Conductor', null, ['Score', 'Full score', 'Full Score']);
+        addInstrumentIfNotExists('Alto Clarinet', 'Eb', ['Altklarinet', 'Alt Klarinet']);
+        addInstrumentIfNotExists('Vocals', null, ['Voice']);
+    } catch (e) {
+        console.error('Migration: Error adding new instruments/aliases', e);
     }
 
     // Migration: Add microsoft_id to users and microsoft_config to associations
