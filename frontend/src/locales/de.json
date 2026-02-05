@@ -53,12 +53,14 @@
     "orchestras": "Orchester",
     "settings": "Einstellungen",
     "theme": "Design",
+    "rehearsals": "Proben",
     "logout": "Abmelden",
     "profile": "Profil"
   },
   "roles": {
     "admin": "Administrator",
     "music_committee": "Musikkommission",
+    "conductor": "Dirigent",
     "member": "Mitglied"
   },
   "auth": {
@@ -764,6 +766,71 @@
       "mono": "Monospace"
     }
   },
+  "rehearsals": {
+    "title": "Proben",
+    "upcoming": "Kommende Proben",
+    "past": "Vergangene Proben",
+    "noRehearsals": "Keine Proben geplant.",
+    "addRehearsal": "Probe hinzufügen",
+    "editRehearsal": "Probe bearbeiten",
+    "deleteRehearsal": "Probe löschen",
+    "deleteConfirm": "Bist du sicher, dass du diese Probe löschen möchtest?",
+    "date": "Datum",
+    "time": "Zeit",
+    "startTime": "Startzeit",
+    "endTime": "Endzeit",
+    "location": "Ort",
+    "notes": "Notizen",
+    "type": "Typ",
+    "types": {
+      "regular": "Regulär",
+      "extra": "Extra",
+      "cancelled": "Abgesagt"
+    },
+    "pieces": "Repertoire",
+    "piecesDescription": "Stücke für diese Probe.",
+    "addPiece": "Stück hinzufügen",
+    "pieceTitle": "Titel",
+    "pieceNotes": "Hinweise Dirigent",
+    "pieceNotesPlaceholder": "Z.B. Achte auf Takt 45-60, Dynamik...",
+    "noPieces": "Noch keine Stücke hinzugefügt.",
+    "savePieces": "Repertoire speichern",
+    "piecesSaved": "Repertoire gespeichert",
+    "attendance": "Anwesenheit",
+    "attendanceAccepted": "Anwesend",
+    "attendanceDeclined": "Abgemeldet",
+    "attendanceWaiting": "Unbekannt",
+    "defaultDays": "Standard-Probentage",
+    "defaultDaysDescription": "Lege die Standardtage für wöchentliche Proben fest.",
+    "addDefaultDay": "Tag hinzufügen",
+    "noDefaultDays": "Keine Standard-Probentage konfiguriert.",
+    "generate": "Proben generieren",
+    "generateDescription": "Erstelle Proben basierend auf den Standard-Probentagen.",
+    "generateFrom": "Von Datum",
+    "generateTo": "Bis Datum",
+    "generateButton": "Generieren",
+    "generated": "{{count}} Proben erstellt",
+    "days": {
+      "0": "Sonntag",
+      "1": "Montag",
+      "2": "Dienstag",
+      "3": "Mittwoch",
+      "4": "Donnerstag",
+      "5": "Freitag",
+      "6": "Samstag"
+    },
+    "saved": "Probe gespeichert",
+    "deleted": "Probe gelöscht",
+    "created": "Probe erstellt",
+    "errorSaving": "Fehler beim Speichern der Probe",
+    "spond": {
+      "title": "Spond-Verknüpfung",
+      "description": "Verbinde mit Spond für automatische Anwesenheitssynchronisation.",
+      "notConfigured": "Spond ist noch nicht konfiguriert.",
+      "connected": "Mit Spond verbunden",
+      "syncNow": "Jetzt synchronisieren"
+    }
+  },
   "accessibility": {
     "skipToContent": "Zum Inhalt springen",
     "mainNavigation": "Hauptnavigation",
@@ -800,7 +867,8 @@
     "lists": "Musiklisten - Harmonie",
     "notFound": "Seite nicht gefunden - Harmonie",
     "settings": "Einstellungen - Harmonie",
-    "theme": "Design - Harmonie"
+    "theme": "Design - Harmonie",
+    "rehearsals": "Proben - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, member
+    role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, conductor, member
     association_id TEXT,
     mfa_secret TEXT, -- TOTP secret for MFA
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
@@ -247,4 +247,73 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, 
 CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+
+-- Standaard repetitiedagen (wekelijks terugkerend)
+CREATE TABLE IF NOT EXISTS rehearsal_default_days (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    day_of_week INTEGER NOT NULL, -- 0=zondag, 1=maandag, ..., 6=zaterdag
+    start_time TEXT NOT NULL, -- HH:MM formaat
+    end_time TEXT NOT NULL,   -- HH:MM formaat
+    location TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Repetities (individuele afspraken, inclusief extra en vervallen)
+CREATE TABLE IF NOT EXISTS rehearsals (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    date TEXT NOT NULL, -- YYYY-MM-DD formaat
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    location TEXT,
+    type TEXT NOT NULL DEFAULT 'regular', -- regular, extra, cancelled
+    notes TEXT,
+    spond_event_id TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Stukken die tijdens een repetitie geoefend worden
+CREATE TABLE IF NOT EXISTS rehearsal_pieces (
+    id TEXT PRIMARY KEY,
+    rehearsal_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    notes TEXT, -- Aanwijzingen van de dirigent
+    sort_order INTEGER DEFAULT 0,
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE
+);
+
+-- Spond-integratie configuratie
+CREATE TABLE IF NOT EXISTS spond_config (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL,
+    password_encrypted TEXT NOT NULL,
+    group_id TEXT, -- Spond groep-ID om te synchroniseren
+    sync_enabled BOOLEAN DEFAULT 0,
+    last_sync DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Spond aanwezigheid per repetitie
+CREATE TABLE IF NOT EXISTS rehearsal_attendance (
+    id TEXT PRIMARY KEY,
+    rehearsal_id TEXT NOT NULL,
+    user_id TEXT,
+    spond_member_id TEXT, -- Voor leden die alleen in Spond staan
+    member_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'unknown', -- accepted, declined, waiting, unknown
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rehearsals_association ON rehearsals(association_id);
+CREATE INDEX IF NOT EXISTS idx_rehearsals_date ON rehearsals(date);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_pieces_rehearsal ON rehearsal_pieces(rehearsal_id);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_attendance_rehearsal ON rehearsal_attendance(rehearsal_id);
 `;

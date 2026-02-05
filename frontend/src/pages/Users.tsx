@@ -132,6 +132,8 @@ export default function Users() {
         return <span className="badge badge-danger">{t('roles.admin')}</span>;
       case 'music_committee':
         return <span className="badge badge-warning">{t('roles.music_committee')}</span>;
+      case 'conductor':
+        return <span className="badge badge-success">{t('roles.conductor')}</span>;
       default:
         return <span className="badge badge-primary">{t('roles.member')}</span>;
     }
@@ -499,6 +501,7 @@ function UserForm({
           onChange={(e) => setFormRole(e.target.value)}
         >
           <option value="member">{t('roles.member')}</option>
+          <option value="conductor">{t('roles.conductor')}</option>
           <option value="music_committee">{t('roles.music_committee')}</option>
           <option value="admin">{t('roles.admin')}</option>
         </select>

@@ -127,6 +127,11 @@ export default function Layout() {
               </NavLink>
             </li>
             <li>
+              <NavLink to="/rehearsals" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                {t('nav.rehearsals')}
+              </NavLink>
+            </li>
+            <li>
               <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 {t('nav.tools')}
               </NavLink>

@@ -53,12 +53,14 @@
     "orchestras": "Orchestras",
     "settings": "Settings",
     "theme": "Theme",
+    "rehearsals": "Rehearsals",
     "logout": "Logout",
     "profile": "Profile"
   },
   "roles": {
     "admin": "Administrator",
     "music_committee": "Music Committee",
+    "conductor": "Conductor",
     "member": "Member"
   },
   "auth": {
@@ -764,6 +766,71 @@
       "mono": "Monospace"
     }
   },
+  "rehearsals": {
+    "title": "Rehearsals",
+    "upcoming": "Upcoming rehearsals",
+    "past": "Past rehearsals",
+    "noRehearsals": "No rehearsals scheduled.",
+    "addRehearsal": "Add rehearsal",
+    "editRehearsal": "Edit rehearsal",
+    "deleteRehearsal": "Delete rehearsal",
+    "deleteConfirm": "Are you sure you want to delete this rehearsal?",
+    "date": "Date",
+    "time": "Time",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "location": "Location",
+    "notes": "Notes",
+    "type": "Type",
+    "types": {
+      "regular": "Regular",
+      "extra": "Extra",
+      "cancelled": "Cancelled"
+    },
+    "pieces": "Repertoire",
+    "piecesDescription": "Pieces to rehearse during this session.",
+    "addPiece": "Add piece",
+    "pieceTitle": "Title",
+    "pieceNotes": "Conductor notes",
+    "pieceNotesPlaceholder": "E.g. Focus on bars 45-60, dynamics...",
+    "noPieces": "No pieces added yet.",
+    "savePieces": "Save repertoire",
+    "piecesSaved": "Repertoire saved",
+    "attendance": "Attendance",
+    "attendanceAccepted": "Present",
+    "attendanceDeclined": "Absent",
+    "attendanceWaiting": "Unknown",
+    "defaultDays": "Default rehearsal days",
+    "defaultDaysDescription": "Set the default days for weekly rehearsals.",
+    "addDefaultDay": "Add day",
+    "noDefaultDays": "No default rehearsal days configured.",
+    "generate": "Generate rehearsals",
+    "generateDescription": "Create rehearsals based on the default rehearsal days.",
+    "generateFrom": "From date",
+    "generateTo": "To date",
+    "generateButton": "Generate",
+    "generated": "{{count}} rehearsals created",
+    "days": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    },
+    "saved": "Rehearsal saved",
+    "deleted": "Rehearsal deleted",
+    "created": "Rehearsal created",
+    "errorSaving": "Error saving rehearsal",
+    "spond": {
+      "title": "Spond integration",
+      "description": "Connect with Spond to automatically sync attendance.",
+      "notConfigured": "Spond is not configured yet.",
+      "connected": "Connected to Spond",
+      "syncNow": "Sync now"
+    }
+  },
   "accessibility": {
     "skipToContent": "Skip to content",
     "mainNavigation": "Main navigation",
@@ -800,7 +867,8 @@
     "lists": "Music Lists - Harmonie",
     "notFound": "Page Not Found - Harmonie",
     "settings": "Settings - Harmonie",
-    "theme": "Theme - Harmonie"
+    "theme": "Theme - Harmonie",
+    "rehearsals": "Rehearsals - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",

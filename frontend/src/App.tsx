@@ -31,6 +31,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
+import Rehearsals from './pages/Rehearsals';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -225,6 +226,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <ThemeSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="rehearsals"
+          element={
+            <PrivateRoute>
+              <Rehearsals />
             </PrivateRoute>
           }
         />

@@ -4,6 +4,7 @@
 export const ROLES = {
   ADMIN: 'admin',
   MUSIC_COMMITTEE: 'music_committee',
+  CONDUCTOR: 'conductor',
   MEMBER: 'member',
 } as const;
 

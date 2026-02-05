@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -637,6 +637,69 @@ export const removeLogo = async (): Promise<void> => {
 // Theme
 export const updateTheme = async (theme: ThemeSettings | null): Promise<void> => {
   await api.put('/settings/theme', { theme });
+};
+
+// Rehearsals
+export const getRehearsals = async (startDate?: string, endDate?: string): Promise<Rehearsal[]> => {
+  const params: Record<string, string> = {};
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  const { data } = await api.get('/rehearsals', { params });
+  return data;
+};
+
+export const getRehearsal = async (id: string): Promise<RehearsalDetail> => {
+  const { data } = await api.get(`/rehearsals/${id}`);
+  return data;
+};
+
+export const createRehearsal = async (rehearsal: {
+  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string;
+}): Promise<any> => {
+  const { data } = await api.post('/rehearsals', rehearsal);
+  return data;
+};
+
+export const updateRehearsal = async (id: string, rehearsal: {
+  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string;
+}): Promise<void> => {
+  await api.put(`/rehearsals/${id}`, rehearsal);
+};
+
+export const deleteRehearsal = async (id: string): Promise<void> => {
+  await api.delete(`/rehearsals/${id}`);
+};
+
+export const updateRehearsalPieces = async (id: string, pieces: { title: string; notes?: string }[]): Promise<void> => {
+  await api.put(`/rehearsals/${id}/pieces`, { pieces });
+};
+
+// Rehearsal Default Days
+export const getDefaultDays = async (): Promise<RehearsalDefaultDay[]> => {
+  const { data } = await api.get('/rehearsals/default-days');
+  return data;
+};
+
+export const addDefaultDay = async (day: {
+  dayOfWeek: number; startTime: string; endTime: string; location?: string;
+}): Promise<RehearsalDefaultDay> => {
+  const { data } = await api.post('/rehearsals/default-days', day);
+  return data;
+};
+
+export const updateDefaultDay = async (id: string, day: {
+  dayOfWeek: number; startTime: string; endTime: string; location?: string;
+}): Promise<void> => {
+  await api.put(`/rehearsals/default-days/${id}`, day);
+};
+
+export const deleteDefaultDay = async (id: string): Promise<void> => {
+  await api.delete(`/rehearsals/default-days/${id}`);
+};
+
+export const generateRehearsals = async (startDate: string, endDate: string): Promise<{ count: number }> => {
+  const { data } = await api.post('/rehearsals/generate', { startDate, endDate });
+  return data;
 };
 
 export default api;

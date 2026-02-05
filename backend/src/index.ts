@@ -36,6 +36,7 @@ import pdfToolsRoutes from './routes/pdf-tools';
 import loansRoutes from './routes/loans';
 import activityRoutes from './routes/activity';
 import settingsRoutes from './routes/settings';
+import rehearsalRoutes from './routes/rehearsals';
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use('/api/pdf-tools', pdfToolsRoutes);
 app.use('/api/loans', loansRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/rehearsals', rehearsalRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

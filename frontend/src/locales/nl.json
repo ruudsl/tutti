@@ -53,12 +53,14 @@
     "orchestras": "Orkesten",
     "settings": "Instellingen",
     "theme": "Thema",
+    "rehearsals": "Repetities",
     "logout": "Uitloggen",
     "profile": "Profiel"
   },
   "roles": {
     "admin": "Beheerder",
     "music_committee": "Muziekcommissie",
+    "conductor": "Dirigent",
     "member": "Lid"
   },
   "auth": {
@@ -754,6 +756,71 @@
       "mono": "Monospace"
     }
   },
+  "rehearsals": {
+    "title": "Repetities",
+    "upcoming": "Komende repetities",
+    "past": "Afgelopen repetities",
+    "noRehearsals": "Geen repetities gepland.",
+    "addRehearsal": "Repetitie toevoegen",
+    "editRehearsal": "Repetitie bewerken",
+    "deleteRehearsal": "Repetitie verwijderen",
+    "deleteConfirm": "Weet je zeker dat je deze repetitie wilt verwijderen?",
+    "date": "Datum",
+    "time": "Tijd",
+    "startTime": "Begintijd",
+    "endTime": "Eindtijd",
+    "location": "Locatie",
+    "notes": "Notities",
+    "type": "Type",
+    "types": {
+      "regular": "Regulier",
+      "extra": "Extra",
+      "cancelled": "Vervallen"
+    },
+    "pieces": "Repertoire",
+    "piecesDescription": "Stukken die geoefend worden tijdens deze repetitie.",
+    "addPiece": "Stuk toevoegen",
+    "pieceTitle": "Titel",
+    "pieceNotes": "Aanwijzingen dirigent",
+    "pieceNotesPlaceholder": "Bijv. Let op maat 45-60, dynamiek...",
+    "noPieces": "Nog geen stukken toegevoegd.",
+    "savePieces": "Repertoire opslaan",
+    "piecesSaved": "Repertoire opgeslagen",
+    "attendance": "Aanwezigheid",
+    "attendanceAccepted": "Aanwezig",
+    "attendanceDeclined": "Afgemeld",
+    "attendanceWaiting": "Onbekend",
+    "defaultDays": "Standaard repetitiedagen",
+    "defaultDaysDescription": "Stel in op welke dagen er standaard gerepeteerd wordt.",
+    "addDefaultDay": "Dag toevoegen",
+    "noDefaultDays": "Geen standaard repetitiedagen ingesteld.",
+    "generate": "Repetities genereren",
+    "generateDescription": "Maak repetities aan op basis van de standaard repetitiedagen.",
+    "generateFrom": "Van datum",
+    "generateTo": "Tot datum",
+    "generateButton": "Genereren",
+    "generated": "{{count}} repetities aangemaakt",
+    "days": {
+      "0": "Zondag",
+      "1": "Maandag",
+      "2": "Dinsdag",
+      "3": "Woensdag",
+      "4": "Donderdag",
+      "5": "Vrijdag",
+      "6": "Zaterdag"
+    },
+    "saved": "Repetitie opgeslagen",
+    "deleted": "Repetitie verwijderd",
+    "created": "Repetitie aangemaakt",
+    "errorSaving": "Fout bij opslaan repetitie",
+    "spond": {
+      "title": "Spond-koppeling",
+      "description": "Koppel met Spond om aanwezigheid automatisch te synchroniseren.",
+      "notConfigured": "Spond is nog niet geconfigureerd.",
+      "connected": "Verbonden met Spond",
+      "syncNow": "Nu synchroniseren"
+    }
+  },
   "accessibility": {
     "skipToContent": "Ga naar inhoud",
     "mainNavigation": "Hoofdnavigatie",
@@ -790,7 +857,8 @@
     "lists": "Muzieklijsten - Harmonie",
     "notFound": "Pagina niet gevonden - Harmonie",
     "settings": "Instellingen - Harmonie",
-    "theme": "Thema - Harmonie"
+    "theme": "Thema - Harmonie",
+    "rehearsals": "Repetities - Harmonie"
   },
   "errorBoundary": {
     "title": "Er is iets misgegaan",

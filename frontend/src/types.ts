@@ -3,7 +3,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'music_committee' | 'member';
+  role: 'admin' | 'music_committee' | 'conductor' | 'member';
   associationId: string | null;
   associationName?: string;
   mfaEnabled?: boolean;
@@ -118,6 +118,50 @@ export interface ThemeSettings {
   fontFamily?: string;
   fontSizeBase?: number;
   borderRadius?: number;
+}
+
+export interface RehearsalDefaultDay {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+}
+
+export interface Rehearsal {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  type: 'regular' | 'extra' | 'cancelled';
+  notes: string | null;
+  spond_event_id: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  piece_count: number;
+  accepted_count: number;
+  declined_count: number;
+}
+
+export interface RehearsalPiece {
+  id: string;
+  title: string;
+  notes: string | null;
+  sort_order: number;
+}
+
+export interface RehearsalAttendance {
+  id: string;
+  user_id: string | null;
+  spond_member_id: string | null;
+  member_name: string;
+  status: 'accepted' | 'declined' | 'waiting' | 'unknown';
+}
+
+export interface RehearsalDetail extends Rehearsal {
+  pieces: RehearsalPiece[];
+  attendance: RehearsalAttendance[];
 }
 
 export interface AuthResponse {
