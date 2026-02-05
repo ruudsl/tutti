@@ -44,12 +44,11 @@ export function Metronome({ compact = false }: MetronomeProps) {
 
     // Accent on first beat of measure
     osc.frequency.value = isAccent ? 1000 : 800;
-    gainNode.gain.value = isAccent ? 1 : 0.5;
+    gainNode.gain.setValueAtTime(isAccent ? 1 : 0.5, time);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
 
     osc.start(time);
     osc.stop(time + 0.05);
-
-    gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
   }, []);
 
   const scheduleNote = useCallback((beatNumber: number, time: number) => {
