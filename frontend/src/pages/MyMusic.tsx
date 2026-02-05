@@ -13,6 +13,12 @@ interface TitleGroup {
   pieces: MusicPiece[];
 }
 
+interface OrchestraGroup {
+  orchestraId: string;
+  orchestraName: string;
+  lists: MusicList[];
+}
+
 export default function MyMusic() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.myMusic');
@@ -29,6 +35,23 @@ export default function MyMusic() {
   const [issuePageNumber, setIssuePageNumber] = useState('');
   const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
+  // Group lists by orchestra
+  const orchestraGroups = useMemo((): OrchestraGroup[] => {
+    const groups = new Map<string, OrchestraGroup>();
+    for (const list of lists) {
+      const key = list.orchestraId;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          orchestraId: key,
+          orchestraName: list.orchestraName || key,
+          lists: [],
+        });
+      }
+      groups.get(key)!.lists.push(list);
+    }
+    return Array.from(groups.values());
+  }, [lists]);
 
   // Group pieces by title
   const titleGroups = useMemo((): TitleGroup[] => {
@@ -382,26 +405,41 @@ export default function MyMusic() {
     );
   }
 
-  // Show lists overview - use titleCount instead of pieceCount
+  // Show lists overview - grouped by orchestra
   return (
     <div>
       <h1 className="mb-3">{t('myMusic.title')}</h1>
 
-      {lists.length > 0 ? (
-        <div className="grid grid-3">
-          {lists.map((list) => (
-            <div key={list.id} className="card">
+      {orchestraGroups.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {orchestraGroups.map((group) => (
+            <div key={group.orchestraId} className="card">
+              <div className="card-header">
+                <h2 className="card-title">{group.orchestraName}</h2>
+              </div>
               <div className="card-body">
-                <h3 className="piece-title">{list.name}</h3>
-                <p className="piece-meta mb-2">
-                  {list.orchestraName} • {list.titleCount || 0} {t('myMusic.titlesForYou')}
-                </p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleSelectList(list.id)}
-                >
-                  {t('myMusic.viewMusic')}
-                </button>
+                <div className="grid grid-3">
+                  {group.lists.map((list) => (
+                    <div
+                      key={list.id}
+                      className="card"
+                      style={{ border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                    >
+                      <div className="card-body">
+                        <h3 className="piece-title">{list.name}</h3>
+                        <p className="piece-meta mb-2">
+                          {list.titleCount || 0} {t('myMusic.titlesForYou')}
+                        </p>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleSelectList(list.id)}
+                        >
+                          {t('myMusic.viewMusic')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
