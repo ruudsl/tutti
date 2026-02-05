@@ -62,6 +62,9 @@ router.post('/login', asyncHandler(async (req, res) => {
         }
     }
 
+    // Update last login timestamp
+    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
+
     // Generate token and return user data
     const token = generateToken(user);
 

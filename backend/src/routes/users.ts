@@ -58,7 +58,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
 
     // Get paginated users
     const users = db.prepare(`
-        SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id, u.created_at,
+        SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id, u.created_at, u.last_login,
                a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
@@ -92,6 +92,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
             associationId: user.association_id,
             associationName: user.association_name,
             createdAt: user.created_at,
+            lastLogin: user.last_login,
             instruments,
             orchestras,
         };

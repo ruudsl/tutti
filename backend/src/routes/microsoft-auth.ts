@@ -194,6 +194,9 @@ router.post('/callback', asyncHandler(async (req: Request, res: Response) => {
         throw new ApiError(400, 'Geen account gevonden met dit e-mailadres. Neem contact op met de beheerder.');
     }
 
+    // Update last login timestamp
+    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
+
     // Generate JWT token
     const token = generateToken(user);
 

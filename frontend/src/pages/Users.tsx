@@ -264,6 +264,7 @@ export default function Users() {
                 <th>{t('users.table.role')}</th>
                 <th>{t('users.table.instruments')}</th>
                 <th>{t('users.table.orchestras')}</th>
+                <th>{t('users.table.lastLogin')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -294,6 +295,11 @@ export default function Users() {
                         <span key={o.id} className="tag">{o.name}</span>
                       )) || '-'}
                     </div>
+                  </td>
+                  <td className="text-light" style={{ whiteSpace: 'nowrap', fontSize: '0.85em' }}>
+                    {user.lastLogin
+                      ? new Date(user.lastLogin).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                      : '-'}
                   </td>
                   <td>
                     <div className="flex gap-1">

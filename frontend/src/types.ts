@@ -7,6 +7,7 @@ export interface User {
   associationId: string | null;
   associationName?: string;
   mfaEnabled?: boolean;
+  lastLogin?: string | null;
   instruments?: Instrument[];
   orchestras?: Orchestra[];
 }

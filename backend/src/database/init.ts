@@ -346,6 +346,19 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add last_login column to users
+    try {
+        const usersLoginInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasLastLogin = usersLoginInfo.some(col => col.name === 'last_login');
+        if (!hasLastLogin) {
+            console.log('Migration: Adding last_login column to users...');
+            db.prepare('ALTER TABLE users ADD COLUMN last_login DATETIME').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

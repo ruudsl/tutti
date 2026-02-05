@@ -593,7 +593,8 @@
       "email": "Email",
       "role": "Rol",
       "instruments": "Instrumenten",
-      "orchestras": "Orkesten"
+      "orchestras": "Orkesten",
+      "lastLogin": "Laatste login"
     },
     "delete": {
       "title": "Lid verwijderen",

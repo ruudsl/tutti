@@ -603,7 +603,8 @@
       "email": "Email",
       "role": "Role",
       "instruments": "Instruments",
-      "orchestras": "Orchestras"
+      "orchestras": "Orchestras",
+      "lastLogin": "Last login"
     },
     "delete": {
       "title": "Delete member",
