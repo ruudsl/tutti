@@ -10,8 +10,8 @@ import logger from '../utils/logger';
 
 const router = Router();
 
-// Logo upload configuration
-const logoDir = path.join(config.uploadDir, 'logos');
+// Logo upload configuration - use absolute path for res.sendFile compatibility
+const logoDir = path.resolve(config.uploadDir, 'logos');
 if (!fs.existsSync(logoDir)) {
     fs.mkdirSync(logoDir, { recursive: true });
 }
