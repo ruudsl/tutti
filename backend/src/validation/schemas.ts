@@ -17,7 +17,7 @@ export const createUserSchema = z.object({
     password: z.string().min(6, 'Wachtwoord moet minimaal 6 tekens zijn.'),
     firstName: z.string().min(1, 'Voornaam is verplicht.'),
     lastName: z.string().min(1, 'Achternaam is verplicht.'),
-    role: z.enum(['admin', 'music_committee', 'member']).optional().default('member'),
+    role: z.enum(['admin', 'music_committee', 'conductor', 'member']).optional().default('member'),
     instrumentIds: z.array(z.string().uuid()).optional(),
     orchestraIds: z.array(z.string().uuid()).optional(),
 });
@@ -27,7 +27,7 @@ export const updateUserSchema = z.object({
     password: z.string().min(6, 'Wachtwoord moet minimaal 6 tekens zijn.').optional(),
     firstName: z.string().min(1, 'Voornaam is verplicht.').optional(),
     lastName: z.string().min(1, 'Achternaam is verplicht.').optional(),
-    role: z.enum(['admin', 'music_committee', 'member']).optional(),
+    role: z.enum(['admin', 'music_committee', 'conductor', 'member']).optional(),
     instrumentIds: z.array(z.string().uuid()).optional(),
     orchestraIds: z.array(z.string().uuid()).optional(),
 });
