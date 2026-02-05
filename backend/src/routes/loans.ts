@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
 // Get all loans
 router.get('/', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { status } = req.query;
 
   let query = `
@@ -52,7 +52,7 @@ router.get('/', authenticateToken, requireRole('music_committee', 'admin'), (req
 
 // Get loan statistics
 router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
 
   try {
     const stats = db.prepare(`
@@ -87,7 +87,7 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
 
 // Get titles available for lending
 router.get('/available-titles', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { search } = req.query;
 
   let query = `
@@ -120,7 +120,7 @@ router.get('/available-titles', authenticateToken, requireRole('music_committee'
 
 // Create a new loan
 router.post('/', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { musicTitleId, borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
 
   if (!musicTitleId || !borrowerName) {
@@ -172,7 +172,7 @@ router.post('/', authenticateToken, requireRole('music_committee', 'admin'), (re
 
 // Update a loan
 router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { id } = req.params;
   const { borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
 
@@ -225,7 +225,7 @@ router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), (
 
 // Return a loan
 router.post('/:id/return', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { id } = req.params;
 
   // Verify the loan exists and belongs to user's association
@@ -270,7 +270,7 @@ router.post('/:id/return', authenticateToken, requireRole('music_committee', 'ad
 
 // Delete a loan
 router.delete('/:id', authenticateToken, requireRole('admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { id } = req.params;
 
   // Verify the loan exists and belongs to user's association

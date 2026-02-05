@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
 // Get all issues (for music committee/admin)
 router.get('/', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { status, pieceId } = req.query;
 
   let query = `
@@ -60,7 +60,7 @@ router.get('/', authenticateToken, requireRole('music_committee', 'admin'), (req
 
 // Get my reported issues (for regular members)
 router.get('/my-issues', authenticateToken, (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
 
   const query = `
     SELECT
@@ -94,7 +94,7 @@ router.get('/my-issues', authenticateToken, (req: Request, res: Response) => {
 
 // Get issue statistics
 router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
 
   try {
     const stats = db.prepare(`
@@ -118,7 +118,7 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
 
 // Create a new issue
 router.post('/', authenticateToken, (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { musicPieceId, pageNumber, measureNumber, description } = req.body;
 
   if (!musicPieceId || !description) {
@@ -164,7 +164,7 @@ router.post('/', authenticateToken, (req: Request, res: Response) => {
 
 // Update issue status (music committee/admin only)
 router.patch('/:id/status', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { id } = req.params;
   const { status, resolutionNotes } = req.body;
 
@@ -221,7 +221,7 @@ router.patch('/:id/status', authenticateToken, requireRole('music_committee', 'a
 
 // Delete issue (admin only or reporter can delete their own open issues)
 router.delete('/:id', authenticateToken, (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { id } = req.params;
 
   const issue = db.prepare(`

@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
 // Log an activity
 router.post('/log', authenticateToken, (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { actionType, entityType, entityId, metadata } = req.body;
 
   if (!actionType || !entityType || !entityId) {
@@ -30,7 +30,7 @@ router.post('/log', authenticateToken, (req: Request, res: Response) => {
 
 // Get activity statistics
 router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { period = '30' } = req.query;
 
   const days = parseInt(period as string) || 30;
@@ -116,7 +116,7 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
 
 // Get recent activity feed
 router.get('/feed', authenticateToken, requireRole('music_committee', 'admin'), (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthRequest;
   const { limit = '50' } = req.query;
 
   try {
