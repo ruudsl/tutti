@@ -64,8 +64,17 @@ export default function Layout() {
   const { t } = useTranslation();
   const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
 
-  useEffect(() => {
+  const loadBrandSettings = () => {
     getSettings().then(setBrandSettings).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadBrandSettings();
+
+    // Refresh brand when settings are updated from the Settings page
+    const handler = () => loadBrandSettings();
+    window.addEventListener('settings-updated', handler);
+    return () => window.removeEventListener('settings-updated', handler);
   }, []);
 
   const handleLogout = () => {

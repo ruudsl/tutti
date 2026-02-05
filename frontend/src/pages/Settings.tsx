@@ -38,6 +38,7 @@ export default function Settings() {
       await updateSettings({ displayName: displayName.trim() || undefined });
       showSuccess(t('settings.saved'));
       await loadSettings();
+      window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorSaving'));
     } finally {
@@ -67,6 +68,7 @@ export default function Settings() {
       await uploadLogo(file);
       showSuccess(t('settings.logoUploaded'));
       await loadSettings();
+      window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorUploadingLogo'));
     } finally {
@@ -84,6 +86,7 @@ export default function Settings() {
       await removeLogo();
       showSuccess(t('settings.logoRemoved'));
       await loadSettings();
+      window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorRemovingLogo'));
     }

@@ -155,9 +155,9 @@ router.delete('/logo', authenticateToken, requireRole('admin'), asyncHandler(asy
 }));
 
 /**
- * GET /settings/logo/:filename - Serve logo file (any authenticated user)
+ * GET /settings/logo/:filename - Serve logo file (public, no auth needed for img tags)
  */
-router.get('/logo/:filename', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/logo/:filename', asyncHandler(async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
 
     // Prevent directory traversal
@@ -168,6 +168,8 @@ router.get('/logo/:filename', authenticateToken, asyncHandler(async (req: AuthRe
         throw new ApiError(404, 'Logo niet gevonden.');
     }
 
+    // Cache logo for 1 hour
+    res.set('Cache-Control', 'public, max-age=3600');
     res.sendFile(filePath);
 }));
 
