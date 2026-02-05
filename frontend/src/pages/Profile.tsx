@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Profile() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.profile');
   const { user, refreshProfile } = useAuth();
 
   // Password change state

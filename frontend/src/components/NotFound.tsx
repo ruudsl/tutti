@@ -1,33 +1,31 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ROUTES } from '../utils/constants';
-
-interface NotFoundProps {
-  title?: string;
-  message?: string;
-}
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 /**
  * 404 Not Found page component
  */
-export function NotFound({
-  title = 'Pagina niet gevonden',
-  message = 'De pagina die je zoekt bestaat niet of is verplaatst.',
-}: NotFoundProps) {
+export function NotFound() {
+  const { t } = useTranslation();
+  useDocumentTitle('pageTitle.notFound');
+
   return (
-    <div className="not-found">
+    <div className="not-found" role="main">
       <div className="not-found-content">
-        <div className="not-found-icon">🔍</div>
-        <h1>{title}</h1>
-        <p>{message}</p>
+        <div className="not-found-icon" aria-hidden="true">🔍</div>
+        <h1>{t('notFound.title')}</h1>
+        <p>{t('notFound.description')}</p>
         <div className="not-found-actions">
           <Link to={ROUTES.DASHBOARD} className="btn btn-primary">
-            Naar Dashboard
+            {t('notFound.backToDashboard')}
           </Link>
           <button
             className="btn btn-outline"
             onClick={() => window.history.back()}
+            type="button"
           >
-            Ga terug
+            {t('notFound.goBack')}
           </button>
         </div>
       </div>

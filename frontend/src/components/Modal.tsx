@@ -1,4 +1,5 @@
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, useId, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ModalProps {
   title: string;
@@ -13,11 +14,14 @@ interface ModalProps {
  * - Closes on Escape key
  * - Closes on overlay click
  * - Focus trap
+ * - Unique ARIA IDs per instance
  */
 export function Modal({ title, children, onClose, footer, size = 'medium' }: ModalProps) {
+  const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
   const onCloseRef = useRef(onClose);
+  const titleId = useId();
 
   // Keep onClose ref updated
   onCloseRef.current = onClose;
@@ -64,24 +68,25 @@ export function Modal({ title, children, onClose, footer, size = 'medium' }: Mod
   }[size];
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
         ref={modalRef}
         className={`modal ${sizeClass}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
         tabIndex={-1}
       >
         <div className="modal-header">
-          <h3 className="modal-title" id="modal-title">{title}</h3>
+          <h3 className="modal-title" id={titleId}>{title}</h3>
           <button
             className="modal-close"
             onClick={onClose}
-            aria-label="Sluiten"
+            aria-label={t('accessibility.closeModal')}
+            type="button"
           >
-            ×
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div className="modal-body">
@@ -112,11 +117,14 @@ export function FormModal({
   children,
   onClose,
   onSubmit,
-  submitLabel = 'Opslaan',
-  cancelLabel = 'Annuleren',
+  submitLabel,
+  cancelLabel,
   isSubmitting = false,
   size,
 }: FormModalProps) {
+  const { t } = useTranslation();
+  const formId = useId();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(e);
@@ -135,20 +143,20 @@ export function FormModal({
             onClick={onClose}
             disabled={isSubmitting}
           >
-            {cancelLabel}
+            {cancelLabel || t('common.cancel')}
           </button>
           <button
             type="submit"
-            form="modal-form"
+            form={formId}
             className="btn btn-primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Bezig...' : submitLabel}
+            {isSubmitting ? t('accessibility.processing') : (submitLabel || t('common.save'))}
           </button>
         </>
       }
     >
-      <form id="modal-form" onSubmit={handleSubmit}>
+      <form id={formId} onSubmit={handleSubmit}>
         {children}
       </form>
     </Modal>

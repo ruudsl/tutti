@@ -20,9 +20,11 @@ import { Skeleton, SkeletonListItem } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Orchestra, MusicList } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Orchestras() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.orchestras');
   const queryClient = useQueryClient();
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);

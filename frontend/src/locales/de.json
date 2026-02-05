@@ -698,6 +698,54 @@
     "errorRestore": "Fehler beim Wiederherstellen des Backups",
     "confirmRestore": "Sind Sie sicher, dass Sie das Backup wiederherstellen möchten? Dies überschreibt alle aktuellen Daten!"
   },
+  "accessibility": {
+    "skipToContent": "Zum Inhalt springen",
+    "mainNavigation": "Hauptnavigation",
+    "userMenu": "Benutzermenü",
+    "languageSwitcher": "Sprache wählen",
+    "closeModal": "Schließen",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "page": "Seite {{number}}",
+    "pagination": "Seitennavigation",
+    "processing": "Wird verarbeitet...",
+    "loadingContent": "Inhalt wird geladen",
+    "errorOccurred": "Ein Fehler ist aufgetreten"
+  },
+  "pageTitle": {
+    "dashboard": "Dashboard - Harmonie",
+    "myMusic": "Meine Musik - Harmonie",
+    "tools": "Werkzeuge - Harmonie",
+    "issues": "Fehlermeldungen - Harmonie",
+    "profile": "Profil - Harmonie",
+    "login": "Anmeldung - Harmonie",
+    "forgotPassword": "Passwort vergessen - Harmonie",
+    "resetPassword": "Passwort zurücksetzen - Harmonie",
+    "musicPieces": "Musikstücke - Harmonie",
+    "titles": "Titel - Harmonie",
+    "upload": "Hochladen - Harmonie",
+    "instruments": "Instrumente - Harmonie",
+    "genres": "Genres - Harmonie",
+    "pdfTools": "PDF-Tools - Harmonie",
+    "loans": "Ausleihen - Harmonie",
+    "statistics": "Statistiken - Harmonie",
+    "users": "Mitglieder - Harmonie",
+    "orchestras": "Orchester - Harmonie",
+    "lists": "Musiklisten - Harmonie",
+    "notFound": "Seite nicht gefunden - Harmonie"
+  },
+  "errorBoundary": {
+    "title": "Etwas ist schiefgelaufen",
+    "description": "Ein unerwarteter Fehler ist aufgetreten. Versuchen Sie, die Seite neu zu laden.",
+    "retry": "Erneut versuchen",
+    "backToHome": "Zurück zur Startseite"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "backToDashboard": "Zum Dashboard",
+    "goBack": "Zurück"
+  },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
     "network": "Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.",

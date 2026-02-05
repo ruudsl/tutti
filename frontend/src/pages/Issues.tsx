@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'badge-warning',
@@ -16,6 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Issues() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.issues');
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [selectedIssue, setSelectedIssue] = useState<PieceIssue | null>(null);

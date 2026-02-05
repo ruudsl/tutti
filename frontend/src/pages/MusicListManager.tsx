@@ -18,6 +18,7 @@ import {
   getYouTubeMeta,
 } from '../api';
 import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // Format duration from seconds to mm:ss or h:mm:ss
 function formatDuration(seconds: number): string {
@@ -45,6 +46,7 @@ function parseDuration(str: string): number {
 
 export default function MusicListManager() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.lists');
   const { orchestraId, listId } = useParams();
   const navigate = useNavigate();
 

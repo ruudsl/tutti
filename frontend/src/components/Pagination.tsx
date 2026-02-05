@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -10,7 +12,7 @@ interface PaginationProps {
 }
 
 /**
- * Pagination component
+ * Pagination component with WCAG 2.1 AA accessibility
  */
 export function Pagination({
   page,
@@ -22,6 +24,8 @@ export function Pagination({
   total,
   limit,
 }: PaginationProps) {
+  const { t } = useTranslation();
+
   // Generate page numbers to show
   const getPageNumbers = (): (number | 'ellipsis')[] => {
     const pages: (number | 'ellipsis')[] = [];
@@ -60,19 +64,19 @@ export function Pagination({
   const canGoNext = hasNext !== undefined ? hasNext : page < totalPages;
 
   return (
-    <div className="pagination">
+    <nav className="pagination" aria-label={t('accessibility.pagination')}>
       <button
         className="pagination-btn"
         onClick={() => onPageChange(page - 1)}
         disabled={!canGoPrev}
-        aria-label="Vorige pagina"
+        aria-label={t('accessibility.previousPage')}
       >
-        ←
+        <span aria-hidden="true">&larr;</span>
       </button>
 
       {getPageNumbers().map((p, i) =>
         p === 'ellipsis' ? (
-          <span key={`ellipsis-${i}`} className="pagination-info">
+          <span key={`ellipsis-${i}`} className="pagination-info" aria-hidden="true">
             ...
           </span>
         ) : (
@@ -80,7 +84,7 @@ export function Pagination({
             key={p}
             className={`pagination-btn ${p === page ? 'active' : ''}`}
             onClick={() => onPageChange(p)}
-            aria-label={`Pagina ${p}`}
+            aria-label={t('accessibility.page', { number: p })}
             aria-current={p === page ? 'page' : undefined}
           >
             {p}
@@ -92,9 +96,9 @@ export function Pagination({
         className="pagination-btn"
         onClick={() => onPageChange(page + 1)}
         disabled={!canGoNext}
-        aria-label="Volgende pagina"
+        aria-label={t('accessibility.nextPage')}
       >
-        →
+        <span aria-hidden="true">&rarr;</span>
       </button>
 
       {showInfo && total !== undefined && limit !== undefined && (
@@ -102,7 +106,7 @@ export function Pagination({
           {(page - 1) * limit + 1}-{Math.min(page * limit, total)} van {total}
         </span>
       )}
-    </div>
+    </nav>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { SkeletonTable } from '../components/Skeleton';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -30,6 +31,7 @@ interface ActivityFeedItem {
 
 export default function Statistics() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.statistics');
   const [period, setPeriod] = useState<string>('30');
 
   // Fetch statistics

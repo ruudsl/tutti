@@ -12,9 +12,11 @@ import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import type { Instrument } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Instruments() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.instruments');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState<Instrument | null>(null);
   const [deletingInstrument, setDeletingInstrument] = useState<Instrument | null>(null);

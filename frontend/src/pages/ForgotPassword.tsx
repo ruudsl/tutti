@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { requestPasswordReset } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.forgotPassword');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,6 +6,7 @@ import { getMyMusicLists } from '../api';
 import type { MusicList } from '../types';
 import MfaSettings from '../components/MfaSettings';
 import BackupSettings from '../components/BackupSettings';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // Format duration from seconds to mm:ss or h:mm:ss
 function formatDuration(seconds: number): string {
@@ -31,6 +32,7 @@ interface OrchestraGroup {
 export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.dashboard');
   const [orchestraGroups, setOrchestraGroups] = useState<OrchestraGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

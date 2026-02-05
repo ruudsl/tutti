@@ -1,4 +1,5 @@
 import { Component, ReactNode, ErrorInfo } from 'react';
+import i18n from '../i18n';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +29,6 @@ export class ErrorBoundary extends Component<Props, State> {
     if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
-    // Here you could also log to an error reporting service
   }
 
   handleRetry = (): void => {
@@ -41,15 +41,14 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const t = (key: string) => i18n.t(key);
+
       return (
-        <div className="error-boundary">
+        <div className="error-boundary" role="alert">
           <div className="error-boundary-content">
-            <div className="error-boundary-icon">⚠️</div>
-            <h1>Er is iets misgegaan</h1>
-            <p>
-              Er is een onverwachte fout opgetreden. Probeer de pagina te
-              vernieuwen.
-            </p>
+            <div className="error-boundary-icon" aria-hidden="true">⚠️</div>
+            <h1>{t('errorBoundary.title')}</h1>
+            <p>{t('errorBoundary.description')}</p>
             {import.meta.env.DEV && this.state.error && (
               <div className="error-boundary-details">
                 <pre>{this.state.error.message}</pre>
@@ -59,14 +58,16 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 className="btn btn-primary"
                 onClick={this.handleRetry}
+                type="button"
               >
-                Probeer opnieuw
+                {t('errorBoundary.retry')}
               </button>
               <button
                 className="btn btn-outline"
                 onClick={() => window.location.href = '/'}
+                type="button"
               >
-                Terug naar home
+                {t('errorBoundary.backToHome')}
               </button>
             </div>
           </div>

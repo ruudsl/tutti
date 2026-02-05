@@ -698,6 +698,54 @@
     "errorRestore": "Error restoring backup",
     "confirmRestore": "Are you sure you want to restore the backup? This will overwrite all current data!"
   },
+  "accessibility": {
+    "skipToContent": "Skip to content",
+    "mainNavigation": "Main navigation",
+    "userMenu": "User menu",
+    "languageSwitcher": "Choose language",
+    "closeModal": "Close",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "page": "Page {{number}}",
+    "pagination": "Pagination",
+    "processing": "Processing...",
+    "loadingContent": "Loading content",
+    "errorOccurred": "An error occurred"
+  },
+  "pageTitle": {
+    "dashboard": "Dashboard - Harmonie",
+    "myMusic": "My Music - Harmonie",
+    "tools": "Tools - Harmonie",
+    "issues": "Issue Center - Harmonie",
+    "profile": "Profile - Harmonie",
+    "login": "Login - Harmonie",
+    "forgotPassword": "Forgot Password - Harmonie",
+    "resetPassword": "Reset Password - Harmonie",
+    "musicPieces": "Music Pieces - Harmonie",
+    "titles": "Titles - Harmonie",
+    "upload": "Upload - Harmonie",
+    "instruments": "Instruments - Harmonie",
+    "genres": "Genres - Harmonie",
+    "pdfTools": "PDF Tools - Harmonie",
+    "loans": "Loans - Harmonie",
+    "statistics": "Statistics - Harmonie",
+    "users": "Members - Harmonie",
+    "orchestras": "Orchestras - Harmonie",
+    "lists": "Music Lists - Harmonie",
+    "notFound": "Page Not Found - Harmonie"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Try refreshing the page.",
+    "retry": "Try again",
+    "backToHome": "Back to home"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has been moved.",
+    "backToDashboard": "Go to Dashboard",
+    "goBack": "Go back"
+  },
   "errors": {
     "generic": "An error occurred. Please try again later.",
     "network": "Network error. Please check your internet connection.",

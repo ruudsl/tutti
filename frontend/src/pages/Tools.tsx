@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { MusicTools } from '../components/MusicTools';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Tools() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.tools');
 
   return (
     <div>

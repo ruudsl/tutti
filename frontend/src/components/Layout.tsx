@@ -24,17 +24,30 @@ function NavDropdown({ label, children, isActive }: DropdownProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close on Escape key
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   return (
     <li className="nav-dropdown" ref={dropdownRef}>
       <button
         className={`nav-link nav-dropdown-toggle ${isActive ? 'active' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
-        {label} <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
+        {label} <span className="dropdown-arrow" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
       </button>
       {isOpen && (
-        <ul className="nav-dropdown-menu" onClick={() => setIsOpen(false)}>
+        <ul className="nav-dropdown-menu" role="menu" onClick={() => setIsOpen(false)}>
           {children}
         </ul>
       )}
@@ -67,10 +80,14 @@ export default function Layout() {
 
   return (
     <div className="app">
-      <nav className="navbar">
+      <a href="#main-content" className="skip-to-content">
+        {t('accessibility.skipToContent')}
+      </a>
+
+      <nav className="navbar" aria-label={t('accessibility.mainNavigation')}>
         <div className="navbar-content">
           <Link to="/" className="navbar-brand">
-            🎵 Harmonie
+            <span aria-hidden="true">🎵</span> Harmonie
           </Link>
 
           <ul className="navbar-nav">
@@ -98,51 +115,51 @@ export default function Layout() {
             {isMusicCommittee && (
               <>
                 <NavDropdown label={t('nav.music')} isActive={isMusicActive}>
-                  <li>
-                    <NavLink to="/lists" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/lists" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.lists')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/music-pieces" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/music-pieces" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.pieces')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/titles" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/titles" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.titles')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/upload" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/upload" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.upload')}
                     </NavLink>
                   </li>
                 </NavDropdown>
 
                 <NavDropdown label={t('nav.management')} isActive={isBeheerActive}>
-                  <li>
-                    <NavLink to="/instruments" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/instruments" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.instruments')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/genres" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/genres" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.genres')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/pdf-tools" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/pdf-tools" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.pdfTools')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/loans" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/loans" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.loans')}
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink to="/statistics" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                  <li role="none">
+                    <NavLink to="/statistics" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                       {t('nav.statistics')}
                     </NavLink>
                   </li>
@@ -152,13 +169,13 @@ export default function Layout() {
 
             {isAdmin && (
               <NavDropdown label={t('nav.admin')} isActive={isAdminActive}>
-                <li>
-                  <NavLink to="/users" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                <li role="none">
+                  <NavLink to="/users" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                     {t('nav.members')}
                   </NavLink>
                 </li>
-                <li>
-                  <NavLink to="/orchestras" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                <li role="none">
+                  <NavLink to="/orchestras" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                     {t('nav.orchestras')}
                   </NavLink>
                 </li>
@@ -166,7 +183,7 @@ export default function Layout() {
             )}
           </ul>
 
-          <div className="navbar-user">
+          <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
             <LanguageSwitcher compact />
             <Link to="/profile" className="user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="user-name">{user?.firstName} {user?.lastName}</div>
@@ -181,7 +198,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="main-content">
+      <main id="main-content" className="main-content">
         <Outlet />
       </main>
     </div>

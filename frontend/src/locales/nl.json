@@ -688,6 +688,54 @@
     "errorRestore": "Fout bij herstellen backup",
     "confirmRestore": "Weet je zeker dat je de backup wilt herstellen? Dit overschrijft alle huidige data!"
   },
+  "accessibility": {
+    "skipToContent": "Ga naar inhoud",
+    "mainNavigation": "Hoofdnavigatie",
+    "userMenu": "Gebruikersmenu",
+    "languageSwitcher": "Taal kiezen",
+    "closeModal": "Sluiten",
+    "previousPage": "Vorige pagina",
+    "nextPage": "Volgende pagina",
+    "page": "Pagina {{number}}",
+    "pagination": "Paginering",
+    "processing": "Bezig...",
+    "loadingContent": "Inhoud wordt geladen",
+    "errorOccurred": "Er is een fout opgetreden"
+  },
+  "pageTitle": {
+    "dashboard": "Dashboard - Harmonie",
+    "myMusic": "Mijn Muziek - Harmonie",
+    "tools": "Tools - Harmonie",
+    "issues": "Meldkamer - Harmonie",
+    "profile": "Profiel - Harmonie",
+    "login": "Inloggen - Harmonie",
+    "forgotPassword": "Wachtwoord vergeten - Harmonie",
+    "resetPassword": "Wachtwoord herstellen - Harmonie",
+    "musicPieces": "Muziekstukken - Harmonie",
+    "titles": "Titels - Harmonie",
+    "upload": "Uploaden - Harmonie",
+    "instruments": "Instrumenten - Harmonie",
+    "genres": "Genres - Harmonie",
+    "pdfTools": "PDF Tools - Harmonie",
+    "loans": "Uitleningen - Harmonie",
+    "statistics": "Statistieken - Harmonie",
+    "users": "Leden - Harmonie",
+    "orchestras": "Orkesten - Harmonie",
+    "lists": "Muzieklijsten - Harmonie",
+    "notFound": "Pagina niet gevonden - Harmonie"
+  },
+  "errorBoundary": {
+    "title": "Er is iets misgegaan",
+    "description": "Er is een onverwachte fout opgetreden. Probeer de pagina te vernieuwen.",
+    "retry": "Probeer opnieuw",
+    "backToHome": "Terug naar home"
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "description": "De pagina die je zoekt bestaat niet of is verplaatst.",
+    "backToDashboard": "Naar Dashboard",
+    "goBack": "Ga terug"
+  },
   "errors": {
     "generic": "Er is een fout opgetreden. Probeer het later opnieuw.",
     "network": "Netwerkfout. Controleer je internetverbinding.",

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -36,6 +37,7 @@ interface SplitResult {
 
 export default function PdfTools() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.pdfTools');
   const [activeTab, setActiveTab] = useState<'split' | 'a3' | 'merge'>('split');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfInfo, setPdfInfo] = useState<PdfInfo | null>(null);

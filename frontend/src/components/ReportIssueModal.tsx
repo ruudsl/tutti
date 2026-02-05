@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { createIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
+import { Modal } from './Modal';
 
 interface ReportIssueModalProps {
   pieceId: string;
@@ -10,27 +12,31 @@ interface ReportIssueModalProps {
 }
 
 export function ReportIssueModal({ pieceId, pieceTitle, onClose }: ReportIssueModalProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [pageNumber, setPageNumber] = useState('');
   const [measureNumber, setMeasureNumber] = useState('');
   const [description, setDescription] = useState('');
+  const pageInputId = useId();
+  const measureInputId = useId();
+  const descriptionId = useId();
 
   const createMutation = useMutation({
     mutationFn: createIssue,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
-      showSuccess('Melding verstuurd naar de muziekcommissie');
+      showSuccess(t('myMusic.reportIssue.success'));
       onClose();
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || 'Fout bij versturen melding');
+      showError(error.response?.data?.error || t('errors.generic'));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) {
-      showError('Beschrijving is verplicht');
+      showError(t('myMusic.reportIssue.description'));
       return;
     }
     createMutation.mutate({
@@ -42,79 +48,76 @@ export function ReportIssueModal({ pieceId, pieceTitle, onClose }: ReportIssueMo
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="modal-title">Fout melden</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+    <Modal
+      title={t('myMusic.reportIssue.title')}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="btn btn-outline" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            form="report-issue-form"
+            className="btn btn-primary"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? t('myMusic.reportIssue.submitting') : t('myMusic.reportIssue.submit')}
+          </button>
+        </>
+      }
+    >
+      <form id="report-issue-form" onSubmit={handleSubmit}>
+        <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
+          {t('myMusic.reportIssue.piece')}: <strong>{pieceTitle}</strong>
+        </p>
+
+        <div className="grid grid-2" style={{ gap: '1rem' }}>
+          <div className="form-group">
+            <label htmlFor={pageInputId} className="form-label">
+              {t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})
+            </label>
+            <input
+              type="number"
+              id={pageInputId}
+              className="form-control"
+              value={pageNumber}
+              onChange={(e) => setPageNumber(e.target.value)}
+              min={1}
+              placeholder="Bijv. 2"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor={measureInputId} className="form-label">
+              {t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})
+            </label>
+            <input
+              type="text"
+              id={measureInputId}
+              className="form-control"
+              value={measureNumber}
+              onChange={(e) => setMeasureNumber(e.target.value)}
+              placeholder="Bijv. 42 of 42-45"
+            />
+          </div>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-              Meld een fout in: <strong>{pieceTitle}</strong>
-            </p>
 
-            <div className="grid grid-2" style={{ gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">Paginanummer (optioneel)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={pageNumber}
-                  onChange={(e) => setPageNumber(e.target.value)}
-                  min={1}
-                  placeholder="Bijv. 2"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Maat (optioneel)</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={measureNumber}
-                  onChange={(e) => setMeasureNumber(e.target.value)}
-                  placeholder="Bijv. 42 of 42-45"
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Beschrijving van de fout *</label>
-              <textarea
-                className="form-control"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Beschrijf de fout zo duidelijk mogelijk. Bijv: 'Maat 42: Bes moet een B zijn' of 'Pauze ontbreekt na de hele noot'"
-                required
-              />
-            </div>
-
-            <div style={{
-              padding: '0.75rem',
-              background: 'var(--background)',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-              color: 'var(--text-light)'
-            }}>
-              <strong>Tip:</strong> Wees zo specifiek mogelijk. Vermeld het paginanummer,
-              maatnummer en welke noot/rust het betreft.
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>
-              Annuleren
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? 'Versturen...' : 'Melding versturen'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="form-group">
+          <label htmlFor={descriptionId} className="form-label">
+            {t('myMusic.reportIssue.description')} *
+          </label>
+          <textarea
+            id={descriptionId}
+            className="form-control"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
+            required
+            aria-required="true"
+          />
+        </div>
+      </form>
+    </Modal>
   );
 }

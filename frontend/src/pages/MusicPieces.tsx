@@ -14,9 +14,11 @@ import { SkeletonTable } from '../components/Skeleton';
 import { showError } from '../utils/toast';
 import { useDebounce } from '../hooks/useDebounce';
 import type { MusicPiece } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function MusicPieces() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.musicPieces');
   const [search, setSearch] = useState('');
   const [filterInstrument, setFilterInstrument] = useState('');
   const [editingPiece, setEditingPiece] = useState<MusicPiece | null>(null);

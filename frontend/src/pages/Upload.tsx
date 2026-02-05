@@ -8,6 +8,7 @@ import { FileDropzone } from '../components/FileDropzone';
 import { SkeletonCard } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FileItem {
   file: File;
@@ -15,6 +16,7 @@ interface FileItem {
 
 export default function Upload() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.upload');
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
   const [files, setFiles] = useState<FileItem[]>([]);

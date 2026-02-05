@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function MyMusic() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.myMusic');
   const [searchParams, setSearchParams] = useSearchParams();
   const [lists, setLists] = useState<MusicList[]>([]);
   const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);

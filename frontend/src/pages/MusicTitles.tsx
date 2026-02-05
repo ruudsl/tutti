@@ -8,6 +8,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { formatDuration } from '../utils/format';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicTitle } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // Parse duration string (mm:ss or h:mm:ss) to seconds
 function parseDuration(str: string): number {
@@ -40,6 +41,7 @@ interface TitleMetaForm {
 
 export default function MusicTitles() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.titles');
   const [search, setSearch] = useState('');
   const [filterGenre, setFilterGenre] = useState('');
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);

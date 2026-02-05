@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
@@ -18,13 +19,15 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   message,
-  confirmLabel = 'Bevestigen',
-  cancelLabel = 'Annuleren',
+  confirmLabel,
+  cancelLabel,
   variant = 'danger',
   onConfirm,
   onCancel,
   isLoading = false,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
+
   const buttonClass = {
     danger: 'btn-danger',
     warning: 'btn-warning',
@@ -44,7 +47,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             disabled={isLoading}
           >
-            {cancelLabel}
+            {cancelLabel || t('common.cancel')}
           </button>
           <button
             type="button"
@@ -52,7 +55,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? 'Bezig...' : confirmLabel}
+            {isLoading ? t('accessibility.processing') : (confirmLabel || t('common.confirm'))}
           </button>
         </>
       }

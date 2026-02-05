@@ -7,9 +7,11 @@ import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import type { User } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Users() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.users');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);

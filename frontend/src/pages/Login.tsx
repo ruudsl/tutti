@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.login');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

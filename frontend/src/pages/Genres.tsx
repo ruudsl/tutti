@@ -10,9 +10,11 @@ import { SkeletonTable } from '../components/Skeleton';
 import { formatDuration } from '../utils/format';
 import type { Genre } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Genres() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.genres');
   const { user } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGenre, setEditingGenre] = useState<Genre | null>(null);

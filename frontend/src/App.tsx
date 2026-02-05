@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { queryClient } from './lib/queryClient';
 import { Toaster } from './utils/toast';
@@ -29,11 +31,13 @@ import ResetPassword from './pages/ResetPassword';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
-      <div className="loading" style={{ minHeight: '100vh' }}>
-        <div className="spinner"></div>
+      <div className="loading" style={{ minHeight: '100vh' }} role="status" aria-label={t('accessibility.loadingContent')}>
+        <div className="spinner" aria-hidden="true"></div>
+        <span className="sr-only">{t('common.loading')}</span>
       </div>
     );
   }
@@ -51,11 +55,13 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
-      <div className="loading" style={{ minHeight: '100vh' }}>
-        <div className="spinner"></div>
+      <div className="loading" style={{ minHeight: '100vh' }} role="status" aria-label={t('accessibility.loadingContent')}>
+        <div className="spinner" aria-hidden="true"></div>
+        <span className="sr-only">{t('common.loading')}</span>
       </div>
     );
   }
@@ -212,12 +218,26 @@ function AppRoutes() {
   );
 }
 
+/**
+ * Syncs the HTML lang attribute with the current i18n language (WCAG 3.1.1)
+ */
+function LanguageSync() {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
+            <LanguageSync />
             <AppRoutes />
             <Toaster
               toastOptions={{

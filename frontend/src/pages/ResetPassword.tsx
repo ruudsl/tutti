@@ -3,12 +3,14 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { validateResetToken, resetPassword } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.resetPassword');
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

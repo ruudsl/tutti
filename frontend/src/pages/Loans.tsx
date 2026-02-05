@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLoans, createLoan, returnLoan, deleteLoan, type Loan } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -29,6 +30,7 @@ interface TitleOption {
 
 export default function Loans() {
   const { t } = useTranslation();
+  useDocumentTitle('pageTitle.loans');
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
