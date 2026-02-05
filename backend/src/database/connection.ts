@@ -81,12 +81,9 @@ class DatabaseWrapper {
     runStatement(sql: string, params: any[] = []): { changes: number; lastInsertRowid: number } {
         const db = this.ensureInit();
         db.run(sql, params);
-        // Only save if not inside a transaction (transaction will save on commit)
-        if (!this.inTransaction) {
-            this.save();
-        }
 
-        // Use prepared statements instead of exec() to preserve transaction state
+        // Capture changes() and last_insert_rowid() immediately after execution,
+        // before save() which may interfere with these counters
         let changes = 0;
         let lastInsertRowid = 0;
 
@@ -101,6 +98,11 @@ class DatabaseWrapper {
             lastInsertRowid = Number(lastIdStmt.get()[0]) || 0;
         }
         lastIdStmt.free();
+
+        // Only save if not inside a transaction (transaction will save on commit)
+        if (!this.inTransaction) {
+            this.save();
+        }
 
         return { changes, lastInsertRowid };
     }

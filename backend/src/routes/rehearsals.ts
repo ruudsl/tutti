@@ -307,10 +307,16 @@ router.put('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncH
 router.delete('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const result = db.prepare('DELETE FROM rehearsals WHERE id = ? AND association_id = ?').run(id, req.user!.associationId);
-    if (result.changes === 0) {
+    // First verify the rehearsal exists and belongs to this association
+    const rehearsal = db.prepare('SELECT id FROM rehearsals WHERE id = ? AND association_id = ?').get(id, req.user!.associationId) as any;
+    if (!rehearsal) {
         throw new ApiError(404, 'Repetitie niet gevonden.');
     }
+
+    // Explicitly clean up related records before deleting
+    db.prepare('DELETE FROM rehearsal_attendance WHERE rehearsal_id = ?').run(id);
+    db.prepare('DELETE FROM rehearsal_pieces WHERE rehearsal_id = ?').run(id);
+    db.prepare('DELETE FROM rehearsals WHERE id = ?').run(id);
 
     res.json({ message: 'Repetitie verwijderd.' });
 }));
