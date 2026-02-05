@@ -53,6 +53,7 @@
     "orchestras": "Orkesten",
     "settings": "Instellingen",
     "theme": "Thema",
+    "changelog": "Changelog",
     "rehearsals": "Repetities",
     "logout": "Uitloggen",
     "profile": "Profiel"
@@ -921,6 +922,16 @@
     "loadingContent": "Inhoud wordt geladen",
     "errorOccurred": "Er is een fout opgetreden"
   },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Overzicht van alle wijzigingen en updates in de applicatie."
+  },
+  "feedback": {
+    "title": "Feedback",
+    "reportBug": "Bug melden",
+    "requestFeature": "Nieuwe functie aanvragen",
+    "linkText": "Feedback geven"
+  },
   "pageTitle": {
     "dashboard": "Dashboard - Harmonie",
     "myMusic": "Mijn Muziek - Harmonie",
@@ -944,7 +955,8 @@
     "notFound": "Pagina niet gevonden - Harmonie",
     "settings": "Instellingen - Harmonie",
     "theme": "Thema - Harmonie",
-    "rehearsals": "Repetities - Harmonie"
+    "rehearsals": "Repetities - Harmonie",
+    "changelog": "Changelog - Harmonie"
   },
   "errorBoundary": {
     "title": "Er is iets misgegaan",

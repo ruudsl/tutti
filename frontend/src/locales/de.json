@@ -53,6 +53,7 @@
     "orchestras": "Orchester",
     "settings": "Einstellungen",
     "theme": "Design",
+    "changelog": "Changelog",
     "rehearsals": "Proben",
     "logout": "Abmelden",
     "profile": "Profil"
@@ -931,6 +932,16 @@
     "loadingContent": "Inhalt wird geladen",
     "errorOccurred": "Ein Fehler ist aufgetreten"
   },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Übersicht aller Änderungen und Updates in der Anwendung."
+  },
+  "feedback": {
+    "title": "Feedback",
+    "reportBug": "Fehler melden",
+    "requestFeature": "Funktion vorschlagen",
+    "linkText": "Feedback geben"
+  },
   "pageTitle": {
     "dashboard": "Dashboard - Harmonie",
     "myMusic": "Meine Musik - Harmonie",
@@ -954,7 +965,8 @@
     "notFound": "Seite nicht gefunden - Harmonie",
     "settings": "Einstellungen - Harmonie",
     "theme": "Design - Harmonie",
-    "rehearsals": "Proben - Harmonie"
+    "rehearsals": "Proben - Harmonie",
+    "changelog": "Changelog - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

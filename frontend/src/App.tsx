@@ -33,6 +33,7 @@ import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
 import Rehearsals from './pages/Rehearsals';
 import MicrosoftCallback from './pages/MicrosoftCallback';
+import Changelog from './pages/Changelog';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -235,6 +236,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <ThemeSettings />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="changelog"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Changelog />
             </PrivateRoute>
           }
         />

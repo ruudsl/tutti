@@ -103,6 +103,17 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Changelog endpoint
+app.get('/api/changelog', (req, res) => {
+    const changelogPath = path.join(__dirname, '../../CHANGELOG.md');
+    if (fs.existsSync(changelogPath)) {
+        const content = fs.readFileSync(changelogPath, 'utf-8');
+        res.json({ content });
+    } else {
+        res.json({ content: '# Changelog\n\nGeen changelog beschikbaar.' });
+    }
+});
+
 // Swagger API documentation
 if (config.isDevelopment) {
     app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

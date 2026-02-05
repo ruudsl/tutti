@@ -53,6 +53,7 @@
     "orchestras": "Orchestras",
     "settings": "Settings",
     "theme": "Theme",
+    "changelog": "Changelog",
     "rehearsals": "Rehearsals",
     "logout": "Logout",
     "profile": "Profile"
@@ -931,6 +932,16 @@
     "loadingContent": "Loading content",
     "errorOccurred": "An error occurred"
   },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Overview of all changes and updates in the application."
+  },
+  "feedback": {
+    "title": "Feedback",
+    "reportBug": "Report a bug",
+    "requestFeature": "Request a feature",
+    "linkText": "Give feedback"
+  },
   "pageTitle": {
     "dashboard": "Dashboard - Harmonie",
     "myMusic": "My Music - Harmonie",
@@ -954,7 +965,8 @@
     "notFound": "Page Not Found - Harmonie",
     "settings": "Settings - Harmonie",
     "theme": "Theme - Harmonie",
-    "rehearsals": "Rehearsals - Harmonie"
+    "rehearsals": "Rehearsals - Harmonie",
+    "changelog": "Changelog - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",

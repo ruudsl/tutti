@@ -97,7 +97,7 @@ export default function Layout() {
   // Check if current path is in a dropdown group
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/theme'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/theme', '/changelog'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
@@ -228,6 +228,11 @@ export default function Layout() {
                     {t('nav.theme')}
                   </NavLink>
                 </li>
+                <li role="none">
+                  <NavLink to="/changelog" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.changelog')}
+                  </NavLink>
+                </li>
               </NavDropdown>
             )}
           </ul>
@@ -257,6 +262,17 @@ export default function Layout() {
       <main id="main-content" className="main-content">
         <Outlet />
       </main>
+
+      <footer className="app-footer">
+        <a
+          href="https://github.com/ruudsl/harmonie/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="feedback-link"
+        >
+          {t('feedback.linkText')}
+        </a>
+      </footer>
 
       <OnboardingTour
         forceShow={showOnboarding || undefined}

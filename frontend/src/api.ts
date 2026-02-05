@@ -790,4 +790,10 @@ export const testSmtpConfig = async (): Promise<{ message: string }> => {
   return data;
 };
 
+// Changelog
+export const getChangelog = async (): Promise<{ content: string }> => {
+  const { data } = await api.get('/changelog');
+  return data;
+};
+
 export default api;

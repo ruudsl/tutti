@@ -252,6 +252,25 @@ body {
   width: 100%;
 }
 
+/* Footer */
+.app-footer {
+  padding: 1rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.app-footer .feedback-link {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.app-footer .feedback-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* Cards */
 .card {
   background: var(--surface);
