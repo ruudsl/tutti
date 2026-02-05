@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -10,22 +10,29 @@ export default function MicrosoftCallback() {
   const { loginWithToken } = useAuth();
   const { t } = useTranslation();
   const [error, setError] = useState('');
+  const processedRef = useRef(false);
 
   useEffect(() => {
+    if (processedRef.current) return;
+
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const errorParam = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
     if (errorParam) {
+      processedRef.current = true;
       setError(errorDescription || t('auth.microsoft.loginFailed'));
       return;
     }
 
     if (!code || !state) {
+      processedRef.current = true;
       setError(t('auth.microsoft.loginFailed'));
       return;
     }
+
+    processedRef.current = true;
 
     microsoftCallback(code, state)
       .then((response) => {
