@@ -4,22 +4,54 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Standaard genres voor muziekstukken
 const defaultGenres = [
-    'Pop',
-    'Rock',
-    'Jazz',
-    'Klassiek',
-    'Film',
-    'Musical',
-    'Mars',
-    'Traditie',
-    'Kerstmis',
-    'Volksmuziek',
-    'Latin',
-    'Swing',
+    'Alternative',
+    'American',
     'Ballad',
-    'Feest',
-    'Religieus',
-    'Origineel',
+    'Baroque',
+    'Blues',
+    'Broadway',
+    'Calypso',
+    'Celtic',
+    'Children',
+    'Christmas',
+    'Classical',
+    'Concert',
+    'Contemporary',
+    'Contest',
+    'Country',
+    'Disney',
+    'Festival',
+    'Film/TV',
+    'Folk',
+    'Funk',
+    'Gospel',
+    'Graduation',
+    'Halloween',
+    'Hanukkah',
+    'Hip-Hop',
+    'Holiday',
+    'Hymn',
+    'Inspirational',
+    'Irish',
+    'Jazz',
+    'Jewish',
+    'Latin',
+    'Latin American',
+    'Love',
+    'Musical/Show',
+    'New Age',
+    'Novelty',
+    'Patriotic',
+    'Pop',
+    'Reggae',
+    'Renaissance',
+    'Rock',
+    'Sacred',
+    'Standards',
+    'Traditional',
+    'Video Game',
+    'Winter',
+    'World',
 ];
 
 // Seed data voor instrumenten met aliassen
@@ -125,6 +157,30 @@ async function initializeDatabase() {
         }
 
         console.log(`Seeded ${defaultGenres.length} genres`);
+    }
+
+    // Migration: Replace old genres with new genre list
+    try {
+        const existingGenreRows = db.prepare('SELECT name FROM genres').all() as { name: string }[];
+        const existingGenreNames = new Set(existingGenreRows.map(g => g.name));
+        const newGenreNames = new Set(defaultGenres);
+
+        // Remove genres not in the new list
+        for (const name of existingGenreNames) {
+            if (!newGenreNames.has(name)) {
+                db.prepare('DELETE FROM genres WHERE name = ?').run(name);
+                console.log(`Migration: Removed genre "${name}"`);
+            }
+        }
+
+        // Add new genres that don't exist yet
+        for (const name of defaultGenres) {
+            if (!existingGenreNames.has(name)) {
+                db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)').run(uuidv4(), name);
+            }
+        }
+    } catch (e) {
+        console.error('Migration: Error updating genres', e);
     }
 
     // Migration: Add is_shared column to music_titles if it doesn't exist
