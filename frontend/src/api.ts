@@ -298,6 +298,11 @@ export const deleteMusicPiece = async (id: string): Promise<void> => {
   await api.delete(`/music-pieces/${id}`);
 };
 
+export const deleteMusicPiecesBulk = async (ids: string[]): Promise<{ count: number }> => {
+  const { data } = await api.post('/music-pieces/bulk-delete', { ids });
+  return data;
+};
+
 export const downloadMusicPiece = async (id: string): Promise<void> => {
   const response = await api.get(`/music-pieces/${id}/download`, {
     responseType: 'blob',

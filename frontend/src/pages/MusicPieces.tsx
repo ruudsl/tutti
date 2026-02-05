@@ -4,9 +4,11 @@ import {
   useMusicPieces,
   useUpdateMusicPiece,
   useDeleteMusicPiece,
+  useDeleteMusicPiecesBulk,
   useRefreshInstrumentLinks,
 } from '../hooks/useMusicPieces';
 import { useInstruments } from '../hooks/useInstruments';
+import { useAuth } from '../context/AuthContext';
 import { downloadMusicPiece, logActivity } from '../api';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -18,12 +20,17 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function MusicPieces() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   useDocumentTitle('pageTitle.musicPieces');
   const [search, setSearch] = useState('');
   const [filterInstrument, setFilterInstrument] = useState('');
   const [editingPiece, setEditingPiece] = useState<MusicPiece | null>(null);
   const [deletingPiece, setDeletingPiece] = useState<MusicPiece | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  const canManage = user && ['admin', 'music_committee'].includes(user.role);
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -40,6 +47,7 @@ export default function MusicPieces() {
 
   const updateMutation = useUpdateMusicPiece();
   const deleteMutation = useDeleteMusicPiece();
+  const bulkDeleteMutation = useDeleteMusicPiecesBulk();
   const refreshMutation = useRefreshInstrumentLinks();
 
   const isLoading = piecesLoading || instrumentsLoading;
@@ -63,6 +71,36 @@ export default function MusicPieces() {
     deleteMutation.mutate(deletingPiece.id, {
       onSuccess: () => {
         setDeletingPiece(null);
+      },
+    });
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === pieces.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pieces.map(p => p.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    bulkDeleteMutation.mutate(Array.from(selectedIds), {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setShowBulkDeleteConfirm(false);
       },
     });
   };
@@ -146,14 +184,37 @@ export default function MusicPieces() {
       </div>
 
       <div className="card">
-        <div className="card-header">
+        <div className="card-header flex justify-between items-center">
           <span className="card-title">{pieces.length} {t('musicPieces.count')}</span>
+          {canManage && selectedIds.size > 0 && (
+            <div className="flex gap-1 items-center">
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
+              </span>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+              >
+                {t('musicPieces.bulk.deleteSelected')}
+              </button>
+            </div>
+          )}
         </div>
         <div className="card-body" style={{ padding: 0 }}>
           {pieces.length > 0 ? (
             <table className="table mb-0">
               <thead>
                 <tr>
+                  {canManage && (
+                    <th style={{ width: '40px' }}>
+                      <input
+                        type="checkbox"
+                        checked={pieces.length > 0 && selectedIds.size === pieces.length}
+                        onChange={handleSelectAll}
+                        title={t('musicPieces.bulk.selectAll')}
+                      />
+                    </th>
+                  )}
                   <th>{t('myMusic.table.title')}</th>
                   <th>{t('myMusic.table.arranger')}</th>
                   <th>{t('myMusic.table.instrument')}</th>
@@ -164,7 +225,16 @@ export default function MusicPieces() {
               </thead>
               <tbody>
                 {pieces.map((piece) => (
-                  <tr key={piece.id}>
+                  <tr key={piece.id} style={selectedIds.has(piece.id) ? { backgroundColor: 'var(--primary-light, rgba(37, 99, 235, 0.05))' } : undefined}>
+                    {canManage && (
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(piece.id)}
+                          onChange={() => handleToggleSelect(piece.id)}
+                        />
+                      </td>
+                    )}
                     <td>
                       <strong>{piece.title}</strong>
                       <br />
@@ -326,6 +396,18 @@ export default function MusicPieces() {
           message={t('musicPieces.delete.confirm', { title: deletingPiece.title })}
           confirmLabel={t('common.delete')}
           isLoading={deleteMutation.isPending}
+        />
+      )}
+
+      {/* Bulk Delete Confirmation */}
+      {showBulkDeleteConfirm && (
+        <ConfirmDialog
+          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkDelete}
+          title={t('musicPieces.bulk.deleteTitle')}
+          message={t('musicPieces.bulk.deleteConfirm', { count: selectedIds.size })}
+          confirmLabel={t('common.delete')}
+          isLoading={bulkDeleteMutation.isPending}
         />
       )}
     </div>

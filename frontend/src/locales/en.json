@@ -308,6 +308,13 @@
     "delete": {
       "title": "Delete music piece",
       "confirm": "Are you sure you want to delete \"{{title}}\"?"
+    },
+    "bulk": {
+      "selectAll": "Select all",
+      "selectedCount": "{{count}} selected",
+      "deleteSelected": "Delete selected",
+      "deleteTitle": "Delete music pieces",
+      "deleteConfirm": "Are you sure you want to delete {{count}} music pieces? This cannot be undone."
     }
   },
   "titles": {

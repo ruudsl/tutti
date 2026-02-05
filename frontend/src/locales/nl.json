@@ -308,6 +308,13 @@
     "delete": {
       "title": "Muziekstuk verwijderen",
       "confirm": "Weet je zeker dat je \"{{title}}\" wilt verwijderen?"
+    },
+    "bulk": {
+      "selectAll": "Alles selecteren",
+      "selectedCount": "{{count}} geselecteerd",
+      "deleteSelected": "Selectie verwijderen",
+      "deleteTitle": "Muziekstukken verwijderen",
+      "deleteConfirm": "Weet je zeker dat je {{count}} muziekstukken wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
     }
   },
   "titles": {

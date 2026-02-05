@@ -192,9 +192,9 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
 
     // Optional filters
     if (search) {
-        query += ' AND (LOWER(mp.title) LIKE ? OR LOWER(mp.arranger) LIKE ?)';
-        const searchTerm = `%${(search as string).toLowerCase()}%`;
-        params.push(searchTerm, searchTerm);
+        query += ' AND (mp.title LIKE ? COLLATE NOCASE OR mp.arranger LIKE ? COLLATE NOCASE OR mp.original_filename LIKE ? COLLATE NOCASE)';
+        const searchTerm = `%${search as string}%`;
+        params.push(searchTerm, searchTerm, searchTerm);
     }
 
     if (instrumentId) {
@@ -347,8 +347,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
     const params: any[] = [req.user!.associationId];
 
     if (search) {
-        query += ' AND (LOWER(mp.title) LIKE ? OR LOWER(mp.arranger) LIKE ?)';
-        const searchTerm = `%${(search as string).toLowerCase()}%`;
+        query += ' AND (mp.title LIKE ? COLLATE NOCASE OR mp.arranger LIKE ? COLLATE NOCASE)';
+        const searchTerm = `%${search as string}%`;
         params.push(searchTerm, searchTerm);
     }
 
@@ -990,6 +990,66 @@ router.post('/upload', authenticateToken, requireRole('admin', 'music_committee'
         uploaded: results,
         errors: errors.length > 0 ? errors : undefined,
     });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/bulk-delete:
+ *   post:
+ *     summary: Bulk delete music pieces
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Music pieces deleted
+ */
+router.post('/bulk-delete', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+        throw new ApiError(400, 'Geen muziekstukken geselecteerd.');
+    }
+
+    if (ids.length > 500) {
+        throw new ApiError(400, 'Maximaal 500 muziekstukken tegelijk verwijderen.');
+    }
+
+    // Get file paths for all pieces to delete
+    const placeholders = ids.map(() => '?').join(', ');
+    const pieces = db.prepare(
+        `SELECT id, file_path FROM music_pieces WHERE id IN (${placeholders}) AND association_id = ?`
+    ).all(...ids, req.user!.associationId) as { id: string; file_path: string }[];
+
+    if (pieces.length === 0) {
+        throw new ApiError(404, 'Geen muziekstukken gevonden.');
+    }
+
+    // Delete from database
+    db.prepare(
+        `DELETE FROM music_pieces WHERE id IN (${placeholders}) AND association_id = ?`
+    ).run(...ids, req.user!.associationId);
+
+    // Delete files asynchronously
+    for (const piece of pieces) {
+        const filePath = path.join(UPLOAD_DIR, piece.file_path);
+        deleteFile(filePath);
+    }
+
+    logger.info(`Bulk deleted ${pieces.length} music pieces`, { deletedBy: req.user!.id, count: pieces.length });
+
+    res.json({ message: `${pieces.length} muziekstukken verwijderd.`, count: pieces.length });
 }));
 
 /**

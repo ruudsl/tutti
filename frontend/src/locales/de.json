@@ -308,6 +308,13 @@
     "delete": {
       "title": "Musikstück löschen",
       "confirm": "Sind Sie sicher, dass Sie \"{{title}}\" löschen möchten?"
+    },
+    "bulk": {
+      "selectAll": "Alle auswählen",
+      "selectedCount": "{{count}} ausgewählt",
+      "deleteSelected": "Auswahl löschen",
+      "deleteTitle": "Musikstücke löschen",
+      "deleteConfirm": "Sind Sie sicher, dass Sie {{count}} Musikstücke löschen möchten? Dies kann nicht rückgängig gemacht werden."
     }
   },
   "titles": {

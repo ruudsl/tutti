@@ -4,6 +4,7 @@ import {
   getMusicPieces,
   updateMusicPiece,
   deleteMusicPiece,
+  deleteMusicPiecesBulk,
   refreshInstrumentLinks,
 } from '../api';
 import { showSuccess, showError } from '../utils/toast';
@@ -63,6 +64,24 @@ export function useDeleteMusicPiece() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess('Muziekstuk verwijderd');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to bulk delete music pieces
+ */
+export function useDeleteMusicPiecesBulk() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => deleteMusicPiecesBulk(ids),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      showSuccess(`${result.count} muziekstukken verwijderd`);
     },
     onError: (error) => {
       showError(getErrorMessage(error));
