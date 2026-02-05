@@ -762,6 +762,32 @@
       "removed": "Microsoft integration removed",
       "errorRemoving": "Error removing Microsoft integration",
       "clientIdRequired": "Please enter at least the Tenant ID and Client ID"
+    },
+    "smtp": {
+      "title": "Email (SMTP)",
+      "description": "Configure the SMTP server for sending emails, such as password reset messages.",
+      "host": "SMTP Server",
+      "hostPlaceholder": "e.g. smtp.gmail.com or smtp.office365.com",
+      "hostRequired": "SMTP server is required",
+      "port": "Port",
+      "secure": "SSL/TLS (port 465)",
+      "user": "Username",
+      "userPlaceholder": "e.g. noreply@yourorganization.com",
+      "password": "Password",
+      "passwordPlaceholder": "SMTP password or app password",
+      "passwordUnchanged": "Leave empty to keep current password",
+      "from": "From address",
+      "fromPlaceholder": "e.g. \"Orchestra\" <noreply@yourorganization.com>",
+      "fromHelp": "Name and email address shown as sender. Format: \"Name\" <email@example.com>",
+      "enabled": "Enable email sending",
+      "saved": "SMTP settings saved",
+      "errorSaving": "Error saving SMTP settings",
+      "remove": "Remove",
+      "removeConfirm": "Are you sure you want to remove the SMTP settings?",
+      "removed": "SMTP settings removed",
+      "errorRemoving": "Error removing SMTP settings",
+      "test": "Send test email",
+      "testFailed": "Failed to send test email"
     }
   },
   "theme": {

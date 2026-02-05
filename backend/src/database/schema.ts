@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS associations (
     microsoft_client_secret TEXT,
     microsoft_tenant_id TEXT,
     microsoft_enabled BOOLEAN DEFAULT 0,
+    smtp_host TEXT,
+    smtp_port INTEGER DEFAULT 587,
+    smtp_secure BOOLEAN DEFAULT 0,
+    smtp_user TEXT,
+    smtp_pass TEXT,
+    smtp_from TEXT,
+    smtp_enabled BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

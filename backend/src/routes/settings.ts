@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import nodemailer from 'nodemailer';
 import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
@@ -275,6 +276,135 @@ router.get('/logo/:filename', asyncHandler(async (req: AuthRequest, res: Respons
     // Cache logo for 1 hour
     res.set('Cache-Control', 'public, max-age=3600');
     res.sendFile(filePath);
+}));
+
+/**
+ * GET /settings/smtp - Get SMTP configuration (admin only)
+ */
+router.get('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_from, smtp_enabled
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as any;
+
+    if (!association) {
+        throw new ApiError(404, 'Vereniging niet gevonden.');
+    }
+
+    res.json({
+        host: association.smtp_host || '',
+        port: association.smtp_port || 587,
+        secure: !!association.smtp_secure,
+        user: association.smtp_user || '',
+        from: association.smtp_from || '',
+        enabled: !!association.smtp_enabled,
+        configured: !!association.smtp_host,
+    });
+}));
+
+/**
+ * PUT /settings/smtp - Save SMTP configuration (admin only)
+ */
+router.put('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { host, port, secure, user, password, from, enabled } = req.body;
+
+    if (!host || typeof host !== 'string' || !host.trim()) {
+        throw new ApiError(400, 'SMTP host is verplicht.');
+    }
+
+    const portNum = Number(port) || 587;
+    if (portNum < 1 || portNum > 65535) {
+        throw new ApiError(400, 'Poort moet tussen 1 en 65535 liggen.');
+    }
+
+    // Check if there's an existing password stored
+    const existing = db.prepare('SELECT smtp_pass FROM associations WHERE id = ?').get(req.user!.associationId) as any;
+
+    // Only update password if a new one is provided
+    const smtpPass = password?.trim() || existing?.smtp_pass || null;
+
+    db.prepare(`
+        UPDATE associations
+        SET smtp_host = ?, smtp_port = ?, smtp_secure = ?, smtp_user = ?, smtp_pass = ?, smtp_from = ?, smtp_enabled = ?
+        WHERE id = ?
+    `).run(
+        host.trim(),
+        portNum,
+        secure ? 1 : 0,
+        user?.trim() || null,
+        smtpPass,
+        from?.trim() || null,
+        enabled ? 1 : 0,
+        req.user!.associationId
+    );
+
+    logger.info('SMTP config updated', { associationId: req.user!.associationId, updatedBy: req.user!.id });
+
+    res.json({ message: 'SMTP-instellingen opgeslagen.' });
+}));
+
+/**
+ * DELETE /settings/smtp - Remove SMTP configuration (admin only)
+ */
+router.delete('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    db.prepare(`
+        UPDATE associations
+        SET smtp_host = NULL, smtp_port = 587, smtp_secure = 0, smtp_user = NULL, smtp_pass = NULL, smtp_from = NULL, smtp_enabled = 0
+        WHERE id = ?
+    `).run(req.user!.associationId);
+
+    logger.info('SMTP config removed', { associationId: req.user!.associationId, removedBy: req.user!.id });
+
+    res.json({ message: 'SMTP-instellingen verwijderd.' });
+}));
+
+/**
+ * POST /settings/smtp/test - Send a test email (admin only)
+ */
+router.post('/smtp/test', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as any;
+
+    if (!association?.smtp_host) {
+        throw new ApiError(400, 'SMTP is niet geconfigureerd. Sla eerst de instellingen op.');
+    }
+
+    const testTransporter = nodemailer.createTransport({
+        host: association.smtp_host,
+        port: association.smtp_port || 587,
+        secure: !!association.smtp_secure,
+        auth: association.smtp_user ? {
+            user: association.smtp_user,
+            pass: association.smtp_pass || '',
+        } : undefined,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+    });
+
+    try {
+        await testTransporter.verify();
+
+        // Send test email to the admin's own email
+        const user = db.prepare('SELECT email FROM users WHERE id = ?').get(req.user!.id) as any;
+        const fromAddress = association.smtp_from || `"Harmonie App" <${association.smtp_user}>`;
+
+        await testTransporter.sendMail({
+            from: fromAddress,
+            to: user.email,
+            subject: 'Harmonie App - SMTP Test',
+            text: 'Dit is een testbericht. Als je dit ontvangt, werkt de SMTP-configuratie correct!',
+            html: '<p>Dit is een <strong>testbericht</strong>.</p><p>Als je dit ontvangt, werkt de SMTP-configuratie correct!</p>',
+        });
+
+        logger.info('SMTP test email sent', { associationId: req.user!.associationId, to: user.email });
+
+        res.json({ message: `Testmail verzonden naar ${user.email}.` });
+    } catch (error: any) {
+        logger.error('SMTP test failed', { error: error.message, associationId: req.user!.associationId });
+        throw new ApiError(400, `SMTP-test mislukt: ${error.message}`);
+    }
 }));
 
 export default router;

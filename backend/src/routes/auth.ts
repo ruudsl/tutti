@@ -279,7 +279,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     // Always return success to prevent email enumeration
     const successMessage = 'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
 
-    const user = db.prepare('SELECT id, first_name, last_name FROM users WHERE email = ?').get(email) as { id: string; first_name: string; last_name: string } | undefined;
+    const user = db.prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ?').get(email) as { id: string; first_name: string; last_name: string; association_id: string | null } | undefined;
 
     if (!user) {
         // Don't reveal that email doesn't exist
@@ -306,7 +306,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
     // Send email
     const userName = `${user.first_name} ${user.last_name}`;
-    const emailSent = await sendPasswordResetEmail(email, token, userName);
+    const emailSent = await sendPasswordResetEmail(email, token, userName, user.association_id);
 
     if (!emailSent) {
         logger.error(`Failed to send password reset email to ${email}`);

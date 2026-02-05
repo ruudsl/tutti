@@ -200,3 +200,13 @@ export interface MicrosoftConfig {
   configured: boolean;
   redirectUri: string;
 }
+
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  from: string;
+  enabled: boolean;
+  configured: boolean;
+}

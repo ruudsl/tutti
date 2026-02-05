@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -767,6 +767,27 @@ export const saveMicrosoftConfig = async (config: {
 
 export const removeMicrosoftConfig = async (): Promise<void> => {
   await api.delete('/auth/microsoft/config');
+};
+
+// SMTP Configuration
+export const getSmtpConfig = async (): Promise<SmtpConfig> => {
+  const { data } = await api.get('/settings/smtp');
+  return data;
+};
+
+export const saveSmtpConfig = async (config: {
+  host: string; port: number; secure: boolean; user: string; password?: string; from: string; enabled: boolean;
+}): Promise<void> => {
+  await api.put('/settings/smtp', config);
+};
+
+export const removeSmtpConfig = async (): Promise<void> => {
+  await api.delete('/settings/smtp');
+};
+
+export const testSmtpConfig = async (): Promise<{ message: string }> => {
+  const { data } = await api.post('/settings/smtp/test');
+  return data;
 };
 
 export default api;

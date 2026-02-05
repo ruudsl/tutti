@@ -1,9 +1,55 @@
 import nodemailer from 'nodemailer';
 import logger from './logger';
+import db from '../database/connection';
 
-// Create transporter based on environment
-const createTransporter = () => {
-  // In production, use real SMTP settings from environment variables
+interface SmtpConfig {
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_secure: number | null;
+  smtp_user: string | null;
+  smtp_pass: string | null;
+  smtp_from: string | null;
+  smtp_enabled: number | null;
+}
+
+/**
+ * Get SMTP config from the database (first association with SMTP enabled),
+ * falling back to environment variables.
+ */
+const getSmtpTransporter = (associationId?: string | null): nodemailer.Transporter | null => {
+  // Try database config first
+  try {
+    let smtpConfig: SmtpConfig | undefined;
+
+    if (associationId) {
+      smtpConfig = db.prepare(
+        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL'
+      ).get(associationId) as SmtpConfig | undefined;
+    }
+
+    // Fallback: try any association with SMTP enabled
+    if (!smtpConfig) {
+      smtpConfig = db.prepare(
+        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1'
+      ).get() as SmtpConfig | undefined;
+    }
+
+    if (smtpConfig?.smtp_host) {
+      return nodemailer.createTransport({
+        host: smtpConfig.smtp_host,
+        port: smtpConfig.smtp_port || 587,
+        secure: !!smtpConfig.smtp_secure,
+        auth: smtpConfig.smtp_user ? {
+          user: smtpConfig.smtp_user,
+          pass: smtpConfig.smtp_pass || '',
+        } : undefined,
+      });
+    }
+  } catch {
+    // Database might not be initialized yet, fall through to env vars
+  }
+
+  // Fallback to environment variables
   if (process.env.SMTP_HOST) {
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -16,29 +62,57 @@ const createTransporter = () => {
     });
   }
 
-  // For development/testing, use ethereal email (fake SMTP)
-  // Or just log to console if no SMTP configured
-  logger.warn('No SMTP configuration found. Emails will be logged to console only.');
   return null;
 };
 
-const transporter = createTransporter();
+/**
+ * Get the "from" address from database config or environment.
+ */
+const getFromAddress = (associationId?: string | null): string => {
+  try {
+    let smtpConfig: SmtpConfig | undefined;
+
+    if (associationId) {
+      smtpConfig = db.prepare(
+        'SELECT smtp_from FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL'
+      ).get(associationId) as SmtpConfig | undefined;
+    }
+
+    if (!smtpConfig) {
+      smtpConfig = db.prepare(
+        'SELECT smtp_from FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1'
+      ).get() as SmtpConfig | undefined;
+    }
+
+    if (smtpConfig?.smtp_from) {
+      return smtpConfig.smtp_from;
+    }
+  } catch {
+    // Fall through
+  }
+
+  return process.env.SMTP_FROM || '"Harmonie App" <noreply@harmonie.app>';
+};
 
 interface EmailOptions {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  associationId?: string | null;
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  const { to, subject, text, html } = options;
+  const { to, subject, text, html, associationId } = options;
 
   // Log email for development/debugging
   logger.info(`Sending email to ${to}: ${subject}`);
 
+  const transporter = getSmtpTransporter(associationId);
+
   if (!transporter) {
     // Log the email content when no SMTP is configured
+    logger.warn('No SMTP configuration found. Emails will be logged to console only.');
     logger.info('Email content (no SMTP configured):');
     logger.info(`To: ${to}`);
     logger.info(`Subject: ${subject}`);
@@ -47,8 +121,9 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   }
 
   try {
+    const from = getFromAddress(associationId);
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Harmonie App" <noreply@harmonie.app>',
+      from,
       to,
       subject,
       text,
@@ -66,7 +141,8 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 export const sendPasswordResetEmail = async (
   email: string,
   resetToken: string,
-  userName: string
+  userName: string,
+  associationId?: string | null
 ): Promise<boolean> => {
   // Get the frontend URL from environment or use default
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -121,5 +197,5 @@ Het Harmonie Team
 </html>
 `;
 
-  return sendEmail({ to: email, subject, text, html });
+  return sendEmail({ to: email, subject, text, html, associationId });
 };

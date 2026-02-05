@@ -327,6 +327,25 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add SMTP config columns to associations
+    try {
+        const assocSmtpInfo = db.prepare("PRAGMA table_info(associations)").all() as { name: string }[];
+        const hasSmtpHost = assocSmtpInfo.some(col => col.name === 'smtp_host');
+        if (!hasSmtpHost) {
+            console.log('Migration: Adding SMTP config columns to associations...');
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_host TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_port INTEGER DEFAULT 587').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_secure BOOLEAN DEFAULT 0').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_user TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_pass TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_from TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN smtp_enabled BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

@@ -762,6 +762,32 @@
       "removed": "Microsoft-Integration entfernt",
       "errorRemoving": "Fehler beim Entfernen der Microsoft-Integration",
       "clientIdRequired": "Bitte geben Sie mindestens die Tenant-ID und Client-ID ein"
+    },
+    "smtp": {
+      "title": "E-Mail (SMTP)",
+      "description": "Konfigurieren Sie den SMTP-Server zum Versenden von E-Mails, z.B. Passwort-Reset-Nachrichten.",
+      "host": "SMTP-Server",
+      "hostPlaceholder": "z.B. smtp.gmail.com oder smtp.office365.com",
+      "hostRequired": "SMTP-Server ist erforderlich",
+      "port": "Port",
+      "secure": "SSL/TLS (Port 465)",
+      "user": "Benutzername",
+      "userPlaceholder": "z.B. noreply@ihrverein.de",
+      "password": "Passwort",
+      "passwordPlaceholder": "SMTP-Passwort oder App-Passwort",
+      "passwordUnchanged": "Leer lassen, um aktuelles Passwort beizubehalten",
+      "from": "Absender",
+      "fromPlaceholder": "z.B. \"Orchester\" <noreply@ihrverein.de>",
+      "fromHelp": "Name und E-Mail-Adresse, die als Absender angezeigt werden. Format: \"Name\" <email@beispiel.de>",
+      "enabled": "E-Mail-Versand aktivieren",
+      "saved": "SMTP-Einstellungen gespeichert",
+      "errorSaving": "Fehler beim Speichern der SMTP-Einstellungen",
+      "remove": "Entfernen",
+      "removeConfirm": "Sind Sie sicher, dass Sie die SMTP-Einstellungen entfernen möchten?",
+      "removed": "SMTP-Einstellungen entfernt",
+      "errorRemoving": "Fehler beim Entfernen der SMTP-Einstellungen",
+      "test": "Test-E-Mail senden",
+      "testFailed": "Test-E-Mail konnte nicht gesendet werden"
     }
   },
   "theme": {

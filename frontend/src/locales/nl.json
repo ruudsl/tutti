@@ -752,6 +752,32 @@
       "removed": "Microsoft koppeling verwijderd",
       "errorRemoving": "Fout bij verwijderen Microsoft koppeling",
       "clientIdRequired": "Vul tenminste de Tenant ID en Client ID in"
+    },
+    "smtp": {
+      "title": "E-mail (SMTP)",
+      "description": "Configureer de SMTP-server voor het versturen van e-mails, zoals wachtwoord-reset berichten.",
+      "host": "SMTP Server",
+      "hostPlaceholder": "bijv. smtp.gmail.com of smtp.office365.com",
+      "hostRequired": "SMTP server is verplicht",
+      "port": "Poort",
+      "secure": "SSL/TLS (poort 465)",
+      "user": "Gebruikersnaam",
+      "userPlaceholder": "bijv. noreply@jouwvereniging.nl",
+      "password": "Wachtwoord",
+      "passwordPlaceholder": "SMTP wachtwoord of app-wachtwoord",
+      "passwordUnchanged": "Laat leeg om huidig wachtwoord te behouden",
+      "from": "Afzender",
+      "fromPlaceholder": "bijv. \"Harmonie\" <noreply@jouwvereniging.nl>",
+      "fromHelp": "Naam en e-mailadres dat als afzender wordt getoond. Formaat: \"Naam\" <email@voorbeeld.nl>",
+      "enabled": "E-mail verzenden inschakelen",
+      "saved": "SMTP-instellingen opgeslagen",
+      "errorSaving": "Fout bij opslaan SMTP-instellingen",
+      "remove": "Verwijderen",
+      "removeConfirm": "Weet je zeker dat je de SMTP-instellingen wilt verwijderen?",
+      "removed": "SMTP-instellingen verwijderd",
+      "errorRemoving": "Fout bij verwijderen SMTP-instellingen",
+      "test": "Testmail versturen",
+      "testFailed": "Testmail versturen mislukt"
     }
   },
   "theme": {
