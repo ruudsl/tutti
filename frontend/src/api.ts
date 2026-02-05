@@ -312,8 +312,8 @@ export const downloadMusicPiece = async (id: string): Promise<void> => {
   const contentDisposition = response.headers['content-disposition'];
   let filename = 'muziekstuk.pdf';
   if (contentDisposition) {
-    const match = contentDisposition.match(/filename="?(.+)"?/);
-    if (match) filename = match[1];
+    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
+    if (match) filename = match[1] || match[2];
   }
 
   // Create download link
