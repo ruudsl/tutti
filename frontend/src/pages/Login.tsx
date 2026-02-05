@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import api from '../api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,10 +13,17 @@ export default function Login() {
   const [showMfa, setShowMfa] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({ displayName: 'Harmonie', logoUrl: null });
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.login');
+
+  useEffect(() => {
+    api.get('/settings/branding').then(({ data }) => {
+      setBranding(data);
+    }).catch(() => { /* fallback to defaults */ });
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -56,8 +64,14 @@ export default function Login() {
           <LanguageSwitcher compact />
         </div>
         <div className="login-logo">
-          <h1>🎵 Harmonie Muziek</h1>
-          <p>Music management for orchestra members</p>
+          {branding.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.displayName}
+              style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', marginBottom: '0.5rem' }}
+            />
+          ) : null}
+          <h1>{branding.logoUrl ? '' : '🎵 '}{branding.displayName}</h1>
         </div>
 
         <form onSubmit={handleSubmit}>

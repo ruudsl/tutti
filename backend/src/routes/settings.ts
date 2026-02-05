@@ -186,6 +186,20 @@ router.get('/theme', asyncHandler(async (_req: AuthRequest, res: Response) => {
 }));
 
 /**
+ * GET /settings/branding - Get public branding (logo + name, no auth needed for login page)
+ */
+router.get('/branding', asyncHandler(async (_req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT name, display_name, logo_path FROM associations LIMIT 1
+    `).get() as any;
+
+    res.json({
+        displayName: association?.display_name || association?.name || 'Harmonie',
+        logoUrl: association?.logo_path ? `/api/settings/logo/${path.basename(association.logo_path)}` : null,
+    });
+}));
+
+/**
  * PUT /settings/theme - Update theme (admin only)
  */
 router.put('/theme', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
