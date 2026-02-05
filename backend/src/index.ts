@@ -79,7 +79,8 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 
-// API Routes
+// API Routes (more specific prefixes first)
+app.use('/api/auth/microsoft', microsoftAuthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/instruments', instrumentsRoutes);
@@ -96,7 +97,6 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
-app.use('/api/auth/microsoft', microsoftAuthRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

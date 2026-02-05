@@ -150,7 +150,7 @@ router.post('/callback', asyncHandler(async (req: Request, res: Response) => {
     if (!tokenResponse.ok) {
         const errorBody = await tokenResponse.text();
         logger.error('Microsoft token exchange failed', { status: tokenResponse.status, body: errorBody });
-        throw new ApiError(401, 'Microsoft login mislukt. Controleer de configuratie.');
+        throw new ApiError(400, 'Microsoft login mislukt. Controleer de configuratie.');
     }
 
     const tokenData = await tokenResponse.json() as MicrosoftTokenResponse;
@@ -162,7 +162,7 @@ router.post('/callback', asyncHandler(async (req: Request, res: Response) => {
 
     if (!profileResponse.ok) {
         logger.error('Microsoft Graph profile fetch failed', { status: profileResponse.status });
-        throw new ApiError(401, 'Kan Microsoft profiel niet ophalen.');
+        throw new ApiError(400, 'Kan Microsoft profiel niet ophalen.');
     }
 
     const msProfile = await profileResponse.json() as MicrosoftUserProfile;
@@ -191,7 +191,7 @@ router.post('/callback', asyncHandler(async (req: Request, res: Response) => {
     }
 
     if (!user) {
-        throw new ApiError(401, 'Geen account gevonden met dit e-mailadres. Neem contact op met de beheerder.');
+        throw new ApiError(400, 'Geen account gevonden met dit e-mailadres. Neem contact op met de beheerder.');
     }
 
     // Generate JWT token
