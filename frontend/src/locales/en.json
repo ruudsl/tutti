@@ -56,7 +56,9 @@
     "changelog": "Changelog",
     "rehearsals": "Rehearsals",
     "logout": "Logout",
-    "profile": "Profile"
+    "profile": "Profile",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "roles": {
     "admin": "Administrator",

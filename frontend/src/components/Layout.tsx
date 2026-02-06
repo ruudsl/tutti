@@ -65,6 +65,24 @@ export default function Layout() {
   const { t } = useTranslation();
   const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   const handleRestartOnboarding = () => {
     if (user) {
@@ -124,7 +142,20 @@ export default function Layout() {
             {' '}{brandSettings?.displayName || 'Harmonie'}
           </Link>
 
-          <ul className="navbar-nav">
+          <button
+            className="hamburger-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
+            aria-expanded={mobileMenuOpen}
+          >
+            <span className={`hamburger-icon ${mobileMenuOpen ? 'open' : ''}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+
+          <ul className={`navbar-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
             <li>
               <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
                 {t('nav.dashboard')}
@@ -235,6 +266,23 @@ export default function Layout() {
                 </li>
               </NavDropdown>
             )}
+
+            {/* Mobile user section */}
+            <li className="mobile-user-section">
+              <div className="mobile-user-info">
+                <div className="user-name">{user?.firstName} {user?.lastName}</div>
+                <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
+              </div>
+              <div className="mobile-user-actions">
+                <LanguageSwitcher compact />
+                <NavLink to="/profile" className="nav-link">
+                  {t('nav.profile')}
+                </NavLink>
+                <button className="btn btn-outline btn-sm" onClick={handleLogout}>
+                  {t('nav.logout')}
+                </button>
+              </div>
+            </li>
           </ul>
 
           <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
@@ -257,6 +305,15 @@ export default function Layout() {
             </button>
           </div>
         </div>
+
+        {/* Mobile menu overlay */}
+        {mobileMenuOpen && (
+          <div
+            className="mobile-menu-overlay"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
       </nav>
 
       <main id="main-content" className="main-content">

@@ -56,7 +56,9 @@
     "changelog": "Changelog",
     "rehearsals": "Repetities",
     "logout": "Uitloggen",
-    "profile": "Profiel"
+    "profile": "Profiel",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten"
   },
   "roles": {
     "admin": "Beheerder",

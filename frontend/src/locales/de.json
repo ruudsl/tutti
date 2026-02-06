@@ -56,7 +56,9 @@
     "changelog": "Changelog",
     "rehearsals": "Proben",
     "logout": "Abmelden",
-    "profile": "Profil"
+    "profile": "Profil",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
   },
   "roles": {
     "admin": "Administrator",
