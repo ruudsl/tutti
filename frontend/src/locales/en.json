@@ -30,7 +30,8 @@
     "all": "All",
     "none": "None",
     "optional": "optional",
-    "required": "required"
+    "required": "required",
+    "sessionExpired": "Session expired. Please log in again."
   },
   "nav": {
     "dashboard": "Dashboard",

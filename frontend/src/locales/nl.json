@@ -30,7 +30,8 @@
     "all": "Alle",
     "none": "Geen",
     "optional": "optioneel",
-    "required": "verplicht"
+    "required": "verplicht",
+    "sessionExpired": "Sessie verlopen. Log opnieuw in."
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -30,7 +30,8 @@
     "all": "Alle",
     "none": "Keine",
     "optional": "optional",
-    "required": "erforderlich"
+    "required": "erforderlich",
+    "sessionExpired": "Sitzung abgelaufen. Bitte erneut anmelden."
   },
   "nav": {
     "dashboard": "Dashboard",

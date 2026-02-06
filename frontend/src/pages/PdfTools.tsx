@@ -222,7 +222,11 @@ export default function PdfTools() {
 
   const downloadFile = (filepath: string, _filename: string) => {
     const token = localStorage.getItem('token');
-    window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${token}`, '_blank');
+    if (!token) {
+      showError(t('common.sessionExpired'));
+      return;
+    }
+    window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${encodeURIComponent(token)}`, '_blank');
   };
 
   const handleSaveAsMusicPiece = async (filepath: string, filename: string) => {
