@@ -501,7 +501,14 @@
     "mergeSuccess": "{{count}} files merged",
     "mergedDocument": "Merged document: {{count}} pages",
     "preview": "Page previews",
-    "size": "Size"
+    "size": "Size",
+    "saveAsMusicPiece": "Save as music piece",
+    "saveAsMusicPieceDescription": "Optional: save split PDFs directly as music piece (select an orchestra first)",
+    "selectOrchestra": "Select orchestra...",
+    "noList": "No list (archive only)",
+    "selectOrchestraFirst": "Select an orchestra first",
+    "savedAsMusicPiece": "\"{{title}}\" saved as music piece",
+    "errorSavingAsMusicPiece": "Error saving as music piece"
   },
   "loans": {
     "title": "Loans",

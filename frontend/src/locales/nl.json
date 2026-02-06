@@ -491,7 +491,14 @@
     "mergeSuccess": "{{count}} bestanden samengevoegd",
     "mergedDocument": "Samengevoegd document: {{count}} pagina's",
     "preview": "Pagina voorbeelden",
-    "size": "Grootte"
+    "size": "Grootte",
+    "saveAsMusicPiece": "Opslaan als muziekstuk",
+    "saveAsMusicPieceDescription": "Optioneel: sla gesplitste PDF's direct op als muziekstuk (selecteer eerst een orkest)",
+    "selectOrchestra": "Selecteer orkest...",
+    "noList": "Geen lijst (alleen archief)",
+    "selectOrchestraFirst": "Selecteer eerst een orkest",
+    "savedAsMusicPiece": "\"{{title}}\" opgeslagen als muziekstuk",
+    "errorSavingAsMusicPiece": "Fout bij opslaan als muziekstuk"
   },
   "loans": {
     "title": "Uitleningen",

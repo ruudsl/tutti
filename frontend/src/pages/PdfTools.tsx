@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import PdfPagePreview from '../components/PdfPagePreview';
+import { useOrchestras } from '../hooks/useOrchestras';
+import { useMusicLists } from '../hooks/useMusicLists';
+import { savePdfAsMusicPiece } from '../api';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -50,8 +53,15 @@ export default function PdfTools() {
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
   const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(null);
   const [thumbnailSize, setThumbnailSize] = useState(100);
+  const [savingAsMusicPiece, setSavingAsMusicPiece] = useState<string | null>(null);
+  const [selectedOrchestra, setSelectedOrchestra] = useState('');
+  const [selectedList, setSelectedList] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Data for saving as music piece
+  const { data: orchestras = [] } = useOrchestras();
+  const { data: lists = [] } = useMusicLists(selectedOrchestra || undefined);
   const mergeInputRef = useRef<HTMLInputElement>(null);
 
   const getAuthHeaders = () => {
@@ -213,6 +223,32 @@ export default function PdfTools() {
   const downloadFile = (filepath: string, _filename: string) => {
     const token = localStorage.getItem('token');
     window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${token}`, '_blank');
+  };
+
+  const handleSaveAsMusicPiece = async (filepath: string, filename: string) => {
+    if (!selectedOrchestra) {
+      showError(t('pdfTools.selectOrchestraFirst'));
+      return;
+    }
+
+    setSavingAsMusicPiece(filepath);
+    try {
+      const result = await savePdfAsMusicPiece(filepath, filename, selectedList || undefined);
+      if (result.success) {
+        showSuccess(t('pdfTools.savedAsMusicPiece', { title: result.title }));
+        // Remove the saved result from splitResults
+        setSplitResults(prev => prev.filter(r => r.filepath !== filepath));
+      }
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('pdfTools.errorSavingAsMusicPiece'));
+    } finally {
+      setSavingAsMusicPiece(null);
+    }
+  };
+
+  const handleOrchestraChange = (orchestraId: string) => {
+    setSelectedOrchestra(orchestraId);
+    setSelectedList('');
   };
 
   const addSplitRange = () => {
@@ -397,7 +433,48 @@ export default function PdfTools() {
                   {splitResults.length > 0 && (
                     <div style={{ marginTop: '1.5rem' }}>
                       <h4>{t('pdfTools.results')}</h4>
-                      <div className="grid" style={{ gap: '0.5rem', marginTop: '0.5rem' }}>
+
+                      {/* Orchestra/List selection for saving as music piece */}
+                      <div style={{
+                        padding: '1rem',
+                        background: 'var(--background)',
+                        borderRadius: '0.5rem',
+                        marginBottom: '1rem',
+                        marginTop: '0.5rem'
+                      }}>
+                        <div style={{ marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
+                          {t('pdfTools.saveAsMusicPieceDescription')}
+                        </div>
+                        <div className="grid grid-2" style={{ gap: '0.5rem' }}>
+                          <select
+                            className="form-control form-select"
+                            value={selectedOrchestra}
+                            onChange={(e) => handleOrchestraChange(e.target.value)}
+                          >
+                            <option value="">{t('pdfTools.selectOrchestra')}</option>
+                            {orchestras.map((orchestra) => (
+                              <option key={orchestra.id} value={orchestra.id}>
+                                {orchestra.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            className="form-control form-select"
+                            value={selectedList}
+                            onChange={(e) => setSelectedList(e.target.value)}
+                            disabled={!selectedOrchestra}
+                          >
+                            <option value="">{t('pdfTools.noList')}</option>
+                            {lists.map((list) => (
+                              <option key={list.id} value={list.id}>
+                                {list.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid" style={{ gap: '0.5rem' }}>
                         {splitResults.map((result, index) => (
                           <div
                             key={index}
@@ -407,10 +484,12 @@ export default function PdfTools() {
                               alignItems: 'center',
                               padding: '0.75rem',
                               background: result.error ? 'var(--danger-light)' : 'var(--success-light)',
-                              borderRadius: '0.25rem'
+                              borderRadius: '0.25rem',
+                              flexWrap: 'wrap',
+                              gap: '0.5rem'
                             }}
                           >
-                            <div>
+                            <div style={{ flex: 1, minWidth: '200px' }}>
                               <strong>{result.name}</strong>
                               {result.pageCount && (
                                 <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
@@ -422,12 +501,22 @@ export default function PdfTools() {
                               )}
                             </div>
                             {result.filepath && (
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => downloadFile(result.filepath!, result.filename!)}
-                              >
-                                {t('pdfTools.download')}
-                              </button>
+                              <div className="flex gap-1">
+                                <button
+                                  className="btn btn-sm btn-outline"
+                                  onClick={() => downloadFile(result.filepath!, result.filename!)}
+                                >
+                                  {t('pdfTools.download')}
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => handleSaveAsMusicPiece(result.filepath!, result.filename!)}
+                                  disabled={!selectedOrchestra || savingAsMusicPiece === result.filepath}
+                                  title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
+                                >
+                                  {savingAsMusicPiece === result.filepath ? '...' : t('pdfTools.saveAsMusicPiece')}
+                                </button>
+                              </div>
                             )}
                           </div>
                         ))}

@@ -5,11 +5,60 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import db from '../database/connection';
 
 const router = Router();
 
-// Configure multer for PDF uploads
+// Configure directories
 const TEMP_DIR = process.env.TEMP_DIR || path.join(__dirname, '../../temp');
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
+
+// Ensure upload directory exists
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Parse filename to extract metadata
+// Format: Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel
+function parseFilename(filename: string): {
+  title: string;
+  arranger: string | null;
+  instrument: string | null;
+  tuning: string | null;
+  groupNumber: string | null;
+  clef: string | null;
+} {
+  const nameWithoutExt = filename.replace(/\.pdf$/i, '');
+  const parts = nameWithoutExt.split('_');
+  return {
+    title: parts[0] || filename,
+    arranger: parts[1] || null,
+    instrument: parts[2] || null,
+    tuning: parts[3] || null,
+    groupNumber: parts[4] || null,
+    clef: parts[5] || null,
+  };
+}
+
+// Find instrument by name or alias
+function findInstrumentId(instrumentName: string): string | null {
+  if (!instrumentName) return null;
+  const searchName = instrumentName.toLowerCase().trim();
+
+  // First try exact match on instrument name
+  const instrument = db.prepare(`
+    SELECT id FROM instruments WHERE LOWER(name) = ?
+  `).get(searchName) as { id: string } | undefined;
+  if (instrument) return instrument.id;
+
+  // Try alias
+  const alias = db.prepare(`
+    SELECT instrument_id FROM instrument_aliases WHERE LOWER(alias) = ?
+  `).get(searchName) as { instrument_id: string } | undefined;
+  return alias ? alias.instrument_id : null;
+}
+
+// Configure multer for PDF uploads
 
 // Ensure temp directory exists
 if (!fs.existsSync(TEMP_DIR)) {
@@ -329,6 +378,76 @@ router.post('/rotate', authenticateToken, requireRole('music_committee', 'admin'
   } catch (error) {
     console.error('Error rotating PDF:', error);
     res.status(500).json({ error: 'Fout bij roteren van PDF' });
+  }
+});
+
+// Save a temp PDF as a music piece
+router.post('/save-as-music-piece', authenticateToken, requireRole('music_committee', 'admin'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { filepath, filename, listId } = req.body;
+
+    if (!filepath || !filename) {
+      return res.status(400).json({ error: 'Filepath en filename zijn verplicht' });
+    }
+
+    // Sanitize and validate filepath
+    const sanitizedFilepath = path.basename(filepath);
+    const tempFilePath = path.join(TEMP_DIR, sanitizedFilepath);
+
+    if (!fs.existsSync(tempFilePath)) {
+      return res.status(404).json({ error: 'Bestand niet gevonden in temp directory' });
+    }
+
+    // Parse the filename to extract metadata
+    const parsed = parseFilename(filename);
+    const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+
+    // Generate new filename for uploads
+    const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+    const newFilename = `${uniqueSuffix}.pdf`;
+    const uploadFilePath = path.join(UPLOAD_DIR, newFilename);
+
+    // Move file from temp to uploads
+    fs.copyFileSync(tempFilePath, uploadFilePath);
+    fs.unlinkSync(tempFilePath);
+
+    // Create music piece record
+    const pieceId = uuidv4();
+    db.prepare(`
+      INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
+                               file_path, original_filename, association_id, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      pieceId,
+      parsed.title,
+      parsed.arranger,
+      instrumentId,
+      parsed.tuning,
+      parsed.groupNumber,
+      parsed.clef,
+      newFilename,
+      filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
+      req.user!.associationId,
+      req.user!.id
+    );
+
+    // Add to list if specified
+    if (listId) {
+      db.prepare(
+        'INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
+      ).run(listId, pieceId);
+    }
+
+    res.json({
+      success: true,
+      id: pieceId,
+      title: parsed.title,
+      instrumentId,
+      instrumentFound: !!instrumentId,
+    });
+  } catch (error) {
+    console.error('Error saving PDF as music piece:', error);
+    res.status(500).json({ error: 'Fout bij opslaan als muziekstuk' });
   }
 });
 

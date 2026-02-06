@@ -796,4 +796,18 @@ export const getChangelog = async (): Promise<{ content: string }> => {
   return data;
 };
 
+// PDF Tools - Save as music piece
+export const savePdfAsMusicPiece = async (
+  filepath: string,
+  filename: string,
+  listId?: string
+): Promise<{ success: boolean; id: string; title: string; instrumentFound: boolean }> => {
+  const { data } = await api.post('/pdf-tools/save-as-music-piece', {
+    filepath,
+    filename,
+    listId,
+  });
+  return data;
+};
+
 export default api;

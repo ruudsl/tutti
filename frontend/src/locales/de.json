@@ -501,7 +501,14 @@
     "mergeSuccess": "{{count}} Dateien zusammengefügt",
     "mergedDocument": "Zusammengefügtes Dokument: {{count}} Seiten",
     "preview": "Seitenvorschau",
-    "size": "Größe"
+    "size": "Größe",
+    "saveAsMusicPiece": "Als Musikstück speichern",
+    "saveAsMusicPieceDescription": "Optional: Speichern Sie geteilte PDFs direkt als Musikstück (wählen Sie zuerst ein Orchester)",
+    "selectOrchestra": "Orchester auswählen...",
+    "noList": "Keine Liste (nur Archiv)",
+    "selectOrchestraFirst": "Wählen Sie zuerst ein Orchester",
+    "savedAsMusicPiece": "\"{{title}}\" als Musikstück gespeichert",
+    "errorSavingAsMusicPiece": "Fehler beim Speichern als Musikstück"
   },
   "loans": {
     "title": "Ausleihen",
