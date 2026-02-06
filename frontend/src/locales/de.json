@@ -498,7 +498,8 @@
     "errorMerging": "Fehler beim Zusammenfügen",
     "mergeSuccess": "{{count}} Dateien zusammengefügt",
     "mergedDocument": "Zusammengefügtes Dokument: {{count}} Seiten",
-    "preview": "Seitenvorschau"
+    "preview": "Seitenvorschau",
+    "size": "Größe"
   },
   "loans": {
     "title": "Ausleihen",

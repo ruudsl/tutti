@@ -498,7 +498,8 @@
     "errorMerging": "Error merging",
     "mergeSuccess": "{{count}} files merged",
     "mergedDocument": "Merged document: {{count}} pages",
-    "preview": "Page previews"
+    "preview": "Page previews",
+    "size": "Size"
   },
   "loans": {
     "title": "Loans",

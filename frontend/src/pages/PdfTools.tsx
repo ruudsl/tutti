@@ -49,6 +49,7 @@ export default function PdfTools() {
   const [a3Result, setA3Result] = useState<{ filepath: string; filename: string; splitCount: number; newPageCount: number } | null>(null);
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
   const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(null);
+  const [thumbnailSize, setThumbnailSize] = useState(100);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mergeInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +57,19 @@ export default function PdfTools() {
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return { Authorization: `Bearer ${token}` };
+  };
+
+  // Extract clean base name from filename (remove extension, clean up)
+  const getBaseFilename = (filename: string): string => {
+    // Remove .pdf extension
+    let base = filename.replace(/\.pdf$/i, '');
+    // Replace spaces and special characters with underscores
+    base = base.replace(/[\s\-]+/g, '_');
+    // Remove multiple underscores
+    base = base.replace(/_+/g, '_');
+    // Remove leading/trailing underscores
+    base = base.replace(/^_+|_+$/g, '');
+    return base;
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +101,8 @@ export default function PdfTools() {
 
       // Initialize split ranges based on page count
       if (info.pageCount > 0) {
-        setSplitRanges([{ start: 1, end: info.pageCount, name: 'Part 1' }]);
+        const baseName = getBaseFilename(file.name);
+        setSplitRanges([{ start: 1, end: info.pageCount, name: `${baseName}_Deel1` }]);
       }
     } catch (error: any) {
       showError(error.message || t('pdfTools.errorReadingPdf'));
@@ -204,10 +219,12 @@ export default function PdfTools() {
     const lastRange = splitRanges[splitRanges.length - 1];
     const newStart = lastRange ? lastRange.end + 1 : 1;
     const newEnd = pdfInfo ? Math.min(newStart, pdfInfo.pageCount) : newStart;
+    const baseName = pdfFile ? getBaseFilename(pdfFile.name) : '';
+    const partNumber = splitRanges.length + 1;
     setSplitRanges([...splitRanges, {
       start: newStart,
       end: newEnd,
-      name: `Deel ${splitRanges.length + 1}`,
+      name: baseName ? `${baseName}_Deel${partNumber}` : `Deel${partNumber}`,
     }]);
   };
 
@@ -291,11 +308,29 @@ export default function PdfTools() {
                   </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <h4 style={{ marginBottom: '0.75rem' }}>{t('pdfTools.preview')}</h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <h4 style={{ margin: 0 }}>{t('pdfTools.preview')}</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                          {t('pdfTools.size')}:
+                        </span>
+                        <input
+                          type="range"
+                          min="60"
+                          max="200"
+                          value={thumbnailSize}
+                          onChange={(e) => setThumbnailSize(Number(e.target.value))}
+                          style={{ width: '120px' }}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', minWidth: '40px' }}>
+                          {thumbnailSize}px
+                        </span>
+                      </div>
+                    </div>
                     <PdfPagePreview
                       file={pdfFile}
                       selectedRanges={splitRanges}
-                      thumbnailWidth={100}
+                      thumbnailWidth={thumbnailSize}
                     />
                   </div>
 

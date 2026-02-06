@@ -488,7 +488,8 @@
     "errorMerging": "Fout bij samenvoegen",
     "mergeSuccess": "{{count}} bestanden samengevoegd",
     "mergedDocument": "Samengevoegd document: {{count}} pagina's",
-    "preview": "Pagina voorbeelden"
+    "preview": "Pagina voorbeelden",
+    "size": "Grootte"
   },
   "loans": {
     "title": "Uitleningen",
