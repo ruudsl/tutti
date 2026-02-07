@@ -49,6 +49,13 @@ interface SplitResult {
   filepath?: string;
   pageCount?: number;
   error?: string;
+  saved?: boolean;
+  title?: string;
+  arranger?: string;
+  instrumentId?: string;
+  tuning?: string;
+  groupNumber?: string;
+  clef?: string;
 }
 
 export default function PdfTools() {
@@ -181,11 +188,22 @@ export default function PdfTools() {
       }
 
       const data = await response.json();
-      // Enrich results with display names
-      const enrichedResults = data.results.map((result: SplitResult, index: number) => ({
-        ...result,
-        displayName: displayNames[index] || result.name,
-      }));
+      // Enrich results with display names and metadata
+      const enrichedResults = data.results.map((result: SplitResult, index: number) => {
+        const range = splitRanges[index];
+        const instrument = range ? instrumentOptions.find(i => i.id === range.instrumentId) : null;
+        return {
+          ...result,
+          displayName: displayNames[index] || result.name,
+          saved: false,
+          title: splitTitle,
+          arranger: splitArranger,
+          instrumentId: range?.instrumentId || undefined,
+          tuning: instrument?.tuning || undefined,
+          groupNumber: range ? String(range.number) : undefined,
+          clef: instrument?.clef || undefined,
+        };
+      });
       setSplitResults(enrichedResults);
       showSuccess(t('pdfTools.pdfSplitSuccess', { count: data.results.length }));
     } catch (error: any) {
@@ -272,7 +290,7 @@ export default function PdfTools() {
     window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${encodeURIComponent(token)}`, '_blank');
   };
 
-  const handleSaveAsMusicPiece = async (filepath: string, filename: string) => {
+  const handleSaveAsMusicPiece = async (filepath: string, filename: string, resultItem?: SplitResult) => {
     if (!selectedOrchestra) {
       showError(t('pdfTools.selectOrchestraFirst'));
       return;
@@ -280,11 +298,20 @@ export default function PdfTools() {
 
     setSavingAsMusicPiece(filepath);
     try {
-      const result = await savePdfAsMusicPiece(filepath, filename, selectedList || undefined);
+      const metadata = resultItem ? {
+        title: resultItem.title,
+        arranger: resultItem.arranger,
+        instrumentId: resultItem.instrumentId,
+        tuning: resultItem.tuning,
+        groupNumber: resultItem.groupNumber,
+        clef: resultItem.clef,
+      } : undefined;
+
+      const result = await savePdfAsMusicPiece(filepath, filename, selectedList || undefined, metadata);
       if (result.success) {
         showSuccess(t('pdfTools.savedAsMusicPiece', { title: result.title }));
-        // Remove the saved result from splitResults
-        setSplitResults(prev => prev.filter(r => r.filepath !== filepath));
+        // Mark as saved instead of removing
+        setSplitResults(prev => prev.map(r => r.filepath === filepath ? { ...r, saved: true } : r));
       }
     } catch (error: any) {
       showError(error.response?.data?.error || t('pdfTools.errorSavingAsMusicPiece'));
@@ -345,7 +372,7 @@ export default function PdfTools() {
       return;
     }
 
-    const toSave = splitResults.filter(r => r.filepath);
+    const toSave = splitResults.filter(r => r.filepath && !r.saved);
     if (toSave.length === 0) return;
 
     setSavingAll(true);
@@ -354,7 +381,15 @@ export default function PdfTools() {
 
     for (const result of toSave) {
       try {
-        const saveResult = await savePdfAsMusicPiece(result.filepath!, result.filename!, selectedList || undefined);
+        const metadata = {
+          title: result.title,
+          arranger: result.arranger,
+          instrumentId: result.instrumentId,
+          tuning: result.tuning,
+          groupNumber: result.groupNumber,
+          clef: result.clef,
+        };
+        const saveResult = await savePdfAsMusicPiece(result.filepath!, result.filename!, selectedList || undefined, metadata);
         if (saveResult.success) {
           savedCount++;
           savedFilepaths.push(result.filepath!);
@@ -366,7 +401,8 @@ export default function PdfTools() {
 
     if (savedCount > 0) {
       showSuccess(t('pdfTools.allSavedAsMusicPieces', { count: savedCount }));
-      setSplitResults(prev => prev.filter(r => !savedFilepaths.includes(r.filepath!)));
+      // Mark as saved instead of removing
+      setSplitResults(prev => prev.map(r => savedFilepaths.includes(r.filepath!) ? { ...r, saved: true } : r));
     }
     setSavingAll(false);
   };
@@ -738,7 +774,7 @@ export default function PdfTools() {
                           <button
                             className="btn btn-primary"
                             onClick={handleSaveAllAsMusicPieces}
-                            disabled={!selectedOrchestra || savingAll}
+                            disabled={!selectedOrchestra || savingAll || splitResults.every(r => r.saved)}
                             title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
                           >
                             {savingAll ? t('pdfTools.saving') : t('pdfTools.saveAllAsMusicPieces')}
@@ -755,7 +791,7 @@ export default function PdfTools() {
                               justifyContent: 'space-between',
                               alignItems: 'center',
                               padding: '0.75rem',
-                              background: result.error ? 'var(--danger-light)' : 'var(--success-light)',
+                              background: result.error ? 'var(--danger-light)' : result.saved ? 'var(--info-light, #d1ecf1)' : 'var(--success-light)',
                               borderRadius: '0.25rem',
                               flexWrap: 'wrap',
                               gap: '0.5rem'
@@ -766,6 +802,11 @@ export default function PdfTools() {
                               {result.pageCount && (
                                 <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
                                   ({result.pageCount} {t('pdfTools.pages')})
+                                </span>
+                              )}
+                              {result.saved && (
+                                <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: 'var(--success, green)' }}>
+                                  — {t('pdfTools.saved')}
                                 </span>
                               )}
                               {result.error && (
@@ -782,11 +823,11 @@ export default function PdfTools() {
                                 </button>
                                 <button
                                   className="btn btn-sm btn-primary"
-                                  onClick={() => handleSaveAsMusicPiece(result.filepath!, result.filename!)}
-                                  disabled={!selectedOrchestra || savingAsMusicPiece === result.filepath}
+                                  onClick={() => handleSaveAsMusicPiece(result.filepath!, result.filename!, result)}
+                                  disabled={result.saved || !selectedOrchestra || savingAsMusicPiece === result.filepath}
                                   title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
                                 >
-                                  {savingAsMusicPiece === result.filepath ? '...' : t('pdfTools.saveAsMusicPiece')}
+                                  {savingAsMusicPiece === result.filepath ? '...' : result.saved ? t('pdfTools.saved') : t('pdfTools.saveAsMusicPiece')}
                                 </button>
                               </div>
                             )}

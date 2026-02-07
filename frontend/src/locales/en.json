@@ -522,7 +522,8 @@
     "downloadFailed": "Download failed",
     "saveAllAsMusicPieces": "Save all as music pieces",
     "saving": "Saving...",
-    "allSavedAsMusicPieces": "{{count}} music pieces saved"
+    "allSavedAsMusicPieces": "{{count}} music pieces saved",
+    "saved": "Saved"
   },
   "loans": {
     "title": "Loans",

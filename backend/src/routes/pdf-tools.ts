@@ -301,8 +301,7 @@ router.get('/download/:filename', authenticateToken, (req: Request, res: Respons
     if (err) {
       console.error('Download error:', err);
     }
-    // Clean up temp file after download
-    fs.unlink(filepath, () => {});
+    // Temp files are cleaned up by the hourly cleanup job
   });
 });
 
@@ -435,7 +434,7 @@ router.post('/rotate', authenticateToken, requireRole('music_committee', 'admin'
 // Save a temp PDF as a music piece
 router.post('/save-as-music-piece', authenticateToken, requireRole('music_committee', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
-    const { filepath, filename, listId } = req.body;
+    const { filepath, filename, listId, title, arranger, instrumentId, tuning, groupNumber, clef } = req.body;
 
     if (!filepath || !filename) {
       return res.status(400).json({ error: 'Filepath en filename zijn verplicht' });
@@ -449,18 +448,38 @@ router.post('/save-as-music-piece', authenticateToken, requireRole('music_commit
       return res.status(404).json({ error: 'Bestand niet gevonden in temp directory' });
     }
 
-    // Parse the filename to extract metadata
-    const parsed = parseFilename(filename);
-    const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+    // Use explicit metadata if provided, otherwise fall back to filename parsing
+    let pieceTitle: string;
+    let pieceArranger: string | null;
+    let pieceInstrumentId: string | null;
+    let pieceTuning: string | null;
+    let pieceGroupNumber: string | null;
+    let pieceClef: string | null;
+
+    if (title) {
+      pieceTitle = title;
+      pieceArranger = arranger || null;
+      pieceInstrumentId = instrumentId || null;
+      pieceTuning = tuning || null;
+      pieceGroupNumber = groupNumber || null;
+      pieceClef = clef || null;
+    } else {
+      const parsed = parseFilename(filename);
+      pieceTitle = parsed.title;
+      pieceArranger = parsed.arranger;
+      pieceInstrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+      pieceTuning = parsed.tuning;
+      pieceGroupNumber = parsed.groupNumber;
+      pieceClef = parsed.clef;
+    }
 
     // Generate new filename for uploads
     const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
     const newFilename = `${uniqueSuffix}.pdf`;
     const uploadFilePath = path.join(UPLOAD_DIR, newFilename);
 
-    // Move file from temp to uploads
+    // Copy file from temp to uploads (keep temp file for further downloads)
     fs.copyFileSync(tempFilePath, uploadFilePath);
-    fs.unlinkSync(tempFilePath);
 
     // Create music piece record
     const pieceId = uuidv4();
@@ -470,12 +489,12 @@ router.post('/save-as-music-piece', authenticateToken, requireRole('music_commit
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       pieceId,
-      parsed.title,
-      parsed.arranger,
-      instrumentId,
-      parsed.tuning,
-      parsed.groupNumber,
-      parsed.clef,
+      pieceTitle,
+      pieceArranger,
+      pieceInstrumentId,
+      pieceTuning,
+      pieceGroupNumber,
+      pieceClef,
       newFilename,
       filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
       req.user!.associationId,
@@ -492,9 +511,9 @@ router.post('/save-as-music-piece', authenticateToken, requireRole('music_commit
     res.json({
       success: true,
       id: pieceId,
-      title: parsed.title,
-      instrumentId,
-      instrumentFound: !!instrumentId,
+      title: pieceTitle,
+      instrumentId: pieceInstrumentId,
+      instrumentFound: !!pieceInstrumentId,
     });
   } catch (error) {
     console.error('Error saving PDF as music piece:', error);

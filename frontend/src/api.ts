@@ -800,12 +800,21 @@ export const getChangelog = async (): Promise<{ content: string }> => {
 export const savePdfAsMusicPiece = async (
   filepath: string,
   filename: string,
-  listId?: string
+  listId?: string,
+  metadata?: {
+    title?: string;
+    arranger?: string;
+    instrumentId?: string;
+    tuning?: string;
+    groupNumber?: string;
+    clef?: string;
+  }
 ): Promise<{ success: boolean; id: string; title: string; instrumentFound: boolean }> => {
   const { data } = await api.post('/pdf-tools/save-as-music-piece', {
     filepath,
     filename,
     listId,
+    ...metadata,
   });
   return data;
 };

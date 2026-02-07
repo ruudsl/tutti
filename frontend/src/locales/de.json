@@ -522,7 +522,8 @@
     "downloadFailed": "Download fehlgeschlagen",
     "saveAllAsMusicPieces": "Alle als Musikstücke speichern",
     "saving": "Wird gespeichert...",
-    "allSavedAsMusicPieces": "{{count}} Musikstücke gespeichert"
+    "allSavedAsMusicPieces": "{{count}} Musikstücke gespeichert",
+    "saved": "Gespeichert"
   },
   "loans": {
     "title": "Ausleihen",
