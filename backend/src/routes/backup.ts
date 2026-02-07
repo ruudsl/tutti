@@ -8,6 +8,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 import config from '../config';
+import db from '../database/connection';
 
 const router = Router();
 
@@ -63,23 +64,81 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
         logger.info('Added database to backup');
     }
 
-    // Add uploaded PDF files
+    // Get file mappings from database for original filenames
+    const pdfMappings = db.prepare(`
+        SELECT file_path, original_filename FROM music_pieces WHERE file_path IS NOT NULL
+    `).all() as { file_path: string; original_filename: string }[];
+
+    const mp3Mappings = db.prepare(`
+        SELECT mp3_file_path as file_path, title as original_filename FROM music_titles
+        WHERE mp3_file_path IS NOT NULL
+    `).all() as { file_path: string; original_filename: string }[];
+
+    // Create lookup maps
+    const pdfNameMap = new Map<string, string>();
+    for (const m of pdfMappings) {
+        pdfNameMap.set(m.file_path, m.original_filename);
+    }
+
+    const mp3NameMap = new Map<string, string>();
+    for (const m of mp3Mappings) {
+        mp3NameMap.set(m.file_path, m.original_filename);
+    }
+
+    // Track used names to handle duplicates
+    const usedPdfNames = new Map<string, number>();
+    const usedMp3Names = new Map<string, number>();
+
+    // Create manifest for restore mapping
+    const manifest: {
+        version: number;
+        pdfs: { storedName: string; archiveName: string }[];
+        mp3s: { storedName: string; archiveName: string }[];
+    } = { version: 1, pdfs: [], mp3s: [] };
+
+    // Add uploaded PDF files with original filenames
     if (fs.existsSync(UPLOAD_DIR)) {
         const pdfFiles = fs.readdirSync(UPLOAD_DIR).filter(f => f.endsWith('.pdf'));
         for (const file of pdfFiles) {
-            archive.file(path.join(UPLOAD_DIR, file), { name: `uploads/${file}` });
+            let archiveName = pdfNameMap.get(file) || file;
+
+            // Handle duplicate names by adding suffix
+            const baseName = archiveName.replace(/\.pdf$/i, '');
+            const count = usedPdfNames.get(archiveName) || 0;
+            if (count > 0) {
+                archiveName = `${baseName} (${count}).pdf`;
+            }
+            usedPdfNames.set(pdfNameMap.get(file) || file, count + 1);
+
+            archive.file(path.join(UPLOAD_DIR, file), { name: `uploads/${archiveName}` });
+            manifest.pdfs.push({ storedName: file, archiveName });
         }
         logger.info(`Added ${pdfFiles.length} PDF files to backup`);
     }
 
-    // Add uploaded MP3 files
+    // Add uploaded MP3 files with original filenames
     if (fs.existsSync(MP3_UPLOAD_DIR)) {
         const mp3Files = fs.readdirSync(MP3_UPLOAD_DIR).filter(f => f.endsWith('.mp3'));
         for (const file of mp3Files) {
-            archive.file(path.join(MP3_UPLOAD_DIR, file), { name: `uploads/mp3/${file}` });
+            let originalName = mp3NameMap.get(file);
+            let archiveName = originalName ? `${originalName}.mp3` : file;
+
+            // Handle duplicate names by adding suffix
+            const baseName = archiveName.replace(/\.mp3$/i, '');
+            const count = usedMp3Names.get(archiveName) || 0;
+            if (count > 0) {
+                archiveName = `${baseName} (${count}).mp3`;
+            }
+            usedMp3Names.set(originalName ? `${originalName}.mp3` : file, count + 1);
+
+            archive.file(path.join(MP3_UPLOAD_DIR, file), { name: `uploads/mp3/${archiveName}` });
+            manifest.mp3s.push({ storedName: file, archiveName });
         }
         logger.info(`Added ${mp3Files.length} MP3 files to backup`);
     }
+
+    // Add manifest file for restore mapping
+    archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
 
     // Finalize archive
     await archive.finalize();
@@ -216,6 +275,35 @@ router.post('/restore', authenticateToken, requireRole('admin'), backupUpload.si
             fs.mkdirSync(MP3_UPLOAD_DIR, { recursive: true });
         }
 
+        // Try to read manifest for file mapping (new backup format)
+        type ManifestType = {
+            version: number;
+            pdfs: { storedName: string; archiveName: string }[];
+            mp3s: { storedName: string; archiveName: string }[];
+        };
+        let manifest: ManifestType | null = null;
+        const manifestEntry = zip.getEntry('manifest.json');
+        if (manifestEntry) {
+            try {
+                manifest = JSON.parse(manifestEntry.getData().toString('utf8'));
+                logger.info('Found manifest.json in backup');
+            } catch (e) {
+                logger.warn('Failed to parse manifest.json, using legacy restore');
+            }
+        }
+
+        // Create reverse lookup maps from manifest
+        const pdfArchiveToStored = new Map<string, string>();
+        const mp3ArchiveToStored = new Map<string, string>();
+        if (manifest) {
+            for (const m of manifest.pdfs) {
+                pdfArchiveToStored.set(m.archiveName, m.storedName);
+            }
+            for (const m of manifest.mp3s) {
+                mp3ArchiveToStored.set(m.archiveName, m.storedName);
+            }
+        }
+
         for (const entry of entries) {
             if (entry.isDirectory) continue;
 
@@ -237,15 +325,22 @@ router.post('/restore', authenticateToken, requireRole('admin'), backupUpload.si
                 fs.writeFileSync(DB_PATH, entry.getData());
                 restoredDb = true;
                 logger.info('Restored database from backup');
+            } else if (entryName === 'manifest.json') {
+                // Skip manifest file, already processed
+                continue;
             } else if (entryName.startsWith('uploads/mp3/') && entryName.endsWith('.mp3')) {
                 // Restore MP3 file
-                const filename = path.basename(entryName);
-                fs.writeFileSync(path.join(MP3_UPLOAD_DIR, filename), entry.getData());
+                const archiveName = path.basename(entryName);
+                // Use manifest mapping if available, otherwise use archive filename (legacy format)
+                const storedName = mp3ArchiveToStored.get(archiveName) || archiveName;
+                fs.writeFileSync(path.join(MP3_UPLOAD_DIR, storedName), entry.getData());
                 restoredMp3s++;
             } else if (entryName.startsWith('uploads/') && entryName.endsWith('.pdf')) {
                 // Restore PDF file
-                const filename = path.basename(entryName);
-                fs.writeFileSync(path.join(UPLOAD_DIR, filename), entry.getData());
+                const archiveName = path.basename(entryName);
+                // Use manifest mapping if available, otherwise use archive filename (legacy format)
+                const storedName = pdfArchiveToStored.get(archiveName) || archiveName;
+                fs.writeFileSync(path.join(UPLOAD_DIR, storedName), entry.getData());
                 restoredPdfs++;
             }
         }
