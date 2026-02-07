@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import PdfPagePreview from '../components/PdfPagePreview';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicLists } from '../hooks/useMusicLists';
+import { useInstruments } from '../hooks/useInstruments';
 import { savePdfAsMusicPiece } from '../api';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -29,6 +30,16 @@ interface SplitRange {
   start: number;
   end: number;
   name: string;
+  instrumentId: string;
+  number: number;
+}
+
+interface InstrumentOption {
+  id: string;
+  label: string;
+  name: string;
+  tuning: string;
+  clef: string;
 }
 
 interface SplitResult {
@@ -47,7 +58,9 @@ export default function PdfTools() {
   const [pdfInfo, setPdfInfo] = useState<PdfInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([{ start: 1, end: 1, name: 'Part 1' }]);
+  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([{ start: 1, end: 1, name: '', instrumentId: '', number: 1 }]);
+  const [splitTitle, setSplitTitle] = useState('');
+  const [splitArranger, setSplitArranger] = useState('');
   const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
   const [a3Result, setA3Result] = useState<{ filepath: string; filename: string; splitCount: number; newPageCount: number } | null>(null);
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
@@ -62,7 +75,19 @@ export default function PdfTools() {
   // Data for saving as music piece
   const { data: orchestras = [] } = useOrchestras();
   const { data: lists = [] } = useMusicLists(selectedOrchestra || undefined);
+  const { data: instruments = [] } = useInstruments();
   const mergeInputRef = useRef<HTMLInputElement>(null);
+
+  // Create instrument options with tuning and clef combinations
+  const instrumentOptions = useMemo((): InstrumentOption[] => {
+    return instruments.map(inst => ({
+      id: inst.id,
+      label: `${inst.name}${inst.tuning ? ` (${inst.tuning})` : ''}${inst.clef ? ` - ${inst.clef}` : ''}`,
+      name: inst.name.replace(/\s+/g, '_'),
+      tuning: inst.tuning || '',
+      clef: inst.clef || '',
+    }));
+  }, [instruments]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -112,7 +137,9 @@ export default function PdfTools() {
       // Initialize split ranges based on page count
       if (info.pageCount > 0) {
         const baseName = getBaseFilename(file.name);
-        setSplitRanges([{ start: 1, end: info.pageCount, name: `${baseName}_Deel1` }]);
+        setSplitTitle(baseName);
+        setSplitArranger('');
+        setSplitRanges([{ start: 1, end: info.pageCount, name: '', instrumentId: '', number: 1 }]);
       }
     } catch (error: any) {
       showError(error.message || t('pdfTools.errorReadingPdf'));
@@ -128,9 +155,16 @@ export default function PdfTools() {
     setSplitResults([]);
 
     try {
+      // Transform ranges to include generated filenames
+      const rangesWithNames = splitRanges.map(range => ({
+        start: range.start,
+        end: range.end,
+        name: generateFilename(range),
+      }));
+
       const formData = new FormData();
       formData.append('pdf', pdfFile);
-      formData.append('ranges', JSON.stringify(splitRanges));
+      formData.append('ranges', JSON.stringify(rangesWithNames));
 
       const response = await fetch(`${API_BASE}/pdf-tools/split`, {
         method: 'POST',
@@ -259,23 +293,89 @@ export default function PdfTools() {
     const lastRange = splitRanges[splitRanges.length - 1];
     const newStart = lastRange ? lastRange.end + 1 : 1;
     const newEnd = pdfInfo ? Math.min(newStart, pdfInfo.pageCount) : newStart;
-    const baseName = pdfFile ? getBaseFilename(pdfFile.name) : '';
-    const partNumber = splitRanges.length + 1;
     setSplitRanges([...splitRanges, {
       start: newStart,
       end: newEnd,
-      name: baseName ? `${baseName}_Deel${partNumber}` : `Deel${partNumber}`,
+      name: '',
+      instrumentId: '',
+      number: 1,
     }]);
   };
 
+  // Calculate the next number for an instrument based on previous selections
+  const getNextNumberForInstrument = (instrumentId: string, currentIndex: number): number => {
+    let count = 1;
+    for (let i = 0; i < currentIndex; i++) {
+      if (splitRanges[i].instrumentId === instrumentId) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  // Update instrument and auto-calculate number
+  const updateInstrument = (index: number, instrumentId: string) => {
+    const updated = [...splitRanges];
+    updated[index].instrumentId = instrumentId;
+    updated[index].number = getNextNumberForInstrument(instrumentId, index);
+
+    // Recalculate numbers for all subsequent ranges with the same instrument
+    for (let i = index + 1; i < updated.length; i++) {
+      if (updated[i].instrumentId === instrumentId) {
+        updated[i].number = getNextNumberForInstrument(instrumentId, i);
+      }
+    }
+
+    setSplitRanges(updated);
+  };
+
+  // Generate filename based on the new format
+  const generateFilename = (range: SplitRange): string => {
+    const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
+    if (!instrument) {
+      return range.name || 'Deel';
+    }
+
+    const parts = [
+      splitTitle.replace(/\s+/g, '_') || 'Untitled',
+      splitArranger.replace(/\s+/g, '_') || 'Unknown',
+      instrument.name,
+      instrument.tuning || 'C',
+      String(range.number),
+      instrument.clef || 'sol',
+    ];
+
+    return parts.join('_');
+  };
+
   const removeSplitRange = (index: number) => {
-    setSplitRanges(splitRanges.filter((_, i) => i !== index));
+    const removedInstrumentId = splitRanges[index].instrumentId;
+    const filtered = splitRanges.filter((_, i) => i !== index);
+
+    // Recalculate numbers for remaining ranges with the same instrument
+    if (removedInstrumentId) {
+      let count = 0;
+      for (let i = 0; i < filtered.length; i++) {
+        if (filtered[i].instrumentId === removedInstrumentId) {
+          count++;
+          filtered[i].number = count;
+        }
+      }
+    }
+
+    setSplitRanges(filtered);
   };
 
   const updateSplitRange = (index: number, field: keyof SplitRange, value: string | number) => {
     const updated = [...splitRanges];
     if (field === 'start' || field === 'end') {
       updated[index][field] = Math.max(1, Math.min(pdfInfo?.pageCount || 1, Number(value)));
+    } else if (field === 'number') {
+      updated[index][field] = Math.max(1, Number(value));
+    } else if (field === 'instrumentId') {
+      // Use updateInstrument for instrument changes
+      updateInstrument(index, value as string);
+      return;
     } else {
       updated[index][field] = value as string;
     }
@@ -369,26 +469,76 @@ export default function PdfTools() {
                     </div>
                     <PdfPagePreview
                       file={pdfFile}
-                      selectedRanges={splitRanges}
+                      selectedRanges={splitRanges.map(range => ({
+                        start: range.start,
+                        end: range.end,
+                        name: generateFilename(range),
+                      }))}
                       thumbnailWidth={thumbnailSize}
                     />
                   </div>
 
                   <h4 style={{ marginBottom: '1rem' }}>{t('pdfTools.splitIntoParts')}</h4>
 
-                  {splitRanges.map((range, index) => (
-                    <div key={index} className="flex gap-2 mb-2 items-end">
-                      <div className="form-group mb-0" style={{ flex: 1 }}>
-                        <label className="form-label">{t('pdfTools.partName')}</label>
+                  {/* General title and arranger fields */}
+                  <div style={{
+                    padding: '1rem',
+                    background: 'var(--background)',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="grid grid-2" style={{ gap: '1rem' }}>
+                      <div className="form-group mb-0">
+                        <label className="form-label">{t('pdfTools.musicTitle')}</label>
                         <input
                           type="text"
                           className="form-control"
-                          value={range.name}
-                          onChange={(e) => updateSplitRange(index, 'name', e.target.value)}
-                          placeholder={t('pdfTools.partNamePlaceholder')}
+                          value={splitTitle}
+                          onChange={(e) => setSplitTitle(e.target.value)}
+                          placeholder={t('pdfTools.musicTitlePlaceholder')}
                         />
                       </div>
-                      <div className="form-group mb-0" style={{ width: '100px' }}>
+                      <div className="form-group mb-0">
+                        <label className="form-label">{t('pdfTools.arranger')}</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={splitArranger}
+                          onChange={(e) => setSplitArranger(e.target.value)}
+                          placeholder={t('pdfTools.arrangerPlaceholder')}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {splitRanges.map((range, index) => (
+                    <div key={index} className="flex gap-2 mb-2 items-end" style={{ flexWrap: 'wrap' }}>
+                      <div className="form-group mb-0" style={{ flex: 2, minWidth: '200px' }}>
+                        <label className="form-label">{t('pdfTools.instrument')}</label>
+                        <select
+                          className="form-control form-select"
+                          value={range.instrumentId}
+                          onChange={(e) => updateInstrument(index, e.target.value)}
+                        >
+                          <option value="">{t('pdfTools.selectInstrument')}</option>
+                          {instrumentOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group mb-0" style={{ width: '70px' }}>
+                        <label className="form-label">{t('pdfTools.number')}</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={range.number}
+                          onChange={(e) => updateSplitRange(index, 'number', e.target.value)}
+                          min={1}
+                        />
+                      </div>
+                      <div className="form-group mb-0" style={{ width: '80px' }}>
                         <label className="form-label">{t('pdfTools.from')}</label>
                         <input
                           type="number"
@@ -399,7 +549,7 @@ export default function PdfTools() {
                           max={pdfInfo.pageCount}
                         />
                       </div>
-                      <div className="form-group mb-0" style={{ width: '100px' }}>
+                      <div className="form-group mb-0" style={{ width: '80px' }}>
                         <label className="form-label">{t('pdfTools.to')}</label>
                         <input
                           type="number"
