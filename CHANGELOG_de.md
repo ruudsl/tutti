@@ -1,0 +1,84 @@
+# Changelog
+
+Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
+
+## [1.6.0] - 2026-02-07
+
+### Hinzugefügt
+- **PDF-Seitenvorschau** - Thumbnails aller Seiten beim Aufteilen sichtbar, mit einstellbarer Größe
+- **PDF-Aufteilung mit Instrumentauswahl** - Instrument-Dropdown mit Stimmung und Notenschlüssel, automatische Nummerierung bei gleichem Instrument
+- **PDF als Musikstück speichern** - Geteilte PDFs direkt als Musikstücke in der Bibliothek speichern
+- **Alle herunterladen (zip)** - Alle geteilten Teile auf einmal als Zip-Datei herunterladen
+- **Alle als Musikstücke speichern** - Alle geteilten Teile auf einmal in der Bibliothek speichern
+- **Hamburger-Menü** - Responsives Navigationsmenü für mobile Geräte
+- **Changelog-Seite** - Versionshistorie im Admin-Menü verfügbar
+- **Feedback-Link** - Link zu GitHub Issues in der Fußzeile
+- **Mehrsprachiges Changelog** - Changelog verfügbar in Niederländisch, Englisch und Deutsch
+
+### Verbessert
+- Backup verwendet jetzt originale Dateinamen statt UUID-Namen
+- Dateinamen bei PDF-Aufteilung bewahren Leerzeichen innerhalb der Feldwerte
+
+### Behoben
+- PDF-Download-Authentifizierung funktioniert jetzt korrekt (Token als Query-Parameter)
+- Lokaler PDF.js-Worker für bessere Kompatibilität
+- Ergebnisse verschwinden nicht mehr nach dem Speichern als Musikstück
+
+## [1.5.0] - 2026-02-05
+
+### Hinzugefügt
+- **Letzte Anmeldung sichtbar** - In der Mitgliederübersicht ist nun zu sehen, wann sich ein Benutzer zuletzt angemeldet hat
+- **SMTP-Einstellungen über UI** - E-Mail-Einstellungen können nun über die Admin-Einstellungen konfiguriert werden, einschließlich Test-E-Mail-Funktion
+- **Erweiterte Genre-Liste** - Genres durch erweiterte englische Liste mit 48 Genres ersetzt
+- **Neue Instrumente** - Conductor, Altklarinette und Gesang hinzugefügt
+- **Zusätzliche Instrument-Aliase** - Mehr Aliase für bestehende Instrumente (Baritonsaxophon, Horn, Schlagzeug, etc.)
+
+### Behoben
+- Löschen von Proben funktioniert jetzt zuverlässig (changes()-Timing-Fix)
+
+## [1.4.0] - 2026-02-04
+
+### Hinzugefügt
+- **Microsoft 365 / Entra ID Anmeldung** - Benutzer können sich mit ihrem Microsoft 365-Konto anmelden
+- **Spracherkennung** - Automatische Spracherkennung basierend auf Browsereinstellungen
+- **Onboarding-Touren** - Geführte Touren für neue Benutzer je nach Rolle
+
+### Behoben
+- Metronom-Lautstärke-Fix (erster Klick genauso laut wie die anderen)
+- Auto-Logout und Rate-Limiting-Verbesserungen
+
+## [1.3.0] - 2026-02-03
+
+### Hinzugefügt
+- **Massenauswahl und Löschen** - Mehrere Musikstücke gleichzeitig auswählen und löschen
+- **Neue Liste beim Hochladen** - Direkt eine neue Liste beim Hochladen erstellen
+- **Dirigentenrolle** - Separate Rolle für Dirigenten mit Zugang zur Probenplanung
+
+### Verbessert
+- Orchestergruppierung auf der Meine-Musik-Seite
+- Download .pdf_-Erweiterung behoben
+
+## [1.2.0] - 2026-02-02
+
+### Hinzugefügt
+- **Theme-System** - Farben, Schriftart und Gestaltung pro Verein anpassbar
+- **Konfigurierbares Logo und Name** - Vereinsname und Logo auf Anmeldebildschirm und Navigation
+- **Probenplanung** - Proben planen mit Repertoire und Spond-Integration
+- **MeineMusik-Akkordeon** - Stücke nach Titel gruppiert mit aufklappbaren Stimmen
+
+## [1.1.0] - 2026-02-01
+
+### Hinzugefügt
+- **Backup und Wiederherstellung** - Vollständige Datenbank- und Datei-Sicherung/-Wiederherstellung
+- **WCAG 2.1 AA Barrierefreiheit** - Verbesserte Barrierefreiheit für Screenreader
+- **Mehrsprachigkeit** - Niederländisch, Englisch und Deutsch unterstützt
+
+## [1.0.0] - 2026-01-15
+
+### Erste Veröffentlichung
+- Musikbibliothek-Verwaltung
+- Benutzer- und Orchesterverwaltung
+- PDF-Upload und -Verarbeitung
+- Instrumente und Genres Verwaltung
+- Ausleihverwaltung
+- Statistiken

@@ -1,0 +1,84 @@
+# Changelog
+
+All notable changes to this application are documented here.
+
+## [1.6.0] - 2026-02-07
+
+### Added
+- **PDF page previews** - Thumbnails of all pages visible when splitting, with adjustable size
+- **PDF split with instrument selection** - Instrument dropdown with tuning and clef, automatic numbering for the same instrument
+- **Save PDF as music piece** - Save split PDFs directly as music pieces in the library
+- **Download all (zip)** - Download all split parts at once as a zip file
+- **Save all as music pieces** - Save all split parts at once to the library
+- **Hamburger menu** - Responsive navigation menu for mobile devices
+- **Changelog page** - Version history available under Admin menu
+- **Feedback link** - Link to GitHub Issues in the footer
+- **Multilingual changelog** - Changelog available in Dutch, English and German
+
+### Improved
+- Backup now uses original filenames instead of UUID names
+- Filenames in PDF split preserve spaces within field values
+
+### Fixed
+- PDF download authentication now works correctly (token as query parameter)
+- Local PDF.js worker for better compatibility
+- Results no longer disappear after saving as music piece
+
+## [1.5.0] - 2026-02-05
+
+### Added
+- **Last login visible** - User overview now shows when a user last logged in
+- **SMTP settings via UI** - Email settings can now be configured through the admin settings, including test email function
+- **Extended genre list** - Genres replaced with extended English list of 48 genres
+- **New instruments** - Conductor, Alto Clarinet and Vocals added
+- **Additional instrument aliases** - More aliases for existing instruments (Baritone Saxophone, Horn, Drumset, etc.)
+
+### Fixed
+- Rehearsal deletion now works reliably (changes() timing fix)
+
+## [1.4.0] - 2026-02-04
+
+### Added
+- **Microsoft 365 / Entra ID login** - Users can log in with their Microsoft 365 account
+- **Language detection** - Automatic language detection based on browser settings
+- **Onboarding tours** - Guided tours for new users per role
+
+### Fixed
+- Metronome volume fix (first click as loud as the rest)
+- Auto-logout and rate limiting improvements
+
+## [1.3.0] - 2026-02-03
+
+### Added
+- **Bulk selection and deletion** - Select and delete multiple music pieces at once
+- **New list during upload** - Create a new list directly during upload
+- **Conductor role** - Separate role for conductors with access to rehearsal planning
+
+### Improved
+- Orchestra grouping on My Music page
+- Download .pdf_ extension fix
+
+## [1.2.0] - 2026-02-02
+
+### Added
+- **Theme system** - Colors, fonts and styling customizable per association
+- **Configurable logo and name** - Association name and logo on login screen and navigation
+- **Rehearsal planning** - Plan rehearsals with repertoire and Spond integration
+- **MyMusic accordion** - Pieces grouped by title with expandable parts
+
+## [1.1.0] - 2026-02-01
+
+### Added
+- **Backup and restore** - Full database and file backup/restore
+- **WCAG 2.1 AA accessibility** - Improved accessibility for screen readers
+- **Multilingual** - Dutch, English and German supported
+
+## [1.0.0] - 2026-01-15
+
+### First release
+- Music library management
+- User and orchestra management
+- PDF upload and processing
+- Instruments and genres management
+- Loan administration
+- Statistics

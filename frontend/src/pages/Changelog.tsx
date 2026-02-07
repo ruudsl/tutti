@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { getChangelog } from '../api';
 
 export default function Changelog() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['changelog'],
-    queryFn: getChangelog,
+    queryKey: ['changelog', i18n.language],
+    queryFn: () => getChangelog(i18n.language),
   });
 
   // Simple markdown to HTML conversion for changelog

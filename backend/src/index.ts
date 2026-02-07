@@ -103,14 +103,21 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Changelog endpoint
+// Changelog endpoint (language-aware)
 app.get('/api/changelog', (req, res) => {
-    const changelogPath = path.join(__dirname, '../../CHANGELOG.md');
+    const lang = (req.query.lang as string) || 'nl';
+    const suffix = lang === 'nl' ? '' : `_${lang}`;
+    const changelogPath = path.join(__dirname, `../../CHANGELOG${suffix}.md`);
+    const fallbackPath = path.join(__dirname, '../../CHANGELOG.md');
+
     if (fs.existsSync(changelogPath)) {
         const content = fs.readFileSync(changelogPath, 'utf-8');
         res.json({ content });
+    } else if (fs.existsSync(fallbackPath)) {
+        const content = fs.readFileSync(fallbackPath, 'utf-8');
+        res.json({ content });
     } else {
-        res.json({ content: '# Changelog\n\nGeen changelog beschikbaar.' });
+        res.json({ content: '# Changelog\n\nNo changelog available.' });
     }
 });
 

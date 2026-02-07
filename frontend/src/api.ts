@@ -791,8 +791,8 @@ export const testSmtpConfig = async (): Promise<{ message: string }> => {
 };
 
 // Changelog
-export const getChangelog = async (): Promise<{ content: string }> => {
-  const { data } = await api.get('/changelog');
+export const getChangelog = async (lang?: string): Promise<{ content: string }> => {
+  const { data } = await api.get('/changelog', { params: { lang } });
   return data;
 };
 
