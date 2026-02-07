@@ -516,7 +516,13 @@
     "noList": "Keine Liste (nur Archiv)",
     "selectOrchestraFirst": "Wählen Sie zuerst ein Orchester",
     "savedAsMusicPiece": "\"{{title}}\" als Musikstück gespeichert",
-    "errorSavingAsMusicPiece": "Fehler beim Speichern als Musikstück"
+    "errorSavingAsMusicPiece": "Fehler beim Speichern als Musikstück",
+    "downloadAll": "Alle herunterladen (zip)",
+    "downloading": "Wird heruntergeladen...",
+    "downloadFailed": "Download fehlgeschlagen",
+    "saveAllAsMusicPieces": "Alle als Musikstücke speichern",
+    "saving": "Wird gespeichert...",
+    "allSavedAsMusicPieces": "{{count}} Musikstücke gespeichert"
   },
   "loans": {
     "title": "Ausleihen",

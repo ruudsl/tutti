@@ -516,7 +516,13 @@
     "noList": "No list (archive only)",
     "selectOrchestraFirst": "Select an orchestra first",
     "savedAsMusicPiece": "\"{{title}}\" saved as music piece",
-    "errorSavingAsMusicPiece": "Error saving as music piece"
+    "errorSavingAsMusicPiece": "Error saving as music piece",
+    "downloadAll": "Download all (zip)",
+    "downloading": "Downloading...",
+    "downloadFailed": "Download failed",
+    "saveAllAsMusicPieces": "Save all as music pieces",
+    "saving": "Saving...",
+    "allSavedAsMusicPieces": "{{count}} music pieces saved"
   },
   "loans": {
     "title": "Loans",

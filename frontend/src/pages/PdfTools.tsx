@@ -44,6 +44,7 @@ interface InstrumentOption {
 
 interface SplitResult {
   name: string;
+  displayName: string;
   filename?: string;
   filepath?: string;
   pageCount?: number;
@@ -67,6 +68,8 @@ export default function PdfTools() {
   const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(null);
   const [thumbnailSize, setThumbnailSize] = useState(100);
   const [savingAsMusicPiece, setSavingAsMusicPiece] = useState<string | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
 
@@ -83,7 +86,7 @@ export default function PdfTools() {
     return instruments.map(inst => ({
       id: inst.id,
       label: `${inst.name}${inst.tuning ? ` (${inst.tuning})` : ''}${inst.clef ? ` - ${inst.clef}` : ''}`,
-      name: inst.name.replace(/\s+/g, '_'),
+      name: inst.name,
       tuning: inst.tuning || '',
       clef: inst.clef || '',
     }));
@@ -94,16 +97,16 @@ export default function PdfTools() {
     return { Authorization: `Bearer ${token}` };
   };
 
-  // Extract clean base name from filename (remove extension, clean up)
+  // Extract clean base name from filename (remove extension, make human-readable)
   const getBaseFilename = (filename: string): string => {
     // Remove .pdf extension
     let base = filename.replace(/\.pdf$/i, '');
-    // Replace spaces and special characters with underscores
-    base = base.replace(/[\s\-]+/g, '_');
-    // Remove multiple underscores
-    base = base.replace(/_+/g, '_');
-    // Remove leading/trailing underscores
-    base = base.replace(/^_+|_+$/g, '');
+    // Replace underscores and hyphens with spaces
+    base = base.replace(/[_\-]+/g, ' ');
+    // Remove multiple spaces
+    base = base.replace(/\s+/g, ' ');
+    // Remove leading/trailing spaces
+    base = base.trim();
     return base;
   };
 
@@ -155,7 +158,8 @@ export default function PdfTools() {
     setSplitResults([]);
 
     try {
-      // Transform ranges to include generated filenames
+      // Transform ranges to include generated filenames and display names
+      const displayNames = splitRanges.map(range => generateDisplayName(range));
       const rangesWithNames = splitRanges.map(range => ({
         start: range.start,
         end: range.end,
@@ -177,7 +181,12 @@ export default function PdfTools() {
       }
 
       const data = await response.json();
-      setSplitResults(data.results);
+      // Enrich results with display names
+      const enrichedResults = data.results.map((result: SplitResult, index: number) => ({
+        ...result,
+        displayName: displayNames[index] || result.name,
+      }));
+      setSplitResults(enrichedResults);
       showSuccess(t('pdfTools.pdfSplitSuccess', { count: data.results.length }));
     } catch (error: any) {
       showError(error.message || t('pdfTools.errorSplitting'));
@@ -289,6 +298,79 @@ export default function PdfTools() {
     setSelectedList('');
   };
 
+  const handleDownloadAll = async () => {
+    const filepaths = splitResults.filter(r => r.filepath).map(r => r.filepath!);
+    if (filepaths.length === 0) return;
+
+    setDownloadingAll(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showError(t('common.sessionExpired'));
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/pdf-tools/download-zip`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filepaths }),
+      });
+
+      if (!response.ok) {
+        throw new Error(t('pdfTools.downloadFailed'));
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${splitTitle.replace(/\s+/g, '_') || 'split'}_parts.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      showError(error.message || t('pdfTools.downloadFailed'));
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
+  const handleSaveAllAsMusicPieces = async () => {
+    if (!selectedOrchestra) {
+      showError(t('pdfTools.selectOrchestraFirst'));
+      return;
+    }
+
+    const toSave = splitResults.filter(r => r.filepath);
+    if (toSave.length === 0) return;
+
+    setSavingAll(true);
+    let savedCount = 0;
+    const savedFilepaths: string[] = [];
+
+    for (const result of toSave) {
+      try {
+        const saveResult = await savePdfAsMusicPiece(result.filepath!, result.filename!, selectedList || undefined);
+        if (saveResult.success) {
+          savedCount++;
+          savedFilepaths.push(result.filepath!);
+        }
+      } catch (error: any) {
+        showError(t('pdfTools.errorSavingAsMusicPiece') + `: ${result.displayName}`);
+      }
+    }
+
+    if (savedCount > 0) {
+      showSuccess(t('pdfTools.allSavedAsMusicPieces', { count: savedCount }));
+      setSplitResults(prev => prev.filter(r => !savedFilepaths.includes(r.filepath!)));
+    }
+    setSavingAll(false);
+  };
+
   const addSplitRange = () => {
     const lastRange = splitRanges[splitRanges.length - 1];
     const newStart = lastRange ? lastRange.end + 1 : 1;
@@ -329,7 +411,7 @@ export default function PdfTools() {
     setSplitRanges(updated);
   };
 
-  // Generate filename based on the new format
+  // Generate filename for file system (with underscores)
   const generateFilename = (range: SplitRange): string => {
     const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
     if (!instrument) {
@@ -339,13 +421,28 @@ export default function PdfTools() {
     const parts = [
       splitTitle.replace(/\s+/g, '_') || 'Untitled',
       splitArranger.replace(/\s+/g, '_') || 'Unknown',
-      instrument.name,
+      instrument.name.replace(/\s+/g, '_'),
       instrument.tuning || 'C',
       String(range.number),
       instrument.clef || 'sol',
     ];
 
     return parts.join('_');
+  };
+
+  // Generate display name (human-readable with spaces)
+  const generateDisplayName = (range: SplitRange): string => {
+    const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
+    if (!instrument) {
+      return range.name || 'Deel';
+    }
+
+    const title = splitTitle || 'Untitled';
+    const arranger = splitArranger || 'Unknown';
+    const tuning = instrument.tuning || 'C';
+    const clef = instrument.clef || 'sol';
+
+    return `${title} - ${arranger} - ${instrument.name.replace(/_/g, ' ')} (${tuning}) ${range.number} [${clef}]`;
   };
 
   const removeSplitRange = (index: number) => {
@@ -628,6 +725,27 @@ export default function PdfTools() {
                         </div>
                       </div>
 
+                      {/* Bulk action buttons */}
+                      {splitResults.filter(r => r.filepath).length > 1 && (
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            className="btn btn-outline"
+                            onClick={handleDownloadAll}
+                            disabled={downloadingAll}
+                          >
+                            {downloadingAll ? t('pdfTools.downloading') : t('pdfTools.downloadAll')}
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            onClick={handleSaveAllAsMusicPieces}
+                            disabled={!selectedOrchestra || savingAll}
+                            title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
+                          >
+                            {savingAll ? t('pdfTools.saving') : t('pdfTools.saveAllAsMusicPieces')}
+                          </button>
+                        </div>
+                      )}
+
                       <div className="grid" style={{ gap: '0.5rem' }}>
                         {splitResults.map((result, index) => (
                           <div
@@ -644,7 +762,7 @@ export default function PdfTools() {
                             }}
                           >
                             <div style={{ flex: 1, minWidth: '200px' }}>
-                              <strong>{result.name}</strong>
+                              <strong>{result.displayName}</strong>
                               {result.pageCount && (
                                 <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
                                   ({result.pageCount} {t('pdfTools.pages')})

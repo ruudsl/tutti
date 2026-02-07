@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import archiver from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import db from '../database/connection';
 
@@ -303,6 +304,56 @@ router.get('/download/:filename', authenticateToken, (req: Request, res: Respons
     // Clean up temp file after download
     fs.unlink(filepath, () => {});
   });
+});
+
+// Download multiple split PDFs as a zip file
+router.post('/download-zip', authenticateToken, requireRole('music_committee', 'admin'), async (req: Request, res: Response) => {
+  try {
+    const { filepaths } = req.body;
+
+    if (!filepaths || !Array.isArray(filepaths) || filepaths.length === 0) {
+      return res.status(400).json({ error: 'Geen bestanden opgegeven' });
+    }
+
+    // Validate all files exist
+    const validFiles: { tempPath: string; originalName: string }[] = [];
+    for (const filepath of filepaths) {
+      const sanitized = path.basename(filepath);
+      const fullPath = path.join(TEMP_DIR, sanitized);
+
+      if (!fs.existsSync(fullPath)) {
+        continue;
+      }
+
+      // Extract original filename (after UUID_)
+      const originalName = sanitized.includes('_')
+        ? sanitized.substring(sanitized.indexOf('_') + 1)
+        : sanitized;
+
+      validFiles.push({ tempPath: fullPath, originalName });
+    }
+
+    if (validFiles.length === 0) {
+      return res.status(404).json({ error: 'Geen bestanden gevonden' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="split_parts.zip"');
+
+    const archive = archiver('zip', { zlib: { level: 5 } });
+    archive.pipe(res);
+
+    for (const file of validFiles) {
+      archive.file(file.tempPath, { name: file.originalName });
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error creating zip:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Fout bij aanmaken van zip bestand' });
+    }
+  }
 });
 
 // Merge multiple PDFs into one

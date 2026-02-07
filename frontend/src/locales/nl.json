@@ -506,7 +506,13 @@
     "noList": "Geen lijst (alleen archief)",
     "selectOrchestraFirst": "Selecteer eerst een orkest",
     "savedAsMusicPiece": "\"{{title}}\" opgeslagen als muziekstuk",
-    "errorSavingAsMusicPiece": "Fout bij opslaan als muziekstuk"
+    "errorSavingAsMusicPiece": "Fout bij opslaan als muziekstuk",
+    "downloadAll": "Alles downloaden (zip)",
+    "downloading": "Downloaden...",
+    "downloadFailed": "Downloaden mislukt",
+    "saveAllAsMusicPieces": "Alles opslaan als muziekstukken",
+    "saving": "Opslaan...",
+    "allSavedAsMusicPieces": "{{count}} muziekstukken opgeslagen"
   },
   "loans": {
     "title": "Uitleningen",
