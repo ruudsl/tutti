@@ -447,7 +447,7 @@ export default function PdfTools() {
     setSplitRanges(updated);
   };
 
-  // Generate filename for file system (with underscores)
+  // Generate filename (underscores only as separator between fields, spaces preserved within)
   const generateFilename = (range: SplitRange): string => {
     const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
     if (!instrument) {
@@ -455,9 +455,9 @@ export default function PdfTools() {
     }
 
     const parts = [
-      splitTitle.replace(/\s+/g, '_') || 'Untitled',
-      splitArranger.replace(/\s+/g, '_') || 'Unknown',
-      instrument.name.replace(/\s+/g, '_'),
+      splitTitle || 'Untitled',
+      splitArranger || 'Unknown',
+      instrument.name,
       instrument.tuning || 'C',
       String(range.number),
       instrument.clef || 'sol',

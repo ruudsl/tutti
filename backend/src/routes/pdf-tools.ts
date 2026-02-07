@@ -172,7 +172,7 @@ router.post('/split', authenticateToken, requireRole('music_committee', 'admin')
 
       // Save to temp file
       const pdfBytes = await newPdf.save();
-      const filename = `${range.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      const filename = `${range.name.replace(/[^a-zA-Z0-9_ ()-]/g, '')}.pdf`;
       const filepath = path.join(TEMP_DIR, `${uuidv4()}_${filename}`);
 
       fs.writeFileSync(filepath, pdfBytes);
