@@ -590,7 +590,7 @@ export default function PdfTools() {
                         <input
                           type="range"
                           min="60"
-                          max="200"
+                          max="300"
                           value={thumbnailSize}
                           onChange={(e) => setThumbnailSize(Number(e.target.value))}
                           style={{ width: '120px' }}
