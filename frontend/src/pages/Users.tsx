@@ -175,7 +175,7 @@ export default function Users() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('users.title')}
-          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+          <span className="badge badge-primary badge-title-count">
             {filteredUsers.length === users.length
               ? users.length
               : `${filteredUsers.length} / ${users.length}`}
@@ -189,8 +189,8 @@ export default function Users() {
       {/* Filters */}
       <div className="card mb-2">
         <div className="card-body">
-          <div className="flex gap-2 items-end" style={{ flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ marginBottom: 0, minWidth: '200px', flex: 1 }}>
+          <div className="filter-bar">
+            <div className="form-group filter-search">
               <label className="form-label">{t('common.search')}</label>
               <input
                 type="text"
@@ -200,7 +200,7 @@ export default function Users() {
                 onChange={(e) => setFilterSearch(e.target.value)}
               />
             </div>
-            <div className="form-group" style={{ marginBottom: 0, minWidth: '180px' }}>
+            <div className="form-group">
               <label className="form-label">{t('orchestras.title')}</label>
               <select
                 className="form-control"
@@ -213,7 +213,7 @@ export default function Users() {
                 ))}
               </select>
             </div>
-            <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
+            <div className="form-group">
               <label className="form-label">{t('instruments.title')}</label>
               <select
                 className="form-control"
@@ -240,7 +240,6 @@ export default function Users() {
                   setFilterOrchestra('');
                   setFilterInstrument('');
                 }}
-                style={{ marginBottom: 0 }}
               >
                 {t('users.clearFilters')}
               </button>
@@ -250,7 +249,7 @@ export default function Users() {
       </div>
 
       <div className="card">
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           <table className="table mb-0">
             <thead>
               <tr>
@@ -291,7 +290,7 @@ export default function Users() {
                       )) || '-'}
                     </div>
                   </td>
-                  <td className="text-light" style={{ whiteSpace: 'nowrap', fontSize: '0.85em' }}>
+                  <td className="text-light text-sm text-nowrap">
                     {user.lastLogin
                       ? new Date(user.lastLogin).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
                       : '-'}

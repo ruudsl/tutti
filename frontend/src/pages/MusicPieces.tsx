@@ -175,8 +175,8 @@ export default function MusicPieces() {
 
       <div className="card mb-2">
         <div className="card-body">
-          <div className="flex gap-2 flex-wrap">
-            <div className="form-group mb-0" style={{ flex: 1, minWidth: '200px' }}>
+          <div className="filter-bar">
+            <div className="form-group filter-search">
               <input
                 type="text"
                 className="form-control"
@@ -185,7 +185,7 @@ export default function MusicPieces() {
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
-            <div className="form-group mb-0" style={{ minWidth: '200px' }}>
+            <div className="form-group">
               <select
                 className="form-control form-select"
                 value={filterInstrument}
@@ -209,7 +209,7 @@ export default function MusicPieces() {
           <span className="card-title">{totalPieces} {t('musicPieces.count')}</span>
           {canManage && selectedIds.size > 0 && (
             <div className="flex gap-1 items-center">
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+              <span className="text-sm text-light">
                 {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
               </span>
               <button
@@ -221,7 +221,7 @@ export default function MusicPieces() {
             </div>
           )}
         </div>
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           {pieces.length > 0 ? (
             <table className="table mb-0">
               <thead>
@@ -246,7 +246,7 @@ export default function MusicPieces() {
               </thead>
               <tbody>
                 {pieces.map((piece) => (
-                  <tr key={piece.id} style={selectedIds.has(piece.id) ? { backgroundColor: 'var(--primary-light, rgba(37, 99, 235, 0.05))' } : undefined}>
+                  <tr key={piece.id} className={selectedIds.has(piece.id) ? 'table-row-selected' : ''}>
                     {canManage && (
                       <td>
                         <input
@@ -259,7 +259,7 @@ export default function MusicPieces() {
                     <td>
                       <strong>{piece.title}</strong>
                       <br />
-                      <small style={{ color: 'var(--text-light)' }}>{piece.originalFilename}</small>
+                      <small className="text-light">{piece.originalFilename}</small>
                     </td>
                     <td>{piece.arranger || '-'}</td>
                     <td>{piece.instrumentName || '-'}</td>
@@ -314,7 +314,7 @@ export default function MusicPieces() {
           )}
         </div>
         {totalPages > 1 && (
-          <div className="card-footer" style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}>
+          <div className="card-footer">
             <Pagination
               page={page}
               totalPages={totalPages}

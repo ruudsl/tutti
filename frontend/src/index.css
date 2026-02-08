@@ -892,6 +892,138 @@ body {
   margin-left: 0.5rem;
 }
 
+.p-0 {
+  padding: 0;
+}
+
+.p-2 {
+  padding: 1rem;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-nowrap {
+  white-space: nowrap;
+}
+
+.text-light {
+  color: var(--text-light);
+}
+
+.font-bold {
+  font-weight: bold;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Badge inline with page title */
+.badge-title-count {
+  margin-left: 0.75rem;
+  font-size: 1rem;
+  vertical-align: middle;
+}
+
+/* Card body without padding (for tables) */
+.card-body.flush {
+  padding: 0;
+}
+
+/* Filter bar layout */
+.filter-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-bar .form-group {
+  margin-bottom: 0;
+  min-width: 180px;
+}
+
+.filter-bar .form-group.filter-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Stat card inline pattern (Issues, Loans, Statistics) */
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .stat-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-inline {
+  text-align: center;
+}
+
+.stat-inline .stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.stat-inline .stat-label {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* Scroll container */
+.scroll-y {
+  overflow-y: auto;
+}
+
+.max-h-200 {
+  max-height: 200px;
+}
+
+.max-h-300 {
+  max-height: 300px;
+}
+
+.max-h-400 {
+  max-height: 400px;
+}
+
+/* Card footer centered */
+.card-footer {
+  padding: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
 .grid-cols-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

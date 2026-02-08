@@ -201,7 +201,7 @@ export default function MusicTitles() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('titles.title')}
-          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+          <span className="badge badge-primary badge-title-count">
             {titles.length}
           </span>
         </h1>
@@ -209,8 +209,8 @@ export default function MusicTitles() {
 
       <div className="card mb-2">
         <div className="card-body">
-          <div className="flex gap-2 flex-wrap">
-            <div className="form-group mb-0" style={{ flex: 1, minWidth: '200px' }}>
+          <div className="filter-bar">
+            <div className="form-group filter-search">
               <input
                 type="text"
                 className="form-control"
@@ -219,7 +219,7 @@ export default function MusicTitles() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="form-group mb-0" style={{ minWidth: '200px' }}>
+            <div className="form-group">
               <select
                 className="form-control form-select"
                 value={filterGenre}
@@ -250,7 +250,7 @@ export default function MusicTitles() {
       </div>
 
       <div className="card">
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           {titles.length > 0 ? (
             <table className="table mb-0">
               <thead>

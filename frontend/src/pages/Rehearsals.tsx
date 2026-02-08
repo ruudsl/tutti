@@ -723,7 +723,7 @@ export default function Rehearsals() {
         <div className="card-header">
           <h2 className="card-title">{t('rehearsals.upcoming')} ({upcoming.length})</h2>
         </div>
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           {upcoming.length > 0 ? (
             <div>
               {upcoming.map(r => (

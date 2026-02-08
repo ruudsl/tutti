@@ -136,7 +136,7 @@ export default function Instruments() {
       </div>
 
       <div className="card">
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           <table className="table mb-0">
             <thead>
               <tr>

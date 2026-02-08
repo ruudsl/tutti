@@ -181,7 +181,7 @@ export default function Loans() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('loans.title')}
-          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+          <span className="badge badge-primary badge-title-count">
             {loans.length}
           </span>
         </h1>
@@ -191,29 +191,29 @@ export default function Loans() {
       </div>
 
       {stats && (
-        <div className="grid grid-4 mb-3" style={{ gap: '1rem' }}>
+        <div className="stat-card-grid">
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>{stats.active}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.active')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--info)' }}>{stats.active}</div>
+              <div className="stat-label">{t('loans.status.active')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{stats.overdue}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.overdue')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--danger)' }}>{stats.overdue}</div>
+              <div className="stat-label">{t('loans.status.overdue')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.returned}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.status.returned')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--success)' }}>{stats.returned}</div>
+              <div className="stat-label">{t('loans.status.returned')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.total}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('loans.total')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number">{stats.total}</div>
+              <div className="stat-label">{t('loans.total')}</div>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function Loans() {
       </div>
 
       <div className="card">
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           {loans.length > 0 ? (
             <table className="table mb-0">
               <thead>

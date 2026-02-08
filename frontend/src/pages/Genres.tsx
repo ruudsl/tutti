@@ -117,7 +117,7 @@ export default function Genres() {
           <div className="card-header">
             <h3>{t('genres.allGenres')}</h3>
           </div>
-          <div className="card-body" style={{ padding: 0 }}>
+          <div className="card-body flush">
             <table className="table mb-0">
               <thead>
                 <tr>
@@ -129,8 +129,7 @@ export default function Genres() {
                 {genres.map((genre) => (
                   <tr
                     key={genre.id}
-                    className={selectedGenre?.id === genre.id ? 'table-row-selected' : ''}
-                    style={{ cursor: 'pointer' }}
+                    className={`${selectedGenre?.id === genre.id ? 'table-row-selected' : ''} cursor-pointer`}
                     onClick={() => setSelectedGenre(selectedGenre?.id === genre.id ? null : genre)}
                   >
                     <td>
@@ -160,7 +159,7 @@ export default function Genres() {
                 ))}
                 {genres.length === 0 && (
                   <tr>
-                    <td colSpan={2} style={{ textAlign: 'center', color: '#666' }}>
+                    <td colSpan={2} className="text-center text-light">
                       {t('genres.noGenres')}
                     </td>
                   </tr>
@@ -180,17 +179,17 @@ export default function Genres() {
               )}
             </h3>
           </div>
-          <div className="card-body" style={{ padding: 0 }}>
+          <div className="card-body flush">
             {!selectedGenre ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+              <div className="empty-state">
                 {t('genres.selectGenreHint')}
               </div>
             ) : loadingTitles ? (
-              <div style={{ padding: '1rem' }}>
+              <div className="p-2">
                 <SkeletonTable rows={3} columns={4} />
               </div>
             ) : titlesForGenre.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+              <div className="empty-state">
                 {t('genres.noTitlesForGenre')}
               </div>
             ) : (

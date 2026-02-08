@@ -74,7 +74,7 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-        <div className="grid grid-2" style={{ marginTop: '1.5rem' }}>
+        <div className="grid grid-2 mt-2">
           <SkeletonCard />
           <SkeletonCard />
         </div>

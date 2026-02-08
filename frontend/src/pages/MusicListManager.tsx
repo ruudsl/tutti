@@ -295,7 +295,7 @@ export default function MusicListManager() {
           <div className="card-header">
             <h2 className="card-title">{t('lists.orchestras')}</h2>
           </div>
-          <div className="card-body" style={{ padding: 0 }}>
+          <div className="card-body flush">
             {orchestras.map((orch) => (
               <div
                 key={orch.id}
@@ -322,7 +322,7 @@ export default function MusicListManager() {
               +
             </button>
           </div>
-          <div className="card-body" style={{ padding: 0 }}>
+          <div className="card-body flush">
             {lists.length > 0 ? (
               lists.map((list, index) => (
                 <div

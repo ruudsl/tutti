@@ -110,36 +110,36 @@ export default function Issues() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('issues.title')}
-          <span className="badge badge-primary" style={{ marginLeft: '0.75rem', fontSize: '1rem', verticalAlign: 'middle' }}>
+          <span className="badge badge-primary badge-title-count">
             {issues.length}
           </span>
         </h1>
       </div>
 
       {isMusicCommittee && stats && (
-        <div className="grid grid-4 mb-3" style={{ gap: '1rem' }}>
+        <div className="stat-card-grid">
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>{stats.open}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.open')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--warning)' }}>{stats.open}</div>
+              <div className="stat-label">{t('issues.status.open')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>{stats.in_review}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.in_review')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--info)' }}>{stats.in_review}</div>
+              <div className="stat-label">{t('issues.status.in_review')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.resolved}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.resolved')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--success)' }}>{stats.resolved}</div>
+              <div className="stat-label">{t('issues.status.resolved')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{stats.rejected}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('issues.status.rejected')}</div>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--danger)' }}>{stats.rejected}</div>
+              <div className="stat-label">{t('issues.status.rejected')}</div>
             </div>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function Issues() {
       )}
 
       <div className="card">
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body flush">
           {issues.length > 0 ? (
             <table className="table mb-0">
               <thead>

@@ -103,43 +103,43 @@ export default function Statistics() {
 
       {/* Summary Cards */}
       {stats?.totals && (
-        <div className="grid grid-4 mb-3" style={{ gap: '1rem' }}>
+        <div className="stat-card-grid">
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--primary)' }}>
                 {stats.totals.total_downloads}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.downloads')}</div>
+              <div className="stat-label">{t('statistics.downloads')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--info)' }}>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--info)' }}>
                 {stats.totals.total_views}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.views')}</div>
+              <div className="stat-label">{t('statistics.views')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
+            <div className="card-body stat-inline">
+              <div className="stat-number" style={{ color: 'var(--success)' }}>
                 {stats.totals.active_users}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.activeMembers')}</div>
+              <div className="stat-label">{t('statistics.activeMembers')}</div>
             </div>
           </div>
           <div className="card">
-            <div className="card-body" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+            <div className="card-body stat-inline">
+              <div className="stat-number">
                 {stats.totals.total_activities}
               </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('statistics.totalActions')}</div>
+              <div className="stat-label">{t('statistics.totalActions')}</div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid grid-2" style={{ gap: '1.5rem' }}>
+      <div className="grid grid-2 gap-3">
         {/* Top 10 Most Played */}
         <div className="card">
           <div className="card-body">
