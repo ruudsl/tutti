@@ -41,6 +41,7 @@ router.get('/orchestra/:orchestraId', authenticateToken, asyncHandler(async (req
 
     const lists = db.prepare(`
         SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
+               ml.list_type, ml.concert_date, ml.concert_location,
                (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
                (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
@@ -64,6 +65,9 @@ router.get('/orchestra/:orchestraId', authenticateToken, asyncHandler(async (req
         position: l.position,
         isActive: l.is_active === 1,
         createdAt: l.created_at,
+        listType: l.list_type || 'regular',
+        concertDate: l.concert_date || null,
+        concertLocation: l.concert_location || null,
         pieceCount: l.piece_count,
         titleCount: l.title_count,
         totalDuration: l.total_duration,
@@ -88,7 +92,9 @@ router.get('/my-lists', authenticateToken, asyncHandler(async (req: AuthRequest,
     const activeFilter = isPrivileged ? '' : 'AND ml.is_active = 1';
 
     const lists = db.prepare(`
-        SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at, o.name as orchestra_name, o.id as orchestra_id,
+        SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
+               ml.list_type, ml.concert_date, ml.concert_location,
+               o.name as orchestra_name, o.id as orchestra_id,
                (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
                (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
@@ -114,6 +120,9 @@ router.get('/my-lists', authenticateToken, asyncHandler(async (req: AuthRequest,
         position: l.position,
         isActive: l.is_active === 1,
         createdAt: l.created_at,
+        listType: l.list_type || 'regular',
+        concertDate: l.concert_date || null,
+        concertLocation: l.concert_location || null,
         orchestraId: l.orchestra_id,
         orchestraName: l.orchestra_name,
         pieceCount: l.piece_count,
@@ -197,7 +206,7 @@ router.put('/reorder', authenticateToken, requireRole('admin', 'music_committee'
  */
 router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const list = db.prepare(`
-        SELECT ml.id, ml.name, ml.created_at, ml.orchestra_id, o.name as orchestra_name
+        SELECT ml.id, ml.name, ml.created_at, ml.orchestra_id, ml.list_type, ml.concert_date, ml.concert_location, o.name as orchestra_name
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
         WHERE ml.id = ? AND o.association_id = ?
@@ -253,6 +262,9 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
         createdAt: list.created_at,
         orchestraId: list.orchestra_id,
         orchestraName: list.orchestra_name,
+        listType: list.list_type || 'regular',
+        concertDate: list.concert_date || null,
+        concertLocation: list.concert_location || null,
         pieces: pieces.map((p: any) => ({
             id: p.id,
             title: p.title,
@@ -322,11 +334,14 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
     ).get(data.orchestraId) as { next_pos: number };
 
     const listId = uuidv4();
-    db.prepare('INSERT INTO music_lists (id, name, orchestra_id, position) VALUES (?, ?, ?, ?)').run(
+    db.prepare('INSERT INTO music_lists (id, name, orchestra_id, position, list_type, concert_date, concert_location) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
         listId,
         data.name.trim(),
         data.orchestraId,
-        maxPos.next_pos
+        maxPos.next_pos,
+        data.listType || 'regular',
+        data.concertDate || null,
+        data.concertLocation || null
     );
 
     logger.info(`Music list created: ${data.name}`, { listId, orchestraId: data.orchestraId, createdBy: req.user!.id });
@@ -335,6 +350,9 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
         id: listId,
         name: data.name.trim(),
         orchestraId: data.orchestraId,
+        listType: data.listType || 'regular',
+        concertDate: data.concertDate || null,
+        concertLocation: data.concertLocation || null,
         message: 'Muzieklijst succesvol aangemaakt.',
     });
 }));
@@ -391,7 +409,13 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
         throw new ApiError(409, 'Muzieklijst met deze naam bestaat al voor dit orkest.');
     }
 
-    db.prepare('UPDATE music_lists SET name = ? WHERE id = ?').run(data.name.trim(), req.params.id);
+    db.prepare('UPDATE music_lists SET name = ?, list_type = ?, concert_date = ?, concert_location = ? WHERE id = ?').run(
+        data.name.trim(),
+        data.listType || 'regular',
+        data.concertDate || null,
+        data.concertLocation || null,
+        req.params.id
+    );
 
     logger.info(`Music list updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
@@ -739,6 +763,246 @@ router.delete('/:id/titles', authenticateToken, requireRole('admin', 'music_comm
         message: `${removed} partijen verwijderd van de lijst.`,
         removed,
     });
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}/program-pdf:
+ *   get:
+ *     summary: Export concert program as PDF
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: PDF program booklet
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/:id/program-pdf', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const list = db.prepare(`
+        SELECT ml.id, ml.name, ml.list_type, ml.concert_date, ml.concert_location,
+               ml.orchestra_id, o.name as orchestra_name, a.name as association_name,
+               a.display_name as association_display_name
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        JOIN associations a ON o.association_id = a.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId) as any;
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
+    // Get distinct titles on this list, ordered by position
+    const titles = db.prepare(`
+        SELECT DISTINCT mp.title, mp.arranger,
+               mt.duration_seconds, mt.description
+        FROM music_pieces mp
+        JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+        LEFT JOIN music_titles mt ON mp.title = mt.title
+            AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+            AND mt.association_id = ?
+        WHERE mlp.music_list_id = ?
+        ORDER BY mp.title
+    `).all(req.user!.associationId, req.params.id) as any[];
+
+    // Build PDF using pdf-lib
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+
+    const pageWidth = 595; // A4
+    const pageHeight = 842;
+    const margin = 60;
+    const contentWidth = pageWidth - 2 * margin;
+
+    let page = pdfDoc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - margin;
+
+    const associationName = list.association_display_name || list.association_name || '';
+
+    // Title page
+    // Association name
+    if (associationName) {
+        const nameWidth = fontBold.widthOfTextAtSize(associationName, 14);
+        page.drawText(associationName, {
+            x: (pageWidth - nameWidth) / 2,
+            y: y - 40,
+            size: 14,
+            font: fontBold,
+            color: rgb(0.3, 0.3, 0.3),
+        });
+    }
+
+    // Concert name
+    const titleSize = 24;
+    const titleText = list.name;
+    const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
+    page.drawText(titleText, {
+        x: (pageWidth - titleWidth) / 2,
+        y: y - 100,
+        size: titleSize,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+    });
+
+    // Orchestra
+    const orchText = list.orchestra_name;
+    const orchWidth = font.widthOfTextAtSize(orchText, 14);
+    page.drawText(orchText, {
+        x: (pageWidth - orchWidth) / 2,
+        y: y - 135,
+        size: 14,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+    });
+
+    // Date + Location
+    let infoY = y - 180;
+    if (list.concert_date) {
+        const dateStr = new Date(list.concert_date).toLocaleDateString('nl-NL', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const dateWidth = font.widthOfTextAtSize(dateStr, 12);
+        page.drawText(dateStr, {
+            x: (pageWidth - dateWidth) / 2,
+            y: infoY,
+            size: 12,
+            font,
+            color: rgb(0.4, 0.4, 0.4),
+        });
+        infoY -= 20;
+    }
+    if (list.concert_location) {
+        const locWidth = font.widthOfTextAtSize(list.concert_location, 12);
+        page.drawText(list.concert_location, {
+            x: (pageWidth - locWidth) / 2,
+            y: infoY,
+            size: 12,
+            font,
+            color: rgb(0.4, 0.4, 0.4),
+        });
+    }
+
+    // Program page
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    y = pageHeight - margin;
+
+    const programTitle = 'Programma';
+    const ptWidth = fontBold.widthOfTextAtSize(programTitle, 18);
+    page.drawText(programTitle, {
+        x: (pageWidth - ptWidth) / 2,
+        y,
+        size: 18,
+        font: fontBold,
+    });
+    y -= 40;
+
+    // Draw a line
+    page.drawLine({
+        start: { x: margin, y },
+        end: { x: pageWidth - margin, y },
+        thickness: 1,
+        color: rgb(0.7, 0.7, 0.7),
+    });
+    y -= 25;
+
+    // Helper to format duration
+    const formatDur = (secs: number) => {
+        if (!secs) return '';
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    // List titles
+    for (let i = 0; i < titles.length; i++) {
+        const t = titles[i];
+
+        // Check if we need a new page
+        if (y < margin + 60) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+        }
+
+        // Number + Title
+        const num = `${i + 1}.`;
+        page.drawText(num, { x: margin, y, size: 12, font: fontBold });
+        page.drawText(t.title, { x: margin + 25, y, size: 12, font: fontBold });
+
+        // Duration on the right
+        if (t.duration_seconds) {
+            const durStr = formatDur(t.duration_seconds);
+            const durWidth = font.widthOfTextAtSize(durStr, 10);
+            page.drawText(durStr, {
+                x: pageWidth - margin - durWidth,
+                y,
+                size: 10,
+                font,
+                color: rgb(0.5, 0.5, 0.5),
+            });
+        }
+        y -= 18;
+
+        // Arranger
+        if (t.arranger) {
+            page.drawText(t.arranger, {
+                x: margin + 25,
+                y,
+                size: 10,
+                font: fontItalic,
+                color: rgb(0.4, 0.4, 0.4),
+            });
+            y -= 16;
+        }
+
+        y -= 10;
+    }
+
+    // Total duration at bottom
+    const totalSeconds = titles.reduce((sum: number, t: any) => sum + (t.duration_seconds || 0), 0);
+    if (totalSeconds > 0) {
+        y -= 10;
+        if (y < margin + 30) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+        }
+        page.drawLine({
+            start: { x: margin, y: y + 5 },
+            end: { x: pageWidth - margin, y: y + 5 },
+            thickness: 0.5,
+            color: rgb(0.7, 0.7, 0.7),
+        });
+        const totalStr = `Totale speelduur: ${formatDur(totalSeconds)}`;
+        const totalWidth = font.widthOfTextAtSize(totalStr, 10);
+        page.drawText(totalStr, {
+            x: pageWidth - margin - totalWidth,
+            y: y - 12,
+            size: 10,
+            font,
+            color: rgb(0.4, 0.4, 0.4),
+        });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+
+    const filename = `${list.name.replace(/[^a-zA-Z0-9\s-]/g, '').trim()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(Buffer.from(pdfBytes));
 }));
 
 export default router;

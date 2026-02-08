@@ -64,7 +64,7 @@ export default function Orchestras() {
   });
 
   const updateListMutation = useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => updateMusicList(id, name),
+    mutationFn: ({ id, ...data }: { id: string; name: string }) => updateMusicList(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
       showSuccess(t('orchestras.listUpdated'));

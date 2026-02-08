@@ -42,6 +42,7 @@ export default function Users() {
   const [filterOrchestra, setFilterOrchestra] = useState<string>('');
   const [filterInstrument, setFilterInstrument] = useState<string>('');
   const [filterSearch, setFilterSearch] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'table' | 'sections'>('table');
 
   // React Hook Form
   const form = useForm<UserFormData>({ defaultValues });
@@ -159,6 +160,32 @@ export default function Users() {
     return true;
   });
 
+  // Group users by instrument section for section view
+  const sectionGroups = (() => {
+    if (viewMode !== 'sections') return [];
+    const groups: Record<string, { instrument: string; users: typeof filteredUsers }> = {};
+    const noSection: typeof filteredUsers = [];
+
+    for (const user of filteredUsers) {
+      if (!user.instruments || user.instruments.length === 0) {
+        noSection.push(user);
+      } else {
+        // Group by first instrument name (base name without tuning/clef)
+        const primaryInstrument = user.instruments[0].name;
+        if (!groups[primaryInstrument]) {
+          groups[primaryInstrument] = { instrument: primaryInstrument, users: [] };
+        }
+        groups[primaryInstrument].users.push(user);
+      }
+    }
+
+    const sorted = Object.values(groups).sort((a, b) => a.instrument.localeCompare(b.instrument));
+    if (noSection.length > 0) {
+      sorted.push({ instrument: t('users.noInstrumentSection'), users: noSection });
+    }
+    return sorted;
+  })();
+
   if (isLoading) {
     return (
       <div>
@@ -181,9 +208,18 @@ export default function Users() {
               : `${filteredUsers.length} / ${users.length}`}
           </span>
         </h1>
-        <button className="btn btn-primary" onClick={openAddModal}>
-          + {t('users.newMember')}
-        </button>
+        <div className="flex gap-1">
+          <button
+            className={`btn ${viewMode === 'table' ? 'btn-outline' : 'btn-primary'} btn-sm`}
+            onClick={() => setViewMode(viewMode === 'table' ? 'sections' : 'table')}
+            title={t('users.sectionView')}
+          >
+            {viewMode === 'table' ? t('users.sectionView') : t('users.tableView')}
+          </button>
+          <button className="btn btn-primary" onClick={openAddModal}>
+            + {t('users.newMember')}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -248,75 +284,143 @@ export default function Users() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-body flush">
-          <table className="table mb-0">
-            <thead>
-              <tr>
-                <th>{t('users.table.name')}</th>
-                <th>{t('users.table.email')}</th>
-                <th>{t('users.table.role')}</th>
-                <th>{t('users.table.instruments')}</th>
-                <th>{t('users.table.orchestras')}</th>
-                <th>{t('users.table.lastLogin')}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <strong>{user.firstName} {user.lastName}</strong>
-                  </td>
-                  <td>{user.email}</td>
-                  <td>{getRoleBadge(user.role)}</td>
-                  <td>
-                    <div className="tags">
-                      {user.instruments?.map((i) => {
-                        const clefLabel = i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol';
-                        const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
-                        return (
-                          <span key={i.id} className="tag">
-                            {i.name}{details && ` (${details})`}
-                          </span>
-                        );
-                      }) || '-'}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="tags">
-                      {user.orchestras?.map((o) => (
-                        <span key={o.id} className="tag">{o.name}</span>
-                      )) || '-'}
-                    </div>
-                  </td>
-                  <td className="text-light text-sm text-nowrap">
-                    {user.lastLogin
-                      ? new Date(user.lastLogin).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-                      : '-'}
-                  </td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => openEditModal(user)}
-                      >
-                        ✏
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => setDeletingUser(user)}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  </td>
+      {viewMode === 'table' ? (
+        <div className="card">
+          <div className="card-body flush">
+            <table className="table mb-0">
+              <thead>
+                <tr>
+                  <th>{t('users.table.name')}</th>
+                  <th>{t('users.table.email')}</th>
+                  <th>{t('users.table.role')}</th>
+                  <th>{t('users.table.instruments')}</th>
+                  <th>{t('users.table.orchestras')}</th>
+                  <th>{t('users.table.lastLogin')}</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.firstName} {user.lastName}</strong>
+                    </td>
+                    <td>{user.email}</td>
+                    <td>{getRoleBadge(user.role)}</td>
+                    <td>
+                      <div className="tags">
+                        {user.instruments?.map((i) => {
+                          const clefLabel = i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol';
+                          const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
+                          return (
+                            <span key={i.id} className="tag">
+                              {i.name}{details && ` (${details})`}
+                            </span>
+                          );
+                        }) || '-'}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="tags">
+                        {user.orchestras?.map((o) => (
+                          <span key={o.id} className="tag">{o.name}</span>
+                        )) || '-'}
+                      </div>
+                    </td>
+                    <td className="text-light text-sm text-nowrap">
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                        : '-'}
+                    </td>
+                    <td>
+                      <div className="flex gap-1">
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => openEditModal(user)}
+                        >
+                          ✏
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => setDeletingUser(user)}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          {sectionGroups.map((group) => (
+            <div key={group.instrument} className="card mb-2">
+              <div className="card-header">
+                <h2 className="card-title">
+                  {group.instrument}
+                  <span className="badge badge-primary" style={{ marginLeft: '0.5rem' }}>
+                    {group.users.length}
+                  </span>
+                </h2>
+              </div>
+              <div className="card-body flush">
+                <table className="table mb-0">
+                  <tbody>
+                    {group.users.map((user) => (
+                      <tr key={user.id}>
+                        <td>
+                          <strong>{user.firstName} {user.lastName}</strong>
+                        </td>
+                        <td>{user.email}</td>
+                        <td>{getRoleBadge(user.role)}</td>
+                        <td>
+                          <div className="tags">
+                            {user.instruments?.map((i) => {
+                              const clefLabel = i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol';
+                              const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
+                              return (
+                                <span key={i.id} className="tag">
+                                  {i.name}{details && ` (${details})`}
+                                </span>
+                              );
+                            }) || '-'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="tags">
+                            {user.orchestras?.map((o) => (
+                              <span key={o.id} className="tag">{o.name}</span>
+                            )) || '-'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex gap-1">
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => openEditModal(user)}
+                            >
+                              ✏
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => setDeletingUser(user)}
+                            >
+                              🗑
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Add User Modal */}
       {showAddModal && (

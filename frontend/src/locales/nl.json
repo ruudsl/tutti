@@ -353,6 +353,9 @@
     "uploadOnSave": "Wordt geüpload bij opslaan",
     "description": "Omschrijving",
     "descriptionPlaceholder": "Optionele omschrijving of notities...",
+    "internalNotes": "Interne notities (muziekcommissie)",
+    "internalNotesPlaceholder": "Bijv. 'Stuk mist nog partijen' of 'Origineel in archiefkast 3'",
+    "internalNotesHelp": "Alleen zichtbaar voor de muziekcommissie en beheerders.",
     "genres": "Genres",
     "sharingAllowed": "Delen met andere verenigingen toegestaan",
     "shared": "Gedeeld",
@@ -623,6 +626,9 @@
       "orchestras": "Orkesten",
       "lastLogin": "Laatste login"
     },
+    "sectionView": "Sectieweergave",
+    "tableView": "Tabelweergave",
+    "noInstrumentSection": "Geen instrument",
     "delete": {
       "title": "Lid verwijderen",
       "confirm": "Weet je zeker dat je {{name}} wilt verwijderen?"
@@ -691,7 +697,15 @@
     "errorAddTitle": "Fout bij toevoegen titel",
     "errorRemoveTitle": "Fout bij verwijderen titel",
     "errorReorder": "Fout bij wijzigen volgorde",
-    "errorToggleStatus": "Fout bij wijzigen status"
+    "errorToggleStatus": "Fout bij wijzigen status",
+    "listType": "Type",
+    "typeRegular": "Reguliere lijst",
+    "typeConcert": "Concert",
+    "concertDate": "Concertdatum",
+    "concertLocation": "Locatie",
+    "concertLocationPlaceholder": "Bijv. Dorpshuis, De Schuur",
+    "exportPdf": "Exporteer programmaboekje (PDF)",
+    "errorExportPdf": "Fout bij exporteren programma"
   },
   "mfa": {
     "title": "Tweestapsverificatie (MFA)",

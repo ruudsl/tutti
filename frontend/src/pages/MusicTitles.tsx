@@ -27,6 +27,7 @@ interface TitleMetaForm {
   grade: string;
   genreIds: string[];
   isShared: boolean;
+  internalNotes: string;
 }
 
 export default function MusicTitles() {
@@ -45,6 +46,7 @@ export default function MusicTitles() {
     grade: '',
     genreIds: [],
     isShared: false,
+    internalNotes: '',
   });
   const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
   const [fetchingYouTube, setFetchingYouTube] = useState(false);
@@ -82,6 +84,7 @@ export default function MusicTitles() {
       grade: title.grade || '',
       genreIds: title.genres?.map(g => g.id) || [],
       isShared: title.isShared || false,
+      internalNotes: title.internalNotes || '',
     });
     setCurrentMp3Path(title.mp3FilePath || null);
     setPendingMp3File(null);
@@ -118,6 +121,7 @@ export default function MusicTitles() {
         grade: titleMetaForm.grade || null,
         genreIds: titleMetaForm.genreIds,
         isShared: titleMetaForm.isShared,
+        internalNotes: titleMetaForm.internalNotes || null,
       });
 
       // If there's a pending MP3 file, upload it now
@@ -513,6 +517,18 @@ export default function MusicTitles() {
                 rows={3}
                 placeholder={t('titles.descriptionPlaceholder')}
               />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('titles.internalNotes')}</label>
+              <textarea
+                className="form-control"
+                value={titleMetaForm.internalNotes}
+                onChange={(e) => setTitleMetaForm(f => ({ ...f, internalNotes: e.target.value }))}
+                rows={2}
+                placeholder={t('titles.internalNotesPlaceholder')}
+                style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
+              />
+              <small className="text-light">{t('titles.internalNotesHelp')}</small>
             </div>
             <div className="form-group">
               <label className="form-label">{t('titles.genres')}</label>

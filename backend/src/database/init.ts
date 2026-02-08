@@ -366,6 +366,34 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add internal_notes column to music_titles
+    try {
+        const titleNotesInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasInternalNotes = titleNotesInfo.some(col => col.name === 'internal_notes');
+        if (!hasInternalNotes) {
+            console.log('Migration: Adding internal_notes column to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN internal_notes TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Add concert fields to music_lists
+    try {
+        const listTableInfo = db.prepare("PRAGMA table_info(music_lists)").all() as { name: string }[];
+        const hasListType = listTableInfo.some(col => col.name === 'list_type');
+        if (!hasListType) {
+            console.log('Migration: Adding concert fields to music_lists...');
+            db.prepare("ALTER TABLE music_lists ADD COLUMN list_type TEXT NOT NULL DEFAULT 'regular'").run();
+            db.prepare('ALTER TABLE music_lists ADD COLUMN concert_date TEXT').run();
+            db.prepare('ALTER TABLE music_lists ADD COLUMN concert_location TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

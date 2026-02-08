@@ -353,6 +353,9 @@
     "uploadOnSave": "Will be uploaded when saving",
     "description": "Description",
     "descriptionPlaceholder": "Optional description or notes...",
+    "internalNotes": "Internal notes (music committee)",
+    "internalNotesPlaceholder": "E.g. 'Missing parts' or 'Original in archive cabinet 3'",
+    "internalNotesHelp": "Only visible to music committee members and administrators.",
     "genres": "Genres",
     "sharingAllowed": "Sharing with other associations allowed",
     "shared": "Shared",
@@ -633,6 +636,9 @@
       "orchestras": "Orchestras",
       "lastLogin": "Last login"
     },
+    "sectionView": "Section view",
+    "tableView": "Table view",
+    "noInstrumentSection": "No instrument",
     "delete": {
       "title": "Delete member",
       "confirm": "Are you sure you want to delete {{name}}?"
@@ -701,7 +707,15 @@
     "errorAddTitle": "Error adding title",
     "errorRemoveTitle": "Error removing title",
     "errorReorder": "Error changing order",
-    "errorToggleStatus": "Error changing status"
+    "errorToggleStatus": "Error changing status",
+    "listType": "Type",
+    "typeRegular": "Regular list",
+    "typeConcert": "Concert",
+    "concertDate": "Concert date",
+    "concertLocation": "Location",
+    "concertLocationPlaceholder": "E.g. Community Hall, The Barn",
+    "exportPdf": "Export program booklet (PDF)",
+    "errorExportPdf": "Error exporting program"
   },
   "mfa": {
     "title": "Two-Factor Authentication (MFA)",

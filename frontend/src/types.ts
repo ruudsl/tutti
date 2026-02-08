@@ -50,6 +50,9 @@ export interface MusicList {
   titleCount?: number;
   isActive?: boolean;
   totalDuration?: number;
+  listType?: 'regular' | 'concert';
+  concertDate?: string | null;
+  concertLocation?: string | null;
 }
 
 export interface Genre {
@@ -68,6 +71,7 @@ export interface MusicTitle {
   grade?: string | null;
   mp3FilePath?: string | null;
   isShared?: boolean;
+  internalNotes?: string | null;
   instruments: string[];
   genres?: Genre[];
   onList?: boolean;

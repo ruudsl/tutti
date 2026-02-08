@@ -369,7 +369,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
                mt.duration_seconds,
                mt.grade,
                mt.mp3_file_path,
-               mt.is_shared
+               mt.is_shared,
+               mt.internal_notes
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
         LEFT JOIN music_titles mt ON mp.title = mt.title
@@ -443,6 +444,7 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             grade: t.grade,
             mp3FilePath: t.mp3_file_path,
             isShared: Boolean(t.is_shared),
+            internalNotes: t.internal_notes || null,
             instruments: t.instruments ? t.instruments.split(',') : [],
             onList: listId ? titlesOnList.has(t.title) : undefined,
             genres,
@@ -480,7 +482,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
     const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
 
     const meta = db.prepare(`
-        SELECT id, title, arranger, youtube_url, description, duration_seconds, grade, mp3_file_path, is_shared
+        SELECT id, title, arranger, youtube_url, description, duration_seconds, grade, mp3_file_path, is_shared, internal_notes
         FROM music_titles
         WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
     `).get(title, arranger, req.user!.associationId) as any;
@@ -505,6 +507,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
             grade: meta.grade,
             mp3FilePath: meta.mp3_file_path,
             isShared: Boolean(meta.is_shared),
+            internalNotes: meta.internal_notes || null,
             genres,
         });
     } else {
@@ -517,6 +520,7 @@ router.get('/title-meta/:title', authenticateToken, requireRole('admin', 'music_
             grade: null,
             mp3FilePath: null,
             isShared: false,
+            internalNotes: null,
             genres: [],
         });
     }
@@ -556,7 +560,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Update existing
             db.prepare(`
                 UPDATE music_titles
-                SET youtube_url = ?, description = ?, duration_seconds = ?, grade = ?, is_shared = ?
+                SET youtube_url = ?, description = ?, duration_seconds = ?, grade = ?, is_shared = ?, internal_notes = ?
                 WHERE id = ?
             `).run(
                 data.youtubeUrl || null,
@@ -564,6 +568,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 data.durationSeconds || 0,
                 data.grade || null,
                 data.isShared ? 1 : 0,
+                data.internalNotes || null,
                 existing.id
             );
             titleId = existing.id;
@@ -571,8 +576,8 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
             // Create new
             titleId = uuidv4();
             db.prepare(`
-                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, grade, is_shared, association_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO music_titles (id, title, arranger, youtube_url, description, duration_seconds, grade, is_shared, internal_notes, association_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 titleId,
                 data.title.trim(),
@@ -582,6 +587,7 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
                 data.durationSeconds || 0,
                 data.grade || null,
                 data.isShared ? 1 : 0,
+                data.internalNotes || null,
                 req.user!.associationId
             );
         }

@@ -12,6 +12,7 @@ interface TitleMetaForm {
   durationStr: string;
   genreIds: string[];
   isShared: boolean;
+  internalNotes: string;
 }
 
 interface TitleMetadataModalProps {
@@ -24,6 +25,7 @@ interface TitleMetadataModalProps {
     durationSeconds: number;
     genreIds: string[];
     isShared: boolean;
+    internalNotes: string | null;
   }) => Promise<void>;
   /** Extra form fields rendered before the description field */
   extraFields?: ReactNode;
@@ -53,6 +55,7 @@ export function TitleMetadataModal({
     durationStr: formatDurationForForm(title.durationSeconds),
     genreIds: title.genres?.map(g => g.id) || [],
     isShared: title.isShared || false,
+    internalNotes: title.internalNotes || '',
   });
   const [fetchingYouTube, setFetchingYouTube] = useState(false);
   const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
@@ -78,6 +81,7 @@ export function TitleMetadataModal({
       durationSeconds: parseDuration(form.durationStr),
       genreIds: form.genreIds,
       isShared: form.isShared,
+      internalNotes: form.internalNotes || null,
     });
   };
 
@@ -231,6 +235,18 @@ export function TitleMetadataModal({
             rows={3}
             placeholder={t('titles.descriptionPlaceholder')}
           />
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t('titles.internalNotes')}</label>
+          <textarea
+            className="form-control"
+            value={form.internalNotes}
+            onChange={(e) => setForm(f => ({ ...f, internalNotes: e.target.value }))}
+            rows={2}
+            placeholder={t('titles.internalNotesPlaceholder')}
+            style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
+          />
+          <small className="text-light">{t('titles.internalNotesHelp')}</small>
         </div>
         <div className="form-group">
           <label className="form-label">{t('titles.genres')}</label>

@@ -75,7 +75,7 @@ export function useUpdateMusicList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => updateMusicList(id, name),
+    mutationFn: ({ id, ...data }: { id: string; name: string; listType?: 'regular' | 'concert'; concertDate?: string | null; concertLocation?: string | null }) => updateMusicList(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['musicLists'] });
       showSuccess('Muzieklijst bijgewerkt');

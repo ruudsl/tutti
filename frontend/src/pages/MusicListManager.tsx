@@ -15,6 +15,7 @@ import {
   toggleMusicListActive,
   updateTitleMeta,
   getGenres,
+  downloadProgramPdf,
 } from '../api';
 import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -41,6 +42,9 @@ export default function MusicListManager() {
   const [showAddListModal, setShowAddListModal] = useState(false);
   const [editingList, setEditingList] = useState<MusicList | null>(null);
   const [listFormName, setListFormName] = useState('');
+  const [listFormType, setListFormType] = useState<'regular' | 'concert'>('regular');
+  const [listFormConcertDate, setListFormConcertDate] = useState('');
+  const [listFormConcertLocation, setListFormConcertLocation] = useState('');
 
   // Title metadata modal
   const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
@@ -144,10 +148,17 @@ export default function MusicListManager() {
     if (!selectedOrchestra) return;
 
     try {
-      await createMusicList(listFormName, selectedOrchestra);
+      await createMusicList(listFormName, selectedOrchestra, {
+        listType: listFormType,
+        concertDate: listFormConcertDate || null,
+        concertLocation: listFormConcertLocation || null,
+      });
       await loadLists(selectedOrchestra);
       setShowAddListModal(false);
       setListFormName('');
+      setListFormType('regular');
+      setListFormConcertDate('');
+      setListFormConcertLocation('');
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij aanmaken lijst');
     }
@@ -158,13 +169,21 @@ export default function MusicListManager() {
     if (!editingList) return;
 
     try {
-      await updateMusicList(editingList.id, listFormName);
+      await updateMusicList(editingList.id, {
+        name: listFormName,
+        listType: listFormType,
+        concertDate: listFormConcertDate || null,
+        concertLocation: listFormConcertLocation || null,
+      });
       await loadLists(selectedOrchestra);
       if (selectedList?.id === editingList.id) {
         await loadList(editingList.id);
       }
       setEditingList(null);
       setListFormName('');
+      setListFormType('regular');
+      setListFormConcertDate('');
+      setListFormConcertLocation('');
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij bijwerken lijst');
     }
@@ -181,6 +200,22 @@ export default function MusicListManager() {
       }
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij verwijderen lijst');
+    }
+  };
+
+  const handleExportProgramPdf = async (listId: string, listName: string) => {
+    try {
+      const blob = await downloadProgramPdf(listId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${listName.replace(/[^a-zA-Z0-9\s-]/g, '').trim()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(error.response?.data?.error || t('lists.errorExportPdf'));
     }
   };
 
@@ -231,6 +266,9 @@ export default function MusicListManager() {
   const openEditModal = (list: MusicList) => {
     setEditingList(list);
     setListFormName(list.name);
+    setListFormType(list.listType || 'regular');
+    setListFormConcertDate(list.concertDate || '');
+    setListFormConcertLocation(list.concertLocation || '');
   };
 
   const handleToggleActive = async (list: MusicList) => {
@@ -248,6 +286,7 @@ export default function MusicListManager() {
     durationSeconds: number;
     genreIds: string[];
     isShared: boolean;
+    internalNotes: string | null;
   }) => {
     if (!editingTitle) return;
 
@@ -340,6 +379,11 @@ export default function MusicListManager() {
                       style={{ cursor: 'pointer', flex: 1 }}
                     >
                       <strong>{list.name}</strong>
+                      {list.listType === 'concert' && (
+                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                          {t('lists.typeConcert')}
+                        </span>
+                      )}
                       {list.isActive === false && (
                         <span className="badge badge-secondary" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
                           {t('lists.inactive')}
@@ -347,6 +391,7 @@ export default function MusicListManager() {
                       )}
                       <div className="piece-meta">
                         {list.titleCount || 0} {t('lists.titles')} • {formatDuration(list.totalDuration || 0)}
+                        {list.concertDate && ` • ${new Date(list.concertDate).toLocaleDateString()}`}
                       </div>
                     </div>
                     <div className="flex gap-1">
@@ -374,6 +419,15 @@ export default function MusicListManager() {
                       >
                         ↓
                       </button>
+                      {list.listType === 'concert' && (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => handleExportProgramPdf(list.id, list.name)}
+                          title={t('lists.exportPdf')}
+                        >
+                          PDF
+                        </button>
+                      )}
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(list)}
@@ -601,7 +655,7 @@ export default function MusicListManager() {
       {showAddListModal && (
         <FormModal
           title={t('lists.newList')}
-          onClose={() => setShowAddListModal(false)}
+          onClose={() => { setShowAddListModal(false); setListFormType('regular'); setListFormConcertDate(''); setListFormConcertLocation(''); }}
           onSubmit={handleCreateList}
           submitLabel={t('common.add')}
         >
@@ -617,6 +671,40 @@ export default function MusicListManager() {
               placeholder={t('lists.namePlaceholder')}
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">{t('lists.listType')}</label>
+            <select
+              className="form-control"
+              value={listFormType}
+              onChange={(e) => setListFormType(e.target.value as 'regular' | 'concert')}
+            >
+              <option value="regular">{t('lists.typeRegular')}</option>
+              <option value="concert">{t('lists.typeConcert')}</option>
+            </select>
+          </div>
+          {listFormType === 'concert' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">{t('lists.concertDate')}</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={listFormConcertDate}
+                  onChange={(e) => setListFormConcertDate(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('lists.concertLocation')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={listFormConcertLocation}
+                  onChange={(e) => setListFormConcertLocation(e.target.value)}
+                  placeholder={t('lists.concertLocationPlaceholder')}
+                />
+              </div>
+            </>
+          )}
         </FormModal>
       )}
 
@@ -637,6 +725,40 @@ export default function MusicListManager() {
               required
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">{t('lists.listType')}</label>
+            <select
+              className="form-control"
+              value={listFormType}
+              onChange={(e) => setListFormType(e.target.value as 'regular' | 'concert')}
+            >
+              <option value="regular">{t('lists.typeRegular')}</option>
+              <option value="concert">{t('lists.typeConcert')}</option>
+            </select>
+          </div>
+          {listFormType === 'concert' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">{t('lists.concertDate')}</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={listFormConcertDate}
+                  onChange={(e) => setListFormConcertDate(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('lists.concertLocation')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={listFormConcertLocation}
+                  onChange={(e) => setListFormConcertLocation(e.target.value)}
+                  placeholder={t('lists.concertLocationPlaceholder')}
+                />
+              </div>
+            </>
+          )}
         </FormModal>
       )}
 

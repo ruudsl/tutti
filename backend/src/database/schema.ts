@@ -93,6 +93,9 @@ CREATE TABLE IF NOT EXISTS music_lists (
     orchestra_id TEXT NOT NULL,
     position INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT 1, -- 0 = verborgen voor leden, 1 = zichtbaar
+    list_type TEXT NOT NULL DEFAULT 'regular', -- 'regular' of 'concert'
+    concert_date TEXT, -- Datum van het concert (ISO 8601)
+    concert_location TEXT, -- Locatie van het concert
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );
@@ -139,6 +142,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     grade TEXT, -- Moeilijkheidsgraad (bijv. 1, 2, 3, 4, 5 of 1.5, 2+, etc.)
     mp3_file_path TEXT, -- Pad naar MP3 preview bestand
     is_shared BOOLEAN DEFAULT 0, -- Mag gedeeld worden met andere verenigingen
+    internal_notes TEXT, -- Interne notities alleen zichtbaar voor muziekcommissie
     association_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,

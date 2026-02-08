@@ -63,10 +63,16 @@ export const updateOrchestraSchema = z.object({
 export const createMusicListSchema = z.object({
     name: z.string().min(1, 'Naam is verplicht.'),
     orchestraId: z.string().uuid('Ongeldig orkest ID.'),
+    listType: z.enum(['regular', 'concert']).optional(),
+    concertDate: z.string().nullable().optional(),
+    concertLocation: z.string().nullable().optional(),
 });
 
 export const updateMusicListSchema = z.object({
     name: z.string().min(1, 'Naam is verplicht.'),
+    listType: z.enum(['regular', 'concert']).optional(),
+    concertDate: z.string().nullable().optional(),
+    concertLocation: z.string().nullable().optional(),
 });
 
 export const reorderMusicListsSchema = z.object({
@@ -111,6 +117,7 @@ export const updateTitleMetaSchema = z.object({
     grade: z.string().nullable().optional(),
     isShared: z.boolean().optional(),
     genreIds: z.array(z.string().uuid()).optional(),
+    internalNotes: z.string().nullable().optional(),
 });
 
 // Share music piece schema

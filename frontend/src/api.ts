@@ -191,13 +191,27 @@ export const getMusicList = async (id: string): Promise<MusicList & { pieces: Mu
   return data;
 };
 
-export const createMusicList = async (name: string, orchestraId: string): Promise<{ id: string }> => {
-  const { data } = await api.post('/music-lists', { name, orchestraId });
+export const createMusicList = async (name: string, orchestraId: string, options?: {
+  listType?: 'regular' | 'concert';
+  concertDate?: string | null;
+  concertLocation?: string | null;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post('/music-lists', { name, orchestraId, ...options });
   return data;
 };
 
-export const updateMusicList = async (id: string, name: string): Promise<void> => {
-  await api.put(`/music-lists/${id}`, { name });
+export const updateMusicList = async (id: string, data: {
+  name: string;
+  listType?: 'regular' | 'concert';
+  concertDate?: string | null;
+  concertLocation?: string | null;
+}): Promise<void> => {
+  await api.put(`/music-lists/${id}`, data);
+};
+
+export const downloadProgramPdf = async (listId: string): Promise<Blob> => {
+  const { data } = await api.get(`/music-lists/${listId}/program-pdf`, { responseType: 'blob' });
+  return data;
 };
 
 export const deleteMusicList = async (id: string): Promise<void> => {
@@ -388,6 +402,7 @@ export const updateTitleMeta = async (titleData: {
   grade?: string | null;
   isShared?: boolean;
   genreIds?: string[];
+  internalNotes?: string | null;
 }): Promise<{ id: string }> => {
   const { data } = await api.put('/music-pieces/title-meta', titleData);
   return data;
