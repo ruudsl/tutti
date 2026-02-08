@@ -21,6 +21,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
 import { FormModal } from '../components/Modal';
 import { TitleMetadataModal } from '../components/TitleMetadataModal';
+import { SkeletonCard, SkeletonListItem } from '../components/Skeleton';
 
 export default function MusicListManager() {
   const { t } = useTranslation();
@@ -273,8 +274,13 @@ export default function MusicListManager() {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <h1 className="mb-3">{t('lists.manageTitle')}</h1>
+        <div className="grid grid-3" style={{ gridTemplateColumns: '250px 250px 1fr' }}>
+          <div className="card"><div className="card-body">{[1,2,3].map(i => <SkeletonListItem key={i} />)}</div></div>
+          <div className="card"><div className="card-body">{[1,2,3,4].map(i => <SkeletonListItem key={i} />)}</div></div>
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

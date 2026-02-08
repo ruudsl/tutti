@@ -9,6 +9,7 @@ import BackupSettings from '../components/BackupSettings';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
 import { ROLES } from '../utils/constants';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 
 // Group lists by orchestra
 interface OrchestraGroup {
@@ -63,8 +64,20 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="loading">
-        <div className="spinner"></div>
+      <div>
+        <h1 className="mb-3"><Skeleton width="300px" height="2rem" /></h1>
+        <div className="stats-grid">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="stat-card">
+              <Skeleton width="3rem" height="2rem" style={{ marginBottom: '0.5rem' }} />
+              <Skeleton width="80%" height="1rem" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-2" style={{ marginTop: '1.5rem' }}>
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

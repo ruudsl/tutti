@@ -2,11 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import {
   getMusicPieces,
+  getMusicPiecesPaginated,
   updateMusicPiece,
   deleteMusicPiece,
   deleteMusicPiecesBulk,
   refreshInstrumentLinks,
+  type PaginatedResponse,
 } from '../api';
+import type { MusicPiece } from '../types';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
@@ -16,6 +19,11 @@ interface MusicPiecesFilters {
   listId?: string;
 }
 
+interface PaginatedMusicPiecesFilters extends MusicPiecesFilters {
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * Hook to fetch music pieces with optional filters
  */
@@ -23,6 +31,17 @@ export function useMusicPieces(filters?: MusicPiecesFilters) {
   return useQuery({
     queryKey: queryKeys.musicPieces(filters as Record<string, string>),
     queryFn: () => getMusicPieces(filters),
+  });
+}
+
+/**
+ * Hook to fetch music pieces with pagination
+ */
+export function useMusicPiecesPaginated(filters?: PaginatedMusicPiecesFilters) {
+  return useQuery<PaginatedResponse<MusicPiece>>({
+    queryKey: [...queryKeys.musicPieces(filters as Record<string, string>), 'paginated', filters?.page, filters?.pageSize],
+    queryFn: () => getMusicPiecesPaginated(filters),
+    placeholderData: (previousData) => previousData,
   });
 }
 

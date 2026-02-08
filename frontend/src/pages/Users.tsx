@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { useInstruments } from '../hooks/useInstruments';
 import { useOrchestras } from '../hooks/useOrchestras';
@@ -8,6 +9,27 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ROLES } from '../utils/constants';
+
+interface UserFormData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  instrumentIds: string[];
+  orchestraIds: string[];
+}
+
+const defaultValues: UserFormData = {
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  role: 'member',
+  instrumentIds: [],
+  orchestraIds: [],
+};
 
 export default function Users() {
   const { t } = useTranslation();
@@ -21,14 +43,8 @@ export default function Users() {
   const [filterInstrument, setFilterInstrument] = useState<string>('');
   const [filterSearch, setFilterSearch] = useState<string>('');
 
-  // Form state
-  const [formEmail, setFormEmail] = useState('');
-  const [formPassword, setFormPassword] = useState('');
-  const [formFirstName, setFormFirstName] = useState('');
-  const [formLastName, setFormLastName] = useState('');
-  const [formRole, setFormRole] = useState('member');
-  const [formInstruments, setFormInstruments] = useState<string[]>([]);
-  const [formOrchestras, setFormOrchestras] = useState<string[]>([]);
+  // React Hook Form
+  const form = useForm<UserFormData>({ defaultValues });
 
   // TanStack Query hooks
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -41,44 +57,41 @@ export default function Users() {
 
   const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleCreate = (data: UserFormData) => {
     createMutation.mutate({
-      email: formEmail,
-      password: formPassword,
-      firstName: formFirstName,
-      lastName: formLastName,
-      role: formRole,
-      instrumentIds: formInstruments,
-      orchestraIds: formOrchestras,
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+      instrumentIds: data.instrumentIds,
+      orchestraIds: data.orchestraIds,
     }, {
       onSuccess: () => {
         setShowAddModal(false);
-        resetForm();
+        form.reset(defaultValues);
       },
     });
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdate = (data: UserFormData) => {
     if (!editingUser) return;
 
     updateMutation.mutate({
       id: editingUser.id,
       data: {
-        email: formEmail,
-        firstName: formFirstName,
-        lastName: formLastName,
-        role: formRole,
-        password: formPassword || undefined,
-        instrumentIds: formInstruments,
-        orchestraIds: formOrchestras,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        password: data.password || undefined,
+        instrumentIds: data.instrumentIds,
+        orchestraIds: data.orchestraIds,
       },
     }, {
       onSuccess: () => {
         setEditingUser(null);
-        resetForm();
+        form.reset(defaultValues);
       },
     });
   };
@@ -93,46 +106,31 @@ export default function Users() {
     });
   };
 
-  const resetForm = () => {
-    setFormEmail('');
-    setFormPassword('');
-    setFormFirstName('');
-    setFormLastName('');
-    setFormRole('member');
-    setFormInstruments([]);
-    setFormOrchestras([]);
+  const openAddModal = () => {
+    form.reset(defaultValues);
+    setShowAddModal(true);
   };
 
   const openEditModal = (user: User) => {
+    form.reset({
+      email: user.email,
+      password: '',
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      instrumentIds: user.instruments?.map((i) => i.id) || [],
+      orchestraIds: user.orchestras?.map((o) => o.id) || [],
+    });
     setEditingUser(user);
-    setFormEmail(user.email);
-    setFormPassword('');
-    setFormFirstName(user.firstName);
-    setFormLastName(user.lastName);
-    setFormRole(user.role);
-    setFormInstruments(user.instruments?.map((i) => i.id) || []);
-    setFormOrchestras(user.orchestras?.map((o) => o.id) || []);
-  };
-
-  const toggleInstrument = (id: string) => {
-    setFormInstruments((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleOrchestra = (id: string) => {
-    setFormOrchestras((prev) =>
-      prev.includes(id) ? prev.filter((o) => o !== id) : [...prev, id]
-    );
   };
 
   const getRoleBadge = (role: string) => {
     switch (role) {
-      case 'admin':
+      case ROLES.ADMIN:
         return <span className="badge badge-danger">{t('roles.admin')}</span>;
-      case 'music_committee':
+      case ROLES.MUSIC_COMMITTEE:
         return <span className="badge badge-warning">{t('roles.music_committee')}</span>;
-      case 'conductor':
+      case ROLES.CONDUCTOR:
         return <span className="badge badge-success">{t('roles.conductor')}</span>;
       default:
         return <span className="badge badge-primary">{t('roles.member')}</span>;
@@ -141,7 +139,6 @@ export default function Users() {
 
   // Filter users
   const filteredUsers = users.filter((user) => {
-    // Search filter
     if (filterSearch) {
       const searchLower = filterSearch.toLowerCase();
       const nameMatch = `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower);
@@ -149,13 +146,11 @@ export default function Users() {
       if (!nameMatch && !emailMatch) return false;
     }
 
-    // Orchestra filter
     if (filterOrchestra) {
       const hasOrchestra = user.orchestras?.some((o) => o.id === filterOrchestra);
       if (!hasOrchestra) return false;
     }
 
-    // Instrument filter
     if (filterInstrument) {
       const hasInstrument = user.instruments?.some((i) => i.id === filterInstrument);
       if (!hasInstrument) return false;
@@ -186,7 +181,7 @@ export default function Users() {
               : `${filteredUsers.length} / ${users.length}`}
           </span>
         </h1>
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+        <button className="btn btn-primary" onClick={openAddModal}>
           + {t('users.newMember')}
         </button>
       </div>
@@ -329,28 +324,15 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setShowAddModal(false);
-            resetForm();
+            form.reset(defaultValues);
           }}
-          onSubmit={handleCreate}
+          onSubmit={form.handleSubmit(handleCreate)}
           title={t('users.newMember')}
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <UserForm
-            formEmail={formEmail}
-            setFormEmail={setFormEmail}
-            formPassword={formPassword}
-            setFormPassword={setFormPassword}
-            formFirstName={formFirstName}
-            setFormFirstName={setFormFirstName}
-            formLastName={formLastName}
-            setFormLastName={setFormLastName}
-            formRole={formRole}
-            setFormRole={setFormRole}
-            formInstruments={formInstruments}
-            toggleInstrument={toggleInstrument}
-            formOrchestras={formOrchestras}
-            toggleOrchestra={toggleOrchestra}
+            form={form}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={false}
@@ -363,28 +345,15 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setEditingUser(null);
-            resetForm();
+            form.reset(defaultValues);
           }}
-          onSubmit={handleUpdate}
+          onSubmit={form.handleSubmit(handleUpdate)}
           title={t('users.edit')}
           submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
         >
           <UserForm
-            formEmail={formEmail}
-            setFormEmail={setFormEmail}
-            formPassword={formPassword}
-            setFormPassword={setFormPassword}
-            formFirstName={formFirstName}
-            setFormFirstName={setFormFirstName}
-            formLastName={formLastName}
-            setFormLastName={setFormLastName}
-            formRole={formRole}
-            setFormRole={setFormRole}
-            formInstruments={formInstruments}
-            toggleInstrument={toggleInstrument}
-            formOrchestras={formOrchestras}
-            toggleOrchestra={toggleOrchestra}
+            form={form}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={true}
@@ -407,47 +376,17 @@ export default function Users() {
   );
 }
 
-// Extracted form component for reuse
+// Extracted form component using react-hook-form
 interface UserFormProps {
-  formEmail: string;
-  setFormEmail: (value: string) => void;
-  formPassword: string;
-  setFormPassword: (value: string) => void;
-  formFirstName: string;
-  setFormFirstName: (value: string) => void;
-  formLastName: string;
-  setFormLastName: (value: string) => void;
-  formRole: string;
-  setFormRole: (value: string) => void;
-  formInstruments: string[];
-  toggleInstrument: (id: string) => void;
-  formOrchestras: string[];
-  toggleOrchestra: (id: string) => void;
+  form: UseFormReturn<UserFormData>;
   instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
   orchestras: { id: string; name: string }[];
   isEditing: boolean;
 }
 
-function UserForm({
-  formEmail,
-  setFormEmail,
-  formPassword,
-  setFormPassword,
-  formFirstName,
-  setFormFirstName,
-  formLastName,
-  setFormLastName,
-  formRole,
-  setFormRole,
-  formInstruments,
-  toggleInstrument,
-  formOrchestras,
-  toggleOrchestra,
-  instruments,
-  orchestras,
-  isEditing,
-}: UserFormProps) {
+function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
   const { t } = useTranslation();
+  const { register, control, formState: { errors } } = form;
 
   return (
     <>
@@ -456,20 +395,16 @@ function UserForm({
           <label className="form-label">{t('users.firstName')}</label>
           <input
             type="text"
-            className="form-control"
-            value={formFirstName}
-            onChange={(e) => setFormFirstName(e.target.value)}
-            required
+            className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
+            {...register('firstName', { required: true })}
           />
         </div>
         <div className="form-group">
           <label className="form-label">{t('users.lastName')}</label>
           <input
             type="text"
-            className="form-control"
-            value={formLastName}
-            onChange={(e) => setFormLastName(e.target.value)}
-            required
+            className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
+            {...register('lastName', { required: true })}
           />
         </div>
       </div>
@@ -478,10 +413,8 @@ function UserForm({
         <label className="form-label">{t('users.email')}</label>
         <input
           type="email"
-          className="form-control"
-          value={formEmail}
-          onChange={(e) => setFormEmail(e.target.value)}
-          required
+          className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+          {...register('email', { required: true })}
         />
       </div>
 
@@ -491,11 +424,11 @@ function UserForm({
         </label>
         <input
           type="password"
-          className="form-control"
-          value={formPassword}
-          onChange={(e) => setFormPassword(e.target.value)}
-          required={!isEditing}
-          minLength={6}
+          className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+          {...register('password', {
+            required: !isEditing,
+            minLength: isEditing ? undefined : 6,
+          })}
         />
       </div>
 
@@ -503,8 +436,7 @@ function UserForm({
         <label className="form-label">{t('users.role')}</label>
         <select
           className="form-control form-select"
-          value={formRole}
-          onChange={(e) => setFormRole(e.target.value)}
+          {...register('role')}
         >
           <option value="member">{t('roles.member')}</option>
           <option value="conductor">{t('roles.conductor')}</option>
@@ -513,47 +445,69 @@ function UserForm({
         </select>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">{t('users.instruments')}</label>
-        <div className="checkbox-group">
-          {instruments.map((instrument) => {
-            const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
-            const details = [
-              instrument.tuning,
-              clefLabel
-            ].filter(Boolean).join(', ');
-            return (
-              <label key={instrument.id} className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={formInstruments.includes(instrument.id)}
-                  onChange={() => toggleInstrument(instrument.id)}
-                />
-                <span>
-                  {instrument.name}
-                  {details && <span className="text-light"> ({details})</span>}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
+      <Controller
+        name="instrumentIds"
+        control={control}
+        render={({ field }) => (
+          <div className="form-group">
+            <label className="form-label">{t('users.instruments')}</label>
+            <div className="checkbox-group">
+              {instruments.map((instrument) => {
+                const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
+                const details = [
+                  instrument.tuning,
+                  clefLabel
+                ].filter(Boolean).join(', ');
+                return (
+                  <label key={instrument.id} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={field.value.includes(instrument.id)}
+                      onChange={() => {
+                        const newValue = field.value.includes(instrument.id)
+                          ? field.value.filter((id: string) => id !== instrument.id)
+                          : [...field.value, instrument.id];
+                        field.onChange(newValue);
+                      }}
+                    />
+                    <span>
+                      {instrument.name}
+                      {details && <span className="text-light"> ({details})</span>}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      />
 
-      <div className="form-group">
-        <label className="form-label">{t('users.orchestras')}</label>
-        <div className="checkbox-group">
-          {orchestras.map((orchestra) => (
-            <label key={orchestra.id} className="checkbox-item">
-              <input
-                type="checkbox"
-                checked={formOrchestras.includes(orchestra.id)}
-                onChange={() => toggleOrchestra(orchestra.id)}
-              />
-              <span>{orchestra.name}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <Controller
+        name="orchestraIds"
+        control={control}
+        render={({ field }) => (
+          <div className="form-group">
+            <label className="form-label">{t('users.orchestras')}</label>
+            <div className="checkbox-group">
+              {orchestras.map((orchestra) => (
+                <label key={orchestra.id} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={field.value.includes(orchestra.id)}
+                    onChange={() => {
+                      const newValue = field.value.includes(orchestra.id)
+                        ? field.value.filter((id: string) => id !== orchestra.id)
+                        : [...field.value, orchestra.id];
+                      field.onChange(newValue);
+                    }}
+                  />
+                  <span>{orchestra.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      />
     </>
   );
 }

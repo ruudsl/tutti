@@ -232,11 +232,30 @@ export const toggleMusicListActive = async (listId: string): Promise<{ isActive:
 };
 
 // Music Pieces
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export const getMusicPieces = async (filters?: {
   search?: string;
   instrumentId?: string;
   listId?: string;
 }): Promise<MusicPiece[]> => {
+  const { data } = await api.get('/music-pieces', { params: filters });
+  return data;
+};
+
+export const getMusicPiecesPaginated = async (filters?: {
+  search?: string;
+  instrumentId?: string;
+  listId?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PaginatedResponse<MusicPiece>> => {
   const { data } = await api.get('/music-pieces', { params: filters });
   return data;
 };

@@ -163,16 +163,9 @@ async function deleteFile(filePath: string): Promise<void> {
  *         description: List of music pieces
  */
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { search, instrumentId, listId } = req.query;
+    const { search, instrumentId, listId, page, pageSize } = req.query;
 
-    let query = `
-        SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
-               mp.youtube_url, mp.original_filename, mp.created_at,
-               i.id as instrument_id, i.name as instrument_name
-        FROM music_pieces mp
-        LEFT JOIN instruments i ON mp.instrument_id = i.id
-        WHERE mp.association_id = ?
-    `;
+    let whereClause = ' WHERE mp.association_id = ?';
     const params: any[] = [req.user!.associationId];
 
     // Filter by instrument for regular members
@@ -182,41 +175,42 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         ).all(req.user!.id) as { instrument_id: string }[];
 
         if (userInstruments.length === 0) {
-            return res.json([]);
+            return res.json(page ? { data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } : []);
         }
 
         const instrumentIds = userInstruments.map(i => i.instrument_id);
-        query += ` AND mp.instrument_id IN (${instrumentIds.map(() => '?').join(',')})`;
+        whereClause += ` AND mp.instrument_id IN (${instrumentIds.map(() => '?').join(',')})`;
         params.push(...instrumentIds);
     }
 
     // Optional filters
     if (search) {
-        query += ' AND (mp.title LIKE ? COLLATE NOCASE OR mp.arranger LIKE ? COLLATE NOCASE OR mp.original_filename LIKE ? COLLATE NOCASE)';
+        whereClause += ' AND (mp.title LIKE ? COLLATE NOCASE OR mp.arranger LIKE ? COLLATE NOCASE OR mp.original_filename LIKE ? COLLATE NOCASE)';
         const searchTerm = `%${search as string}%`;
         params.push(searchTerm, searchTerm, searchTerm);
     }
 
     if (instrumentId) {
         if (instrumentId === '__none__') {
-            // Special filter: pieces without instrument assigned
-            query += ' AND mp.instrument_id IS NULL';
+            whereClause += ' AND mp.instrument_id IS NULL';
         } else {
-            query += ' AND mp.instrument_id = ?';
+            whereClause += ' AND mp.instrument_id = ?';
             params.push(instrumentId);
         }
     }
 
     if (listId) {
-        query += ' AND mp.id IN (SELECT music_piece_id FROM music_list_pieces WHERE music_list_id = ?)';
+        whereClause += ' AND mp.id IN (SELECT music_piece_id FROM music_list_pieces WHERE music_list_id = ?)';
         params.push(listId);
     }
 
-    query += ' ORDER BY mp.title, i.name, mp.group_number';
+    const baseFrom = `
+        FROM music_pieces mp
+        LEFT JOIN instruments i ON mp.instrument_id = i.id
+        ${whereClause}
+    `;
 
-    const pieces = db.prepare(query).all(...params);
-
-    res.json(pieces.map((p: any) => ({
+    const mapPiece = (p: any) => ({
         id: p.id,
         title: p.title,
         arranger: p.arranger,
@@ -228,7 +222,46 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         createdAt: p.created_at,
         instrumentId: p.instrument_id,
         instrumentName: p.instrument_name,
-    })));
+    });
+
+    // Paginated response
+    if (page) {
+        const currentPage = Math.max(1, parseInt(page as string, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(pageSize as string, 10) || 50));
+        const offset = (currentPage - 1) * limit;
+
+        const countResult = db.prepare(`SELECT COUNT(*) as count ${baseFrom}`).get(...params) as { count: number };
+        const total = countResult.count;
+        const totalPages = Math.ceil(total / limit);
+
+        const pieces = db.prepare(`
+            SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
+                   mp.youtube_url, mp.original_filename, mp.created_at,
+                   i.id as instrument_id, i.name as instrument_name
+            ${baseFrom}
+            ORDER BY mp.title, i.name, mp.group_number
+            LIMIT ? OFFSET ?
+        `).all(...params, limit, offset);
+
+        return res.json({
+            data: pieces.map(mapPiece),
+            total,
+            page: currentPage,
+            pageSize: limit,
+            totalPages,
+        });
+    }
+
+    // Non-paginated response (backwards compatible)
+    const pieces = db.prepare(`
+        SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
+               mp.youtube_url, mp.original_filename, mp.created_at,
+               i.id as instrument_id, i.name as instrument_name
+        ${baseFrom}
+        ORDER BY mp.title, i.name, mp.group_number
+    `).all(...params);
+
+    res.json(pieces.map(mapPiece));
 }));
 
 /**

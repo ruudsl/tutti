@@ -13,6 +13,7 @@ import {
 } from '../api';
 import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup } from '../types';
 import { ROLES } from '../utils/constants';
+import { SkeletonTable } from '../components/Skeleton';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -266,9 +267,11 @@ export default function Rehearsals() {
 
   if (isLoading) {
     return (
-      <div className="loading" role="status">
-        <div className="spinner" aria-hidden="true"></div>
-        <span className="sr-only">{t('common.loading')}</span>
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h1>{t('rehearsals.title')}</h1>
+        </div>
+        <SkeletonTable rows={6} columns={5} />
       </div>
     );
   }

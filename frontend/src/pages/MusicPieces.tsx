@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  useMusicPieces,
+  useMusicPiecesPaginated,
   useUpdateMusicPiece,
   useDeleteMusicPiece,
   useDeleteMusicPiecesBulk,
@@ -13,10 +13,14 @@ import { downloadMusicPiece, logActivity } from '../api';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
+import { Pagination } from '../components/Pagination';
 import { showError } from '../utils/toast';
 import { useDebounce } from '../hooks/useDebounce';
 import type { MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ROLES } from '../utils/constants';
+
+const PAGE_SIZE = 50;
 
 export default function MusicPieces() {
   const { t } = useTranslation();
@@ -29,8 +33,9 @@ export default function MusicPieces() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const canManage = user && ['admin', 'music_committee'].includes(user.role);
+  const canManage = user && ([ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] as string[]).includes(user.role);
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -39,11 +44,28 @@ export default function MusicPieces() {
   const filters = useMemo(() => ({
     search: debouncedSearch || undefined,
     instrumentId: filterInstrument || undefined,
-  }), [debouncedSearch, filterInstrument]);
+    page,
+    pageSize: PAGE_SIZE,
+  }), [debouncedSearch, filterInstrument, page]);
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleFilterChange = (value: string) => {
+    setFilterInstrument(value);
+    setPage(1);
+  };
 
   // TanStack Query hooks
-  const { data: pieces = [], isLoading: piecesLoading } = useMusicPieces(filters);
+  const { data: paginatedData, isLoading: piecesLoading } = useMusicPiecesPaginated(filters);
   const { data: instruments = [], isLoading: instrumentsLoading } = useInstruments();
+
+  const pieces = paginatedData?.data ?? [];
+  const totalPieces = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const updateMutation = useUpdateMusicPiece();
   const deleteMutation = useDeleteMusicPiece();
@@ -56,7 +78,6 @@ export default function MusicPieces() {
     setDownloading(pieceId);
     try {
       await downloadMusicPiece(pieceId);
-      // Log activity for statistics
       logActivity('download', 'music_piece', pieceId).catch(() => {});
     } catch (error) {
       showError(t('errors.generic'));
@@ -161,14 +182,14 @@ export default function MusicPieces() {
                 className="form-control"
                 placeholder={t('musicPieces.searchPlaceholder')}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
             <div className="form-group mb-0" style={{ minWidth: '200px' }}>
               <select
                 className="form-control form-select"
                 value={filterInstrument}
-                onChange={(e) => setFilterInstrument(e.target.value)}
+                onChange={(e) => handleFilterChange(e.target.value)}
               >
                 <option value="">{t('musicPieces.allInstruments')}</option>
                 <option value="__none__">{t('musicPieces.noInstrument')}</option>
@@ -185,7 +206,7 @@ export default function MusicPieces() {
 
       <div className="card">
         <div className="card-header flex justify-between items-center">
-          <span className="card-title">{pieces.length} {t('musicPieces.count')}</span>
+          <span className="card-title">{totalPieces} {t('musicPieces.count')}</span>
           {canManage && selectedIds.size > 0 && (
             <div className="flex gap-1 items-center">
               <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
@@ -292,6 +313,17 @@ export default function MusicPieces() {
             </div>
           )}
         </div>
+        {totalPages > 1 && (
+          <div className="card-footer" style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              total={totalPieces}
+              limit={PAGE_SIZE}
+            />
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
