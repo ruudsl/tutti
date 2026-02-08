@@ -5,22 +5,12 @@ import { useGenres } from '../hooks/useGenres';
 import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
-import { formatDuration } from '../utils/format';
+import { formatDuration, parseDuration } from '../utils/format';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
-// Parse duration string (mm:ss or h:mm:ss) to seconds
-function parseDuration(str: string): number {
-  if (!str) return 0;
-  const parts = str.split(':').map(Number);
-  if (parts.length === 2) {
-    return (parts[0] * 60) + parts[1];
-  } else if (parts.length === 3) {
-    return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
-  }
-  return 0;
-}
+import { Modal } from '../components/Modal';
+import { searchSheetMusicWebsites } from '../utils/sheetMusic';
 
 // Format seconds to mm:ss string for form input
 function formatDurationForForm(seconds: number): string {
@@ -195,19 +185,6 @@ export default function MusicTitles() {
     }));
   };
 
-  // Search helper - open sheet music websites
-  const searchSheetMusicWebsites = (title: string) => {
-    const encodedTitle = encodeURIComponent(title);
-    const websites = [
-      { name: 'De Haske', url: `https://www.dehaske.com/en-gb/search?q=${encodedTitle}` },
-      { name: 'Molenaar Edition', url: `https://www.molenaar.com/search?q=${encodedTitle}` },
-      { name: 'Hal Leonard', url: `https://www.halleonard.com/search/search.action?_requestid=2&subsiteid=1&seriesfeature=CONCERTBAND&keywords=${encodedTitle}` },
-      { name: 'Beriato Music', url: `https://www.beriato.com/search?q=${encodedTitle}` },
-      { name: 'YouTube', url: `https://www.youtube.com/results?search_query=${encodedTitle}+concert+band` },
-    ];
-    return websites;
-  };
-
   if (isLoading) {
     return (
       <div>
@@ -312,280 +289,275 @@ export default function MusicTitles() {
 
       {/* Edit Title Metadata Modal */}
       {editingTitle && (
-        <div className="modal-overlay" onClick={() => setEditingTitle(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('titles.editMetadata')}</h3>
-              <button className="modal-close" onClick={() => setEditingTitle(null)}>×</button>
-            </div>
-            <form onSubmit={handleSaveTitleMeta}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('myMusic.table.title')}</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingTitle.title}
-                      disabled
-                      style={{ flex: 1 }}
-                    />
-                    <div className="dropdown" style={{ position: 'relative' }}>
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={(e) => {
-                          const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
-                          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                        }}
-                        title={t('titles.searchOnSites')}
-                      >
-                        🔍
-                      </button>
-                      <div
+        <Modal
+          title={t('titles.editMetadata')}
+          onClose={() => setEditingTitle(null)}
+          footer={
+            <>
+              <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
+                {t('common.cancel')}
+              </button>
+              <button type="submit" form="edit-title-meta-form" className="btn btn-primary" disabled={saving}>
+                {saving ? `${t('common.save')}...` : t('common.save')}
+              </button>
+            </>
+          }
+        >
+          <form id="edit-title-meta-form" onSubmit={handleSaveTitleMeta}>
+            <div className="form-group">
+              <label className="form-label">{t('myMusic.table.title')}</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editingTitle.title}
+                  disabled
+                  style={{ flex: 1 }}
+                />
+                <div className="dropdown" style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={(e) => {
+                      const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
+                      dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                    }}
+                    title={t('titles.searchOnSites')}
+                  >
+                    🔍
+                  </button>
+                  <div
+                    style={{
+                      display: 'none',
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      background: 'white',
+                      border: '1px solid var(--border)',
+                      borderRadius: '0.25rem',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      zIndex: 1000,
+                      minWidth: '200px',
+                    }}
+                  >
+                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                      {t('titles.searchOnSites')}:
+                    </div>
+                    {searchSheetMusicWebsites(editingTitle.title).map((site) => (
+                      <a
+                        key={site.name}
+                        href={site.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          display: 'none',
-                          position: 'absolute',
-                          right: 0,
-                          top: '100%',
-                          background: 'white',
-                          border: '1px solid var(--border)',
-                          borderRadius: '0.25rem',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                          zIndex: 1000,
-                          minWidth: '200px',
+                          display: 'block',
+                          padding: '0.5rem 1rem',
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          borderBottom: '1px solid var(--border)',
                         }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
                       >
-                        <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
-                          {t('titles.searchOnSites')}:
-                        </div>
-                        {searchSheetMusicWebsites(editingTitle.title).map((site) => (
-                          <a
-                            key={site.name}
-                            href={site.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'block',
-                              padding: '0.5rem 1rem',
-                              color: 'inherit',
-                              textDecoration: 'none',
-                              borderBottom: '1px solid var(--border)',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
-                          >
-                            {site.name}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {editingTitle.arranger && (
-                  <div className="form-group">
-                    <label className="form-label">{t('titles.arranger')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingTitle.arranger}
-                      disabled
-                    />
-                  </div>
-                )}
-                <div className="form-group">
-                  <label className="form-label">{t('titles.youtubeUrl')}</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      className="form-control"
-                      value={titleMetaForm.youtubeUrl}
-                      onChange={(e) => {
-                        setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
-                        setYoutubeMeta(null);
-                      }}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={fetchYouTubeMetadata}
-                      disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
-                      title={t('titles.fetchVideoInfo')}
-                    >
-                      {fetchingYouTube ? '...' : '📥'}
-                    </button>
-                  </div>
-                  {youtubeMeta && (
-                    <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
-                      <strong>{youtubeMeta.title}</strong>
-                      <div>{t('titles.by')}: {youtubeMeta.author}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-2">
-                  <div className="form-group">
-                    <label className="form-label">{t('titles.durationFormat')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={titleMetaForm.durationStr}
-                      onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
-                      placeholder="3:45"
-                      pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('titles.difficulty')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={titleMetaForm.grade}
-                      onChange={(e) => setTitleMetaForm(f => ({ ...f, grade: e.target.value }))}
-                      placeholder={t('titles.difficultyPlaceholder')}
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.mp3Preview')}</label>
-                  {currentMp3Path ? (
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <audio
-                        controls
-                        src={getMp3Url(currentMp3Path)}
-                        style={{ flex: 1, height: '40px' }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={handleMp3Delete}
-                        title={t('common.delete')}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  ) : pendingMp3File ? (
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
-                      <span style={{ flex: 1 }}>
-                        📎 {pendingMp3File.name}
-                        <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                          ({(pendingMp3File.size / 1024 / 1024).toFixed(1)} MB)
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={() => {
-                          setPendingMp3File(null);
-                          if (mp3InputRef.current) mp3InputRef.current.value = '';
-                        }}
-                        title={t('common.delete')}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        ref={mp3InputRef}
-                        type="file"
-                        accept=".mp3,audio/mpeg"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            // If title already has an ID, upload immediately
-                            if (editingTitle?.id) {
-                              handleMp3Upload(e);
-                            } else {
-                              // Otherwise store for later upload
-                              setPendingMp3File(file);
-                            }
-                          }
-                        }}
-                        disabled={uploadingMp3}
-                        style={{ display: 'none' }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={() => mp3InputRef.current?.click()}
-                        disabled={uploadingMp3}
-                      >
-                        {uploadingMp3 ? t('upload.uploading') : `📤 ${t('titles.selectMp3')}`}
-                      </button>
-                      {!editingTitle?.id && (
-                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                          {t('titles.uploadOnSave')}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.description')}</label>
-                  <textarea
-                    className="form-control"
-                    value={titleMetaForm.description}
-                    onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    placeholder={t('titles.descriptionPlaceholder')}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.genres')}</label>
-                  <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {genres.map((genre) => (
-                      <label
-                        key={genre.id}
-                        className="checkbox-item"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.25rem 0.5rem',
-                          background: titleMetaForm.genreIds.includes(genre.id) ? 'var(--primary)' : 'var(--background)',
-                          color: titleMetaForm.genreIds.includes(genre.id) ? 'white' : 'inherit',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={titleMetaForm.genreIds.includes(genre.id)}
-                          onChange={() => toggleGenre(genre.id)}
-                          style={{ display: 'none' }}
-                        />
-                        {genre.name}
-                      </label>
+                        {site.name}
+                      </a>
                     ))}
                   </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-check" style={{ cursor: 'pointer' }}>
+              </div>
+            </div>
+            {editingTitle.arranger && (
+              <div className="form-group">
+                <label className="form-label">{t('titles.arranger')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editingTitle.arranger}
+                  disabled
+                />
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">{t('titles.youtubeUrl')}</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  className="form-control"
+                  value={titleMetaForm.youtubeUrl}
+                  onChange={(e) => {
+                    setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
+                    setYoutubeMeta(null);
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={fetchYouTubeMetadata}
+                  disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
+                  title={t('titles.fetchVideoInfo')}
+                >
+                  {fetchingYouTube ? '...' : '📥'}
+                </button>
+              </div>
+              {youtubeMeta && (
+                <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                  <strong>{youtubeMeta.title}</strong>
+                  <div>{t('titles.by')}: {youtubeMeta.author}</div>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label">{t('titles.durationFormat')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={titleMetaForm.durationStr}
+                  onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
+                  placeholder="3:45"
+                  pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('titles.difficulty')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={titleMetaForm.grade}
+                  onChange={(e) => setTitleMetaForm(f => ({ ...f, grade: e.target.value }))}
+                  placeholder={t('titles.difficultyPlaceholder')}
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('titles.mp3Preview')}</label>
+              {currentMp3Path ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <audio
+                    controls
+                    src={getMp3Url(currentMp3Path)}
+                    style={{ flex: 1, height: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={handleMp3Delete}
+                    title={t('common.delete')}
+                  >
+                    🗑
+                  </button>
+                </div>
+              ) : pendingMp3File ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                  <span style={{ flex: 1 }}>
+                    📎 {pendingMp3File.name}
+                    <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                      ({(pendingMp3File.size / 1024 / 1024).toFixed(1)} MB)
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => {
+                      setPendingMp3File(null);
+                      if (mp3InputRef.current) mp3InputRef.current.value = '';
+                    }}
+                    title={t('common.delete')}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={mp3InputRef}
+                    type="file"
+                    accept=".mp3,audio/mpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (editingTitle?.id) {
+                          handleMp3Upload(e);
+                        } else {
+                          setPendingMp3File(file);
+                        }
+                      }
+                    }}
+                    disabled={uploadingMp3}
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => mp3InputRef.current?.click()}
+                    disabled={uploadingMp3}
+                  >
+                    {uploadingMp3 ? t('upload.uploading') : `📤 ${t('titles.selectMp3')}`}
+                  </button>
+                  {!editingTitle?.id && (
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                      {t('titles.uploadOnSave')}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('titles.description')}</label>
+              <textarea
+                className="form-control"
+                value={titleMetaForm.description}
+                onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
+                rows={3}
+                placeholder={t('titles.descriptionPlaceholder')}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('titles.genres')}</label>
+              <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {genres.map((genre) => (
+                  <label
+                    key={genre.id}
+                    className="checkbox-item"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0.25rem 0.5rem',
+                      background: titleMetaForm.genreIds.includes(genre.id) ? 'var(--primary)' : 'var(--background)',
+                      color: titleMetaForm.genreIds.includes(genre.id) ? 'white' : 'inherit',
+                      borderRadius: '0.25rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                    }}
+                  >
                     <input
                       type="checkbox"
-                      className="form-check-input"
-                      checked={titleMetaForm.isShared}
-                      onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
+                      checked={titleMetaForm.genreIds.includes(genre.id)}
+                      onChange={() => toggleGenre(genre.id)}
+                      style={{ display: 'none' }}
                     />
-                    <span style={{ marginLeft: '0.5rem' }}>
-                      {t('titles.sharingAllowed')}
-                    </span>
+                    {genre.name}
                   </label>
-                </div>
+                ))}
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? `${t('common.save')}...` : t('common.save')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+            <div className="form-group">
+              <label className="form-check" style={{ cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={titleMetaForm.isShared}
+                  onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
+                />
+                <span style={{ marginLeft: '0.5rem' }}>
+                  {t('titles.sharingAllowed')}
+                </span>
+              </label>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

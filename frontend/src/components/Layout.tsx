@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { ROLES } from '../utils/constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { getSettings } from '../api';
@@ -109,8 +110,8 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const isAdmin = user?.role === 'admin';
-  const isMusicCommittee = user?.role === 'music_committee' || isAdmin;
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
 
   // Check if current path is in a dropdown group
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload'];

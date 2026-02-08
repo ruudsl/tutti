@@ -11,6 +11,7 @@ import { formatDuration } from '../utils/format';
 import type { Genre } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ROLES } from '../utils/constants';
 
 export default function Genres() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export default function Genres() {
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
   const [formName, setFormName] = useState('');
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === ROLES.ADMIN;
 
   // TanStack Query hooks
   const { data: genres = [], isLoading } = useGenres();

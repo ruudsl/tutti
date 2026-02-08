@@ -12,8 +12,9 @@ import {
   getSpondGroups, syncSpond, syncSpondRehearsal,
 } from '../api';
 import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup } from '../types';
+import { ROLES } from '../utils/constants';
 
-const MANAGER_ROLES = ['admin', 'music_committee', 'conductor'];
+const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
 export default function Rehearsals() {
   const { t } = useTranslation();
@@ -53,7 +54,7 @@ export default function Rehearsals() {
   const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === ROLES.ADMIN;
 
   useEffect(() => {
     loadData();

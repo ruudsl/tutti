@@ -5,6 +5,7 @@ import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createI
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { Modal } from '../components/Modal';
 
 interface TitleGroup {
   title: string;
@@ -325,81 +326,77 @@ export default function MyMusic() {
 
       {/* Issue Report Modal */}
       {reportingPiece && (
-        <div className="modal-overlay" onClick={() => setReportingPiece(null)} role="presentation">
-          <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="report-issue-title">
-            <div className="modal-header">
-              <h3 className="modal-title" id="report-issue-title">{t('myMusic.reportIssue.title')}</h3>
-              <button className="modal-close" onClick={() => setReportingPiece(null)} aria-label={t('accessibility.closeModal')} type="button">
-                <span aria-hidden="true">×</span>
+        <Modal
+          title={t('myMusic.reportIssue.title')}
+          onClose={() => setReportingPiece(null)}
+          footer={
+            <>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setReportingPiece(null)}
+              >
+                {t('common.cancel')}
               </button>
+              <button
+                type="submit"
+                form="report-issue-form"
+                className="btn btn-primary"
+                disabled={isSubmittingIssue || !issueDescription.trim()}
+              >
+                {isSubmittingIssue ? t('myMusic.reportIssue.submitting') : t('myMusic.reportIssue.submit')}
+              </button>
+            </>
+          }
+        >
+          <form id="report-issue-form" onSubmit={handleReportIssue}>
+            <div className="form-group">
+              <label className="form-label">{t('myMusic.reportIssue.piece')}</label>
+              <p>
+                <strong>{reportingPiece.title}</strong>
+                {reportingPiece.instrumentName && ` - ${reportingPiece.instrumentName}`}
+              </p>
             </div>
-            <form onSubmit={handleReportIssue}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('myMusic.reportIssue.piece')}</label>
-                  <p>
-                    <strong>{reportingPiece.title}</strong>
-                    {reportingPiece.instrumentName && ` - ${reportingPiece.instrumentName}`}
-                  </p>
-                </div>
-                <div className="grid grid-2">
-                  <div className="form-group">
-                    <label htmlFor="issue-page" className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
-                    <input
-                      type="number"
-                      id="issue-page"
-                      className="form-control"
-                      value={issuePageNumber}
-                      onChange={(e) => setIssuePageNumber(e.target.value)}
-                      min="1"
-                      placeholder="2"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="issue-measure" className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
-                    <input
-                      type="text"
-                      id="issue-measure"
-                      className="form-control"
-                      value={issueMeasureNumber}
-                      onChange={(e) => setIssueMeasureNumber(e.target.value)}
-                      placeholder="24-28"
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="issue-description" className="form-label">{t('myMusic.reportIssue.description')} *</label>
-                  <textarea
-                    id="issue-description"
-                    className="form-control"
-                    value={issueDescription}
-                    onChange={(e) => setIssueDescription(e.target.value)}
-                    rows={4}
-                    placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
-                    required
-                    aria-required="true"
-                  />
-                </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label htmlFor="issue-page" className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
+                <input
+                  type="number"
+                  id="issue-page"
+                  className="form-control"
+                  value={issuePageNumber}
+                  onChange={(e) => setIssuePageNumber(e.target.value)}
+                  min="1"
+                  placeholder="2"
+                />
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setReportingPiece(null)}
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isSubmittingIssue || !issueDescription.trim()}
-                >
-                  {isSubmittingIssue ? t('myMusic.reportIssue.submitting') : t('myMusic.reportIssue.submit')}
-                </button>
+              <div className="form-group">
+                <label htmlFor="issue-measure" className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
+                <input
+                  type="text"
+                  id="issue-measure"
+                  className="form-control"
+                  value={issueMeasureNumber}
+                  onChange={(e) => setIssueMeasureNumber(e.target.value)}
+                  placeholder="24-28"
+                />
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="issue-description" className="form-label">{t('myMusic.reportIssue.description')} *</label>
+              <textarea
+                id="issue-description"
+                className="form-control"
+                value={issueDescription}
+                onChange={(e) => setIssueDescription(e.target.value)}
+                rows={4}
+                placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
+                required
+                aria-required="true"
+              />
+            </div>
+          </form>
+        </Modal>
       )}
     </>
     );

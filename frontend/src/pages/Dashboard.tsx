@@ -7,18 +7,8 @@ import type { MusicList } from '../types';
 import MfaSettings from '../components/MfaSettings';
 import BackupSettings from '../components/BackupSettings';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
-// Format duration from seconds to mm:ss or h:mm:ss
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '-';
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+import { formatDuration } from '../utils/format';
+import { ROLES } from '../utils/constants';
 
 // Group lists by orchestra
 interface OrchestraGroup {
@@ -197,7 +187,7 @@ export default function Dashboard() {
         <MfaSettings />
       </div>
 
-      {user?.role === 'admin' && (
+      {user?.role === ROLES.ADMIN && (
         <div className="mt-3">
           <h2 className="mb-2">{t('dashboard.administration')}</h2>
           <BackupSettings />

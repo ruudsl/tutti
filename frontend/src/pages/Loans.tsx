@@ -5,6 +5,7 @@ import { getLoans, createLoan, returnLoan, deleteLoan, type Loan } from '../api'
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { Modal } from '../components/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -315,157 +316,155 @@ export default function Loans() {
 
       {/* New Loan Modal */}
       {showNewLoanModal && (
-        <div className="modal-overlay" onClick={resetForm}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('loans.newLoan')}</h3>
-              <button className="modal-close" onClick={resetForm}>×</button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('loans.musicPiece')} *</label>
-                  {selectedTitle ? (
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.75rem',
-                      background: 'var(--background)',
-                      borderRadius: '0.25rem'
-                    }}>
-                      <div>
-                        <strong>{selectedTitle.title}</strong>
-                        {selectedTitle.arranger && (
-                          <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
-                            - {selectedTitle.arranger}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() => setSelectedTitle(null)}
-                      >
-                        {t('loans.change')}
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={titleSearch}
-                        onChange={(e) => setTitleSearch(e.target.value)}
-                        placeholder={t('loans.searchTitle')}
-                      />
-                      {titleOptions.length > 0 && (
-                        <div style={{
-                          maxHeight: '200px',
-                          overflow: 'auto',
-                          border: '1px solid var(--border)',
-                          borderRadius: '0.25rem',
-                          marginTop: '0.5rem'
-                        }}>
-                          {titleOptions.map((title) => (
-                            <div
-                              key={title.id}
-                              style={{
-                                padding: '0.5rem 0.75rem',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid var(--border)'
-                              }}
-                              onClick={() => setSelectedTitle(title)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                            >
-                              <strong>{title.title}</strong>
-                              {title.arranger && (
-                                <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
-                                  - {title.arranger}
-                                </span>
-                              )}
-                              {title.active_loans > 0 && (
-                                <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
-                                  {t('loans.timesLoaned', { count: title.active_loans })}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
+        <Modal
+          title={t('loans.newLoan')}
+          onClose={resetForm}
+          size="small"
+          footer={
+            <>
+              <button type="button" className="btn btn-outline" onClick={resetForm}>
+                {t('common.cancel')}
+              </button>
+              <button type="submit" form="new-loan-form" className="btn btn-primary" disabled={createMutation.isPending}>
+                {createMutation.isPending ? t('loans.creating') : t('loans.createLoan')}
+              </button>
+            </>
+          }
+        >
+          <form id="new-loan-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">{t('loans.musicPiece')} *</label>
+              {selectedTitle ? (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0.75rem',
+                  background: 'var(--background)',
+                  borderRadius: '0.25rem'
+                }}>
+                  <div>
+                    <strong>{selectedTitle.title}</strong>
+                    {selectedTitle.arranger && (
+                      <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
+                        - {selectedTitle.arranger}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setSelectedTitle(null)}
+                  >
+                    {t('loans.change')}
+                  </button>
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t('loans.borrowerName')} *</label>
+              ) : (
+                <>
                   <input
                     type="text"
                     className="form-control"
-                    value={borrowerName}
-                    onChange={(e) => setBorrowerName(e.target.value)}
-                    placeholder={t('loans.borrowerNamePlaceholder')}
-                    required
+                    value={titleSearch}
+                    onChange={(e) => setTitleSearch(e.target.value)}
+                    placeholder={t('loans.searchTitle')}
                   />
-                </div>
+                  {titleOptions.length > 0 && (
+                    <div style={{
+                      maxHeight: '200px',
+                      overflow: 'auto',
+                      border: '1px solid var(--border)',
+                      borderRadius: '0.25rem',
+                      marginTop: '0.5rem'
+                    }}>
+                      {titleOptions.map((title) => (
+                        <div
+                          key={title.id}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--border)'
+                          }}
+                          onClick={() => setSelectedTitle(title)}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                        >
+                          <strong>{title.title}</strong>
+                          {title.arranger && (
+                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
+                              - {title.arranger}
+                            </span>
+                          )}
+                          {title.active_loans > 0 && (
+                            <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
+                              {t('loans.timesLoaned', { count: title.active_loans })}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
-                <div className="grid grid-2" style={{ gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('loans.borrowerEmail')}</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={borrowerEmail}
-                      onChange={(e) => setBorrowerEmail(e.target.value)}
-                      placeholder={t('loans.borrowerEmailPlaceholder')}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('loans.borrowerOrganization')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={borrowerOrganization}
-                      onChange={(e) => setBorrowerOrganization(e.target.value)}
-                      placeholder={t('loans.borrowerOrgPlaceholder')}
-                    />
-                  </div>
-                </div>
+            <div className="form-group">
+              <label className="form-label">{t('loans.borrowerName')} *</label>
+              <input
+                type="text"
+                className="form-control"
+                value={borrowerName}
+                onChange={(e) => setBorrowerName(e.target.value)}
+                placeholder={t('loans.borrowerNamePlaceholder')}
+                required
+              />
+            </div>
 
-                <div className="form-group">
-                  <label className="form-label">{t('loans.expectedReturnDate')}</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={expectedReturn}
-                    onChange={(e) => setExpectedReturn(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t('loans.notes')}</label>
-                  <textarea
-                    className="form-control"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={2}
-                    placeholder={t('loans.notesPlaceholder')}
-                  />
-                </div>
+            <div className="grid grid-2" style={{ gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">{t('loans.borrowerEmail')}</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  value={borrowerEmail}
+                  onChange={(e) => setBorrowerEmail(e.target.value)}
+                  placeholder={t('loans.borrowerEmailPlaceholder')}
+                />
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={resetForm}>
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? t('loans.creating') : t('loans.createLoan')}
-                </button>
+              <div className="form-group">
+                <label className="form-label">{t('loans.borrowerOrganization')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={borrowerOrganization}
+                  onChange={(e) => setBorrowerOrganization(e.target.value)}
+                  placeholder={t('loans.borrowerOrgPlaceholder')}
+                />
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('loans.expectedReturnDate')}</label>
+              <input
+                type="date"
+                className="form-control"
+                value={expectedReturn}
+                onChange={(e) => setExpectedReturn(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('loans.notes')}</label>
+              <textarea
+                className="form-control"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder={t('loans.notesPlaceholder')}
+              />
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

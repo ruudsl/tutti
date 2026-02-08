@@ -6,6 +6,8 @@ import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, 
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ROLES } from '../utils/constants';
+import { Modal } from '../components/Modal';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'badge-warning',
@@ -23,7 +25,7 @@ export default function Issues() {
   const [selectedIssue, setSelectedIssue] = useState<PieceIssue | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  const isMusicCommittee = user?.role === 'music_committee' || user?.role === 'admin';
+  const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || user?.role === ROLES.ADMIN;
 
   // Fetch issues based on user role
   const { data: issues = [], isLoading: issuesLoading } = useQuery({
@@ -247,7 +249,7 @@ export default function Issues() {
                       )}
                     </td>
                     <td>
-                      {(user?.role === 'admin' || (issue.status === 'open')) && (
+                      {(user?.role === ROLES.ADMIN || (issue.status === 'open')) && (
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(issue)}
@@ -272,35 +274,11 @@ export default function Issues() {
 
       {/* Resolution Modal */}
       {selectedIssue && (
-        <div className="modal-overlay" onClick={() => setSelectedIssue(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {selectedIssue.status === 'rejected' ? t('issues.rejectIssue') : t('issues.resolveIssue')}
-              </h3>
-              <button className="modal-close" onClick={() => setSelectedIssue(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">{t('issues.table.piece')}</label>
-                <p><strong>{selectedIssue.piece_title}</strong></p>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('issues.originalIssue')}</label>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{selectedIssue.description}</p>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('issues.responseNotes')} ({t('common.optional')})</label>
-                <textarea
-                  className="form-control"
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  rows={3}
-                  placeholder={t('issues.responseNotesPlaceholder')}
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
+        <Modal
+          title={selectedIssue.status === 'rejected' ? t('issues.rejectIssue') : t('issues.resolveIssue')}
+          onClose={() => setSelectedIssue(null)}
+          footer={
+            <>
               <button className="btn btn-outline" onClick={() => setSelectedIssue(null)}>
                 {t('common.cancel')}
               </button>
@@ -330,9 +308,28 @@ export default function Issues() {
                   {t('issues.status.resolved')}
                 </button>
               </div>
-            </div>
+            </>
+          }
+        >
+          <div className="form-group">
+            <label className="form-label">{t('issues.table.piece')}</label>
+            <p><strong>{selectedIssue.piece_title}</strong></p>
           </div>
-        </div>
+          <div className="form-group">
+            <label className="form-label">{t('issues.originalIssue')}</label>
+            <p style={{ whiteSpace: 'pre-wrap' }}>{selectedIssue.description}</p>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('issues.responseNotes')} ({t('common.optional')})</label>
+            <textarea
+              className="form-control"
+              value={resolutionNotes}
+              onChange={(e) => setResolutionNotes(e.target.value)}
+              rows={3}
+              placeholder={t('issues.responseNotesPlaceholder')}
+            />
+          </div>
+        </Modal>
       )}
     </div>
   );

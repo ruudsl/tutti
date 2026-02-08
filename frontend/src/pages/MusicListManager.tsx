@@ -15,34 +15,12 @@ import {
   toggleMusicListActive,
   updateTitleMeta,
   getGenres,
-  getYouTubeMeta,
 } from '../api';
 import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-
-// Format duration from seconds to mm:ss or h:mm:ss
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '-';
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Parse duration string (mm:ss or h:mm:ss) to seconds
-function parseDuration(str: string): number {
-  if (!str) return 0;
-  const parts = str.split(':').map(Number);
-  if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  } else if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  }
-  return 0;
-}
+import { formatDuration } from '../utils/format';
+import { FormModal } from '../components/Modal';
+import { TitleMetadataModal } from '../components/TitleMetadataModal';
 
 export default function MusicListManager() {
   const { t } = useTranslation();
@@ -65,21 +43,10 @@ export default function MusicListManager() {
 
   // Title metadata modal
   const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
-  const [titleMetaForm, setTitleMetaForm] = useState({
-    youtubeUrl: '',
-    description: '',
-    durationStr: '',
-    genreIds: [] as string[],
-    isShared: false,
-  });
 
   // Genres
   const [genres, setGenres] = useState<Genre[]>([]);
   const [genreFilter, setGenreFilter] = useState<string>('');
-
-  // YouTube metadata
-  const [fetchingYouTube, setFetchingYouTube] = useState(false);
-  const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
 
   useEffect(() => {
     loadOrchestras();
@@ -274,45 +241,20 @@ export default function MusicListManager() {
     }
   };
 
-  const openTitleMetaModal = (title: MusicTitle) => {
-    setEditingTitle(title);
-    setTitleMetaForm({
-      youtubeUrl: title.youtubeUrl || '',
-      description: title.description || '',
-      durationStr: title.durationSeconds ? formatDuration(title.durationSeconds).replace(/^0:/, '') : '',
-      genreIds: title.genres?.map(g => g.id) || [],
-      isShared: title.isShared || false,
-    });
-    setYoutubeMeta(null);
-  };
-
-  const fetchYouTubeMetadata = async () => {
-    if (!titleMetaForm.youtubeUrl) return;
-
-    setFetchingYouTube(true);
-    try {
-      const meta = await getYouTubeMeta(titleMetaForm.youtubeUrl);
-      setYoutubeMeta({ title: meta.title, author: meta.author });
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Kon YouTube metadata niet ophalen');
-    } finally {
-      setFetchingYouTube(false);
-    }
-  };
-
-  const handleSaveTitleMeta = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveTitleMeta = async (data: {
+    youtubeUrl: string | null;
+    description: string | null;
+    durationSeconds: number;
+    genreIds: string[];
+    isShared: boolean;
+  }) => {
     if (!editingTitle) return;
 
     try {
       await updateTitleMeta({
         title: editingTitle.title,
         arranger: editingTitle.arranger,
-        youtubeUrl: titleMetaForm.youtubeUrl || null,
-        description: titleMetaForm.description || null,
-        durationSeconds: parseDuration(titleMetaForm.durationStr),
-        genreIds: titleMetaForm.genreIds,
-        isShared: titleMetaForm.isShared,
+        ...data,
       });
       setEditingTitle(null);
       if (listId) {
@@ -322,28 +264,6 @@ export default function MusicListManager() {
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij opslaan metadata');
     }
-  };
-
-  const toggleGenre = (genreId: string) => {
-    setTitleMetaForm(f => ({
-      ...f,
-      genreIds: f.genreIds.includes(genreId)
-        ? f.genreIds.filter(id => id !== genreId)
-        : [...f.genreIds, genreId],
-    }));
-  };
-
-  // Search helper - open sheet music websites
-  const searchSheetMusicWebsites = (title: string) => {
-    const encodedTitle = encodeURIComponent(title);
-    const websites = [
-      { name: 'De Haske', url: `https://www.dehaske.com/en-gb/search?q=${encodedTitle}` },
-      { name: 'Molenaar Edition', url: `https://www.molenaar.com/search?q=${encodedTitle}` },
-      { name: 'Hal Leonard', url: `https://www.halleonard.com/search/search.action?_requestid=2&subsiteid=1&seriesfeature=CONCERTBAND&keywords=${encodedTitle}` },
-      { name: 'Beriato Music', url: `https://www.beriato.com/search?q=${encodedTitle}` },
-      { name: 'YouTube', url: `https://www.youtube.com/results?search_query=${encodedTitle}+concert+band` },
-    ];
-    return websites;
   };
 
   // Group pieces by title for display
@@ -565,7 +485,7 @@ export default function MusicListManager() {
                             {titleData && (
                               <button
                                 className="btn btn-outline btn-sm"
-                                onClick={() => openTitleMetaModal(titleData)}
+                                onClick={() => setEditingTitle(titleData)}
                                 title={t('lists.editMetadata')}
                               >
                                 ✏
@@ -637,7 +557,7 @@ export default function MusicListManager() {
                         <div className="flex gap-1">
                           <button
                             className="btn btn-outline btn-sm"
-                            onClick={() => openTitleMetaModal(title)}
+                            onClick={() => setEditingTitle(title)}
                             title="Bewerk metadata"
                           >
                             ✏
@@ -673,263 +593,55 @@ export default function MusicListManager() {
 
       {/* Add List Modal */}
       {showAddListModal && (
-        <div className="modal-overlay" onClick={() => setShowAddListModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('lists.newList')}</h3>
-              <button className="modal-close" onClick={() => setShowAddListModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreateList}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('common.name')}</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={listFormName}
-                    onChange={(e) => setListFormName(e.target.value)}
-                    required
-                    autoFocus
-                    placeholder={t('lists.namePlaceholder')}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAddListModal(false)}>
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {t('common.add')}
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title={t('lists.newList')}
+          onClose={() => setShowAddListModal(false)}
+          onSubmit={handleCreateList}
+          submitLabel={t('common.add')}
+        >
+          <div className="form-group">
+            <label className="form-label">{t('common.name')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={listFormName}
+              onChange={(e) => setListFormName(e.target.value)}
+              required
+              autoFocus
+              placeholder={t('lists.namePlaceholder')}
+            />
           </div>
-        </div>
+        </FormModal>
       )}
 
       {/* Edit List Modal */}
       {editingList && (
-        <div className="modal-overlay" onClick={() => setEditingList(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('lists.renameList')}</h3>
-              <button className="modal-close" onClick={() => setEditingList(null)}>×</button>
-            </div>
-            <form onSubmit={handleUpdateList}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('common.name')}</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={listFormName}
-                    onChange={(e) => setListFormName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingList(null)}>
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {t('common.save')}
-                </button>
-              </div>
-            </form>
+        <FormModal
+          title={t('lists.renameList')}
+          onClose={() => setEditingList(null)}
+          onSubmit={handleUpdateList}
+        >
+          <div className="form-group">
+            <label className="form-label">{t('common.name')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={listFormName}
+              onChange={(e) => setListFormName(e.target.value)}
+              required
+            />
           </div>
-        </div>
+        </FormModal>
       )}
 
       {/* Title Metadata Modal */}
       {editingTitle && (
-        <div className="modal-overlay" onClick={() => setEditingTitle(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('titles.editMetadata')}</h3>
-              <button className="modal-close" onClick={() => setEditingTitle(null)}>×</button>
-            </div>
-            <form onSubmit={handleSaveTitleMeta}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">{t('myMusic.table.title')}</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingTitle.title}
-                      disabled
-                      style={{ flex: 1 }}
-                    />
-                    <div className="dropdown" style={{ position: 'relative' }}>
-                      <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={(e) => {
-                          const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
-                          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                        }}
-                        title={t('titles.searchOnSites')}
-                      >
-                        🔍
-                      </button>
-                      <div
-                        style={{
-                          display: 'none',
-                          position: 'absolute',
-                          right: 0,
-                          top: '100%',
-                          background: 'white',
-                          border: '1px solid var(--border)',
-                          borderRadius: '0.25rem',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                          zIndex: 1000,
-                          minWidth: '200px',
-                        }}
-                      >
-                        <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
-                          {t('titles.searchOnSites')}:
-                        </div>
-                        {searchSheetMusicWebsites(editingTitle.title).map((site) => (
-                          <a
-                            key={site.name}
-                            href={site.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'block',
-                              padding: '0.5rem 1rem',
-                              color: 'inherit',
-                              textDecoration: 'none',
-                              borderBottom: '1px solid var(--border)',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
-                          >
-                            {site.name}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {editingTitle.arranger && (
-                  <div className="form-group">
-                    <label className="form-label">{t('titles.arranger')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={editingTitle.arranger}
-                      disabled
-                    />
-                  </div>
-                )}
-                <div className="form-group">
-                  <label className="form-label">{t('titles.youtubeUrl')}</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      className="form-control"
-                      value={titleMetaForm.youtubeUrl}
-                      onChange={(e) => {
-                        setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
-                        setYoutubeMeta(null);
-                      }}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={fetchYouTubeMetadata}
-                      disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
-                      title={t('titles.fetchVideoInfo')}
-                    >
-                      {fetchingYouTube ? '...' : '📥'}
-                    </button>
-                  </div>
-                  {youtubeMeta && (
-                    <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
-                      <strong>{youtubeMeta.title}</strong>
-                      <div>{t('titles.by')}: {youtubeMeta.author}</div>
-                    </div>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.durationFormat')}</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={titleMetaForm.durationStr}
-                    onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
-                    placeholder="3:45"
-                    pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.description')}</label>
-                  <textarea
-                    className="form-control"
-                    value={titleMetaForm.description}
-                    onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    placeholder={t('titles.descriptionPlaceholder')}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('titles.genres')}</label>
-                  <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {genres.map((genre) => (
-                      <label
-                        key={genre.id}
-                        className="checkbox-item"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.25rem 0.5rem',
-                          background: titleMetaForm.genreIds.includes(genre.id) ? 'var(--primary)' : 'var(--background)',
-                          color: titleMetaForm.genreIds.includes(genre.id) ? 'white' : 'inherit',
-                          borderRadius: '0.25rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={titleMetaForm.genreIds.includes(genre.id)}
-                          onChange={() => toggleGenre(genre.id)}
-                          style={{ display: 'none' }}
-                        />
-                        {genre.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-check" style={{ cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={titleMetaForm.isShared}
-                      onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
-                    />
-                    <span style={{ marginLeft: '0.5rem' }}>
-                      {t('titles.sharingAllowed')}
-                    </span>
-                  </label>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {t('common.save')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <TitleMetadataModal
+          title={editingTitle}
+          genres={genres}
+          onClose={() => setEditingTitle(null)}
+          onSave={handleSaveTitleMeta}
+        />
       )}
     </div>
   );
