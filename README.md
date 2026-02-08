@@ -7,6 +7,16 @@
 
 Webapplicatie voor het beheren en distribueren van muziekstukken binnen een harmonieorkest.
 
+## Screenshots
+
+| Dashboard | Muziekstukken |
+|-----------|---------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Muziekstukken](docs/screenshots/music-pieces.png) |
+
+| Upload | Muzieklijsten |
+|--------|---------------|
+| ![Upload](docs/screenshots/upload.png) | ![Muzieklijsten](docs/screenshots/music-lists.png) |
+
 ## Functionaliteiten
 
 ### Voor leden
