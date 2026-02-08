@@ -134,15 +134,22 @@ async function initializeDatabase() {
             associationId
         );
 
-        // Create admin user
+        // Create admin user with password from env var or generated random password
         const adminId = uuidv4();
-        const passwordHash = bcrypt.hashSync('admin123', 10);
+        const adminPassword = process.env.ADMIN_INIT_PASSWORD || Math.random().toString(36).slice(-12) + 'A1!';
+        const passwordHash = bcrypt.hashSync(adminPassword, 10);
         db.prepare(
             'INSERT INTO users (id, email, password_hash, first_name, last_name, role, association_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).run(adminId, 'admin@harmonie.nl', passwordHash, 'Admin', 'Beheerder', 'admin', associationId);
 
         console.log('Created default association, orchestra, and admin user');
-        console.log('Admin login: admin@harmonie.nl / admin123');
+        console.log('Admin login: admin@harmonie.nl');
+        if (process.env.ADMIN_INIT_PASSWORD) {
+            console.log('Password: (set via ADMIN_INIT_PASSWORD env var)');
+        } else {
+            console.log(`Generated password: ${adminPassword}`);
+            console.log('⚠️  Save this password! Set ADMIN_INIT_PASSWORD env var to use a custom password.');
+        }
     }
 
     // Seed genres if they don't exist

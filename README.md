@@ -1,5 +1,10 @@
 # Harmonie Muziek App
 
+![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
 Webapplicatie voor het beheren en distribueren van muziekstukken binnen een harmonieorkest.
 
 ## Functionaliteiten
@@ -67,9 +72,11 @@ De applicatie is nu beschikbaar op:
 
 Na initialisatie is er een admin account beschikbaar:
 - **Email:** admin@harmonie.nl
-- **Wachtwoord:** admin123
+- **Wachtwoord:** wordt gegenereerd bij eerste start (zie console output)
 
-⚠️ Wijzig dit wachtwoord na de eerste login!
+Je kunt ook een eigen wachtwoord instellen via de environment variable `ADMIN_INIT_PASSWORD` voordat je de applicatie voor het eerst start.
+
+⚠️ Wijzig het wachtwoord na de eerste login via Profiel → Wachtwoord wijzigen!
 
 ## Projectstructuur
 
@@ -224,7 +231,7 @@ Ga terug naar **Render.com** en voeg de frontend URL toe aan de environment vari
 1. Open de frontend URL in je browser
 2. Log in met:
    - **Email:** `admin@harmonie.nl`
-   - **Wachtwoord:** `admin123`
+   - **Wachtwoord:** de waarde van je `ADMIN_INIT_PASSWORD` environment variable (of het wachtwoord dat bij eerste start in de logs verscheen)
 3. **Wijzig direct je wachtwoord** via Profiel → Wachtwoord wijzigen
 
 ### Troubleshooting
