@@ -10,7 +10,9 @@ import {
   generateRehearsals, getOrchestras,
   getSpondConfig, saveSpondConfig, removeSpondConfig,
   getSpondGroups, syncSpond, syncSpondRehearsal,
+  getAttendanceSummary,
 } from '../api';
+import type { AttendanceMember } from '../api';
 import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
@@ -57,6 +59,22 @@ export default function Rehearsals() {
   const [isSyncing, setIsSyncing] = useState(false);
   const isAdmin = user?.role === ROLES.ADMIN;
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'rehearsals' | 'attendance'>('rehearsals');
+
+  // Attendance summary
+  const [attendanceMembers, setAttendanceMembers] = useState<AttendanceMember[]>([]);
+  const [attendanceRehearsalCount, setAttendanceRehearsalCount] = useState(0);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceFrom, setAttendanceFrom] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    return d.toISOString().split('T')[0];
+  });
+  const [attendanceTo, setAttendanceTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const [attendanceOrchestraId, setAttendanceOrchestraId] = useState('');
+  const [attendanceSortBy, setAttendanceSortBy] = useState<'name' | 'rate' | 'count'>('name');
+
   useEffect(() => {
     loadData();
   }, []);
@@ -87,6 +105,38 @@ export default function Rehearsals() {
       setIsLoading(false);
     }
   };
+
+  const loadAttendance = async () => {
+    setAttendanceLoading(true);
+    try {
+      const data = await getAttendanceSummary(attendanceFrom, attendanceTo, attendanceOrchestraId || undefined);
+      setAttendanceMembers(data.members);
+      setAttendanceRehearsalCount(data.rehearsalCount);
+    } catch (e) {
+      console.error(e);
+      showError(t('rehearsals.attendance.error'));
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'attendance') {
+      loadAttendance();
+    }
+  }, [activeTab, attendanceFrom, attendanceTo, attendanceOrchestraId]);
+
+  const sortedAttendance = useMemo(() => {
+    const sorted = [...attendanceMembers];
+    if (attendanceSortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (attendanceSortBy === 'rate') {
+      sorted.sort((a, b) => (b.total ? b.accepted / b.total : 0) - (a.total ? a.accepted / a.total : 0));
+    } else if (attendanceSortBy === 'count') {
+      sorted.sort((a, b) => b.accepted - a.accepted);
+    }
+    return sorted;
+  }, [attendanceMembers, attendanceSortBy]);
 
   const upcoming = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -436,9 +486,9 @@ export default function Rehearsals() {
   // Overview
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>{t('rehearsals.title')}</h1>
-        {isManager && (
+        {isManager && activeTab === 'rehearsals' && (
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className="btn btn-outline" onClick={() => setShowGenerate(!showGenerate)}>
               {t('rehearsals.generate')}
@@ -450,6 +500,140 @@ export default function Rehearsals() {
         )}
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid var(--border)', marginBottom: '1.5rem' }}>
+        <button
+          onClick={() => setActiveTab('rehearsals')}
+          style={{
+            padding: '0.5rem 1.5rem',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'rehearsals' ? 'bold' : 'normal',
+            borderBottom: activeTab === 'rehearsals' ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom: '-2px',
+            color: activeTab === 'rehearsals' ? 'var(--primary)' : 'inherit',
+          }}
+        >
+          {t('rehearsals.title')}
+        </button>
+        <button
+          onClick={() => setActiveTab('attendance')}
+          style={{
+            padding: '0.5rem 1.5rem',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'attendance' ? 'bold' : 'normal',
+            borderBottom: activeTab === 'attendance' ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom: '-2px',
+            color: activeTab === 'attendance' ? 'var(--primary)' : 'inherit',
+          }}
+        >
+          {t('rehearsals.attendance.title')}
+        </button>
+      </div>
+
+      {/* ===== ATTENDANCE TAB ===== */}
+      {activeTab === 'attendance' && (
+        <div>
+          {/* Filters */}
+          <div className="card mb-3">
+            <div className="card-body">
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                <div className="form-group" style={{ flex: 1, minWidth: '140px' }}>
+                  <label className="form-label">{t('rehearsals.attendance.from')}</label>
+                  <input type="date" className="form-control" value={attendanceFrom} onChange={e => setAttendanceFrom(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 1, minWidth: '140px' }}>
+                  <label className="form-label">{t('rehearsals.attendance.to')}</label>
+                  <input type="date" className="form-control" value={attendanceTo} onChange={e => setAttendanceTo(e.target.value)} />
+                </div>
+                {orchestras.length > 0 && (
+                  <div className="form-group" style={{ flex: 1, minWidth: '160px' }}>
+                    <label className="form-label">{t('rehearsals.orchestra')}</label>
+                    <select className="form-control form-select" value={attendanceOrchestraId} onChange={e => setAttendanceOrchestraId(e.target.value)}>
+                      <option value="">{t('rehearsals.allOrchestras')}</option>
+                      {orchestras.map(o => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              {attendanceRehearsalCount > 0 && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                  {t('rehearsals.attendance.rehearsalCount', { count: attendanceRehearsalCount })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Attendance table */}
+          {attendanceLoading ? (
+            <SkeletonTable rows={8} columns={5} />
+          ) : sortedAttendance.length === 0 ? (
+            <p className="piece-meta" style={{ padding: '1rem' }}>{t('rehearsals.attendance.noData')}</p>
+          ) : (
+            <div className="card">
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ cursor: 'pointer' }} onClick={() => setAttendanceSortBy('name')}>
+                        {t('rehearsals.attendance.name')} {attendanceSortBy === 'name' ? '▼' : ''}
+                      </th>
+                      <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => setAttendanceSortBy('count')}>
+                        {t('rehearsals.attendance.present')} {attendanceSortBy === 'count' ? '▼' : ''}
+                      </th>
+                      <th style={{ textAlign: 'center' }}>{t('rehearsals.attendance.absent')}</th>
+                      <th style={{ textAlign: 'center' }}>{t('rehearsals.attendance.unknown')}</th>
+                      <th style={{ cursor: 'pointer', textAlign: 'center', minWidth: '120px' }} onClick={() => setAttendanceSortBy('rate')}>
+                        {t('rehearsals.attendance.percentage')} {attendanceSortBy === 'rate' ? '▼' : ''}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAttendance.map((member, i) => {
+                      const rate = member.total > 0 ? Math.round((member.accepted / member.total) * 100) : 0;
+                      return (
+                        <tr key={member.spondMemberId || member.name + i}>
+                          <td style={{ fontWeight: 500 }}>{member.name}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--success)' }}>{member.accepted}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--danger)' }}>{member.declined}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--text-light)' }}>{member.unknown}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                              <div style={{
+                                width: '60px',
+                                height: '8px',
+                                background: 'var(--border)',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                              }}>
+                                <div style={{
+                                  width: `${rate}%`,
+                                  height: '100%',
+                                  background: rate >= 75 ? 'var(--success)' : rate >= 50 ? 'var(--warning, orange)' : 'var(--danger)',
+                                  borderRadius: '4px',
+                                }} />
+                              </div>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 'bold', minWidth: '35px' }}>{rate}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== REHEARSALS TAB ===== */}
+      {activeTab === 'rehearsals' && <>
       {/* Generate form */}
       {showGenerate && isManager && (
         <div className="card mb-3">
@@ -784,6 +968,7 @@ export default function Rehearsals() {
           )}
         </div>
       </div>
+      </>}
     </div>
   );
 }

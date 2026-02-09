@@ -930,6 +930,19 @@
     "deleted": "Repetitie verwijderd",
     "created": "Repetitie aangemaakt",
     "errorSaving": "Fout bij opslaan repetitie",
+    "attendance": {
+      "title": "Aanwezigheid",
+      "from": "Van",
+      "to": "Tot",
+      "rehearsalCount": "{{count}} repetities in deze periode",
+      "noData": "Geen aanwezigheidsdata beschikbaar voor deze periode.",
+      "error": "Fout bij ophalen aanwezigheidsdata.",
+      "name": "Naam",
+      "present": "Aanwezig",
+      "absent": "Afwezig",
+      "unknown": "Onbekend",
+      "percentage": "Opkomst"
+    },
     "spond": {
       "title": "Spond-koppeling",
       "description": "Koppel met Spond om aanwezigheid automatisch te synchroniseren.",

@@ -926,6 +926,19 @@
     "deleted": "Probe gelöscht",
     "created": "Probe erstellt",
     "errorSaving": "Fehler beim Speichern der Probe",
+    "attendance": {
+      "title": "Anwesenheit",
+      "from": "Von",
+      "to": "Bis",
+      "rehearsalCount": "{{count}} Proben in diesem Zeitraum",
+      "noData": "Keine Anwesenheitsdaten für diesen Zeitraum verfügbar.",
+      "error": "Fehler beim Laden der Anwesenheitsdaten.",
+      "name": "Name",
+      "present": "Anwesend",
+      "absent": "Abwesend",
+      "unknown": "Unbekannt",
+      "percentage": "Anwesenheit"
+    },
     "spond": {
       "title": "Spond-Verknüpfung",
       "description": "Verbinde mit Spond für automatische Anwesenheitssynchronisation.",

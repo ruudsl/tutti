@@ -741,6 +741,29 @@ export const generateRehearsals = async (startDate: string, endDate: string): Pr
   return data;
 };
 
+// Attendance summary
+export interface AttendanceMember {
+  name: string;
+  spondMemberId: string | null;
+  userId: string | null;
+  accepted: number;
+  declined: number;
+  unknown: number;
+  total: number;
+}
+
+export const getAttendanceSummary = async (from: string, to: string, orchestraId?: string): Promise<{
+  members: AttendanceMember[];
+  rehearsalCount: number;
+  from: string;
+  to: string;
+}> => {
+  const params: Record<string, string> = { from, to };
+  if (orchestraId) params.orchestraId = orchestraId;
+  const { data } = await api.get('/rehearsals/attendance/summary', { params });
+  return data;
+};
+
 // Spond integration
 export const getSpondConfig = async (): Promise<SpondConfig> => {
   const { data } = await api.get('/spond/config');

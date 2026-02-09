@@ -940,6 +940,19 @@
     "deleted": "Rehearsal deleted",
     "created": "Rehearsal created",
     "errorSaving": "Error saving rehearsal",
+    "attendance": {
+      "title": "Attendance",
+      "from": "From",
+      "to": "To",
+      "rehearsalCount": "{{count}} rehearsals in this period",
+      "noData": "No attendance data available for this period.",
+      "error": "Error loading attendance data.",
+      "name": "Name",
+      "present": "Present",
+      "absent": "Absent",
+      "unknown": "Unknown",
+      "percentage": "Attendance"
+    },
     "spond": {
       "title": "Spond integration",
       "description": "Connect with Spond to automatically sync attendance.",
