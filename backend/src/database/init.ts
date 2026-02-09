@@ -58,7 +58,7 @@ const defaultGenres = [
 const instrumentsWithAliases = [
     { name: 'Alto Saxophone', tuning: 'Eb', aliases: ['Altsax', 'altsax', 'Alt Sax', 'Alt Saxofoon'] },
     { name: 'Tenor Saxophone', tuning: 'Bb', aliases: ['Tenorsax', 'tenorsax', 'Tenor Sax', 'Tenor Saxofoon'] },
-    { name: 'Baritone Saxophone', tuning: 'Eb', aliases: ['Baritonsax', 'baritonsax', 'Bari Sax', 'Bariton Saxofoon', 'Bariton Saxophone'] },
+    { name: 'Baritone Saxophone', tuning: 'Eb', aliases: ['Baritonsax', 'baritonsax', 'Bari Sax', 'Bariton Saxofoon', 'Bariton Saxophone', 'Baritone Saxofoon'] },
     { name: 'Soprano Saxophone', tuning: 'Bb', aliases: ['Sopraansax', 'sopraansax', 'Sopraan Saxofoon'] },
     { name: 'Clarinet', tuning: 'Bb', aliases: ['Klarinet', 'klarinet', 'Bb Klarinet'] },
     { name: 'Bass Clarinet', tuning: 'Bb', aliases: ['Basklarinet', 'basklarinet', 'Bas Klarinet', 'Bas Clarinet'] },
@@ -73,21 +73,22 @@ const instrumentsWithAliases = [
     { name: 'French Horn', tuning: 'F', aliases: ['Hoorn', 'hoorn', 'F Hoorn', 'Waldhoorn', 'Horn'] },
     { name: 'Trombone', tuning: 'C', aliases: ['Schuiftrombone', 'trombone', 'Tenor Trombone'] },
     { name: 'Bass Trombone', tuning: 'C', aliases: ['Bastrombone', 'bastrombone'] },
-    { name: 'Euphonium', tuning: 'Bb', aliases: ['Bariton', 'bariton', 'Eufonium', 'Baritone'] },
+    { name: 'Euphonium', tuning: 'Bb', aliases: ['Bariton', 'bariton', 'Eufonium', 'Baritone', 'Tenorhorn', 'Baritone Horn', 'Tenor Tuba'] },
     { name: 'Tuba', tuning: 'C', aliases: ['tuba', 'Bas Tuba', 'C Tuba'] },
     { name: 'Tuba', tuning: 'Bb', aliases: ['BBb Tuba', 'Bb Tuba'] },
     { name: 'Tuba', tuning: 'Eb', aliases: ['Eb Tuba', 'Es Tuba'] },
-    { name: 'Percussion', tuning: null, aliases: ['Slagwerk', 'slagwerk', 'Drums', 'Percussie', 'Drumset', 'Bongo', 'Glockenspiel', 'Mallet Percussion', 'Shaker', 'Vibraphone'] },
+    { name: 'Percussion', tuning: null, aliases: ['Slagwerk', 'slagwerk', 'Drums', 'Percussie', 'Drumset', 'Bongo', 'Glockenspiel', 'Mallet Percussion', 'Shaker', 'Vibraphone', 'Tambourine'] },
     { name: 'Timpani', tuning: null, aliases: ['Pauken', 'pauken'] },
     { name: 'Mallets', tuning: 'C', aliases: ['Klokkenspel', 'Xylofoon', 'Marimba', 'Vibrafoon'] },
     { name: 'String Bass', tuning: 'C', aliases: ['Contrabas', 'contrabas', 'Double Bass'] },
     { name: 'Electric Bass', tuning: null, aliases: ['Basgitaar', 'E-bas'] },
-    { name: 'Guitar', tuning: null, aliases: ['Gitaar', 'gitaar'] },
-    { name: 'Piano', tuning: 'C', aliases: ['piano', 'Keyboard'] },
+    { name: 'Guitar', tuning: null, aliases: ['Gitaar', 'gitaar', 'Electric Guitar'] },
+    { name: 'Bass Guitar', tuning: null, aliases: ['Basgitaar', 'Bass Gitaar'] },
+    { name: 'Piano', tuning: 'C', aliases: ['piano', 'Keyboard', 'Synthesizer'] },
     { name: 'Harp', tuning: 'C', aliases: ['harp'] },
     { name: 'Conductor', tuning: null, aliases: ['Score', 'Full score', 'Full Score'] },
     { name: 'Alto Clarinet', tuning: 'Eb', aliases: ['Altklarinet', 'Alt Klarinet'] },
-    { name: 'Vocals', tuning: null, aliases: ['Voice'] },
+    { name: 'Vocals', tuning: null, aliases: ['Voice', 'Choir'] },
 ];
 
 async function initializeDatabase() {
@@ -299,6 +300,7 @@ async function initializeDatabase() {
 
         // New aliases for existing instruments
         addAliasIfNotExists('Baritone Saxophone', 'Eb', 'Bariton Saxophone');
+        addAliasIfNotExists('Baritone Saxophone', 'Eb', 'Baritone Saxofoon');
         addAliasIfNotExists('French Horn', 'F', 'Horn');
         addAliasIfNotExists('Percussion', null, 'Drumset');
         addAliasIfNotExists('Percussion', null, 'Bongo');
@@ -306,10 +308,18 @@ async function initializeDatabase() {
         addAliasIfNotExists('Percussion', null, 'Mallet Percussion');
         addAliasIfNotExists('Percussion', null, 'Shaker');
         addAliasIfNotExists('Percussion', null, 'Vibraphone');
+        addAliasIfNotExists('Percussion', null, 'Tambourine');
         addAliasIfNotExists('Bass Clarinet', 'Bb', 'Bas Clarinet');
         addAliasIfNotExists('Euphonium', 'Bb', 'Baritone');
+        addAliasIfNotExists('Euphonium', 'Bb', 'Tenorhorn');
+        addAliasIfNotExists('Euphonium', 'Bb', 'Baritone Horn');
+        addAliasIfNotExists('Euphonium', 'Bb', 'Tenor Tuba');
+        addAliasIfNotExists('Guitar', null, 'Electric Guitar');
+        addAliasIfNotExists('Piano', 'C', 'Synthesizer');
+        addAliasIfNotExists('Vocals', null, 'Choir');
 
         // New instruments
+        addInstrumentIfNotExists('Bass Guitar', null, ['Basgitaar', 'Bass Gitaar']);
         addInstrumentIfNotExists('Conductor', null, ['Score', 'Full score', 'Full Score']);
         addInstrumentIfNotExists('Alto Clarinet', 'Eb', ['Altklarinet', 'Alt Klarinet']);
         addInstrumentIfNotExists('Vocals', null, ['Voice']);
