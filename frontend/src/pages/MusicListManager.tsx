@@ -328,7 +328,7 @@ export default function MusicListManager() {
     <div>
       <h1 className="mb-3">{t('lists.manageTitle')}</h1>
 
-      <div className="grid grid-3" style={{ gridTemplateColumns: '250px 250px 1fr' }}>
+      <div className="grid grid-3" style={{ gridTemplateColumns: '200px 1fr 2fr' }}>
         {/* Orchestra selector */}
         <div className="card">
           <div className="card-header">
@@ -373,76 +373,74 @@ export default function MusicListManager() {
                     opacity: list.isActive === false ? 0.6 : 1,
                   }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div
-                      onClick={() => handleSelectList(list)}
-                      style={{ cursor: 'pointer', flex: 1 }}
+                  <div
+                    onClick={() => handleSelectList(list)}
+                    style={{ cursor: 'pointer', marginBottom: '0.25rem' }}
+                  >
+                    <strong>{list.name}</strong>
+                    {list.listType === 'concert' && (
+                      <span className="badge badge-warning" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                        {t('lists.typeConcert')}
+                      </span>
+                    )}
+                    {list.isActive === false && (
+                      <span className="badge badge-secondary" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                        {t('lists.inactive')}
+                      </span>
+                    )}
+                    <div className="piece-meta">
+                      {list.titleCount || 0} {t('lists.titles')} • {formatDuration(list.totalDuration || 0)}
+                      {list.concertDate && ` • ${new Date(list.concertDate).toLocaleDateString()}`}
+                    </div>
+                  </div>
+                  <div className="flex gap-1" style={{ flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className={`btn btn-sm ${list.isActive !== false ? 'btn-success' : 'btn-outline'}`}
+                      onClick={() => handleToggleActive(list)}
+                      title={list.isActive !== false ? t('lists.activeToggle') : t('lists.inactiveToggle')}
+                      style={{ minWidth: '2rem' }}
                     >
-                      <strong>{list.name}</strong>
-                      {list.listType === 'concert' && (
-                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
-                          {t('lists.typeConcert')}
-                        </span>
-                      )}
-                      {list.isActive === false && (
-                        <span className="badge badge-secondary" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
-                          {t('lists.inactive')}
-                        </span>
-                      )}
-                      <div className="piece-meta">
-                        {list.titleCount || 0} {t('lists.titles')} • {formatDuration(list.totalDuration || 0)}
-                        {list.concertDate && ` • ${new Date(list.concertDate).toLocaleDateString()}`}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
+                      {list.isActive !== false ? '✓' : '○'}
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleMoveList(index, 'up')}
+                      disabled={index === 0}
+                      title={t('lists.moveUp')}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleMoveList(index, 'down')}
+                      disabled={index === lists.length - 1}
+                      title={t('lists.moveDown')}
+                    >
+                      ↓
+                    </button>
+                    {list.listType === 'concert' && (
                       <button
-                        className={`btn btn-sm ${list.isActive !== false ? 'btn-success' : 'btn-outline'}`}
-                        onClick={() => handleToggleActive(list)}
-                        title={list.isActive !== false ? t('lists.activeToggle') : t('lists.inactiveToggle')}
-                        style={{ minWidth: '2rem' }}
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleExportProgramPdf(list.id, list.name)}
+                        title={t('lists.exportPdf')}
                       >
-                        {list.isActive !== false ? '✓' : '○'}
+                        PDF
                       </button>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => handleMoveList(index, 'up')}
-                        disabled={index === 0}
-                        title={t('lists.moveUp')}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => handleMoveList(index, 'down')}
-                        disabled={index === lists.length - 1}
-                        title={t('lists.moveDown')}
-                      >
-                        ↓
-                      </button>
-                      {list.listType === 'concert' && (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => handleExportProgramPdf(list.id, list.name)}
-                          title={t('lists.exportPdf')}
-                        >
-                          PDF
-                        </button>
-                      )}
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => openEditModal(list)}
-                        title={t('lists.rename')}
-                      >
-                        ✏
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDeleteList(list.id)}
-                        title={t('common.delete')}
-                      >
-                        🗑
-                      </button>
-                    </div>
+                    )}
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => openEditModal(list)}
+                      title={t('lists.rename')}
+                    >
+                      ✏
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleDeleteList(list.id)}
+                      title={t('common.delete')}
+                    >
+                      🗑
+                    </button>
                   </div>
                 </div>
               ))
@@ -641,11 +639,8 @@ export default function MusicListManager() {
           </div>
         ) : (
           <div className="card">
-            <div className="card-body">
-              <div className="empty-state">
-                <div className="empty-icon">📋</div>
-                <p>{t('lists.selectListToAdd')}</p>
-              </div>
+            <div className="card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('lists.selectListToAdd')}</p>
             </div>
           </div>
         )}
