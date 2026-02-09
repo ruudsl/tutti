@@ -31,8 +31,13 @@ export function Modal({ title, children, onClose, footer, size = 'medium' }: Mod
     // Store currently focused element
     previousActiveElement.current = document.activeElement;
 
-    // Focus the modal only on initial mount
-    modalRef.current?.focus();
+    // Focus the close button (or first focusable element) on mount
+    const closeButton = modalRef.current?.querySelector<HTMLElement>('button.modal-close');
+    if (closeButton) {
+      closeButton.focus();
+    } else {
+      modalRef.current?.focus();
+    }
 
     // Handle Escape key using ref to avoid re-running effect
     const handleKeyDown = (e: KeyboardEvent) => {

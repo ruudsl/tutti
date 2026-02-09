@@ -172,13 +172,13 @@ export default function Issues() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>{t('issues.table.piece')}</th>
-                  <th>{t('issues.table.location')}</th>
-                  <th>{t('issues.table.description')}</th>
-                  {isMusicCommittee && <th>{t('issues.table.reporter')}</th>}
-                  <th>{t('issues.table.date')}</th>
-                  <th>{t('issues.table.status')}</th>
-                  <th style={{ width: '100px' }}></th>
+                  <th scope="col">{t('issues.table.piece')}</th>
+                  <th scope="col">{t('issues.table.location')}</th>
+                  <th scope="col">{t('issues.table.description')}</th>
+                  {isMusicCommittee && <th scope="col">{t('issues.table.reporter')}</th>}
+                  <th scope="col">{t('issues.table.date')}</th>
+                  <th scope="col">{t('issues.table.status')}</th>
+                  <th scope="col" style={{ width: '100px' }}><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>

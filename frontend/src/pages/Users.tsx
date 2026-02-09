@@ -290,13 +290,13 @@ export default function Users() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>{t('users.table.name')}</th>
-                  <th>{t('users.table.email')}</th>
-                  <th>{t('users.table.role')}</th>
-                  <th>{t('users.table.instruments')}</th>
-                  <th>{t('users.table.orchestras')}</th>
-                  <th>{t('users.table.lastLogin')}</th>
-                  <th></th>
+                  <th scope="col">{t('users.table.name')}</th>
+                  <th scope="col">{t('users.table.email')}</th>
+                  <th scope="col">{t('users.table.role')}</th>
+                  <th scope="col">{t('users.table.instruments')}</th>
+                  <th scope="col">{t('users.table.orchestras')}</th>
+                  <th scope="col">{t('users.table.lastLogin')}</th>
+                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -337,14 +337,18 @@ export default function Users() {
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => openEditModal(user)}
+                          aria-label={`${t('common.edit')}: ${user.firstName} ${user.lastName}`}
+                          title={t('common.edit')}
                         >
-                          ✏
+                          <span aria-hidden="true">✏</span>
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => setDeletingUser(user)}
+                          aria-label={`${t('common.delete')}: ${user.firstName} ${user.lastName}`}
+                          title={t('common.delete')}
                         >
-                          🗑
+                          <span aria-hidden="true">🗑</span>
                         </button>
                       </div>
                     </td>

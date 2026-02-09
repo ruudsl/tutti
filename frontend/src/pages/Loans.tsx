@@ -243,13 +243,13 @@ export default function Loans() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>{t('titles.title')}</th>
-                  <th>{t('loans.borrowedBy')}</th>
-                  <th>{t('loans.borrowerOrganization')}</th>
-                  <th>{t('loans.dateOut')}</th>
-                  <th>{t('loans.expectedReturn')}</th>
-                  <th>{t('common.status')}</th>
-                  <th style={{ width: '120px' }}></th>
+                  <th scope="col">{t('titles.title')}</th>
+                  <th scope="col">{t('loans.borrowedBy')}</th>
+                  <th scope="col">{t('loans.borrowerOrganization')}</th>
+                  <th scope="col">{t('loans.dateOut')}</th>
+                  <th scope="col">{t('loans.expectedReturn')}</th>
+                  <th scope="col">{t('common.status')}</th>
+                  <th scope="col" style={{ width: '120px' }}><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>

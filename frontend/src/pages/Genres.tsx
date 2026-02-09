@@ -121,8 +121,8 @@ export default function Genres() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th>{t('genres.genre')}</th>
-                  <th></th>
+                  <th scope="col">{t('genres.genre')}</th>
+                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -140,17 +140,19 @@ export default function Genres() {
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => openEditModal(genre)}
+                          aria-label={`${t('common.edit')}: ${genre.name}`}
                           title={t('common.edit')}
                         >
-                          ✏
+                          <span aria-hidden="true">✏</span>
                         </button>
                         {isAdmin && (
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => setDeletingGenre(genre)}
+                            aria-label={`${t('common.delete')}: ${genre.name}`}
                             title={t('common.delete')}
                           >
-                            🗑
+                            <span aria-hidden="true">🗑</span>
                           </button>
                         )}
                       </div>
@@ -196,10 +198,10 @@ export default function Genres() {
               <table className="table mb-0">
                 <thead>
                   <tr>
-                    <th>{t('genres.table.title')}</th>
-                    <th>{t('genres.table.arranger')}</th>
-                    <th>{t('genres.table.duration')}</th>
-                    <th>{t('genres.table.parts')}</th>
+                    <th scope="col">{t('genres.table.title')}</th>
+                    <th scope="col">{t('genres.table.arranger')}</th>
+                    <th scope="col">{t('genres.table.duration')}</th>
+                    <th scope="col">{t('genres.table.parts')}</th>
                   </tr>
                 </thead>
                 <tbody>

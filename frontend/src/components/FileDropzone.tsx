@@ -63,11 +63,13 @@ export function FileDropzone({
     <div
       {...getRootProps()}
       className={`dropzone ${isDragActive ? 'drag-active' : ''} ${isDragReject ? 'drag-reject' : ''} ${disabled ? 'disabled' : ''}`}
+      role="button"
+      aria-label="Upload bestanden - sleep hierheen of klik om te selecteren"
     >
       <input {...getInputProps()} />
       {children || (
         <>
-          <div className="dropzone-icon">📁</div>
+          <div className="dropzone-icon" aria-hidden="true">📁</div>
           <p className="dropzone-text">
             {isDragActive ? (
               'Laat bestanden hier los...'

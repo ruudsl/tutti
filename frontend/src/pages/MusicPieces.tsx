@@ -177,7 +177,9 @@ export default function MusicPieces() {
         <div className="card-body">
           <div className="filter-bar">
             <div className="form-group filter-search">
+              <label htmlFor="pieces-search" className="sr-only">{t('common.search')}</label>
               <input
+                id="pieces-search"
                 type="text"
                 className="form-control"
                 placeholder={t('musicPieces.searchPlaceholder')}
@@ -186,7 +188,9 @@ export default function MusicPieces() {
               />
             </div>
             <div className="form-group">
+              <label htmlFor="pieces-instrument-filter" className="sr-only">{t('myMusic.table.instrument')}</label>
               <select
+                id="pieces-instrument-filter"
                 className="form-control form-select"
                 value={filterInstrument}
                 onChange={(e) => handleFilterChange(e.target.value)}
@@ -227,21 +231,22 @@ export default function MusicPieces() {
               <thead>
                 <tr>
                   {canManage && (
-                    <th style={{ width: '40px' }}>
+                    <th scope="col" style={{ width: '40px' }}>
                       <input
                         type="checkbox"
                         checked={pieces.length > 0 && selectedIds.size === pieces.length}
                         onChange={handleSelectAll}
+                        aria-label={t('musicPieces.bulk.selectAll')}
                         title={t('musicPieces.bulk.selectAll')}
                       />
                     </th>
                   )}
-                  <th>{t('myMusic.table.title')}</th>
-                  <th>{t('myMusic.table.arranger')}</th>
-                  <th>{t('myMusic.table.instrument')}</th>
-                  <th>{t('myMusic.table.tuning')}</th>
-                  <th>{t('myMusic.table.number')}</th>
-                  <th></th>
+                  <th scope="col">{t('myMusic.table.title')}</th>
+                  <th scope="col">{t('myMusic.table.arranger')}</th>
+                  <th scope="col">{t('myMusic.table.instrument')}</th>
+                  <th scope="col">{t('myMusic.table.tuning')}</th>
+                  <th scope="col">{t('myMusic.table.number')}</th>
+                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -253,6 +258,7 @@ export default function MusicPieces() {
                           type="checkbox"
                           checked={selectedIds.has(piece.id)}
                           onChange={() => handleToggleSelect(piece.id)}
+                          aria-label={`${t('common.select')} ${piece.title}`}
                         />
                       </td>
                     )}
@@ -273,32 +279,36 @@ export default function MusicPieces() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-outline btn-sm"
+                            aria-label={`YouTube: ${piece.title}`}
                             title="YouTube preview"
                           >
-                            ▶
+                            <span aria-hidden="true">▶</span>
                           </a>
                         )}
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => handleDownload(piece.id)}
                           disabled={downloading === piece.id}
+                          aria-label={`${t('common.download')}: ${piece.title}`}
                           title={t('common.download')}
                         >
-                          ⬇
+                          <span aria-hidden="true">⬇</span>
                         </button>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setEditingPiece({ ...piece })}
+                          aria-label={`${t('common.edit')}: ${piece.title}`}
                           title={t('common.edit')}
                         >
-                          ✏
+                          <span aria-hidden="true">✏</span>
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => setDeletingPiece(piece)}
+                          aria-label={`${t('common.delete')}: ${piece.title}`}
                           title={t('common.delete')}
                         >
-                          🗑
+                          <span aria-hidden="true">🗑</span>
                         </button>
                       </div>
                     </td>

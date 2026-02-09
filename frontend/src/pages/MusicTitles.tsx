@@ -259,15 +259,15 @@ export default function MusicTitles() {
             <table className="table mb-0">
               <thead>
                 <tr>
-                  <th style={{ width: '30px' }}></th>
-                  <th>{t('myMusic.table.title')}</th>
-                  <th>{t('titles.arranger')}</th>
-                  <th>{t('titles.genres')}</th>
-                  <th>{t('titles.grade')}</th>
-                  <th>{t('titles.duration')}</th>
-                  <th>{t('titles.parts')}</th>
-                  <th>{t('titles.lists')}</th>
-                  <th style={{ width: '50px' }}></th>
+                  <th scope="col" style={{ width: '30px' }}></th>
+                  <th scope="col">{t('myMusic.table.title')}</th>
+                  <th scope="col">{t('titles.arranger')}</th>
+                  <th scope="col">{t('titles.genres')}</th>
+                  <th scope="col">{t('titles.grade')}</th>
+                  <th scope="col">{t('titles.duration')}</th>
+                  <th scope="col">{t('titles.parts')}</th>
+                  <th scope="col">{t('titles.lists')}</th>
+                  <th scope="col" style={{ width: '50px' }}><span className="sr-only">{t('common.actions')}</span></th>
                 </tr>
               </thead>
               <tbody>

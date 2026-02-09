@@ -140,11 +140,11 @@ export default function Instruments() {
           <table className="table mb-0">
             <thead>
               <tr>
-                <th>{t('instruments.name')}</th>
-                <th>{t('instruments.tuning')}</th>
-                <th>{t('instruments.clef')}</th>
-                <th>{t('instruments.aliases')}</th>
-                <th></th>
+                <th scope="col">{t('instruments.name')}</th>
+                <th scope="col">{t('instruments.tuning')}</th>
+                <th scope="col">{t('instruments.clef')}</th>
+                <th scope="col">{t('instruments.aliases')}</th>
+                <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -163,9 +163,10 @@ export default function Instruments() {
                           <button
                             className="tag-remove"
                             onClick={() => handleDeleteAlias(instrument.id, alias.id)}
+                            aria-label={`${t('instruments.removeAlias')}: ${alias.name}`}
                             title={t('instruments.removeAlias')}
                           >
-                            ×
+                            <span aria-hidden="true">×</span>
                           </button>
                         </span>
                       ))}
@@ -182,16 +183,18 @@ export default function Instruments() {
                       <button
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(instrument)}
+                        aria-label={`${t('common.edit')}: ${instrument.name}`}
                         title={t('common.edit')}
                       >
-                        ✏
+                        <span aria-hidden="true">✏</span>
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeletingInstrument(instrument)}
+                        aria-label={`${t('common.delete')}: ${instrument.name}`}
                         title={t('common.delete')}
                       >
-                        🗑
+                        <span aria-hidden="true">🗑</span>
                       </button>
                     </div>
                   </td>

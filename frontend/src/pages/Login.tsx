@@ -89,7 +89,7 @@ export default function Login() {
               style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', marginBottom: '0.5rem' }}
             />
           ) : null}
-          <h1>{branding.logoUrl ? '' : '🎵 '}{branding.displayName}</h1>
+          <h1>{branding.logoUrl ? '' : <span aria-hidden="true">🎵 </span>}{branding.displayName}</h1>
         </div>
 
         <form onSubmit={handleSubmit}>
