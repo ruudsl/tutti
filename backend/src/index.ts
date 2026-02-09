@@ -39,6 +39,7 @@ import settingsRoutes from './routes/settings';
 import rehearsalRoutes from './routes/rehearsals';
 import spondRoutes from './routes/spond';
 import microsoftAuthRoutes from './routes/microsoft-auth';
+import musicaInfoRoutes from './routes/musicainfo';
 
 const app = express();
 
@@ -97,6 +98,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
+app.use('/api/musicainfo', musicaInfoRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

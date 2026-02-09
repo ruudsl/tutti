@@ -853,4 +853,46 @@ export const savePdfAsMusicPiece = async (
   return data;
 };
 
+// ========================
+// MUSICAINFO
+// ========================
+
+export interface MusicaInfoSearchResult {
+  title: string;
+  composer: string;
+  arranger: string;
+  articleNumber: string;
+  detailUrl: string;
+  publisher: string;
+  duration: string;
+  difficulty: string;
+}
+
+export interface MusicaInfoDetail {
+  title: string;
+  composer: string;
+  arranger: string;
+  publisher: string;
+  duration: string;
+  durationSeconds: number;
+  difficulty: string;
+  instrumentation: string;
+  articleNumber: string;
+}
+
+export const searchMusicaInfo = async (query: string): Promise<{
+  query: string;
+  resultCount: number;
+  results: MusicaInfoSearchResult[];
+  searchUrl: string;
+}> => {
+  const { data } = await api.get('/musicainfo/search', { params: { q: query } });
+  return data;
+};
+
+export const getMusicaInfoDetail = async (artnr: string): Promise<MusicaInfoDetail> => {
+  const { data } = await api.get('/musicainfo/detail', { params: { artnr } });
+  return data;
+};
+
 export default api;

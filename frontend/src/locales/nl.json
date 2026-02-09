@@ -364,7 +364,16 @@
     "occurringInLists": "Voorkomend in lijsten",
     "clearFilters": "Wis filters",
     "searchOnSites": "Zoek op",
-    "by": "Door"
+    "by": "Door",
+    "musicaInfoSearch": "Zoek op MusicaInfo",
+    "musicaInfoSearching": "Zoeken",
+    "musicaInfoError": "Kon MusicaInfo.net niet bereiken",
+    "musicaInfoNoResults": "Geen resultaten gevonden.",
+    "musicaInfoOpenManually": "Open handmatig op MusicaInfo.net",
+    "musicaInfoSelect": "Selecteer",
+    "musicaInfoApply": "Overnemen",
+    "musicaInfoComposer": "Componist",
+    "musicaInfoPublisher": "Uitgever"
   },
   "upload": {
     "title": "Muziekstukken uploaden",
