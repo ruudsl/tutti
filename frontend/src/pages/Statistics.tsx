@@ -29,6 +29,218 @@ interface ActivityFeedItem {
   entity_name: string | null;
 }
 
+/** Lightweight vertical bar chart for activity per day */
+function ActivityBarChart({ data, t }: {
+  data: { date: string; downloads: number; views: number }[];
+  t: (key: string) => string;
+}) {
+  const maxVal = Math.max(...data.map(d => d.downloads + d.views), 1);
+  const chartHeight = 180;
+
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  };
+
+  return (
+    <div role="img" aria-label={t('statistics.activityPerDay')}>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }} />
+          {t('statistics.downloads')}
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--info, #17a2b8)', display: 'inline-block' }} />
+          {t('statistics.views')}
+        </span>
+      </div>
+
+      {/* Chart area */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: 2,
+        height: chartHeight,
+        borderBottom: '1px solid var(--border)',
+        paddingBottom: 0,
+      }}>
+        {data.map((day) => {
+          const dlHeight = (day.downloads / maxVal) * (chartHeight - 20);
+          const vwHeight = (day.views / maxVal) * (chartHeight - 20);
+          const total = day.downloads + day.views;
+          return (
+            <div
+              key={day.date}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: 0,
+              }}
+              title={`${formatShortDate(day.date)}: ${day.downloads} ${t('statistics.downloads').toLowerCase()}, ${day.views} ${t('statistics.views').toLowerCase()}`}
+            >
+              {total > 0 && (
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-light)', marginBottom: 2 }}>
+                  {total}
+                </span>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', width: '80%', maxWidth: 28 }}>
+                <div style={{
+                  height: vwHeight,
+                  background: 'var(--info, #17a2b8)',
+                  borderRadius: '2px 2px 0 0',
+                  minHeight: day.views > 0 ? 2 : 0,
+                }} />
+                <div style={{
+                  height: dlHeight,
+                  background: 'var(--primary)',
+                  borderRadius: day.views > 0 ? 0 : '2px 2px 0 0',
+                  minHeight: day.downloads > 0 ? 2 : 0,
+                }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>
+        {data.map((day, i) => (
+          <div
+            key={day.date}
+            style={{
+              flex: 1,
+              textAlign: 'center',
+              fontSize: '0.6rem',
+              color: 'var(--text-light)',
+              minWidth: 0,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Show label every few bars depending on count */}
+            {data.length <= 14 || i % Math.ceil(data.length / 10) === 0
+              ? formatShortDate(day.date)
+              : ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Horizontal bar chart for ranking data */
+function HorizontalBarChart({ items, color }: {
+  items: { label: string; sublabel?: string; value: number }[];
+  color: string;
+}) {
+  const maxVal = Math.max(...items.map(i => i.value), 1);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {items.map((item, index) => (
+        <div key={index}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 2 }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <strong style={{ marginRight: '0.35rem', color: 'var(--text-light)' }}>{index + 1}.</strong>
+              {item.label}
+              {item.sublabel && (
+                <span style={{ color: 'var(--text-light)', fontSize: '0.7rem', marginLeft: '0.35rem' }}>
+                  {item.sublabel}
+                </span>
+              )}
+            </span>
+            <strong style={{ flexShrink: 0, marginLeft: '0.5rem' }}>{item.value}</strong>
+          </div>
+          <div style={{
+            height: 6,
+            background: 'var(--border)',
+            borderRadius: 3,
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${(item.value / maxVal) * 100}%`,
+              background: color,
+              borderRadius: 3,
+              transition: 'width 0.3s ease',
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Stacked horizontal bar for user activity (downloads + views) */
+function UserActivityChart({ users, t }: {
+  users: { id: string; name: string; downloads: number; views: number }[];
+  t: (key: string) => string;
+}) {
+  const maxVal = Math.max(...users.map(u => u.downloads + u.views), 1);
+
+  return (
+    <div>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }} />
+          {t('statistics.downloads')}
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--info, #17a2b8)', display: 'inline-block' }} />
+          {t('statistics.views')}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {users.map((user) => {
+          const total = user.downloads + user.views;
+          return (
+            <div key={user.id}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 2 }}>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.name}
+                </span>
+                <span style={{ flexShrink: 0, marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                  {user.downloads}+{user.views} = <strong style={{ color: 'var(--text)' }}>{total}</strong>
+                </span>
+              </div>
+              <div style={{
+                height: 6,
+                background: 'var(--border)',
+                borderRadius: 3,
+                overflow: 'hidden',
+                display: 'flex',
+              }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${(user.downloads / maxVal) * 100}%`,
+                    background: 'var(--primary)',
+                    transition: 'width 0.3s ease',
+                  }}
+                  title={`${user.downloads} ${t('statistics.downloads').toLowerCase()}`}
+                />
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${(user.views / maxVal) * 100}%`,
+                    background: 'var(--info, #17a2b8)',
+                    transition: 'width 0.3s ease',
+                  }}
+                  title={`${user.views} ${t('statistics.views').toLowerCase()}`}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Statistics() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.statistics');
@@ -58,14 +270,6 @@ export default function Statistics() {
     },
   });
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
   const formatDateTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('nl-NL', {
       day: 'numeric',
@@ -88,17 +292,21 @@ export default function Statistics() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>{t('statistics.title')}</h1>
-        <select
-          className="form-control form-select"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          style={{ maxWidth: '200px' }}
-        >
-          <option value="7">{t('statistics.last7Days')}</option>
-          <option value="30">{t('statistics.last30Days')}</option>
-          <option value="90">{t('statistics.last90Days')}</option>
-          <option value="365">{t('statistics.lastYear')}</option>
-        </select>
+        <label>
+          <span className="sr-only">{t('statistics.period')}</span>
+          <select
+            className="form-control form-select"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            style={{ maxWidth: '200px' }}
+            aria-label={t('statistics.period')}
+          >
+            <option value="7">{t('statistics.last7Days')}</option>
+            <option value="30">{t('statistics.last30Days')}</option>
+            <option value="90">{t('statistics.last90Days')}</option>
+            <option value="365">{t('statistics.lastYear')}</option>
+          </select>
+        </label>
       </div>
 
       {/* Summary Cards */}
@@ -139,37 +347,30 @@ export default function Statistics() {
         </div>
       )}
 
+      {/* Activity Bar Chart - Full Width */}
+      {stats?.recentActivity && stats.recentActivity.length > 0 && (
+        <div className="card mb-3">
+          <div className="card-body">
+            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.activityPerDay')}</h4>
+            <ActivityBarChart data={stats.recentActivity} t={t} />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-2 gap-3">
-        {/* Top 10 Most Played */}
+        {/* Top 10 Most Played - Bar Chart */}
         <div className="card">
           <div className="card-body">
             <h4 style={{ marginBottom: '1rem' }}>{t('statistics.topPieces')}</h4>
             {stats?.topPieces && stats.topPieces.length > 0 ? (
-              <table className="table mb-0">
-                <thead>
-                  <tr>
-                    <th>{t('statistics.table.rank')}</th>
-                    <th>{t('statistics.table.title')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('statistics.table.count')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.topPieces.map((piece, index) => (
-                    <tr key={piece.id}>
-                      <td style={{ width: '40px', fontWeight: 'bold' }}>{index + 1}</td>
-                      <td>
-                        <div>{piece.title}</div>
-                        {piece.arranger && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            {piece.arranger}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{piece.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <HorizontalBarChart
+                items={stats.topPieces.map(p => ({
+                  label: p.title,
+                  sublabel: p.arranger || undefined,
+                  value: p.count,
+                }))}
+                color="var(--primary)"
+              />
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
                 {t('statistics.noActivity')}
@@ -178,62 +379,12 @@ export default function Statistics() {
           </div>
         </div>
 
-        {/* Top Users */}
+        {/* Top Users - Stacked Bar Chart */}
         <div className="card">
           <div className="card-body">
             <h4 style={{ marginBottom: '1rem' }}>{t('statistics.mostActiveMembers')}</h4>
             {stats?.userActivity && stats.userActivity.length > 0 ? (
-              <table className="table mb-0">
-                <thead>
-                  <tr>
-                    <th>{t('statistics.table.member')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('statistics.downloads')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('statistics.views')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.userActivity.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td style={{ textAlign: 'right' }}>{user.downloads}</td>
-                      <td style={{ textAlign: 'right' }}>{user.views}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                {t('statistics.noActivity')}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity Chart (simplified as table) */}
-        <div className="card">
-          <div className="card-body">
-            <h4 style={{ marginBottom: '1rem' }}>{t('statistics.activityPerDay')}</h4>
-            {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                <table className="table mb-0">
-                  <thead>
-                    <tr>
-                      <th>{t('statistics.table.date')}</th>
-                      <th style={{ textAlign: 'right' }}>{t('statistics.downloads')}</th>
-                      <th style={{ textAlign: 'right' }}>{t('statistics.views')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentActivity.map((day) => (
-                      <tr key={day.date}>
-                        <td>{formatDate(day.date)}</td>
-                        <td style={{ textAlign: 'right' }}>{day.downloads}</td>
-                        <td style={{ textAlign: 'right' }}>{day.views}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <UserActivityChart users={stats.userActivity} t={t} />
             ) : (
               <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
                 {t('statistics.noActivity')}
@@ -243,7 +394,7 @@ export default function Statistics() {
         </div>
 
         {/* Recent Activity Feed */}
-        <div className="card">
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div className="card-body">
             <h4 style={{ marginBottom: '1rem' }}>{t('statistics.recentActivity')}</h4>
             {feed.length > 0 ? (
