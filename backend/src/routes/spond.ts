@@ -8,6 +8,12 @@ import logger from '../utils/logger';
 
 const router = Router();
 
+/** Convert "HH:MM" time string to minutes since midnight */
+function timeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+}
+
 // ========================
 // SPOND CONFIG
 // ========================
@@ -145,16 +151,41 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
     const events = await client.getEvents(spondConfig.group_id, today, endDate);
 
     let synced = 0;
+    const matchedEventIds = new Set<string>();
 
     for (const rehearsal of rehearsals) {
-        // Find matching Spond event by date
-        const rehearsalDate = rehearsal.date;
-        const matchingEvent = events.find(e => {
-            const eventDate = e.startTimestamp.split('T')[0];
-            return eventDate === rehearsalDate;
-        });
+        let matchingEvent;
+
+        // 1. If already linked to a specific Spond event, use that
+        if (rehearsal.spond_event_id) {
+            matchingEvent = events.find(e => e.id === rehearsal.spond_event_id);
+        }
+
+        // 2. Otherwise, match by date + closest start time (skip already-matched events)
+        if (!matchingEvent) {
+            const rehearsalDate = rehearsal.date;
+            const sameDayEvents = events.filter(e => {
+                const eventDate = e.startTimestamp.split('T')[0];
+                return eventDate === rehearsalDate && !matchedEventIds.has(e.id);
+            });
+
+            if (sameDayEvents.length === 1) {
+                matchingEvent = sameDayEvents[0];
+            } else if (sameDayEvents.length > 1 && rehearsal.start_time) {
+                // Multiple events on same day: find closest by start time
+                const rehearsalMinutes = timeToMinutes(rehearsal.start_time);
+                matchingEvent = sameDayEvents.reduce((best, e) => {
+                    const eventTime = e.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                    const eventMinutes = timeToMinutes(eventTime);
+                    const bestTime = best.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                    const bestMinutes = timeToMinutes(bestTime);
+                    return Math.abs(eventMinutes - rehearsalMinutes) < Math.abs(bestMinutes - rehearsalMinutes) ? e : best;
+                });
+            }
+        }
 
         if (!matchingEvent) continue;
+        matchedEventIds.add(matchingEvent.id);
 
         // Link event if not already linked
         if (!rehearsal.spond_event_id) {
@@ -201,7 +232,7 @@ router.post('/sync/:rehearsalId', authenticateToken, requireRole('admin', 'music
     const { rehearsalId } = req.params;
 
     const rehearsal = db.prepare(`
-        SELECT id, date, spond_event_id
+        SELECT id, date, start_time, spond_event_id
         FROM rehearsals
         WHERE id = ? AND association_id = ?
     `).get(rehearsalId, req.user!.associationId) as any;
@@ -236,10 +267,35 @@ router.post('/sync/:rehearsalId', authenticateToken, requireRole('admin', 'music
         dayAfter.toISOString().split('T')[0],
     );
 
-    const matchingEvent = events.find(e => {
-        const eventDate = e.startTimestamp.split('T')[0];
-        return eventDate === rehearsal.date;
-    });
+    let matchingEvent;
+
+    // 1. If already linked to a specific Spond event, use that
+    if (rehearsal.spond_event_id) {
+        matchingEvent = events.find(e => e.id === rehearsal.spond_event_id);
+    }
+
+    // 2. Otherwise, match by date + closest start time
+    if (!matchingEvent) {
+        const sameDayEvents = events.filter(e => {
+            const eventDate = e.startTimestamp.split('T')[0];
+            return eventDate === rehearsal.date;
+        });
+
+        if (sameDayEvents.length === 1) {
+            matchingEvent = sameDayEvents[0];
+        } else if (sameDayEvents.length > 1 && rehearsal.start_time) {
+            const rehearsalMinutes = timeToMinutes(rehearsal.start_time);
+            matchingEvent = sameDayEvents.reduce((best, e) => {
+                const eventTime = e.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                const eventMinutes = timeToMinutes(eventTime);
+                const bestTime = best.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                const bestMinutes = timeToMinutes(bestTime);
+                return Math.abs(eventMinutes - rehearsalMinutes) < Math.abs(bestMinutes - rehearsalMinutes) ? e : best;
+            });
+        } else if (sameDayEvents.length > 1) {
+            matchingEvent = sameDayEvents[0];
+        }
+    }
 
     if (!matchingEvent) {
         throw new ApiError(404, 'Geen bijpassend Spond-event gevonden voor deze datum.');
