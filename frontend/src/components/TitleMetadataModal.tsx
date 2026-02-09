@@ -10,6 +10,7 @@ interface TitleMetaForm {
   youtubeUrl: string;
   description: string;
   durationStr: string;
+  grade: string;
   genreIds: string[];
   isShared: boolean;
   internalNotes: string;
@@ -23,6 +24,7 @@ interface TitleMetadataModalProps {
     youtubeUrl: string | null;
     description: string | null;
     durationSeconds: number;
+    grade: string | null;
     genreIds: string[];
     isShared: boolean;
     internalNotes: string | null;
@@ -53,6 +55,7 @@ export function TitleMetadataModal({
     youtubeUrl: title.youtubeUrl || '',
     description: title.description || '',
     durationStr: formatDurationForForm(title.durationSeconds),
+    grade: title.grade || '',
     genreIds: title.genres?.map(g => g.id) || [],
     isShared: title.isShared || false,
     internalNotes: title.internalNotes || '',
@@ -79,6 +82,7 @@ export function TitleMetadataModal({
       youtubeUrl: form.youtubeUrl || null,
       description: form.description || null,
       durationSeconds: parseDuration(form.durationStr),
+      grade: form.grade || null,
       genreIds: form.genreIds,
       isShared: form.isShared,
       internalNotes: form.internalNotes || null,
@@ -223,6 +227,16 @@ export function TitleMetadataModal({
             onChange={(e) => setForm(f => ({ ...f, durationStr: e.target.value }))}
             placeholder="3:45"
             pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t('titles.difficulty')}</label>
+          <input
+            type="text"
+            className="form-control"
+            value={form.grade}
+            onChange={(e) => setForm(f => ({ ...f, grade: e.target.value }))}
+            placeholder={t('titles.difficultyPlaceholder')}
           />
         </div>
         {extraFields}

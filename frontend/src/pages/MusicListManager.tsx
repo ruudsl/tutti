@@ -284,6 +284,7 @@ export default function MusicListManager() {
     youtubeUrl: string | null;
     description: string | null;
     durationSeconds: number;
+    grade: string | null;
     genreIds: string[];
     isShared: boolean;
     internalNotes: string | null;

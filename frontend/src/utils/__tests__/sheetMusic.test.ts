@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { searchSheetMusicWebsites } from '../sheetMusic'
 
 describe('searchSheetMusicWebsites', () => {
-  it('returns 5 search sites', () => {
+  it('returns 6 search sites', () => {
     const results = searchSheetMusicWebsites('Bohemian Rhapsody')
-    expect(results).toHaveLength(5)
+    expect(results).toHaveLength(6)
   })
 
   it('includes expected site names', () => {
@@ -12,6 +12,7 @@ describe('searchSheetMusicWebsites', () => {
     const names = results.map(r => r.name)
     expect(names).toContain('De Haske')
     expect(names).toContain('Hal Leonard')
+    expect(names).toContain('MusicaInfo')
     expect(names).toContain('YouTube')
   })
 
