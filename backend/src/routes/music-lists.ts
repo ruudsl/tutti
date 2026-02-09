@@ -827,8 +827,6 @@ router.get('/:id/program-pdf', authenticateToken, asyncHandler(async (req: AuthR
     const pageWidth = 595; // A4
     const pageHeight = 842;
     const margin = 60;
-    const contentWidth = pageWidth - 2 * margin;
-
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
 
