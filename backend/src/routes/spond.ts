@@ -150,48 +150,57 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
     // Fetch Spond events
     const events = await client.getEvents(spondConfig.group_id, today, endDate);
 
+    // Clear all existing spond_event_id links so we can re-match cleanly
+    db.prepare(`
+        UPDATE rehearsals SET spond_event_id = NULL
+        WHERE association_id = ? AND date >= ? AND date <= ?
+    `).run(req.user!.associationId, today, endDate);
+
+    // Build a lookup: date -> list of events on that date
+    const eventsByDate = new Map<string, typeof events>();
+    for (const event of events) {
+        const eventDate = event.startTimestamp.split('T')[0];
+        if (!eventsByDate.has(eventDate)) eventsByDate.set(eventDate, []);
+        eventsByDate.get(eventDate)!.push(event);
+    }
+
+    logger.info(`Spond sync: ${events.length} events found, ${rehearsals.length} rehearsals to match`, {
+        eventDates: events.map(e => `${e.startTimestamp} (${e.heading})`),
+    });
+
     let synced = 0;
     const matchedEventIds = new Set<string>();
 
     for (const rehearsal of rehearsals) {
+        const sameDayEvents = (eventsByDate.get(rehearsal.date) || [])
+            .filter(e => !matchedEventIds.has(e.id));
+
+        logger.info(`Matching rehearsal ${rehearsal.date} ${rehearsal.start_time}: ${sameDayEvents.length} candidate events`, {
+            candidates: sameDayEvents.map(e => `${e.startTimestamp} (${e.heading})`),
+        });
+
         let matchingEvent;
 
-        // 1. If already linked to a specific Spond event, use that
-        if (rehearsal.spond_event_id) {
-            matchingEvent = events.find(e => e.id === rehearsal.spond_event_id);
-        }
-
-        // 2. Otherwise, match by date + closest start time (skip already-matched events)
-        if (!matchingEvent) {
-            const rehearsalDate = rehearsal.date;
-            const sameDayEvents = events.filter(e => {
-                const eventDate = e.startTimestamp.split('T')[0];
-                return eventDate === rehearsalDate && !matchedEventIds.has(e.id);
+        if (sameDayEvents.length === 1) {
+            matchingEvent = sameDayEvents[0];
+        } else if (sameDayEvents.length > 1 && rehearsal.start_time) {
+            // Multiple events on same day: find closest by start time
+            const rehearsalMinutes = timeToMinutes(rehearsal.start_time);
+            matchingEvent = sameDayEvents.reduce((best, e) => {
+                const eventTime = e.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                const eventMinutes = timeToMinutes(eventTime);
+                const bestTime = best.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
+                const bestMinutes = timeToMinutes(bestTime);
+                return Math.abs(eventMinutes - rehearsalMinutes) < Math.abs(bestMinutes - rehearsalMinutes) ? e : best;
             });
-
-            if (sameDayEvents.length === 1) {
-                matchingEvent = sameDayEvents[0];
-            } else if (sameDayEvents.length > 1 && rehearsal.start_time) {
-                // Multiple events on same day: find closest by start time
-                const rehearsalMinutes = timeToMinutes(rehearsal.start_time);
-                matchingEvent = sameDayEvents.reduce((best, e) => {
-                    const eventTime = e.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
-                    const eventMinutes = timeToMinutes(eventTime);
-                    const bestTime = best.startTimestamp.split('T')[1]?.substring(0, 5) || '00:00';
-                    const bestMinutes = timeToMinutes(bestTime);
-                    return Math.abs(eventMinutes - rehearsalMinutes) < Math.abs(bestMinutes - rehearsalMinutes) ? e : best;
-                });
-            }
         }
 
         if (!matchingEvent) continue;
         matchedEventIds.add(matchingEvent.id);
 
-        // Link event if not already linked
-        if (!rehearsal.spond_event_id) {
-            db.prepare('UPDATE rehearsals SET spond_event_id = ? WHERE id = ?')
-                .run(matchingEvent.id, rehearsal.id);
-        }
+        // Link event
+        db.prepare('UPDATE rehearsals SET spond_event_id = ? WHERE id = ?')
+            .run(matchingEvent.id, rehearsal.id);
 
         // Clear existing attendance for this rehearsal
         db.prepare('DELETE FROM rehearsal_attendance WHERE rehearsal_id = ?')
