@@ -131,6 +131,10 @@ export default function Users() {
         return <span className="badge badge-danger">{t('roles.admin')}</span>;
       case ROLES.MUSIC_COMMITTEE:
         return <span className="badge badge-warning">{t('roles.music_committee')}</span>;
+      case ROLES.EQUIPMENT_COMMITTEE:
+        return <span className="badge badge-info">{t('roles.equipment_committee')}</span>;
+      case ROLES.UNIFORMS_COMMITTEE:
+        return <span className="badge badge-secondary">{t('roles.uniforms_committee')}</span>;
       case ROLES.CONDUCTOR:
         return <span className="badge badge-success">{t('roles.conductor')}</span>;
       default:
@@ -548,6 +552,8 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           <option value="member">{t('roles.member')}</option>
           <option value="conductor">{t('roles.conductor')}</option>
           <option value="music_committee">{t('roles.music_committee')}</option>
+          <option value="equipment_committee">{t('roles.equipment_committee')}</option>
+          <option value="uniforms_committee">{t('roles.uniforms_committee')}</option>
           <option value="admin">{t('roles.admin')}</option>
         </select>
       </div>
