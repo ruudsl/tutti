@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, VenueType, MediaType } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
