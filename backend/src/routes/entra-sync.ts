@@ -25,6 +25,7 @@ interface EntraUser {
     mail: string | null;
     userPrincipalName: string;
     jobTitle: string | null;
+    department: string | null;
 }
 
 interface GraphUsersResponse {
@@ -80,7 +81,7 @@ async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
  */
 async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
     const users: EntraUser[] = [];
-    let nextLink: string | null = 'https://graph.microsoft.com/v1.0/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle&$top=100';
+    let nextLink: string | null = 'https://graph.microsoft.com/v1.0/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle,department&$top=100';
 
     while (nextLink) {
         const response = await fetch(nextLink, {
@@ -99,6 +100,53 @@ async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
     }
 
     return users;
+}
+
+/**
+ * Parse department string into orchestra names (comma-separated)
+ */
+function parseDepartments(department: string | null): string[] {
+    if (!department) return [];
+    return department.split(',').map(d => d.trim()).filter(d => d.length > 0);
+}
+
+/**
+ * Find or create orchestras by name and return their IDs
+ */
+function findOrCreateOrchestras(orchestraNames: string[], associationId: string | null): string[] {
+    if (!associationId) return [];
+    const orchestraIds: string[] = [];
+
+    for (const name of orchestraNames) {
+        // Try to find existing orchestra (case-insensitive)
+        let orchestra = db.prepare(
+            'SELECT id FROM orchestras WHERE LOWER(name) = LOWER(?) AND association_id = ?'
+        ).get(name, associationId) as { id: string } | undefined;
+
+        if (!orchestra) {
+            // Create new orchestra
+            const id = uuidv4();
+            db.prepare(
+                'INSERT INTO orchestras (id, name, association_id) VALUES (?, ?, ?)'
+            ).run(id, name, associationId);
+            orchestraIds.push(id);
+            logger.info(`Orchestra created from Entra department: ${name}`, { orchestraId: id, associationId });
+        } else {
+            orchestraIds.push(orchestra.id);
+        }
+    }
+
+    return orchestraIds;
+}
+
+/**
+ * Assign user to orchestras
+ */
+function assignUserToOrchestras(userId: string, orchestraIds: string[]): void {
+    const insertStmt = db.prepare('INSERT OR IGNORE INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
+    for (const orchestraId of orchestraIds) {
+        insertStmt.run(userId, orchestraId);
+    }
 }
 
 // ========================================
@@ -246,8 +294,15 @@ router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async
 
     const jobTitleMap = new Map(mappings.map(m => [m.job_title.toLowerCase(), m.instrument_id]));
 
-    // Collect unique job titles for the response
+    // Collect unique job titles and departments for the response
     const uniqueJobTitles = new Set<string>();
+    const uniqueDepartments = new Set<string>();
+
+    // Get existing orchestras
+    const existingOrchestras = db.prepare(
+        'SELECT LOWER(name) as name FROM orchestras WHERE association_id = ?'
+    ).all(req.user!.associationId) as { name: string }[];
+    const existingOrchestraNames = new Set(existingOrchestras.map(o => o.name));
 
     // Enrich with import status
     const enrichedUsers = entraUsers.map(user => {
@@ -255,9 +310,15 @@ router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async
         const isImported = existingMsIds.has(user.id) || existingEmails.has(email);
         const hasMapping = user.jobTitle ? jobTitleMap.has(user.jobTitle.toLowerCase()) : false;
         const mappedInstrumentId = user.jobTitle ? jobTitleMap.get(user.jobTitle.toLowerCase()) : null;
+        const departments = parseDepartments(user.department);
 
         if (user.jobTitle) {
             uniqueJobTitles.add(user.jobTitle);
+        }
+
+        // Track unique departments
+        for (const dept of departments) {
+            uniqueDepartments.add(dept);
         }
 
         return {
@@ -267,6 +328,8 @@ router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async
             lastName: user.surname || '',
             email,
             jobTitle: user.jobTitle,
+            department: user.department,
+            departments, // Parsed array
             isImported,
             hasMapping,
             mappedInstrumentId,
@@ -276,9 +339,16 @@ router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async
     // Sort by display name
     enrichedUsers.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
+    // Find departments that don't exist as orchestras yet
+    const newDepartments = Array.from(uniqueDepartments).filter(
+        d => !existingOrchestraNames.has(d.toLowerCase())
+    );
+
     res.json({
         users: enrichedUsers,
         uniqueJobTitles: Array.from(uniqueJobTitles).sort(),
+        uniqueDepartments: Array.from(uniqueDepartments).sort(),
+        newDepartments: newDepartments.sort(),
         totalCount: enrichedUsers.length,
         importedCount: enrichedUsers.filter(u => u.isImported).length,
     });
@@ -370,6 +440,13 @@ router.post('/users/import', authenticateToken, requireRole('admin'), asyncHandl
                 }
             }
 
+            // Add to orchestras based on department
+            const departments = parseDepartments(entraUser.department);
+            if (departments.length > 0) {
+                const orchestraIds = findOrCreateOrchestras(departments, req.user!.associationId);
+                assignUserToOrchestras(userId, orchestraIds);
+            }
+
             results.imported++;
             logger.info(`User imported from Entra ID: ${email}`, { userId, microsoftId: entraUser.id, importedBy: req.user!.id });
         }
@@ -447,6 +524,15 @@ router.post('/users/sync', authenticateToken, requireRole('admin'), asyncHandler
                     }
                 }
 
+                // Update orchestras based on department
+                const departments = parseDepartments(entraUser.department);
+                if (departments.length > 0) {
+                    const orchestraIds = findOrCreateOrchestras(departments, req.user!.associationId);
+                    // Clear existing orchestras and set new ones from department
+                    db.prepare('DELETE FROM user_orchestras WHERE user_id = ?').run(existing.id);
+                    assignUserToOrchestras(existing.id, orchestraIds);
+                }
+
                 results.updated++;
             } else if (createNew) {
                 // Create new user
@@ -469,6 +555,13 @@ router.post('/users/sync', authenticateToken, requireRole('admin'), asyncHandler
                         db.prepare('INSERT OR IGNORE INTO user_instruments (user_id, instrument_id) VALUES (?, ?)')
                             .run(userId, instrumentId);
                     }
+                }
+
+                // Add to orchestras based on department
+                const departments = parseDepartments(entraUser.department);
+                if (departments.length > 0) {
+                    const orchestraIds = findOrCreateOrchestras(departments, req.user!.associationId);
+                    assignUserToOrchestras(userId, orchestraIds);
                 }
 
                 results.created++;

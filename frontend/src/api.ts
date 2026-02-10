@@ -1374,6 +1374,8 @@ export interface EntraUser {
   lastName: string;
   email: string;
   jobTitle: string | null;
+  department: string | null;
+  departments: string[];
   isImported: boolean;
   hasMapping: boolean;
   mappedInstrumentId: string | null;
@@ -1382,6 +1384,8 @@ export interface EntraUser {
 export interface EntraUsersResponse {
   users: EntraUser[];
   uniqueJobTitles: string[];
+  uniqueDepartments: string[];
+  newDepartments: string[];
   totalCount: number;
   importedCount: number;
 }

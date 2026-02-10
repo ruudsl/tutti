@@ -128,7 +128,8 @@ export default function EntraSync() {
         (u) =>
           u.displayName.toLowerCase().includes(query) ||
           u.email.toLowerCase().includes(query) ||
-          (u.jobTitle && u.jobTitle.toLowerCase().includes(query))
+          (u.jobTitle && u.jobTitle.toLowerCase().includes(query)) ||
+          (u.department && u.department.toLowerCase().includes(query))
       );
     }
 
@@ -408,6 +409,36 @@ export default function EntraSync() {
               </div>
             )}
 
+            {/* New departments notice */}
+            {entraData && entraData.newDepartments && entraData.newDepartments.length > 0 && (
+              <div
+                className="mb-3"
+                style={{
+                  background: 'var(--info-bg, #cfe2ff)',
+                  border: '1px solid var(--info, #0d6efd)',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <strong>{t('entraSync.newDepartmentsNotice')}</strong>
+                <div className="flex gap-2 flex-wrap mt-1">
+                  {entraData.newDepartments.map((dept) => (
+                    <span
+                      key={dept}
+                      style={{
+                        background: 'white',
+                        borderRadius: '0.25rem',
+                        padding: '0.1rem 0.5rem',
+                      }}
+                    >
+                      {dept}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Stats */}
             {entraData && (
               <div className="flex gap-3 mb-3" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -443,6 +474,7 @@ export default function EntraSync() {
                         <th>{t('entraSync.columnName')}</th>
                         <th>{t('entraSync.columnEmail')}</th>
                         <th>{t('entraSync.columnJobTitle')}</th>
+                        <th>{t('entraSync.columnDepartment')}</th>
                         <th>{t('entraSync.columnStatus')}</th>
                       </tr>
                     </thead>
@@ -486,6 +518,27 @@ export default function EntraSync() {
                                     {t('entraSync.createMapping')}
                                   </button>
                                 )}
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                            )}
+                          </td>
+                          <td>
+                            {user.departments && user.departments.length > 0 ? (
+                              <div className="flex gap-1 flex-wrap">
+                                {user.departments.map((dept, idx) => (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      background: 'var(--bg-secondary)',
+                                      borderRadius: '0.25rem',
+                                      padding: '0.1rem 0.4rem',
+                                      fontSize: '0.8rem',
+                                    }}
+                                  >
+                                    {dept}
+                                  </span>
+                                ))}
                               </div>
                             ) : (
                               <span style={{ color: 'var(--text-secondary)' }}>-</span>

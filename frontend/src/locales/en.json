@@ -1423,7 +1423,7 @@
     "tabUsers": "Users",
     "tabMappings": "Job Title Mappings",
     "entraUsers": "Entra ID Users",
-    "usersDescription": "View and import users from Microsoft Entra ID. The job title is used to automatically assign the instrument.",
+    "usersDescription": "View and import users from Microsoft Entra ID. The job title is used to assign the instrument, the department determines the orchestra.",
     "refresh": "Refresh",
     "syncExisting": "Sync existing",
     "syncAndCreate": "Sync + create new",
@@ -1471,6 +1471,8 @@
     "errorCreatingMapping": "Error creating mapping.",
     "errorUpdatingMapping": "Error updating mapping.",
     "errorDeletingMapping": "Error deleting mapping.",
-    "deleteMappingConfirm": "Are you sure you want to delete the mapping for \"{{jobTitle}}\"?"
+    "deleteMappingConfirm": "Are you sure you want to delete the mapping for \"{{jobTitle}}\"?",
+    "columnDepartment": "Orchestra(s)",
+    "newDepartmentsNotice": "The following orchestras will be automatically created on import:"
   }
 }

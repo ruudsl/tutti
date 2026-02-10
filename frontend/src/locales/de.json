@@ -1407,7 +1407,7 @@
     "tabUsers": "Benutzer",
     "tabMappings": "Jobbezeichnung-Mappings",
     "entraUsers": "Entra ID Benutzer",
-    "usersDescription": "Benutzer aus Microsoft Entra ID anzeigen und importieren. Die Jobbezeichnung wird verwendet, um automatisch das Instrument zuzuweisen.",
+    "usersDescription": "Benutzer aus Microsoft Entra ID anzeigen und importieren. Die Jobbezeichnung bestimmt das Instrument, die Abteilung bestimmt das Orchester.",
     "refresh": "Aktualisieren",
     "syncExisting": "Bestehende sync.",
     "syncAndCreate": "Sync + neue erstellen",
@@ -1455,6 +1455,8 @@
     "errorCreatingMapping": "Fehler beim Erstellen des Mappings.",
     "errorUpdatingMapping": "Fehler beim Aktualisieren des Mappings.",
     "errorDeletingMapping": "Fehler beim Löschen des Mappings.",
-    "deleteMappingConfirm": "Möchten Sie das Mapping für \"{{jobTitle}}\" wirklich löschen?"
+    "deleteMappingConfirm": "Möchten Sie das Mapping für \"{{jobTitle}}\" wirklich löschen?",
+    "columnDepartment": "Orchester",
+    "newDepartmentsNotice": "Die folgenden Orchester werden beim Import automatisch erstellt:"
   }
 }

@@ -1484,7 +1484,7 @@
     "tabUsers": "Gebruikers",
     "tabMappings": "Functie Mappings",
     "entraUsers": "Entra ID Gebruikers",
-    "usersDescription": "Bekijk en importeer gebruikers vanuit Microsoft Entra ID. De functietitel (job title) wordt gebruikt om automatisch het instrument toe te wijzen.",
+    "usersDescription": "Bekijk en importeer gebruikers vanuit Microsoft Entra ID. De functietitel wordt gebruikt om het instrument toe te wijzen, het department bepaalt het orkest.",
     "refresh": "Vernieuwen",
     "syncExisting": "Sync bestaande",
     "syncAndCreate": "Sync + nieuwe aanmaken",
@@ -1532,6 +1532,8 @@
     "errorCreatingMapping": "Fout bij aanmaken van mapping.",
     "errorUpdatingMapping": "Fout bij bijwerken van mapping.",
     "errorDeletingMapping": "Fout bij verwijderen van mapping.",
-    "deleteMappingConfirm": "Weet je zeker dat je de mapping voor \"{{jobTitle}}\" wilt verwijderen?"
+    "deleteMappingConfirm": "Weet je zeker dat je de mapping voor \"{{jobTitle}}\" wilt verwijderen?",
+    "columnDepartment": "Orkest(en)",
+    "newDepartmentsNotice": "De volgende orkesten worden automatisch aangemaakt bij import:"
   }
 }
