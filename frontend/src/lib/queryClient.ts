@@ -48,4 +48,27 @@ export const queryKeys = {
   // Association
   association: ['association'] as const,
   associations: ['associations'] as const,
+
+  // Equipment
+  equipment: (filters?: Record<string, string>) => ['equipment', filters] as const,
+  equipmentItem: (id: string) => ['equipment', id] as const,
+  equipmentTypes: ['equipment', 'types'] as const,
+  maintenanceAlerts: ['equipment', 'maintenance-alerts'] as const,
+
+  // Uniforms
+  uniformItems: (filters?: Record<string, string>) => ['uniforms', 'items', filters] as const,
+  uniformItem: (id: string) => ['uniforms', 'items', id] as const,
+  uniformSets: ['uniforms', 'sets'] as const,
+  uniformSet: (id: string) => ['uniforms', 'sets', id] as const,
+  uniformItemTypes: ['uniforms', 'item-types'] as const,
+  uniformAvailability: (itemType?: string) => ['uniforms', 'availability', itemType] as const,
+  userUniforms: (userId: string) => ['uniforms', 'user', userId] as const,
+
+  // Concerts
+  concerts: (filters?: Record<string, string>) => ['concerts', filters] as const,
+  concert: (id: string) => ['concerts', id] as const,
+  concertTypes: ['concerts', 'types'] as const,
+  concertYears: ['concerts', 'years'] as const,
+  concertStatistics: ['concerts', 'statistics'] as const,
+  pieceHistory: (title: string) => ['concerts', 'piece-history', title] as const,
 };

@@ -215,3 +215,246 @@ export interface SmtpConfig {
   enabled: boolean;
   configured: boolean;
 }
+
+// ==================== EQUIPMENT (INSTRUMENTENBEHEER) ====================
+
+export interface Equipment {
+  id: string;
+  instrumentType: string;
+  brandModel: string | null;
+  serialNumber: string | null;
+  yearOfManufacture: number | null;
+  status: 'available' | 'on_loan' | 'in_repair' | 'written_off' | 'personal';
+  notes: string | null;
+  maintenanceIntervalMonths: number;
+  lastMaintenanceDate: string | null;
+  nextMaintenanceDate: string | null;
+  purchasePrice: number | null;
+  currentValue: number | null;
+  currentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EquipmentDamageLog {
+  id: string;
+  date: string;
+  description: string;
+  repairCost: number | null;
+  repairedBy: string | null;
+  status: 'reported' | 'in_repair' | 'repaired' | 'written_off';
+  createdAt: string;
+}
+
+export interface EquipmentLoan {
+  id: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  loanDate: string;
+  returnDate: string | null;
+  conditionAtLoan: string | null;
+  conditionAtReturn: string | null;
+  notes: string | null;
+  agreementPdfPath: string | null;
+}
+
+export interface EquipmentDetail extends Equipment {
+  damageLogs: EquipmentDamageLog[];
+  loanHistory: EquipmentLoan[];
+}
+
+export interface MaintenanceAlert {
+  id: string;
+  instrumentType: string;
+  brandModel: string | null;
+  serialNumber: string | null;
+  nextMaintenanceDate: string;
+  isOverdue: boolean;
+  currentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+}
+
+// ==================== UNIFORMS (UNIFORMEN-INVENTARIS) ====================
+
+export interface UniformItem {
+  id: string;
+  itemType: string;
+  sizeStandard: string | null;
+  sizeLength: number | null;
+  sizeWidth: number | null;
+  color: string | null;
+  condition: 'good' | 'fair' | 'poor';
+  status: 'available' | 'issued' | 'in_repair' | 'written_off';
+  notes: string | null;
+  purchaseDate: string | null;
+  purchasePrice: number | null;
+  currentUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UniformAssignment {
+  id: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  assignedDate: string;
+  returnedDate: string | null;
+  conditionAtAssignment: string | null;
+  conditionAtReturn: string | null;
+  notes: string | null;
+}
+
+export interface UniformItemDetail extends UniformItem {
+  assignmentHistory: UniformAssignment[];
+}
+
+export interface UniformSetRequirement {
+  id: string;
+  itemType: string;
+  quantity: number;
+}
+
+export interface UniformSet {
+  id: string;
+  name: string;
+  description: string | null;
+  requirements: UniformSetRequirement[];
+  createdAt: string;
+}
+
+export interface UniformItemType {
+  value: string;
+  label: string;
+}
+
+export interface UniformSizeAvailability {
+  itemType: string;
+  sizeStandard: string;
+  count: number;
+}
+
+// ==================== CONCERTS (CONCERT-ARCHIEF) ====================
+
+export interface Concert {
+  id: string;
+  name: string;
+  date: string;
+  endDate: string | null;
+  location: string | null;
+  venueType: string | null;
+  concertType: string | null;
+  description: string | null;
+  notes: string | null;
+  programCount: number;
+  attendanceCount: number;
+  mediaCount: number;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConcertProgramItem {
+  id: string;
+  musicTitleId: string | null;
+  title: string;
+  arranger: string | null;
+  sortOrder: number;
+  notes: string | null;
+  partOfSet: string | null;
+  youtubeUrl?: string | null;
+  durationSeconds?: number | null;
+}
+
+export interface ConcertMedia {
+  id: string;
+  mediaType: string;
+  url: string | null;
+  filePath: string | null;
+  description: string | null;
+  uploadedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface ConcertAttendance {
+  id: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  memberName: string;
+  instrumentPlayed: string | null;
+  notes: string | null;
+}
+
+export interface ConcertDetail extends Omit<Concert, 'programCount' | 'attendanceCount' | 'mediaCount'> {
+  program: ConcertProgramItem[];
+  media: ConcertMedia[];
+  attendance: ConcertAttendance[];
+}
+
+export interface ConcertStatistics {
+  totalConcerts: number;
+  concertsPerYear: { year: string; count: number }[];
+  mostPlayedPieces: { title: string; playCount: number; lastPlayed: string }[];
+  concertsPerType: { type: string; count: number }[];
+}
+
+export interface PieceHistory {
+  title: string;
+  playCount: number;
+  lastPlayed: string | null;
+  history: {
+    concertId: string;
+    concertName: string;
+    date: string;
+    location: string | null;
+    notes: string | null;
+  }[];
+}
+
+export interface ConcertType {
+  value: string;
+  label: string;
+}
+
+export interface VenueType {
+  value: string;
+  label: string;
+}
+
+export interface MediaType {
+  value: string;
+  label: string;
+}

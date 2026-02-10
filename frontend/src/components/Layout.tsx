@@ -114,12 +114,14 @@ export default function Layout() {
   const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
 
   // Check if current path is in a dropdown group
-  const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload'];
+  const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/concerts'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
+  const inventarisPaths = ['/equipment', '/uniforms'];
   const adminPaths = ['/users', '/orchestras', '/settings', '/theme', '/changelog'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
+  const isInventarisActive = inventarisPaths.some(p => location.pathname.startsWith(p));
   const isAdminActive = adminPaths.some(p => location.pathname.startsWith(p));
 
   return (
@@ -206,6 +208,11 @@ export default function Layout() {
                       {t('nav.upload')}
                     </NavLink>
                   </li>
+                  <li role="none">
+                    <NavLink to="/concerts" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                      {t('nav.concerts')}
+                    </NavLink>
+                  </li>
                 </NavDropdown>
 
                 <NavDropdown label={t('nav.management')} isActive={isBeheerActive}>
@@ -236,6 +243,21 @@ export default function Layout() {
                   </li>
                 </NavDropdown>
               </>
+            )}
+
+            {isAdmin && (
+              <NavDropdown label={t('nav.inventory')} isActive={isInventarisActive}>
+                <li role="none">
+                  <NavLink to="/equipment" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.equipment')}
+                  </NavLink>
+                </li>
+                <li role="none">
+                  <NavLink to="/uniforms" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.uniforms')}
+                  </NavLink>
+                </li>
+              </NavDropdown>
             )}
 
             {isAdmin && (

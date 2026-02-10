@@ -34,6 +34,9 @@ import ThemeSettings from './pages/ThemeSettings';
 import Rehearsals from './pages/Rehearsals';
 import MicrosoftCallback from './pages/MicrosoftCallback';
 import Changelog from './pages/Changelog';
+import Equipment from './pages/Equipment';
+import Uniforms from './pages/Uniforms';
+import Concerts from './pages/Concerts';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -252,6 +255,30 @@ function AppRoutes() {
           element={
             <PrivateRoute>
               <Rehearsals />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="equipment"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Equipment />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="uniforms"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Uniforms />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="concerts"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <Concerts />
             </PrivateRoute>
           }
         />

@@ -337,4 +337,206 @@ CREATE INDEX IF NOT EXISTS idx_rehearsals_association ON rehearsals(association_
 CREATE INDEX IF NOT EXISTS idx_rehearsals_date ON rehearsals(date);
 CREATE INDEX IF NOT EXISTS idx_rehearsal_pieces_rehearsal ON rehearsal_pieces(rehearsal_id);
 CREATE INDEX IF NOT EXISTS idx_rehearsal_attendance_rehearsal ON rehearsal_attendance(rehearsal_id);
+
+-- ===========================================
+-- INSTRUMENTENBEHEER (Equipment Management)
+-- ===========================================
+
+-- Fysieke instrumenten (bruikleen-inventaris)
+CREATE TABLE IF NOT EXISTS equipment (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    instrument_type TEXT NOT NULL,
+    brand_model TEXT,
+    serial_number TEXT,
+    year_of_manufacture INTEGER,
+    status TEXT NOT NULL DEFAULT 'available',
+    current_user_id TEXT,
+    notes TEXT,
+    maintenance_interval_months INTEGER DEFAULT 12,
+    last_maintenance_date TEXT,
+    next_maintenance_date TEXT,
+    purchase_price REAL,
+    current_value REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (current_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Schade/reparatie logboek voor instrumenten
+CREATE TABLE IF NOT EXISTS equipment_damage_logs (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    description TEXT NOT NULL,
+    repair_cost REAL,
+    repaired_by TEXT,
+    status TEXT DEFAULT 'reported',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE CASCADE
+);
+
+-- Bruikleen-historie voor instrumenten
+CREATE TABLE IF NOT EXISTS equipment_loans (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    loan_date TEXT NOT NULL,
+    return_date TEXT,
+    condition_at_loan TEXT,
+    condition_at_return TEXT,
+    notes TEXT,
+    agreement_pdf_path TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_association ON equipment(association_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_user ON equipment(current_user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_damage_equipment ON equipment_damage_logs(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_equipment ON equipment_loans(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_user ON equipment_loans(user_id);
+
+-- ===========================================
+-- UNIFORMEN-INVENTARIS (Uniform Management)
+-- ===========================================
+
+-- Uniform onderdelen
+CREATE TABLE IF NOT EXISTS uniform_items (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    size_standard TEXT,
+    size_length INTEGER,
+    size_width INTEGER,
+    color TEXT,
+    condition TEXT DEFAULT 'good',
+    status TEXT DEFAULT 'available',
+    current_user_id TEXT,
+    notes TEXT,
+    purchase_date TEXT,
+    purchase_price REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (current_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Uniform sets (bijv. Concert Set A, Mars Set B)
+CREATE TABLE IF NOT EXISTS uniform_sets (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Onderdelen die in een set horen
+CREATE TABLE IF NOT EXISTS uniform_set_requirements (
+    id TEXT PRIMARY KEY,
+    set_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    FOREIGN KEY (set_id) REFERENCES uniform_sets(id) ON DELETE CASCADE
+);
+
+-- Uitgifte-historie voor uniformen
+CREATE TABLE IF NOT EXISTS uniform_assignments (
+    id TEXT PRIMARY KEY,
+    uniform_item_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    assigned_date TEXT NOT NULL,
+    returned_date TEXT,
+    condition_at_assignment TEXT,
+    condition_at_return TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (uniform_item_id) REFERENCES uniform_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_uniform_items_association ON uniform_items(association_id);
+CREATE INDEX IF NOT EXISTS idx_uniform_items_type ON uniform_items(item_type);
+CREATE INDEX IF NOT EXISTS idx_uniform_items_status ON uniform_items(status);
+CREATE INDEX IF NOT EXISTS idx_uniform_items_user ON uniform_items(current_user_id);
+CREATE INDEX IF NOT EXISTS idx_uniform_sets_association ON uniform_sets(association_id);
+CREATE INDEX IF NOT EXISTS idx_uniform_assignments_item ON uniform_assignments(uniform_item_id);
+CREATE INDEX IF NOT EXISTS idx_uniform_assignments_user ON uniform_assignments(user_id);
+
+-- ===========================================
+-- CONCERT-ARCHIEF (Concert Archive)
+-- ===========================================
+
+-- Concerten
+CREATE TABLE IF NOT EXISTS concerts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL,
+    end_date TEXT,
+    location TEXT,
+    venue_type TEXT,
+    concert_type TEXT,
+    description TEXT,
+    notes TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Concert programma (gespeelde stukken)
+CREATE TABLE IF NOT EXISTS concert_program (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    music_title_id TEXT,
+    title TEXT NOT NULL,
+    arranger TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    part_of_set TEXT,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+-- Concert media (foto's, video's, audio, posters)
+CREATE TABLE IF NOT EXISTS concert_media (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    url TEXT,
+    file_path TEXT,
+    description TEXT,
+    uploaded_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Concert bezetting (wie speelde mee)
+CREATE TABLE IF NOT EXISTS concert_attendance (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    user_id TEXT,
+    member_name TEXT NOT NULL,
+    instrument_played TEXT,
+    notes TEXT,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(concert_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_concerts_association ON concerts(association_id);
+CREATE INDEX IF NOT EXISTS idx_concerts_date ON concerts(date);
+CREATE INDEX IF NOT EXISTS idx_concerts_type ON concerts(concert_type);
+CREATE INDEX IF NOT EXISTS idx_concert_program_concert ON concert_program(concert_id);
+CREATE INDEX IF NOT EXISTS idx_concert_program_title ON concert_program(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_concert_media_concert ON concert_media(concert_id);
+CREATE INDEX IF NOT EXISTS idx_concert_attendance_concert ON concert_attendance(concert_id);
+CREATE INDEX IF NOT EXISTS idx_concert_attendance_user ON concert_attendance(user_id);
 `;

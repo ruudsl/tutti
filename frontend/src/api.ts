@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, VenueType, MediaType } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -916,6 +916,405 @@ export const searchMusicaInfo = async (query: string): Promise<{
 export const getMusicaInfoDetail = async (artnr: string): Promise<MusicaInfoDetail> => {
   const { data } = await api.get('/musicainfo/detail', { params: { artnr } });
   return data;
+};
+
+// ==================== EQUIPMENT (INSTRUMENTENBEHEER) ====================
+
+export const getEquipmentTypes = async (): Promise<string[]> => {
+  const { data } = await api.get('/equipment/types');
+  return data;
+};
+
+export const getMaintenanceAlerts = async (): Promise<MaintenanceAlert[]> => {
+  const { data } = await api.get('/equipment/maintenance-alerts');
+  return data;
+};
+
+export const getEquipment = async (filters?: {
+  search?: string;
+  status?: string;
+  type?: string;
+}): Promise<{ data: Equipment[]; total: number; page: number; limit: number }> => {
+  const { data } = await api.get('/equipment', { params: filters });
+  return data;
+};
+
+export const getEquipmentItem = async (id: string): Promise<EquipmentDetail> => {
+  const { data } = await api.get(`/equipment/${id}`);
+  return data;
+};
+
+export const createEquipment = async (equipment: {
+  instrumentType: string;
+  brandModel?: string;
+  serialNumber?: string;
+  yearOfManufacture?: number;
+  status?: string;
+  currentUserId?: string | null;
+  notes?: string;
+  maintenanceIntervalMonths?: number;
+  lastMaintenanceDate?: string;
+  purchasePrice?: number;
+  currentValue?: number;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post('/equipment', equipment);
+  return data;
+};
+
+export const updateEquipment = async (id: string, equipment: {
+  instrumentType?: string;
+  brandModel?: string;
+  serialNumber?: string;
+  yearOfManufacture?: number;
+  status?: string;
+  currentUserId?: string | null;
+  notes?: string;
+  maintenanceIntervalMonths?: number;
+  lastMaintenanceDate?: string;
+  purchasePrice?: number;
+  currentValue?: number;
+}): Promise<void> => {
+  await api.put(`/equipment/${id}`, equipment);
+};
+
+export const deleteEquipment = async (id: string): Promise<void> => {
+  await api.delete(`/equipment/${id}`);
+};
+
+export const addEquipmentDamageLog = async (equipmentId: string, log: {
+  date: string;
+  description: string;
+  repairCost?: number;
+  repairedBy?: string;
+  status?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/equipment/${equipmentId}/damage-logs`, log);
+  return data;
+};
+
+export const updateEquipmentDamageLog = async (equipmentId: string, logId: string, log: {
+  date?: string;
+  description?: string;
+  repairCost?: number;
+  repairedBy?: string;
+  status?: string;
+}): Promise<void> => {
+  await api.put(`/equipment/${equipmentId}/damage-logs/${logId}`, log);
+};
+
+export const deleteEquipmentDamageLog = async (equipmentId: string, logId: string): Promise<void> => {
+  await api.delete(`/equipment/${equipmentId}/damage-logs/${logId}`);
+};
+
+export const createEquipmentLoan = async (equipmentId: string, loan: {
+  userId: string;
+  loanDate: string;
+  conditionAtLoan?: string;
+  notes?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/equipment/${equipmentId}/loans`, loan);
+  return data;
+};
+
+export const returnEquipmentLoan = async (equipmentId: string, loanId: string, returnData: {
+  returnDate: string;
+  conditionAtReturn?: string;
+}): Promise<void> => {
+  await api.post(`/equipment/${equipmentId}/loans/${loanId}/return`, returnData);
+};
+
+export const recordEquipmentMaintenance = async (equipmentId: string, maintenance: {
+  date?: string;
+  notes?: string;
+}): Promise<{ nextMaintenanceDate: string }> => {
+  const { data } = await api.post(`/equipment/${equipmentId}/record-maintenance`, maintenance);
+  return data;
+};
+
+// ==================== UNIFORMS (UNIFORMEN-INVENTARIS) ====================
+
+export const getUniformItemTypes = async (): Promise<UniformItemType[]> => {
+  const { data } = await api.get('/uniforms/item-types');
+  return data;
+};
+
+export const searchUniformsBySize = async (size: string, itemType?: string): Promise<UniformItem[]> => {
+  const { data } = await api.get('/uniforms/size-search', { params: { size, itemType } });
+  return data;
+};
+
+export const getUniformAvailabilityBySize = async (itemType?: string): Promise<UniformSizeAvailability[]> => {
+  const { data } = await api.get('/uniforms/available-by-size', { params: { itemType } });
+  return data;
+};
+
+export const getUniformItems = async (filters?: {
+  search?: string;
+  status?: string;
+  itemType?: string;
+  size?: string;
+}): Promise<{ data: UniformItem[]; total: number; page: number; limit: number }> => {
+  const { data } = await api.get('/uniforms/items', { params: filters });
+  return data;
+};
+
+export const getUniformItem = async (id: string): Promise<UniformItemDetail> => {
+  const { data } = await api.get(`/uniforms/items/${id}`);
+  return data;
+};
+
+export const createUniformItem = async (item: {
+  itemType: string;
+  sizeStandard?: string;
+  sizeLength?: number;
+  sizeWidth?: number;
+  color?: string;
+  condition?: string;
+  status?: string;
+  currentUserId?: string | null;
+  notes?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post('/uniforms/items', item);
+  return data;
+};
+
+export const createUniformItemsBulk = async (item: {
+  itemType: string;
+  sizeStandard?: string;
+  sizeLength?: number;
+  sizeWidth?: number;
+  color?: string;
+  condition?: string;
+  status?: string;
+  notes?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  count: number;
+}): Promise<{ ids: string[]; count: number }> => {
+  const { data } = await api.post('/uniforms/items/bulk', item);
+  return data;
+};
+
+export const updateUniformItem = async (id: string, item: {
+  itemType?: string;
+  sizeStandard?: string;
+  sizeLength?: number;
+  sizeWidth?: number;
+  color?: string;
+  condition?: string;
+  status?: string;
+  currentUserId?: string | null;
+  notes?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+}): Promise<void> => {
+  await api.put(`/uniforms/items/${id}`, item);
+};
+
+export const deleteUniformItem = async (id: string): Promise<void> => {
+  await api.delete(`/uniforms/items/${id}`);
+};
+
+export const assignUniformItem = async (itemId: string, assignment: {
+  userId: string;
+  assignedDate: string;
+  conditionAtAssignment?: string;
+  notes?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/uniforms/items/${itemId}/assign`, assignment);
+  return data;
+};
+
+export const returnUniformItem = async (itemId: string, returnData: {
+  returnedDate: string;
+  conditionAtReturn?: string;
+}): Promise<void> => {
+  await api.post(`/uniforms/items/${itemId}/return`, returnData);
+};
+
+export const getUniformSets = async (): Promise<UniformSet[]> => {
+  const { data } = await api.get('/uniforms/sets');
+  return data;
+};
+
+export const getUniformSet = async (id: string): Promise<UniformSet> => {
+  const { data } = await api.get(`/uniforms/sets/${id}`);
+  return data;
+};
+
+export const createUniformSet = async (set: {
+  name: string;
+  description?: string;
+  requirements?: { itemType: string; quantity: number }[];
+}): Promise<{ id: string }> => {
+  const { data } = await api.post('/uniforms/sets', set);
+  return data;
+};
+
+export const updateUniformSet = async (id: string, set: {
+  name?: string;
+  description?: string;
+  requirements?: { itemType: string; quantity: number }[];
+}): Promise<void> => {
+  await api.put(`/uniforms/sets/${id}`, set);
+};
+
+export const deleteUniformSet = async (id: string): Promise<void> => {
+  await api.delete(`/uniforms/sets/${id}`);
+};
+
+export const getUserUniforms = async (userId: string): Promise<UniformItem[]> => {
+  const { data } = await api.get(`/uniforms/user/${userId}`);
+  return data;
+};
+
+// ==================== CONCERTS (CONCERT-ARCHIEF) ====================
+
+export const getConcertTypes = async (): Promise<{
+  concertTypes: ConcertType[];
+  venueTypes: VenueType[];
+  mediaTypes: MediaType[];
+}> => {
+  const { data } = await api.get('/concerts/types');
+  return data;
+};
+
+export const getConcertStatistics = async (): Promise<ConcertStatistics> => {
+  const { data } = await api.get('/concerts/statistics');
+  return data;
+};
+
+export const getPieceHistory = async (title: string): Promise<PieceHistory> => {
+  const { data } = await api.get(`/concerts/piece-history/${encodeURIComponent(title)}`);
+  return data;
+};
+
+export const getConcerts = async (filters?: {
+  search?: string;
+  year?: string;
+  concertType?: string;
+}): Promise<{ data: Concert[]; total: number; page: number; limit: number }> => {
+  const { data } = await api.get('/concerts', { params: filters });
+  return data;
+};
+
+export const getConcertYears = async (): Promise<string[]> => {
+  const { data } = await api.get('/concerts/years');
+  return data;
+};
+
+export const getConcert = async (id: string): Promise<ConcertDetail> => {
+  const { data } = await api.get(`/concerts/${id}`);
+  return data;
+};
+
+export const createConcert = async (concert: {
+  name: string;
+  date: string;
+  endDate?: string;
+  location?: string;
+  venueType?: string;
+  concertType?: string;
+  description?: string;
+  notes?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post('/concerts', concert);
+  return data;
+};
+
+export const updateConcert = async (id: string, concert: {
+  name?: string;
+  date?: string;
+  endDate?: string;
+  location?: string;
+  venueType?: string;
+  concertType?: string;
+  description?: string;
+  notes?: string;
+}): Promise<void> => {
+  await api.put(`/concerts/${id}`, concert);
+};
+
+export const deleteConcert = async (id: string): Promise<void> => {
+  await api.delete(`/concerts/${id}`);
+};
+
+export const addConcertProgramItem = async (concertId: string, item: {
+  musicTitleId?: string | null;
+  title: string;
+  arranger?: string;
+  sortOrder?: number;
+  notes?: string;
+  partOfSet?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/concerts/${concertId}/program`, item);
+  return data;
+};
+
+export const updateConcertProgramItem = async (concertId: string, programId: string, item: {
+  musicTitleId?: string | null;
+  title?: string;
+  arranger?: string;
+  sortOrder?: number;
+  notes?: string;
+  partOfSet?: string;
+}): Promise<void> => {
+  await api.put(`/concerts/${concertId}/program/${programId}`, item);
+};
+
+export const deleteConcertProgramItem = async (concertId: string, programId: string): Promise<void> => {
+  await api.delete(`/concerts/${concertId}/program/${programId}`);
+};
+
+export const reorderConcertProgram = async (concertId: string, items: { id: string; sortOrder: number }[]): Promise<void> => {
+  await api.put(`/concerts/${concertId}/program/reorder`, { items });
+};
+
+export const exportConcertProgram = async (concertId: string): Promise<string> => {
+  const { data } = await api.get(`/concerts/${concertId}/program/export`, { responseType: 'text' });
+  return data;
+};
+
+export const addConcertMedia = async (concertId: string, media: {
+  mediaType: string;
+  url?: string;
+  description?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/concerts/${concertId}/media`, media);
+  return data;
+};
+
+export const deleteConcertMedia = async (concertId: string, mediaId: string): Promise<void> => {
+  await api.delete(`/concerts/${concertId}/media/${mediaId}`);
+};
+
+export const addConcertAttendance = async (concertId: string, attendance: {
+  userId?: string | null;
+  memberName: string;
+  instrumentPlayed?: string;
+  notes?: string;
+}): Promise<{ id: string }> => {
+  const { data } = await api.post(`/concerts/${concertId}/attendance`, attendance);
+  return data;
+};
+
+export const addConcertAttendanceBulk = async (concertId: string, userIds: string[]): Promise<{ ids: string[]; count: number }> => {
+  const { data } = await api.post(`/concerts/${concertId}/attendance/bulk`, { userIds });
+  return data;
+};
+
+export const updateConcertAttendance = async (concertId: string, attendanceId: string, attendance: {
+  memberName?: string;
+  instrumentPlayed?: string;
+  notes?: string;
+}): Promise<void> => {
+  await api.put(`/concerts/${concertId}/attendance/${attendanceId}`, attendance);
+};
+
+export const deleteConcertAttendance = async (concertId: string, attendanceId: string): Promise<void> => {
+  await api.delete(`/concerts/${concertId}/attendance/${attendanceId}`);
 };
 
 export default api;

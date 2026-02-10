@@ -40,6 +40,9 @@ import rehearsalRoutes from './routes/rehearsals';
 import spondRoutes from './routes/spond';
 import microsoftAuthRoutes from './routes/microsoft-auth';
 import musicaInfoRoutes from './routes/musicainfo';
+import equipmentRoutes from './routes/equipment';
+import uniformsRoutes from './routes/uniforms';
+import concertsRoutes from './routes/concerts';
 
 const app = express();
 
@@ -99,6 +102,9 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
 app.use('/api/musicainfo', musicaInfoRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/uniforms', uniformsRoutes);
+app.use('/api/concerts', concertsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
