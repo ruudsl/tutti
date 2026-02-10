@@ -69,6 +69,8 @@
   "roles": {
     "admin": "Beheerder",
     "music_committee": "Muziekcommissie",
+    "equipment_committee": "Instrumentencommissie",
+    "uniforms_committee": "Uniformencommissie",
     "conductor": "Dirigent",
     "member": "Lid"
   },

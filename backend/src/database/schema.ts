@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, conductor, member
+    role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, equipment_committee, uniforms_committee, conductor, member
     association_id TEXT,
     mfa_secret TEXT, -- TOTP secret for MFA
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled

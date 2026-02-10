@@ -302,7 +302,7 @@ router.get('/items/:id', authenticateToken, asyncHandler(async (req: AuthRequest
  *     summary: Create new uniform item
  *     tags: [Uniforms]
  */
-router.post('/items', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/items', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createUniformItemSchema.parse(req.body);
 
     const id = uuidv4();
@@ -334,7 +334,7 @@ router.post('/items', authenticateToken, requireRole('admin', 'music_committee')
  *     summary: Create multiple uniform items at once
  *     tags: [Uniforms]
  */
-router.post('/items/bulk', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/items/bulk', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { count, ...itemData } = req.body;
     const data = createUniformItemSchema.parse(itemData);
     const quantity = Math.min(Math.max(1, count || 1), 100); // Max 100 items at once
@@ -377,7 +377,7 @@ router.post('/items/bulk', authenticateToken, requireRole('admin', 'music_commit
  *     summary: Update uniform item
  *     tags: [Uniforms]
  */
-router.put('/items/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/items/:id', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateUniformItemSchema.parse(req.body);
 
     const existing = db.prepare('SELECT * FROM uniform_items WHERE id = ? AND association_id = ?')
@@ -444,7 +444,7 @@ router.delete('/items/:id', authenticateToken, requireRole('admin'), asyncHandle
  *     summary: Assign uniform item to user
  *     tags: [Uniforms]
  */
-router.post('/items/:id/assign', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/items/:id/assign', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAssignmentSchema.parse(req.body);
 
     const item = db.prepare('SELECT * FROM uniform_items WHERE id = ? AND association_id = ?')
@@ -486,7 +486,7 @@ router.post('/items/:id/assign', authenticateToken, requireRole('admin', 'music_
  *     summary: Return uniform item
  *     tags: [Uniforms]
  */
-router.post('/items/:id/return', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/items/:id/return', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = returnAssignmentSchema.parse(req.body);
 
     const assignment = db.prepare(`
@@ -605,7 +605,7 @@ router.get('/sets/:id', authenticateToken, asyncHandler(async (req: AuthRequest,
  *     summary: Create new uniform set
  *     tags: [Uniforms]
  */
-router.post('/sets', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/sets', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createUniformSetSchema.parse(req.body);
 
     const id = uuidv4();
@@ -642,7 +642,7 @@ router.post('/sets', authenticateToken, requireRole('admin', 'music_committee'),
  *     summary: Update uniform set
  *     tags: [Uniforms]
  */
-router.put('/sets/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/sets/:id', authenticateToken, requireRole('admin', 'uniforms_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateUniformSetSchema.parse(req.body);
 
     const existing = db.prepare('SELECT * FROM uniform_sets WHERE id = ? AND association_id = ?')

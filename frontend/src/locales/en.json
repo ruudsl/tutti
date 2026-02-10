@@ -69,6 +69,8 @@
   "roles": {
     "admin": "Administrator",
     "music_committee": "Music Committee",
+    "equipment_committee": "Equipment Committee",
+    "uniforms_committee": "Uniforms Committee",
     "conductor": "Conductor",
     "member": "Member"
   },

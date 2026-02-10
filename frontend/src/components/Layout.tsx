@@ -112,6 +112,8 @@ export default function Layout() {
 
   const isAdmin = user?.role === ROLES.ADMIN;
   const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
+  const isEquipmentCommittee = user?.role === ROLES.EQUIPMENT_COMMITTEE || isAdmin;
+  const isUniformsCommittee = user?.role === ROLES.UNIFORMS_COMMITTEE || isAdmin;
 
   // Check if current path is in a dropdown group
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/concerts'];
@@ -245,18 +247,22 @@ export default function Layout() {
               </>
             )}
 
-            {isAdmin && (
+            {(isEquipmentCommittee || isUniformsCommittee) && (
               <NavDropdown label={t('nav.inventory')} isActive={isInventarisActive}>
-                <li role="none">
-                  <NavLink to="/equipment" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                    {t('nav.equipment')}
-                  </NavLink>
-                </li>
-                <li role="none">
-                  <NavLink to="/uniforms" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
-                    {t('nav.uniforms')}
-                  </NavLink>
-                </li>
+                {isEquipmentCommittee && (
+                  <li role="none">
+                    <NavLink to="/equipment" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                      {t('nav.equipment')}
+                    </NavLink>
+                  </li>
+                )}
+                {isUniformsCommittee && (
+                  <li role="none">
+                    <NavLink to="/uniforms" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                      {t('nav.uniforms')}
+                    </NavLink>
+                  </li>
+                )}
               </NavDropdown>
             )}
 

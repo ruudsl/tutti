@@ -275,7 +275,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  *     summary: Create new equipment
  *     tags: [Equipment]
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createEquipmentSchema.parse(req.body);
 
     const id = uuidv4();
@@ -317,7 +317,7 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
  *     summary: Update equipment
  *     tags: [Equipment]
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateEquipmentSchema.parse(req.body);
 
     const existing = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')
@@ -396,7 +396,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
  *     summary: Add damage log entry
  *     tags: [Equipment]
  */
-router.post('/:id/damage-logs', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/:id/damage-logs', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createDamageLogSchema.parse(req.body);
 
     const equipment = db.prepare('SELECT id FROM equipment WHERE id = ? AND association_id = ?')
@@ -430,7 +430,7 @@ router.post('/:id/damage-logs', authenticateToken, requireRole('admin', 'music_c
  *     summary: Update damage log entry
  *     tags: [Equipment]
  */
-router.put('/:id/damage-logs/:logId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id/damage-logs/:logId', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createDamageLogSchema.partial().parse(req.body);
 
     const log = db.prepare(`
@@ -496,7 +496,7 @@ router.delete('/:id/damage-logs/:logId', authenticateToken, requireRole('admin')
  *     summary: Create equipment loan (lend out instrument)
  *     tags: [Equipment]
  */
-router.post('/:id/loans', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/:id/loans', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createEquipmentLoanSchema.parse(req.body);
 
     const equipment = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')
@@ -538,7 +538,7 @@ router.post('/:id/loans', authenticateToken, requireRole('admin', 'music_committ
  *     summary: Return equipment loan
  *     tags: [Equipment]
  */
-router.post('/:id/loans/:loanId/return', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/:id/loans/:loanId/return', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = returnEquipmentLoanSchema.parse(req.body);
 
     const loan = db.prepare(`
@@ -573,7 +573,7 @@ router.post('/:id/loans/:loanId/return', authenticateToken, requireRole('admin',
  *     summary: Record maintenance performed
  *     tags: [Equipment]
  */
-router.post('/:id/record-maintenance', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/:id/record-maintenance', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, notes } = req.body;
 
     const equipment = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')

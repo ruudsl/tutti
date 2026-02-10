@@ -3,7 +3,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'music_committee' | 'conductor' | 'member';
+  role: 'admin' | 'music_committee' | 'equipment_committee' | 'uniforms_committee' | 'conductor' | 'member';
   associationId: string | null;
   associationName?: string;
   mfaEnabled?: boolean;

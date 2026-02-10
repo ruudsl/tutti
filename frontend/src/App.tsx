@@ -261,7 +261,7 @@ function AppRoutes() {
         <Route
           path="equipment"
           element={
-            <PrivateRoute roles={[ROLES.ADMIN]}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
               <Equipment />
             </PrivateRoute>
           }
@@ -269,7 +269,7 @@ function AppRoutes() {
         <Route
           path="uniforms"
           element={
-            <PrivateRoute roles={[ROLES.ADMIN]}>
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE]}>
               <Uniforms />
             </PrivateRoute>
           }
