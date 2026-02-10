@@ -1261,7 +1261,13 @@
     "neverPlayed": "Nog nooit gespeeld",
     "whenLastPlayed": "Wanneer hebben we dit stuk gespeeld?",
     "searchPieceHistory": "Zoek op titel...",
-    "deleteConfirm": "Weet je zeker dat je dit concert wilt verwijderen?"
+    "deleteConfirm": "Weet je zeker dat je dit concert wilt verwijderen?",
+    "bumaStemraExport": "Buma/Stemra Export",
+    "bumaStemraDescription": "Genereer een CSV-bestand met alle gespeelde stukken in de geselecteerde periode. Dit overzicht bevat per stuk de componist, arrangeur en speelduur, geschikt voor aangifte bij Buma/Stemra.",
+    "startDate": "Van datum",
+    "endDateExport": "Tot datum",
+    "downloadExport": "Download CSV",
+    "composer": "Componist"
   },
   "nav": {
     "dashboard": "Dashboard",

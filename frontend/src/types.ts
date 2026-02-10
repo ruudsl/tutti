@@ -383,6 +383,7 @@ export interface ConcertProgramItem {
   id: string;
   musicTitleId: string | null;
   title: string;
+  composer: string | null;
   arranger: string | null;
   sortOrder: number;
   notes: string | null;

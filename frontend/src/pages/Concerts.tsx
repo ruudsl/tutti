@@ -17,6 +17,7 @@ import {
   useAddConcertAttendanceBulk,
   useDeleteConcertAttendance,
   useExportConcertProgram,
+  useExportBumaStemra,
 } from '../hooks/useConcerts';
 import { useUsers } from '../hooks/useUsers';
 import { useMusicTitles } from '../hooks/useMusicTitles';
@@ -46,7 +47,14 @@ export default function Concerts() {
   const [showAddProgramModal, setShowAddProgramModal] = useState(false);
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showAddAttendanceModal, setShowAddAttendanceModal] = useState(false);
+  const [showBumaStemraModal, setShowBumaStemraModal] = useState(false);
   const [searchTitle, setSearchTitle] = useState('');
+
+  // Buma/Stemra export state - default to last year
+  const today = new Date();
+  const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+  const [bumaStemraStartDate, setBumaStemraStartDate] = useState(oneYearAgo.toISOString().split('T')[0]);
+  const [bumaStemraEndDate, setBumaStemraEndDate] = useState(today.toISOString().split('T')[0]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -101,6 +109,7 @@ export default function Concerts() {
   const addAttendanceMutation = useAddConcertAttendanceBulk();
   const deleteAttendanceMutation = useDeleteConcertAttendance();
   const exportProgramMutation = useExportConcertProgram();
+  const exportBumaStemraMutation = useExportBumaStemra();
 
   const concerts = concertsData?.data || [];
   const concertTypes = typesData?.concertTypes || [];
@@ -203,6 +212,15 @@ export default function Concerts() {
     });
     setShowAddAttendanceModal(false);
     setSelectedUserIds([]);
+  };
+
+  const handleExportBumaStemra = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await exportBumaStemraMutation.mutateAsync({
+      startDate: bumaStemraStartDate,
+      endDate: bumaStemraEndDate,
+    });
+    setShowBumaStemraModal(false);
   };
 
   const openEditModal = (concert: Concert) => {
@@ -383,7 +401,15 @@ export default function Concerts() {
       {activeTab === 'statistics' && statistics && (
         <div className="card">
           <div className="card-body">
-            <h3 style={{ marginTop: 0 }}>{t('concerts.statistics')}</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 style={{ margin: 0 }}>{t('concerts.statistics')}</h3>
+              <button
+                className="btn btn-outline"
+                onClick={() => setShowBumaStemraModal(true)}
+              >
+                {t('concerts.bumaStemraExport')}
+              </button>
+            </div>
             <div className="flex gap-3 mb-3">
               <div className="card" style={{ flex: 1, padding: '1rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{statistics.totalConcerts}</div>
@@ -828,6 +854,43 @@ export default function Concerts() {
               ))}
             </div>
             <small style={{ color: '#666' }}>{selectedUserIds.length} geselecteerd</small>
+          </div>
+        </FormModal>
+      )}
+
+      {/* Buma/Stemra Export Modal */}
+      {showBumaStemraModal && (
+        <FormModal
+          title={t('concerts.bumaStemraExport')}
+          onClose={() => setShowBumaStemraModal(false)}
+          onSubmit={handleExportBumaStemra}
+          isSubmitting={exportBumaStemraMutation.isPending}
+          submitLabel={t('concerts.downloadExport')}
+        >
+          <p style={{ marginBottom: '1rem', color: '#666' }}>
+            {t('concerts.bumaStemraDescription')}
+          </p>
+          <div className="flex gap-2">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('concerts.startDate')}</label>
+              <input
+                type="date"
+                className="form-control"
+                value={bumaStemraStartDate}
+                onChange={(e) => setBumaStemraStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('concerts.endDateExport')}</label>
+              <input
+                type="date"
+                className="form-control"
+                value={bumaStemraEndDate}
+                onChange={(e) => setBumaStemraEndDate(e.target.value)}
+                required
+              />
+            </div>
           </div>
         </FormModal>
       )}

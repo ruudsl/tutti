@@ -411,6 +411,31 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add composer column to music_titles and concert_program (for Buma/Stemra export)
+    try {
+        const titleTableInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasComposer = titleTableInfo.some(col => col.name === 'composer');
+        if (!hasComposer) {
+            console.log('Migration: Adding composer column to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN composer TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    try {
+        const programTableInfo = db.prepare("PRAGMA table_info(concert_program)").all() as { name: string }[];
+        const hasComposer = programTableInfo.some(col => col.name === 'composer');
+        if (!hasComposer) {
+            console.log('Migration: Adding composer column to concert_program...');
+            db.prepare('ALTER TABLE concert_program ADD COLUMN composer TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS music_list_pieces (
 CREATE TABLE IF NOT EXISTS music_titles (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
+    composer TEXT, -- Componist (voor Buma/Stemra)
     arranger TEXT,
     youtube_url TEXT,
     description TEXT,
@@ -496,6 +497,7 @@ CREATE TABLE IF NOT EXISTS concert_program (
     concert_id TEXT NOT NULL,
     music_title_id TEXT,
     title TEXT NOT NULL,
+    composer TEXT, -- Componist (voor Buma/Stemra)
     arranger TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     notes TEXT,

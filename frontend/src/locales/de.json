@@ -1260,7 +1260,13 @@
     "neverPlayed": "Noch nie gespielt",
     "whenLastPlayed": "Wann haben wir dieses Stück gespielt?",
     "searchPieceHistory": "Suche nach Titel...",
-    "deleteConfirm": "Möchten Sie dieses Konzert wirklich löschen?"
+    "deleteConfirm": "Möchten Sie dieses Konzert wirklich löschen?",
+    "bumaStemraExport": "Buma/Stemra Export",
+    "bumaStemraDescription": "Generieren Sie eine CSV-Datei mit allen gespielten Stücken im ausgewählten Zeitraum. Diese Übersicht enthält für jedes Stück den Komponisten, Arrangeur und die Dauer, geeignet für die Buma/Stemra-Meldung.",
+    "startDate": "Von Datum",
+    "endDateExport": "Bis Datum",
+    "downloadExport": "CSV herunterladen",
+    "composer": "Komponist"
   },
   "onboarding": {
     "menuItem": "Rundgang",

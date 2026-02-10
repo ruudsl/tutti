@@ -59,6 +59,7 @@ const updateConcertSchema = createConcertSchema.partial();
 const createProgramItemSchema = z.object({
     musicTitleId: z.string().uuid().optional().nullable(),
     title: z.string().min(1, 'Titel is verplicht'),
+    composer: z.string().optional(),
     arranger: z.string().optional(),
     sortOrder: z.number().int().min(0).default(0),
     notes: z.string().optional(),
@@ -189,6 +190,97 @@ router.get('/piece-history/:title', authenticateToken, asyncHandler(async (req: 
     });
 }));
 
+/**
+ * @swagger
+ * /concerts/buma-stemra-export:
+ *   get:
+ *     summary: Export played pieces for Buma/Stemra report
+ *     tags: [Concerts]
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date of the period (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date of the period (YYYY-MM-DD)
+ */
+router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Default to last year if no dates provided
+    const today = new Date();
+    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+
+    const startDate = (req.query.startDate as string) || oneYearAgo.toISOString().split('T')[0];
+    const endDate = (req.query.endDate as string) || today.toISOString().split('T')[0];
+
+    // Get all concerts and their program items within the date range
+    const pieces = db.prepare(`
+        SELECT
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location,
+            cp.title,
+            COALESCE(cp.composer, mt.composer) as composer,
+            COALESCE(cp.arranger, mt.arranger) as arranger,
+            COALESCE(mt.duration_seconds, 0) as duration_seconds
+        FROM concerts c
+        JOIN concert_program cp ON c.id = cp.concert_id
+        LEFT JOIN music_titles mt ON cp.music_title_id = mt.id
+        WHERE c.association_id = ?
+          AND c.date >= ?
+          AND c.date <= ?
+        ORDER BY c.date ASC, cp.sort_order ASC
+    `).all(req.user!.associationId, startDate, endDate) as any[];
+
+    // Format duration as MM:SS
+    const formatDuration = (seconds: number): string => {
+        if (!seconds || seconds <= 0) return '';
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Generate CSV content
+    let csv = 'Concert,Datum,Locatie,Titel,Componist,Arrangeur,Duur\n';
+
+    for (const piece of pieces) {
+        const row = [
+            `"${(piece.concert_name || '').replace(/"/g, '""')}"`,
+            piece.concert_date || '',
+            `"${(piece.concert_location || '').replace(/"/g, '""')}"`,
+            `"${(piece.title || '').replace(/"/g, '""')}"`,
+            `"${(piece.composer || '').replace(/"/g, '""')}"`,
+            `"${(piece.arranger || '').replace(/"/g, '""')}"`,
+            formatDuration(piece.duration_seconds),
+        ];
+        csv += row.join(',') + '\n';
+    }
+
+    // Add summary at the end
+    const totalPieces = pieces.length;
+    const uniqueConcerts = new Set(pieces.map(p => p.concert_date + p.concert_name)).size;
+    const totalDuration = pieces.reduce((sum, p) => sum + (p.duration_seconds || 0), 0);
+
+    csv += '\n';
+    csv += `Periode,${startDate} t/m ${endDate}\n`;
+    csv += `Totaal concerten,${uniqueConcerts}\n`;
+    csv += `Totaal stukken,${totalPieces}\n`;
+    csv += `Totale speelduur,${formatDuration(totalDuration)}\n`;
+
+    // Set headers for CSV download
+    const filename = `buma_stemra_${startDate}_${endDate}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Add BOM for Excel UTF-8 compatibility
+    res.send('\ufeff' + csv);
+}));
+
 // ==================== CONCERTS ====================
 
 /**
@@ -304,7 +396,10 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
 
     // Get program
     const program = db.prepare(`
-        SELECT cp.*, mt.youtube_url, mt.duration_seconds
+        SELECT cp.*,
+               mt.youtube_url,
+               mt.duration_seconds,
+               COALESCE(cp.composer, mt.composer) as resolved_composer
         FROM concert_program cp
         LEFT JOIN music_titles mt ON cp.music_title_id = mt.id
         WHERE cp.concert_id = ?
@@ -350,6 +445,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
             id: p.id,
             musicTitleId: p.music_title_id,
             title: p.title,
+            composer: p.resolved_composer || p.composer,
             arranger: p.arranger,
             sortOrder: p.sort_order,
             notes: p.notes,
@@ -505,9 +601,9 @@ router.post('/:id/program', authenticateToken, requireRole('admin', 'music_commi
     const sortOrder = data.sortOrder ?? ((maxOrder.max_order ?? -1) + 1);
 
     db.prepare(`
-        INSERT INTO concert_program (id, concert_id, music_title_id, title, arranger, sort_order, notes, part_of_set)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, data.musicTitleId || null, data.title, data.arranger || null, sortOrder, data.notes || null, data.partOfSet || null);
+        INSERT INTO concert_program (id, concert_id, music_title_id, title, composer, arranger, sort_order, notes, part_of_set)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, req.params.id, data.musicTitleId || null, data.title, data.composer || null, data.arranger || null, sortOrder, data.notes || null, data.partOfSet || null);
 
     logger.info(`Program item added to concert: ${req.params.id}`, { programId: id, title: data.title });
 
@@ -538,12 +634,13 @@ router.put('/:id/program/:programId', authenticateToken, requireRole('admin', 'm
         UPDATE concert_program SET
             music_title_id = COALESCE(?, music_title_id),
             title = COALESCE(?, title),
+            composer = COALESCE(?, composer),
             arranger = COALESCE(?, arranger),
             sort_order = COALESCE(?, sort_order),
             notes = COALESCE(?, notes),
             part_of_set = COALESCE(?, part_of_set)
         WHERE id = ?
-    `).run(data.musicTitleId, data.title, data.arranger, data.sortOrder, data.notes, data.partOfSet, req.params.programId);
+    `).run(data.musicTitleId, data.title, data.composer, data.arranger, data.sortOrder, data.notes, data.partOfSet, req.params.programId);
 
     res.json({ message: 'Programma item bijgewerkt.' });
 }));

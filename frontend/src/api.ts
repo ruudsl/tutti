@@ -1244,6 +1244,7 @@ export const deleteConcert = async (id: string): Promise<void> => {
 export const addConcertProgramItem = async (concertId: string, item: {
   musicTitleId?: string | null;
   title: string;
+  composer?: string;
   arranger?: string;
   sortOrder?: number;
   notes?: string;
@@ -1274,6 +1275,17 @@ export const reorderConcertProgram = async (concertId: string, items: { id: stri
 
 export const exportConcertProgram = async (concertId: string): Promise<string> => {
   const { data } = await api.get(`/concerts/${concertId}/program/export`, { responseType: 'text' });
+  return data;
+};
+
+export const exportBumaStemra = async (params: {
+  startDate: string;
+  endDate: string;
+}): Promise<string> => {
+  const { data } = await api.get('/concerts/buma-stemra-export', {
+    params,
+    responseType: 'text',
+  });
   return data;
 };
 

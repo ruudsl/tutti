@@ -15,6 +15,7 @@ import {
   deleteConcertProgramItem,
   reorderConcertProgram,
   exportConcertProgram,
+  exportBumaStemra,
   addConcertMedia,
   deleteConcertMedia,
   addConcertAttendance,
@@ -245,6 +246,31 @@ export function useExportConcertProgram() {
       link.remove();
       window.URL.revokeObjectURL(url);
       showSuccess('Programma geëxporteerd');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to export Buma/Stemra report
+ */
+export function useExportBumaStemra() {
+  return useMutation({
+    mutationFn: exportBumaStemra,
+    onSuccess: (content, variables) => {
+      // Create a download
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `buma_stemra_${variables.startDate}_${variables.endDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSuccess('Buma/Stemra export gedownload');
     },
     onError: (error) => {
       showError(getErrorMessage(error));

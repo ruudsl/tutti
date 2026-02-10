@@ -1274,7 +1274,13 @@
     "neverPlayed": "Never played",
     "whenLastPlayed": "When did we play this piece?",
     "searchPieceHistory": "Search by title...",
-    "deleteConfirm": "Are you sure you want to delete this concert?"
+    "deleteConfirm": "Are you sure you want to delete this concert?",
+    "bumaStemraExport": "Buma/Stemra Export",
+    "bumaStemraDescription": "Generate a CSV file with all pieces played in the selected period. This overview includes the composer, arranger and duration for each piece, suitable for Buma/Stemra reporting.",
+    "startDate": "From date",
+    "endDateExport": "To date",
+    "downloadExport": "Download CSV",
+    "composer": "Composer"
   },
   "onboarding": {
     "menuItem": "Guided tour",
