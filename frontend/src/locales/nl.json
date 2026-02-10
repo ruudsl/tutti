@@ -1459,5 +1459,20 @@
         "description": "Je weet nu waar alles staat. Veel plezier met musiceren! Deze rondleiding kun je altijd opnieuw starten via de knop in de navigatiebalk."
       }
     }
+  },
+  "pwa": {
+    "offline_mode": "Je bent offline. Sommige functies zijn mogelijk beperkt beschikbaar.",
+    "update_available": "Update beschikbaar",
+    "update_description": "Er is een nieuwe versie van de app beschikbaar. Ververs om de laatste verbeteringen te krijgen.",
+    "update_now": "Nu bijwerken",
+    "later": "Later",
+    "install_title": "Installeer Harmonie",
+    "install_description": "Voeg deze app toe aan je startscherm voor snelle toegang en een betere ervaring.",
+    "install": "Installeren",
+    "not_now": "Niet nu",
+    "pending_changes": "{{count}} wijziging(en) wachtend op synchronisatie",
+    "syncing": "Synchroniseren...",
+    "sync_complete": "Synchronisatie voltooid",
+    "sync_failed": "Synchronisatie mislukt"
   }
 }

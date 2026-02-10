@@ -1398,5 +1398,20 @@
         "description": "You now know where everything is. Enjoy making music! You can always restart this tour via the button in the navigation bar."
       }
     }
+  },
+  "pwa": {
+    "offline_mode": "You are offline. Some features may be limited.",
+    "update_available": "Update available",
+    "update_description": "A new version of the app is available. Refresh to get the latest improvements.",
+    "update_now": "Update now",
+    "later": "Later",
+    "install_title": "Install Harmonie",
+    "install_description": "Add this app to your home screen for quick access and a better experience.",
+    "install": "Install",
+    "not_now": "Not now",
+    "pending_changes": "{{count}} change(s) pending sync",
+    "syncing": "Syncing...",
+    "sync_complete": "Sync complete",
+    "sync_failed": "Sync failed"
   }
 }

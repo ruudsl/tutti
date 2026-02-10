@@ -8,6 +8,9 @@ import { queryClient } from './lib/queryClient';
 import { Toaster } from './utils/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotFound } from './components/NotFound';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { InstallPrompt } from './components/InstallPrompt';
 import { ROLES } from './utils/constants';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -334,6 +337,9 @@ export default function App() {
                 },
               }}
             />
+            <OfflineIndicator />
+            <PWAUpdatePrompt />
+            <InstallPrompt />
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

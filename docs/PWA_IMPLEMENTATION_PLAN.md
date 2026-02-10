@@ -556,25 +556,25 @@ export function usePushNotifications() {
 
 ### Sprint 1: Basis PWA (Week 1-2)
 - [x] Plan uitwerken
-- [ ] Dependencies installeren (`vite-plugin-pwa`)
-- [ ] Manifest bestand aanmaken
-- [ ] App icons genereren (alle formaten)
-- [ ] Vite config updaten met PWA plugin
-- [ ] Service worker basis setup
+- [x] Dependencies installeren (`vite-plugin-pwa`)
+- [x] Manifest bestand aanmaken
+- [x] App icons genereren (SVG-based, script voor PNG generatie)
+- [x] Vite config updaten met PWA plugin
+- [x] Service worker basis setup
 - [ ] Testen installatie op mobiel
 
 ### Sprint 2: Caching & Offline (Week 3-4)
-- [ ] Runtime caching configureren
-- [ ] React Query persistence toevoegen
-- [ ] Offline indicator component
-- [ ] Offline queue voor mutations
+- [x] Runtime caching configureren
+- [x] React Query persistence toevoegen
+- [x] Offline indicator component
+- [x] Offline queue voor mutations
 - [ ] Testen offline functionaliteit
 
 ### Sprint 3: UX Verbeteringen (Week 5)
-- [ ] Install prompt component
-- [ ] Update notification component
-- [ ] Vertalingen toevoegen (NL/EN/DE)
-- [ ] Styling voor PWA elementen
+- [x] Install prompt component
+- [x] Update notification component
+- [x] Vertalingen toevoegen (NL/EN/DE)
+- [x] Styling voor PWA elementen
 
 ### Sprint 4: Push Notifications (Week 6 - Optioneel)
 - [ ] VAPID keys genereren
@@ -667,6 +667,7 @@ frontend/
 
 ---
 
-*Document versie: 1.0*
+*Document versie: 1.1*
 *Aangemaakt: 2026-02-10*
-*Status: Plan - Wacht op goedkeuring*
+*Laatst bijgewerkt: 2026-02-10*
+*Status: Fase 1-3 geimplementeerd - Klaar voor testen*

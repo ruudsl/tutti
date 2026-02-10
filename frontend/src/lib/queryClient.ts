@@ -1,18 +1,37 @@
 import { QueryClient } from '@tanstack/react-query';
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours - extended for offline support
       retry: 1,
       refetchOnWindowFocus: false,
+      networkMode: 'offlineFirst', // Try cache first for offline support
     },
     mutations: {
       retry: 0,
+      networkMode: 'offlineFirst',
     },
   },
 });
+
+// Persist queries to localStorage for offline support
+if (typeof window !== 'undefined') {
+  const localStoragePersister = createSyncStoragePersister({
+    storage: window.localStorage,
+    key: 'harmonie-query-cache',
+  });
+
+  persistQueryClient({
+    queryClient,
+    persister: localStoragePersister,
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    buster: 'v1', // Change this to invalidate cache on breaking changes
+  });
+}
 
 /**
  * Query keys for consistent cache management

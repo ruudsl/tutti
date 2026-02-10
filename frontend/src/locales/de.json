@@ -1382,5 +1382,20 @@
         "description": "Sie wissen jetzt, wo alles zu finden ist. Viel Spaß beim Musizieren! Sie können diesen Rundgang jederzeit über die Schaltfläche in der Navigationsleiste neu starten."
       }
     }
+  },
+  "pwa": {
+    "offline_mode": "Sie sind offline. Einige Funktionen sind möglicherweise eingeschränkt.",
+    "update_available": "Update verfügbar",
+    "update_description": "Eine neue Version der App ist verfügbar. Aktualisieren Sie, um die neuesten Verbesserungen zu erhalten.",
+    "update_now": "Jetzt aktualisieren",
+    "later": "Später",
+    "install_title": "Harmonie installieren",
+    "install_description": "Fügen Sie diese App zu Ihrem Startbildschirm hinzu für schnellen Zugriff und ein besseres Erlebnis.",
+    "install": "Installieren",
+    "not_now": "Nicht jetzt",
+    "pending_changes": "{{count}} Änderung(en) warten auf Synchronisierung",
+    "syncing": "Synchronisieren...",
+    "sync_complete": "Synchronisierung abgeschlossen",
+    "sync_failed": "Synchronisierung fehlgeschlagen"
   }
 }
