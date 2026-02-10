@@ -119,7 +119,7 @@ export default function Layout() {
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/concerts'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
   const inventarisPaths = ['/equipment', '/uniforms'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/theme', '/changelog'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/theme', '/changelog'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
@@ -281,6 +281,11 @@ export default function Layout() {
                 <li role="none">
                   <NavLink to="/settings" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
                     {t('nav.settings')}
+                  </NavLink>
+                </li>
+                <li role="none">
+                  <NavLink to="/entra-sync" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.entraSync')}
                   </NavLink>
                 </li>
                 <li role="none">

@@ -43,6 +43,7 @@ import musicaInfoRoutes from './routes/musicainfo';
 import equipmentRoutes from './routes/equipment';
 import uniformsRoutes from './routes/uniforms';
 import concertsRoutes from './routes/concerts';
+import entraSyncRoutes from './routes/entra-sync';
 
 const app = express();
 
@@ -105,6 +106,7 @@ app.use('/api/musicainfo', musicaInfoRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
+app.use('/api/entra', entraSyncRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

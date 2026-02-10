@@ -553,4 +553,23 @@ CREATE INDEX IF NOT EXISTS idx_concert_program_title ON concert_program(music_ti
 CREATE INDEX IF NOT EXISTS idx_concert_media_concert ON concert_media(concert_id);
 CREATE INDEX IF NOT EXISTS idx_concert_attendance_concert ON concert_attendance(concert_id);
 CREATE INDEX IF NOT EXISTS idx_concert_attendance_user ON concert_attendance(user_id);
+
+-- ===========================================
+-- ENTRA ID SYNCHRONISATIE
+-- ===========================================
+
+-- Job Title naar Instrument mapping tabel
+CREATE TABLE IF NOT EXISTS job_title_instrument_mappings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    job_title TEXT NOT NULL,
+    instrument_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+    UNIQUE(association_id, job_title)
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_title_mappings_association ON job_title_instrument_mappings(association_id);
+CREATE INDEX IF NOT EXISTS idx_job_title_mappings_title ON job_title_instrument_mappings(job_title);
 `;

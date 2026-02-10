@@ -40,6 +40,7 @@ import Changelog from './pages/Changelog';
 import Equipment from './pages/Equipment';
 import Uniforms from './pages/Uniforms';
 import Concerts from './pages/Concerts';
+import EntraSync from './pages/EntraSync';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -282,6 +283,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Concerts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="entra-sync"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <EntraSync />
             </PrivateRoute>
           }
         />
