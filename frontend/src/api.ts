@@ -1174,10 +1174,38 @@ export const getUserUniforms = async (userId: string): Promise<UniformItem[]> =>
 
 export const getConcertTypes = async (): Promise<{
   concertTypes: ConcertType[];
-  venueTypes: VenueType[];
   mediaTypes: MediaType[];
 }> => {
   const { data } = await api.get('/concerts/types');
+  return data;
+};
+
+// Concert Types Admin
+export const getAdminConcertTypes = async (): Promise<{
+  types: { id: string; value: string; label: string; sortOrder: number }[];
+  defaults: ConcertType[];
+}> => {
+  const { data } = await api.get('/concerts/concert-types');
+  return data;
+};
+
+export const createConcertType = async (value: string, label: string, sortOrder?: number): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/concerts/concert-types', { value, label, sortOrder });
+  return data;
+};
+
+export const updateConcertType = async (id: string, updates: { value?: string; label?: string; sortOrder?: number }): Promise<{ message: string }> => {
+  const { data } = await api.put(`/concerts/concert-types/${id}`, updates);
+  return data;
+};
+
+export const deleteConcertType = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/concerts/concert-types/${id}`);
+  return data;
+};
+
+export const initDefaultConcertTypes = async (): Promise<{ message: string }> => {
+  const { data } = await api.post('/concerts/concert-types/init-defaults');
   return data;
 };
 

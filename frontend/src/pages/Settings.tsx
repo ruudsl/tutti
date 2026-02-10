@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDeleteConcertType, useInitDefaultConcertTypes } from '../hooks/useConcerts';
+import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { AssociationSettings, MicrosoftConfig, SmtpConfig } from '../types';
 
 export default function Settings() {
@@ -34,6 +37,19 @@ export default function Settings() {
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const [smtpSaving, setSmtpSaving] = useState(false);
   const [smtpTesting, setSmtpTesting] = useState(false);
+
+  // Concert types state
+  const [showAddConcertTypeModal, setShowAddConcertTypeModal] = useState(false);
+  const [editingConcertType, setEditingConcertType] = useState<{ id: string; value: string; label: string; sortOrder: number } | null>(null);
+  const [deletingConcertType, setDeletingConcertType] = useState<{ id: string; label: string } | null>(null);
+  const [concertTypeFormData, setConcertTypeFormData] = useState({ value: '', label: '', sortOrder: 0 });
+
+  // Concert types hooks
+  const { data: concertTypesData, isLoading: concertTypesLoading } = useAdminConcertTypes();
+  const createConcertTypeMutation = useCreateConcertType();
+  const updateConcertTypeMutation = useUpdateConcertType();
+  const deleteConcertTypeMutation = useDeleteConcertType();
+  const initDefaultsMutation = useInitDefaultConcertTypes();
 
   useEffect(() => {
     loadSettings();
@@ -235,6 +251,48 @@ export default function Settings() {
     } finally {
       setSmtpTesting(false);
     }
+  };
+
+  // Concert type handlers
+  const handleCreateConcertType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createConcertTypeMutation.mutateAsync({
+      value: concertTypeFormData.value,
+      label: concertTypeFormData.label,
+      sortOrder: concertTypeFormData.sortOrder,
+    });
+    setShowAddConcertTypeModal(false);
+    setConcertTypeFormData({ value: '', label: '', sortOrder: 0 });
+  };
+
+  const handleUpdateConcertType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingConcertType) return;
+    await updateConcertTypeMutation.mutateAsync({
+      id: editingConcertType.id,
+      updates: {
+        value: concertTypeFormData.value,
+        label: concertTypeFormData.label,
+        sortOrder: concertTypeFormData.sortOrder,
+      },
+    });
+    setEditingConcertType(null);
+    setConcertTypeFormData({ value: '', label: '', sortOrder: 0 });
+  };
+
+  const handleDeleteConcertType = async () => {
+    if (!deletingConcertType) return;
+    await deleteConcertTypeMutation.mutateAsync(deletingConcertType.id);
+    setDeletingConcertType(null);
+  };
+
+  const handleInitDefaults = async () => {
+    await initDefaultsMutation.mutateAsync();
+  };
+
+  const openEditConcertTypeModal = (type: { id: string; value: string; label: string; sortOrder: number }) => {
+    setEditingConcertType(type);
+    setConcertTypeFormData({ value: type.value, label: type.label, sortOrder: type.sortOrder });
   };
 
   if (isLoading) {
@@ -576,6 +634,144 @@ export default function Settings() {
           </form>
         </div>
       </div>
+
+      <div className="card mb-3">
+        <div className="card-header">
+          <h2 className="card-title">{t('settings.concertTypes.title')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('settings.concertTypes.description')}</p>
+
+          {concertTypesLoading ? (
+            <p>{t('common.loading')}</p>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex gap-2">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowAddConcertTypeModal(true)}
+                  >
+                    + {t('settings.concertTypes.add')}
+                  </button>
+                  {(!concertTypesData?.types || concertTypesData.types.length === 0) && (
+                    <button
+                      className="btn btn-outline"
+                      onClick={handleInitDefaults}
+                      disabled={initDefaultsMutation.isPending}
+                    >
+                      {initDefaultsMutation.isPending ? t('common.loading') : t('settings.concertTypes.initDefaults')}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {concertTypesData?.types && concertTypesData.types.length > 0 ? (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('settings.concertTypes.value')}</th>
+                      <th>{t('settings.concertTypes.label')}</th>
+                      <th>{t('settings.concertTypes.sortOrder')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {concertTypesData.types.map((type) => (
+                      <tr key={type.id}>
+                        <td><code>{type.value}</code></td>
+                        <td><strong>{type.label}</strong></td>
+                        <td>{type.sortOrder}</td>
+                        <td>
+                          <div className="flex gap-1">
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => openEditConcertTypeModal(type)}
+                            >
+                              {t('common.edit')}
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => setDeletingConcertType({ id: type.id, label: type.label })}
+                            >
+                              {t('common.delete')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p style={{ color: '#666' }}>
+                  {t('settings.concertTypes.noTypes')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Add/Edit Concert Type Modal */}
+      {(showAddConcertTypeModal || editingConcertType) && (
+        <FormModal
+          title={editingConcertType ? t('settings.concertTypes.edit') : t('settings.concertTypes.add')}
+          onClose={() => {
+            setShowAddConcertTypeModal(false);
+            setEditingConcertType(null);
+            setConcertTypeFormData({ value: '', label: '', sortOrder: 0 });
+          }}
+          onSubmit={editingConcertType ? handleUpdateConcertType : handleCreateConcertType}
+          isSubmitting={createConcertTypeMutation.isPending || updateConcertTypeMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">{t('settings.concertTypes.value')} *</label>
+            <input
+              type="text"
+              className="form-control"
+              value={concertTypeFormData.value}
+              onChange={(e) => setConcertTypeFormData({ ...concertTypeFormData, value: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+              placeholder="bijv. christmas, summer, concert"
+              required
+            />
+            <small style={{ color: '#666' }}>{t('settings.concertTypes.valueHelp')}</small>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('settings.concertTypes.label')} *</label>
+            <input
+              type="text"
+              className="form-control"
+              value={concertTypeFormData.label}
+              onChange={(e) => setConcertTypeFormData({ ...concertTypeFormData, label: e.target.value })}
+              placeholder="bijv. Kerstconcert, Zomerconcert"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('settings.concertTypes.sortOrder')}</label>
+            <input
+              type="number"
+              className="form-control"
+              value={concertTypeFormData.sortOrder}
+              onChange={(e) => setConcertTypeFormData({ ...concertTypeFormData, sortOrder: parseInt(e.target.value) || 0 })}
+              min="0"
+            />
+          </div>
+        </FormModal>
+      )}
+
+      {/* Delete Concert Type Confirmation */}
+      {deletingConcertType && (
+        <ConfirmDialog
+          title={t('common.delete')}
+          message={t('settings.concertTypes.deleteConfirm', { label: deletingConcertType.label })}
+          confirmLabel={t('common.delete')}
+          onConfirm={handleDeleteConcertType}
+          onCancel={() => setDeletingConcertType(null)}
+          isLoading={deleteConcertTypeMutation.isPending}
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

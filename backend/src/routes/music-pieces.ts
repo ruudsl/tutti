@@ -435,6 +435,7 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
         `).all(t.title, req.user!.associationId) as { id: string; name: string; orchestra_name: string }[];
 
         return {
+            id: t.title_id || null,
             title: t.title,
             arranger: t.arranger,
             pieceCount: t.piece_count,

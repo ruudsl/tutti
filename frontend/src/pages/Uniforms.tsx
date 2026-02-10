@@ -50,7 +50,6 @@ export default function Uniforms() {
     sizeStandard: '',
     sizeLength: '',
     sizeWidth: '',
-    color: '',
     condition: 'good',
     status: 'available',
     notes: '',
@@ -108,7 +107,6 @@ export default function Uniforms() {
       sizeStandard: '',
       sizeLength: '',
       sizeWidth: '',
-      color: '',
       condition: 'good',
       status: 'available',
       notes: '',
@@ -124,7 +122,6 @@ export default function Uniforms() {
       sizeStandard: formData.sizeStandard || undefined,
       sizeLength: formData.sizeLength ? parseInt(formData.sizeLength) : undefined,
       sizeWidth: formData.sizeWidth ? parseInt(formData.sizeWidth) : undefined,
-      color: formData.color || undefined,
       condition: formData.condition,
       status: formData.status,
       notes: formData.notes || undefined,
@@ -142,7 +139,6 @@ export default function Uniforms() {
       sizeStandard: formData.sizeStandard || undefined,
       sizeLength: formData.sizeLength ? parseInt(formData.sizeLength) : undefined,
       sizeWidth: formData.sizeWidth ? parseInt(formData.sizeWidth) : undefined,
-      color: formData.color || undefined,
       condition: formData.condition,
       status: formData.status,
       notes: formData.notes || undefined,
@@ -165,7 +161,6 @@ export default function Uniforms() {
         sizeStandard: formData.sizeStandard || undefined,
         sizeLength: formData.sizeLength ? parseInt(formData.sizeLength) : undefined,
         sizeWidth: formData.sizeWidth ? parseInt(formData.sizeWidth) : undefined,
-        color: formData.color || undefined,
         condition: formData.condition,
         status: formData.status,
         notes: formData.notes || undefined,
@@ -229,7 +224,6 @@ export default function Uniforms() {
       sizeStandard: item.sizeStandard || '',
       sizeLength: item.sizeLength?.toString() || '',
       sizeWidth: item.sizeWidth?.toString() || '',
-      color: item.color || '',
       condition: item.condition,
       status: item.status,
       notes: item.notes || '',
@@ -365,7 +359,6 @@ export default function Uniforms() {
                   <tr>
                     <th>{t('uniforms.itemType')}</th>
                     <th>{t('uniforms.sizeStandard')}</th>
-                    <th>{t('uniforms.color')}</th>
                     <th>{t('uniforms.condition')}</th>
                     <th>{t('common.status')}</th>
                     <th>{t('users.title')}</th>
@@ -377,7 +370,6 @@ export default function Uniforms() {
                     <tr key={item.id}>
                       <td><strong>{getItemTypeLabel(item.itemType)}</strong></td>
                       <td>{item.sizeStandard || '-'}</td>
-                      <td>{item.color || '-'}</td>
                       <td>{getConditionBadge(item.condition)}</td>
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
@@ -427,7 +419,7 @@ export default function Uniforms() {
                   ))}
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', color: '#666' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', color: '#666' }}>
                         {t('uniforms.noItems')}
                       </td>
                     </tr>
@@ -548,26 +540,15 @@ export default function Uniforms() {
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('uniforms.sizeStandard')}</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.sizeStandard}
-                onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
-                placeholder="M, L, 52..."
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('uniforms.color')}</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              />
-            </div>
+          <div className="form-group">
+            <label className="form-label">{t('uniforms.sizeStandard')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.sizeStandard}
+              onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
+              placeholder="M, L, 52..."
+            />
           </div>
           <div className="flex gap-2">
             <div className="form-group" style={{ flex: 1 }}>
@@ -646,25 +627,14 @@ export default function Uniforms() {
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('uniforms.sizeStandard')}</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.sizeStandard}
-                onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('uniforms.color')}</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              />
-            </div>
+          <div className="form-group">
+            <label className="form-label">{t('uniforms.sizeStandard')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.sizeStandard}
+              onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
+            />
           </div>
         </FormModal>
       )}

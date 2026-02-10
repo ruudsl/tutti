@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   useEquipment,
   useEquipmentItem,
-  useEquipmentTypes,
   useMaintenanceAlerts,
   useCreateEquipment,
   useUpdateEquipment,
@@ -14,6 +13,7 @@ import {
   useRecordEquipmentMaintenance,
 } from '../hooks/useEquipment';
 import { useUsers } from '../hooks/useUsers';
+import { useInstruments } from '../hooks/useInstruments';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -84,7 +84,7 @@ export default function Equipment() {
     status: statusFilter || undefined,
     type: typeFilter || undefined,
   });
-  const { data: equipmentTypes = [] } = useEquipmentTypes();
+  const { data: instruments = [] } = useInstruments();
   const { data: maintenanceAlerts = [] } = useMaintenanceAlerts();
   const { data: users = [] } = useUsers();
   const { data: equipmentDetail } = useEquipmentItem(viewingEquipment || '');
@@ -326,8 +326,8 @@ export default function Equipment() {
               style={{ maxWidth: '200px' }}
             >
               <option value="">{t('equipment.allTypes')}</option>
-              {equipmentTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
+              {instruments.map((instrument) => (
+                <option key={instrument.id} value={instrument.name}>{instrument.name}</option>
               ))}
             </select>
           </div>
@@ -426,8 +426,8 @@ export default function Equipment() {
               required
             >
               <option value="">-- {t('common.select')} --</option>
-              {equipmentTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
+              {instruments.map((instrument) => (
+                <option key={instrument.id} value={instrument.name}>{instrument.name}</option>
               ))}
             </select>
           </div>

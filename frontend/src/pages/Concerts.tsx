@@ -62,7 +62,6 @@ export default function Concerts() {
     date: '',
     endDate: '',
     location: '',
-    venueType: '',
     concertType: '',
     description: '',
     notes: '',
@@ -113,7 +112,6 @@ export default function Concerts() {
 
   const concerts = concertsData?.data || [];
   const concertTypes = typesData?.concertTypes || [];
-  const venueTypes = typesData?.venueTypes || [];
   const mediaTypes = typesData?.mediaTypes || [];
 
   const resetForm = () => {
@@ -122,7 +120,6 @@ export default function Concerts() {
       date: '',
       endDate: '',
       location: '',
-      venueType: '',
       concertType: '',
       description: '',
       notes: '',
@@ -136,7 +133,6 @@ export default function Concerts() {
       date: formData.date,
       endDate: formData.endDate || undefined,
       location: formData.location || undefined,
-      venueType: formData.venueType || undefined,
       concertType: formData.concertType || undefined,
       description: formData.description || undefined,
       notes: formData.notes || undefined,
@@ -155,7 +151,6 @@ export default function Concerts() {
         date: formData.date,
         endDate: formData.endDate || undefined,
         location: formData.location || undefined,
-        venueType: formData.venueType || undefined,
         concertType: formData.concertType || undefined,
         description: formData.description || undefined,
         notes: formData.notes || undefined,
@@ -230,7 +225,6 @@ export default function Concerts() {
       date: concert.date,
       endDate: concert.endDate || '',
       location: concert.location || '',
-      venueType: concert.venueType || '',
       concertType: concert.concertType || '',
       description: concert.description || '',
       notes: concert.notes || '',
@@ -551,33 +545,18 @@ export default function Concerts() {
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             />
           </div>
-          <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.venueType')}</label>
-              <select
-                className="form-control"
-                value={formData.venueType}
-                onChange={(e) => setFormData({ ...formData, venueType: e.target.value })}
-              >
-                <option value="">--</option>
-                {venueTypes.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.concertType')}</label>
-              <select
-                className="form-control"
-                value={formData.concertType}
-                onChange={(e) => setFormData({ ...formData, concertType: e.target.value })}
-              >
-                <option value="">--</option>
-                {concertTypes.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
+          <div className="form-group">
+            <label className="form-label">{t('concerts.concertType')}</label>
+            <select
+              className="form-control"
+              value={formData.concertType}
+              onChange={(e) => setFormData({ ...formData, concertType: e.target.value })}
+            >
+              <option value="">--</option>
+              {concertTypes.map((type) => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
           </div>
           <div className="form-group">
             <label className="form-label">{t('concerts.description')}</label>
@@ -733,18 +712,26 @@ export default function Concerts() {
               className="form-control"
               value={programFormData.musicTitleId}
               onChange={(e) => {
-                const title = musicTitles.find(t => t.id === e.target.value);
-                setProgramFormData({
-                  ...programFormData,
-                  musicTitleId: e.target.value,
-                  title: title?.title || programFormData.title,
-                  arranger: title?.arranger || programFormData.arranger,
-                });
+                const selectedIndex = parseInt(e.target.value);
+                if (!isNaN(selectedIndex) && musicTitles[selectedIndex]) {
+                  const selectedTitle = musicTitles[selectedIndex];
+                  setProgramFormData({
+                    ...programFormData,
+                    musicTitleId: selectedTitle.id || '',
+                    title: selectedTitle.title,
+                    arranger: selectedTitle.arranger || '',
+                  });
+                } else {
+                  setProgramFormData({
+                    ...programFormData,
+                    musicTitleId: '',
+                  });
+                }
               }}
             >
               <option value="">-- {t('common.select')} --</option>
-              {musicTitles.map((title) => (
-                <option key={title.id} value={title.id}>
+              {musicTitles.map((title, index) => (
+                <option key={`${title.title}-${title.arranger || ''}-${index}`} value={index}>
                   {title.title} {title.arranger ? `(${title.arranger})` : ''}
                 </option>
               ))}

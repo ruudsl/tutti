@@ -834,6 +834,19 @@
       "errorRemoving": "Fout bij verwijderen SMTP-instellingen",
       "test": "Testmail versturen",
       "testFailed": "Testmail versturen mislukt"
+    },
+    "concertTypes": {
+      "title": "Concert types",
+      "description": "Beheer de types concerten die je kunt aanmaken. Deze worden getoond in het dropdown menu bij het aanmaken van een concert.",
+      "add": "Type toevoegen",
+      "edit": "Type bewerken",
+      "value": "Waarde",
+      "valueHelp": "Technische waarde voor in de database (alleen kleine letters, cijfers en underscores).",
+      "label": "Label",
+      "sortOrder": "Volgorde",
+      "noTypes": "Er zijn nog geen concert types gedefinieerd. Klik op 'Standaardwaarden laden' om de standaard types te gebruiken.",
+      "initDefaults": "Standaardwaarden laden",
+      "deleteConfirm": "Weet je zeker dat je het concert type '{{label}}' wilt verwijderen?"
     }
   },
   "theme": {

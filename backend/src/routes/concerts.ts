@@ -9,8 +9,8 @@ import { z } from 'zod';
 
 const router = Router();
 
-// Concert types
-const CONCERT_TYPES = [
+// Default concert types (used when association has no custom types)
+const DEFAULT_CONCERT_TYPES = [
     { value: 'concert', label: 'Concert' },
     { value: 'christmas', label: 'Kerstconcert' },
     { value: 'summer', label: 'Zomerconcert' },
@@ -22,16 +22,6 @@ const CONCERT_TYPES = [
     { value: 'serenade', label: 'Serenade' },
     { value: 'ceremony', label: 'Ceremonie' },
     { value: 'other', label: 'Overig' },
-];
-
-const VENUE_TYPES = [
-    { value: 'indoor', label: 'Binnenshuis' },
-    { value: 'outdoor', label: 'Buiten' },
-    { value: 'church', label: 'Kerk' },
-    { value: 'theater', label: 'Theater' },
-    { value: 'hall', label: 'Zaal' },
-    { value: 'tent', label: 'Tent' },
-    { value: 'street', label: 'Straat' },
 ];
 
 const MEDIA_TYPES = [
@@ -85,16 +75,195 @@ const createAttendanceSchema = z.object({
  * @swagger
  * /concerts/types:
  *   get:
- *     summary: Get concert types and venue types
+ *     summary: Get concert types and media types
  *     tags: [Concerts]
  */
-router.get('/types', authenticateToken, (req: AuthRequest, res: Response) => {
+router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Get custom concert types for this association
+    const customTypes = db.prepare(`
+        SELECT id, value, label, sort_order
+        FROM concert_types
+        WHERE association_id = ?
+        ORDER BY sort_order, label
+    `).all(req.user!.associationId) as { id: string; value: string; label: string; sort_order: number }[];
+
+    // Use custom types if available, otherwise use defaults
+    const concertTypes = customTypes.length > 0
+        ? customTypes.map(t => ({ value: t.value, label: t.label }))
+        : DEFAULT_CONCERT_TYPES;
+
     res.json({
-        concertTypes: CONCERT_TYPES,
-        venueTypes: VENUE_TYPES,
+        concertTypes,
         mediaTypes: MEDIA_TYPES,
     });
-});
+}));
+
+// ==================== CONCERT TYPES CRUD ====================
+
+/**
+ * @swagger
+ * /concerts/concert-types:
+ *   get:
+ *     summary: Get all concert types for this association (for admin)
+ *     tags: [Concerts]
+ */
+router.get('/concert-types', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const types = db.prepare(`
+        SELECT id, value, label, sort_order
+        FROM concert_types
+        WHERE association_id = ?
+        ORDER BY sort_order, label
+    `).all(req.user!.associationId);
+
+    res.json({
+        types: types.map((t: any) => ({
+            id: t.id,
+            value: t.value,
+            label: t.label,
+            sortOrder: t.sort_order,
+        })),
+        defaults: DEFAULT_CONCERT_TYPES,
+    });
+}));
+
+/**
+ * @swagger
+ * /concerts/concert-types:
+ *   post:
+ *     summary: Create a new concert type
+ *     tags: [Concerts]
+ */
+router.post('/concert-types', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { value, label, sortOrder } = req.body;
+
+    if (!value || !label) {
+        throw new ApiError(400, 'Value en label zijn verplicht.');
+    }
+
+    // Check for duplicate value
+    const existing = db.prepare(`
+        SELECT id FROM concert_types WHERE association_id = ? AND value = ?
+    `).get(req.user!.associationId, value);
+
+    if (existing) {
+        throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
+    }
+
+    const id = uuidv4();
+    const order = sortOrder ?? 0;
+
+    db.prepare(`
+        INSERT INTO concert_types (id, association_id, value, label, sort_order)
+        VALUES (?, ?, ?, ?, ?)
+    `).run(id, req.user!.associationId, value, label, order);
+
+    logger.info(`Concert type created: ${label}`, { id, createdBy: req.user!.id });
+
+    res.status(201).json({
+        id,
+        value,
+        label,
+        sortOrder: order,
+        message: 'Concert type aangemaakt.',
+    });
+}));
+
+/**
+ * @swagger
+ * /concerts/concert-types/{id}:
+ *   put:
+ *     summary: Update a concert type
+ *     tags: [Concerts]
+ */
+router.put('/concert-types/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { value, label, sortOrder } = req.body;
+
+    const existing = db.prepare(`
+        SELECT * FROM concert_types WHERE id = ? AND association_id = ?
+    `).get(req.params.id, req.user!.associationId);
+
+    if (!existing) {
+        throw new ApiError(404, 'Concert type niet gevonden.');
+    }
+
+    // Check for duplicate value (if changing)
+    if (value && value !== (existing as any).value) {
+        const duplicate = db.prepare(`
+            SELECT id FROM concert_types WHERE association_id = ? AND value = ? AND id != ?
+        `).get(req.user!.associationId, value, req.params.id);
+
+        if (duplicate) {
+            throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
+        }
+    }
+
+    db.prepare(`
+        UPDATE concert_types SET
+            value = COALESCE(?, value),
+            label = COALESCE(?, label),
+            sort_order = COALESCE(?, sort_order)
+        WHERE id = ?
+    `).run(value, label, sortOrder, req.params.id);
+
+    logger.info(`Concert type updated: ${req.params.id}`, { updatedBy: req.user!.id });
+
+    res.json({ message: 'Concert type bijgewerkt.' });
+}));
+
+/**
+ * @swagger
+ * /concerts/concert-types/{id}:
+ *   delete:
+ *     summary: Delete a concert type
+ *     tags: [Concerts]
+ */
+router.delete('/concert-types/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare(`
+        DELETE FROM concert_types WHERE id = ? AND association_id = ?
+    `).run(req.params.id, req.user!.associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Concert type niet gevonden.');
+    }
+
+    logger.info(`Concert type deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    res.json({ message: 'Concert type verwijderd.' });
+}));
+
+/**
+ * @swagger
+ * /concerts/concert-types/init-defaults:
+ *   post:
+ *     summary: Initialize concert types with defaults
+ *     tags: [Concerts]
+ */
+router.post('/concert-types/init-defaults', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Check if already has custom types
+    const existingCount = db.prepare(`
+        SELECT COUNT(*) as count FROM concert_types WHERE association_id = ?
+    `).get(req.user!.associationId) as { count: number };
+
+    if (existingCount.count > 0) {
+        throw new ApiError(400, 'Er bestaan al concert types. Verwijder deze eerst.');
+    }
+
+    // Insert defaults
+    withTransaction(() => {
+        const stmt = db.prepare(`
+            INSERT INTO concert_types (id, association_id, value, label, sort_order)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+
+        DEFAULT_CONCERT_TYPES.forEach((type, index) => {
+            stmt.run(uuidv4(), req.user!.associationId, type.value, type.label, index);
+        });
+    });
+
+    logger.info('Concert types initialized with defaults', { associationId: req.user!.associationId });
+
+    res.status(201).json({ message: 'Standaard concert types aangemaakt.' });
+}));
 
 /**
  * @swagger

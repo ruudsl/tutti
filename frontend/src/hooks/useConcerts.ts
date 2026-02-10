@@ -22,17 +22,110 @@ import {
   addConcertAttendanceBulk,
   updateConcertAttendance,
   deleteConcertAttendance,
+  getAdminConcertTypes,
+  createConcertType,
+  updateConcertType,
+  deleteConcertType,
+  initDefaultConcertTypes,
 } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
 /**
- * Hook to fetch concert types and venue types
+ * Hook to fetch concert types and media types
  */
 export function useConcertTypes() {
   return useQuery({
     queryKey: queryKeys.concertTypes,
     queryFn: getConcertTypes,
+  });
+}
+
+/**
+ * Hook to fetch admin concert types for management
+ */
+export function useAdminConcertTypes() {
+  return useQuery({
+    queryKey: ['admin', 'concertTypes'],
+    queryFn: getAdminConcertTypes,
+  });
+}
+
+/**
+ * Hook to create a concert type
+ */
+export function useCreateConcertType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ value, label, sortOrder }: { value: string; label: string; sortOrder?: number }) =>
+      createConcertType(value, label, sortOrder),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'concertTypes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concertTypes });
+      showSuccess('Concert type aangemaakt');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to update a concert type
+ */
+export function useUpdateConcertType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { value?: string; label?: string; sortOrder?: number } }) =>
+      updateConcertType(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'concertTypes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concertTypes });
+      showSuccess('Concert type bijgewerkt');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to delete a concert type
+ */
+export function useDeleteConcertType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteConcertType,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'concertTypes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concertTypes });
+      showSuccess('Concert type verwijderd');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to initialize default concert types
+ */
+export function useInitDefaultConcertTypes() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: initDefaultConcertTypes,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'concertTypes'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concertTypes });
+      showSuccess('Standaard concert types aangemaakt');
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
   });
 }
 

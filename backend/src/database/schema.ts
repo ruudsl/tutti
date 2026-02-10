@@ -472,6 +472,18 @@ CREATE INDEX IF NOT EXISTS idx_uniform_assignments_user ON uniform_assignments(u
 -- CONCERT-ARCHIEF (Concert Archive)
 -- ===========================================
 
+-- Concert types (aanpasbaar per vereniging)
+CREATE TABLE IF NOT EXISTS concert_types (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    value TEXT NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, value)
+);
+
 -- Concerten
 CREATE TABLE IF NOT EXISTS concerts (
     id TEXT PRIMARY KEY,
