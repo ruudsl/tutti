@@ -2,6 +2,32 @@
 
 All notable changes to this application are documented here.
 
+## [1.7.0] - 2026-02-10
+
+### Added
+- **Equipment and uniform management** - Manage instruments, uniforms and accessories with member assignments
+- **Concert management** - Plan concerts with date, location and repertoire
+- **Buma/Stemra export** - Export concert programs for copyright reporting
+- **MusicaInfo.net integration** - Search metadata and difficulty grades of music pieces
+- **Attendance overview** - New tab in rehearsals with attendance overview
+- **Section view** - View music pieces per orchestra section
+- **Music committee notes** - Internal notes for music committee on pieces
+- **Concert programs** - Create programs for concerts
+- **Visual charts** - Charts added to statistics page
+- **New instruments** - Baritone, Euphonium and Bass Guitar added
+- **Additional instrument aliases** - More aliases for existing instruments
+
+### Improved
+- Improved error handling in the backend
+- Extended API documentation
+- Music lists layout and PDF button visibility
+- Navigation bar layout on desktop and mobile
+- WCAG 2.1 AA accessibility improvements
+
+### Fixed
+- Spond bulk sync: clears stale event links before re-matching
+- Spond sync for same-day rehearsals with duplicate attendance
+
 ## [1.6.0] - 2026-02-07
 
 ### Added

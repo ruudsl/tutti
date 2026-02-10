@@ -2,6 +2,32 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.7.0] - 2026-02-10
+
+### Toegevoegd
+- **Materiaal- en uniformbeheer** - Beheer van instrumenten, uniformen en accessoires met toewijzing aan leden
+- **Concertbeheer** - Concerten plannen met datum, locatie en repertoire
+- **Buma/Stemra export** - Exporteer concertprogramma's voor auteursrechtenmelding
+- **MusicaInfo.net integratie** - Zoek metadata en moeilijkheidsgraad van muziekstukken
+- **Aanwezigheidsoverzicht** - Nieuw tabblad bij repetities met overzicht van aanwezigheid
+- **Sectie-weergave** - Muziekstukken bekijken per orkestsectie
+- **Muziekcommissie notities** - Interne notities voor muziekcommissie bij stukken
+- **Concertprogramma's** - Programma's samenstellen voor concerten
+- **Visuele grafieken** - Grafieken toegevoegd aan statistiekenpagina
+- **Nieuwe instrumenten** - Bariton, Euphonium en Basgitaar toegevoegd
+- **Extra instrument aliassen** - Meer aliassen voor bestaande instrumenten
+
+### Verbeterd
+- Verbeterde foutafhandeling in de backend
+- Uitgebreide API-documentatie
+- Muzieklijsten layout en PDF-knop zichtbaarheid
+- Navigatiebalk layout op desktop en mobiel
+- WCAG 2.1 AA toegankelijkheid verbeteringen
+
+### Opgelost
+- Spond bulk sync: verwijdert verouderde event-koppelingen voor opnieuw matchen
+- Spond sync voor repetities op dezelfde dag met dubbele aanwezigheid
+
 ## [1.6.0] - 2026-02-07
 
 ### Toegevoegd

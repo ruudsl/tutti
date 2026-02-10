@@ -2,6 +2,32 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.7.0] - 2026-02-10
+
+### Hinzugefügt
+- **Ausrüstungs- und Uniformverwaltung** - Verwaltung von Instrumenten, Uniformen und Zubehör mit Mitgliederzuordnung
+- **Konzertverwaltung** - Konzerte mit Datum, Ort und Repertoire planen
+- **Buma/Stemra-Export** - Konzertprogramme für Urheberrechtsmeldung exportieren
+- **MusicaInfo.net-Integration** - Metadaten und Schwierigkeitsgrade von Musikstücken suchen
+- **Anwesenheitsübersicht** - Neuer Tab bei Proben mit Anwesenheitsübersicht
+- **Sektionsansicht** - Musikstücke nach Orchestersektion anzeigen
+- **Musikkommission-Notizen** - Interne Notizen für die Musikkommission zu Stücken
+- **Konzertprogramme** - Programme für Konzerte erstellen
+- **Visuelle Diagramme** - Diagramme zur Statistikseite hinzugefügt
+- **Neue Instrumente** - Bariton, Euphonium und E-Bass hinzugefügt
+- **Zusätzliche Instrument-Aliase** - Mehr Aliase für bestehende Instrumente
+
+### Verbessert
+- Verbesserte Fehlerbehandlung im Backend
+- Erweiterte API-Dokumentation
+- Musiklisten-Layout und PDF-Schaltflächen-Sichtbarkeit
+- Navigationsleisten-Layout auf Desktop und Mobil
+- WCAG 2.1 AA Barrierefreiheit-Verbesserungen
+
+### Behoben
+- Spond-Massensynchronisierung: Löscht veraltete Event-Verknüpfungen vor dem erneuten Abgleich
+- Spond-Synchronisierung für Proben am selben Tag mit doppelter Anwesenheit
+
 ## [1.6.0] - 2026-02-07
 
 ### Hinzugefügt
