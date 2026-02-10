@@ -41,7 +41,7 @@ interface DetailResult {
 /**
  * Parse a duration string like "05:30" or "5:30" into seconds
  */
-function parseDurationToSeconds(durationStr: string): number {
+export function parseDurationToSeconds(durationStr: string): number {
     if (!durationStr) return 0;
     // Match patterns like "05:30", "5:30", "1:05:30"
     const match = durationStr.match(/(\d+):(\d{2})(?::(\d{2}))?/);

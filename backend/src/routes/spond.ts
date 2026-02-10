@@ -9,7 +9,7 @@ import logger from '../utils/logger';
 const router = Router();
 
 /** Convert "HH:MM" time string to minutes since midnight */
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
 }

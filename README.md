@@ -3,42 +3,250 @@
 ![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-Webapplicatie voor het beheren en distribueren van muziekstukken binnen een harmonieorkest.
+Een complete webapplicatie voor het beheren van muziekstukken, repetities, concertprogramma's en ledenorganisatie binnen harmonieorkesten en fanfares.
+
+## Inhoudsopgave
+
+- [Overzicht](#overzicht)
+- [Architectuur](#architectuur)
+- [Functionaliteiten](#functionaliteiten)
+- [Screenshots](#screenshots)
+- [Installatie](#installatie)
+- [Configuratie](#configuratie)
+- [Development](#development)
+- [Testen](#testen)
+- [Deployment](#deployment)
+- [API Documentatie](#api-documentatie)
+- [Projectstructuur](#projectstructuur)
+- [Technologieën](#technologieën)
+- [Licentie](#licentie)
+
+## Overzicht
+
+Harmonie is een multi-tenant webapplicatie ontworpen voor harmonieorkesten, fanfares en brassbands. De applicatie centraliseert het beheer van muziekstukken (PDF's), repetitieplanningen, concertprogramma's, leningen van muziekmateriaal en ledenbeheer. Meerdere verenigingen kunnen dezelfde installatie delen en optioneel muziek met elkaar delen.
+
+### Kernfunctionaliteit
+
+- **Muziekbibliotheek** — Upload, categoriseer en distribueer PDF-bladmuziek aan leden op basis van hun instrumenten
+- **Repetities & Aanwezigheid** — Plan repetities, koppel met Spond voor automatische aanwezigheidsregistratie
+- **Concertprogramma's** — Stel programma's samen met tijdsberekening en stuknummering
+- **Ledenbeheer** — Beheer leden, instrumenten, orkesten en rollen
+- **Metadata verrijking** — Haal automatisch speelduur en moeilijkheidsgraad op via MusicaInfo.net
+- **Multi-tenant** — Ondersteuning voor meerdere verenigingen op één installatie
+
+## Architectuur
+
+```
+┌─────────────────────────────────┐
+│         Frontend (React)        │
+│  Vite · TypeScript · TanStack   │
+│  i18n (NL/EN/DE) · React Router │
+└──────────────┬──────────────────┘
+               │ REST API (Axios)
+               ▼
+┌─────────────────────────────────┐
+│       Backend (Express.js)      │
+│  TypeScript · JWT Auth · Helmet │
+│  Rate Limiting · Zod Validation │
+└──────────────┬──────────────────┘
+               │
+       ┌───────┴───────┐
+       ▼               ▼
+┌─────────────┐  ┌───────────┐
+│   SQLite    │  │   Files   │
+│  (sql.js)   │  │  PDF/MP3  │
+└─────────────┘  └───────────┘
+```
+
+### Design beslissingen
+
+| Beslissing | Motivatie |
+|---|---|
+| **SQLite i.p.v. PostgreSQL** | Geen aparte database-server nodig; eenvoudige backup (één bestand); voldoende voor de typische schaal van een vereniging |
+| **sql.js i.p.v. better-sqlite3** | Geen native compilatie vereist; draait op elk platform zonder build-tools |
+| **Multi-tenant via association_id** | Elke vereniging heeft eigen data, instrumenten en instellingen; optioneel muziek delen |
+| **JWT authenticatie** | Stateless, schaalbaar; optioneel uitbreidbaar met TOTP MFA en Microsoft SSO |
+| **i18n met i18next** | Meertalige ondersteuning (Nederlands, Engels, Duits) voor internationaal gebruik |
+
+### Rollenmodel
+
+| Rol | Rechten |
+|---|---|
+| `member` | Eigen muziekstukken bekijken en downloaden, profiel beheren |
+| `conductor` | Alles van member + repetities en concertprogramma's beheren |
+| `music_committee` | Alles van conductor + muziekstukken uploaden, instrumenten beheren, issues behandelen |
+| `admin` | Volledige toegang: ledenbeheer, instellingen, backup/restore, verenigingsconfiguratie |
+
+## Functionaliteiten
+
+### Muziekbeheer
+
+- **Upload** — Sleep PDF's naar de dropzone; metadata wordt automatisch geparseerd uit de bestandsnaam (`Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf`)
+- **Muziekstukken** — Bladmuziek per instrument met filters op titel, instrument en orkest
+- **Muziektitels** — Metadata per titel: componist, arrangeur, genre, speelduur, moeilijkheidsgraad, YouTube-link
+- **MusicaInfo.net integratie** — Zoek en importeer metadata (speelduur, moeilijkheidsgraad, uitgever) automatisch
+- **Instrumentaliassen** — Flexibel instrument-matching (bijv. "Altsax" → "Alto Saxophone Eb")
+- **Delen** — Deel muziekstukken en titels tussen verenigingen
+- **MP3 uploads** — Voeg audio-opnames toe aan muziekstukken
+- **PDF Tools** — Samenvoegen, pagina's extraheren en transponeren van PDF's
+
+### Repetities & Aanwezigheid
+
+- **Standaard repetitiedagen** — Stel terugkerende dagen/tijden in per orkest
+- **Repetitie-instanties** — Automatisch gegenereerd of handmatig aangemaakt (regulier/extra/geannuleerd)
+- **Spond koppeling** — Synchroniseer aanwezigheidsdata automatisch vanuit Spond
+- **Aanwezigheidsoverzicht** — Per lid: aantal keer aanwezig, afwezig, percentage (filterbaar op datum en orkest)
+
+### Concertprogramma's & Muzieklijsten
+
+- **Setlists** — Stel concertprogramma's samen per orkest met datum, locatie en opmerkingen
+- **Tijdsberekening** — Automatische berekening van totale speelduur
+- **Muziekcommissie notities** — Interne opmerkingen bij titels (alleen zichtbaar voor commissieleden)
+
+### Ledenbeheer
+
+- **Gebruikers** — Aanmaken, bewerken, verwijderen met paginering en zoekfunctie
+- **Instrumenten** — Toewijzen aan leden met stemming en muzieksleutel
+- **Orkesten** — Leden koppelen aan meerdere orkesten
+- **Rollen** — Flexibel rollensysteem (member, conductor, music_committee, admin)
+
+### Uitleenbeheer
+
+- **Leningen** — Registreer uitleningen van muziekmateriaal aan externe organisaties
+- **Status tracking** — Actief, te laat, geretourneerd met automatische statusupdates
+- **Beschikbaarheid** — Overzicht welke titels beschikbaar zijn voor uitlening
+
+### Issues & Kwaliteitsbeheer
+
+- **Meldingen** — Leden kunnen fouten in bladmuziek melden (verkeerde noten, ontbrekende pagina's)
+- **Workflow** — Status tracking: open → in review → opgelost/afgewezen
+
+### Beveiliging & Authenticatie
+
+- **JWT tokens** — Veilige authenticatie met configureerbare geldigheidsduur
+- **TOTP MFA** — Optionele tweefactor-authenticatie via authenticator-app
+- **Microsoft SSO** — Azure Entra ID (voorheen Azure AD) integratie
+- **Wachtwoord reset** — Via e-mail met beveiligde tokens
+- **Rate limiting** — Bescherming tegen brute-force aanvallen
+- **Helmet** — HTTP security headers
+
+### Overige features
+
+- **Thema's** — Aanpasbare kleuren en branding per vereniging
+- **Logo** — Upload verenigingslogo
+- **SMTP configuratie** — E-mail instellingen per vereniging
+- **Backup & Restore** — Download/upload volledige database met bestanden als ZIP
+- **Activiteitenlog** — Track wie wat bekijkt en downloadt
+- **Statistieken** — Dashboard met top-bekeken en -gedownloade stukken
+- **Changelog** — In-app versiegeschiedenis
+- **Onboarding tour** — Begeleide rondleiding voor nieuwe gebruikers
+- **Muziektools** — Ingebouwde metronoom en stemapparaat
+- **WCAG 2.1 AA** — Toegankelijke interface met toetsenbordnavigatie en contrastverhouding
 
 ## Screenshots
 
 | Dashboard | Muziekstukken |
-|-----------|---------------|
+|---|---|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Muziekstukken](docs/screenshots/music-pieces.png) |
 
 | Upload | Muzieklijsten |
-|--------|---------------|
+|---|---|
 | ![Upload](docs/screenshots/upload.png) | ![Muzieklijsten](docs/screenshots/music-lists.png) |
 
-## Functionaliteiten
+## Installatie
 
-### Voor leden
-- Bekijk muziekstukken gefilterd op je eigen instrumenten
-- Download PDF bestanden van muziekstukken
-- Bekijk YouTube previews van muziekstukken
-- Overzicht van je orkesten en muzieklijsten
+### Vereisten
 
-### Voor muziekcommissie
-- Upload meerdere muziekstukken tegelijk
-- Beheer instrumenten en aliassen (bijv. "Altsax" → "Alto Saxophone")
-- Wijs muziekstukken toe aan orkesten en lijsten
-- Voeg YouTube links toe aan muziekstukken
-- Bewerk metadata van muziekstukken
+- **Node.js** 18+ (20+ aanbevolen)
+- **npm** 9+
+- **Git**
 
-### Voor beheerders
-- Beheer leden (toevoegen, wijzigen, verwijderen)
-- Beheer orkesten en muzieklijsten
-- Wijs instrumenten en orkesten toe aan leden
-- Deel muziekstukken met andere verenigingen
+### Snelle start
 
-## Bestandsnaam formaat
+```bash
+# 1. Clone de repository
+git clone https://github.com/ruudsl/harmonie.git
+cd harmonie
+
+# 2. Installeer alle dependencies (backend + frontend)
+npm install
+
+# 3. Maak configuratiebestanden aan
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+
+# 4. Pas de backend configuratie aan (zie Configuratie hieronder)
+#    Minimaal: stel een JWT_SECRET in voor productie
+
+# 5. Start de ontwikkelserver (backend + frontend tegelijk)
+npm run dev
+```
+
+De applicatie is nu beschikbaar op:
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:3001
+
+### Standaard inloggegevens
+
+Bij de eerste start wordt automatisch een admin-account aangemaakt:
+- **E-mail:** `admin@harmonie.nl`
+- **Wachtwoord:** wordt gegenereerd en getoond in de console-output
+
+Je kunt ook vooraf een wachtwoord instellen via de environment variable `ADMIN_INIT_PASSWORD`.
+
+> **Let op:** Wijzig het wachtwoord na de eerste login via Profiel → Wachtwoord wijzigen!
+
+## Configuratie
+
+### Backend (`backend/.env`)
+
+| Variable | Standaard | Beschrijving |
+|---|---|---|
+| `NODE_ENV` | `development` | `development` of `production` |
+| `PORT` | `3001` | Poort voor de API server |
+| `JWT_SECRET` | *(dev-only default)* | **Verplicht in productie!** Genereer met `openssl rand -hex 32` |
+| `JWT_EXPIRES_IN` | `7d` | Geldigheidsduur JWT tokens (bijv. `1d`, `12h`) |
+| `DB_PATH` | `./data/harmonie.db` | Pad naar SQLite database bestand |
+| `UPLOAD_DIR` | `./uploads` | Map voor geüploade PDF bestanden |
+| `MP3_UPLOAD_DIR` | `./uploads/mp3` | Map voor geüploade MP3 bestanden |
+| `MAX_FILE_SIZE` | `52428800` | Max bestandsgrootte in bytes (standaard 50MB) |
+| `FRONTEND_URL` | `http://localhost:5173` | Frontend URL voor CORS-configuratie |
+| `ADMIN_INIT_PASSWORD` | *(leeg)* | Optioneel: admin wachtwoord bij eerste start |
+| `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit venster in ms (standaard 15 min) |
+| `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per venster |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5` | Max login pogingen per venster |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Standaard | Beschrijving |
+|---|---|---|
+| `VITE_API_URL` | *(leeg = proxy)* | Backend API URL. Leeg laten voor development (Vite proxy). In productie: volledige URL bijv. `https://api.example.com/api` |
+
+## Development
+
+### Commando's
+
+```bash
+# Start backend + frontend tegelijkertijd
+npm run dev
+
+# Alleen backend
+npm run dev --workspace=backend
+
+# Alleen frontend
+npm run dev --workspace=frontend
+
+# Build voor productie
+npm run build
+
+# Database opnieuw initialiseren (waarschuwing: wist alle data)
+npm run db:init --workspace=backend
+```
+
+### Bestandsnaam formaat
 
 Muziekstukken worden automatisch geparseerd op basis van de bestandsnaam:
 
@@ -49,123 +257,38 @@ Titel_arrangeur_instrument_stemming_groepnummer_muzieksleutel.pdf
 Voorbeelden:
 - `The Pacific_Ted Ricketts_Bariton_Bb__sol.pdf`
 - `Shannon Song_Rowwen Heze_Alto Saxophone_Eb_1.pdf`
-- `Shannon Song_Rowwen Heze_Altsax_Eb_2.pdf`
+- `Shannon Song_Rowwen Heze_Altsax_Eb_2.pdf` (alias wordt herkend)
 
-## Installatie
+## Testen
 
-### Vereisten
-- Node.js 18+
-- npm 9+
+### Frontend testen
 
-### Stappen
-
-1. Installeer dependencies:
 ```bash
-npm install
+# Run alle frontend tests
+npm test --workspace=frontend
+
+# Watch mode (automatisch herladen bij wijzigingen)
+npm run test:watch --workspace=frontend
 ```
 
-2. Initialiseer de database:
+### Backend testen
+
 ```bash
-npm run db:init --workspace=backend
+# Run alle backend tests
+npm test --workspace=backend
+
+# Watch mode
+npm run test:watch --workspace=backend
 ```
 
-3. Start de ontwikkelserver:
+### Alle testen
+
 ```bash
-npm run dev
+# CI-stijl: TypeScript check + tests + build
+npm test --workspace=frontend && npm test --workspace=backend
 ```
-
-De applicatie is nu beschikbaar op:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-
-### Standaard inloggegevens
-
-Na initialisatie is er een admin account beschikbaar:
-- **Email:** admin@harmonie.nl
-- **Wachtwoord:** wordt gegenereerd bij eerste start (zie console output)
-
-Je kunt ook een eigen wachtwoord instellen via de environment variable `ADMIN_INIT_PASSWORD` voordat je de applicatie voor het eerst start.
-
-⚠️ Wijzig het wachtwoord na de eerste login via Profiel → Wachtwoord wijzigen!
-
-## Projectstructuur
-
-```
-harmonie/
-├── backend/
-│   ├── src/
-│   │   ├── database/       # Database schema en connectie
-│   │   ├── middleware/     # Auth middleware
-│   │   ├── routes/         # API routes
-│   │   └── index.ts        # Server entry point
-│   ├── data/               # SQLite database (gegenereerd)
-│   └── uploads/            # Geüploade PDF bestanden
-├── frontend/
-│   ├── src/
-│   │   ├── components/     # React componenten
-│   │   ├── context/        # Auth context
-│   │   ├── pages/          # Pagina componenten
-│   │   ├── api.ts          # API client
-│   │   └── types.ts        # TypeScript types
-│   └── index.html
-└── package.json
-```
-
-## API Endpoints
-
-### Authenticatie
-- `POST /api/auth/login` - Inloggen
-- `GET /api/auth/me` - Profiel ophalen
-- `POST /api/auth/change-password` - Wachtwoord wijzigen
-
-### Gebruikers (admin)
-- `GET /api/users` - Alle leden
-- `POST /api/users` - Nieuw lid
-- `PUT /api/users/:id` - Lid bijwerken
-- `DELETE /api/users/:id` - Lid verwijderen
-
-### Instrumenten
-- `GET /api/instruments` - Alle instrumenten
-- `POST /api/instruments` - Nieuw instrument
-- `PUT /api/instruments/:id` - Instrument bijwerken
-- `DELETE /api/instruments/:id` - Instrument verwijderen
-- `POST /api/instruments/:id/aliases` - Alias toevoegen
-- `DELETE /api/instruments/:id/aliases/:aliasId` - Alias verwijderen
-
-### Orkesten (admin)
-- `GET /api/orchestras` - Alle orkesten
-- `POST /api/orchestras` - Nieuw orkest
-- `PUT /api/orchestras/:id` - Orkest bijwerken
-- `DELETE /api/orchestras/:id` - Orkest verwijderen
-
-### Muzieklijsten
-- `GET /api/music-lists/my-lists` - Mijn lijsten
-- `GET /api/music-lists/:id` - Lijst met stukken
-- `POST /api/music-lists` - Nieuwe lijst
-- `PUT /api/music-lists/:id` - Lijst bijwerken
-- `DELETE /api/music-lists/:id` - Lijst verwijderen
-- `POST /api/music-lists/:id/pieces` - Stuk toevoegen
-- `DELETE /api/music-lists/:id/pieces/:pieceId` - Stuk verwijderen
-
-### Muziekstukken
-- `GET /api/music-pieces` - Alle stukken
-- `GET /api/music-pieces/my-pieces` - Mijn stukken
-- `POST /api/music-pieces/upload` - Stukken uploaden
-- `PUT /api/music-pieces/:id` - Stuk bijwerken
-- `DELETE /api/music-pieces/:id` - Stuk verwijderen
-- `GET /api/music-pieces/:id/download` - Stuk downloaden
-
-## Rollen
-
-| Rol | Beschrijving |
-|-----|--------------|
-| `member` | Standaard lid, kan alleen eigen muziekstukken zien en downloaden |
-| `music_committee` | Muziekcommissie, kan muziekstukken en instrumenten beheren |
-| `admin` | Beheerder, volledige toegang tot alle functionaliteiten |
 
 ## Deployment
-
-De applicatie kan worden gedeployed met Vercel (frontend) en Render.com (backend).
 
 ### Backend deployen op Render.com
 
@@ -173,104 +296,198 @@ De applicatie kan worden gedeployed met Vercel (frontend) en Render.com (backend
 
 2. **Klik op "New" → "Web Service"**
 
-3. **Connect je GitHub repository**
-   - Selecteer de repository waar deze code staat
-   - Geef Render toegang tot de repository
+3. **Connect je GitHub repository** en selecteer de harmonie repository
 
 4. **Configureer de service:**
-   - **Name:** `harmonie-backend` (of een andere naam)
-   - **Region:** Frankfurt (EU Central) - dichtstbij voor Nederland
+   - **Name:** `harmonie-backend`
+   - **Region:** Frankfurt (EU Central)
    - **Root Directory:** `backend`
    - **Runtime:** Node
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `npm start`
 
-5. **Voeg Environment Variables toe** (klik op "Advanced" → "Add Environment Variable"):
+5. **Voeg Environment Variables toe:**
+
    | Key | Value |
-   |-----|-------|
+   |---|---|
    | `NODE_ENV` | `production` |
    | `PORT` | `10000` |
-   | `JWT_SECRET` | *(genereer een lange random string, bijv. met `openssl rand -hex 32`)* |
+   | `JWT_SECRET` | *(genereer met `openssl rand -hex 32`)* |
    | `DB_PATH` | `/opt/render/project/data/harmonie.db` |
    | `UPLOAD_DIR` | `/opt/render/project/data/uploads` |
    | `MP3_UPLOAD_DIR` | `/opt/render/project/data/uploads/mp3` |
    | `FRONTEND_URL` | *(vul later in na frontend deployment)* |
 
 6. **Voeg een Disk toe** voor persistente opslag:
-   - Klik op "Add Disk"
-   - **Name:** `harmonie-data`
    - **Mount Path:** `/opt/render/project/data`
    - **Size:** 1 GB (of meer indien nodig)
 
-7. **Klik op "Create Web Service"**
-
-8. **Wacht tot de deployment klaar is** - noteer de URL (bijv. `https://harmonie-backend.onrender.com`)
+7. **Klik op "Create Web Service"** en noteer de URL
 
 ### Frontend deployen op Vercel
 
 1. **Maak een account** op [vercel.com](https://vercel.com) en log in
 
-2. **Klik op "Add New..." → "Project"**
+2. **Import je GitHub repository** via "Add New..." → "Project"
 
-3. **Import je GitHub repository**
-   - Selecteer de repository waar deze code staat
-
-4. **Configureer het project:**
+3. **Configuratie:**
    - **Framework Preset:** Vite
    - **Root Directory:** `frontend`
 
-5. **Voeg Environment Variables toe:**
+4. **Environment Variable:**
+
    | Key | Value |
-   |-----|-------|
-   | `VITE_API_URL` | De Render backend URL + `/api`, bijv. `https://harmonie-backend.onrender.com/api` |
+   |---|---|
+   | `VITE_API_URL` | Backend URL + `/api`, bijv. `https://harmonie-backend.onrender.com/api` |
 
-6. **Klik op "Deploy"**
+5. **Deploy** en noteer de frontend URL
 
-7. **Noteer de frontend URL** (bijv. `https://harmonie-frontend.vercel.app`)
+### Na beide deployments
 
-### Na beide deployments: CORS configureren
-
-Ga terug naar **Render.com** en voeg de frontend URL toe aan de environment variables:
-
-1. Ga naar je backend service → "Environment"
-2. Voeg toe of update: `FRONTEND_URL` = `https://harmonie-frontend.vercel.app` (jouw Vercel URL)
-3. Klik op "Save Changes" - de service herstart automatisch
-
-### Verificatie
-
-1. Open de frontend URL in je browser
-2. Log in met:
-   - **Email:** `admin@harmonie.nl`
-   - **Wachtwoord:** de waarde van je `ADMIN_INIT_PASSWORD` environment variable (of het wachtwoord dat bij eerste start in de logs verscheen)
-3. **Wijzig direct je wachtwoord** via Profiel → Wachtwoord wijzigen
+Ga terug naar Render.com en stel `FRONTEND_URL` in op de Vercel URL voor CORS.
 
 ### Troubleshooting
 
-**"Cannot GET /api" foutmelding:**
-- Check of je de juiste backend URL hebt in `VITE_API_URL`
-- De URL moet eindigen op `/api`, bijv. `https://harmonie-backend.onrender.com/api`
+| Probleem | Oplossing |
+|---|---|
+| "Cannot GET /api" | Check of `VITE_API_URL` correct is (moet eindigen op `/api`) |
+| CORS errors bij login | Stel `FRONTEND_URL` correct in op Render (exact, met https://, zonder trailing slash) |
+| Backend start niet | Check de Render logs; verifieer alle environment variables |
+| Data kwijt na redeploy | Voeg een Disk toe met het juiste mount path |
 
-**CORS errors (login mislukt):**
-- Zorg dat `FRONTEND_URL` correct is ingesteld op Render
-- De URL moet exact overeenkomen (inclusief https://, zonder trailing slash)
+## API Documentatie
 
-**Backend start niet:**
-- Check de logs in Render dashboard
-- Verifieer dat alle environment variables correct zijn ingesteld
+### Authenticatie
 
-**Database of uploads kwijt na redeploy:**
-- Zorg dat je een Disk hebt toegevoegd met het juiste mount path
-- Zonder Disk gaan alle gegevens verloren bij elke redeploy
+Alle endpoints (behalve login) vereisen een JWT token in de `Authorization` header:
+
+```
+Authorization: Bearer <token>
+```
+
+### Endpoints overzicht
+
+| Groep | Pad | Beschrijving |
+|---|---|---|
+| Auth | `/api/auth/*` | Login, profiel, wachtwoord, MFA, wachtwoord-reset |
+| Gebruikers | `/api/users/*` | CRUD leden, instrumenten/orkesten toewijzen |
+| Instrumenten | `/api/instruments/*` | CRUD instrumenten en aliassen |
+| Orkesten | `/api/orchestras/*` | CRUD orkesten, ledenbeheer |
+| Muziekstukken | `/api/music-pieces/*` | Upload, download, metadata, MP3, delen |
+| Muziektitels | `/api/music-titles/*` | Metadata bibliotheek (via music-pieces routes) |
+| Muzieklijsten | `/api/music-lists/*` | Setlists en concertprogramma's |
+| Genres | `/api/genres/*` | Muziekgenres/categorieën |
+| Repetities | `/api/rehearsals/*` | Planning, standaarddagen, aanwezigheid |
+| Spond | `/api/spond/*` | Spond configuratie en synchronisatie |
+| Leningen | `/api/loans/*` | Uitleenbeheer |
+| Issues | `/api/issues/*` | Meldingen bladmuziekfouten |
+| Activiteit | `/api/activity/*` | Logging en statistieken |
+| MusicaInfo | `/api/musicainfo/*` | Metadata opzoeken via MusicaInfo.net |
+| PDF Tools | `/api/pdf-tools/*` | PDF samenvoegen, extraheren, transponeren |
+| Instellingen | `/api/settings/*` | Verenigingsinstellingen, thema, SMTP |
+| Backup | `/api/backup/*` | Database backup en restore |
+| Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |
+
+## Projectstructuur
+
+```
+harmonie/
+├── backend/
+│   ├── src/
+│   │   ├── config.ts              # Configuratie en environment variables
+│   │   ├── index.ts               # Express server entry point
+│   │   ├── database/
+│   │   │   ├── connection.ts      # SQLite connectie (sql.js wrapper)
+│   │   │   ├── schema.ts          # Database schema (25+ tabellen)
+│   │   │   └── init.ts            # Initialisatie script
+│   │   ├── middleware/
+│   │   │   ├── auth.ts            # JWT authenticatie & autorisatie
+│   │   │   └── errorHandler.ts    # Centrale error handling
+│   │   ├── routes/                # 18 API route modules
+│   │   │   ├── auth.ts            # Login, MFA, wachtwoord-reset
+│   │   │   ├── users.ts           # Ledenbeheer
+│   │   │   ├── instruments.ts     # Instrumenten & aliassen
+│   │   │   ├── orchestras.ts      # Orkesten
+│   │   │   ├── music-pieces.ts    # Muziekstukken (PDF)
+│   │   │   ├── music-lists.ts     # Concertprogramma's
+│   │   │   ├── rehearsals.ts      # Repetities & aanwezigheid
+│   │   │   ├── spond.ts           # Spond integratie
+│   │   │   ├── loans.ts           # Uitleenbeheer
+│   │   │   ├── issues.ts          # Meldingen
+│   │   │   ├── musicainfo.ts      # MusicaInfo.net scraper
+│   │   │   ├── pdf-tools.ts       # PDF manipulatie
+│   │   │   ├── settings.ts        # Verenigingsinstellingen
+│   │   │   ├── backup.ts          # Backup & restore
+│   │   │   ├── activity.ts        # Activiteitenlog
+│   │   │   ├── genres.ts          # Genres
+│   │   │   ├── associations.ts    # Multi-tenant beheer
+│   │   │   └── microsoft-auth.ts  # Azure SSO
+│   │   ├── services/
+│   │   │   └── spond.ts           # Spond API client
+│   │   └── utils/
+│   │       ├── database.ts        # Transacties & paginering helpers
+│   │       ├── email.ts           # SMTP e-mail verzending
+│   │       └── logger.ts          # Winston logging
+│   ├── data/                      # SQLite database (gegenereerd)
+│   ├── uploads/                   # Geüploade PDF/MP3 bestanden
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── api.ts                 # Axios API client met alle endpoints
+│   │   ├── types.ts               # TypeScript type definities
+│   │   ├── App.tsx                # Root component met routing
+│   │   ├── pages/                 # 24 pagina-componenten
+│   │   ├── components/            # 19 herbruikbare componenten
+│   │   ├── hooks/                 # 10 custom React hooks
+│   │   ├── context/               # Auth context (login state)
+│   │   ├── lib/                   # React Query configuratie
+│   │   ├── utils/                 # Utility functies met tests
+│   │   ├── locales/               # i18n vertalingen (NL, EN, DE)
+│   │   └── test/                  # Test setup
+│   └── package.json
+├── .github/workflows/ci.yml      # GitHub Actions CI/CD
+├── LICENSE                        # MIT licentie
+└── package.json                   # Workspace root (npm workspaces)
+```
 
 ## Technologieën
 
-- **Frontend:** React 18, TypeScript, React Router, Axios, TanStack Query
-- **Backend:** Node.js, Express, TypeScript
-- **Database:** SQLite (better-sqlite3)
-- **Authenticatie:** JWT tokens, TOTP MFA
-- **Build tools:** Vite, tsx
-- **Deployment:** Vercel (frontend), Render.com (backend)
+### Backend
+
+| Technologie | Versie | Doel |
+|---|---|---|
+| Node.js | 20+ | Runtime |
+| Express | 4.x | HTTP framework |
+| TypeScript | 5.x | Type safety |
+| sql.js | 1.x | SQLite database (WASM) |
+| JWT (jsonwebtoken) | 9.x | Authenticatie |
+| Zod | 4.x | Request validatie |
+| Cheerio | 1.x | HTML parsing (MusicaInfo scraper) |
+| Winston | 3.x | Logging |
+| Helmet | 8.x | HTTP security headers |
+| Multer | 1.x | File uploads |
+| pdf-lib | 1.x | PDF manipulatie |
+| Nodemailer | 7.x | E-mail verzending |
+| otplib | 13.x | TOTP MFA |
+| Vitest | 3.x | Unit & integratie tests |
+
+### Frontend
+
+| Technologie | Versie | Doel |
+|---|---|---|
+| React | 18.x | UI framework |
+| TypeScript | 5.x | Type safety |
+| Vite | 5.x | Build tool & dev server |
+| React Router | 6.x | Client-side routing |
+| TanStack Query | 5.x | Server state management |
+| Axios | 1.x | HTTP client |
+| i18next | 25.x | Internationalisatie (NL/EN/DE) |
+| React Hook Form | 7.x | Formulierbeheer |
+| Zod | 4.x | Formuliervalidatie |
+| pdfjs-dist | 4.x | PDF preview rendering |
+| Vitest | 4.x | Unit tests |
+| Testing Library | 16.x | Component tests |
 
 ## Licentie
 
-MIT
+[MIT](LICENSE)
