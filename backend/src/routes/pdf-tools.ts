@@ -282,27 +282,32 @@ router.post('/split-a3', authenticateToken, requireRole('music_committee', 'admi
 
 // Download processed PDF
 router.get('/download/:filename', authenticateToken, (req: Request, res: Response) => {
-  const { filename } = req.params;
+  try {
+    const { filename } = req.params;
 
-  // Sanitize filename
-  const sanitizedFilename = path.basename(filename);
-  const filepath = path.join(TEMP_DIR, sanitizedFilename);
+    // Sanitize filename
+    const sanitizedFilename = path.basename(filename);
+    const filepath = path.join(TEMP_DIR, sanitizedFilename);
 
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ error: 'Bestand niet gevonden' });
-  }
-
-  // Extract original filename (after UUID_)
-  const originalFilename = sanitizedFilename.includes('_')
-    ? sanitizedFilename.substring(sanitizedFilename.indexOf('_') + 1)
-    : sanitizedFilename;
-
-  res.download(filepath, originalFilename, (err) => {
-    if (err) {
-      console.error('Download error:', err);
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Bestand niet gevonden' });
     }
-    // Temp files are cleaned up by the hourly cleanup job
-  });
+
+    // Extract original filename (after UUID_)
+    const originalFilename = sanitizedFilename.includes('_')
+      ? sanitizedFilename.substring(sanitizedFilename.indexOf('_') + 1)
+      : sanitizedFilename;
+
+    res.download(filepath, originalFilename, (err) => {
+      if (err && !res.headersSent) {
+        res.status(500).json({ error: 'Fout bij downloaden van bestand' });
+      }
+    });
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Fout bij downloaden van bestand' });
+    }
+  }
 });
 
 // Download multiple split PDFs as a zip file

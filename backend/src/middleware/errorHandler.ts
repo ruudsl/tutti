@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
+import logger from '../utils/logger';
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -41,15 +42,10 @@ export function errorHandler(
     next: NextFunction
 ): void {
     // Log the error with full details for debugging
-    console.error('=== ERROR DETAILS ===');
-    console.error(`[ERROR] ${req.method} ${req.path}`);
-    console.error('Message:', err.message);
-    console.error('Name:', err.name);
-    console.error('Stack:', err.stack);
-    if (req.body && Object.keys(req.body).length > 0) {
-        console.error('Request body:', JSON.stringify(req.body, null, 2));
-    }
-    console.error('=====================');
+    logger.error(`[${req.method} ${req.path}] ${err.name}: ${err.message}`, {
+        stack: err.stack,
+        body: req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
+    });
 
     // Handle known API errors
     if (err instanceof ApiError) {

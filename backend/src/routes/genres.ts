@@ -7,7 +7,18 @@ import { createGenreSchema, updateGenreSchema } from '../validation/schemas';
 
 const router = Router();
 
-// Get all genres
+/**
+ * @swagger
+ * /genres:
+ *   get:
+ *     summary: Get all genres
+ *     tags: [Genres]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of genres
+ */
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const genres = db.prepare(`
         SELECT id, name, created_at
@@ -22,7 +33,30 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     })));
 }));
 
-// Create new genre (admin or music_committee)
+/**
+ * @swagger
+ * /genres:
+ *   post:
+ *     summary: Create a new genre
+ *     tags: [Genres]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Genre created
+ *       409:
+ *         description: Genre already exists
+ */
 router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = createGenreSchema.parse(req.body);
 
@@ -42,7 +76,26 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
     });
 }));
 
-// Update genre (admin or music_committee)
+/**
+ * @swagger
+ * /genres/{id}:
+ *   put:
+ *     summary: Update a genre
+ *     tags: [Genres]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Genre updated
+ *       404:
+ *         description: Genre not found
+ */
 router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = updateGenreSchema.parse(req.body);
 
@@ -62,7 +115,26 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
     res.json({ message: 'Genre succesvol bijgewerkt.' });
 }));
 
-// Delete genre (admin only)
+/**
+ * @swagger
+ * /genres/{id}:
+ *   delete:
+ *     summary: Delete a genre
+ *     tags: [Genres]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Genre deleted
+ *       404:
+ *         description: Genre not found
+ */
 router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db.prepare('DELETE FROM genres WHERE id = ?').run(req.params.id);
 

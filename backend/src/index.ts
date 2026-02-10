@@ -186,6 +186,17 @@ async function startServer() {
     }
 }
 
+// Global error handlers for safety net
+process.on('unhandledRejection', (reason: unknown) => {
+    logger.error('Unhandled Promise Rejection:', { reason });
+});
+
+process.on('uncaughtException', (error: Error) => {
+    logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
+    // Give logger time to flush, then exit
+    setTimeout(() => process.exit(1), 1000);
+});
+
 startServer();
 
 export default app;
