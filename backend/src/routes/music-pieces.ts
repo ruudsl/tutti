@@ -9,6 +9,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { updateMusicPieceSchema, updateTitleMetaSchema, shareMusicPieceSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -612,6 +613,23 @@ router.put('/title-meta', authenticateToken, requireRole('admin', 'music_committ
 
     logger.info(`Title metadata updated: ${data.title}`, { titleId: titleId!, updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        existing ? 'update' : 'create',
+        'music_title',
+        titleId!,
+        data.title,
+        {
+            arranger: data.arranger,
+            youtubeUrl: data.youtubeUrl,
+            grade: data.grade,
+            isShared: data.isShared,
+        },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({
         id: titleId!,
         message: existing ? 'Titel metadata bijgewerkt.' : 'Titel metadata aangemaakt.',
@@ -675,6 +693,18 @@ router.post('/title-mp3/:titleId', authenticateToken, requireRole('admin', 'musi
 
     logger.info(`MP3 uploaded for title: ${titleId}`, { filename: req.file.filename, uploadedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'upload',
+        'music_title',
+        titleId,
+        req.file.originalname,
+        { filename: req.file.filename, type: 'mp3' },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({
         message: 'MP3 bestand geüpload.',
         mp3FilePath: req.file.filename,
@@ -723,6 +753,18 @@ router.delete('/title-mp3/:titleId', authenticateToken, requireRole('admin', 'mu
     db.prepare('UPDATE music_titles SET mp3_file_path = NULL WHERE id = ?').run(titleId);
 
     logger.info(`MP3 deleted for title: ${titleId}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'music_title',
+        titleId,
+        'MP3 bestand',
+        { type: 'mp3' },
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({
         message: 'MP3 bestand verwijderd.',
@@ -1025,6 +1067,24 @@ router.post('/upload', authenticateToken, requireRole('admin', 'music_committee'
 
     logger.info(`Files uploaded: ${results.length} success, ${errors.length} errors`, { uploadedBy: req.user!.id });
 
+    // Log audit event for bulk upload
+    if (results.length > 0) {
+        logAuditEvent(
+            req.user!.id,
+            'upload',
+            'music_piece',
+            results[0].id,
+            `${results.length} muziekstukken`,
+            {
+                count: results.length,
+                titles: results.slice(0, 5).map(r => r.title),
+                listId: listId || null,
+            },
+            req.ip,
+            req.get('user-agent')
+        );
+    }
+
     res.status(201).json({
         message: `${results.length} bestanden succesvol geüpload.`,
         uploaded: results,
@@ -1089,6 +1149,18 @@ router.post('/bulk-delete', authenticateToken, requireRole('admin', 'music_commi
 
     logger.info(`Bulk deleted ${pieces.length} music pieces`, { deletedBy: req.user!.id, count: pieces.length });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'music_piece',
+        pieces[0]?.id || 'bulk',
+        `${pieces.length} muziekstukken`,
+        { count: pieces.length, ids: ids.slice(0, 10) },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: `${pieces.length} muziekstukken verwijderd.`, count: pieces.length });
 }));
 
@@ -1145,6 +1217,22 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
 
     logger.info(`Music piece updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'music_piece',
+        req.params.id,
+        data.title,
+        {
+            arranger: data.arranger,
+            instrumentId: data.instrumentId,
+            tuning: data.tuning,
+        },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Muziekstuk succesvol bijgewerkt.' });
 }));
 
@@ -1168,8 +1256,8 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  */
 router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const piece = db.prepare(
-        'SELECT file_path FROM music_pieces WHERE id = ? AND association_id = ?'
-    ).get(req.params.id, req.user!.associationId) as { file_path: string } | undefined;
+        'SELECT file_path, title, original_filename FROM music_pieces WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, req.user!.associationId) as { file_path: string; title: string; original_filename: string } | undefined;
 
     if (!piece) {
         throw new ApiError(404, 'Muziekstuk niet gevonden.');
@@ -1183,6 +1271,18 @@ router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee')
     deleteFile(filePath);
 
     logger.info(`Music piece deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'music_piece',
+        req.params.id,
+        piece.title,
+        { originalFilename: piece.original_filename },
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Muziekstuk succesvol verwijderd.' });
 }));
@@ -1294,6 +1394,18 @@ router.post('/:id/share', authenticateToken, requireRole('admin'), asyncHandler(
     });
 
     logger.info(`Music piece shared: ${req.params.id} with association ${data.associationId}`, { sharedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'share',
+        'music_piece',
+        req.params.id,
+        'Muziekstuk gedeeld',
+        { sharedWithAssociationId: data.associationId },
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Muziekstuk succesvol gedeeld.' });
 }));

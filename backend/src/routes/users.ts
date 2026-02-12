@@ -7,6 +7,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -243,6 +244,18 @@ router.post('/', authenticateToken, requireRole('admin'), asyncHandler(async (re
 
     logger.info(`User created: ${data.email}`, { userId, createdBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'create',
+        'user',
+        userId,
+        `${data.firstName} ${data.lastName}`,
+        { email: data.email, role: data.role },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.status(201).json({
         id: userId,
         email: data.email,
@@ -360,6 +373,24 @@ router.put('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (
 
     logger.info(`User updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'user',
+        req.params.id,
+        data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : undefined,
+        {
+            ...(data.email && { email: data.email }),
+            ...(data.firstName && { firstName: data.firstName }),
+            ...(data.lastName && { lastName: data.lastName }),
+            ...(data.role && { role: data.role }),
+            ...(data.password && { password: '***' }),
+        },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Gebruiker succesvol bijgewerkt.' });
 }));
 
@@ -387,6 +418,15 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
         throw new ApiError(400, 'Je kunt jezelf niet verwijderen.');
     }
 
+    // Get user info before deletion for audit log
+    const userToDelete = db.prepare(
+        'SELECT first_name, last_name, email FROM users WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, req.user!.associationId) as { first_name: string; last_name: string; email: string } | undefined;
+
+    if (!userToDelete) {
+        throw new ApiError(404, 'Gebruiker niet gevonden.');
+    }
+
     const result = db.prepare('DELETE FROM users WHERE id = ? AND association_id = ?').run(
         req.params.id,
         req.user!.associationId
@@ -397,6 +437,18 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
     }
 
     logger.info(`User deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'user',
+        req.params.id,
+        `${userToDelete.first_name} ${userToDelete.last_name}`,
+        { email: userToDelete.email },
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Gebruiker succesvol verwijderd.' });
 }));

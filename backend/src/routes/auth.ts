@@ -10,6 +10,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { loginSchema, changePasswordSchema } from '../validation/schemas';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -67,6 +68,18 @@ router.post('/login', asyncHandler(async (req, res) => {
 
     // Generate token and return user data
     const token = generateToken(user);
+
+    // Log audit event for successful login
+    logAuditEvent(
+        user.id,
+        'login',
+        'user',
+        user.id,
+        `${user.first_name} ${user.last_name}`,
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({
         token,
@@ -144,6 +157,18 @@ router.post('/change-password', authenticateToken, asyncHandler(async (req: Auth
     const newPasswordHash = bcrypt.hashSync(newPassword, 10);
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newPasswordHash, req.user!.id);
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'user',
+        req.user!.id,
+        'Wachtwoord gewijzigd',
+        { field: 'password' },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Wachtwoord succesvol gewijzigd.' });
 }));
 
@@ -210,6 +235,18 @@ router.post('/mfa/enable', authenticateToken, asyncHandler(async (req: AuthReque
     // Enable MFA
     db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(req.user!.id);
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'user',
+        req.user!.id,
+        'MFA ingeschakeld',
+        { mfaEnabled: true },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({
         message: 'MFA is succesvol ingeschakeld.',
         mfaEnabled: true,
@@ -251,6 +288,18 @@ router.post('/mfa/disable', authenticateToken, asyncHandler(async (req: AuthRequ
 
     // Disable MFA and clear secret
     db.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?').run(req.user!.id);
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'user',
+        req.user!.id,
+        'MFA uitgeschakeld',
+        { mfaEnabled: false },
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({
         message: 'MFA is uitgeschakeld.',
@@ -352,6 +401,18 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
     // Mark token as used
     db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
+
+    // Log audit event
+    logAuditEvent(
+        resetToken.user_id,
+        'update',
+        'user',
+        resetToken.user_id,
+        'Wachtwoord hersteld via reset link',
+        { field: 'password', method: 'reset_token' },
+        req.ip,
+        req.get('user-agent')
+    );
 
     logger.info(`Password reset successful for user ${resetToken.user_id}`);
 

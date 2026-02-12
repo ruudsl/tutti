@@ -5,6 +5,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createOrchestraSchema, updateOrchestraSchema } from '../validation/schemas';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -153,6 +154,18 @@ router.post('/', authenticateToken, requireRole('admin'), asyncHandler(async (re
 
     logger.info(`Orchestra created: ${data.name}`, { orchestraId, createdBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'create',
+        'orchestra',
+        orchestraId,
+        data.name.trim(),
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.status(201).json({
         id: orchestraId,
         name: data.name.trim(),
@@ -215,6 +228,18 @@ router.put('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (
 
     logger.info(`Orchestra updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'orchestra',
+        req.params.id,
+        data.name.trim(),
+        { name: data.name.trim() },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Orkest succesvol bijgewerkt.' });
 }));
 
@@ -239,6 +264,15 @@ router.put('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (
  *         description: Orchestra not found
  */
 router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Get orchestra name before deletion for audit log
+    const orchestraToDelete = db.prepare(
+        'SELECT name FROM orchestras WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, req.user!.associationId) as { name: string } | undefined;
+
+    if (!orchestraToDelete) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
+    }
+
     const result = db.prepare(
         'DELETE FROM orchestras WHERE id = ? AND association_id = ?'
     ).run(req.params.id, req.user!.associationId);
@@ -248,6 +282,18 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
     }
 
     logger.info(`Orchestra deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'orchestra',
+        req.params.id,
+        orchestraToDelete.name,
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Orkest succesvol verwijderd.' });
 }));

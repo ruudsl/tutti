@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createInstrumentSchema, updateInstrumentSchema, addAliasSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -123,6 +124,18 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
 
     logger.info(`Instrument created: ${data.name}`, { instrumentId, createdBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'create',
+        'instrument',
+        instrumentId,
+        data.name,
+        { tuning: data.tuning, clef: clefValue },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.status(201).json({
         id: instrumentId,
         name: data.name,
@@ -181,6 +194,18 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
 
     logger.info(`Instrument updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'instrument',
+        req.params.id,
+        data.name,
+        { tuning: data.tuning, clef: clefValue },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Instrument succesvol bijgewerkt.' });
 }));
 
@@ -203,6 +228,13 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  *         description: Instrument deleted successfully
  */
 router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Get instrument name before deletion for audit log
+    const instrumentToDelete = db.prepare('SELECT name FROM instruments WHERE id = ?').get(req.params.id) as { name: string } | undefined;
+
+    if (!instrumentToDelete) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
+    }
+
     const result = db.prepare('DELETE FROM instruments WHERE id = ?').run(req.params.id);
 
     if (result.changes === 0) {
@@ -210,6 +242,18 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
     }
 
     logger.info(`Instrument deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'instrument',
+        req.params.id,
+        instrumentToDelete.name,
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Instrument succesvol verwijderd.' });
 }));

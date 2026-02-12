@@ -8,6 +8,7 @@ import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -82,6 +83,18 @@ router.put('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
 
     logger.info(`Association settings updated`, { associationId: req.user!.associationId, updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId,
+        'Instellingen',
+        { displayName: displayName?.trim() },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Instellingen succesvol bijgewerkt.' });
 }));
 
@@ -122,6 +135,18 @@ router.post('/logo', authenticateToken, requireRole('admin'), (req: AuthRequest,
 
             logger.info(`Logo uploaded for association`, { associationId: req.user!.associationId, uploadedBy: req.user!.id });
 
+            // Log audit event
+            logAuditEvent(
+                req.user!.id,
+                'upload',
+                'settings',
+                req.user!.associationId,
+                'Logo',
+                { filename: path.basename(logoPath) },
+                req.ip,
+                req.get('user-agent')
+            );
+
             res.json({
                 message: 'Logo succesvol geüpload.',
                 logoUrl: `/api/settings/logo/${path.basename(logoPath)}`,
@@ -152,6 +177,18 @@ router.delete('/logo', authenticateToken, requireRole('admin'), asyncHandler(asy
     db.prepare('UPDATE associations SET logo_path = NULL WHERE id = ?').run(req.user!.associationId);
 
     logger.info(`Logo removed for association`, { associationId: req.user!.associationId, removedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'settings',
+        req.user!.associationId,
+        'Logo',
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Logo succesvol verwijderd.' });
 }));
@@ -256,6 +293,18 @@ router.put('/theme', authenticateToken, requireRole('admin'), asyncHandler(async
 
     logger.info(`Theme updated`, { associationId: req.user!.associationId, updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId,
+        'Thema',
+        theme ? { keys: Object.keys(theme) } : { reset: true },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Thema succesvol bijgewerkt.' });
 }));
 
@@ -340,6 +389,18 @@ router.put('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async 
 
     logger.info('SMTP config updated', { associationId: req.user!.associationId, updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId,
+        'SMTP configuratie',
+        { host: host.trim(), port: portNum, enabled: !!enabled },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'SMTP-instellingen opgeslagen.' });
 }));
 
@@ -354,6 +415,18 @@ router.delete('/smtp', authenticateToken, requireRole('admin'), asyncHandler(asy
     `).run(req.user!.associationId);
 
     logger.info('SMTP config removed', { associationId: req.user!.associationId, removedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'settings',
+        req.user!.associationId,
+        'SMTP configuratie',
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'SMTP-instellingen verwijderd.' });
 }));

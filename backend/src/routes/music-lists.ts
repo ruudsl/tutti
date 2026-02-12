@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createMusicListSchema, updateMusicListSchema, reorderMusicListsSchema, addPieceToListSchema, addTitleToListSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -346,6 +347,18 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
 
     logger.info(`Music list created: ${data.name}`, { listId, orchestraId: data.orchestraId, createdBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'create',
+        'music_list',
+        listId,
+        data.name.trim(),
+        { orchestraId: data.orchestraId, listType: data.listType || 'regular' },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.status(201).json({
         id: listId,
         name: data.name.trim(),
@@ -419,6 +432,18 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
 
     logger.info(`Music list updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'music_list',
+        req.params.id,
+        data.name.trim(),
+        { listType: data.listType || 'regular', concertDate: data.concertDate, concertLocation: data.concertLocation },
+        req.ip,
+        req.get('user-agent')
+    );
+
     res.json({ message: 'Muzieklijst succesvol bijgewerkt.' });
 }));
 
@@ -483,11 +508,11 @@ router.patch('/:id/toggle-active', authenticateToken, requireRole('admin', 'musi
  */
 router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const list = db.prepare(`
-        SELECT ml.id
+        SELECT ml.id, ml.name
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
         WHERE ml.id = ? AND o.association_id = ?
-    `).get(req.params.id, req.user!.associationId);
+    `).get(req.params.id, req.user!.associationId) as { id: string; name: string } | undefined;
 
     if (!list) {
         throw new ApiError(404, 'Muzieklijst niet gevonden.');
@@ -496,6 +521,18 @@ router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee')
     db.prepare('DELETE FROM music_lists WHERE id = ?').run(req.params.id);
 
     logger.info(`Music list deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'music_list',
+        req.params.id,
+        list.name,
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
 
     res.json({ message: 'Muzieklijst succesvol verwijderd.' });
 }));
