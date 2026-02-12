@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../utils/constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { OnboardingTour, resetOnboarding } from './OnboardingTour';
+import { DarkModeToggle } from './DarkModeToggle';
+import { Breadcrumbs } from './Breadcrumbs';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
 
@@ -119,7 +121,7 @@ export default function Layout() {
   const musicPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/concerts'];
   const beheerPaths = ['/instruments', '/genres', '/pdf-tools', '/loans', '/statistics'];
   const inventarisPaths = ['/equipment', '/uniforms'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/theme', '/changelog'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/theme', '/changelog', '/audit-logs'];
 
   const isMusicActive = musicPaths.some(p => location.pathname.startsWith(p));
   const isBeheerActive = beheerPaths.some(p => location.pathname.startsWith(p));
@@ -298,6 +300,11 @@ export default function Layout() {
                     {t('nav.changelog')}
                   </NavLink>
                 </li>
+                <li role="none">
+                  <NavLink to="/audit-logs" role="menuitem" className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}>
+                    {t('nav.auditLogs')}
+                  </NavLink>
+                </li>
               </NavDropdown>
             )}
 
@@ -320,6 +327,7 @@ export default function Layout() {
           </ul>
 
           <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
+            <DarkModeToggle />
             <LanguageSwitcher compact />
             <button
               className="btn btn-outline btn-sm"
@@ -351,6 +359,7 @@ export default function Layout() {
       </nav>
 
       <main id="main-content" className="main-content">
+        <Breadcrumbs />
         <Outlet />
       </main>
 

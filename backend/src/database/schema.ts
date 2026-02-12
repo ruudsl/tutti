@@ -572,4 +572,28 @@ CREATE TABLE IF NOT EXISTS job_title_instrument_mappings (
 
 CREATE INDEX IF NOT EXISTS idx_job_title_mappings_association ON job_title_instrument_mappings(association_id);
 CREATE INDEX IF NOT EXISTS idx_job_title_mappings_title ON job_title_instrument_mappings(job_title);
+
+-- ===========================================
+-- AUDIT LOGS (Beheer logging)
+-- ===========================================
+
+-- Audit log tabel voor het bijhouden van alle wijzigingen
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT,
+    changes TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_date ON audit_logs(created_at);
 `;

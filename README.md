@@ -39,6 +39,88 @@ Harmonie is een multi-tenant webapplicatie ontworpen voor harmonieorkesten, fanf
 
 ## Architectuur
 
+```mermaid
+flowchart TB
+    subgraph Client["🖥️ Client"]
+        Browser["Browser / PWA"]
+    end
+
+    subgraph Frontend["⚛️ Frontend (React)"]
+        direction TB
+        UI["UI Components"]
+        Router["React Router v6"]
+        State["TanStack Query"]
+        i18n["i18next (NL/EN/DE)"]
+        Auth["Auth Context"]
+    end
+
+    subgraph Backend["🚀 Backend (Express.js)"]
+        direction TB
+        API["REST API"]
+        JWT["JWT Auth + MFA"]
+        Middleware["Helmet + Rate Limiting"]
+        Validation["Zod Validation"]
+        Routes["API Routes"]
+    end
+
+    subgraph Storage["💾 Storage"]
+        direction LR
+        SQLite[("SQLite\n(sql.js)")]
+        Files[("Files\nPDF/MP3")]
+    end
+
+    subgraph External["🌐 External Services"]
+        direction TB
+        Spond["Spond API\n(Aanwezigheid)"]
+        MusicaInfo["MusicaInfo.net\n(Metadata)"]
+        Entra["Microsoft Entra ID\n(SSO)"]
+        SMTP["SMTP Server\n(E-mail)"]
+    end
+
+    Browser <--> Frontend
+    Frontend <-->|"Axios\nREST API"| Backend
+    Backend <--> Storage
+    Backend <--> External
+
+    style Frontend fill:#61DAFB,color:#000
+    style Backend fill:#339933,color:#fff
+    style Storage fill:#003B57,color:#fff
+    style External fill:#6B7280,color:#fff
+```
+
+### Systeem Componenten
+
+```mermaid
+flowchart LR
+    subgraph FE["Frontend Modules"]
+        Pages["📄 24 Pages"]
+        Components["🧩 19 Components"]
+        Hooks["🪝 10 Custom Hooks"]
+        Utils["🔧 Utilities"]
+    end
+
+    subgraph BE["Backend Modules"]
+        AuthRoutes["🔐 Auth Routes"]
+        MusicRoutes["🎵 Music Routes"]
+        UserRoutes["👥 User Routes"]
+        AdminRoutes["⚙️ Admin Routes"]
+    end
+
+    subgraph DB["Database (25+ Tabellen)"]
+        Users["users"]
+        Music["music_pieces"]
+        Lists["music_lists"]
+        Orchestras["orchestras"]
+        Rehearsals["rehearsals"]
+        AuditLogs["audit_logs"]
+    end
+
+    FE --> BE
+    BE --> DB
+```
+
+### Text-diagram (fallback)
+
 ```
 ┌─────────────────────────────────┐
 │         Frontend (React)        │
@@ -59,6 +141,12 @@ Harmonie is een multi-tenant webapplicatie ontworpen voor harmonieorkesten, fanf
 │   SQLite    │  │   Files   │
 │  (sql.js)   │  │  PDF/MP3  │
 └─────────────┘  └───────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│      External Services          │
+│  Spond · MusicaInfo · Entra ID  │
+└─────────────────────────────────┘
 ```
 
 ### Design beslissingen

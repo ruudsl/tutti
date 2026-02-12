@@ -44,6 +44,7 @@ import equipmentRoutes from './routes/equipment';
 import uniformsRoutes from './routes/uniforms';
 import concertsRoutes from './routes/concerts';
 import entraSyncRoutes from './routes/entra-sync';
+import auditLogsRoutes from './routes/audit-logs';
 
 const app = express();
 
@@ -107,6 +108,7 @@ app.use('/api/equipment', equipmentRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

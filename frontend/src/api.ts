@@ -1442,4 +1442,58 @@ export const syncEntraUsers = async (createNew: boolean = false): Promise<EntraS
   return data;
 };
 
+// ==================== AUDIT LOGS ====================
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  entityName?: string;
+  changes?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const getAuditLogs = async (params?: {
+  page?: number;
+  pageSize?: number;
+  action?: string;
+  entityType?: string;
+  userId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): Promise<AuditLogsResponse> => {
+  const { data } = await api.get('/audit-logs', { params });
+  return data;
+};
+
+// ==================== DASHBOARD WIDGETS ====================
+
+export const getUpcomingRehearsals = async (limit: number = 3): Promise<Rehearsal[]> => {
+  const { data } = await api.get('/rehearsals/upcoming', { params: { limit } });
+  return data;
+};
+
+export const getRecentActivity = async (limit: number = 5): Promise<{
+  id: string;
+  actionType: string;
+  entityType: string;
+  entityName?: string;
+  createdAt: string;
+}[]> => {
+  const { data } = await api.get('/activity/recent', { params: { limit } });
+  return data;
+};
+
 export default api;
