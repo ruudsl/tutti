@@ -316,6 +316,9 @@ export default function Layout() {
               </div>
               <div className="mobile-user-actions">
                 <LanguageSwitcher compact />
+                <NavLink to="/user-guide" className="nav-link">
+                  {t('nav.userGuide')}
+                </NavLink>
                 <NavLink to="/profile" className="nav-link">
                   {t('nav.profile')}
                 </NavLink>
@@ -329,6 +332,9 @@ export default function Layout() {
           <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
             <DarkModeToggle />
             <LanguageSwitcher compact />
+            <Link to="/user-guide" className="btn btn-outline btn-sm">
+              {t('nav.userGuide')}
+            </Link>
             <button
               className="btn btn-outline btn-sm"
               onClick={handleRestartOnboarding}
