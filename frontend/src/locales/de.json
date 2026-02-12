@@ -65,7 +65,9 @@
     "equipment": "Instrumente",
     "uniforms": "Uniformen",
     "concerts": "Konzerte",
-    "entraSync": "Entra ID Sync"
+    "entraSync": "Entra ID Sync",
+    "userGuide": "Benutzerhandbuch",
+    "auditLogs": "Audit-Protokolle"
   },
   "roles": {
     "admin": "Administrator",
