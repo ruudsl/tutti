@@ -40,7 +40,10 @@ const router = Router();
  *         description: List of users with pagination
  */
 router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { page, limit, offset } = getPaginationParams(req.query);
+    // Use custom pagination with higher limit for users (up to 1000)
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const offset = (page - 1) * limit;
     const search = req.query.search as string | undefined;
 
     let whereClause = 'WHERE u.association_id = ?';

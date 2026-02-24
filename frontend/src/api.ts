@@ -84,7 +84,8 @@ export const getMfaStatus = async (): Promise<{ mfaEnabled: boolean }> => {
 
 // Users
 export const getUsers = async (): Promise<User[]> => {
-  const { data } = await api.get('/users');
+  // Request all users by setting a high limit (max 1000 users should be enough for most associations)
+  const { data } = await api.get('/users?limit=1000');
   // Backend returns paginated data, extract the data array
   return Array.isArray(data) ? data : data.data || [];
 };
