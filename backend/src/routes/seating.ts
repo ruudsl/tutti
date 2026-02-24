@@ -709,13 +709,33 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
         throw new ApiError(400, 'Geen aanwezigen voor deze repetitie.');
     }
 
+    // Determine which orchestra(s) to use for sections
+    // If the rehearsal has a specific orchestra, use that; otherwise find orchestras with sections configured
+    let orchestraId = rehearsal.orchestra_id;
+
+    if (!orchestraId) {
+        // Rehearsal is for all orchestras - find the first orchestra with seating sections configured
+        const orchestraWithSections = db.prepare(`
+            SELECT DISTINCT ss.orchestra_id
+            FROM seating_sections ss
+            JOIN orchestras o ON ss.orchestra_id = o.id
+            WHERE o.association_id = ?
+            ORDER BY o.name
+            LIMIT 1
+        `).get(req.user!.associationId) as any;
+
+        if (orchestraWithSections) {
+            orchestraId = orchestraWithSections.orchestra_id;
+        }
+    }
+
     // Get sections for the orchestra
-    const sections = db.prepare(`
+    const sections = orchestraId ? db.prepare(`
         SELECT ss.id, ss.row_number, ss.name
         FROM seating_sections ss
         WHERE ss.orchestra_id = ?
         ORDER BY ss.row_number
-    `).all(rehearsal.orchestra_id) as any[];
+    `).all(orchestraId) as any[] : [];
 
     // Get section instruments mapping
     const sectionInstruments = new Map<string, Set<string>>();
@@ -732,13 +752,25 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
     }
 
     // Get existing assignments
-    const existingAssignments = db.prepare(`
+    const existingAssignments = orchestraId ? db.prepare(`
         SELECT sa.user_id, sa.section_id, sa.position_in_section
         FROM seating_assignments sa
         WHERE sa.orchestra_id = ?
-    `).all(rehearsal.orchestra_id) as any[];
+    `).all(orchestraId) as any[] : [];
 
     const assignmentMap = new Map(existingAssignments.map(a => [a.user_id, a]));
+
+    // Build a lookup for Spond-only members: try to match by name to find user_id and instrument
+    const usersByName = new Map<string, any>();
+    const allUsers = db.prepare(`
+        SELECT u.id, u.first_name, u.last_name
+        FROM users u
+        WHERE u.association_id = ?
+    `).all(req.user!.associationId) as any[];
+    for (const u of allUsers) {
+        const fullName = `${u.first_name} ${u.last_name}`.toLowerCase().trim();
+        usersByName.set(fullName, u);
+    }
 
     // Delete existing rehearsal seating
     db.prepare('DELETE FROM rehearsal_seating WHERE rehearsal_id = ?').run(rehearsalId);
@@ -751,14 +783,23 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
         let rowNumber = 99; // Default to last row if no match
         let instrumentName: string | null = null;
 
-        if (attendee.user_id) {
+        // Resolve user_id: either from attendance record or by matching Spond member name
+        let resolvedUserId = attendee.user_id;
+        if (!resolvedUserId && attendee.member_name) {
+            const matchedUser = usersByName.get(attendee.member_name.toLowerCase().trim());
+            if (matchedUser) {
+                resolvedUserId = matchedUser.id;
+            }
+        }
+
+        if (resolvedUserId) {
             // Get user's instruments
             const userInstruments = db.prepare(`
                 SELECT i.id, i.name
                 FROM user_instruments ui
                 JOIN instruments i ON ui.instrument_id = i.id
                 WHERE ui.user_id = ?
-            `).all(attendee.user_id) as any[];
+            `).all(resolvedUserId) as any[];
 
             if (userInstruments.length > 0) {
                 instrumentName = userInstruments.map((i: any) => i.name).join(', ');
@@ -779,8 +820,8 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
                 }
             }
 
-            // Check for existing assignment
-            const existing = assignmentMap.get(attendee.user_id);
+            // Check for existing manual assignment (overrides instrument-based placement)
+            const existing = assignmentMap.get(resolvedUserId);
             if (existing) {
                 sectionId = existing.section_id;
                 const section = sections.find((s: any) => s.id === sectionId);
@@ -801,6 +842,20 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
         });
     }
 
+    // Renumber rows compactly: row 99 (unmatched) becomes the next row after the last used section row
+    const sortedRowNumbers = Array.from(rowAssignments.keys()).sort((a, b) => a - b);
+    const compactRowMap = new Map<number, number>();
+    let compactRow = 1;
+    for (const rn of sortedRowNumbers) {
+        if (rn === 99) {
+            // Unmatched members get placed after the last configured row
+            compactRowMap.set(rn, compactRow);
+        } else {
+            compactRowMap.set(rn, rn);
+            compactRow = rn + 1;
+        }
+    }
+
     // Assign positions within each row (compact layout)
     const transaction = db.transaction(() => {
         for (const [rowNumber, rowMembers] of rowAssignments) {
@@ -815,6 +870,8 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
                 }
                 return a.memberName.localeCompare(b.memberName);
             });
+
+            const finalRowNumber = compactRowMap.get(rowNumber) ?? rowNumber;
 
             // Assign compact positions
             let position = 0;
@@ -832,7 +889,7 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
                     member.memberName,
                     member.instrumentName,
                     member.sectionId,
-                    rowNumber,
+                    finalRowNumber,
                     member.position
                 );
             }

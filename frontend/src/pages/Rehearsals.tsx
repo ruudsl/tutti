@@ -479,7 +479,7 @@ export default function Rehearsals() {
         {/* Attendance */}
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('rehearsals.attendance')}</h2>
+            <h2 className="card-title">{t('rehearsals.attendance.title')}</h2>
             {isManager && spondConfig?.configured && spondConfig.groupId && (
               <button
                 className="btn btn-outline btn-sm"
