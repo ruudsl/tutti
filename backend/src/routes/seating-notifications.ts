@@ -354,7 +354,19 @@ router.post('/send/:rehearsalId', authenticateToken, async (req: Request, res: R
         const conductors = seating.filter(s => s.is_conductor);
         const regularMembers = seating.filter(s => !s.is_conductor);
 
-        let messageText = settings.message_template || buildDefaultMessage(rehearsal, rows, conductors.length, regularMembers.length);
+        // Get attendance data (declined members)
+        const attendance = db.prepare(`
+            SELECT member_name, status
+            FROM rehearsal_attendance
+            WHERE rehearsal_id = ?
+            ORDER BY member_name
+        `).all(rehearsalId) as { member_name: string; status: string }[];
+
+        const declinedMembers = attendance
+            .filter(a => a.status === 'declined')
+            .map(a => a.member_name);
+
+        let messageText = settings.message_template || buildDefaultMessage(rehearsal, rows, conductors.length, regularMembers.length, declinedMembers);
 
         // Replace placeholders in template
         messageText = messageText
@@ -364,7 +376,9 @@ router.post('/send/:rehearsalId', authenticateToken, async (req: Request, res: R
             .replace('{location}', rehearsal.location || '')
             .replace('{total_members}', String(regularMembers.length))
             .replace('{total_conductors}', String(conductors.length))
-            .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '));
+            .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '))
+            .replace('{absent_count}', String(declinedMembers.length))
+            .replace('{absent_members}', declinedMembers.join(', ') || 'Niemand');
 
         // Create log entry
         const logId = uuidv4();
@@ -464,7 +478,8 @@ function buildDefaultMessage(
     rehearsal: { orchestra_name?: string; date: string; start_time?: string; location?: string },
     rows: { row: number; chairs: number }[],
     conductorCount: number,
-    memberCount: number
+    memberCount: number,
+    declinedMembers: string[] = []
 ): string {
     const lines = [
         `🎵 Opstelling ${rehearsal.orchestra_name || 'Orkest'}`,
@@ -476,6 +491,13 @@ function buildDefaultMessage(
         '🪑 Stoelen per rij:',
         ...rows.map(r => `  Rij ${r.row}: ${r.chairs} stoelen`),
     ];
+
+    // Add absent members section if there are any
+    if (declinedMembers.length > 0) {
+        lines.push('');
+        lines.push(`❌ Afgemeld (${declinedMembers.length}):`);
+        lines.push(`  ${declinedMembers.join(', ')}`);
+    }
 
     return lines.filter(Boolean).join('\n');
 }

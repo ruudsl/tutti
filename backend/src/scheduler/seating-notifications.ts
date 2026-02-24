@@ -50,7 +50,8 @@ function buildDefaultMessage(
     rehearsal: Rehearsal,
     rows: { row: number; chairs: number }[],
     conductorCount: number,
-    memberCount: number
+    memberCount: number,
+    declinedMembers: string[] = []
 ): string {
     const lines = [
         `🎵 Opstelling ${orchestraName}`,
@@ -62,6 +63,13 @@ function buildDefaultMessage(
         '🪑 Stoelen per rij:',
         ...rows.map(r => `  Rij ${r.row}: ${r.chairs} stoelen`),
     ];
+
+    // Add absent members section if there are any
+    if (declinedMembers.length > 0) {
+        lines.push('');
+        lines.push(`❌ Afgemeld (${declinedMembers.length}):`);
+        lines.push(`  ${declinedMembers.join(', ')}`);
+    }
 
     return lines.filter(Boolean).join('\n');
 }
@@ -178,13 +186,26 @@ async function sendNotification(settings: NotificationSettings, rehearsal: Rehea
         const conductors = seating.filter(s => s.is_conductor);
         const regularMembers = seating.filter(s => !s.is_conductor);
 
+        // Get attendance data (declined members)
+        const attendance = db.prepare(`
+            SELECT member_name, status
+            FROM rehearsal_attendance
+            WHERE rehearsal_id = ?
+            ORDER BY member_name
+        `).all(rehearsal.id) as { member_name: string; status: string }[];
+
+        const declinedMembers = attendance
+            .filter(a => a.status === 'declined')
+            .map(a => a.member_name);
+
         // Build message
         let messageText = settings.message_template || buildDefaultMessage(
             settings.orchestra_name,
             rehearsal,
             rows,
             conductors.length,
-            regularMembers.length
+            regularMembers.length,
+            declinedMembers
         );
 
         messageText = messageText
@@ -194,7 +215,9 @@ async function sendNotification(settings: NotificationSettings, rehearsal: Rehea
             .replace('{location}', rehearsal.location || '')
             .replace('{total_members}', String(regularMembers.length))
             .replace('{total_conductors}', String(conductors.length))
-            .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '));
+            .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '))
+            .replace('{absent_count}', String(declinedMembers.length))
+            .replace('{absent_members}', declinedMembers.join(', ') || 'Niemand');
 
         // Create log entry
         const logId = uuidv4();

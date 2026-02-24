@@ -162,6 +162,97 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
 // REHEARSALS (individual)
 // ========================
 
+// ========================
+// ATTENDANCE SUMMARY (must be before /:id route)
+// ========================
+
+/**
+ * GET /rehearsals/attendance/summary - Get attendance summary per person
+ * Query params: from (YYYY-MM-DD), to (YYYY-MM-DD), orchestraId (optional)
+ */
+router.get('/attendance/summary', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const from = (req.query.from as string) || '';
+    const to = (req.query.to as string) || '';
+    const orchestraId = req.query.orchestraId as string | undefined;
+
+    if (!from || !to) {
+        throw new ApiError(400, 'Parameters "from" en "to" zijn verplicht (YYYY-MM-DD).');
+    }
+
+    // Get rehearsals in the date range for this association
+    let rehearsalQuery = `
+        SELECT r.id, r.date, r.orchestra_id, o.name as orchestra_name
+        FROM rehearsals r
+        LEFT JOIN orchestras o ON r.orchestra_id = o.id
+        WHERE r.association_id = ? AND r.date >= ? AND r.date <= ? AND r.type != 'cancelled'
+    `;
+    const params: any[] = [req.user!.associationId, from, to];
+
+    if (orchestraId) {
+        rehearsalQuery += ' AND r.orchestra_id = ?';
+        params.push(orchestraId);
+    }
+
+    rehearsalQuery += ' ORDER BY r.date';
+
+    const rehearsals = db.prepare(rehearsalQuery).all(...params) as any[];
+    const rehearsalIds = rehearsals.map(r => r.id);
+
+    if (rehearsalIds.length === 0) {
+        return res.json({ members: [], rehearsalCount: 0, rehearsals: [] });
+    }
+
+    // Get all attendance records for these rehearsals
+    const placeholders = rehearsalIds.map(() => '?').join(',');
+    const attendanceRows = db.prepare(`
+        SELECT ra.rehearsal_id, ra.member_name, ra.spond_member_id, ra.user_id, ra.status
+        FROM rehearsal_attendance ra
+        WHERE ra.rehearsal_id IN (${placeholders})
+    `).all(...rehearsalIds) as any[];
+
+    // Aggregate per person (use spond_member_id or member_name as key)
+    const memberMap = new Map<string, {
+        name: string;
+        spondMemberId: string | null;
+        userId: string | null;
+        accepted: number;
+        declined: number;
+        unknown: number;
+        total: number;
+    }>();
+
+    for (const row of attendanceRows) {
+        const key = row.spond_member_id || row.member_name;
+        if (!memberMap.has(key)) {
+            memberMap.set(key, {
+                name: row.member_name,
+                spondMemberId: row.spond_member_id,
+                userId: row.user_id,
+                accepted: 0,
+                declined: 0,
+                unknown: 0,
+                total: 0,
+            });
+        }
+        const member = memberMap.get(key)!;
+        member.total++;
+        if (row.status === 'accepted') member.accepted++;
+        else if (row.status === 'declined') member.declined++;
+        else member.unknown++;
+    }
+
+    // Sort by name
+    const members = Array.from(memberMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({
+        members,
+        rehearsalCount: rehearsalIds.length,
+        from,
+        to,
+    });
+}));
+
 /**
  * GET /rehearsals - Get rehearsals (optionally filtered by date range)
  * Regular members only see rehearsals for their orchestras (or orchestra_id=NULL which are for everyone)
@@ -359,97 +450,6 @@ router.put('/:id/pieces', authenticateToken, requireRole(...REHEARSAL_MANAGERS),
     logger.info('Rehearsal pieces updated', { rehearsalId: id, pieceCount: pieces.length });
 
     res.json({ message: 'Repertoire bijgewerkt.' });
-}));
-
-// ========================
-// ATTENDANCE SUMMARY
-// ========================
-
-/**
- * GET /rehearsals/attendance/summary - Get attendance summary per person
- * Query params: from (YYYY-MM-DD), to (YYYY-MM-DD), orchestraId (optional)
- */
-router.get('/attendance/summary', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const from = (req.query.from as string) || '';
-    const to = (req.query.to as string) || '';
-    const orchestraId = req.query.orchestraId as string | undefined;
-
-    if (!from || !to) {
-        throw new ApiError(400, 'Parameters "from" en "to" zijn verplicht (YYYY-MM-DD).');
-    }
-
-    // Get rehearsals in the date range for this association
-    let rehearsalQuery = `
-        SELECT r.id, r.date, r.orchestra_id, o.name as orchestra_name
-        FROM rehearsals r
-        LEFT JOIN orchestras o ON r.orchestra_id = o.id
-        WHERE r.association_id = ? AND r.date >= ? AND r.date <= ? AND r.type != 'cancelled'
-    `;
-    const params: any[] = [req.user!.associationId, from, to];
-
-    if (orchestraId) {
-        rehearsalQuery += ' AND r.orchestra_id = ?';
-        params.push(orchestraId);
-    }
-
-    rehearsalQuery += ' ORDER BY r.date';
-
-    const rehearsals = db.prepare(rehearsalQuery).all(...params) as any[];
-    const rehearsalIds = rehearsals.map(r => r.id);
-
-    if (rehearsalIds.length === 0) {
-        return res.json({ members: [], rehearsalCount: 0, rehearsals: [] });
-    }
-
-    // Get all attendance records for these rehearsals
-    const placeholders = rehearsalIds.map(() => '?').join(',');
-    const attendanceRows = db.prepare(`
-        SELECT ra.rehearsal_id, ra.member_name, ra.spond_member_id, ra.user_id, ra.status
-        FROM rehearsal_attendance ra
-        WHERE ra.rehearsal_id IN (${placeholders})
-    `).all(...rehearsalIds) as any[];
-
-    // Aggregate per person (use spond_member_id or member_name as key)
-    const memberMap = new Map<string, {
-        name: string;
-        spondMemberId: string | null;
-        userId: string | null;
-        accepted: number;
-        declined: number;
-        unknown: number;
-        total: number;
-    }>();
-
-    for (const row of attendanceRows) {
-        const key = row.spond_member_id || row.member_name;
-        if (!memberMap.has(key)) {
-            memberMap.set(key, {
-                name: row.member_name,
-                spondMemberId: row.spond_member_id,
-                userId: row.user_id,
-                accepted: 0,
-                declined: 0,
-                unknown: 0,
-                total: 0,
-            });
-        }
-        const member = memberMap.get(key)!;
-        member.total++;
-        if (row.status === 'accepted') member.accepted++;
-        else if (row.status === 'declined') member.declined++;
-        else member.unknown++;
-    }
-
-    // Sort by name
-    const members = Array.from(memberMap.values())
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-    res.json({
-        members,
-        rehearsalCount: rehearsalIds.length,
-        from,
-        to,
-    });
 }));
 
 export default router;
