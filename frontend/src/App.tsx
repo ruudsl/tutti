@@ -43,6 +43,7 @@ import Concerts from './pages/Concerts';
 import EntraSync from './pages/EntraSync';
 import UserGuide from './pages/UserGuide';
 import AuditLogs from './pages/AuditLogs';
+import Seating from './pages/Seating';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -261,6 +262,14 @@ function AppRoutes() {
           element={
             <PrivateRoute>
               <Rehearsals />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="seating"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <Seating />
             </PrivateRoute>
           }
         />

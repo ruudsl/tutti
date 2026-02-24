@@ -1476,5 +1476,58 @@
     "deleteMappingConfirm": "Are you sure you want to delete the mapping for \"{{jobTitle}}\"?",
     "columnDepartment": "Orchestra(s)",
     "newDepartmentsNotice": "The following orchestras will be automatically created on import:"
+  },
+  "seating": {
+    "title": "Orchestra Seating",
+    "selectOrchestra": "Select orchestra",
+    "tabs": {
+      "chart": "Seating Chart",
+      "config": "Configuration",
+      "assignments": "Seat Assignments"
+    },
+    "chartTitle": "Seating Visualization",
+    "conductor": "Conductor",
+    "noSections": "No sections configured. Create a default layout first.",
+    "noAssignments": "No seats assigned. Assign members to their seats.",
+    "createDefaultLayout": "Create default layout",
+    "defaultLayoutCreated": "Default layout created",
+    "sectionsTitle": "Sections (rows)",
+    "deleteAllSections": "Delete all sections",
+    "confirmDeleteAllSections": "Are you sure you want to delete all sections?",
+    "allSectionsDeleted": "All sections deleted",
+    "addSection": "Add section",
+    "editSection": "Edit section",
+    "sectionCreated": "Section created",
+    "sectionUpdated": "Section updated",
+    "sectionDeleted": "Section deleted",
+    "confirmDeleteSection": "Are you sure you want to delete this section?",
+    "rowNumber": "Row",
+    "sectionName": "Section name",
+    "instruments": "Instruments",
+    "row": "Row",
+    "assignmentsTitle": "Seat assignments",
+    "addAssignment": "Assign seat",
+    "assignmentCreated": "Seat assigned",
+    "assignmentDeleted": "Seat removed",
+    "confirmDeleteAssignment": "Are you sure you want to remove this seat assignment?",
+    "noSectionsForAssignment": "Configure sections first before assigning seats.",
+    "member": "Member",
+    "section": "Section",
+    "position": "Position",
+    "positionHint": "0 = left, increasing to the right",
+    "seatLabel": "Seat label",
+    "seatLabelPlaceholder": "E.g. 1st part, Solo",
+    "notes": "Notes",
+    "rehearsalSeating": "Rehearsal seating",
+    "generateSeating": "Generate seating",
+    "seatingGenerated": "Seating generated for {{count}} members",
+    "noAttendees": "No attendees for this rehearsal",
+    "viewSeating": "View seating"
+  },
+  "pageTitle": {
+    "seating": "Seating - Harmonie"
+  },
+  "nav": {
+    "seating": "Seating"
   }
 }

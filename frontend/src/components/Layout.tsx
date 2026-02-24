@@ -114,6 +114,8 @@ export default function Layout() {
 
   const isAdmin = user?.role === ROLES.ADMIN;
   const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
+  const isConductor = user?.role === ROLES.CONDUCTOR;
+  const canManageSeating = isAdmin || isMusicCommittee || isConductor;
   const isEquipmentCommittee = user?.role === ROLES.EQUIPMENT_COMMITTEE || isAdmin;
   const isUniformsCommittee = user?.role === ROLES.UNIFORMS_COMMITTEE || isAdmin;
 
@@ -178,6 +180,13 @@ export default function Layout() {
                 {t('nav.rehearsals')}
               </NavLink>
             </li>
+            {canManageSeating && (
+              <li>
+                <NavLink to="/seating" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                  {t('nav.seating')}
+                </NavLink>
+              </li>
+            )}
             <li>
               <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 {t('nav.tools')}

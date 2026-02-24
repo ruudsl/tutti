@@ -459,3 +459,81 @@ export interface MediaType {
   value: string;
   label: string;
 }
+
+// ==================== SEATING (ORKEST OPSTELLING) ====================
+
+export interface SeatingSectionInstrument {
+  id: string;
+  name: string;
+  tuning: string | null;
+  sortOrder: number;
+}
+
+export interface SeatingSection {
+  id: string;
+  name: string;
+  rowNumber: number;
+  sortOrder: number;
+  instruments: SeatingSectionInstrument[];
+  createdAt: string;
+}
+
+export interface SeatingAssignment {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  sectionId: string;
+  sectionName: string;
+  rowNumber: number;
+  positionInSection: number;
+  seatLabel: string | null;
+  notes: string | null;
+  instruments: string | null;
+}
+
+export interface SeatingNeighbor {
+  id: string;
+  userId: string;
+  userName: string;
+  neighborUserId: string;
+  neighborUserName: string;
+  preference: 'preferred' | 'avoid';
+}
+
+export interface RehearsalSeat {
+  id: string;
+  userId: string | null;
+  spondMemberId: string | null;
+  memberName: string;
+  instrumentName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  rowNumber: number;
+  positionInRow: number;
+}
+
+export interface SeatingChartSection {
+  id: string;
+  name: string;
+  rowNumber: number;
+  seatCount: number;
+}
+
+export interface SeatingChartSeat {
+  id: string;
+  userId: string | null;
+  memberName: string;
+  instrumentName: string | null;
+  rowNumber: number;
+  positionInRow: number;
+  sectionName: string | null;
+}
+
+export interface SeatingChart {
+  orchestraId: string;
+  orchestraName: string;
+  sections: SeatingChartSection[];
+  seats: SeatingChartSeat[];
+  totalRows: number;
+}

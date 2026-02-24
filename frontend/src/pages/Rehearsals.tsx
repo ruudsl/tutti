@@ -11,11 +11,13 @@ import {
   getSpondConfig, saveSpondConfig, removeSpondConfig,
   getSpondGroups, syncSpond, syncSpondRehearsal,
   getAttendanceSummary,
+  getRehearsalSeating, generateRehearsalSeating,
 } from '../api';
 import type { AttendanceMember } from '../api';
-import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup } from '../types';
+import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup, RehearsalSeat } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
+import SeatingChartVisualization from '../components/SeatingChartVisualization';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -27,6 +29,9 @@ export default function Rehearsals() {
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
+  const [rehearsalSeating, setRehearsalSeating] = useState<RehearsalSeat[]>([]);
+  const [showSeating, setShowSeating] = useState(false);
+  const [seatingLoading, setSeatingLoading] = useState(false);
   const [defaultDays, setDefaultDays] = useState<RehearsalDefaultDay[]>([]);
   const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -307,6 +312,34 @@ export default function Rehearsals() {
     }
   };
 
+  const handleLoadSeating = async (rehearsalId: string) => {
+    setSeatingLoading(true);
+    try {
+      const seats = await getRehearsalSeating(rehearsalId);
+      setRehearsalSeating(seats);
+      setShowSeating(true);
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setSeatingLoading(false);
+    }
+  };
+
+  const handleGenerateSeating = async (rehearsalId: string) => {
+    setSeatingLoading(true);
+    try {
+      const result = await generateRehearsalSeating(rehearsalId);
+      showSuccess(t('seating.seatingGenerated', { count: result.memberCount }));
+      const seats = await getRehearsalSeating(rehearsalId);
+      setRehearsalSeating(seats);
+      setShowSeating(true);
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setSeatingLoading(false);
+    }
+  };
+
   const getTypeStyle = (type: string): React.CSSProperties => {
     switch (type) {
       case 'extra': return { borderLeft: '4px solid var(--warning)' };
@@ -479,6 +512,58 @@ export default function Rehearsals() {
             )}
           </div>
         </div>
+
+        {/* Seating */}
+        {isManager && (
+          <div className="card mt-3">
+            <div className="card-header">
+              <h2 className="card-title">{t('seating.rehearsalSeating')}</h2>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => handleLoadSeating(selectedRehearsal.id)}
+                  disabled={seatingLoading}
+                >
+                  {seatingLoading ? t('common.loading') : t('seating.viewSeating')}
+                </button>
+                {selectedRehearsal.attendance.filter(a => a.status === 'accepted').length > 0 && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleGenerateSeating(selectedRehearsal.id)}
+                    disabled={seatingLoading}
+                  >
+                    {t('seating.generateSeating')}
+                  </button>
+                )}
+              </div>
+            </div>
+            {showSeating && (
+              <div className="card-body">
+                {rehearsalSeating.length > 0 ? (
+                  <SeatingChartVisualization
+                    chart={{
+                      orchestraId: selectedRehearsal.orchestra_id || '',
+                      orchestraName: selectedRehearsal.orchestra_name || t('rehearsals.allOrchestras'),
+                      sections: [],
+                      seats: rehearsalSeating.map(s => ({
+                        id: s.id,
+                        userId: s.userId,
+                        memberName: s.memberName,
+                        instrumentName: s.instrumentName,
+                        rowNumber: s.rowNumber,
+                        positionInRow: s.positionInRow,
+                        sectionName: s.sectionName,
+                      })),
+                      totalRows: Math.max(...rehearsalSeating.map(s => s.rowNumber), 0),
+                    }}
+                  />
+                ) : (
+                  <p className="piece-meta">{t('seating.noAttendees')}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

@@ -1460,5 +1460,58 @@
     "deleteMappingConfirm": "Möchten Sie das Mapping für \"{{jobTitle}}\" wirklich löschen?",
     "columnDepartment": "Orchester",
     "newDepartmentsNotice": "Die folgenden Orchester werden beim Import automatisch erstellt:"
+  },
+  "seating": {
+    "title": "Orchester Sitzordnung",
+    "selectOrchestra": "Orchester auswählen",
+    "tabs": {
+      "chart": "Sitzplan",
+      "config": "Konfiguration",
+      "assignments": "Sitzplatzzuweisungen"
+    },
+    "chartTitle": "Sitzplan Visualisierung",
+    "conductor": "Dirigent",
+    "noSections": "Keine Sektionen konfiguriert. Erstellen Sie zuerst ein Standardlayout.",
+    "noAssignments": "Keine Sitzplätze zugewiesen. Weisen Sie Mitglieder ihren Plätzen zu.",
+    "createDefaultLayout": "Standardlayout erstellen",
+    "defaultLayoutCreated": "Standardlayout erstellt",
+    "sectionsTitle": "Sektionen (Reihen)",
+    "deleteAllSections": "Alle Sektionen löschen",
+    "confirmDeleteAllSections": "Möchten Sie wirklich alle Sektionen löschen?",
+    "allSectionsDeleted": "Alle Sektionen gelöscht",
+    "addSection": "Sektion hinzufügen",
+    "editSection": "Sektion bearbeiten",
+    "sectionCreated": "Sektion erstellt",
+    "sectionUpdated": "Sektion aktualisiert",
+    "sectionDeleted": "Sektion gelöscht",
+    "confirmDeleteSection": "Möchten Sie diese Sektion wirklich löschen?",
+    "rowNumber": "Reihe",
+    "sectionName": "Sektionsname",
+    "instruments": "Instrumente",
+    "row": "Reihe",
+    "assignmentsTitle": "Sitzplatzzuweisungen",
+    "addAssignment": "Sitzplatz zuweisen",
+    "assignmentCreated": "Sitzplatz zugewiesen",
+    "assignmentDeleted": "Sitzplatz entfernt",
+    "confirmDeleteAssignment": "Möchten Sie diese Sitzplatzzuweisung wirklich entfernen?",
+    "noSectionsForAssignment": "Konfigurieren Sie zuerst Sektionen, bevor Sie Sitzplätze zuweisen.",
+    "member": "Mitglied",
+    "section": "Sektion",
+    "position": "Position",
+    "positionHint": "0 = links, nach rechts steigend",
+    "seatLabel": "Sitzplatzbezeichnung",
+    "seatLabelPlaceholder": "Z.B. 1. Stimme, Solo",
+    "notes": "Notizen",
+    "rehearsalSeating": "Proben-Sitzordnung",
+    "generateSeating": "Sitzordnung generieren",
+    "seatingGenerated": "Sitzordnung für {{count}} Mitglieder generiert",
+    "noAttendees": "Keine Teilnehmer für diese Probe",
+    "viewSeating": "Sitzordnung anzeigen"
+  },
+  "pageTitle": {
+    "seating": "Sitzordnung - Harmonie"
+  },
+  "nav": {
+    "seating": "Sitzordnung"
   }
 }

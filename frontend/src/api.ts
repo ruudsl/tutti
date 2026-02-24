@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -1493,6 +1493,137 @@ export const getRecentActivity = async (limit: number = 5): Promise<{
   createdAt: string;
 }[]> => {
   const { data } = await api.get('/activity/recent', { params: { limit } });
+  return data;
+};
+
+// ==================== SEATING (ORKEST OPSTELLING) ====================
+
+// Seating Sections
+export const getSeatingSections = async (orchestraId: string): Promise<SeatingSection[]> => {
+  const { data } = await api.get(`/seating/sections/${orchestraId}`);
+  return data;
+};
+
+export const createDefaultSeatingLayout = async (orchestraId: string): Promise<{ message: string }> => {
+  const { data } = await api.post(`/seating/sections/${orchestraId}/default`);
+  return data;
+};
+
+export const createSeatingSection = async (section: {
+  orchestraId: string;
+  name: string;
+  rowNumber: number;
+  instrumentIds?: string[];
+}): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/seating/sections', section);
+  return data;
+};
+
+export const updateSeatingSection = async (id: string, section: {
+  name?: string;
+  rowNumber?: number;
+  instrumentIds?: string[];
+}): Promise<{ message: string }> => {
+  const { data } = await api.put(`/seating/sections/${id}`, section);
+  return data;
+};
+
+export const deleteSeatingSection = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/seating/sections/${id}`);
+  return data;
+};
+
+export const deleteAllSeatingSections = async (orchestraId: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/seating/sections/orchestra/${orchestraId}`);
+  return data;
+};
+
+// Seating Assignments
+export const getSeatingAssignments = async (orchestraId: string): Promise<SeatingAssignment[]> => {
+  const { data } = await api.get(`/seating/assignments/${orchestraId}`);
+  return data;
+};
+
+export const createSeatingAssignment = async (assignment: {
+  orchestraId: string;
+  userId: string;
+  sectionId: string;
+  positionInSection: number;
+  seatLabel?: string;
+  notes?: string;
+}): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/seating/assignments', assignment);
+  return data;
+};
+
+export const updateSeatingAssignment = async (id: string, assignment: {
+  sectionId?: string;
+  positionInSection?: number;
+  seatLabel?: string;
+  notes?: string;
+}): Promise<{ message: string }> => {
+  const { data } = await api.put(`/seating/assignments/${id}`, assignment);
+  return data;
+};
+
+export const deleteSeatingAssignment = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/seating/assignments/${id}`);
+  return data;
+};
+
+export const bulkUpdateSeatingAssignments = async (orchestraId: string, assignments: {
+  userId: string;
+  sectionId: string;
+  positionInSection: number;
+}[]): Promise<{ message: string }> => {
+  const { data } = await api.put(`/seating/assignments/bulk/${orchestraId}`, { assignments });
+  return data;
+};
+
+// Seating Neighbors
+export const getSeatingNeighbors = async (orchestraId: string): Promise<SeatingNeighbor[]> => {
+  const { data } = await api.get(`/seating/neighbors/${orchestraId}`);
+  return data;
+};
+
+export const createSeatingNeighbor = async (neighbor: {
+  orchestraId: string;
+  userId: string;
+  neighborUserId: string;
+  preference: 'preferred' | 'avoid';
+}): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/seating/neighbors', neighbor);
+  return data;
+};
+
+export const deleteSeatingNeighbor = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/seating/neighbors/${id}`);
+  return data;
+};
+
+// Rehearsal Seating
+export const getRehearsalSeating = async (rehearsalId: string): Promise<RehearsalSeat[]> => {
+  const { data } = await api.get(`/seating/rehearsal/${rehearsalId}`);
+  return data;
+};
+
+export const generateRehearsalSeating = async (rehearsalId: string): Promise<{ message: string; memberCount: number }> => {
+  const { data } = await api.post(`/seating/rehearsal/${rehearsalId}/generate`);
+  return data;
+};
+
+export const updateRehearsalSeat = async (rehearsalId: string, seatId: string, seat: {
+  rowNumber: number;
+  positionInRow: number;
+}): Promise<{ message: string }> => {
+  const { data } = await api.put(`/seating/rehearsal/${rehearsalId}/seat/${seatId}`, seat);
+  return data;
+};
+
+// Seating Chart
+export const getSeatingChart = async (orchestraId: string, rehearsalId?: string): Promise<SeatingChart> => {
+  const params = rehearsalId ? { rehearsalId } : {};
+  const { data } = await api.get(`/seating/chart/${orchestraId}`, { params });
   return data;
 };
 

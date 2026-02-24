@@ -596,4 +596,88 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_date ON audit_logs(created_at);
+
+-- ===========================================
+-- ORKEST OPSTELLING (Seating Arrangement)
+-- ===========================================
+
+-- Secties/rijen in de opstelling per orkest
+CREATE TABLE IF NOT EXISTS seating_sections (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    row_number INTEGER NOT NULL, -- 1 = eerste rij (vooraan), 2 = tweede rij, etc.
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE,
+    UNIQUE(orchestra_id, row_number)
+);
+
+-- Instrumentgroepen die in een sectie/rij thuishoren
+CREATE TABLE IF NOT EXISTS seating_section_instruments (
+    id TEXT PRIMARY KEY,
+    section_id TEXT NOT NULL,
+    instrument_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0, -- volgorde binnen de rij (links naar rechts)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (section_id) REFERENCES seating_sections(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+    UNIQUE(section_id, instrument_id)
+);
+
+-- Vaste zitplaats-toewijzingen (wie zit normaal waar)
+CREATE TABLE IF NOT EXISTS seating_assignments (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    section_id TEXT NOT NULL,
+    position_in_section INTEGER NOT NULL DEFAULT 0, -- positie binnen de sectie (0 = links, oplopend naar rechts)
+    seat_label TEXT, -- optioneel label bijv. "1e stem", "2e stem"
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (section_id) REFERENCES seating_sections(id) ON DELETE CASCADE,
+    UNIQUE(orchestra_id, user_id)
+);
+
+-- Buren-relaties (wie zit naast wie - optionele voorkeuren)
+CREATE TABLE IF NOT EXISTS seating_neighbors (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    neighbor_user_id TEXT NOT NULL,
+    preference TEXT NOT NULL DEFAULT 'preferred', -- 'preferred' = wil naast, 'avoid' = liever niet naast
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (neighbor_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(orchestra_id, user_id, neighbor_user_id)
+);
+
+-- Per-repetitie opstelling (gegenereerd op basis van aanwezigen)
+CREATE TABLE IF NOT EXISTS rehearsal_seating (
+    id TEXT PRIMARY KEY,
+    rehearsal_id TEXT NOT NULL,
+    user_id TEXT,
+    spond_member_id TEXT, -- Voor leden die alleen in Spond staan
+    member_name TEXT NOT NULL,
+    instrument_name TEXT,
+    section_id TEXT,
+    row_number INTEGER NOT NULL,
+    position_in_row INTEGER NOT NULL, -- positie binnen de rij (0 = links)
+    generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (section_id) REFERENCES seating_sections(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_seating_sections_orchestra ON seating_sections(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_seating_section_instruments_section ON seating_section_instruments(section_id);
+CREATE INDEX IF NOT EXISTS idx_seating_assignments_orchestra ON seating_assignments(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_seating_assignments_user ON seating_assignments(user_id);
+CREATE INDEX IF NOT EXISTS idx_seating_neighbors_orchestra ON seating_neighbors(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_seating_neighbors_user ON seating_neighbors(user_id);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_seating_rehearsal ON rehearsal_seating(rehearsal_id);
 `;
