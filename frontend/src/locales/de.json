@@ -68,7 +68,8 @@
     "entraSync": "Entra ID Sync",
     "userGuide": "Benutzerhandbuch",
     "auditLogs": "Audit-Protokolle",
-    "memberDirectory": "Mitglieder"
+    "memberDirectory": "Mitglieder",
+    "seating": "Sitzordnung"
   },
   "roles": {
     "admin": "Administrator",
@@ -1567,9 +1568,6 @@
   "pageTitle": {
     "seating": "Sitzordnung - Harmonie",
     "memberDirectory": "Mitgliederverzeichnis - Harmonie"
-  },
-  "nav": {
-    "seating": "Sitzordnung"
   },
   "memberDirectory": {
     "title": "Mitgliederverzeichnis",

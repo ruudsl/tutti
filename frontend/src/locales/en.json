@@ -68,7 +68,8 @@
     "entraSync": "Entra ID Sync",
     "userGuide": "User Guide",
     "auditLogs": "Audit Logs",
-    "memberDirectory": "Members"
+    "memberDirectory": "Members",
+    "seating": "Seating"
   },
   "roles": {
     "admin": "Administrator",
@@ -1583,9 +1584,6 @@
   "pageTitle": {
     "seating": "Seating - Harmonie",
     "memberDirectory": "Member Directory - Harmonie"
-  },
-  "nav": {
-    "seating": "Seating"
   },
   "memberDirectory": {
     "title": "Member Directory",
