@@ -44,6 +44,7 @@ import EntraSync from './pages/EntraSync';
 import UserGuide from './pages/UserGuide';
 import AuditLogs from './pages/AuditLogs';
 import Seating from './pages/Seating';
+import MemberDirectory from './pages/MemberDirectory';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -305,6 +306,7 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
+        <Route path="members" element={<MemberDirectory />} />
         <Route path="user-guide" element={<UserGuide />} />
         <Route
           path="audit-logs"

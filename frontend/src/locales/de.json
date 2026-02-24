@@ -67,7 +67,8 @@
     "concerts": "Konzerte",
     "entraSync": "Entra ID Sync",
     "userGuide": "Benutzerhandbuch",
-    "auditLogs": "Audit-Protokolle"
+    "auditLogs": "Audit-Protokolle",
+    "memberDirectory": "Mitglieder"
   },
   "roles": {
     "admin": "Administrator",
@@ -1561,9 +1562,22 @@
     }
   },
   "pageTitle": {
-    "seating": "Sitzordnung - Harmonie"
+    "seating": "Sitzordnung - Harmonie",
+    "memberDirectory": "Mitgliederverzeichnis - Harmonie"
   },
   "nav": {
     "seating": "Sitzordnung"
+  },
+  "memberDirectory": {
+    "title": "Mitgliederverzeichnis",
+    "subtitle": "{{count}} Mitglieder",
+    "searchPlaceholder": "Nach Name suchen...",
+    "allOrchestras": "Alle Orchester",
+    "allInstruments": "Alle Instrumente",
+    "clearFilters": "Filter löschen",
+    "noMembers": "Keine Mitglieder gefunden.",
+    "syncPhotos": "Fotos synchronisieren",
+    "syncPhotosDescription": "Profilfotos von Microsoft 365 synchronisieren.",
+    "syncPhotosSuccess": "Fotos synchronisiert"
   }
 }

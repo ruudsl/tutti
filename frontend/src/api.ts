@@ -1467,6 +1467,31 @@ export const syncEntraUsers = async (createNew: boolean = false): Promise<EntraS
   return data;
 };
 
+export const syncEntraPhotos = async (): Promise<{ message: string; synced: number; skipped: number; failed: number }> => {
+  const { data } = await api.post('/entra/sync-photos');
+  return data;
+};
+
+// ==================== MEMBER DIRECTORY (SMOELENBOEK) ====================
+
+export interface DirectoryMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  photoUrl: string | null;
+  instruments: { id: string; name: string; tuning: string | null }[];
+  orchestras: { id: string; name: string }[];
+}
+
+export const getMemberDirectory = async (filters?: {
+  orchestraId?: string;
+  instrumentId?: string;
+  search?: string;
+}): Promise<DirectoryMember[]> => {
+  const { data } = await api.get('/users/directory', { params: filters });
+  return data;
+};
+
 // ==================== AUDIT LOGS ====================
 
 export interface AuditLog {

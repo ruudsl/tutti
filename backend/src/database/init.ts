@@ -565,6 +565,19 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add profile_photo_path column to users
+    try {
+        const usersPhotoInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasProfilePhoto = usersPhotoInfo.some(col => col.name === 'profile_photo_path');
+        if (!hasProfilePhoto) {
+            console.log('Migration: Adding profile_photo_path column to users...');
+            db.prepare('ALTER TABLE users ADD COLUMN profile_photo_path TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

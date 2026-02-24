@@ -67,7 +67,8 @@
     "concerts": "Concerten",
     "entraSync": "Entra ID Sync",
     "userGuide": "Handleiding",
-    "auditLogs": "Audit Logs"
+    "auditLogs": "Audit Logs",
+    "memberDirectory": "Smoelenboek"
   },
   "roles": {
     "admin": "Beheerder",
@@ -1671,7 +1672,8 @@
   "pageTitle": {
     "userGuide": "Handleiding - Harmonie",
     "auditLogs": "Audit Logs - Harmonie",
-    "seating": "Opstelling - Harmonie"
+    "seating": "Opstelling - Harmonie",
+    "memberDirectory": "Smoelenboek - Harmonie"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -1772,5 +1774,17 @@
       "step4": "Kopieer je Account SID en Auth Token van de Console",
       "step5": "Vul de gegevens hierboven in en test de verbinding"
     }
+  },
+  "memberDirectory": {
+    "title": "Smoelenboek",
+    "subtitle": "{{count}} leden",
+    "searchPlaceholder": "Zoek op naam...",
+    "allOrchestras": "Alle orkesten",
+    "allInstruments": "Alle instrumenten",
+    "clearFilters": "Filters wissen",
+    "noMembers": "Geen leden gevonden.",
+    "syncPhotos": "Foto's synchroniseren",
+    "syncPhotosDescription": "Synchroniseer profielfoto's van Microsoft 365.",
+    "syncPhotosSuccess": "Foto's gesynchroniseerd"
   }
 }

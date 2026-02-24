@@ -1,7 +1,11 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
+import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
@@ -10,6 +14,128 @@ import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
+
+// Profile photo upload configuration
+const profilePhotoDir = path.resolve(config.uploadDir, 'profile-photos');
+if (!fs.existsSync(profilePhotoDir)) {
+    fs.mkdirSync(profilePhotoDir, { recursive: true });
+}
+
+const profilePhotoStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, profilePhotoDir),
+    filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `profile-${Date.now()}-${uuidv4().slice(0, 8)}${ext}`);
+    },
+});
+
+const profilePhotoUpload = multer({
+    storage: profilePhotoStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen PNG, JPG of WebP bestanden zijn toegestaan.'));
+        }
+    },
+});
+
+// ========================================
+// MEMBER DIRECTORY (Smoelenboek)
+// ========================================
+
+/**
+ * GET /users/directory
+ * Public member directory (all authenticated users can see)
+ */
+router.get('/directory', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orchestraId = req.query.orchestraId as string | undefined;
+    const instrumentId = req.query.instrumentId as string | undefined;
+    const search = req.query.search as string | undefined;
+
+    let whereClause = 'WHERE u.association_id = ?';
+    const params: any[] = [req.user!.associationId];
+
+    if (search) {
+        whereClause += ` AND (LOWER(u.first_name) LIKE ? OR LOWER(u.last_name) LIKE ?)`;
+        const searchTerm = `%${search.toLowerCase()}%`;
+        params.push(searchTerm, searchTerm);
+    }
+
+    // Get all members
+    const users = db.prepare(`
+        SELECT u.id, u.first_name, u.last_name, u.profile_photo_path
+        FROM users u
+        ${whereClause}
+        ORDER BY u.last_name, u.first_name
+    `).all(...params) as { id: string; first_name: string; last_name: string; profile_photo_path: string | null }[];
+
+    // Get instruments and orchestras for all users in batch
+    const result = users.map(user => {
+        const instruments = db.prepare(`
+            SELECT i.id, i.name, i.tuning
+            FROM instruments i
+            JOIN user_instruments ui ON i.id = ui.instrument_id
+            WHERE ui.user_id = ?
+        `).all(user.id) as { id: string; name: string; tuning: string | null }[];
+
+        const orchestras = db.prepare(`
+            SELECT o.id, o.name
+            FROM orchestras o
+            JOIN user_orchestras uo ON o.id = uo.orchestra_id
+            WHERE uo.user_id = ?
+        `).all(user.id) as { id: string; name: string }[];
+
+        return {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
+            instruments,
+            orchestras,
+        };
+    }).filter(user => {
+        // Apply orchestra filter
+        if (orchestraId && !user.orchestras.some(o => o.id === orchestraId)) {
+            return false;
+        }
+        // Apply instrument filter
+        if (instrumentId && !user.instruments.some(i => i.id === instrumentId)) {
+            return false;
+        }
+        return true;
+    });
+
+    res.json(result);
+}));
+
+// ========================================
+// PROFILE PHOTO ENDPOINTS
+// ========================================
+
+/**
+ * GET /users/:id/photo
+ * Serve a user's profile photo (any authenticated user)
+ */
+router.get('/:id/photo', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = db.prepare(
+        'SELECT profile_photo_path FROM users WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, req.user!.associationId) as { profile_photo_path: string | null } | undefined;
+
+    if (!user || !user.profile_photo_path) {
+        throw new ApiError(404, 'Profielfoto niet gevonden.');
+    }
+
+    const photoPath = path.resolve(user.profile_photo_path);
+    if (!fs.existsSync(photoPath)) {
+        throw new ApiError(404, 'Profielfoto niet gevonden.');
+    }
+
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.sendFile(photoPath);
+}));
 
 /**
  * @swagger
@@ -454,6 +580,45 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
     );
 
     res.json({ message: 'Gebruiker succesvol verwijderd.' });
+}));
+
+/**
+ * POST /users/:id/photo
+ * Upload a profile photo for a user (admin only, or via Entra sync)
+ */
+router.post('/:id/photo', authenticateToken, requireRole('admin'), profilePhotoUpload.single('photo'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+        throw new ApiError(400, 'Geen bestand geüpload.');
+    }
+
+    // Verify user exists and belongs to same association
+    const user = db.prepare(
+        'SELECT id, profile_photo_path FROM users WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, req.user!.associationId) as { id: string; profile_photo_path: string | null } | undefined;
+
+    if (!user) {
+        // Clean up uploaded file
+        fs.unlinkSync(req.file.path);
+        throw new ApiError(404, 'Gebruiker niet gevonden.');
+    }
+
+    // Remove old photo if exists
+    if (user.profile_photo_path) {
+        const oldPath = path.resolve(user.profile_photo_path);
+        if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+        }
+    }
+
+    // Update database with new photo path
+    db.prepare('UPDATE users SET profile_photo_path = ? WHERE id = ?').run(req.file.path, req.params.id);
+
+    logger.info(`Profile photo uploaded for user ${req.params.id}`, { uploadedBy: req.user!.id });
+
+    res.json({
+        photoUrl: `/api/users/${req.params.id}/photo`,
+        message: 'Profielfoto geüpload.',
+    });
 }));
 
 export default router;

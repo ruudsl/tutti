@@ -1,0 +1,153 @@
+.member-directory-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.member-directory-page .page-header {
+  margin-bottom: 1.5rem;
+}
+
+.member-directory-page .page-subtitle {
+  color: var(--text-secondary, #6c757d);
+  margin-top: 0.25rem;
+}
+
+/* Filters */
+.directory-filters {
+  margin-bottom: 1.5rem;
+}
+
+.directory-filters .filter-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.directory-filters .search-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.directory-filters .filter-group select {
+  min-width: 180px;
+}
+
+/* Grid */
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* Member Card */
+.member-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 0.75rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.member-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Avatar */
+.member-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--primary, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-avatar .avatar-initials {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+.member-avatar .avatar-initials.hidden {
+  display: none;
+}
+
+/* Member Info */
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-instrument {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #6c757d);
+  margin: 0 0 0.375rem 0;
+}
+
+.member-orchestras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.orchestra-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--primary-bg, #eef2ff);
+  color: var(--primary, #4f46e5);
+  font-weight: 500;
+}
+
+/* Empty state */
+.member-directory-page .empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary, #6c757d);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .directory-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .directory-filters .filter-row {
+    flex-direction: column;
+  }
+
+  .directory-filters .search-group,
+  .directory-filters .filter-group {
+    width: 100%;
+  }
+
+  .directory-filters .filter-group select {
+    width: 100%;
+    min-width: auto;
+  }
+}

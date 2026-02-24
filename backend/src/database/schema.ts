@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS users (
     mfa_secret TEXT, -- TOTP secret for MFA
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
     microsoft_id TEXT, -- Microsoft Entra Object ID for SSO
+    profile_photo_path TEXT, -- Pad naar profielfoto
     last_login DATETIME, -- Laatste keer ingelogd
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL

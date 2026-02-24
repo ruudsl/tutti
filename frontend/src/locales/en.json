@@ -67,7 +67,8 @@
     "concerts": "Concerts",
     "entraSync": "Entra ID Sync",
     "userGuide": "User Guide",
-    "auditLogs": "Audit Logs"
+    "auditLogs": "Audit Logs",
+    "memberDirectory": "Members"
   },
   "roles": {
     "admin": "Administrator",
@@ -1577,9 +1578,22 @@
     }
   },
   "pageTitle": {
-    "seating": "Seating - Harmonie"
+    "seating": "Seating - Harmonie",
+    "memberDirectory": "Member Directory - Harmonie"
   },
   "nav": {
     "seating": "Seating"
+  },
+  "memberDirectory": {
+    "title": "Member Directory",
+    "subtitle": "{{count}} members",
+    "searchPlaceholder": "Search by name...",
+    "allOrchestras": "All orchestras",
+    "allInstruments": "All instruments",
+    "clearFilters": "Clear filters",
+    "noMembers": "No members found.",
+    "syncPhotos": "Sync photos",
+    "syncPhotosDescription": "Sync profile photos from Microsoft 365.",
+    "syncPhotosSuccess": "Photos synchronized"
   }
 }

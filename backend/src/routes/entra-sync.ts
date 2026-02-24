@@ -2,7 +2,10 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
+import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
@@ -100,6 +103,45 @@ async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
     }
 
     return users;
+}
+
+/**
+ * Fetch profile photo for a specific user from Microsoft Graph API
+ * Returns the photo as a Buffer or null if not available
+ */
+async function fetchUserPhoto(accessToken: string, userId: string): Promise<Buffer | null> {
+    try {
+        const response = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`,
+            {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            }
+        );
+
+        if (!response.ok) {
+            return null; // User may not have a photo
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Save profile photo to disk for a user
+ */
+function saveProfilePhoto(userId: string, photoBuffer: Buffer): string {
+    const photoDir = path.resolve(config.uploadDir, 'profile-photos');
+    if (!fs.existsSync(photoDir)) {
+        fs.mkdirSync(photoDir, { recursive: true });
+    }
+
+    const filename = `profile-entra-${userId.slice(0, 8)}-${Date.now()}.jpg`;
+    const filePath = path.join(photoDir, filename);
+    fs.writeFileSync(filePath, photoBuffer);
+    return filePath;
 }
 
 /**
@@ -393,6 +435,7 @@ router.post('/users/import', authenticateToken, requireRole('admin'), asyncHandl
         skipped: 0,
         errors: [] as string[],
     };
+    const importedUsers: { userId: string; entraId: string; email: string }[] = [];
 
     withTransaction(() => {
         for (const entraUser of selectedUsers) {
@@ -448,9 +491,23 @@ router.post('/users/import', authenticateToken, requireRole('admin'), asyncHandl
             }
 
             results.imported++;
+            importedUsers.push({ userId, entraId: entraUser.id, email });
             logger.info(`User imported from Entra ID: ${email}`, { userId, microsoftId: entraUser.id, importedBy: req.user!.id });
         }
     });
+
+    // Fetch profile photos outside transaction (async operations)
+    for (const imported of importedUsers) {
+        try {
+            const photoBuffer = await fetchUserPhoto(accessToken, imported.entraId);
+            if (photoBuffer) {
+                const filePath = saveProfilePhoto(imported.userId, photoBuffer);
+                db.prepare('UPDATE users SET profile_photo_path = ? WHERE id = ?').run(filePath, imported.userId);
+            }
+        } catch (e) {
+            logger.warn(`Could not fetch photo for ${imported.email}`, { error: e });
+        }
+    }
 
     res.json({
         message: `${results.imported} gebruiker(s) geïmporteerd, ${results.skipped} overgeslagen.`,
@@ -577,6 +634,64 @@ router.post('/users/sync', authenticateToken, requireRole('admin'), asyncHandler
     res.json({
         message: `Synchronisatie voltooid: ${results.updated} bijgewerkt, ${results.created} aangemaakt, ${results.skipped} overgeslagen.`,
         ...results,
+    });
+}));
+
+/**
+ * POST /entra/sync-photos
+ * Sync profile photos from Entra ID for all users with a microsoft_id
+ */
+router.post('/sync-photos', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const msConfig = getMicrosoftConfig(req.user!.associationId);
+    if (!msConfig) {
+        throw new ApiError(400, 'Microsoft integratie is niet geconfigureerd.');
+    }
+
+    // Get access token
+    const accessToken = await getAppAccessToken(msConfig);
+
+    // Get all users with microsoft_id
+    const users = db.prepare(`
+        SELECT id, microsoft_id, profile_photo_path FROM users
+        WHERE association_id = ? AND microsoft_id IS NOT NULL
+    `).all(req.user!.associationId) as { id: string; microsoft_id: string; profile_photo_path: string | null }[];
+
+    let synced = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const user of users) {
+        try {
+            const photoBuffer = await fetchUserPhoto(accessToken, user.microsoft_id);
+            if (!photoBuffer) {
+                skipped++;
+                continue;
+            }
+
+            // Remove old photo if exists
+            if (user.profile_photo_path) {
+                const oldPath = path.resolve(user.profile_photo_path);
+                if (fs.existsSync(oldPath)) {
+                    fs.unlinkSync(oldPath);
+                }
+            }
+
+            const filePath = saveProfilePhoto(user.id, photoBuffer);
+            db.prepare('UPDATE users SET profile_photo_path = ? WHERE id = ?').run(filePath, user.id);
+            synced++;
+        } catch (e) {
+            logger.error(`Failed to sync photo for user ${user.id}`, { error: e });
+            failed++;
+        }
+    }
+
+    logger.info(`Entra photo sync completed`, { synced, failed, skipped, syncedBy: req.user!.id });
+
+    res.json({
+        message: `Foto's gesynchroniseerd: ${synced} geüpdatet, ${skipped} zonder foto, ${failed} mislukt.`,
+        synced,
+        skipped,
+        failed,
     });
 }));
 
