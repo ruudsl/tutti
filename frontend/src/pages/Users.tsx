@@ -9,7 +9,14 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { ROLES } from '../utils/constants';
+import { ROLES, STORAGE_KEYS } from '../utils/constants';
+
+// Helper to get photo URL with auth token for img src
+const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
+  if (!photoUrl) return null;
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  return token ? `${photoUrl}?token=${token}` : null;
+};
 
 interface UserFormData {
   email: string;
@@ -321,9 +328,9 @@ export default function Users() {
                             flexShrink: 0,
                           }}
                         >
-                          {user.photoUrl ? (
+                          {getPhotoUrl(user.photoUrl) ? (
                             <img
-                              src={user.photoUrl}
+                              src={getPhotoUrl(user.photoUrl)!}
                               alt=""
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
