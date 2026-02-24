@@ -47,6 +47,7 @@ import entraSyncRoutes from './routes/entra-sync';
 import auditLogsRoutes from './routes/audit-logs';
 import seatingRoutes from './routes/seating';
 import seatingNotificationsRoutes from './routes/seating-notifications';
+import { startScheduler } from './scheduler/seating-notifications';
 
 const app = express();
 
@@ -193,6 +194,9 @@ async function startServer() {
             if (config.isDevelopment) {
                 logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
             }
+
+            // Start the seating notification scheduler
+            startScheduler();
         });
     } catch (error) {
         logger.error('Failed to start server:', error);

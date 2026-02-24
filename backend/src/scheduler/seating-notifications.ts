@@ -1,0 +1,267 @@
+import db from '../database/connection';
+import logger from '../utils/logger';
+import { v4 as uuidv4 } from 'uuid';
+
+interface NotificationSettings {
+    id: string;
+    orchestra_id: string;
+    webhook_url: string;
+    minutes_before: number;
+    enabled: boolean;
+    include_image: boolean;
+    message_template: string | null;
+    orchestra_name: string;
+}
+
+interface Rehearsal {
+    id: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    location: string;
+}
+
+interface Seat {
+    member_name: string;
+    instrument_name: string | null;
+    row_number: number;
+    position_in_row: number;
+    is_conductor: boolean;
+}
+
+// Run every minute to check for upcoming rehearsals
+const CHECK_INTERVAL_MS = 60 * 1000;
+
+let schedulerRunning = false;
+
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function buildDefaultMessage(
+    orchestraName: string,
+    rehearsal: Rehearsal,
+    rows: { row: number; chairs: number }[],
+    conductorCount: number,
+    memberCount: number
+): string {
+    const lines = [
+        `🎵 Opstelling ${orchestraName}`,
+        `📅 ${formatDate(rehearsal.date)}${rehearsal.start_time ? ` om ${rehearsal.start_time}` : ''}`,
+        rehearsal.location ? `📍 ${rehearsal.location}` : '',
+        '',
+        `👥 Totaal: ${memberCount} leden${conductorCount > 0 ? ` + ${conductorCount} dirigent${conductorCount > 1 ? 'en' : ''}` : ''}`,
+        '',
+        '🪑 Stoelen per rij:',
+        ...rows.map(r => `  Rij ${r.row}: ${r.chairs} stoelen`),
+    ];
+
+    return lines.filter(Boolean).join('\n');
+}
+
+async function sendNotification(settings: NotificationSettings, rehearsal: Rehearsal): Promise<boolean> {
+    try {
+        // Get seating arrangement
+        const seating = db.prepare(`
+            SELECT rs.*, ss.name as section_name
+            FROM rehearsal_seating rs
+            LEFT JOIN seating_sections ss ON rs.section_id = ss.id
+            WHERE rs.rehearsal_id = ?
+            ORDER BY rs.row_number, rs.position_in_row
+        `).all(rehearsal.id) as Seat[];
+
+        if (seating.length === 0) {
+            logger.info('No seating arrangement for rehearsal, skipping notification', { rehearsalId: rehearsal.id });
+            return false;
+        }
+
+        // Group by row
+        const rowsMap = new Map<number, Seat[]>();
+        for (const seat of seating) {
+            if (!rowsMap.has(seat.row_number)) {
+                rowsMap.set(seat.row_number, []);
+            }
+            rowsMap.get(seat.row_number)!.push(seat);
+        }
+
+        const rows = Array.from(rowsMap.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([rowNumber, seats]) => ({
+                row: rowNumber,
+                chairs: seats.length,
+                members: seats.map(s => ({
+                    name: s.member_name,
+                    instrument: s.instrument_name,
+                    isConductor: Boolean(s.is_conductor),
+                })),
+            }));
+
+        const conductors = seating.filter(s => s.is_conductor);
+        const regularMembers = seating.filter(s => !s.is_conductor);
+
+        // Build message
+        let messageText = settings.message_template || buildDefaultMessage(
+            settings.orchestra_name,
+            rehearsal,
+            rows,
+            conductors.length,
+            regularMembers.length
+        );
+
+        messageText = messageText
+            .replace('{orchestra}', settings.orchestra_name || 'Orkest')
+            .replace('{date}', formatDate(rehearsal.date))
+            .replace('{time}', rehearsal.start_time || '')
+            .replace('{location}', rehearsal.location || '')
+            .replace('{total_members}', String(regularMembers.length))
+            .replace('{total_conductors}', String(conductors.length))
+            .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '));
+
+        // Build payload
+        const payload = {
+            type: 'seating_notification',
+            rehearsal: {
+                id: rehearsal.id,
+                date: rehearsal.date,
+                startTime: rehearsal.start_time,
+                endTime: rehearsal.end_time,
+                location: rehearsal.location,
+            },
+            orchestra: {
+                id: settings.orchestra_id,
+                name: settings.orchestra_name,
+            },
+            seating: {
+                totalMembers: regularMembers.length,
+                totalConductors: conductors.length,
+                rows,
+            },
+            message: messageText,
+        };
+
+        // Create log entry
+        const logId = uuidv4();
+        db.prepare(`
+            INSERT INTO seating_notification_logs (id, rehearsal_id, orchestra_id, status)
+            VALUES (?, ?, ?, 'pending')
+        `).run(logId, rehearsal.id, settings.orchestra_id);
+
+        // Send webhook
+        const response = await fetch(settings.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const responseText = await response.text();
+
+        if (response.ok) {
+            db.prepare(`
+                UPDATE seating_notification_logs
+                SET status = 'sent', webhook_response = ?, sent_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `).run(responseText.substring(0, 1000), logId);
+
+            logger.info('Seating notification sent', { rehearsalId: rehearsal.id, orchestraId: settings.orchestra_id });
+            return true;
+        } else {
+            throw new Error(`HTTP ${response.status}: ${responseText}`);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to send seating notification', { error: errorMessage, rehearsalId: rehearsal.id });
+
+        // Log the failure
+        try {
+            const existingLog = db.prepare(`
+                SELECT id FROM seating_notification_logs
+                WHERE rehearsal_id = ? AND orchestra_id = ? AND status = 'pending'
+                ORDER BY sent_at DESC LIMIT 1
+            `).get(rehearsal.id, settings.orchestra_id) as { id: string } | undefined;
+
+            if (existingLog) {
+                db.prepare(`
+                    UPDATE seating_notification_logs
+                    SET status = 'failed', error_message = ?, sent_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                `).run(errorMessage.substring(0, 500), existingLog.id);
+            }
+        } catch (logError) {
+            logger.error('Failed to log notification failure', { error: logError });
+        }
+
+        return false;
+    }
+}
+
+async function checkAndSendNotifications(): Promise<void> {
+    if (!schedulerRunning) return;
+
+    try {
+        const now = new Date();
+
+        // Get all enabled notification settings
+        const allSettings = db.prepare(`
+            SELECT sns.*, o.name as orchestra_name
+            FROM seating_notification_settings sns
+            JOIN orchestras o ON sns.orchestra_id = o.id
+            WHERE sns.enabled = 1
+        `).all() as NotificationSettings[];
+
+        for (const settings of allSettings) {
+            // Calculate the target time window
+            const targetTime = new Date(now.getTime() + settings.minutes_before * 60 * 1000);
+            const windowStart = new Date(targetTime.getTime() - 2 * 60 * 1000); // 2 min before
+            const windowEnd = new Date(targetTime.getTime() + 2 * 60 * 1000); // 2 min after
+
+            const today = now.toISOString().split('T')[0];
+            const windowStartTime = windowStart.toTimeString().substring(0, 5);
+            const windowEndTime = windowEnd.toTimeString().substring(0, 5);
+
+            // Find rehearsals in the time window that haven't been notified
+            const rehearsals = db.prepare(`
+                SELECT r.*
+                FROM rehearsals r
+                WHERE r.orchestra_id = ?
+                AND r.date = ?
+                AND r.start_time >= ?
+                AND r.start_time <= ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM seating_notification_logs snl
+                    WHERE snl.rehearsal_id = r.id
+                    AND snl.status = 'sent'
+                )
+            `).all(settings.orchestra_id, today, windowStartTime, windowEndTime) as Rehearsal[];
+
+            for (const rehearsal of rehearsals) {
+                await sendNotification(settings, rehearsal);
+            }
+        }
+    } catch (error) {
+        logger.error('Error in notification scheduler', { error });
+    }
+
+    // Schedule next check
+    if (schedulerRunning) {
+        setTimeout(checkAndSendNotifications, CHECK_INTERVAL_MS);
+    }
+}
+
+export function startScheduler(): void {
+    if (schedulerRunning) {
+        logger.warn('Seating notification scheduler already running');
+        return;
+    }
+
+    schedulerRunning = true;
+    logger.info('Seating notification scheduler started');
+
+    // Start checking after a short delay
+    setTimeout(checkAndSendNotifications, 5000);
+}
+
+export function stopScheduler(): void {
+    schedulerRunning = false;
+    logger.info('Seating notification scheduler stopped');
+}
