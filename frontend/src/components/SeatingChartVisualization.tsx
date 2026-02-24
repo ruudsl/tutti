@@ -219,18 +219,29 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
           )}
         </g>
 
-        {/* Row labels on the left */}
+        {/* Row labels on the left with seat counts */}
         {layout.rows.map((row, index) => (
-          <text
-            key={`label-${row.rowNumber}`}
-            x={15}
-            y={layout.PADDING + index * (layout.SEAT_HEIGHT + 20) + 60 + layout.SEAT_HEIGHT / 2 + 4}
-            fill="var(--text-light-color, #666)"
-            fontSize="10"
-            textAnchor="start"
-          >
-            {row.rowNumber}
-          </text>
+          <g key={`label-${row.rowNumber}`}>
+            <text
+              x={15}
+              y={layout.PADDING + index * (layout.SEAT_HEIGHT + 20) + 60 + layout.SEAT_HEIGHT / 2 - 2}
+              fill="var(--text-light-color, #666)"
+              fontSize="10"
+              textAnchor="start"
+              fontWeight="600"
+            >
+              {t('seating.rowLabel', { row: row.rowNumber })}
+            </text>
+            <text
+              x={15}
+              y={layout.PADDING + index * (layout.SEAT_HEIGHT + 20) + 60 + layout.SEAT_HEIGHT / 2 + 10}
+              fill="var(--text-light-color, #888)"
+              fontSize="9"
+              textAnchor="start"
+            >
+              {t('seating.chairCount', { count: row.seats.length })}
+            </text>
+          </g>
         ))}
 
         {/* Seats */}
@@ -303,6 +314,50 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
           {chart.orchestraName}
         </text>
       </svg>
+
+      {/* Summary stats */}
+      <div className="seating-summary" style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '24px',
+        justifyContent: 'center',
+        marginTop: '16px',
+        padding: '12px 16px',
+        background: 'var(--surface-color, white)',
+        borderRadius: '8px',
+        border: '1px solid var(--border-color, #eee)',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary-color, #3498db)' }}>
+            {chart.seats.filter(s => !s.isConductor && s.rowNumber !== 0).length}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
+            {t('seating.totalMembers')}
+          </div>
+        </div>
+        {layout.conductors.length > 0 && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e94560' }}>
+              {layout.conductors.length}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
+              {layout.conductors.length === 1 ? t('seating.conductor') : t('seating.conductors')}
+            </div>
+          </div>
+        )}
+        <div style={{ borderLeft: '1px solid var(--border-color, #ddd)', paddingLeft: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-color, #333)' }}>
+            {t('seating.chairsPerRow')}
+          </div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {layout.rows.map(row => (
+              <div key={row.rowNumber} style={{ fontSize: '11px', color: 'var(--text-light-color, #666)' }}>
+                <span style={{ fontWeight: '600' }}>{t('seating.rowLabel', { row: row.rowNumber })}:</span> {row.seats.length}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Tooltip */}
       {hoveredSeat && (

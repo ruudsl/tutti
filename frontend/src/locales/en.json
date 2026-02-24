@@ -1531,7 +1531,12 @@
     "dropHere": "Drop a member here",
     "unassignedMembers": "Unassigned members",
     "allMembersAssigned": "All members are assigned",
-    "legend": "Instrument legend"
+    "legend": "Instrument legend",
+    "totalMembers": "Total members",
+    "conductors": "Conductors",
+    "chairsPerRow": "Chairs per row",
+    "rowLabel": "Row {{row}}",
+    "chairCount": "{{count}} chairs"
   },
   "pageTitle": {
     "seating": "Seating - Harmonie"

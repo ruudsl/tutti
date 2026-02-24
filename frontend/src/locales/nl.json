@@ -1728,6 +1728,11 @@
     "dropHere": "Sleep hier een lid naartoe",
     "unassignedMembers": "Niet-ingedeelde leden",
     "allMembersAssigned": "Alle leden zijn ingedeeld",
-    "legend": "Legenda instrumenten"
+    "legend": "Legenda instrumenten",
+    "totalMembers": "Totaal leden",
+    "conductors": "Dirigenten",
+    "chairsPerRow": "Stoelen per rij",
+    "rowLabel": "Rij {{row}}",
+    "chairCount": "{{count}} stoelen"
   }
 }

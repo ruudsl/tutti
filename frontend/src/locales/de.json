@@ -1515,7 +1515,12 @@
     "dropHere": "Mitglied hier ablegen",
     "unassignedMembers": "Nicht zugewiesene Mitglieder",
     "allMembersAssigned": "Alle Mitglieder sind zugewiesen",
-    "legend": "Instrumenten-Legende"
+    "legend": "Instrumenten-Legende",
+    "totalMembers": "Gesamtmitglieder",
+    "conductors": "Dirigenten",
+    "chairsPerRow": "Stühle pro Reihe",
+    "rowLabel": "Reihe {{row}}",
+    "chairCount": "{{count}} Stühle"
   },
   "pageTitle": {
     "seating": "Sitzordnung - Harmonie"
