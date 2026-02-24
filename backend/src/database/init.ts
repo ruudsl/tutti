@@ -436,6 +436,66 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add is_conductor column to rehearsal_seating
+    try {
+        const seatingTableInfo = db.prepare("PRAGMA table_info(rehearsal_seating)").all() as { name: string }[];
+        const hasIsConductor = seatingTableInfo.some(col => col.name === 'is_conductor');
+        if (!hasIsConductor) {
+            console.log('Migration: Adding is_conductor column to rehearsal_seating...');
+            db.prepare('ALTER TABLE rehearsal_seating ADD COLUMN is_conductor BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Add spond_orchestra_groups table for orchestra-specific Spond groups
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='spond_orchestra_groups'").get();
+        if (!tables) {
+            console.log('Migration: Creating spond_orchestra_groups table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS spond_orchestra_groups (
+                    id TEXT PRIMARY KEY,
+                    orchestra_id TEXT NOT NULL UNIQUE,
+                    spond_group_id TEXT NOT NULL,
+                    spond_group_name TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+                )
+            `).run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating spond_orchestra_groups table', e);
+    }
+
+    // Migration: Add spond_member_links table for persistent Spond member to user mappings
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='spond_member_links'").get();
+        if (!tables) {
+            console.log('Migration: Creating spond_member_links table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS spond_member_links (
+                    id TEXT PRIMARY KEY,
+                    association_id TEXT NOT NULL,
+                    spond_member_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    spond_member_name TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE(association_id, spond_member_id)
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating spond_member_links table', e);
+    }
+
     console.log('Database initialization complete!');
 }
 
