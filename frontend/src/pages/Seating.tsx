@@ -24,6 +24,7 @@ import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
 import SeatingEditor from '../components/SeatingEditor';
+import SeatingNotificationSettings from '../components/SeatingNotificationSettings';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -44,7 +45,7 @@ export default function Seating() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Form states
-  const [activeTab, setActiveTab] = useState<'chart' | 'editor' | 'config' | 'assignments'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'editor' | 'config' | 'assignments' | 'notifications'>('chart');
   const [showSectionForm, setShowSectionForm] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [sectionForm, setSectionForm] = useState({ name: '', rowNumber: 1, instrumentIds: [] as string[] });
@@ -283,6 +284,12 @@ export default function Seating() {
               onClick={() => setActiveTab('assignments')}
             >
               {t('seating.tabs.assignments')}
+            </button>
+            <button
+              className={`tab ${activeTab === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveTab('notifications')}
+            >
+              {t('seating.tabs.notifications')}
             </button>
           </>
         )}
@@ -616,6 +623,20 @@ export default function Seating() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Notifications Tab */}
+      {activeTab === 'notifications' && isManager && (
+        <div className="card">
+          <div className="card-header">
+            <h2>{t('seating.notifications.title')}</h2>
+          </div>
+          <div className="card-body">
+            <SeatingNotificationSettings
+              orchestraId={selectedOrchestraId}
+            />
+          </div>
         </div>
       )}
     </div>

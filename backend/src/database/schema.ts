@@ -707,4 +707,39 @@ CREATE INDEX IF NOT EXISTS idx_seating_assignments_user ON seating_assignments(u
 CREATE INDEX IF NOT EXISTS idx_seating_neighbors_orchestra ON seating_neighbors(orchestra_id);
 CREATE INDEX IF NOT EXISTS idx_seating_neighbors_user ON seating_neighbors(user_id);
 CREATE INDEX IF NOT EXISTS idx_rehearsal_seating_rehearsal ON rehearsal_seating(rehearsal_id);
+
+-- ===========================================
+-- SEATING NOTIFICATIES (WhatsApp/Webhook)
+-- ===========================================
+
+-- Instellingen voor opstelling notificaties per orkest
+CREATE TABLE IF NOT EXISTS seating_notification_settings (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL UNIQUE,
+    webhook_url TEXT NOT NULL, -- URL waar de notificatie naartoe gestuurd wordt
+    minutes_before INTEGER NOT NULL DEFAULT 15, -- Hoeveel minuten voor de repetitie
+    enabled BOOLEAN DEFAULT 1,
+    include_image BOOLEAN DEFAULT 1, -- Of de afbeelding meegestuurd moet worden
+    message_template TEXT, -- Optioneel aangepaste berichttekst
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+);
+
+-- Log van verstuurde notificaties
+CREATE TABLE IF NOT EXISTS seating_notification_logs (
+    id TEXT PRIMARY KEY,
+    rehearsal_id TEXT NOT NULL,
+    orchestra_id TEXT NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, sent, failed
+    error_message TEXT,
+    webhook_response TEXT,
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_seating_notification_settings_orchestra ON seating_notification_settings(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_rehearsal ON seating_notification_logs(rehearsal_id);
+CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_status ON seating_notification_logs(status);
 `;

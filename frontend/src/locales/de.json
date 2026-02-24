@@ -1467,7 +1467,8 @@
       "chart": "Sitzplan",
       "editor": "Layout",
       "config": "Konfiguration",
-      "assignments": "Sitzplatzzuweisungen"
+      "assignments": "Sitzplatzzuweisungen",
+      "notifications": "Benachrichtigungen"
     },
     "chartTitle": "Sitzplan Visualisierung",
     "editorTitle": "Visueller Sitzordnung-Editor",
@@ -1520,7 +1521,29 @@
     "conductors": "Dirigenten",
     "chairsPerRow": "Stühle pro Reihe",
     "rowLabel": "Reihe {{row}}",
-    "chairCount": "{{count}} Stühle"
+    "chairCount": "{{count}} Stühle",
+    "notifications": {
+      "title": "WhatsApp/Webhook Benachrichtigungen",
+      "description": "Senden Sie die Sitzordnung automatisch an eine WhatsApp-Gruppe oder Webhook vor Probenbeginn.",
+      "webhookUrl": "Webhook URL",
+      "webhookHelp": "URL wohin die Benachrichtigung gesendet wird (z.B. Twilio, Make, n8n oder eigener Endpoint)",
+      "minutesBefore": "Minuten vor der Probe",
+      "enabled": "Automatisches Senden aktiviert",
+      "includeImage": "Bild der Sitzordnung mitsenden",
+      "messageTemplate": "Benutzerdefinierte Nachricht (optional)",
+      "messagePlaceholder": "Leer lassen für Standardnachricht. Verwenden Sie {orchestra}, {date}, {time}, {location}, {total_members}, {chairs_summary}",
+      "templateHelp": "Variablen: {orchestra}, {date}, {time}, {location}, {total_members}, {total_conductors}, {chairs_summary}",
+      "saved": "Benachrichtigungseinstellungen gespeichert",
+      "deleted": "Benachrichtigungseinstellungen gelöscht",
+      "deleteConfirm": "Möchten Sie die Benachrichtigungseinstellungen wirklich löschen?",
+      "testSection": "Test-Benachrichtigung",
+      "testDescription": "Senden Sie jetzt eine Testnachricht für die ausgewählte Probe.",
+      "sendNow": "Jetzt senden",
+      "sent": "Benachrichtigung gesendet",
+      "selectRehearsalFirst": "Wählen Sie zuerst eine Probe aus, um einen Test zu senden",
+      "webhookFormat": "Webhook Format",
+      "webhookFormatDescription": "Der Webhook empfängt eine JSON-Payload mit folgender Struktur:"
+    }
   },
   "pageTitle": {
     "seating": "Sitzordnung - Harmonie"

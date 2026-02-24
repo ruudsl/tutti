@@ -1652,4 +1652,58 @@ export const getSeatingChart = async (orchestraId: string, rehearsalId?: string)
   return data;
 };
 
+// Seating Notifications
+export interface SeatingNotificationSettings {
+  id: string;
+  orchestra_id: string;
+  webhook_url: string;
+  minutes_before: number;
+  enabled: boolean;
+  include_image: boolean;
+  message_template: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SeatingNotificationLog {
+  id: string;
+  rehearsal_id: string;
+  orchestra_id: string;
+  sent_at: string;
+  status: 'pending' | 'sent' | 'failed';
+  error_message: string | null;
+  webhook_response: string | null;
+}
+
+export const getSeatingNotificationSettings = async (orchestraId: string): Promise<SeatingNotificationSettings | null> => {
+  const { data } = await api.get(`/seating-notifications/settings/${orchestraId}`);
+  return data;
+};
+
+export const saveSeatingNotificationSettings = async (orchestraId: string, settings: {
+  webhook_url: string;
+  minutes_before: number;
+  enabled: boolean;
+  include_image: boolean;
+  message_template?: string;
+}): Promise<SeatingNotificationSettings> => {
+  const { data } = await api.put(`/seating-notifications/settings/${orchestraId}`, settings);
+  return data;
+};
+
+export const deleteSeatingNotificationSettings = async (orchestraId: string): Promise<{ success: boolean }> => {
+  const { data } = await api.delete(`/seating-notifications/settings/${orchestraId}`);
+  return data;
+};
+
+export const getSeatingNotificationLogs = async (rehearsalId: string): Promise<SeatingNotificationLog[]> => {
+  const { data } = await api.get(`/seating-notifications/logs/${rehearsalId}`);
+  return data;
+};
+
+export const sendSeatingNotification = async (rehearsalId: string, imageBase64?: string): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.post(`/seating-notifications/send/${rehearsalId}`, { imageBase64 });
+  return data;
+};
+
 export default api;

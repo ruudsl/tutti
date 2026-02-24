@@ -496,6 +496,58 @@ async function initializeDatabase() {
         console.error('Migration: Error creating spond_member_links table', e);
     }
 
+    // Migration: Add seating notification settings table
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seating_notification_settings'").get();
+        if (!tables) {
+            console.log('Migration: Creating seating_notification_settings table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS seating_notification_settings (
+                    id TEXT PRIMARY KEY,
+                    orchestra_id TEXT NOT NULL UNIQUE,
+                    webhook_url TEXT NOT NULL,
+                    minutes_before INTEGER NOT NULL DEFAULT 15,
+                    enabled BOOLEAN DEFAULT 1,
+                    include_image BOOLEAN DEFAULT 1,
+                    message_template TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_seating_notification_settings_orchestra ON seating_notification_settings(orchestra_id)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating seating_notification_settings table', e);
+    }
+
+    // Migration: Add seating notification logs table
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seating_notification_logs'").get();
+        if (!tables) {
+            console.log('Migration: Creating seating_notification_logs table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS seating_notification_logs (
+                    id TEXT PRIMARY KEY,
+                    rehearsal_id TEXT NOT NULL,
+                    orchestra_id TEXT NOT NULL,
+                    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    error_message TEXT,
+                    webhook_response TEXT,
+                    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
+                    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_rehearsal ON seating_notification_logs(rehearsal_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_status ON seating_notification_logs(status)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating seating_notification_logs table', e);
+    }
+
     console.log('Database initialization complete!');
 }
 

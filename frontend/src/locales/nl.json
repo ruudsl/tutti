@@ -1680,7 +1680,8 @@
       "chart": "Opstelling",
       "editor": "Indeling",
       "config": "Configuratie",
-      "assignments": "Zitplaatsen"
+      "assignments": "Zitplaatsen",
+      "notifications": "Notificaties"
     },
     "chartTitle": "Zitplaatsen Visualisatie",
     "editorTitle": "Visuele Opstelling Editor",
@@ -1733,6 +1734,28 @@
     "conductors": "Dirigenten",
     "chairsPerRow": "Stoelen per rij",
     "rowLabel": "Rij {{row}}",
-    "chairCount": "{{count}} stoelen"
+    "chairCount": "{{count}} stoelen",
+    "notifications": {
+      "title": "WhatsApp/Webhook Notificaties",
+      "description": "Stuur de opstelling automatisch naar een WhatsApp groep of webhook voordat de repetitie begint.",
+      "webhookUrl": "Webhook URL",
+      "webhookHelp": "URL waar de notificatie naartoe gestuurd wordt (bijv. Twilio, Make, n8n, of eigen endpoint)",
+      "minutesBefore": "Minuten voor repetitie",
+      "enabled": "Automatisch versturen ingeschakeld",
+      "includeImage": "Afbeelding van opstelling meesturen",
+      "messageTemplate": "Aangepast bericht (optioneel)",
+      "messagePlaceholder": "Laat leeg voor standaard bericht. Gebruik {orchestra}, {date}, {time}, {location}, {total_members}, {chairs_summary}",
+      "templateHelp": "Variabelen: {orchestra}, {date}, {time}, {location}, {total_members}, {total_conductors}, {chairs_summary}",
+      "saved": "Notificatie-instellingen opgeslagen",
+      "deleted": "Notificatie-instellingen verwijderd",
+      "deleteConfirm": "Weet je zeker dat je de notificatie-instellingen wilt verwijderen?",
+      "testSection": "Test notificatie",
+      "testDescription": "Verstuur nu een testbericht voor de geselecteerde repetitie.",
+      "sendNow": "Nu versturen",
+      "sent": "Notificatie verstuurd",
+      "selectRehearsalFirst": "Selecteer eerst een repetitie om een test te versturen",
+      "webhookFormat": "Webhook formaat",
+      "webhookFormatDescription": "De webhook ontvangt een JSON payload met de volgende structuur:"
+    }
   }
 }

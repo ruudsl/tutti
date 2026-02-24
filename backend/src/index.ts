@@ -46,6 +46,7 @@ import concertsRoutes from './routes/concerts';
 import entraSyncRoutes from './routes/entra-sync';
 import auditLogsRoutes from './routes/audit-logs';
 import seatingRoutes from './routes/seating';
+import seatingNotificationsRoutes from './routes/seating-notifications';
 
 const app = express();
 
@@ -111,6 +112,7 @@ app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/seating', seatingRoutes);
+app.use('/api/seating-notifications', seatingNotificationsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

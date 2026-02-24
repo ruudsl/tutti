@@ -1483,7 +1483,8 @@
       "chart": "Seating Chart",
       "editor": "Layout",
       "config": "Configuration",
-      "assignments": "Seat Assignments"
+      "assignments": "Seat Assignments",
+      "notifications": "Notifications"
     },
     "chartTitle": "Seating Visualization",
     "editorTitle": "Visual Seating Editor",
@@ -1536,7 +1537,29 @@
     "conductors": "Conductors",
     "chairsPerRow": "Chairs per row",
     "rowLabel": "Row {{row}}",
-    "chairCount": "{{count}} chairs"
+    "chairCount": "{{count}} chairs",
+    "notifications": {
+      "title": "WhatsApp/Webhook Notifications",
+      "description": "Automatically send the seating arrangement to a WhatsApp group or webhook before rehearsal starts.",
+      "webhookUrl": "Webhook URL",
+      "webhookHelp": "URL where the notification will be sent (e.g., Twilio, Make, n8n, or custom endpoint)",
+      "minutesBefore": "Minutes before rehearsal",
+      "enabled": "Automatic sending enabled",
+      "includeImage": "Include seating chart image",
+      "messageTemplate": "Custom message (optional)",
+      "messagePlaceholder": "Leave empty for default message. Use {orchestra}, {date}, {time}, {location}, {total_members}, {chairs_summary}",
+      "templateHelp": "Variables: {orchestra}, {date}, {time}, {location}, {total_members}, {total_conductors}, {chairs_summary}",
+      "saved": "Notification settings saved",
+      "deleted": "Notification settings deleted",
+      "deleteConfirm": "Are you sure you want to delete the notification settings?",
+      "testSection": "Test notification",
+      "testDescription": "Send a test message now for the selected rehearsal.",
+      "sendNow": "Send now",
+      "sent": "Notification sent",
+      "selectRehearsalFirst": "Select a rehearsal first to send a test",
+      "webhookFormat": "Webhook format",
+      "webhookFormatDescription": "The webhook receives a JSON payload with the following structure:"
+    }
   },
   "pageTitle": {
     "seating": "Seating - Harmonie"
