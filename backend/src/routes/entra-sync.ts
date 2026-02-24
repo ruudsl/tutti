@@ -119,12 +119,17 @@ async function fetchUserPhoto(accessToken: string, userId: string): Promise<Buff
         );
 
         if (!response.ok) {
+            // Log non-404 errors (404 just means no photo)
+            if (response.status !== 404) {
+                logger.warn(`Failed to fetch photo for user ${userId}`, { status: response.status });
+            }
             return null; // User may not have a photo
         }
 
         const arrayBuffer = await response.arrayBuffer();
         return Buffer.from(arrayBuffer);
-    } catch {
+    } catch (e) {
+        logger.error(`Error fetching photo for user ${userId}`, { error: e });
         return null;
     }
 }
@@ -655,6 +660,17 @@ router.post('/sync-photos', authenticateToken, requireRole('admin'), asyncHandle
         SELECT id, microsoft_id, profile_photo_path FROM users
         WHERE association_id = ? AND microsoft_id IS NOT NULL
     `).all(req.user!.associationId) as { id: string; microsoft_id: string; profile_photo_path: string | null }[];
+
+    logger.info(`Starting photo sync for ${users.length} users with microsoft_id`);
+
+    if (users.length === 0) {
+        return res.json({
+            message: 'Geen gebruikers met Microsoft ID gevonden. Sync eerst gebruikers via "Sync bestaande" of importeer nieuwe gebruikers.',
+            synced: 0,
+            skipped: 0,
+            failed: 0,
+        });
+    }
 
     let synced = 0;
     let failed = 0;
