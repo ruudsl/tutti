@@ -307,7 +307,34 @@ export default function Users() {
                 {filteredUsers.map((user) => (
                   <tr key={user.id}>
                     <td>
-                      <strong>{user.firstName} {user.lastName}</strong>
+                      <div className="flex items-center gap-2">
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            background: 'var(--primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {user.photoUrl ? (
+                            <img
+                              src={user.photoUrl}
+                              alt=""
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                              {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <strong>{user.firstName} {user.lastName}</strong>
+                      </div>
                     </td>
                     <td>{user.email}</td>
                     <td>{getRoleBadge(user.role)}</td>
@@ -380,7 +407,34 @@ export default function Users() {
                     {group.users.map((user) => (
                       <tr key={user.id}>
                         <td>
-                          <strong>{user.firstName} {user.lastName}</strong>
+                          <div className="flex items-center gap-2">
+                            <div
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                background: 'var(--primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {user.photoUrl ? (
+                                <img
+                                  src={user.photoUrl}
+                                  alt=""
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <strong>{user.firstName} {user.lastName}</strong>
+                          </div>
                         </td>
                         <td>{user.email}</td>
                         <td>{getRoleBadge(user.role)}</td>

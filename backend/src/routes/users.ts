@@ -189,7 +189,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
     // Get paginated users
     const users = db.prepare(`
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id, u.created_at, u.last_login,
-               a.name as association_name
+               u.profile_photo_path, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
         ${whereClause}
@@ -223,6 +223,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
             associationName: user.association_name,
             createdAt: user.created_at,
             lastLogin: user.last_login,
+            photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
             instruments,
             orchestras,
         };
@@ -254,7 +255,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
 router.get('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare(`
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id, u.created_at,
-               a.name as association_name
+               u.profile_photo_path, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
         WHERE u.id = ? AND u.association_id = ?
@@ -287,6 +288,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (
         associationId: user.association_id,
         associationName: user.association_name,
         createdAt: user.created_at,
+        photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
         instruments,
         orchestras,
     });

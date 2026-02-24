@@ -10,6 +10,7 @@ import {
   getEntraUsers,
   importEntraUsers,
   syncEntraUsers,
+  syncEntraPhotos,
   getInstruments,
   getMicrosoftConfig,
   type JobTitleMapping,
@@ -34,6 +35,7 @@ export default function EntraSync() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
   const [userFilter, setUserFilter] = useState<'all' | 'not-imported' | 'imported'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -191,6 +193,19 @@ export default function EntraSync() {
       showError(error.response?.data?.error || t('entraSync.syncError'));
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Sync profile photos from M365
+  const handleSyncPhotos = async () => {
+    setIsSyncingPhotos(true);
+    try {
+      const result = await syncEntraPhotos();
+      showSuccess(result.message);
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('entraSync.syncPhotosError'));
+    } finally {
+      setIsSyncingPhotos(false);
     }
   };
 
@@ -362,6 +377,14 @@ export default function EntraSync() {
                 disabled={isSyncing}
               >
                 {isSyncing ? t('common.loading') : t('entraSync.syncAndCreate')}
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={handleSyncPhotos}
+                disabled={isSyncingPhotos}
+                title={t('entraSync.syncPhotosDescription')}
+              >
+                {isSyncingPhotos ? t('common.loading') : t('entraSync.syncPhotos')}
               </button>
             </div>
 

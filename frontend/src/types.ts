@@ -8,6 +8,7 @@ export interface User {
   associationName?: string;
   mfaEnabled?: boolean;
   lastLogin?: string | null;
+  photoUrl?: string | null;
   instruments?: Instrument[];
   orchestras?: Orchestra[];
 }
