@@ -11,6 +11,7 @@ import {
   deleteAllSeatingSections,
   createSeatingAssignment,
   deleteSeatingAssignment,
+  bulkUpdateSeatingAssignments,
   getSeatingChart,
   getUsers,
   getInstruments,
@@ -22,6 +23,7 @@ import type { Orchestra, SeatingSection, SeatingAssignment, SeatingChart, User, 
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
+import SeatingEditor from '../components/SeatingEditor';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -42,7 +44,7 @@ export default function Seating() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Form states
-  const [activeTab, setActiveTab] = useState<'chart' | 'config' | 'assignments'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'editor' | 'config' | 'assignments'>('chart');
   const [showSectionForm, setShowSectionForm] = useState(false);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [sectionForm, setSectionForm] = useState({ name: '', rowNumber: 1, instrumentIds: [] as string[] });
@@ -202,6 +204,17 @@ export default function Seating() {
     }
   };
 
+  const handleBulkSaveAssignments = async (newAssignments: { userId: string; sectionId: string; positionInSection: number }[]) => {
+    if (!selectedOrchestraId) return;
+    try {
+      await bulkUpdateSeatingAssignments(selectedOrchestraId, newAssignments);
+      showSuccess(t('seating.assignmentsSaved'));
+      loadOrchestraData();
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('common.error'));
+    }
+  };
+
   // Get users not yet assigned
   const unassignedUsers = useMemo(() => {
     const assignedUserIds = new Set(assignments.map(a => a.userId));
@@ -254,6 +267,12 @@ export default function Seating() {
         {isManager && (
           <>
             <button
+              className={`tab ${activeTab === 'editor' ? 'active' : ''}`}
+              onClick={() => setActiveTab('editor')}
+            >
+              {t('seating.tabs.editor')}
+            </button>
+            <button
               className={`tab ${activeTab === 'config' ? 'active' : ''}`}
               onClick={() => setActiveTab('config')}
             >
@@ -291,6 +310,33 @@ export default function Seating() {
               <div className="empty-state">
                 <p>{t('seating.noAssignments')}</p>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Editor Tab */}
+      {activeTab === 'editor' && isManager && (
+        <div className="card">
+          <div className="card-header">
+            <h2>{t('seating.editorTitle')}</h2>
+          </div>
+          <div className="card-body">
+            {sections.length === 0 ? (
+              <div className="empty-state">
+                <p>{t('seating.noSections')}</p>
+                <button className="btn btn-primary" onClick={handleCreateDefaultLayout}>
+                  {t('seating.createDefaultLayout')}
+                </button>
+              </div>
+            ) : (
+              <SeatingEditor
+                sections={sections}
+                assignments={assignments}
+                users={users}
+                orchestraId={selectedOrchestraId}
+                onSave={handleBulkSaveAssignments}
+              />
             )}
           </div>
         </div>

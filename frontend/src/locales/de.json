@@ -1465,10 +1465,12 @@
     "selectOrchestra": "Orchester auswählen",
     "tabs": {
       "chart": "Sitzplan",
+      "editor": "Layout",
       "config": "Konfiguration",
       "assignments": "Sitzplatzzuweisungen"
     },
     "chartTitle": "Sitzplan Visualisierung",
+    "editorTitle": "Visueller Sitzordnung-Editor",
     "conductor": "Dirigent",
     "noSections": "Keine Sektionen konfiguriert. Erstellen Sie zuerst ein Standardlayout.",
     "noAssignments": "Keine Sitzplätze zugewiesen. Weisen Sie Mitglieder ihren Plätzen zu.",
@@ -1492,6 +1494,7 @@
     "addAssignment": "Sitzplatz zuweisen",
     "assignmentCreated": "Sitzplatz zugewiesen",
     "assignmentDeleted": "Sitzplatz entfernt",
+    "assignmentsSaved": "Sitzplätze gespeichert",
     "confirmDeleteAssignment": "Möchten Sie diese Sitzplatzzuweisung wirklich entfernen?",
     "noSectionsForAssignment": "Konfigurieren Sie zuerst Sektionen, bevor Sie Sitzplätze zuweisen.",
     "member": "Mitglied",
@@ -1505,7 +1508,14 @@
     "generateSeating": "Sitzordnung generieren",
     "seatingGenerated": "Sitzordnung für {{count}} Mitglieder generiert",
     "noAttendees": "Keine Teilnehmer für diese Probe",
-    "viewSeating": "Sitzordnung anzeigen"
+    "viewSeating": "Sitzordnung anzeigen",
+    "autoAssign": "Automatisch zuweisen",
+    "unsavedChanges": "Nicht gespeicherte Änderungen",
+    "dragDropHint": "Ziehen Sie Mitglieder an die gewünschte Position",
+    "dropHere": "Mitglied hier ablegen",
+    "unassignedMembers": "Nicht zugewiesene Mitglieder",
+    "allMembersAssigned": "Alle Mitglieder sind zugewiesen",
+    "legend": "Instrumenten-Legende"
   },
   "pageTitle": {
     "seating": "Sitzordnung - Harmonie"

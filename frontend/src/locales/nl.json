@@ -1678,10 +1678,12 @@
     "selectOrchestra": "Selecteer orkest",
     "tabs": {
       "chart": "Opstelling",
+      "editor": "Indeling",
       "config": "Configuratie",
       "assignments": "Zitplaatsen"
     },
     "chartTitle": "Zitplaatsen Visualisatie",
+    "editorTitle": "Visuele Opstelling Editor",
     "conductor": "Dirigent",
     "noSections": "Geen secties geconfigureerd. Maak eerst een basisopstelling aan.",
     "noAssignments": "Geen zitplaatsen toegewezen. Wijs leden toe aan hun zitplaatsen.",
@@ -1705,6 +1707,7 @@
     "addAssignment": "Zitplaats toewijzen",
     "assignmentCreated": "Zitplaats toegewezen",
     "assignmentDeleted": "Zitplaats verwijderd",
+    "assignmentsSaved": "Zitplaatsen opgeslagen",
     "confirmDeleteAssignment": "Weet je zeker dat je deze zitplaats wilt verwijderen?",
     "noSectionsForAssignment": "Configureer eerst secties voordat je zitplaatsen kunt toewijzen.",
     "member": "Lid",
@@ -1718,6 +1721,13 @@
     "generateSeating": "Genereer opstelling",
     "seatingGenerated": "Opstelling gegenereerd voor {{count}} leden",
     "noAttendees": "Geen aanwezigen voor deze repetitie",
-    "viewSeating": "Bekijk opstelling"
+    "viewSeating": "Bekijk opstelling",
+    "autoAssign": "Automatisch indelen",
+    "unsavedChanges": "Niet-opgeslagen wijzigingen",
+    "dragDropHint": "Sleep leden naar de gewenste positie",
+    "dropHere": "Sleep hier een lid naartoe",
+    "unassignedMembers": "Niet-ingedeelde leden",
+    "allMembersAssigned": "Alle leden zijn ingedeeld",
+    "legend": "Legenda instrumenten"
   }
 }

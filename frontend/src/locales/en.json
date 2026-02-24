@@ -1481,10 +1481,12 @@
     "selectOrchestra": "Select orchestra",
     "tabs": {
       "chart": "Seating Chart",
+      "editor": "Layout",
       "config": "Configuration",
       "assignments": "Seat Assignments"
     },
     "chartTitle": "Seating Visualization",
+    "editorTitle": "Visual Seating Editor",
     "conductor": "Conductor",
     "noSections": "No sections configured. Create a default layout first.",
     "noAssignments": "No seats assigned. Assign members to their seats.",
@@ -1508,6 +1510,7 @@
     "addAssignment": "Assign seat",
     "assignmentCreated": "Seat assigned",
     "assignmentDeleted": "Seat removed",
+    "assignmentsSaved": "Seats saved",
     "confirmDeleteAssignment": "Are you sure you want to remove this seat assignment?",
     "noSectionsForAssignment": "Configure sections first before assigning seats.",
     "member": "Member",
@@ -1521,7 +1524,14 @@
     "generateSeating": "Generate seating",
     "seatingGenerated": "Seating generated for {{count}} members",
     "noAttendees": "No attendees for this rehearsal",
-    "viewSeating": "View seating"
+    "viewSeating": "View seating",
+    "autoAssign": "Auto-assign",
+    "unsavedChanges": "Unsaved changes",
+    "dragDropHint": "Drag members to the desired position",
+    "dropHere": "Drop a member here",
+    "unassignedMembers": "Unassigned members",
+    "allMembersAssigned": "All members are assigned",
+    "legend": "Instrument legend"
   },
   "pageTitle": {
     "seating": "Seating - Harmonie"
