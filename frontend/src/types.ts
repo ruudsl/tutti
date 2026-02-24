@@ -529,6 +529,7 @@ export interface RehearsalSeat {
   sectionName: string | null;
   rowNumber: number;
   positionInRow: number;
+  isConductor?: boolean;
 }
 
 export interface SeatingChartSection {
@@ -546,6 +547,7 @@ export interface SeatingChartSeat {
   rowNumber: number;
   positionInRow: number;
   sectionName: string | null;
+  isConductor?: boolean;
 }
 
 export interface SeatingChart {

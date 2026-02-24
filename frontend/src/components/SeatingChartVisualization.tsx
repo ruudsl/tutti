@@ -72,9 +72,13 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
     const PADDING = 40;
     const CURVE_FACTOR = 0.15; // How much the rows curve (0 = flat, 1 = semicircle)
 
+    // Separate conductors from regular seats
+    const conductors = chart.seats.filter(s => s.isConductor || s.rowNumber === 0);
+    const regularSeats = chart.seats.filter(s => !s.isConductor && s.rowNumber !== 0);
+
     // Group seats by row
     const rowsMap = new Map<number, SeatingChartSeat[]>();
-    for (const seat of chart.seats) {
+    for (const seat of regularSeats) {
       if (!rowsMap.has(seat.rowNumber)) {
         rowsMap.set(seat.rowNumber, []);
       }
@@ -94,13 +98,13 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
 
     // Calculate SVG dimensions
     const chartWidth = maxSeatsInRow * (SEAT_WIDTH + SEAT_GAP) - SEAT_GAP + PADDING * 2;
-    const chartHeight = rows.length * (SEAT_HEIGHT + ROW_GAP) - ROW_GAP + PADDING * 2 + 60; // Extra for conductor
+    const chartHeight = rows.length * (SEAT_HEIGHT + ROW_GAP) - ROW_GAP + PADDING * 2 + 80; // Extra for conductor
 
     // Calculate seat positions with curved rows
     const seatPositions: { seat: SeatingChartSeat; x: number; y: number }[] = [];
 
     rows.forEach((row, rowIndex) => {
-      const rowY = PADDING + rowIndex * (SEAT_HEIGHT + ROW_GAP) + 60; // Offset for conductor
+      const rowY = PADDING + rowIndex * (SEAT_HEIGHT + ROW_GAP) + 80; // Offset for conductor area
       const rowWidth = row.seats.length * (SEAT_WIDTH + SEAT_GAP) - SEAT_GAP;
       const rowStartX = (chartWidth - rowWidth) / 2;
 
@@ -123,6 +127,7 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
       width: chartWidth,
       height: chartHeight,
       seatPositions,
+      conductors,
       SEAT_WIDTH,
       SEAT_HEIGHT,
       PADDING,
@@ -155,19 +160,63 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
         <rect width={layout.width} height={layout.height} fill="var(--bg-color, #f5f5f5)" rx="8" />
 
         {/* Conductor position */}
-        <g transform={`translate(${layout.width / 2}, 35)`}>
-          <circle r="20" fill="var(--primary-color, #3498db)" opacity="0.2" />
-          <circle r="15" fill="var(--primary-color, #3498db)" opacity="0.4" />
-          <circle r="5" fill="var(--primary-color, #3498db)" />
-          <text
-            y="35"
-            textAnchor="middle"
-            fill="var(--text-color, #333)"
-            fontSize="12"
-            fontWeight="500"
-          >
-            {t('seating.conductor')}
-          </text>
+        <g transform={`translate(${layout.width / 2}, 45)`}>
+          {layout.conductors.length > 0 ? (
+            // Show actual conductor(s)
+            layout.conductors.map((conductor, index) => {
+              const offsetX = layout.conductors.length > 1
+                ? (index - (layout.conductors.length - 1) / 2) * 90
+                : 0;
+              return (
+                <g key={conductor.id} transform={`translate(${offsetX}, 0)`}>
+                  <rect
+                    x={-35}
+                    y={-25}
+                    width={70}
+                    height={45}
+                    rx={8}
+                    fill="#1a1a2e"
+                    stroke="#e94560"
+                    strokeWidth={2}
+                  />
+                  <text
+                    y={-5}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="11"
+                    fontWeight="600"
+                  >
+                    {conductor.memberName.split(' ')[0].substring(0, 8)}
+                  </text>
+                  <text
+                    y={12}
+                    textAnchor="middle"
+                    fill="#e94560"
+                    fontSize="9"
+                    fontWeight="500"
+                  >
+                    {t('seating.conductor')}
+                  </text>
+                </g>
+              );
+            })
+          ) : (
+            // Placeholder when no conductor in data
+            <>
+              <circle r="20" fill="var(--primary-color, #3498db)" opacity="0.2" />
+              <circle r="15" fill="var(--primary-color, #3498db)" opacity="0.4" />
+              <circle r="5" fill="var(--primary-color, #3498db)" />
+              <text
+                y="35"
+                textAnchor="middle"
+                fill="var(--text-color, #333)"
+                fontSize="12"
+                fontWeight="500"
+              >
+                {t('seating.conductor')}
+              </text>
+            </>
+          )}
         </g>
 
         {/* Row labels on the left */}

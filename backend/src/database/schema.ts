@@ -693,6 +693,7 @@ CREATE TABLE IF NOT EXISTS rehearsal_seating (
     section_id TEXT,
     row_number INTEGER NOT NULL,
     position_in_row INTEGER NOT NULL, -- positie binnen de rij (0 = links)
+    is_conductor BOOLEAN DEFAULT 0, -- true als dit de dirigent is
     generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,

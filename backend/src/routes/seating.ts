@@ -660,7 +660,7 @@ router.get('/rehearsal/:rehearsalId', authenticateToken, asyncHandler(async (req
     const seating = db.prepare(`
         SELECT
             rs.id, rs.user_id, rs.spond_member_id, rs.member_name, rs.instrument_name,
-            rs.section_id, rs.row_number, rs.position_in_row,
+            rs.section_id, rs.row_number, rs.position_in_row, rs.is_conductor,
             ss.name as section_name
         FROM rehearsal_seating rs
         LEFT JOIN seating_sections ss ON rs.section_id = ss.id
@@ -678,6 +678,7 @@ router.get('/rehearsal/:rehearsalId', authenticateToken, asyncHandler(async (req
         sectionName: s.section_name,
         rowNumber: s.row_number,
         positionInRow: s.position_in_row,
+        isConductor: !!s.is_conductor,
     })));
 }));
 
@@ -791,12 +792,20 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
     db.prepare('DELETE FROM rehearsal_seating WHERE rehearsal_id = ?').run(rehearsalId);
 
     // Group attendees by section/row
-    const rowAssignments = new Map<number, { userId: string | null; spondMemberId: string | null; memberName: string; instrumentName: string | null; sectionId: string | null; position: number }[]>();
+    const rowAssignments = new Map<number, { userId: string | null; spondMemberId: string | null; memberName: string; instrumentName: string | null; sectionId: string | null; position: number; isConductor: boolean }[]>();
 
     for (const attendee of attendance) {
         let sectionId: string | null = null;
         let rowNumber = 99; // Default to last row if no match
         let instrumentName: string | null = null;
+        let isConductor = false;
+
+        // Check if this is a conductor based on name containing "dirigent" or "conductor"
+        const nameLower = attendee.member_name.toLowerCase();
+        if (nameLower.includes('dirigent') || nameLower.includes('conductor')) {
+            isConductor = true;
+            rowNumber = 0; // Conductor gets row 0 (front)
+        }
 
         // Resolve user_id: either from attendance record or by matching Spond member name
         let resolvedUserId = attendee.user_id;
@@ -808,39 +817,49 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
         }
 
         if (resolvedUserId) {
-            // Get user's instruments
-            const userInstruments = db.prepare(`
-                SELECT i.id, i.name
-                FROM user_instruments ui
-                JOIN instruments i ON ui.instrument_id = i.id
-                WHERE ui.user_id = ?
-            `).all(resolvedUserId) as any[];
-
-            if (userInstruments.length > 0) {
-                instrumentName = userInstruments.map((i: any) => i.name).join(', ');
-
-                // Find matching section based on instrument
-                for (const section of sections) {
-                    const sectionInstrumentIds = sectionInstruments.get(section.id);
-                    if (sectionInstrumentIds) {
-                        for (const userInstr of userInstruments) {
-                            if (sectionInstrumentIds.has(userInstr.id)) {
-                                sectionId = section.id;
-                                rowNumber = section.row_number;
-                                break;
-                            }
-                        }
-                    }
-                    if (sectionId) break;
-                }
+            // Check if user has conductor role
+            const userRole = db.prepare('SELECT role FROM users WHERE id = ?').get(resolvedUserId) as any;
+            if (userRole?.role === 'conductor') {
+                isConductor = true;
+                rowNumber = 0; // Conductor gets row 0 (front)
             }
 
-            // Check for existing manual assignment (overrides instrument-based placement)
-            const existing = assignmentMap.get(resolvedUserId);
-            if (existing) {
-                sectionId = existing.section_id;
-                const section = sections.find((s: any) => s.id === sectionId);
-                if (section) rowNumber = section.row_number;
+            // Only assign instrument/section if not a conductor
+            if (!isConductor) {
+                // Get user's instruments
+                const userInstruments = db.prepare(`
+                    SELECT i.id, i.name
+                    FROM user_instruments ui
+                    JOIN instruments i ON ui.instrument_id = i.id
+                    WHERE ui.user_id = ?
+                `).all(resolvedUserId) as any[];
+
+                if (userInstruments.length > 0) {
+                    instrumentName = userInstruments.map((i: any) => i.name).join(', ');
+
+                    // Find matching section based on instrument
+                    for (const section of sections) {
+                        const sectionInstrumentIds = sectionInstruments.get(section.id);
+                        if (sectionInstrumentIds) {
+                            for (const userInstr of userInstruments) {
+                                if (sectionInstrumentIds.has(userInstr.id)) {
+                                    sectionId = section.id;
+                                    rowNumber = section.row_number;
+                                    break;
+                                }
+                            }
+                        }
+                        if (sectionId) break;
+                    }
+                }
+
+                // Check for existing manual assignment (overrides instrument-based placement)
+                const existing = assignmentMap.get(resolvedUserId);
+                if (existing) {
+                    sectionId = existing.section_id;
+                    const section = sections.find((s: any) => s.id === sectionId);
+                    if (section) rowNumber = section.row_number;
+                }
             }
         }
 
@@ -854,6 +873,7 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
             instrumentName,
             sectionId,
             position: 0,
+            isConductor,
         });
     }
 
@@ -894,8 +914,8 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
                 member.position = position++;
 
                 db.prepare(`
-                    INSERT INTO rehearsal_seating (id, rehearsal_id, user_id, spond_member_id, member_name, instrument_name, section_id, row_number, position_in_row)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO rehearsal_seating (id, rehearsal_id, user_id, spond_member_id, member_name, instrument_name, section_id, row_number, position_in_row, is_conductor)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     uuidv4(),
                     rehearsalId,
@@ -905,7 +925,8 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
                     member.instrumentName,
                     member.sectionId,
                     finalRowNumber,
-                    member.position
+                    member.position,
+                    member.isConductor ? 1 : 0
                 );
             }
         }
@@ -974,7 +995,7 @@ router.get('/chart/:orchestraId', authenticateToken, asyncHandler(async (req: Au
         seats = db.prepare(`
             SELECT
                 rs.id, rs.user_id, rs.member_name, rs.instrument_name,
-                rs.row_number, rs.position_in_row,
+                rs.row_number, rs.position_in_row, rs.is_conductor,
                 ss.name as section_name
             FROM rehearsal_seating rs
             LEFT JOIN seating_sections ss ON rs.section_id = ss.id
@@ -1027,6 +1048,7 @@ router.get('/chart/:orchestraId', authenticateToken, asyncHandler(async (req: Au
             rowNumber: s.row_number,
             positionInRow: s.position_in_row,
             sectionName: s.section_name,
+            isConductor: !!s.is_conductor,
         })),
         totalRows: sections.length,
     });
