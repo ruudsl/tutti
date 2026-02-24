@@ -1525,8 +1525,17 @@
     "notifications": {
       "title": "WhatsApp/Webhook Benachrichtigungen",
       "description": "Senden Sie die Sitzordnung automatisch an eine WhatsApp-Gruppe oder Webhook vor Probenbeginn.",
+      "type": "Benachrichtigungstyp",
       "webhookUrl": "Webhook URL",
-      "webhookHelp": "URL wohin die Benachrichtigung gesendet wird (z.B. Twilio, Make, n8n oder eigener Endpoint)",
+      "webhookHelp": "URL wohin die Benachrichtigung gesendet wird (z.B. Make, n8n oder eigener Endpoint)",
+      "twilioHelp": "Erstellen Sie ein kostenloses Twilio-Konto auf twilio.com und aktivieren Sie die WhatsApp Sandbox.",
+      "twilioFrom": "Twilio WhatsApp Nummer",
+      "twilioFromHelp": "Die Twilio WhatsApp Nummer (z.B. +14155238886 für Sandbox)",
+      "twilioTo": "Zielnummer(n)",
+      "twilioToHelp": "WhatsApp Nummern, kommagetrennt (z.B. +31612345678, +31687654321)",
+      "testConnection": "Verbindung testen",
+      "testSent": "Testnachricht an WhatsApp gesendet!",
+      "fillAllTwilioFields": "Füllen Sie alle Twilio-Felder aus, um zu testen",
       "minutesBefore": "Minuten vor der Probe",
       "enabled": "Automatisches Senden aktiviert",
       "includeImage": "Bild der Sitzordnung mitsenden",
@@ -1542,7 +1551,13 @@
       "sent": "Benachrichtigung gesendet",
       "selectRehearsalFirst": "Wählen Sie zuerst eine Probe aus, um einen Test zu senden",
       "webhookFormat": "Webhook Format",
-      "webhookFormatDescription": "Der Webhook empfängt eine JSON-Payload mit folgender Struktur:"
+      "webhookFormatDescription": "Der Webhook empfängt eine JSON-Payload mit folgender Struktur:",
+      "setupTitle": "WhatsApp über Twilio einrichten",
+      "step1": "Erstellen Sie ein kostenloses Twilio-Konto auf twilio.com",
+      "step2": "Gehen Sie zu Console → Messaging → WhatsApp Sandbox",
+      "step3": "Senden Sie 'join [code]' an die Sandbox-Nummer per WhatsApp",
+      "step4": "Kopieren Sie Ihre Account SID und Auth Token aus der Console",
+      "step5": "Geben Sie die Daten oben ein und testen Sie die Verbindung"
     }
   },
   "pageTitle": {

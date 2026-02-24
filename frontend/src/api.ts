@@ -1656,7 +1656,12 @@ export const getSeatingChart = async (orchestraId: string, rehearsalId?: string)
 export interface SeatingNotificationSettings {
   id: string;
   orchestra_id: string;
-  webhook_url: string;
+  notification_type: 'webhook' | 'whatsapp';
+  webhook_url: string | null;
+  twilio_account_sid: string | null;
+  twilio_auth_token: string | null;
+  twilio_whatsapp_from: string | null;
+  twilio_whatsapp_to: string | null;
   minutes_before: number;
   enabled: boolean;
   include_image: boolean;
@@ -1681,7 +1686,12 @@ export const getSeatingNotificationSettings = async (orchestraId: string): Promi
 };
 
 export const saveSeatingNotificationSettings = async (orchestraId: string, settings: {
-  webhook_url: string;
+  notification_type: 'webhook' | 'whatsapp';
+  webhook_url?: string;
+  twilio_account_sid?: string;
+  twilio_auth_token?: string;
+  twilio_whatsapp_from?: string;
+  twilio_whatsapp_to?: string;
   minutes_before: number;
   enabled: boolean;
   include_image: boolean;
@@ -1703,6 +1713,16 @@ export const getSeatingNotificationLogs = async (rehearsalId: string): Promise<S
 
 export const sendSeatingNotification = async (rehearsalId: string, imageBase64?: string): Promise<{ success: boolean; message: string }> => {
   const { data } = await api.post(`/seating-notifications/send/${rehearsalId}`, { imageBase64 });
+  return data;
+};
+
+export const testTwilioConnection = async (settings: {
+  account_sid: string;
+  auth_token: string;
+  whatsapp_from: string;
+  whatsapp_to: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.post('/seating-notifications/test-twilio', settings);
   return data;
 };
 

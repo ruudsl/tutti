@@ -1,11 +1,17 @@
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+import twilio from 'twilio';
 
 interface NotificationSettings {
     id: string;
     orchestra_id: string;
-    webhook_url: string;
+    notification_type: 'webhook' | 'whatsapp';
+    webhook_url: string | null;
+    twilio_account_sid: string | null;
+    twilio_auth_token: string | null;
+    twilio_whatsapp_from: string | null;
+    twilio_whatsapp_to: string | null;
     minutes_before: number;
     enabled: boolean;
     include_image: boolean;
@@ -58,6 +64,78 @@ function buildDefaultMessage(
     ];
 
     return lines.filter(Boolean).join('\n');
+}
+
+async function sendWhatsApp(settings: NotificationSettings, message: string): Promise<boolean> {
+    if (!settings.twilio_account_sid || !settings.twilio_auth_token) {
+        logger.error('Twilio credentials not configured for WhatsApp');
+        return false;
+    }
+
+    try {
+        const client = twilio(settings.twilio_account_sid, settings.twilio_auth_token);
+        const destinations = settings.twilio_whatsapp_to?.split(',').map(n => n.trim()) || [];
+
+        if (destinations.length === 0) {
+            logger.error('No WhatsApp destination numbers configured');
+            return false;
+        }
+
+        let allSuccessful = true;
+
+        for (const to of destinations) {
+            try {
+                const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
+                const fromNumber = settings.twilio_whatsapp_from?.startsWith('whatsapp:')
+                    ? settings.twilio_whatsapp_from
+                    : `whatsapp:${settings.twilio_whatsapp_from}`;
+
+                await client.messages.create({
+                    body: message,
+                    from: fromNumber,
+                    to: toNumber,
+                });
+                logger.info(`WhatsApp message sent to ${to}`);
+            } catch (sendError) {
+                const errorMsg = sendError instanceof Error ? sendError.message : 'Unknown error';
+                logger.error(`Failed to send WhatsApp to ${to}`, { error: errorMsg });
+                allSuccessful = false;
+            }
+        }
+
+        return allSuccessful;
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('WhatsApp sending failed', { error: errorMsg });
+        return false;
+    }
+}
+
+async function sendWebhook(settings: NotificationSettings, payload: Record<string, unknown>): Promise<boolean> {
+    if (!settings.webhook_url) {
+        logger.error('Webhook URL not configured');
+        return false;
+    }
+
+    try {
+        const response = await fetch(settings.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+            return true;
+        } else {
+            const responseText = await response.text();
+            logger.error(`Webhook failed: HTTP ${response.status}`, { response: responseText });
+            return false;
+        }
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Webhook sending failed', { error: errorMsg });
+        return false;
+    }
 }
 
 async function sendNotification(settings: NotificationSettings, rehearsal: Rehearsal): Promise<boolean> {
@@ -118,28 +196,6 @@ async function sendNotification(settings: NotificationSettings, rehearsal: Rehea
             .replace('{total_conductors}', String(conductors.length))
             .replace('{chairs_summary}', rows.map(r => `Rij ${r.row}: ${r.chairs}`).join(', '));
 
-        // Build payload
-        const payload = {
-            type: 'seating_notification',
-            rehearsal: {
-                id: rehearsal.id,
-                date: rehearsal.date,
-                startTime: rehearsal.start_time,
-                endTime: rehearsal.end_time,
-                location: rehearsal.location,
-            },
-            orchestra: {
-                id: settings.orchestra_id,
-                name: settings.orchestra_name,
-            },
-            seating: {
-                totalMembers: regularMembers.length,
-                totalConductors: conductors.length,
-                rows,
-            },
-            message: messageText,
-        };
-
         // Create log entry
         const logId = uuidv4();
         db.prepare(`
@@ -147,50 +203,57 @@ async function sendNotification(settings: NotificationSettings, rehearsal: Rehea
             VALUES (?, ?, ?, 'pending')
         `).run(logId, rehearsal.id, settings.orchestra_id);
 
-        // Send webhook
-        const response = await fetch(settings.webhook_url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+        // Send based on notification type
+        let success = false;
 
-        const responseText = await response.text();
+        if (settings.notification_type === 'whatsapp') {
+            success = await sendWhatsApp(settings, messageText);
+        } else {
+            // Webhook payload
+            const payload = {
+                type: 'seating_notification',
+                rehearsal: {
+                    id: rehearsal.id,
+                    date: rehearsal.date,
+                    startTime: rehearsal.start_time,
+                    endTime: rehearsal.end_time,
+                    location: rehearsal.location,
+                },
+                orchestra: {
+                    id: settings.orchestra_id,
+                    name: settings.orchestra_name,
+                },
+                seating: {
+                    totalMembers: regularMembers.length,
+                    totalConductors: conductors.length,
+                    rows,
+                },
+                message: messageText,
+            };
+            success = await sendWebhook(settings, payload);
+        }
 
-        if (response.ok) {
+        if (success) {
             db.prepare(`
                 UPDATE seating_notification_logs
                 SET status = 'sent', webhook_response = ?, sent_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `).run(responseText.substring(0, 1000), logId);
+            `).run(settings.notification_type === 'whatsapp' ? 'WhatsApp message sent' : 'Webhook sent', logId);
 
-            logger.info('Seating notification sent', { rehearsalId: rehearsal.id, orchestraId: settings.orchestra_id });
+            logger.info('Seating notification sent', { rehearsalId: rehearsal.id, orchestraId: settings.orchestra_id, type: settings.notification_type });
             return true;
         } else {
-            throw new Error(`HTTP ${response.status}: ${responseText}`);
+            db.prepare(`
+                UPDATE seating_notification_logs
+                SET status = 'failed', error_message = ?, sent_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `).run('Failed to send notification', logId);
+
+            return false;
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error('Failed to send seating notification', { error: errorMessage, rehearsalId: rehearsal.id });
-
-        // Log the failure
-        try {
-            const existingLog = db.prepare(`
-                SELECT id FROM seating_notification_logs
-                WHERE rehearsal_id = ? AND orchestra_id = ? AND status = 'pending'
-                ORDER BY sent_at DESC LIMIT 1
-            `).get(rehearsal.id, settings.orchestra_id) as { id: string } | undefined;
-
-            if (existingLog) {
-                db.prepare(`
-                    UPDATE seating_notification_logs
-                    SET status = 'failed', error_message = ?, sent_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                `).run(errorMessage.substring(0, 500), existingLog.id);
-            }
-        } catch (logError) {
-            logger.error('Failed to log notification failure', { error: logError });
-        }
-
         return false;
     }
 }

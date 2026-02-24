@@ -1541,8 +1541,17 @@
     "notifications": {
       "title": "WhatsApp/Webhook Notifications",
       "description": "Automatically send the seating arrangement to a WhatsApp group or webhook before rehearsal starts.",
+      "type": "Notification type",
       "webhookUrl": "Webhook URL",
-      "webhookHelp": "URL where the notification will be sent (e.g., Twilio, Make, n8n, or custom endpoint)",
+      "webhookHelp": "URL where the notification will be sent (e.g., Make, n8n, or custom endpoint)",
+      "twilioHelp": "Create a free Twilio account at twilio.com and activate the WhatsApp Sandbox.",
+      "twilioFrom": "Twilio WhatsApp number",
+      "twilioFromHelp": "The Twilio WhatsApp number (e.g., +14155238886 for sandbox)",
+      "twilioTo": "Destination number(s)",
+      "twilioToHelp": "WhatsApp numbers, comma-separated (e.g., +31612345678, +31687654321)",
+      "testConnection": "Test connection",
+      "testSent": "Test message sent to WhatsApp!",
+      "fillAllTwilioFields": "Fill in all Twilio fields to test",
       "minutesBefore": "Minutes before rehearsal",
       "enabled": "Automatic sending enabled",
       "includeImage": "Include seating chart image",
@@ -1558,7 +1567,13 @@
       "sent": "Notification sent",
       "selectRehearsalFirst": "Select a rehearsal first to send a test",
       "webhookFormat": "Webhook format",
-      "webhookFormatDescription": "The webhook receives a JSON payload with the following structure:"
+      "webhookFormatDescription": "The webhook receives a JSON payload with the following structure:",
+      "setupTitle": "Set up WhatsApp via Twilio",
+      "step1": "Create a free Twilio account at twilio.com",
+      "step2": "Go to Console → Messaging → WhatsApp Sandbox",
+      "step3": "Send 'join [code]' to the sandbox number via WhatsApp",
+      "step4": "Copy your Account SID and Auth Token from the Console",
+      "step5": "Enter the details above and test the connection"
     }
   },
   "pageTitle": {

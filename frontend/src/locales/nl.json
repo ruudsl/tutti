@@ -1738,8 +1738,17 @@
     "notifications": {
       "title": "WhatsApp/Webhook Notificaties",
       "description": "Stuur de opstelling automatisch naar een WhatsApp groep of webhook voordat de repetitie begint.",
+      "type": "Notificatie type",
       "webhookUrl": "Webhook URL",
-      "webhookHelp": "URL waar de notificatie naartoe gestuurd wordt (bijv. Twilio, Make, n8n, of eigen endpoint)",
+      "webhookHelp": "URL waar de notificatie naartoe gestuurd wordt (bijv. Make, n8n, of eigen endpoint)",
+      "twilioHelp": "Maak een gratis Twilio account aan op twilio.com en activeer de WhatsApp Sandbox.",
+      "twilioFrom": "Twilio WhatsApp nummer",
+      "twilioFromHelp": "Het Twilio WhatsApp nummer (bijv. +14155238886 voor sandbox)",
+      "twilioTo": "Bestemmingsnummer(s)",
+      "twilioToHelp": "WhatsApp nummers, komma-gescheiden (bijv. +31612345678, +31687654321)",
+      "testConnection": "Test verbinding",
+      "testSent": "Testbericht verstuurd naar WhatsApp!",
+      "fillAllTwilioFields": "Vul alle Twilio velden in om te testen",
       "minutesBefore": "Minuten voor repetitie",
       "enabled": "Automatisch versturen ingeschakeld",
       "includeImage": "Afbeelding van opstelling meesturen",
@@ -1755,7 +1764,13 @@
       "sent": "Notificatie verstuurd",
       "selectRehearsalFirst": "Selecteer eerst een repetitie om een test te versturen",
       "webhookFormat": "Webhook formaat",
-      "webhookFormatDescription": "De webhook ontvangt een JSON payload met de volgende structuur:"
+      "webhookFormatDescription": "De webhook ontvangt een JSON payload met de volgende structuur:",
+      "setupTitle": "WhatsApp instellen via Twilio",
+      "step1": "Maak een gratis Twilio account aan op twilio.com",
+      "step2": "Ga naar Console → Messaging → WhatsApp Sandbox",
+      "step3": "Stuur 'join [code]' naar het sandbox nummer via WhatsApp",
+      "step4": "Kopieer je Account SID en Auth Token van de Console",
+      "step5": "Vul de gegevens hierboven in en test de verbinding"
     }
   }
 }

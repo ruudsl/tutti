@@ -6,6 +6,7 @@ import {
   saveSeatingNotificationSettings,
   deleteSeatingNotificationSettings,
   sendSeatingNotification,
+  testTwilioConnection,
   type SeatingNotificationSettings as NotificationSettings,
 } from '../api';
 
@@ -21,9 +22,15 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   const [formData, setFormData] = useState({
+    notification_type: 'whatsapp' as 'webhook' | 'whatsapp',
     webhook_url: '',
+    twilio_account_sid: '',
+    twilio_auth_token: '',
+    twilio_whatsapp_from: '',
+    twilio_whatsapp_to: '',
     minutes_before: 15,
     enabled: true,
     include_image: true,
@@ -41,7 +48,12 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
       setSettings(data);
       if (data) {
         setFormData({
-          webhook_url: data.webhook_url,
+          notification_type: data.notification_type || 'whatsapp',
+          webhook_url: data.webhook_url || '',
+          twilio_account_sid: data.twilio_account_sid || '',
+          twilio_auth_token: data.twilio_auth_token || '',
+          twilio_whatsapp_from: data.twilio_whatsapp_from || '',
+          twilio_whatsapp_to: data.twilio_whatsapp_to || '',
           minutes_before: data.minutes_before,
           enabled: data.enabled,
           include_image: data.include_image,
@@ -60,7 +72,12 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
     setIsSaving(true);
     try {
       const result = await saveSeatingNotificationSettings(orchestraId, {
-        webhook_url: formData.webhook_url,
+        notification_type: formData.notification_type,
+        webhook_url: formData.notification_type === 'webhook' ? formData.webhook_url : undefined,
+        twilio_account_sid: formData.notification_type === 'whatsapp' ? formData.twilio_account_sid : undefined,
+        twilio_auth_token: formData.notification_type === 'whatsapp' ? formData.twilio_auth_token : undefined,
+        twilio_whatsapp_from: formData.notification_type === 'whatsapp' ? formData.twilio_whatsapp_from : undefined,
+        twilio_whatsapp_to: formData.notification_type === 'whatsapp' ? formData.twilio_whatsapp_to : undefined,
         minutes_before: formData.minutes_before,
         enabled: formData.enabled,
         include_image: formData.include_image,
@@ -81,7 +98,12 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
       await deleteSeatingNotificationSettings(orchestraId);
       setSettings(null);
       setFormData({
+        notification_type: 'whatsapp',
         webhook_url: '',
+        twilio_account_sid: '',
+        twilio_auth_token: '',
+        twilio_whatsapp_from: '',
+        twilio_whatsapp_to: '',
         minutes_before: 15,
         enabled: true,
         include_image: true,
@@ -90,6 +112,30 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
       showSuccess(t('seating.notifications.deleted'));
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
+    }
+  };
+
+  const handleTestTwilio = async () => {
+    if (!formData.twilio_account_sid || !formData.twilio_auth_token || !formData.twilio_whatsapp_from || !formData.twilio_whatsapp_to) {
+      showError(t('seating.notifications.fillAllTwilioFields'));
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      // For testing, use the first number in the comma-separated list
+      const firstNumber = formData.twilio_whatsapp_to.split(',')[0].trim();
+      await testTwilioConnection({
+        account_sid: formData.twilio_account_sid,
+        auth_token: formData.twilio_auth_token,
+        whatsapp_from: formData.twilio_whatsapp_from,
+        whatsapp_to: firstNumber,
+      });
+      showSuccess(t('seating.notifications.testSent'));
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -125,18 +171,106 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
       </p>
 
       <form onSubmit={handleSave}>
+        {/* Notification Type Selection */}
         <div className="form-group">
-          <label htmlFor="webhookUrl">{t('seating.notifications.webhookUrl')}</label>
-          <input
-            type="url"
-            id="webhookUrl"
-            value={formData.webhook_url}
-            onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
-            placeholder="https://..."
-            required
-          />
-          <small className="form-help">{t('seating.notifications.webhookHelp')}</small>
+          <label>{t('seating.notifications.type')}</label>
+          <div className="btn-group" style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className={`btn ${formData.notification_type === 'whatsapp' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFormData({ ...formData, notification_type: 'whatsapp' })}
+            >
+              📱 WhatsApp
+            </button>
+            <button
+              type="button"
+              className={`btn ${formData.notification_type === 'webhook' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFormData({ ...formData, notification_type: 'webhook' })}
+            >
+              🔗 Webhook
+            </button>
+          </div>
         </div>
+
+        {/* WhatsApp/Twilio Settings */}
+        {formData.notification_type === 'whatsapp' && (
+          <div style={{ padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px', marginBottom: '1rem' }}>
+            <h4 style={{ marginTop: 0 }}>Twilio WhatsApp</h4>
+            <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
+              {t('seating.notifications.twilioHelp')}
+            </p>
+
+            <div className="form-group">
+              <label htmlFor="twilioAccountSid">Account SID</label>
+              <input
+                type="text"
+                id="twilioAccountSid"
+                value={formData.twilio_account_sid}
+                onChange={(e) => setFormData({ ...formData, twilio_account_sid: e.target.value })}
+                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="twilioAuthToken">Auth Token</label>
+              <input
+                type="password"
+                id="twilioAuthToken"
+                value={formData.twilio_auth_token}
+                onChange={(e) => setFormData({ ...formData, twilio_auth_token: e.target.value })}
+                placeholder="••••••••••••••••"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="twilioFrom">{t('seating.notifications.twilioFrom')}</label>
+              <input
+                type="text"
+                id="twilioFrom"
+                value={formData.twilio_whatsapp_from}
+                onChange={(e) => setFormData({ ...formData, twilio_whatsapp_from: e.target.value })}
+                placeholder="+14155238886"
+              />
+              <small className="form-help">{t('seating.notifications.twilioFromHelp')}</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="twilioTo">{t('seating.notifications.twilioTo')}</label>
+              <input
+                type="text"
+                id="twilioTo"
+                value={formData.twilio_whatsapp_to}
+                onChange={(e) => setFormData({ ...formData, twilio_whatsapp_to: e.target.value })}
+                placeholder="+31612345678, +31687654321"
+              />
+              <small className="form-help">{t('seating.notifications.twilioToHelp')}</small>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleTestTwilio}
+              disabled={isTesting}
+            >
+              {isTesting ? t('common.loading') : t('seating.notifications.testConnection')}
+            </button>
+          </div>
+        )}
+
+        {/* Webhook Settings */}
+        {formData.notification_type === 'webhook' && (
+          <div className="form-group">
+            <label htmlFor="webhookUrl">{t('seating.notifications.webhookUrl')}</label>
+            <input
+              type="url"
+              id="webhookUrl"
+              value={formData.webhook_url}
+              onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
+              placeholder="https://..."
+            />
+            <small className="form-help">{t('seating.notifications.webhookHelp')}</small>
+          </div>
+        )}
 
         <div className="form-row">
           <div className="form-group">
@@ -161,17 +295,6 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
             />
             <span>{t('seating.notifications.enabled')}</span>
-          </label>
-        </div>
-
-        <div className="form-group">
-          <label className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={formData.include_image}
-              onChange={(e) => setFormData({ ...formData, include_image: e.target.checked })}
-            />
-            <span>{t('seating.notifications.includeImage')}</span>
           </label>
         </div>
 
@@ -215,19 +338,34 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
         </div>
       )}
 
-      <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px' }}>
-        <h4 style={{ marginBottom: '0.5rem' }}>{t('seating.notifications.webhookFormat')}</h4>
-        <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-          {t('seating.notifications.webhookFormatDescription')}
-        </p>
-        <pre style={{
-          fontSize: '0.75rem',
-          background: 'var(--surface-color)',
-          padding: '0.75rem',
-          borderRadius: '4px',
-          overflow: 'auto',
-          maxHeight: '200px'
-        }}>
+      {/* Setup Instructions */}
+      {formData.notification_type === 'whatsapp' && (
+        <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>{t('seating.notifications.setupTitle')}</h4>
+          <ol style={{ fontSize: '0.875rem', color: 'var(--text-light-color)', paddingLeft: '1.5rem', margin: 0 }}>
+            <li>{t('seating.notifications.step1')}</li>
+            <li>{t('seating.notifications.step2')}</li>
+            <li>{t('seating.notifications.step3')}</li>
+            <li>{t('seating.notifications.step4')}</li>
+            <li>{t('seating.notifications.step5')}</li>
+          </ol>
+        </div>
+      )}
+
+      {formData.notification_type === 'webhook' && (
+        <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>{t('seating.notifications.webhookFormat')}</h4>
+          <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            {t('seating.notifications.webhookFormatDescription')}
+          </p>
+          <pre style={{
+            fontSize: '0.75rem',
+            background: 'var(--surface-color)',
+            padding: '0.75rem',
+            borderRadius: '4px',
+            overflow: 'auto',
+            maxHeight: '200px'
+          }}>
 {`{
   "type": "seating_notification",
   "rehearsal": {
@@ -242,17 +380,16 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
   },
   "seating": {
     "totalMembers": 42,
-    "totalConductors": 1,
     "rows": [
-      { "row": 1, "chairs": 8, "members": [...] },
-      { "row": 2, "chairs": 10, "members": [...] }
+      { "row": 1, "chairs": 8 },
+      { "row": 2, "chairs": 10 }
     ]
   },
-  "message": "Opstelling Groot Orkest\\n...",
-  "image": "data:image/png;base64,..." // optioneel
+  "message": "🎵 Opstelling Groot Orkest\\n..."
 }`}
-        </pre>
-      </div>
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

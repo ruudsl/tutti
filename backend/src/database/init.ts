@@ -548,6 +548,23 @@ async function initializeDatabase() {
         console.error('Migration: Error creating seating_notification_logs table', e);
     }
 
+    // Migration: Add WhatsApp/Twilio columns to seating_notification_settings
+    try {
+        const notifTableInfo = db.prepare("PRAGMA table_info(seating_notification_settings)").all() as { name: string }[];
+        const hasNotificationType = notifTableInfo.some(col => col.name === 'notification_type');
+        if (!hasNotificationType) {
+            console.log('Migration: Adding WhatsApp columns to seating_notification_settings...');
+            db.prepare("ALTER TABLE seating_notification_settings ADD COLUMN notification_type TEXT NOT NULL DEFAULT 'webhook'").run();
+            db.prepare('ALTER TABLE seating_notification_settings ADD COLUMN twilio_account_sid TEXT').run();
+            db.prepare('ALTER TABLE seating_notification_settings ADD COLUMN twilio_auth_token TEXT').run();
+            db.prepare('ALTER TABLE seating_notification_settings ADD COLUMN twilio_whatsapp_from TEXT').run();
+            db.prepare('ALTER TABLE seating_notification_settings ADD COLUMN twilio_whatsapp_to TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

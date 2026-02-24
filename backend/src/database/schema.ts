@@ -716,7 +716,12 @@ CREATE INDEX IF NOT EXISTS idx_rehearsal_seating_rehearsal ON rehearsal_seating(
 CREATE TABLE IF NOT EXISTS seating_notification_settings (
     id TEXT PRIMARY KEY,
     orchestra_id TEXT NOT NULL UNIQUE,
-    webhook_url TEXT NOT NULL, -- URL waar de notificatie naartoe gestuurd wordt
+    notification_type TEXT NOT NULL DEFAULT 'webhook', -- 'webhook' of 'whatsapp'
+    webhook_url TEXT, -- URL voor webhook type
+    twilio_account_sid TEXT, -- Twilio Account SID voor WhatsApp
+    twilio_auth_token TEXT, -- Twilio Auth Token (encrypted)
+    twilio_whatsapp_from TEXT, -- Twilio WhatsApp nummer (bijv. whatsapp:+14155238886)
+    twilio_whatsapp_to TEXT, -- Bestemmingsnummer(s), komma-gescheiden (bijv. whatsapp:+31612345678)
     minutes_before INTEGER NOT NULL DEFAULT 15, -- Hoeveel minuten voor de repetitie
     enabled BOOLEAN DEFAULT 1,
     include_image BOOLEAN DEFAULT 1, -- Of de afbeelding meegestuurd moet worden
