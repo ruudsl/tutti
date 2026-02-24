@@ -193,6 +193,24 @@ export interface SpondSyncResult {
   total: number;
 }
 
+export interface SpondOrchestraGroup {
+  id: string;
+  orchestraId: string;
+  orchestraName: string;
+  spondGroupId: string;
+  spondGroupName?: string;
+}
+
+export interface SpondMemberLink {
+  id: string;
+  spondMemberId: string;
+  userId: string;
+  spondMemberName?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

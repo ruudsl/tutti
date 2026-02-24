@@ -761,13 +761,28 @@ router.post('/rehearsal/:rehearsalId/generate', authenticateToken, requireRole('
     const assignmentMap = new Map(existingAssignments.map(a => [a.user_id, a]));
 
     // Build a lookup for Spond-only members: try to match by name to find user_id and instrument
+    // Filter by orchestra membership to avoid cross-orchestra name collisions
     const usersByName = new Map<string, any>();
-    const allUsers = db.prepare(`
-        SELECT u.id, u.first_name, u.last_name
-        FROM users u
-        WHERE u.association_id = ?
-    `).all(req.user!.associationId) as any[];
-    for (const u of allUsers) {
+    let eligibleUsers: any[];
+
+    if (orchestraId) {
+        // Only get users who are members of this specific orchestra
+        eligibleUsers = db.prepare(`
+            SELECT u.id, u.first_name, u.last_name
+            FROM users u
+            JOIN user_orchestras uo ON u.id = uo.user_id
+            WHERE u.association_id = ? AND uo.orchestra_id = ?
+        `).all(req.user!.associationId, orchestraId) as any[];
+    } else {
+        // Fallback: get all users (for all-orchestra rehearsals without specific orchestra)
+        eligibleUsers = db.prepare(`
+            SELECT u.id, u.first_name, u.last_name
+            FROM users u
+            WHERE u.association_id = ?
+        `).all(req.user!.associationId) as any[];
+    }
+
+    for (const u of eligibleUsers) {
         const fullName = `${u.first_name} ${u.last_name}`.toLowerCase().trim();
         usersByName.set(fullName, u);
     }

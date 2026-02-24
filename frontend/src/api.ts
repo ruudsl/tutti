@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -793,6 +793,30 @@ export const syncSpond = async (): Promise<SpondSyncResult> => {
 export const syncSpondRehearsal = async (rehearsalId: string): Promise<{ message: string; attendanceCount: number }> => {
   const { data } = await api.post(`/spond/sync/${rehearsalId}`);
   return data;
+};
+
+// Spond Orchestra Groups
+export const getSpondOrchestraGroups = async (): Promise<SpondOrchestraGroup[]> => {
+  const { data } = await api.get('/spond/orchestra-groups');
+  return data;
+};
+
+export const setSpondOrchestraGroup = async (orchestraId: string, spondGroupId: string | null, spondGroupName?: string): Promise<void> => {
+  await api.put(`/spond/orchestra-groups/${orchestraId}`, { spondGroupId, spondGroupName });
+};
+
+// Spond Member Links
+export const getSpondMemberLinks = async (): Promise<SpondMemberLink[]> => {
+  const { data } = await api.get('/spond/member-links');
+  return data;
+};
+
+export const createSpondMemberLink = async (spondMemberId: string, userId: string, spondMemberName?: string): Promise<void> => {
+  await api.post('/spond/member-links', { spondMemberId, userId, spondMemberName });
+};
+
+export const deleteSpondMemberLink = async (id: string): Promise<void> => {
+  await api.delete(`/spond/member-links/${id}`);
 };
 
 // Microsoft Entra ID (SSO)

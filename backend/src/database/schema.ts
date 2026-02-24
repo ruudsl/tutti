@@ -315,12 +315,38 @@ CREATE TABLE IF NOT EXISTS spond_config (
     association_id TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL,
     password_encrypted TEXT NOT NULL,
-    group_id TEXT, -- Spond groep-ID om te synchroniseren
+    group_id TEXT, -- Default Spond groep-ID (fallback)
     sync_enabled BOOLEAN DEFAULT 0,
     last_sync DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
 );
+
+-- Spond groepen per orkest (voor verenigingen met meerdere orkesten)
+CREATE TABLE IF NOT EXISTS spond_orchestra_groups (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL UNIQUE,
+    spond_group_id TEXT NOT NULL,
+    spond_group_name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+);
+
+-- Spond lid koppeling met systeem gebruikers
+CREATE TABLE IF NOT EXISTS spond_member_links (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    spond_member_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    spond_member_name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(association_id, spond_member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id);
+CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id);
 
 -- Spond aanwezigheid per repetitie
 CREATE TABLE IF NOT EXISTS rehearsal_attendance (
