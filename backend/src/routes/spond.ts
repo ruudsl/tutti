@@ -637,7 +637,11 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
         WHERE user_id = ? AND association_id = ?
     `).get(req.user!.id, req.user!.associationId) as any;
 
-    const userName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
+    // Get user's full name from database
+    const userRecord = db.prepare(`
+        SELECT first_name, last_name FROM users WHERE id = ?
+    `).get(req.user!.id) as any;
+    const userName = userRecord ? `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() : '';
 
     // Update local attendance record - try multiple lookup strategies
     // 1. By user_id
@@ -754,7 +758,10 @@ router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler
 
     // 3. By member name (fallback for Spond-synced records not yet linked)
     if (!attendance) {
-        const userName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
+        const userRecord = db.prepare(`
+            SELECT first_name, last_name FROM users WHERE id = ?
+        `).get(req.user!.id) as any;
+        const userName = userRecord ? `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() : '';
         if (userName) {
             attendance = db.prepare(`
                 SELECT status FROM rehearsal_attendance
