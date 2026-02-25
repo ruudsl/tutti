@@ -646,14 +646,14 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
     // Update local attendance record - try multiple lookup strategies
     // 1. By user_id
     let existingAttendance = db.prepare(`
-        SELECT id FROM rehearsal_attendance
+        SELECT id, spond_member_id FROM rehearsal_attendance
         WHERE rehearsal_id = ? AND user_id = ?
     `).get(rehearsalId, req.user!.id) as any;
 
     // 2. By spond_member_id (if user has a Spond link)
     if (!existingAttendance && memberLink?.spond_member_id) {
         existingAttendance = db.prepare(`
-            SELECT id FROM rehearsal_attendance
+            SELECT id, spond_member_id FROM rehearsal_attendance
             WHERE rehearsal_id = ? AND spond_member_id = ?
         `).get(rehearsalId, memberLink.spond_member_id) as any;
     }
@@ -661,10 +661,13 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
     // 3. By member name (fallback for Spond-synced records not yet linked)
     if (!existingAttendance && userName) {
         existingAttendance = db.prepare(`
-            SELECT id FROM rehearsal_attendance
+            SELECT id, spond_member_id FROM rehearsal_attendance
             WHERE rehearsal_id = ? AND member_name = ? COLLATE NOCASE
         `).get(rehearsalId, userName) as any;
     }
+
+    // Determine the spond_member_id to use for syncing (from existing record or member link)
+    const spondMemberIdForSync = existingAttendance?.spond_member_id || memberLink?.spond_member_id || null;
 
     if (existingAttendance) {
         // Update existing record and ensure user_id is linked
@@ -680,9 +683,9 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
         `).run(uuidv4(), rehearsalId, req.user!.id, memberLink?.spond_member_id || null, userName, status);
     }
 
-    // If we have a Spond event linked and the user has a Spond member ID, sync to Spond
+    // If we have a Spond event linked and a Spond member ID (from record or link), sync to Spond
     let spondSynced = false;
-    if (rehearsal.spond_event_id && memberLink?.spond_member_id) {
+    if (rehearsal.spond_event_id && spondMemberIdForSync) {
         const spondConfig = db.prepare(`
             SELECT username, password_encrypted
             FROM spond_config
@@ -693,13 +696,13 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
             try {
                 const password = decryptPassword(spondConfig.password_encrypted);
                 const client = new SpondClient(spondConfig.username, password);
-                await client.changeResponse(rehearsal.spond_event_id, memberLink.spond_member_id, accepted);
+                await client.changeResponse(rehearsal.spond_event_id, spondMemberIdForSync, accepted);
                 spondSynced = true;
                 logger.info('Attendance synced to Spond', {
                     rehearsalId,
                     userId: req.user!.id,
                     spondEventId: rehearsal.spond_event_id,
-                    spondMemberId: memberLink.spond_member_id,
+                    spondMemberId: spondMemberIdForSync,
                     accepted,
                 });
             } catch (err) {
@@ -744,14 +747,14 @@ router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler
     // Get user's attendance record - try multiple lookup strategies
     // 1. By user_id
     let attendance = db.prepare(`
-        SELECT status FROM rehearsal_attendance
+        SELECT status, spond_member_id FROM rehearsal_attendance
         WHERE rehearsal_id = ? AND user_id = ?
     `).get(rehearsalId, req.user!.id) as any;
 
     // 2. By spond_member_id (if user has a Spond link)
     if (!attendance && memberLink?.spond_member_id) {
         attendance = db.prepare(`
-            SELECT status FROM rehearsal_attendance
+            SELECT status, spond_member_id FROM rehearsal_attendance
             WHERE rehearsal_id = ? AND spond_member_id = ?
         `).get(rehearsalId, memberLink.spond_member_id) as any;
     }
@@ -764,15 +767,18 @@ router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler
         const userName = userRecord ? `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() : '';
         if (userName) {
             attendance = db.prepare(`
-                SELECT status FROM rehearsal_attendance
+                SELECT status, spond_member_id FROM rehearsal_attendance
                 WHERE rehearsal_id = ? AND member_name = ? COLLATE NOCASE
             `).get(rehearsalId, userName) as any;
         }
     }
 
+    // Can sync to Spond if we have an event ID and a spond_member_id (from record or link)
+    const spondMemberId = attendance?.spond_member_id || memberLink?.spond_member_id;
+
     res.json({
         status: attendance?.status || 'unknown',
-        canSyncToSpond: !!(rehearsal.spond_event_id && memberLink?.spond_member_id),
+        canSyncToSpond: !!(rehearsal.spond_event_id && spondMemberId),
     });
 }));
 
