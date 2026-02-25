@@ -635,20 +635,29 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
         WHERE user_id = ? AND association_id = ?
     `).get(req.user!.id, req.user!.associationId) as any;
 
-    // Update local attendance record
-    const existingAttendance = db.prepare(`
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    // Update local attendance record - first try by user_id, then by spond_member_id
+    let existingAttendance = db.prepare(`
         SELECT id FROM rehearsal_attendance
         WHERE rehearsal_id = ? AND user_id = ?
     `).get(rehearsalId, req.user!.id) as any;
 
-    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+    // If not found by user_id but user has a Spond link, try by spond_member_id
+    if (!existingAttendance && memberLink?.spond_member_id) {
+        existingAttendance = db.prepare(`
+            SELECT id FROM rehearsal_attendance
+            WHERE rehearsal_id = ? AND spond_member_id = ?
+        `).get(rehearsalId, memberLink.spond_member_id) as any;
+    }
 
     if (existingAttendance) {
+        // Update existing record and ensure user_id is linked
         db.prepare(`
             UPDATE rehearsal_attendance
-            SET status = ?
+            SET status = ?, user_id = ?
             WHERE id = ?
-        `).run(status, existingAttendance.id);
+        `).run(status, req.user!.id, existingAttendance.id);
     } else {
         db.prepare(`
             INSERT INTO rehearsal_attendance (id, rehearsal_id, user_id, spond_member_id, member_name, status)
@@ -711,17 +720,25 @@ router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler
         throw new ApiError(404, 'Repetitie niet gevonden.');
     }
 
-    // Get user's attendance record
-    const attendance = db.prepare(`
-        SELECT status FROM rehearsal_attendance
-        WHERE rehearsal_id = ? AND user_id = ?
-    `).get(rehearsalId, req.user!.id) as any;
-
     // Check if user has Spond link (needed for bidirectional sync)
     const memberLink = db.prepare(`
         SELECT spond_member_id FROM spond_member_links
         WHERE user_id = ? AND association_id = ?
     `).get(req.user!.id, req.user!.associationId) as any;
+
+    // Get user's attendance record - first try by user_id, then by spond_member_id
+    let attendance = db.prepare(`
+        SELECT status FROM rehearsal_attendance
+        WHERE rehearsal_id = ? AND user_id = ?
+    `).get(rehearsalId, req.user!.id) as any;
+
+    // If not found by user_id but user has a Spond link, try by spond_member_id
+    if (!attendance && memberLink?.spond_member_id) {
+        attendance = db.prepare(`
+            SELECT status FROM rehearsal_attendance
+            WHERE rehearsal_id = ? AND spond_member_id = ?
+        `).get(rehearsalId, memberLink.spond_member_id) as any;
+    }
 
     res.json({
         status: attendance?.status || 'unknown',
