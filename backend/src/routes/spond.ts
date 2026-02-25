@@ -402,7 +402,9 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
             `);
 
             for (const response of matchingEvent.responses) {
-                const name = `${response.firstName} ${response.lastName}`.trim() || 'Onbekend';
+                const firstName = response.firstName || '';
+                const lastName = response.lastName || '';
+                const name = `${firstName} ${lastName}`.trim() || 'Onbekend';
                 const status = response.status === 'unanswered' ? 'unknown' : response.status;
 
                 // Try to match to a user: first by explicit link, then by name
