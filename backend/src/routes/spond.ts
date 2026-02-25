@@ -637,20 +637,29 @@ router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (re
         WHERE user_id = ? AND association_id = ?
     `).get(req.user!.id, req.user!.associationId) as any;
 
-    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
 
-    // Update local attendance record - first try by user_id, then by spond_member_id
+    // Update local attendance record - try multiple lookup strategies
+    // 1. By user_id
     let existingAttendance = db.prepare(`
         SELECT id FROM rehearsal_attendance
         WHERE rehearsal_id = ? AND user_id = ?
     `).get(rehearsalId, req.user!.id) as any;
 
-    // If not found by user_id but user has a Spond link, try by spond_member_id
+    // 2. By spond_member_id (if user has a Spond link)
     if (!existingAttendance && memberLink?.spond_member_id) {
         existingAttendance = db.prepare(`
             SELECT id FROM rehearsal_attendance
             WHERE rehearsal_id = ? AND spond_member_id = ?
         `).get(rehearsalId, memberLink.spond_member_id) as any;
+    }
+
+    // 3. By member name (fallback for Spond-synced records not yet linked)
+    if (!existingAttendance && userName) {
+        existingAttendance = db.prepare(`
+            SELECT id FROM rehearsal_attendance
+            WHERE rehearsal_id = ? AND member_name = ? COLLATE NOCASE
+        `).get(rehearsalId, userName) as any;
     }
 
     if (existingAttendance) {
@@ -728,18 +737,30 @@ router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler
         WHERE user_id = ? AND association_id = ?
     `).get(req.user!.id, req.user!.associationId) as any;
 
-    // Get user's attendance record - first try by user_id, then by spond_member_id
+    // Get user's attendance record - try multiple lookup strategies
+    // 1. By user_id
     let attendance = db.prepare(`
         SELECT status FROM rehearsal_attendance
         WHERE rehearsal_id = ? AND user_id = ?
     `).get(rehearsalId, req.user!.id) as any;
 
-    // If not found by user_id but user has a Spond link, try by spond_member_id
+    // 2. By spond_member_id (if user has a Spond link)
     if (!attendance && memberLink?.spond_member_id) {
         attendance = db.prepare(`
             SELECT status FROM rehearsal_attendance
             WHERE rehearsal_id = ? AND spond_member_id = ?
         `).get(rehearsalId, memberLink.spond_member_id) as any;
+    }
+
+    // 3. By member name (fallback for Spond-synced records not yet linked)
+    if (!attendance) {
+        const userName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
+        if (userName) {
+            attendance = db.prepare(`
+                SELECT status FROM rehearsal_attendance
+                WHERE rehearsal_id = ? AND member_name = ? COLLATE NOCASE
+            `).get(rehearsalId, userName) as any;
+        }
     }
 
     res.json({
