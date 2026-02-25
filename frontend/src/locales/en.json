@@ -34,6 +34,13 @@
     "required": "required",
     "sessionExpired": "Session expired. Please log in again."
   },
+  "sidebar": {
+    "agenda": "Agenda",
+    "members": "Members",
+    "library": "Library",
+    "inventory": "Inventory",
+    "admin": "Admin"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "myMusic": "My Music",

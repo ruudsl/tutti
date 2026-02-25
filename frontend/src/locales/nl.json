@@ -34,6 +34,13 @@
     "required": "verplicht",
     "sessionExpired": "Sessie verlopen. Log opnieuw in."
   },
+  "sidebar": {
+    "agenda": "Agenda",
+    "members": "Leden",
+    "library": "Bibliotheek",
+    "inventory": "Inventaris",
+    "admin": "Beheer"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "myMusic": "Mijn Muziek",

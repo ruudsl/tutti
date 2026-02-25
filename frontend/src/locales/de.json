@@ -34,6 +34,13 @@
     "required": "erforderlich",
     "sessionExpired": "Sitzung abgelaufen. Bitte erneut anmelden."
   },
+  "sidebar": {
+    "agenda": "Kalender",
+    "members": "Mitglieder",
+    "library": "Bibliothek",
+    "inventory": "Inventar",
+    "admin": "Verwaltung"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "myMusic": "Meine Musik",
