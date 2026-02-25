@@ -600,4 +600,133 @@ router.post('/sync/:rehearsalId', authenticateToken, requireRole('admin', 'music
     });
 }));
 
+// ========================
+// USER ATTENDANCE UPDATE (bidirectional sync)
+// ========================
+
+/**
+ * PUT /spond/attendance/:rehearsalId - Update current user's attendance for a rehearsal
+ * This syncs the change to Spond if possible
+ */
+router.put('/attendance/:rehearsalId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { rehearsalId } = req.params;
+    const { accepted } = req.body;
+
+    if (typeof accepted !== 'boolean') {
+        throw new ApiError(400, 'Parameter "accepted" (boolean) is verplicht.');
+    }
+
+    const status = accepted ? 'accepted' : 'declined';
+
+    // Get the rehearsal
+    const rehearsal = db.prepare(`
+        SELECT id, spond_event_id, orchestra_id
+        FROM rehearsals
+        WHERE id = ? AND association_id = ?
+    `).get(rehearsalId, req.user!.associationId) as any;
+
+    if (!rehearsal) {
+        throw new ApiError(404, 'Repetitie niet gevonden.');
+    }
+
+    // Get user's Spond member link
+    const memberLink = db.prepare(`
+        SELECT spond_member_id FROM spond_member_links
+        WHERE user_id = ? AND association_id = ?
+    `).get(req.user!.id, req.user!.associationId) as any;
+
+    // Update local attendance record
+    const existingAttendance = db.prepare(`
+        SELECT id FROM rehearsal_attendance
+        WHERE rehearsal_id = ? AND user_id = ?
+    `).get(rehearsalId, req.user!.id) as any;
+
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    if (existingAttendance) {
+        db.prepare(`
+            UPDATE rehearsal_attendance
+            SET status = ?
+            WHERE id = ?
+        `).run(status, existingAttendance.id);
+    } else {
+        db.prepare(`
+            INSERT INTO rehearsal_attendance (id, rehearsal_id, user_id, spond_member_id, member_name, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(uuidv4(), rehearsalId, req.user!.id, memberLink?.spond_member_id || null, userName, status);
+    }
+
+    // If we have a Spond event linked and the user has a Spond member ID, sync to Spond
+    let spondSynced = false;
+    if (rehearsal.spond_event_id && memberLink?.spond_member_id) {
+        const spondConfig = db.prepare(`
+            SELECT username, password_encrypted
+            FROM spond_config
+            WHERE association_id = ?
+        `).get(req.user!.associationId) as any;
+
+        if (spondConfig) {
+            try {
+                const password = decryptPassword(spondConfig.password_encrypted);
+                const client = new SpondClient(spondConfig.username, password);
+                await client.changeResponse(rehearsal.spond_event_id, memberLink.spond_member_id, accepted);
+                spondSynced = true;
+                logger.info('Attendance synced to Spond', {
+                    rehearsalId,
+                    userId: req.user!.id,
+                    spondEventId: rehearsal.spond_event_id,
+                    spondMemberId: memberLink.spond_member_id,
+                    accepted,
+                });
+            } catch (err) {
+                logger.warn('Failed to sync attendance to Spond', {
+                    rehearsalId,
+                    userId: req.user!.id,
+                    error: err instanceof Error ? err.message : String(err),
+                });
+                // Don't fail the request - local update succeeded
+            }
+        }
+    }
+
+    res.json({
+        message: accepted ? 'Je bent aangemeld voor deze repetitie.' : 'Je bent afgemeld voor deze repetitie.',
+        status,
+        spondSynced,
+    });
+}));
+
+/**
+ * GET /spond/attendance/:rehearsalId/my-status - Get current user's attendance status
+ */
+router.get('/attendance/:rehearsalId/my-status', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { rehearsalId } = req.params;
+
+    // Verify rehearsal exists
+    const rehearsal = db.prepare(`
+        SELECT id, spond_event_id FROM rehearsals WHERE id = ? AND association_id = ?
+    `).get(rehearsalId, req.user!.associationId) as any;
+
+    if (!rehearsal) {
+        throw new ApiError(404, 'Repetitie niet gevonden.');
+    }
+
+    // Get user's attendance record
+    const attendance = db.prepare(`
+        SELECT status FROM rehearsal_attendance
+        WHERE rehearsal_id = ? AND user_id = ?
+    `).get(rehearsalId, req.user!.id) as any;
+
+    // Check if user has Spond link (needed for bidirectional sync)
+    const memberLink = db.prepare(`
+        SELECT spond_member_id FROM spond_member_links
+        WHERE user_id = ? AND association_id = ?
+    `).get(req.user!.id, req.user!.associationId) as any;
+
+    res.json({
+        status: attendance?.status || 'unknown',
+        canSyncToSpond: !!(rehearsal.spond_event_id && memberLink?.spond_member_id),
+    });
+}));
+
 export default router;

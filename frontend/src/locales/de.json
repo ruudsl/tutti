@@ -936,6 +936,18 @@
     "errorSaving": "Fehler beim Speichern der Probe",
     "attendance": {
       "title": "Anwesenheit",
+      "myAttendance": "Meine Anwesenheit",
+      "currentStatus": "Aktueller Status",
+      "accept": "Zusagen",
+      "decline": "Absagen",
+      "willSyncToSpond": "Wird mit Spond synchronisiert",
+      "syncedToSpond": "Mit Spond synchronisiert",
+      "statuses": {
+        "accepted": "Anwesend",
+        "declined": "Abwesend",
+        "unknown": "Noch nicht angegeben",
+        "waiting": "Warteliste"
+      },
       "from": "Von",
       "to": "Bis",
       "rehearsalCount": "{{count}} Proben in diesem Zeitraum",

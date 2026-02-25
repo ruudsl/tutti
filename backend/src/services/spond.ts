@@ -165,6 +165,53 @@ export class SpondClient {
             ),
         }));
     }
+
+    /**
+     * Change a member's response for an event (accept or decline)
+     * @param eventId - The Spond event ID
+     * @param memberId - The Spond member ID
+     * @param accepted - true to accept, false to decline
+     */
+    async changeResponse(eventId: string, memberId: string, accepted: boolean): Promise<void> {
+        if (!this.token) {
+            await this.login();
+        }
+
+        const url = `${SPOND_API_BASE}/sponds/${eventId}/responses/${memberId}`;
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ accepted }),
+        });
+
+        if (res.status === 401) {
+            // Token expired, retry once
+            await this.login();
+            const retryRes = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ accepted }),
+            });
+            if (!retryRes.ok) {
+                const text = await retryRes.text();
+                logger.error('Spond changeResponse failed', { status: retryRes.status, body: text });
+                throw new Error(`Spond API error: ${retryRes.status}`);
+            }
+            return;
+        }
+
+        if (!res.ok) {
+            const text = await res.text();
+            logger.error('Spond changeResponse failed', { status: res.status, body: text });
+            throw new Error(`Spond API error: ${res.status}`);
+        }
+    }
 }
 
 function findMember(event: any, memberId: string): { firstName: string; lastName: string } | undefined {

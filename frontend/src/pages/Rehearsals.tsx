@@ -12,6 +12,7 @@ import {
   getSpondGroups, syncSpond, syncSpondRehearsal,
   getAttendanceSummary,
   getRehearsalSeating, generateRehearsalSeating,
+  getMyAttendanceStatus, updateMyAttendance,
 } from '../api';
 import type { AttendanceMember } from '../api';
 import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup, RehearsalSeat } from '../types';
@@ -79,6 +80,11 @@ export default function Rehearsals() {
   const [attendanceTo, setAttendanceTo] = useState(() => new Date().toISOString().split('T')[0]);
   const [attendanceOrchestraId, setAttendanceOrchestraId] = useState('');
   const [attendanceSortBy, setAttendanceSortBy] = useState<'name' | 'rate' | 'count'>('name');
+
+  // My attendance
+  const [myAttendanceStatus, setMyAttendanceStatus] = useState<string>('unknown');
+  const [canSyncToSpond, setCanSyncToSpond] = useState(false);
+  const [updatingAttendance, setUpdatingAttendance] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -153,8 +159,37 @@ export default function Rehearsals() {
       const detail = await getRehearsal(id);
       setSelectedRehearsal(detail);
       setEditingPieces(false);
+      // Load my attendance status
+      try {
+        const status = await getMyAttendanceStatus(id);
+        setMyAttendanceStatus(status.status);
+        setCanSyncToSpond(status.canSyncToSpond);
+      } catch {
+        setMyAttendanceStatus('unknown');
+        setCanSyncToSpond(false);
+      }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleUpdateMyAttendance = async (accepted: boolean) => {
+    if (!selectedRehearsal) return;
+    setUpdatingAttendance(true);
+    try {
+      const result = await updateMyAttendance(selectedRehearsal.id, accepted);
+      setMyAttendanceStatus(result.status);
+      showSuccess(result.message);
+      if (result.spondSynced) {
+        showSuccess(t('rehearsals.attendance.syncedToSpond'));
+      }
+      // Reload rehearsal details to update attendance list
+      const detail = await getRehearsal(selectedRehearsal.id);
+      setSelectedRehearsal(detail);
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setUpdatingAttendance(false);
     }
   };
 
@@ -473,6 +508,46 @@ export default function Rehearsals() {
             ) : (
               <p className="piece-meta">{t('rehearsals.noPieces')}</p>
             )}
+          </div>
+        </div>
+
+        {/* My Attendance */}
+        <div className="card mb-3">
+          <div className="card-header">
+            <h2 className="card-title">{t('rehearsals.attendance.myAttendance')}</h2>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>{t('rehearsals.attendance.currentStatus')}:</span>
+                <span className={`badge badge-${myAttendanceStatus === 'accepted' ? 'success' : myAttendanceStatus === 'declined' ? 'danger' : 'secondary'}`}>
+                  {t(`rehearsals.attendance.statuses.${myAttendanceStatus}`)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className={`btn ${myAttendanceStatus === 'accepted' ? 'btn-success' : 'btn-outline'} btn-sm`}
+                  onClick={() => handleUpdateMyAttendance(true)}
+                  disabled={updatingAttendance || myAttendanceStatus === 'accepted'}
+                  style={myAttendanceStatus === 'accepted' ? { backgroundColor: 'var(--success)', borderColor: 'var(--success)', color: 'white' } : {}}
+                >
+                  {updatingAttendance ? '...' : t('rehearsals.attendance.accept')}
+                </button>
+                <button
+                  className={`btn ${myAttendanceStatus === 'declined' ? 'btn-danger' : 'btn-outline'} btn-sm`}
+                  onClick={() => handleUpdateMyAttendance(false)}
+                  disabled={updatingAttendance || myAttendanceStatus === 'declined'}
+                  style={myAttendanceStatus === 'declined' ? { backgroundColor: 'var(--danger)', borderColor: 'var(--danger)', color: 'white' } : {}}
+                >
+                  {updatingAttendance ? '...' : t('rehearsals.attendance.decline')}
+                </button>
+              </div>
+              {canSyncToSpond && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                  {t('rehearsals.attendance.willSyncToSpond')}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

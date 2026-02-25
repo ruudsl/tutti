@@ -820,6 +820,24 @@ export const deleteSpondMemberLink = async (id: string): Promise<void> => {
   await api.delete(`/spond/member-links/${id}`);
 };
 
+// Spond Attendance (bidirectional sync)
+export const updateMyAttendance = async (rehearsalId: string, accepted: boolean): Promise<{
+  message: string;
+  status: string;
+  spondSynced: boolean;
+}> => {
+  const { data } = await api.put(`/spond/attendance/${rehearsalId}`, { accepted });
+  return data;
+};
+
+export const getMyAttendanceStatus = async (rehearsalId: string): Promise<{
+  status: string;
+  canSyncToSpond: boolean;
+}> => {
+  const { data } = await api.get(`/spond/attendance/${rehearsalId}/my-status`);
+  return data;
+};
+
 // Microsoft Entra ID (SSO)
 export const getMicrosoftEnabled = async (): Promise<{ enabled: boolean }> => {
   const { data } = await api.get('/auth/microsoft/enabled');

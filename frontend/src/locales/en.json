@@ -952,6 +952,18 @@
     "errorSaving": "Error saving rehearsal",
     "attendance": {
       "title": "Attendance",
+      "myAttendance": "My attendance",
+      "currentStatus": "Current status",
+      "accept": "Accept",
+      "decline": "Decline",
+      "willSyncToSpond": "Will sync to Spond",
+      "syncedToSpond": "Synced to Spond",
+      "statuses": {
+        "accepted": "Attending",
+        "declined": "Not attending",
+        "unknown": "Not indicated",
+        "waiting": "Waiting list"
+      },
       "from": "From",
       "to": "To",
       "rehearsalCount": "{{count}} rehearsals in this period",

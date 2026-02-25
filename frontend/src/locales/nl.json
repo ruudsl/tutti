@@ -955,6 +955,18 @@
     "errorSaving": "Fout bij opslaan repetitie",
     "attendance": {
       "title": "Aanwezigheid",
+      "myAttendance": "Mijn aanwezigheid",
+      "currentStatus": "Huidige status",
+      "accept": "Aanmelden",
+      "decline": "Afmelden",
+      "willSyncToSpond": "Wordt gesynchroniseerd met Spond",
+      "syncedToSpond": "Gesynchroniseerd met Spond",
+      "statuses": {
+        "accepted": "Aanwezig",
+        "declined": "Afwezig",
+        "unknown": "Nog niet aangegeven",
+        "waiting": "Wachtlijst"
+      },
       "from": "Van",
       "to": "Tot",
       "rehearsalCount": "{{count}} repetities in deze periode",
