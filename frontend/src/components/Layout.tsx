@@ -63,19 +63,22 @@ export default function Layout() {
   };
 
   const isAdmin = user?.role === ROLES.ADMIN;
+  const isConductor = user?.role === ROLES.CONDUCTOR || isAdmin;
   const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
   const isEquipmentCommittee = user?.role === ROLES.EQUIPMENT_COMMITTEE || isAdmin;
   const isUniformsCommittee = user?.role === ROLES.UNIFORMS_COMMITTEE || isAdmin;
   const hasSidebar = useHasSidebar();
 
   // Check if current path is in a navigation group
-  const agendaPaths = ['/rehearsals', '/concerts', '/seating'];
+  const agendaPaths = ['/rehearsals', '/concerts'];
+  const orchestraPaths = ['/seating', '/voice-parts', '/instruments', '/occupancy', '/neighbor-preferences'];
   const ledenPaths = ['/members', '/issues'];
-  const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/instruments', '/genres', '/statistics', '/pdf-tools'];
+  const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools'];
   const inventarisPaths = ['/equipment', '/uniforms'];
   const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/theme', '/changelog', '/audit-logs'];
 
   const isAgendaActive = agendaPaths.some(p => location.pathname.startsWith(p));
+  const isOrchestraActive = orchestraPaths.some(p => location.pathname.startsWith(p));
   const isLedenActive = ledenPaths.some(p => location.pathname.startsWith(p));
   const isLibraryActive = libraryPaths.some(p => location.pathname.startsWith(p));
   const isInventarisActive = inventarisPaths.some(p => location.pathname.startsWith(p));
@@ -136,6 +139,13 @@ export default function Layout() {
                 {t('sidebar.members')}
               </NavLink>
             </li>
+            {(isConductor || isMusicCommittee) && (
+              <li>
+                <NavLink to="/voice-parts" className={() => `nav-link ${isOrchestraActive ? 'active' : ''}`}>
+                  {t('sidebar.orchestra')}
+                </NavLink>
+              </li>
+            )}
             <li>
               <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 {t('nav.tools')}
