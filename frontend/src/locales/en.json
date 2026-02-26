@@ -36,6 +36,7 @@
   },
   "sidebar": {
     "agenda": "Agenda",
+    "orchestra": "Orchestra",
     "members": "Members",
     "library": "Library",
     "inventory": "Inventory",
@@ -76,7 +77,10 @@
     "userGuide": "User Guide",
     "auditLogs": "Audit Logs",
     "memberDirectory": "Members",
-    "seating": "Seating"
+    "seating": "Seating",
+    "voiceParts": "Voice Parts",
+    "occupancy": "Occupancy",
+    "neighborPreferences": "Neighbor Preferences"
   },
   "roles": {
     "admin": "Administrator",
@@ -1602,6 +1606,9 @@
   },
   "pageTitle": {
     "seating": "Seating - Harmonie",
+    "voiceParts": "Voice Parts - Harmonie",
+    "occupancy": "Occupancy - Harmonie",
+    "neighborPreferences": "Neighbor Preferences - Harmonie",
     "memberDirectory": "Member Directory - Harmonie"
   },
   "memberDirectory": {
@@ -1615,5 +1622,61 @@
     "syncPhotos": "Sync photos",
     "syncPhotosDescription": "Sync profile photos from Microsoft 365.",
     "syncPhotosSuccess": "Photos synchronized"
+  },
+  "voiceParts": {
+    "title": "Voice Parts",
+    "description": "Assign voice parts to members (1st voice, 2nd voice, etc.)",
+    "filterBySection": "Filter by section",
+    "members": "members",
+    "noSections": "No sections configured. Configure sections in Seating first.",
+    "noMembers": "No members in this section",
+    "position": "Position",
+    "member": "Member",
+    "instrument": "Instrument",
+    "voicePart": "Voice Part",
+    "clickToAssign": "Click to assign",
+    "enterVoice": "E.g. 1st voice",
+    "saved": "Voice part saved"
+  },
+  "occupancy": {
+    "title": "Occupancy Overview",
+    "description": "View occupancy rates per section and identify under- or overstaffing.",
+    "section": "Section",
+    "assigned": "Assigned",
+    "potential": "Available",
+    "fillRate": "Fill Rate",
+    "status": "Status",
+    "instruments": "Instruments",
+    "totalAssigned": "Total assigned",
+    "totalPotential": "Total available",
+    "totalSections": "Total sections",
+    "noSections": "No sections configured.",
+    "sectionOverview": "Section Overview",
+    "legend": "Legend",
+    "wellStaffed": "Well staffed",
+    "adequate": "Adequate",
+    "understaffed": "Understaffed",
+    "noPlayers": "No players"
+  },
+  "neighborPreferences": {
+    "title": "Neighbor Preferences",
+    "description": "Manage preferences for who wants to sit next to whom during rehearsals.",
+    "add": "Add preference",
+    "member": "Member",
+    "neighbor": "Neighbor",
+    "preference": "Preference",
+    "preferenceType": "Preference type",
+    "wantsToSitWith": "Wants to sit with",
+    "prefersNotToSitWith": "Prefers not to sit with",
+    "preferred": "Preferred",
+    "avoid": "Avoid",
+    "preferredCount": "Preferred",
+    "avoidCount": "To avoid",
+    "list": "Neighbor preferences",
+    "noPreferences": "No preferences set yet.",
+    "saved": "Preference saved",
+    "deleted": "Preference deleted",
+    "confirmDelete": "Are you sure you want to delete this preference?",
+    "cannotSelectSelf": "You cannot select yourself as a neighbor"
   }
 }

@@ -36,6 +36,7 @@
   },
   "sidebar": {
     "agenda": "Agenda",
+    "orchestra": "Orkest",
     "members": "Leden",
     "library": "Bibliotheek",
     "inventory": "Inventaris",
@@ -76,7 +77,10 @@
     "userGuide": "Handleiding",
     "auditLogs": "Audit Logs",
     "memberDirectory": "Smoelenboek",
-    "seating": "Opstelling"
+    "seating": "Opstelling",
+    "voiceParts": "Partijen",
+    "occupancy": "Bezetting",
+    "neighborPreferences": "Buurvoorkeuren"
   },
   "roles": {
     "admin": "Beheerder",
@@ -1663,6 +1667,9 @@
     "userGuide": "Handleiding - Harmonie",
     "auditLogs": "Audit Logs - Harmonie",
     "seating": "Opstelling - Harmonie",
+    "voiceParts": "Partijenverdeling - Harmonie",
+    "occupancy": "Bezettingsoverzicht - Harmonie",
+    "neighborPreferences": "Buurvoorkeuren - Harmonie",
     "memberDirectory": "Smoelenboek - Harmonie"
   },
   "seating": {
@@ -1776,5 +1783,61 @@
     "syncPhotos": "Foto's synchroniseren",
     "syncPhotosDescription": "Synchroniseer profielfoto's van Microsoft 365.",
     "syncPhotosSuccess": "Foto's gesynchroniseerd"
+  },
+  "voiceParts": {
+    "title": "Partijenverdeling",
+    "description": "Wijs stemmen toe aan leden (1e stem, 2e stem, etc.)",
+    "filterBySection": "Filter op sectie",
+    "members": "leden",
+    "noSections": "Geen secties geconfigureerd. Configureer eerst secties bij de Opstelling.",
+    "noMembers": "Geen leden in deze sectie",
+    "position": "Positie",
+    "member": "Lid",
+    "instrument": "Instrument",
+    "voicePart": "Partij",
+    "clickToAssign": "Klik om toe te wijzen",
+    "enterVoice": "Bijv. 1e stem",
+    "saved": "Partij opgeslagen"
+  },
+  "occupancy": {
+    "title": "Bezettingsoverzicht",
+    "description": "Bekijk de bezettingsgraad per sectie en signaleer onder- of overbezetting.",
+    "section": "Sectie",
+    "assigned": "Ingedeeld",
+    "potential": "Beschikbaar",
+    "fillRate": "Bezettingsgraad",
+    "status": "Status",
+    "instruments": "Instrumenten",
+    "totalAssigned": "Totaal ingedeeld",
+    "totalPotential": "Totaal beschikbaar",
+    "totalSections": "Aantal secties",
+    "noSections": "Geen secties geconfigureerd.",
+    "sectionOverview": "Overzicht per sectie",
+    "legend": "Legenda",
+    "wellStaffed": "Goed bezet",
+    "adequate": "Voldoende",
+    "understaffed": "Onderbezet",
+    "noPlayers": "Geen spelers"
+  },
+  "neighborPreferences": {
+    "title": "Buurvoorkeuren",
+    "description": "Beheer voorkeuren voor wie naast wie wil zitten tijdens repetities.",
+    "add": "Voorkeur toevoegen",
+    "member": "Lid",
+    "neighbor": "Buur",
+    "preference": "Voorkeur",
+    "preferenceType": "Type voorkeur",
+    "wantsToSitWith": "Wil graag naast",
+    "prefersNotToSitWith": "Liever niet naast",
+    "preferred": "Voorkeur",
+    "avoid": "Vermijden",
+    "preferredCount": "Voorkeuren",
+    "avoidCount": "Te vermijden",
+    "list": "Buurvoorkeuren",
+    "noPreferences": "Nog geen voorkeuren ingesteld.",
+    "saved": "Voorkeur opgeslagen",
+    "deleted": "Voorkeur verwijderd",
+    "confirmDelete": "Weet je zeker dat je deze voorkeur wilt verwijderen?",
+    "cannotSelectSelf": "Je kunt niet jezelf selecteren als buur"
   }
 }

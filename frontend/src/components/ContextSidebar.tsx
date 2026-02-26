@@ -20,11 +20,22 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: '📅',
-    basePaths: ['/rehearsals', '/concerts', '/seating'],
+    basePaths: ['/rehearsals', '/concerts'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.orchestra',
+    icon: '🎻',
+    basePaths: ['/seating', '/instruments', '/voice-parts', '/occupancy', '/neighbor-preferences'],
+    items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/instruments', labelKey: 'nav.instruments', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
     ],
   },
   {
@@ -39,7 +50,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.library',
     icon: '📚',
-    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/instruments', '/genres', '/statistics', '/pdf-tools'],
+    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools'],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/lists', labelKey: 'nav.lists', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -47,7 +58,6 @@ const navGroups: NavGroup[] = [
       { path: '/upload', labelKey: 'nav.upload', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
-      { path: '/instruments', labelKey: 'nav.instruments', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/statistics', labelKey: 'nav.statistics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
     ],

@@ -44,6 +44,9 @@ import EntraSync from './pages/EntraSync';
 import UserGuide from './pages/UserGuide';
 import AuditLogs from './pages/AuditLogs';
 import Seating from './pages/Seating';
+import VoiceParts from './pages/VoiceParts';
+import Occupancy from './pages/Occupancy';
+import NeighborPreferences from './pages/NeighborPreferences';
 import MemberDirectory from './pages/MemberDirectory';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -271,6 +274,30 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
               <Seating />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="voice-parts"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <VoiceParts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="occupancy"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <Occupancy />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="neighbor-preferences"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <NeighborPreferences />
             </PrivateRoute>
           }
         />

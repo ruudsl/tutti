@@ -36,6 +36,7 @@
   },
   "sidebar": {
     "agenda": "Kalender",
+    "orchestra": "Orchester",
     "members": "Mitglieder",
     "library": "Bibliothek",
     "inventory": "Inventar",
@@ -76,7 +77,10 @@
     "userGuide": "Benutzerhandbuch",
     "auditLogs": "Audit-Protokolle",
     "memberDirectory": "Mitglieder",
-    "seating": "Sitzordnung"
+    "seating": "Sitzordnung",
+    "voiceParts": "Stimmen",
+    "occupancy": "Besetzung",
+    "neighborPreferences": "Nachbarvorlieben"
   },
   "roles": {
     "admin": "Administrator",
@@ -1586,6 +1590,9 @@
   },
   "pageTitle": {
     "seating": "Sitzordnung - Harmonie",
+    "voiceParts": "Stimmenzuordnung - Harmonie",
+    "occupancy": "Besetzungsübersicht - Harmonie",
+    "neighborPreferences": "Nachbarvorlieben - Harmonie",
     "memberDirectory": "Mitgliederverzeichnis - Harmonie"
   },
   "memberDirectory": {
@@ -1599,5 +1606,61 @@
     "syncPhotos": "Fotos synchronisieren",
     "syncPhotosDescription": "Profilfotos von Microsoft 365 synchronisieren.",
     "syncPhotosSuccess": "Fotos synchronisiert"
+  },
+  "voiceParts": {
+    "title": "Stimmenzuordnung",
+    "description": "Stimmen den Mitgliedern zuweisen (1. Stimme, 2. Stimme, usw.)",
+    "filterBySection": "Nach Sektion filtern",
+    "members": "Mitglieder",
+    "noSections": "Keine Sektionen konfiguriert. Konfigurieren Sie zuerst Sektionen bei der Sitzordnung.",
+    "noMembers": "Keine Mitglieder in dieser Sektion",
+    "position": "Position",
+    "member": "Mitglied",
+    "instrument": "Instrument",
+    "voicePart": "Stimme",
+    "clickToAssign": "Klicken zum Zuweisen",
+    "enterVoice": "Z.B. 1. Stimme",
+    "saved": "Stimme gespeichert"
+  },
+  "occupancy": {
+    "title": "Besetzungsübersicht",
+    "description": "Besetzungsquoten pro Sektion anzeigen und Unter- oder Überbesetzung identifizieren.",
+    "section": "Sektion",
+    "assigned": "Zugewiesen",
+    "potential": "Verfügbar",
+    "fillRate": "Auslastung",
+    "status": "Status",
+    "instruments": "Instrumente",
+    "totalAssigned": "Gesamt zugewiesen",
+    "totalPotential": "Gesamt verfügbar",
+    "totalSections": "Anzahl Sektionen",
+    "noSections": "Keine Sektionen konfiguriert.",
+    "sectionOverview": "Sektionsübersicht",
+    "legend": "Legende",
+    "wellStaffed": "Gut besetzt",
+    "adequate": "Ausreichend",
+    "understaffed": "Unterbesetzt",
+    "noPlayers": "Keine Spieler"
+  },
+  "neighborPreferences": {
+    "title": "Nachbarvorlieben",
+    "description": "Vorlieben verwalten, wer neben wem bei Proben sitzen möchte.",
+    "add": "Vorliebe hinzufügen",
+    "member": "Mitglied",
+    "neighbor": "Nachbar",
+    "preference": "Vorliebe",
+    "preferenceType": "Art der Vorliebe",
+    "wantsToSitWith": "Möchte sitzen neben",
+    "prefersNotToSitWith": "Möchte lieber nicht neben",
+    "preferred": "Bevorzugt",
+    "avoid": "Vermeiden",
+    "preferredCount": "Bevorzugt",
+    "avoidCount": "Zu vermeiden",
+    "list": "Nachbarvorlieben",
+    "noPreferences": "Noch keine Vorlieben festgelegt.",
+    "saved": "Vorliebe gespeichert",
+    "deleted": "Vorliebe gelöscht",
+    "confirmDelete": "Sind Sie sicher, dass Sie diese Vorliebe löschen möchten?",
+    "cannotSelectSelf": "Sie können sich nicht selbst als Nachbar auswählen"
   }
 }
