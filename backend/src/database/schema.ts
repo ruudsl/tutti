@@ -59,12 +59,15 @@ CREATE TABLE IF NOT EXISTS users (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'member', -- admin, music_committee, equipment_committee, uniforms_committee, conductor, member
+    status TEXT NOT NULL DEFAULT 'active', -- active, inactive, pending
     association_id TEXT,
     mfa_secret TEXT, -- TOTP secret for MFA
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
     microsoft_id TEXT, -- Microsoft Entra Object ID for SSO
     profile_photo_path TEXT, -- Pad naar profielfoto
     last_login DATETIME, -- Laatste keer ingelogd
+    onboarded_at DATETIME, -- Wanneer onboarding is voltooid
+    offboarded_at DATETIME, -- Wanneer offboarding is voltooid
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
@@ -340,6 +343,7 @@ CREATE TABLE IF NOT EXISTS spond_member_links (
     spond_member_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     spond_member_name TEXT,
+    spond_member_email TEXT, -- Email voor betere matching
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -348,6 +352,7 @@ CREATE TABLE IF NOT EXISTS spond_member_links (
 
 CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id);
 CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_spond_member_links_email ON spond_member_links(spond_member_email);
 
 -- Spond aanwezigheid per repetitie
 CREATE TABLE IF NOT EXISTS rehearsal_attendance (
@@ -748,4 +753,40 @@ CREATE TABLE IF NOT EXISTS seating_notification_logs (
 CREATE INDEX IF NOT EXISTS idx_seating_notification_settings_orchestra ON seating_notification_settings(orchestra_id);
 CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_rehearsal ON seating_notification_logs(rehearsal_id);
 CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_status ON seating_notification_logs(status);
+
+-- ===========================================
+-- ONBOARDING & OFFBOARDING
+-- ===========================================
+
+-- Onboarding taken voor tracking
+CREATE TABLE IF NOT EXISTS onboarding_tasks (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    association_id TEXT NOT NULL,
+    task_type TEXT NOT NULL, -- m365_create, harmonie_create, spond_invite, spond_link
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, in_progress, completed, failed, skipped
+    error_message TEXT,
+    metadata TEXT, -- JSON met extra info (bijv. tijdelijk wachtwoord)
+    completed_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Pending Spond koppelingen (voor leden die nog moeten koppelen)
+CREATE TABLE IF NOT EXISTS pending_spond_links (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE,
+    association_id TEXT NOT NULL,
+    expected_email TEXT, -- Email waarmee lid zich moet aanmelden in Spond
+    expected_name TEXT, -- Naam waarmee lid zich moet aanmelden
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_user ON onboarding_tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_status ON onboarding_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_pending_spond_links_email ON pending_spond_links(expected_email);
+CREATE INDEX IF NOT EXISTS idx_pending_spond_links_user ON pending_spond_links(user_id);
 `;

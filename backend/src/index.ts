@@ -47,6 +47,7 @@ import entraSyncRoutes from './routes/entra-sync';
 import auditLogsRoutes from './routes/audit-logs';
 import seatingRoutes from './routes/seating';
 import seatingNotificationsRoutes from './routes/seating-notifications';
+import onboardingRoutes from './routes/onboarding';
 import { startScheduler } from './scheduler/seating-notifications';
 
 const app = express();
@@ -114,6 +115,7 @@ app.use('/api/entra', entraSyncRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/seating', seatingRoutes);
 app.use('/api/seating-notifications', seatingNotificationsRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

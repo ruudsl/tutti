@@ -74,9 +74,10 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: '⚙️',
-    basePaths: ['/users', '/orchestras', '/settings', '/entra-sync', '/theme', '/changelog', '/audit-logs'],
+    basePaths: ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
+      { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
       { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
       { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },

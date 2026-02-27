@@ -62,6 +62,7 @@ export interface SpondResponse {
     id: string;
     firstName: string;
     lastName: string;
+    email?: string;
     status: 'accepted' | 'declined' | 'unanswered' | 'waiting';
 }
 
@@ -148,19 +149,19 @@ export class SpondClient {
             cancelled: e.cancelled || false,
             responses: (e.responses?.acceptedIds || []).map((id: string) => {
                 const member = findMember(e, id);
-                return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', status: 'accepted' as const };
+                return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', email: member?.email, status: 'accepted' as const };
             }).concat(
                 (e.responses?.declinedIds || []).map((id: string) => {
                     const member = findMember(e, id);
-                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', status: 'declined' as const };
+                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', email: member?.email, status: 'declined' as const };
                 }),
                 (e.responses?.unansweredIds || []).map((id: string) => {
                     const member = findMember(e, id);
-                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', status: 'unanswered' as const };
+                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', email: member?.email, status: 'unanswered' as const };
                 }),
                 (e.responses?.waitinglistIds || []).map((id: string) => {
                     const member = findMember(e, id);
-                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', status: 'waiting' as const };
+                    return { id, firstName: member?.firstName || '', lastName: member?.lastName || '', email: member?.email, status: 'waiting' as const };
                 }),
             ),
         }));
@@ -214,8 +215,16 @@ export class SpondClient {
     }
 }
 
-function findMember(event: any, memberId: string): { firstName: string; lastName: string } | undefined {
+function findMember(event: any, memberId: string): { firstName: string; lastName: string; email?: string } | undefined {
     // Spond events may have recipients with member details
     const recipients = event.recipients?.group?.members || event.recipients || [];
-    return recipients.find((m: any) => m.id === memberId);
+    const member = recipients.find((m: any) => m.id === memberId);
+    if (member) {
+        return {
+            firstName: member.firstName || '',
+            lastName: member.lastName || '',
+            email: member.email || member.profile?.email || undefined,
+        };
+    }
+    return undefined;
 }

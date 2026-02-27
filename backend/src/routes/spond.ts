@@ -289,15 +289,33 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
     `).all(req.user!.associationId) as any[];
     const memberLinkMap = new Map(memberLinks.map(ml => [ml.spond_member_id, ml.user_id]));
 
-    // Build user lookup by name for fallback matching
+    // Build user lookup by name and email for fallback matching
     const users = db.prepare(`
-        SELECT id, first_name, last_name FROM users WHERE association_id = ?
+        SELECT id, first_name, last_name, email FROM users WHERE association_id = ? AND status = 'active'
     `).all(req.user!.associationId) as any[];
     const usersByName = new Map<string, string>();
+    const usersByEmail = new Map<string, string>();
     for (const u of users) {
         const fullName = `${u.first_name} ${u.last_name}`.toLowerCase().trim();
         usersByName.set(fullName, u.id);
+        if (u.email) {
+            usersByEmail.set(u.email.toLowerCase(), u.id);
+        }
     }
+
+    // Get pending Spond links (users waiting for auto-linking)
+    const pendingLinks = db.prepare(`
+        SELECT user_id, expected_email, expected_name FROM pending_spond_links WHERE association_id = ?
+    `).all(req.user!.associationId) as any[];
+    const pendingByEmail = new Map<string, string>();
+    const pendingByName = new Map<string, string>();
+    for (const p of pendingLinks) {
+        if (p.expected_email) pendingByEmail.set(p.expected_email.toLowerCase(), p.user_id);
+        if (p.expected_name) pendingByName.set(p.expected_name.toLowerCase(), p.user_id);
+    }
+
+    // Track newly linked users (to remove from pending_spond_links)
+    const newlyLinkedUserIds = new Set<string>();
 
     // Collect all unique Spond group IDs we need to fetch
     const groupsToFetch = new Set<string>();
@@ -405,24 +423,54 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
                 const firstName = response.firstName || '';
                 const lastName = response.lastName || '';
                 const name = `${firstName} ${lastName}`.trim() || 'Onbekend';
+                const email = response.email?.toLowerCase() || null;
                 const status = response.status === 'unanswered' ? 'unknown' : response.status;
 
-                // Try to match to a user: first by explicit link, then by name
+                // Try to match to a user in order of priority:
+                // 1. Explicit spond_member_links
+                // 2. Email match (most reliable)
+                // 3. Pending link by email (onboarding)
+                // 4. Name match (fallback)
+                // 5. Pending link by name (onboarding fallback)
                 let userId: string | null = memberLinkMap.get(response.id) || null;
-                if (!userId) {
-                    userId = usersByName.get(name.toLowerCase().trim()) || null;
+                let matchedBy: string | null = userId ? 'explicit_link' : null;
 
-                    // If matched by name, save the link for future syncs
-                    if (userId) {
-                        try {
-                            db.prepare(`
-                                INSERT OR IGNORE INTO spond_member_links (id, association_id, spond_member_id, user_id, spond_member_name)
-                                VALUES (?, ?, ?, ?, ?)
-                            `).run(uuidv4(), req.user!.associationId, response.id, userId, name);
-                            memberLinkMap.set(response.id, userId);
-                        } catch {
-                            // Ignore duplicate insert errors
-                        }
+                if (!userId && email) {
+                    // Try email match against existing users
+                    userId = usersByEmail.get(email) || null;
+                    if (userId) matchedBy = 'email';
+
+                    // Try pending link by email (newly onboarded users)
+                    if (!userId) {
+                        userId = pendingByEmail.get(email) || null;
+                        if (userId) matchedBy = 'pending_email';
+                    }
+                }
+
+                if (!userId) {
+                    // Try name match
+                    userId = usersByName.get(name.toLowerCase().trim()) || null;
+                    if (userId) matchedBy = 'name';
+
+                    // Try pending link by name
+                    if (!userId) {
+                        userId = pendingByName.get(name.toLowerCase().trim()) || null;
+                        if (userId) matchedBy = 'pending_name';
+                    }
+                }
+
+                // If matched, save the link for future syncs
+                if (userId && !memberLinkMap.has(response.id)) {
+                    try {
+                        db.prepare(`
+                            INSERT OR IGNORE INTO spond_member_links (id, association_id, spond_member_id, user_id, spond_member_name, spond_member_email)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        `).run(uuidv4(), req.user!.associationId, response.id, userId, name, email);
+                        memberLinkMap.set(response.id, userId);
+                        newlyLinkedUserIds.add(userId);
+                        logger.info(`Spond member linked: ${name} -> user ${userId} (via ${matchedBy})`);
+                    } catch {
+                        // Ignore duplicate insert errors
                     }
                 }
 
@@ -433,16 +481,26 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
         }
     }
 
+    // Remove pending Spond links for users that were just linked
+    if (newlyLinkedUserIds.size > 0) {
+        const removePending = db.prepare('DELETE FROM pending_spond_links WHERE user_id = ?');
+        for (const userId of newlyLinkedUserIds) {
+            removePending.run(userId);
+        }
+        logger.info(`Removed ${newlyLinkedUserIds.size} pending Spond links after auto-linking`);
+    }
+
     // Update last sync timestamp
     db.prepare('UPDATE spond_config SET last_sync = CURRENT_TIMESTAMP WHERE association_id = ?')
         .run(req.user!.associationId);
 
-    logger.info(`Spond sync completed: ${synced} rehearsals synced`, { associationId: req.user!.associationId });
+    logger.info(`Spond sync completed: ${synced} rehearsals synced, ${newlyLinkedUserIds.size} new links created`, { associationId: req.user!.associationId });
 
     res.json({
-        message: `${synced} repetities gesynchroniseerd met Spond.`,
+        message: `${synced} repetities gesynchroniseerd met Spond.${newlyLinkedUserIds.size > 0 ? ` ${newlyLinkedUserIds.size} nieuwe lid-koppelingen gemaakt.` : ''}`,
         synced,
         total: rehearsals.length,
+        newLinks: newlyLinkedUserIds.size,
     });
 }));
 
@@ -498,13 +556,28 @@ router.post('/sync/:rehearsalId', authenticateToken, requireRole('admin', 'music
     const memberLinkMap = new Map(memberLinks.map(ml => [ml.spond_member_id, ml.user_id]));
 
     const users = db.prepare(`
-        SELECT id, first_name, last_name FROM users WHERE association_id = ?
+        SELECT id, first_name, last_name, email FROM users WHERE association_id = ? AND status = 'active'
     `).all(req.user!.associationId) as any[];
     const usersByName = new Map<string, string>();
+    const usersByEmail = new Map<string, string>();
     for (const u of users) {
         const fullName = `${u.first_name} ${u.last_name}`.toLowerCase().trim();
         usersByName.set(fullName, u.id);
+        if (u.email) usersByEmail.set(u.email.toLowerCase(), u.id);
     }
+
+    // Get pending Spond links (users waiting for auto-linking)
+    const pendingLinks = db.prepare(`
+        SELECT user_id, expected_email, expected_name FROM pending_spond_links WHERE association_id = ?
+    `).all(req.user!.associationId) as any[];
+    const pendingByEmail = new Map<string, string>();
+    const pendingByName = new Map<string, string>();
+    for (const p of pendingLinks) {
+        if (p.expected_email) pendingByEmail.set(p.expected_email.toLowerCase(), p.user_id);
+        if (p.expected_name) pendingByName.set(p.expected_name.toLowerCase(), p.user_id);
+    }
+
+    const newlyLinkedUserIds = new Set<string>();
 
     // Fetch events around this rehearsal's date
     const date = new Date(rehearsal.date);
@@ -570,35 +643,63 @@ router.post('/sync/:rehearsalId', authenticateToken, requireRole('admin', 'music
 
     for (const response of matchingEvent.responses) {
         const name = `${response.firstName} ${response.lastName}`.trim() || 'Onbekend';
+        const email = response.email?.toLowerCase() || null;
         const status = response.status === 'unanswered' ? 'unknown' : response.status;
 
-        // Try to match to a user: first by explicit link, then by name
+        // Try to match to a user in order of priority (same as bulk sync)
         let userId: string | null = memberLinkMap.get(response.id) || null;
+        let matchedBy: string | null = userId ? 'explicit_link' : null;
+
+        if (!userId && email) {
+            userId = usersByEmail.get(email) || null;
+            if (userId) matchedBy = 'email';
+            if (!userId) {
+                userId = pendingByEmail.get(email) || null;
+                if (userId) matchedBy = 'pending_email';
+            }
+        }
+
         if (!userId) {
             userId = usersByName.get(name.toLowerCase().trim()) || null;
+            if (userId) matchedBy = 'name';
+            if (!userId) {
+                userId = pendingByName.get(name.toLowerCase().trim()) || null;
+                if (userId) matchedBy = 'pending_name';
+            }
+        }
 
-            // If matched by name, save the link for future syncs
-            if (userId) {
-                try {
-                    db.prepare(`
-                        INSERT OR IGNORE INTO spond_member_links (id, association_id, spond_member_id, user_id, spond_member_name)
-                        VALUES (?, ?, ?, ?, ?)
-                    `).run(uuidv4(), req.user!.associationId, response.id, userId, name);
-                    memberLinkMap.set(response.id, userId);
-                } catch {
-                    // Ignore duplicate insert errors
-                }
+        // If matched, save the link for future syncs
+        if (userId && !memberLinkMap.has(response.id)) {
+            try {
+                db.prepare(`
+                    INSERT OR IGNORE INTO spond_member_links (id, association_id, spond_member_id, user_id, spond_member_name, spond_member_email)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `).run(uuidv4(), req.user!.associationId, response.id, userId, name, email);
+                memberLinkMap.set(response.id, userId);
+                newlyLinkedUserIds.add(userId);
+                logger.info(`Spond member linked: ${name} -> user ${userId} (via ${matchedBy})`);
+            } catch {
+                // Ignore duplicate insert errors
             }
         }
 
         insertStmt.run(uuidv4(), rehearsal.id, userId, response.id, name, status);
     }
 
-    logger.info(`Spond sync for rehearsal ${rehearsalId}`, { associationId: req.user!.associationId });
+    // Remove pending Spond links for users that were just linked
+    if (newlyLinkedUserIds.size > 0) {
+        const removePending = db.prepare('DELETE FROM pending_spond_links WHERE user_id = ?');
+        for (const linkUserId of newlyLinkedUserIds) {
+            removePending.run(linkUserId);
+        }
+    }
+
+    logger.info(`Spond sync for rehearsal ${rehearsalId}`, { associationId: req.user!.associationId, newLinks: newlyLinkedUserIds.size });
 
     res.json({
-        message: 'Aanwezigheid gesynchroniseerd.',
+        message: `Aanwezigheid gesynchroniseerd.${newlyLinkedUserIds.size > 0 ? ` ${newlyLinkedUserIds.size} nieuwe lid-koppeling(en) gemaakt.` : ''}`,
         attendanceCount: matchingEvent.responses.length,
+        newLinks: newlyLinkedUserIds.size,
     });
 }));
 

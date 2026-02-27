@@ -578,6 +578,88 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add status and onboarding columns to users
+    try {
+        const usersStatusInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasStatus = usersStatusInfo.some(col => col.name === 'status');
+        if (!hasStatus) {
+            console.log('Migration: Adding status and onboarding columns to users...');
+            db.prepare("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'").run();
+            db.prepare('ALTER TABLE users ADD COLUMN onboarded_at DATETIME').run();
+            db.prepare('ALTER TABLE users ADD COLUMN offboarded_at DATETIME').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Add spond_member_email to spond_member_links
+    try {
+        const linksTableInfo = db.prepare("PRAGMA table_info(spond_member_links)").all() as { name: string }[];
+        const hasEmail = linksTableInfo.some(col => col.name === 'spond_member_email');
+        if (!hasEmail) {
+            console.log('Migration: Adding spond_member_email to spond_member_links...');
+            db.prepare('ALTER TABLE spond_member_links ADD COLUMN spond_member_email TEXT').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_spond_member_links_email ON spond_member_links(spond_member_email)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Create onboarding_tasks table
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='onboarding_tasks'").get();
+        if (!tables) {
+            console.log('Migration: Creating onboarding_tasks table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS onboarding_tasks (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    association_id TEXT NOT NULL,
+                    task_type TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    error_message TEXT,
+                    metadata TEXT,
+                    completed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_user ON onboarding_tasks(user_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_status ON onboarding_tasks(status)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating onboarding_tasks table', e);
+    }
+
+    // Migration: Create pending_spond_links table
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='pending_spond_links'").get();
+        if (!tables) {
+            console.log('Migration: Creating pending_spond_links table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS pending_spond_links (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
+                    association_id TEXT NOT NULL,
+                    expected_email TEXT,
+                    expected_name TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_pending_spond_links_email ON pending_spond_links(expected_email)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_pending_spond_links_user ON pending_spond_links(user_id)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating pending_spond_links table', e);
+    }
+
     console.log('Database initialization complete!');
 }
 

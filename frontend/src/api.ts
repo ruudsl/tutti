@@ -1769,4 +1769,105 @@ export const testTwilioConnection = async (settings: {
   return data;
 };
 
+// ========================
+// ONBOARDING & OFFBOARDING
+// ========================
+
+export interface OnboardingRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  instrumentIds?: string[];
+  orchestraIds?: string[];
+  createM365Account?: boolean;
+  m365Password?: string;
+}
+
+export interface OnboardingResponse {
+  success: boolean;
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  tempPassword: string;
+  m365Created: boolean;
+  m365Error: string | null;
+  spondLinkPending: boolean;
+  message: string;
+  instructions: string[];
+}
+
+export interface PendingSpondLink {
+  id: string;
+  userId: string;
+  expectedEmail: string;
+  expectedName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface OnboardingTask {
+  id: string;
+  taskType: string;
+  status: string;
+  errorMessage: string | null;
+  metadata: Record<string, any> | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface OffboardResponse {
+  success: boolean;
+  m365Removed: boolean;
+  m365Error: string | null;
+  message: string;
+  notes: string[];
+}
+
+export interface InactiveMember {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  offboardedAt: string | null;
+  createdAt: string;
+}
+
+export const onboardMember = async (data: OnboardingRequest): Promise<OnboardingResponse> => {
+  const { data: response } = await api.post('/onboarding/member', data);
+  return response;
+};
+
+export const getPendingSpondLinks = async (): Promise<PendingSpondLink[]> => {
+  const { data } = await api.get('/onboarding/pending-links');
+  return data;
+};
+
+export const deletePendingSpondLink = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/onboarding/pending-links/${id}`);
+  return data;
+};
+
+export const getOnboardingTasks = async (userId: string): Promise<OnboardingTask[]> => {
+  const { data } = await api.get(`/onboarding/tasks/${userId}`);
+  return data;
+};
+
+export const offboardMember = async (userId: string, removeFromM365?: boolean): Promise<OffboardResponse> => {
+  const { data } = await api.post(`/onboarding/offboard/${userId}`, { removeFromM365 });
+  return data;
+};
+
+export const reactivateMember = async (userId: string): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.post(`/onboarding/reactivate/${userId}`);
+  return data;
+};
+
+export const getInactiveMembers = async (): Promise<InactiveMember[]> => {
+  const { data } = await api.get('/onboarding/inactive-members');
+  return data;
+};
+
 export default api;

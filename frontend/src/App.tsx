@@ -48,6 +48,7 @@ import VoiceParts from './pages/VoiceParts';
 import Occupancy from './pages/Occupancy';
 import NeighborPreferences from './pages/NeighborPreferences';
 import MemberDirectory from './pages/MemberDirectory';
+import Onboarding from './pages/Onboarding';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -330,6 +331,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <EntraSync />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="onboarding"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Onboarding />
             </PrivateRoute>
           }
         />
