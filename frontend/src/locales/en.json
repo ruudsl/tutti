@@ -1742,6 +1742,27 @@
     "reactivateTitle": "Reactivate member",
     "reactivateConfirm": "Are you sure you want to reactivate {{name}}?",
     "memberReactivated": "Member has been reactivated",
-    "errorReactivating": "Could not reactivate member"
+    "errorReactivating": "Could not reactivate member",
+    "tabM365Settings": "M365 Settings",
+    "m365Settings": {
+      "title": "Microsoft 365 Settings",
+      "jobTitleMappingsTitle": "Job Title Mappings",
+      "jobTitleMappingsDescription": "Link instruments to M365 job titles. When a new member is created with an M365 account, the job title is automatically set based on their first instrument.",
+      "addMapping": "Add new mapping",
+      "instrument": "Instrument",
+      "jobTitle": "Job title",
+      "selectInstrument": "Select instrument...",
+      "jobTitlePlaceholder": "E.g. Trumpet Player, Clarinet Player",
+      "add": "Add",
+      "noMappings": "No mappings configured yet. Add a mapping to automatically set job titles for new M365 accounts.",
+      "mappingCreated": "Mapping created successfully",
+      "mappingUpdated": "Mapping updated successfully",
+      "mappingDeleted": "Mapping deleted successfully",
+      "errorCreatingMapping": "Could not create mapping",
+      "errorUpdatingMapping": "Could not update mapping",
+      "errorDeletingMapping": "Could not delete mapping",
+      "deleteMapping": "Delete mapping",
+      "deleteMappingConfirm": "Are you sure you want to delete the mapping for {{instrument}}?"
+    }
   }
 }

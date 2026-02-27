@@ -15,9 +15,13 @@ import {
   getMicrosoftConfig,
   getM365GroupMappings,
   getInstrumentJobTitleMappings,
+  createInstrumentJobTitleMapping,
+  updateInstrumentJobTitleMapping,
+  deleteInstrumentJobTitleMapping,
   type OnboardingResponse,
   type InactiveMember,
   type M365GroupMapping,
+  type InstrumentJobTitleMapping,
 } from '../api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -33,7 +37,7 @@ interface OnboardingFormData {
 }
 
 type WizardStep = 'form' | 'result';
-type ActiveTab = 'onboard' | 'pending' | 'inactive';
+type ActiveTab = 'onboard' | 'pending' | 'inactive' | 'm365';
 
 export default function Onboarding() {
   const { t } = useTranslation();
@@ -49,6 +53,12 @@ export default function Onboarding() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Job title mapping state
+  const [newMappingInstrumentId, setNewMappingInstrumentId] = useState('');
+  const [newMappingJobTitle, setNewMappingJobTitle] = useState('');
+  const [editingMapping, setEditingMapping] = useState<{ id: string; jobTitle: string } | null>(null);
+  const [confirmDeleteMapping, setConfirmDeleteMapping] = useState<InstrumentJobTitleMapping | null>(null);
+
   const { data: instruments = [] } = useInstruments();
   const { data: orchestras = [] } = useOrchestras();
   const { data: msConfig } = useQuery({
@@ -63,11 +73,50 @@ export default function Onboarding() {
     enabled: !!msConfig?.configured,
   });
 
-  // Query for instrument job title mappings (currently unused but can be used for UI enhancement)
-  useQuery({
+  // Query for instrument job title mappings
+  const { data: jobTitleMappings = [], isLoading: jobTitleMappingsLoading } = useQuery({
     queryKey: ['instrumentJobTitleMappings'],
     queryFn: getInstrumentJobTitleMappings,
     enabled: !!msConfig?.configured,
+  });
+
+  // Mutations for job title mappings
+  const createJobTitleMappingMutation = useMutation({
+    mutationFn: createInstrumentJobTitleMapping,
+    onSuccess: () => {
+      showSuccess(t('onboarding.m365Settings.mappingCreated'));
+      queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
+      setNewMappingInstrumentId('');
+      setNewMappingJobTitle('');
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('onboarding.m365Settings.errorCreatingMapping'));
+    },
+  });
+
+  const updateJobTitleMappingMutation = useMutation({
+    mutationFn: ({ id, jobTitle }: { id: string; jobTitle: string }) =>
+      updateInstrumentJobTitleMapping(id, jobTitle),
+    onSuccess: () => {
+      showSuccess(t('onboarding.m365Settings.mappingUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
+      setEditingMapping(null);
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('onboarding.m365Settings.errorUpdatingMapping'));
+    },
+  });
+
+  const deleteJobTitleMappingMutation = useMutation({
+    mutationFn: deleteInstrumentJobTitleMapping,
+    onSuccess: () => {
+      showSuccess(t('onboarding.m365Settings.mappingDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
+      setConfirmDeleteMapping(null);
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('onboarding.m365Settings.errorDeletingMapping'));
+    },
   });
 
   // Check if there's a percussion group configured
@@ -256,6 +305,14 @@ export default function Onboarding() {
             </span>
           )}
         </button>
+        {msConfig?.configured && (
+          <button
+            className={`btn ${activeTab === 'm365' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setActiveTab('m365')}
+          >
+            {t('onboarding.tabM365Settings')}
+          </button>
+        )}
       </div>
 
       {/* Onboard New Member Tab */}
@@ -676,6 +733,177 @@ export default function Onboarding() {
         </div>
       )}
 
+      {/* M365 Settings Tab */}
+      {activeTab === 'm365' && msConfig?.configured && (
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">{t('onboarding.m365Settings.title')}</h2>
+          </div>
+          <div className="card-body">
+            <h3>{t('onboarding.m365Settings.jobTitleMappingsTitle')}</h3>
+            <p className="piece-meta mb-3">{t('onboarding.m365Settings.jobTitleMappingsDescription')}</p>
+
+            {/* Add new mapping form */}
+            <div
+              style={{
+                background: 'var(--bg-secondary)',
+                padding: '1rem',
+                borderRadius: '0.5rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <h4 style={{ marginTop: 0 }}>{t('onboarding.m365Settings.addMapping')}</h4>
+              <div className="grid grid-cols-3 gap-2" style={{ alignItems: 'end' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('onboarding.m365Settings.instrument')}</label>
+                  <select
+                    className="form-control"
+                    value={newMappingInstrumentId}
+                    onChange={(e) => setNewMappingInstrumentId(e.target.value)}
+                  >
+                    <option value="">{t('onboarding.m365Settings.selectInstrument')}</option>
+                    {instruments
+                      .filter((inst) => !jobTitleMappings.some((m) => m.instrumentId === inst.id))
+                      .map((inst) => (
+                        <option key={inst.id} value={inst.id}>
+                          {inst.name} {inst.tuning && `(${inst.tuning})`}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('onboarding.m365Settings.jobTitle')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={t('onboarding.m365Settings.jobTitlePlaceholder')}
+                    value={newMappingJobTitle}
+                    onChange={(e) => setNewMappingJobTitle(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={
+                    !newMappingInstrumentId ||
+                    !newMappingJobTitle.trim() ||
+                    createJobTitleMappingMutation.isPending
+                  }
+                  onClick={() =>
+                    createJobTitleMappingMutation.mutate({
+                      instrumentId: newMappingInstrumentId,
+                      jobTitle: newMappingJobTitle.trim(),
+                    })
+                  }
+                >
+                  {createJobTitleMappingMutation.isPending
+                    ? t('common.loading')
+                    : t('onboarding.m365Settings.add')}
+                </button>
+              </div>
+            </div>
+
+            {/* Existing mappings table */}
+            {jobTitleMappingsLoading ? (
+              <div className="loading">
+                <div className="spinner"></div>
+              </div>
+            ) : jobTitleMappings.length === 0 ? (
+              <p className="text-secondary">{t('onboarding.m365Settings.noMappings')}</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('onboarding.m365Settings.instrument')}</th>
+                    <th>{t('onboarding.m365Settings.jobTitle')}</th>
+                    <th style={{ width: '150px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobTitleMappings.map((mapping) => (
+                    <tr key={mapping.id}>
+                      <td>
+                        {mapping.instrumentName}
+                        {mapping.instrumentTuning && ` (${mapping.instrumentTuning})`}
+                      </td>
+                      <td>
+                        {editingMapping?.id === mapping.id ? (
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={editingMapping.jobTitle}
+                            onChange={(e) =>
+                              setEditingMapping({ ...editingMapping, jobTitle: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && editingMapping.jobTitle.trim()) {
+                                updateJobTitleMappingMutation.mutate({
+                                  id: mapping.id,
+                                  jobTitle: editingMapping.jobTitle.trim(),
+                                });
+                              } else if (e.key === 'Escape') {
+                                setEditingMapping(null);
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          mapping.jobTitle
+                        )}
+                      </td>
+                      <td>
+                        {editingMapping?.id === mapping.id ? (
+                          <div className="flex gap-1">
+                            <button
+                              className="btn btn-primary btn-sm"
+                              disabled={
+                                !editingMapping.jobTitle.trim() ||
+                                updateJobTitleMappingMutation.isPending
+                              }
+                              onClick={() =>
+                                updateJobTitleMappingMutation.mutate({
+                                  id: mapping.id,
+                                  jobTitle: editingMapping.jobTitle.trim(),
+                                })
+                              }
+                            >
+                              {t('common.save')}
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => setEditingMapping(null)}
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1">
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() =>
+                                setEditingMapping({ id: mapping.id, jobTitle: mapping.jobTitle })
+                              }
+                            >
+                              {t('common.edit')}
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              style={{ color: 'var(--danger)' }}
+                              onClick={() => setConfirmDeleteMapping(mapping)}
+                            >
+                              {t('common.delete')}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Reactivate Confirmation Dialog */}
       {confirmReactivate && (
         <ConfirmDialog
@@ -688,6 +916,21 @@ export default function Onboarding() {
           onCancel={() => setConfirmReactivate(null)}
           isLoading={reactivateMutation.isPending}
           variant="info"
+        />
+      )}
+
+      {/* Delete Mapping Confirmation Dialog */}
+      {confirmDeleteMapping && (
+        <ConfirmDialog
+          title={t('onboarding.m365Settings.deleteMapping')}
+          message={t('onboarding.m365Settings.deleteMappingConfirm', {
+            instrument: confirmDeleteMapping.instrumentName,
+          })}
+          confirmLabel={t('common.delete')}
+          onConfirm={() => deleteJobTitleMappingMutation.mutate(confirmDeleteMapping.id)}
+          onCancel={() => setConfirmDeleteMapping(null)}
+          isLoading={deleteJobTitleMappingMutation.isPending}
+          variant="danger"
         />
       )}
     </div>

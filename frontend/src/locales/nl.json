@@ -1903,6 +1903,27 @@
     "reactivateTitle": "Lid heractiveren",
     "reactivateConfirm": "Weet je zeker dat je {{name}} wilt heractiveren?",
     "memberReactivated": "Lid is geheractiveerd",
-    "errorReactivating": "Kon lid niet heractiveren"
+    "errorReactivating": "Kon lid niet heractiveren",
+    "tabM365Settings": "M365 Instellingen",
+    "m365Settings": {
+      "title": "Microsoft 365 Instellingen",
+      "jobTitleMappingsTitle": "Functietitel Mappings",
+      "jobTitleMappingsDescription": "Koppel instrumenten aan M365 functietitels. Wanneer een nieuw lid wordt aangemaakt met een M365 account, wordt de functietitel automatisch ingesteld op basis van hun eerste instrument.",
+      "addMapping": "Nieuwe mapping toevoegen",
+      "instrument": "Instrument",
+      "jobTitle": "Functietitel",
+      "selectInstrument": "Selecteer instrument...",
+      "jobTitlePlaceholder": "Bijv. Trompettist, Klarinettist",
+      "add": "Toevoegen",
+      "noMappings": "Nog geen mappings geconfigureerd. Voeg een mapping toe om automatisch functietitels in te stellen bij nieuwe M365 accounts.",
+      "mappingCreated": "Mapping succesvol aangemaakt",
+      "mappingUpdated": "Mapping succesvol bijgewerkt",
+      "mappingDeleted": "Mapping succesvol verwijderd",
+      "errorCreatingMapping": "Kon mapping niet aanmaken",
+      "errorUpdatingMapping": "Kon mapping niet bijwerken",
+      "errorDeletingMapping": "Kon mapping niet verwijderen",
+      "deleteMapping": "Mapping verwijderen",
+      "deleteMappingConfirm": "Weet je zeker dat je de mapping voor {{instrument}} wilt verwijderen?"
+    }
   }
 }
