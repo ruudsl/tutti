@@ -270,10 +270,63 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Try to create an inbox forwarding rule with retry logic
- * The mailbox may not be immediately available after user creation
+ * Try to set mailbox forwarding using Exchange Admin API (beta)
+ * This sets forwardingSmtpAddress which is visible in M365 Admin under "Email forwarding"
+ * Note: This API may not be available in all tenants
  */
-async function createForwardingRuleWithRetry(
+async function tryExchangeAdminForwarding(
+    accessToken: string,
+    userId: string,
+    forwardingAddress: string
+): Promise<{ success: boolean; notSupported?: boolean }> {
+    try {
+        const response = await fetch(
+            `https://graph.microsoft.com/beta/admin/exchange/mailboxes/${userId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    forwardingSmtpAddress: `smtp:${forwardingAddress}`,
+                    deliverToMailboxAndForward: true,
+                }),
+            }
+        );
+
+        if (response.ok) {
+            logger.info(`Email forwarding set via Exchange Admin API for user ${userId} to ${forwardingAddress}`);
+            return { success: true };
+        }
+
+        const errorData = await response.json() as { error?: { code?: string; message?: string } };
+        const errorCode = errorData.error?.code;
+
+        // Check if the API is not available/supported
+        if (response.status === 404 || errorCode === 'ResourceNotFound' || errorCode === 'UnknownError') {
+            logger.info('Exchange Admin API not available, will use inbox rules fallback');
+            return { success: false, notSupported: true };
+        }
+
+        logger.warn('Exchange Admin API forwarding failed', {
+            error: errorData.error?.message,
+            code: errorCode,
+            status: response.status
+        });
+        return { success: false, notSupported: false };
+    } catch (err) {
+        logger.warn('Error calling Exchange Admin API', { error: err });
+        return { success: false, notSupported: true };
+    }
+}
+
+/**
+ * Create an inbox forwarding rule with retry logic (fallback method)
+ * This creates a mail rule that forwards all incoming mail
+ * Note: This is NOT visible in M365 Admin "Email forwarding" but works via Graph API
+ */
+async function createInboxForwardingRule(
     accessToken: string,
     userId: string,
     forwardingAddress: string,
@@ -372,19 +425,28 @@ async function setupEmailForwarding(accessToken: string, userId: string, forward
         if (!updateResponse.ok) {
             const errorData = await updateResponse.json() as { error?: { message?: string } };
             logger.warn('Failed to set otherMails', { error: errorData.error?.message });
-            // Continue anyway - the forwarding rule is more important
+            // Continue anyway - the forwarding is more important
         }
 
-        // Try to create the forwarding rule with retry logic
-        // This handles the case where the mailbox is not immediately available
-        const ruleCreated = await createForwardingRuleWithRetry(accessToken, userId, forwardingAddress);
-
-        if (ruleCreated) {
+        // First, try the Exchange Admin API (beta) - this shows in M365 Admin
+        const exchangeResult = await tryExchangeAdminForwarding(accessToken, userId, forwardingAddress);
+        if (exchangeResult.success) {
             return true;
         }
 
-        // If rule creation failed, return false to indicate forwarding was not set up
-        logger.warn('Email forwarding rule could not be created - mailbox may need more time to provision');
+        // If Exchange Admin API is not supported, fall back to inbox rules
+        // Note: Inbox rules work but are NOT visible in M365 Admin "Email forwarding"
+        // They are visible in Outlook Web -> Settings -> Mail -> Rules
+        if (exchangeResult.notSupported) {
+            logger.info('Using inbox rules fallback for email forwarding');
+            const ruleCreated = await createInboxForwardingRule(accessToken, userId, forwardingAddress);
+            if (ruleCreated) {
+                return true;
+            }
+        }
+
+        // If forwarding failed, return false
+        logger.warn('Email forwarding could not be set - mailbox may need more time to provision');
         return false;
     } catch (err) {
         logger.error('Error setting up email forwarding', { error: err });
