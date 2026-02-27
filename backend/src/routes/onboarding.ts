@@ -434,19 +434,22 @@ async function setupEmailForwarding(accessToken: string, userId: string, forward
             return true;
         }
 
-        // If Exchange Admin API is not supported, fall back to inbox rules
+        // Always fall back to inbox rules when Exchange Admin API fails
         // Note: Inbox rules work but are NOT visible in M365 Admin "Email forwarding"
         // They are visible in Outlook Web -> Settings -> Mail -> Rules
-        if (exchangeResult.notSupported) {
-            logger.info('Using inbox rules fallback for email forwarding');
-            const ruleCreated = await createInboxForwardingRule(accessToken, userId, forwardingAddress);
-            if (ruleCreated) {
-                return true;
-            }
+        // We try this regardless of the error type (500, 400, 404, etc.) because:
+        // 1. Exchange Admin API may fail temporarily while mailbox is being provisioned
+        // 2. Inbox rules API often succeeds even when Exchange Admin API fails
+        logger.info('Exchange Admin API failed, using inbox rules fallback for email forwarding', {
+            wasNotSupported: exchangeResult.notSupported
+        });
+        const ruleCreated = await createInboxForwardingRule(accessToken, userId, forwardingAddress);
+        if (ruleCreated) {
+            return true;
         }
 
-        // If forwarding failed, return false
-        logger.warn('Email forwarding could not be set - mailbox may need more time to provision');
+        // If both methods failed, return false
+        logger.warn('Email forwarding could not be set - both Exchange Admin API and inbox rules failed. Mailbox may need more time to provision.');
         return false;
     } catch (err) {
         logger.error('Error setting up email forwarding', { error: err });
@@ -812,6 +815,37 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
                 taskType.includes('pending') || taskType.includes('failed') ? null : new Date().toISOString()
             );
         }
+
+        // Track email forwarding status for automatic retry
+        if (privateEmail && m365Created && licenseAssigned) {
+            if (emailForwardingSet) {
+                db.prepare(`
+                    INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, metadata, completed_at)
+                    VALUES (?, ?, ?, 'email_forwarding', 'completed', ?, CURRENT_TIMESTAMP)
+                `).run(
+                    uuidv4(),
+                    userId,
+                    req.user!.associationId,
+                    JSON.stringify({ privateEmail, method: 'initial' })
+                );
+            } else {
+                // Create pending task for automatic retry by scheduler
+                db.prepare(`
+                    INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, metadata)
+                    VALUES (?, ?, ?, 'email_forwarding_pending', 'pending', ?)
+                `).run(
+                    uuidv4(),
+                    userId,
+                    req.user!.associationId,
+                    JSON.stringify({
+                        privateEmail,
+                        retryCount: 0,
+                        lastAttempt: new Date().toISOString(),
+                        nextRetryAfter: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+                    })
+                );
+            }
+        }
     });
 
     logger.info(`User onboarded: ${email}`, {
@@ -872,7 +906,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
             } else if (!licenseAssigned) {
                 m365Status += ` ⚠️ Email forwarding niet ingesteld (mailbox niet beschikbaar zonder licentie).`;
             } else {
-                m365Status += ` ⚠️ Email forwarding kon niet direct worden ingesteld (mailbox wordt nog ingericht). Probeer later opnieuw via ledenlijst.`;
+                m365Status += ` ⚠️ Email forwarding kon niet direct worden ingesteld (mailbox wordt nog ingericht, dit kan tot 30 min duren). Het systeem probeert automatisch opnieuw.`;
             }
         }
 
@@ -1039,6 +1073,28 @@ router.post('/retry-email-forwarding/:userId', authenticateToken, requireRole('a
             message: `Email forwarding naar ${user.private_email} is succesvol ingesteld.`,
         });
     } else {
+        // Check if there's already a pending automatic retry task
+        const pendingTask = db.prepare(`
+            SELECT id, metadata FROM onboarding_tasks
+            WHERE user_id = ? AND task_type = 'email_forwarding_pending' AND status = 'pending'
+            ORDER BY created_at DESC LIMIT 1
+        `).get(userId) as { id: string; metadata: string } | undefined;
+
+        let retryInfo = '';
+        if (pendingTask) {
+            try {
+                const metadata = JSON.parse(pendingTask.metadata);
+                const nextRetry = new Date(metadata.nextRetryAfter);
+                const now = new Date();
+                if (nextRetry > now) {
+                    const minutesUntilRetry = Math.ceil((nextRetry.getTime() - now.getTime()) / (60 * 1000));
+                    retryInfo = ` Automatische retry gepland over ${minutesUntilRetry} minuten.`;
+                }
+            } catch {
+                // Ignore parse errors
+            }
+        }
+
         // Log failure
         db.prepare(`
             INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, error_message)
@@ -1047,10 +1103,10 @@ router.post('/retry-email-forwarding/:userId', authenticateToken, requireRole('a
             uuidv4(),
             userId,
             req.user!.associationId,
-            'Mailbox is mogelijk nog niet beschikbaar. Probeer het later opnieuw.'
+            'Mailbox is mogelijk nog niet beschikbaar. Automatische retry is gepland.'
         );
 
-        throw new ApiError(500, 'Email forwarding kon niet worden ingesteld. De mailbox is mogelijk nog niet volledig ingericht. Probeer het over enkele minuten opnieuw.');
+        throw new ApiError(500, `Email forwarding kon niet worden ingesteld. De Exchange mailbox van Microsoft 365 is waarschijnlijk nog niet volledig ingericht (dit kan tot 30 minuten duren na het aanmaken van een nieuw account).${retryInfo} Het systeem probeert automatisch opnieuw, of u kunt later handmatig opnieuw proberen.`);
     }
 }));
 

@@ -48,7 +48,8 @@ import auditLogsRoutes from './routes/audit-logs';
 import seatingRoutes from './routes/seating';
 import seatingNotificationsRoutes from './routes/seating-notifications';
 import onboardingRoutes from './routes/onboarding';
-import { startScheduler } from './scheduler/seating-notifications';
+import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
+import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 
 const app = express();
 
@@ -197,8 +198,9 @@ async function startServer() {
                 logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
             }
 
-            // Start the seating notification scheduler
-            startScheduler();
+            // Start schedulers
+            startSeatingScheduler();
+            startEmailForwardingScheduler();
         });
     } catch (error) {
         logger.error('Failed to start server:', error);
