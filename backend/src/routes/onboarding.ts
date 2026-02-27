@@ -575,6 +575,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
                             mailNickname: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s+/g, ''),
                             userPrincipalName: upn,
                             mail: email,
+                            usageLocation: 'NL', // Required for license assignment
                             jobTitle: jobTitle || undefined,
                             department: department || undefined,
                             otherMails: privateEmail ? [privateEmail] : undefined,
