@@ -866,6 +866,30 @@
       "noTypes": "Er zijn nog geen concert types gedefinieerd. Klik op 'Standaardwaarden laden' om de standaard types te gebruiken.",
       "initDefaults": "Standaardwaarden laden",
       "deleteConfirm": "Weet je zeker dat je het concert type '{{label}}' wilt verwijderen?"
+    },
+    "m365Groups": {
+      "title": "M365 Groep Koppelingen",
+      "description": "Koppel orkesten aan Microsoft 365 groepen. Nieuwe leden worden automatisch toegevoegd aan de bijbehorende M365 groepen.",
+      "add": "Koppeling toevoegen",
+      "edit": "Koppeling bewerken",
+      "type": "Type",
+      "typeOrchestra": "Orkest",
+      "typePercussion": "Slagwerk",
+      "typeSpecial": "Speciaal",
+      "orchestra": "Orkest",
+      "selectOrchestra": "Selecteer een orkest...",
+      "groupName": "M365 Groepsnaam",
+      "groupNamePlaceholder": "Exacte naam van de groep in M365",
+      "groupNameHelp": "De naam moet exact overeenkomen met de groepsnaam in Microsoft 365.",
+      "groupNameRequired": "Groepsnaam is verplicht",
+      "noMappings": "Geen groep koppelingen geconfigureerd. Nieuwe leden worden niet automatisch aan M365 groepen toegevoegd.",
+      "created": "Groep koppeling aangemaakt",
+      "updated": "Groep koppeling bijgewerkt",
+      "deleted": "Groep koppeling verwijderd",
+      "errorCreating": "Fout bij aanmaken koppeling",
+      "errorUpdating": "Fout bij bijwerken koppeling",
+      "errorDeleting": "Fout bij verwijderen koppeling",
+      "deleteConfirm": "Weet je zeker dat je de koppeling naar '{{groupName}}' wilt verwijderen?"
     }
   },
   "theme": {

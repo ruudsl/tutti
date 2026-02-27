@@ -863,6 +863,43 @@
       "errorRemoving": "Error removing SMTP settings",
       "test": "Send test email",
       "testFailed": "Failed to send test email"
+    },
+    "concertTypes": {
+      "title": "Concert types",
+      "description": "Manage the types of concerts you can create. These are shown in the dropdown menu when creating a concert.",
+      "add": "Add type",
+      "edit": "Edit type",
+      "value": "Value",
+      "valueHelp": "Technical value for the database (lowercase letters, numbers and underscores only).",
+      "label": "Label",
+      "sortOrder": "Order",
+      "noTypes": "No concert types defined yet. Click 'Load defaults' to use the default types.",
+      "initDefaults": "Load defaults",
+      "deleteConfirm": "Are you sure you want to delete the concert type '{{label}}'?"
+    },
+    "m365Groups": {
+      "title": "M365 Group Mappings",
+      "description": "Link orchestras to Microsoft 365 groups. New members will be automatically added to the corresponding M365 groups.",
+      "add": "Add mapping",
+      "edit": "Edit mapping",
+      "type": "Type",
+      "typeOrchestra": "Orchestra",
+      "typePercussion": "Percussion",
+      "typeSpecial": "Special",
+      "orchestra": "Orchestra",
+      "selectOrchestra": "Select an orchestra...",
+      "groupName": "M365 Group name",
+      "groupNamePlaceholder": "Exact name of the group in M365",
+      "groupNameHelp": "The name must exactly match the group name in Microsoft 365.",
+      "groupNameRequired": "Group name is required",
+      "noMappings": "No group mappings configured. New members will not be automatically added to M365 groups.",
+      "created": "Group mapping created",
+      "updated": "Group mapping updated",
+      "deleted": "Group mapping deleted",
+      "errorCreating": "Error creating mapping",
+      "errorUpdating": "Error updating mapping",
+      "errorDeleting": "Error deleting mapping",
+      "deleteConfirm": "Are you sure you want to delete the mapping to '{{groupName}}'?"
     }
   },
   "theme": {

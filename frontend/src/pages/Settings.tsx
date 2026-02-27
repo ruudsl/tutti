@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig } from '../api';
+import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDeleteConcertType, useInitDefaultConcertTypes } from '../hooks/useConcerts';
+import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { AssociationSettings, MicrosoftConfig, SmtpConfig } from '../types';
@@ -44,8 +45,20 @@ export default function Settings() {
   const [deletingConcertType, setDeletingConcertType] = useState<{ id: string; label: string } | null>(null);
   const [concertTypeFormData, setConcertTypeFormData] = useState({ value: '', label: '', sortOrder: 0 });
 
+  // M365 group mappings state
+  const [m365GroupMappings, setM365GroupMappings] = useState<M365GroupMapping[]>([]);
+  const [m365MappingsLoading, setM365MappingsLoading] = useState(false);
+  const [showAddGroupMappingModal, setShowAddGroupMappingModal] = useState(false);
+  const [editingGroupMapping, setEditingGroupMapping] = useState<M365GroupMapping | null>(null);
+  const [deletingGroupMapping, setDeletingGroupMapping] = useState<M365GroupMapping | null>(null);
+  const [groupMappingFormData, setGroupMappingFormData] = useState({ orchestraId: '', groupName: '', groupType: 'orchestra' as 'orchestra' | 'percussion' | 'special' });
+  const [groupMappingSaving, setGroupMappingSaving] = useState(false);
+
   // Concert types hooks
   const { data: concertTypesData, isLoading: concertTypesLoading } = useAdminConcertTypes();
+
+  // Orchestras for M365 group mappings
+  const { data: orchestras = [] } = useOrchestras();
   const createConcertTypeMutation = useCreateConcertType();
   const updateConcertTypeMutation = useUpdateConcertType();
   const deleteConcertTypeMutation = useDeleteConcertType();
@@ -55,6 +68,7 @@ export default function Settings() {
     loadSettings();
     loadMicrosoftConfig();
     loadSmtpConfig();
+    loadM365GroupMappings();
   }, []);
 
   const loadSettings = async () => {
@@ -295,6 +309,92 @@ export default function Settings() {
     setConcertTypeFormData({ value: type.value, label: type.label, sortOrder: type.sortOrder });
   };
 
+  // M365 group mapping handlers
+  const loadM365GroupMappings = async () => {
+    setM365MappingsLoading(true);
+    try {
+      const mappings = await getM365GroupMappings();
+      setM365GroupMappings(mappings);
+    } catch {
+      // Not configured or error
+    } finally {
+      setM365MappingsLoading(false);
+    }
+  };
+
+  const handleCreateGroupMapping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupMappingFormData.groupName.trim()) {
+      showError(t('settings.m365Groups.groupNameRequired'));
+      return;
+    }
+    setGroupMappingSaving(true);
+    try {
+      await createM365GroupMapping({
+        orchestraId: groupMappingFormData.orchestraId || undefined,
+        groupName: groupMappingFormData.groupName.trim(),
+        groupType: groupMappingFormData.groupType,
+      });
+      showSuccess(t('settings.m365Groups.created'));
+      setShowAddGroupMappingModal(false);
+      setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
+      await loadM365GroupMappings();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.m365Groups.errorCreating'));
+    } finally {
+      setGroupMappingSaving(false);
+    }
+  };
+
+  const handleUpdateGroupMapping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGroupMapping || !groupMappingFormData.groupName.trim()) {
+      showError(t('settings.m365Groups.groupNameRequired'));
+      return;
+    }
+    setGroupMappingSaving(true);
+    try {
+      await updateM365GroupMapping(editingGroupMapping.id, groupMappingFormData.groupName.trim());
+      showSuccess(t('settings.m365Groups.updated'));
+      setEditingGroupMapping(null);
+      setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
+      await loadM365GroupMappings();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.m365Groups.errorUpdating'));
+    } finally {
+      setGroupMappingSaving(false);
+    }
+  };
+
+  const handleDeleteGroupMapping = async () => {
+    if (!deletingGroupMapping) return;
+    try {
+      await deleteM365GroupMapping(deletingGroupMapping.id);
+      showSuccess(t('settings.m365Groups.deleted'));
+      setDeletingGroupMapping(null);
+      await loadM365GroupMappings();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.m365Groups.errorDeleting'));
+    }
+  };
+
+  const openEditGroupMappingModal = (mapping: M365GroupMapping) => {
+    setEditingGroupMapping(mapping);
+    setGroupMappingFormData({
+      orchestraId: mapping.orchestraId || '',
+      groupName: mapping.groupName,
+      groupType: mapping.groupType,
+    });
+  };
+
+  // Get orchestras that don't have a mapping yet (for the dropdown)
+  const availableOrchestras = orchestras.filter(
+    o => !m365GroupMappings.some(m => m.orchestraId === o.id && m.groupType === 'orchestra')
+  );
+
+  // Check if percussion group already exists
+  const hasPercussionGroup = m365GroupMappings.some(m => m.groupType === 'percussion');
+
   if (isLoading) {
     return (
       <div className="loading" role="status" aria-label={t('accessibility.loadingContent')}>
@@ -497,6 +597,84 @@ export default function Settings() {
           </form>
         </div>
       </div>
+
+      {/* M365 Group Mappings - only show when Microsoft is configured */}
+      {msConfig?.configured && (
+        <div className="card mb-3">
+          <div className="card-header">
+            <h2 className="card-title">{t('settings.m365Groups.title')}</h2>
+          </div>
+          <div className="card-body">
+            <p className="piece-meta mb-3">{t('settings.m365Groups.description')}</p>
+
+            {m365MappingsLoading ? (
+              <p>{t('common.loading')}</p>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
+                      setShowAddGroupMappingModal(true);
+                    }}
+                  >
+                    + {t('settings.m365Groups.add')}
+                  </button>
+                </div>
+
+                {m365GroupMappings.length > 0 ? (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t('settings.m365Groups.type')}</th>
+                        <th>{t('settings.m365Groups.orchestra')}</th>
+                        <th>{t('settings.m365Groups.groupName')}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {m365GroupMappings.map((mapping) => (
+                        <tr key={mapping.id}>
+                          <td>
+                            <span className={`badge ${mapping.groupType === 'percussion' ? 'badge-warning' : mapping.groupType === 'special' ? 'badge-info' : 'badge-success'}`}>
+                              {mapping.groupType === 'orchestra' ? t('settings.m365Groups.typeOrchestra') :
+                               mapping.groupType === 'percussion' ? t('settings.m365Groups.typePercussion') :
+                               t('settings.m365Groups.typeSpecial')}
+                            </span>
+                          </td>
+                          <td>{mapping.orchestraName || '-'}</td>
+                          <td><strong>{mapping.groupName}</strong></td>
+                          <td>
+                            <div className="flex gap-1">
+                              <button
+                                className="btn btn-outline btn-sm"
+                                onClick={() => openEditGroupMappingModal(mapping)}
+                              >
+                                {t('common.edit')}
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => setDeletingGroupMapping(mapping)}
+                              >
+                                {t('common.delete')}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ color: '#666' }}>
+                    {t('settings.m365Groups.noMappings')}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-header">
@@ -769,6 +947,81 @@ export default function Settings() {
           onConfirm={handleDeleteConcertType}
           onCancel={() => setDeletingConcertType(null)}
           isLoading={deleteConcertTypeMutation.isPending}
+          variant="danger"
+        />
+      )}
+
+      {/* Add/Edit M365 Group Mapping Modal */}
+      {(showAddGroupMappingModal || editingGroupMapping) && (
+        <FormModal
+          title={editingGroupMapping ? t('settings.m365Groups.edit') : t('settings.m365Groups.add')}
+          onClose={() => {
+            setShowAddGroupMappingModal(false);
+            setEditingGroupMapping(null);
+            setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
+          }}
+          onSubmit={editingGroupMapping ? handleUpdateGroupMapping : handleCreateGroupMapping}
+          isSubmitting={groupMappingSaving}
+        >
+          {!editingGroupMapping && (
+            <div className="form-group">
+              <label className="form-label">{t('settings.m365Groups.type')} *</label>
+              <select
+                className="form-control"
+                value={groupMappingFormData.groupType}
+                onChange={(e) => setGroupMappingFormData({
+                  ...groupMappingFormData,
+                  groupType: e.target.value as 'orchestra' | 'percussion' | 'special',
+                  orchestraId: e.target.value !== 'orchestra' ? '' : groupMappingFormData.orchestraId,
+                })}
+                required
+              >
+                <option value="orchestra">{t('settings.m365Groups.typeOrchestra')}</option>
+                <option value="percussion" disabled={hasPercussionGroup}>{t('settings.m365Groups.typePercussion')}</option>
+              </select>
+            </div>
+          )}
+
+          {!editingGroupMapping && groupMappingFormData.groupType === 'orchestra' && (
+            <div className="form-group">
+              <label className="form-label">{t('settings.m365Groups.orchestra')} *</label>
+              <select
+                className="form-control"
+                value={groupMappingFormData.orchestraId}
+                onChange={(e) => setGroupMappingFormData({ ...groupMappingFormData, orchestraId: e.target.value })}
+                required
+              >
+                <option value="">{t('settings.m365Groups.selectOrchestra')}</option>
+                {availableOrchestras.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-label">{t('settings.m365Groups.groupName')} *</label>
+            <input
+              type="text"
+              className="form-control"
+              value={groupMappingFormData.groupName}
+              onChange={(e) => setGroupMappingFormData({ ...groupMappingFormData, groupName: e.target.value })}
+              placeholder={t('settings.m365Groups.groupNamePlaceholder')}
+              required
+            />
+            <small style={{ color: '#666' }}>{t('settings.m365Groups.groupNameHelp')}</small>
+          </div>
+        </FormModal>
+      )}
+
+      {/* Delete M365 Group Mapping Confirmation */}
+      {deletingGroupMapping && (
+        <ConfirmDialog
+          title={t('common.delete')}
+          message={t('settings.m365Groups.deleteConfirm', { groupName: deletingGroupMapping.groupName })}
+          confirmLabel={t('common.delete')}
+          onConfirm={handleDeleteGroupMapping}
+          onCancel={() => setDeletingGroupMapping(null)}
           variant="danger"
         />
       )}
