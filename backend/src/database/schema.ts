@@ -352,7 +352,7 @@ CREATE TABLE IF NOT EXISTS spond_member_links (
 
 CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id);
 CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id);
-CREATE INDEX IF NOT EXISTS idx_spond_member_links_email ON spond_member_links(spond_member_email);
+-- Note: idx_spond_member_links_email is created in init.ts migration after adding the column
 
 -- Spond aanwezigheid per repetitie
 CREATE TABLE IF NOT EXISTS rehearsal_attendance (
