@@ -2,6 +2,29 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.8.0] - 2026-02-27
+
+### Toegevoegd
+- **Orkest sectie** - Nieuwe sectie met stemgroepen, bezetting en buurvoorkeuren
+- **Hybride navigatie** - Context sidebar met verbeterde navigatie-ervaring
+- **Bidirectionele Spond synchronisatie** - Aanwezigheid van en naar Spond synchroniseren
+- **Smoelenboek** - Ledenlijst met M365 profielfoto's
+- **Foto synchronisatie** - Profielfoto's synchroniseren en tonen in de UI
+- **WhatsApp integratie** - Directe WhatsApp berichten via Twilio
+- **Automatische zitplaatsmeldingen** - Scheduler voor automatische notificaties
+- **Drag-and-drop zitplaatseneditor** - Visuele editor voor zitplaatsindelingen
+- **Zitplaatsvisualisatie** - Ledentelling en stoelen per rij weergave
+
+### Opgelost
+- Spond sync gebruikt nu spond_member_id uit aanwezigheidsrecord
+- Gebruikersnaam ophalen uit database in plaats van JWT token
+- Aanwezigheidsstatus matchen op lidnaam als fallback
+- 'undefined undefined' namen voorkomen bij Spond synchronisatie
+- Auth token toegevoegd aan foto URLs voor browserverzoeken
+- Betere logging voor foto synchronisatie debugging
+- Afwezige leden toevoegen aan meldingen
+- Dubbele navigatiesecties verwijderd uit vertaalbestanden
+
 ## [1.7.0] - 2026-02-10
 
 ### Toegevoegd

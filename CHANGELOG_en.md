@@ -2,6 +2,29 @@
 
 All notable changes to this application are documented here.
 
+## [1.8.0] - 2026-02-27
+
+### Added
+- **Orchestra section** - New section with voice parts, occupancy and neighbor preferences
+- **Hybrid navigation** - Context sidebar with improved navigation experience
+- **Bidirectional Spond sync** - Sync attendance to and from Spond
+- **Member directory** - Member list with M365 profile photos
+- **Photo sync** - Synchronize and display profile photos in the UI
+- **WhatsApp integration** - Direct WhatsApp messages via Twilio
+- **Automatic seating notifications** - Scheduler for automatic notifications
+- **Drag-and-drop seating editor** - Visual editor for seating arrangements
+- **Seating visualization** - Member count and chairs per row display
+
+### Fixed
+- Spond sync now uses spond_member_id from attendance record
+- User name lookup from database instead of JWT token
+- Match attendance status by member name as fallback
+- Prevent 'undefined undefined' names when syncing Spond attendance
+- Auth token added to photo URLs for browser requests
+- Better logging for photo sync debugging
+- Absent members added to notifications
+- Duplicate nav sections removed from translation files
+
 ## [1.7.0] - 2026-02-10
 
 ### Added
