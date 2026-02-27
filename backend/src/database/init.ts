@@ -723,6 +723,82 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Seed default instrument-to-job-title mappings for all associations
+    try {
+        // Define the default mappings: instrument name, tuning, job title
+        const defaultJobTitleMappings = [
+            { instrumentName: 'Clarinet', tuning: 'Bb', jobTitle: 'Klarinettist' },
+            { instrumentName: 'Bass Clarinet', tuning: 'Bb', jobTitle: 'Bas Klarinettist' },
+            { instrumentName: 'Eb Clarinet', tuning: 'Eb', jobTitle: 'Klarinettist' },
+            { instrumentName: 'Alto Clarinet', tuning: 'Eb', jobTitle: 'Klarinettist' },
+            { instrumentName: 'Euphonium', tuning: 'Bb', jobTitle: 'Baritonist' },
+            { instrumentName: 'Flute', tuning: 'C', jobTitle: 'Dwarsfluitist' },
+            { instrumentName: 'Piccolo', tuning: 'C', jobTitle: 'Dwarsfluitist' },
+            { instrumentName: 'Oboe', tuning: 'C', jobTitle: 'Hoboïst' },
+            { instrumentName: 'Tenor Saxophone', tuning: 'Bb', jobTitle: 'Tenor Saxofonist' },
+            { instrumentName: 'French Horn', tuning: 'F', jobTitle: 'Hoornist' },
+            { instrumentName: 'Percussion', tuning: null, jobTitle: 'Slagwerker' },
+            { instrumentName: 'Timpani', tuning: null, jobTitle: 'Slagwerker' },
+            { instrumentName: 'Mallets', tuning: 'C', jobTitle: 'Slagwerker' },
+            { instrumentName: 'Trombone', tuning: 'C', jobTitle: 'Trombonist' },
+            { instrumentName: 'Bass Trombone', tuning: 'C', jobTitle: 'Trombonist' },
+            { instrumentName: 'Alto Saxophone', tuning: 'Eb', jobTitle: 'Alt Saxofonist' },
+            { instrumentName: 'Baritone Saxophone', tuning: 'Eb', jobTitle: 'Bariton Saxofonist' },
+            { instrumentName: 'Soprano Saxophone', tuning: 'Bb', jobTitle: 'Saxofonist' },
+            { instrumentName: 'Trumpet', tuning: 'Bb', jobTitle: 'Trompetist' },
+            { instrumentName: 'Cornet', tuning: 'Bb', jobTitle: 'Trompetist' },
+            { instrumentName: 'Flugelhorn', tuning: 'Bb', jobTitle: 'Trompetist' },
+            { instrumentName: 'Conductor', tuning: null, jobTitle: 'Dirigent' },
+            { instrumentName: 'String Bass', tuning: 'C', jobTitle: 'Bassist' },
+            { instrumentName: 'Electric Bass', tuning: null, jobTitle: 'Bassist' },
+            { instrumentName: 'Bass Guitar', tuning: null, jobTitle: 'Bassist' },
+            { instrumentName: 'Bassoon', tuning: 'C', jobTitle: 'Fagottist' },
+            { instrumentName: 'Tuba', tuning: 'C', jobTitle: 'Bassist' },
+            { instrumentName: 'Tuba', tuning: 'Bb', jobTitle: 'Bassist' },
+            { instrumentName: 'Tuba', tuning: 'Eb', jobTitle: 'Bassist' },
+        ];
+
+        // Get all associations
+        const associations = db.prepare('SELECT id FROM associations').all() as { id: string }[];
+
+        for (const association of associations) {
+            // Check if any mappings already exist for this association
+            const existingCount = db.prepare(
+                'SELECT COUNT(*) as count FROM instrument_job_title_mappings WHERE association_id = ?'
+            ).get(association.id) as { count: number };
+
+            if (existingCount.count === 0) {
+                console.log(`Migration: Seeding default job title mappings for association ${association.id}...`);
+
+                for (const mapping of defaultJobTitleMappings) {
+                    // Find the instrument
+                    const instrument = db.prepare(
+                        mapping.tuning !== null
+                            ? 'SELECT id FROM instruments WHERE name = ? AND tuning = ?'
+                            : 'SELECT id FROM instruments WHERE name = ? AND tuning IS NULL'
+                    ).get(...(mapping.tuning !== null ? [mapping.instrumentName, mapping.tuning] : [mapping.instrumentName])) as { id: string } | undefined;
+
+                    if (instrument) {
+                        // Check if mapping already exists (shouldn't happen, but be safe)
+                        const existingMapping = db.prepare(
+                            'SELECT id FROM instrument_job_title_mappings WHERE association_id = ? AND instrument_id = ?'
+                        ).get(association.id, instrument.id);
+
+                        if (!existingMapping) {
+                            db.prepare(
+                                'INSERT INTO instrument_job_title_mappings (id, association_id, instrument_id, job_title) VALUES (?, ?, ?, ?)'
+                            ).run(uuidv4(), association.id, instrument.id, mapping.jobTitle);
+                        }
+                    }
+                }
+
+                console.log('Migration: Default job title mappings seeded');
+            }
+        }
+    } catch (e) {
+        console.error('Migration: Error seeding default job title mappings', e);
+    }
+
     console.log('Database initialization complete!');
 }
 
