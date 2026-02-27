@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS users (
     mfa_enabled BOOLEAN DEFAULT 0, -- Whether MFA is enabled
     microsoft_id TEXT, -- Microsoft Entra Object ID for SSO
     profile_photo_path TEXT, -- Pad naar profielfoto
+    private_email TEXT, -- Privé email adres (voor M365 forwarding)
     last_login DATETIME, -- Laatste keer ingelogd
     onboarded_at DATETIME, -- Wanneer onboarding is voltooid
     offboarded_at DATETIME, -- Wanneer offboarding is voltooid
@@ -789,4 +790,38 @@ CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_user ON onboarding_tasks(user_id
 CREATE INDEX IF NOT EXISTS idx_onboarding_tasks_status ON onboarding_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_pending_spond_links_email ON pending_spond_links(expected_email);
 CREATE INDEX IF NOT EXISTS idx_pending_spond_links_user ON pending_spond_links(user_id);
+
+-- ===========================================
+-- M365 INTEGRATIE UITBREIDING
+-- ===========================================
+
+-- M365 groep mappings voor orkesten
+CREATE TABLE IF NOT EXISTS m365_group_mappings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    orchestra_id TEXT,
+    group_name TEXT NOT NULL,
+    group_type TEXT NOT NULL DEFAULT 'orchestra', -- orchestra, percussion, special
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_m365_group_mappings_association ON m365_group_mappings(association_id);
+CREATE INDEX IF NOT EXISTS idx_m365_group_mappings_orchestra ON m365_group_mappings(orchestra_id);
+
+-- Instrument naar Job Title mapping (voor M365 functietitel)
+CREATE TABLE IF NOT EXISTS instrument_job_title_mappings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    instrument_id TEXT NOT NULL,
+    job_title TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+    UNIQUE(association_id, instrument_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_association ON instrument_job_title_mappings(association_id);
+CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_instrument ON instrument_job_title_mappings(instrument_id);
 `;

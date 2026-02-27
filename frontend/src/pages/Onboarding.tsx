@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -12,11 +12,12 @@ import {
   deletePendingSpondLink,
   getInactiveMembers,
   reactivateMember,
-  offboardMember,
   getMicrosoftConfig,
+  getM365GroupMappings,
+  getInstrumentJobTitleMappings,
   type OnboardingResponse,
-  type PendingSpondLink,
   type InactiveMember,
+  type M365GroupMapping,
 } from '../api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -24,9 +25,11 @@ interface OnboardingFormData {
   firstName: string;
   lastName: string;
   email: string;
+  privateEmail: string;
   instrumentIds: string[];
   orchestraIds: string[];
   createM365Account: boolean;
+  addToPercussionGroup: boolean;
 }
 
 type WizardStep = 'form' | 'result';
@@ -41,8 +44,10 @@ export default function Onboarding() {
   const [wizardStep, setWizardStep] = useState<WizardStep>('form');
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResponse | null>(null);
   const [confirmReactivate, setConfirmReactivate] = useState<InactiveMember | null>(null);
-  const [confirmOffboard, setConfirmOffboard] = useState<{ id: string; name: string } | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: instruments = [] } = useInstruments();
   const { data: orchestras = [] } = useOrchestras();
@@ -51,6 +56,22 @@ export default function Onboarding() {
     queryFn: getMicrosoftConfig,
     retry: false,
   });
+
+  const { data: m365Groups = [] } = useQuery({
+    queryKey: ['m365GroupMappings'],
+    queryFn: getM365GroupMappings,
+    enabled: !!msConfig?.configured,
+  });
+
+  // Query for instrument job title mappings (currently unused but can be used for UI enhancement)
+  useQuery({
+    queryKey: ['instrumentJobTitleMappings'],
+    queryFn: getInstrumentJobTitleMappings,
+    enabled: !!msConfig?.configured,
+  });
+
+  // Check if there's a percussion group configured
+  const hasPercussionGroup = m365Groups.some((g: M365GroupMapping) => g.groupType === 'percussion');
 
   const { data: pendingLinks = [], isLoading: pendingLoading } = useQuery({
     queryKey: ['pendingSpondLinks'],
@@ -67,9 +88,11 @@ export default function Onboarding() {
       firstName: '',
       lastName: '',
       email: '',
+      privateEmail: '',
       instrumentIds: [],
       orchestraIds: [],
       createM365Account: false,
+      addToPercussionGroup: false,
     },
   });
 
@@ -115,10 +138,41 @@ export default function Onboarding() {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
+      privateEmail: data.privateEmail || undefined,
       instrumentIds: data.instrumentIds,
       orchestraIds: data.orchestraIds,
       createM365Account: data.createM365Account,
+      addToPercussionGroup: data.addToPercussionGroup,
+      profilePhoto: profilePhoto || undefined,
     });
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showError(t('onboarding.photoTooLarge'));
+        return;
+      }
+      if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+        showError(t('onboarding.photoInvalidType'));
+        return;
+      }
+      setProfilePhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setProfilePhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleNewOnboarding = () => {
@@ -126,6 +180,11 @@ export default function Onboarding() {
     setOnboardingResult(null);
     setWizardStep('form');
     setPasswordCopied(false);
+    setProfilePhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const copyPassword = () => {
@@ -239,6 +298,18 @@ export default function Onboarding() {
                   <small className="text-secondary">{t('onboarding.emailHint')}</small>
                 </div>
 
+                {msConfig?.configured && (
+                  <div className="form-group">
+                    <label className="form-label">{t('onboarding.privateEmail')}</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      {...form.register('privateEmail')}
+                    />
+                    <small className="text-secondary">{t('onboarding.privateEmailHint')}</small>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label className="form-label">{t('onboarding.instruments')}</label>
                   <Controller
@@ -295,14 +366,95 @@ export default function Onboarding() {
                 </div>
 
                 {msConfig?.configured && (
-                  <div className="form-group">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" {...form.register('createM365Account')} />
-                      {t('onboarding.createM365')}
-                    </label>
-                    <small className="text-secondary">{t('onboarding.createM365Hint')}</small>
-                  </div>
+                  <>
+                    <div className="form-group">
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" {...form.register('createM365Account')} />
+                        {t('onboarding.createM365')}
+                      </label>
+                      <small className="text-secondary">{t('onboarding.createM365Hint')}</small>
+                    </div>
+
+                    {form.watch('createM365Account') && hasPercussionGroup && (
+                      <div className="form-group">
+                        <label className="flex items-center gap-2">
+                          <input type="checkbox" {...form.register('addToPercussionGroup')} />
+                          {t('onboarding.addToPercussionGroup')}
+                        </label>
+                        <small className="text-secondary">{t('onboarding.addToPercussionGroupHint')}</small>
+                      </div>
+                    )}
+                  </>
                 )}
+
+                <div className="form-group">
+                  <label className="form-label">{t('onboarding.profilePhoto')}</label>
+                  <div className="flex items-center gap-3">
+                    {photoPreview ? (
+                      <div style={{ position: 'relative' }}>
+                        <img
+                          src={photoPreview}
+                          alt="Preview"
+                          style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={handleRemovePhoto}
+                          style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            borderRadius: '50%',
+                            padding: '2px 6px',
+                            fontSize: '12px',
+                            background: 'var(--danger)',
+                            color: 'white',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '50%',
+                          background: 'var(--bg-secondary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        ?
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/jpeg,image/jpg,image/png"
+                        onChange={handlePhotoChange}
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {t('onboarding.selectPhoto')}
+                      </button>
+                    </div>
+                  </div>
+                  <small className="text-secondary">{t('onboarding.profilePhotoHint')}</small>
+                </div>
 
                 <div className="flex gap-2 mt-4">
                   <button
@@ -535,7 +687,7 @@ export default function Onboarding() {
           onConfirm={() => reactivateMutation.mutate(confirmReactivate.id)}
           onCancel={() => setConfirmReactivate(null)}
           isLoading={reactivateMutation.isPending}
-          variant="primary"
+          variant="info"
         />
       )}
     </div>

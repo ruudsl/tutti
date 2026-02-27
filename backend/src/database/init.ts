@@ -660,6 +660,69 @@ async function initializeDatabase() {
         console.error('Migration: Error creating pending_spond_links table', e);
     }
 
+    // Migration: Create m365_group_mappings table for orchestra to M365 group mappings
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='m365_group_mappings'").get();
+        if (!tables) {
+            console.log('Migration: Creating m365_group_mappings table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS m365_group_mappings (
+                    id TEXT PRIMARY KEY,
+                    association_id TEXT NOT NULL,
+                    orchestra_id TEXT,
+                    group_name TEXT NOT NULL,
+                    group_type TEXT NOT NULL DEFAULT 'orchestra',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_m365_group_mappings_association ON m365_group_mappings(association_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_m365_group_mappings_orchestra ON m365_group_mappings(orchestra_id)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating m365_group_mappings table', e);
+    }
+
+    // Migration: Create instrument_job_title_mappings table (reverse of job_title_instrument_mappings)
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='instrument_job_title_mappings'").get();
+        if (!tables) {
+            console.log('Migration: Creating instrument_job_title_mappings table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS instrument_job_title_mappings (
+                    id TEXT PRIMARY KEY,
+                    association_id TEXT NOT NULL,
+                    instrument_id TEXT NOT NULL,
+                    job_title TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+                    UNIQUE(association_id, instrument_id)
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_association ON instrument_job_title_mappings(association_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_instrument ON instrument_job_title_mappings(instrument_id)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating instrument_job_title_mappings table', e);
+    }
+
+    // Migration: Add private_email column to users for email forwarding
+    try {
+        const usersPrivateEmailInfo = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        const hasPrivateEmail = usersPrivateEmailInfo.some(col => col.name === 'private_email');
+        if (!hasPrivateEmail) {
+            console.log('Migration: Adding private_email column to users...');
+            db.prepare('ALTER TABLE users ADD COLUMN private_email TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

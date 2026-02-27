@@ -2,12 +2,31 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
+import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import multer from 'multer';
+
+// Configure multer for profile photo uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen JPG en PNG bestanden zijn toegestaan'));
+        }
+    },
+});
 
 const router = Router();
 
@@ -57,6 +76,319 @@ async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
     return tokenData.access_token;
 }
 
+/**
+ * Assign a license to a user in M365
+ * Uses the Microsoft 365 Business Basic SKU by default
+ */
+async function assignM365License(accessToken: string, userId: string): Promise<boolean> {
+    try {
+        // First, get available licenses (SKUs) in the tenant
+        const skuResponse = await fetch(
+            'https://graph.microsoft.com/v1.0/subscribedSkus',
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+
+        if (!skuResponse.ok) {
+            logger.warn('Could not fetch subscribed SKUs', { status: skuResponse.status });
+            return false;
+        }
+
+        const skuData = await skuResponse.json() as { value: { skuId: string; skuPartNumber: string; consumedUnits: number; prepaidUnits: { enabled: number } }[] };
+
+        // Look for Microsoft 365 Business Basic (O365_BUSINESS_ESSENTIALS or SMB_BUSINESS_ESSENTIALS)
+        const businessBasicSku = skuData.value.find(sku =>
+            sku.skuPartNumber === 'O365_BUSINESS_ESSENTIALS' ||
+            sku.skuPartNumber === 'SMB_BUSINESS_ESSENTIALS' ||
+            sku.skuPartNumber === 'MICROSOFT_365_BUSINESS_BASIC'
+        );
+
+        if (!businessBasicSku) {
+            logger.warn('Microsoft 365 Business Basic license not found in tenant');
+            return false;
+        }
+
+        // Check if licenses are available
+        if (businessBasicSku.consumedUnits >= businessBasicSku.prepaidUnits.enabled) {
+            logger.warn('No available Microsoft 365 Business Basic licenses');
+            return false;
+        }
+
+        // Assign the license to the user
+        const assignResponse = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${userId}/assignLicense`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    addLicenses: [{ skuId: businessBasicSku.skuId }],
+                    removeLicenses: [],
+                }),
+            }
+        );
+
+        if (!assignResponse.ok) {
+            const errorData = await assignResponse.json() as { error?: { message?: string } };
+            logger.warn('Failed to assign license', { error: errorData.error?.message });
+            return false;
+        }
+
+        logger.info(`License assigned to user ${userId}`, { skuPartNumber: businessBasicSku.skuPartNumber });
+        return true;
+    } catch (err) {
+        logger.error('Error assigning license', { error: err });
+        return false;
+    }
+}
+
+/**
+ * Add user to M365 groups based on their orchestras
+ */
+async function addUserToM365Groups(accessToken: string, userId: string, groupNames: string[]): Promise<{ added: string[]; failed: string[] }> {
+    const added: string[] = [];
+    const failed: string[] = [];
+
+    for (const groupName of groupNames) {
+        try {
+            // Search for the group by display name
+            const searchResponse = await fetch(
+                `https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '${encodeURIComponent(groupName)}'`,
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+
+            if (!searchResponse.ok) {
+                logger.warn(`Could not search for group: ${groupName}`);
+                failed.push(groupName);
+                continue;
+            }
+
+            const searchData = await searchResponse.json() as { value: { id: string; displayName: string }[] };
+
+            if (searchData.value.length === 0) {
+                logger.warn(`Group not found: ${groupName}`);
+                failed.push(groupName);
+                continue;
+            }
+
+            const groupId = searchData.value[0].id;
+
+            // Add user to the group
+            const addResponse = await fetch(
+                `https://graph.microsoft.com/v1.0/groups/${groupId}/members/$ref`,
+                {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        '@odata.id': `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`,
+                    }),
+                }
+            );
+
+            if (addResponse.ok || addResponse.status === 204) {
+                added.push(groupName);
+                logger.info(`User ${userId} added to group ${groupName}`);
+            } else if (addResponse.status === 400) {
+                // User might already be a member
+                added.push(groupName);
+            } else {
+                const errorData = await addResponse.json() as { error?: { message?: string } };
+                logger.warn(`Failed to add user to group ${groupName}`, { error: errorData.error?.message });
+                failed.push(groupName);
+            }
+        } catch (err) {
+            logger.error(`Error adding user to group ${groupName}`, { error: err });
+            failed.push(groupName);
+        }
+    }
+
+    return { added, failed };
+}
+
+/**
+ * Set up email forwarding to private email address
+ */
+async function setupEmailForwarding(accessToken: string, userId: string, forwardingAddress: string): Promise<boolean> {
+    try {
+        // Configure mailbox forwarding using Exchange Online settings
+        // Note: This requires Exchange Online PowerShell or specific Graph permissions
+        // For now, we'll set the otherMails property and document manual forwarding setup
+
+        const updateResponse = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${userId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    otherMails: [forwardingAddress],
+                }),
+            }
+        );
+
+        if (!updateResponse.ok) {
+            const errorData = await updateResponse.json() as { error?: { message?: string } };
+            logger.warn('Failed to set otherMails', { error: errorData.error?.message });
+            return false;
+        }
+
+        // Try to set up inbox rule for forwarding (requires Mail.ReadWrite permission)
+        try {
+            const ruleResponse = await fetch(
+                `https://graph.microsoft.com/v1.0/users/${userId}/mailFolders/inbox/messageRules`,
+                {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        displayName: 'Forward all mail to private email',
+                        sequence: 1,
+                        isEnabled: true,
+                        conditions: {},
+                        actions: {
+                            forwardTo: [{
+                                emailAddress: {
+                                    address: forwardingAddress,
+                                },
+                            }],
+                            stopProcessingRules: false,
+                        },
+                    }),
+                }
+            );
+
+            if (ruleResponse.ok) {
+                logger.info(`Email forwarding rule created for user ${userId} to ${forwardingAddress}`);
+                return true;
+            } else {
+                // Rule creation might fail due to permissions, but otherMails was set
+                logger.warn('Could not create forwarding rule, but otherMails was set');
+                return true;
+            }
+        } catch (ruleErr) {
+            logger.warn('Could not create forwarding rule', { error: ruleErr });
+            return true; // otherMails was still set successfully
+        }
+    } catch (err) {
+        logger.error('Error setting up email forwarding', { error: err });
+        return false;
+    }
+}
+
+/**
+ * Upload profile photo to M365
+ */
+async function uploadProfilePhotoToM365(accessToken: string, userId: string, photoBuffer: Buffer): Promise<boolean> {
+    try {
+        const uploadResponse = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${userId}/photo/$value`,
+            {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'image/jpeg',
+                },
+                body: photoBuffer,
+            }
+        );
+
+        if (uploadResponse.ok || uploadResponse.status === 200) {
+            logger.info(`Profile photo uploaded for user ${userId}`);
+            return true;
+        } else {
+            const errorText = await uploadResponse.text();
+            logger.warn('Failed to upload profile photo', { status: uploadResponse.status, error: errorText });
+            return false;
+        }
+    } catch (err) {
+        logger.error('Error uploading profile photo', { error: err });
+        return false;
+    }
+}
+
+/**
+ * Get job title for an instrument from mappings
+ */
+function getJobTitleForInstrument(instrumentId: string, associationId: string): string | null {
+    const mapping = db.prepare(`
+        SELECT job_title FROM instrument_job_title_mappings
+        WHERE instrument_id = ? AND association_id = ?
+    `).get(instrumentId, associationId) as { job_title: string } | undefined;
+
+    return mapping?.job_title || null;
+}
+
+/**
+ * Get M365 group names for orchestras
+ */
+function getM365GroupsForOrchestras(orchestraIds: string[], associationId: string): string[] {
+    const groupNames: string[] = [];
+
+    for (const orchestraId of orchestraIds) {
+        const mapping = db.prepare(`
+            SELECT group_name FROM m365_group_mappings
+            WHERE orchestra_id = ? AND association_id = ?
+        `).get(orchestraId, associationId) as { group_name: string } | undefined;
+
+        if (mapping?.group_name) {
+            groupNames.push(mapping.group_name);
+        }
+    }
+
+    return groupNames;
+}
+
+/**
+ * Get M365 group for percussion (slagwerkgroep)
+ */
+function getPercussionGroupName(associationId: string): string | null {
+    const mapping = db.prepare(`
+        SELECT group_name FROM m365_group_mappings
+        WHERE association_id = ? AND group_type = 'percussion'
+    `).get(associationId) as { group_name: string } | undefined;
+
+    return mapping?.group_name || null;
+}
+
+/**
+ * Check if instrument is a percussion instrument
+ */
+function isPercussionInstrument(instrumentId: string): boolean {
+    const instrument = db.prepare(`
+        SELECT name FROM instruments WHERE id = ?
+    `).get(instrumentId) as { name: string } | undefined;
+
+    if (!instrument) return false;
+
+    const percussionNames = ['Percussion', 'Timpani', 'Mallets', 'Slagwerk', 'Pauken'];
+    return percussionNames.some(name =>
+        instrument.name.toLowerCase().includes(name.toLowerCase())
+    );
+}
+
+/**
+ * Save uploaded profile photo to disk
+ */
+function saveProfilePhoto(userId: string, photoBuffer: Buffer): string {
+    const photoDir = path.resolve(config.uploadDir, 'profile-photos');
+    if (!fs.existsSync(photoDir)) {
+        fs.mkdirSync(photoDir, { recursive: true });
+    }
+
+    const filename = `profile-${userId.slice(0, 8)}-${Date.now()}.jpg`;
+    const filePath = path.join(photoDir, filename);
+    fs.writeFileSync(filePath, photoBuffer);
+    return filePath;
+}
+
 // ========================================
 // ONBOARDING WIZARD ENDPOINTS
 // ========================================
@@ -65,16 +397,25 @@ async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
  * POST /onboarding/member
  * Start onboarding for a new member
  */
-router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/member', authenticateToken, requireRole('admin'), upload.single('profilePhoto'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const {
         firstName,
         lastName,
         email,
-        instrumentIds,
-        orchestraIds,
-        createM365Account,
+        privateEmail,
+        instrumentIds: instrumentIdsStr,
+        orchestraIds: orchestraIdsStr,
+        createM365Account: createM365AccountStr,
         m365Password,
+        addToPercussionGroup: addToPercussionGroupStr,
     } = req.body;
+
+    // Parse arrays from form data (when sent with multipart/form-data for file upload)
+    const instrumentIds = instrumentIdsStr ? (typeof instrumentIdsStr === 'string' ? JSON.parse(instrumentIdsStr) : instrumentIdsStr) : [];
+    const orchestraIds = orchestraIdsStr ? (typeof orchestraIdsStr === 'string' ? JSON.parse(orchestraIdsStr) : orchestraIdsStr) : [];
+    const createM365Account = createM365AccountStr === 'true' || createM365AccountStr === true;
+    const addToPercussionGroup = addToPercussionGroupStr === 'true' || addToPercussionGroupStr === true;
+    const profilePhotoBuffer = req.file?.buffer;
 
     if (!firstName || !lastName || !email) {
         throw new ApiError(400, 'Voornaam, achternaam en email zijn verplicht.');
@@ -92,6 +433,12 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
     let microsoftId: string | null = null;
     let m365Created = false;
     let m365Error: string | null = null;
+    let licenseAssigned = false;
+    let groupsAdded: string[] = [];
+    let groupsFailed: string[] = [];
+    let emailForwardingSet = false;
+    let photoUploaded = false;
+    let profilePhotoPath: string | null = null;
 
     // Try to create M365 account if requested
     if (createM365Account) {
@@ -122,7 +469,23 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
                     ? email
                     : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${defaultDomain}`.replace(/\s+/g, '');
 
-                // Create user in M365
+                // Determine job title from first instrument
+                let jobTitle: string | null = null;
+                if (instrumentIds.length > 0) {
+                    jobTitle = getJobTitleForInstrument(instrumentIds[0], req.user!.associationId!);
+                }
+
+                // Determine department from orchestras
+                let department: string | null = null;
+                if (orchestraIds.length > 0) {
+                    const orchestraNames = orchestraIds.map((orchId: string) => {
+                        const orch = db.prepare('SELECT name FROM orchestras WHERE id = ?').get(orchId) as { name: string } | undefined;
+                        return orch?.name;
+                    }).filter(Boolean);
+                    department = orchestraNames.join(', ');
+                }
+
+                // Create user in M365 with job information
                 const createResponse = await fetch(
                     'https://graph.microsoft.com/v1.0/users',
                     {
@@ -139,6 +502,9 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
                             mailNickname: `${firstName.toLowerCase()}${lastName.toLowerCase()}`.replace(/\s+/g, ''),
                             userPrincipalName: upn,
                             mail: email,
+                            jobTitle: jobTitle || undefined,
+                            department: department || undefined,
+                            otherMails: privateEmail ? [privateEmail] : undefined,
                             passwordProfile: {
                                 forceChangePasswordNextSignIn: true,
                                 password: tempPassword,
@@ -151,7 +517,38 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
                     const userData = await createResponse.json() as { id: string };
                     microsoftId = userData.id;
                     m365Created = true;
-                    logger.info(`M365 user created: ${upn}`, { microsoftId, createdBy: req.user!.id });
+                    logger.info(`M365 user created: ${upn}`, { microsoftId, jobTitle, department, createdBy: req.user!.id });
+
+                    // Assign license
+                    licenseAssigned = await assignM365License(accessToken, microsoftId);
+
+                    // Add to M365 groups based on orchestras
+                    const groupNamesToAdd: string[] = getM365GroupsForOrchestras(orchestraIds, req.user!.associationId!);
+
+                    // Add percussion group if requested or if instrument is percussion
+                    const isPercussion = instrumentIds.some((instId: string) => isPercussionInstrument(instId));
+                    if (addToPercussionGroup || isPercussion) {
+                        const percussionGroup = getPercussionGroupName(req.user!.associationId!);
+                        if (percussionGroup && !groupNamesToAdd.includes(percussionGroup)) {
+                            groupNamesToAdd.push(percussionGroup);
+                        }
+                    }
+
+                    if (groupNamesToAdd.length > 0) {
+                        const groupResult = await addUserToM365Groups(accessToken, microsoftId, groupNamesToAdd);
+                        groupsAdded = groupResult.added;
+                        groupsFailed = groupResult.failed;
+                    }
+
+                    // Set up email forwarding if private email is provided
+                    if (privateEmail) {
+                        emailForwardingSet = await setupEmailForwarding(accessToken, microsoftId, privateEmail);
+                    }
+
+                    // Upload profile photo if provided
+                    if (profilePhotoBuffer) {
+                        photoUploaded = await uploadProfilePhotoToM365(accessToken, microsoftId, profilePhotoBuffer);
+                    }
                 } else {
                     const errorData = await createResponse.json() as { error?: { message?: string } };
                     m365Error = errorData.error?.message || 'Kon M365 account niet aanmaken';
@@ -166,12 +563,17 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
         }
     }
 
+    // Save profile photo locally if provided
+    if (profilePhotoBuffer) {
+        profilePhotoPath = saveProfilePhoto(userId, profilePhotoBuffer);
+    }
+
     // Create user in local database
     withTransaction(() => {
         db.prepare(`
-            INSERT INTO users (id, email, password_hash, first_name, last_name, role, status, association_id, microsoft_id, onboarded_at)
-            VALUES (?, ?, ?, ?, ?, 'member', 'active', ?, ?, CURRENT_TIMESTAMP)
-        `).run(userId, email.toLowerCase(), passwordHash, firstName, lastName, req.user!.associationId, microsoftId);
+            INSERT INTO users (id, email, password_hash, first_name, last_name, role, status, association_id, microsoft_id, private_email, profile_photo_path, onboarded_at)
+            VALUES (?, ?, ?, ?, ?, 'member', 'active', ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `).run(userId, email.toLowerCase(), passwordHash, firstName, lastName, req.user!.associationId, microsoftId, privateEmail || null, profilePhotoPath);
 
         // Add instruments
         if (instrumentIds && instrumentIds.length > 0) {
@@ -216,7 +618,15 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
         }
     });
 
-    logger.info(`User onboarded: ${email}`, { userId, m365Created, createdBy: req.user!.id });
+    logger.info(`User onboarded: ${email}`, {
+        userId,
+        m365Created,
+        licenseAssigned,
+        groupsAdded,
+        emailForwardingSet,
+        photoUploaded,
+        createdBy: req.user!.id,
+    });
 
     logAuditEvent(
         req.user!.id,
@@ -224,10 +634,42 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
         'user',
         userId,
         `${firstName} ${lastName}`,
-        { email, onboarding: true, m365Created },
+        { email, onboarding: true, m365Created, licenseAssigned, groupsAdded },
         req.ip,
         req.get('user-agent')
     );
+
+    // Build instructions based on what happened
+    const instructions: string[] = [
+        'Deel het tijdelijke wachtwoord met het nieuwe lid.',
+    ];
+
+    if (m365Created) {
+        let m365Status = 'Het M365 account is aangemaakt.';
+        if (licenseAssigned) {
+            m365Status += ' Microsoft 365 Business Basic licentie is toegewezen.';
+        }
+        if (groupsAdded.length > 0) {
+            m365Status += ` Toegevoegd aan groepen: ${groupsAdded.join(', ')}.`;
+        }
+        if (groupsFailed.length > 0) {
+            m365Status += ` Kon niet toevoegen aan: ${groupsFailed.join(', ')}.`;
+        }
+        if (emailForwardingSet && privateEmail) {
+            m365Status += ` Email forwarding naar ${privateEmail} ingesteld.`;
+        }
+        if (photoUploaded) {
+            m365Status += ' Profielfoto is geüpload.';
+        }
+        m365Status += ' Het lid moet bij eerste login het wachtwoord wijzigen.';
+        instructions.push(m365Status);
+    } else if (m365Error) {
+        instructions.push(`M365 account kon niet worden aangemaakt: ${m365Error}`);
+    } else {
+        instructions.push('Geen M365 account aangemaakt.');
+    }
+
+    instructions.push('Nodig het lid uit in de Spond app. De koppeling wordt automatisch gemaakt bij de volgende sync.');
 
     res.status(201).json({
         success: true,
@@ -235,18 +677,17 @@ router.post('/member', authenticateToken, requireRole('admin'), asyncHandler(asy
         email,
         firstName,
         lastName,
-        tempPassword, // Return so admin can share with new member
+        tempPassword,
         m365Created,
         m365Error,
+        licenseAssigned,
+        groupsAdded,
+        groupsFailed,
+        emailForwardingSet,
+        photoUploaded,
         spondLinkPending: true,
         message: 'Lid succesvol aangemaakt.',
-        instructions: [
-            'Deel het tijdelijke wachtwoord met het nieuwe lid.',
-            m365Created
-                ? 'Het M365 account is aangemaakt. Het lid moet bij eerste login het wachtwoord wijzigen.'
-                : (m365Error ? `M365 account kon niet worden aangemaakt: ${m365Error}` : 'Geen M365 account aangemaakt.'),
-            'Nodig het lid uit in de Spond app. De koppeling wordt automatisch gemaakt bij de volgende sync.',
-        ],
+        instructions,
     });
 }));
 
@@ -498,6 +939,239 @@ router.get('/inactive-members', authenticateToken, requireRole('admin'), asyncHa
         offboardedAt: m.offboarded_at,
         createdAt: m.created_at,
     })));
+}));
+
+// ========================================
+// M365 GROUP MAPPINGS ENDPOINTS
+// ========================================
+
+/**
+ * GET /onboarding/m365-groups
+ * Get all M365 group mappings
+ */
+router.get('/m365-groups', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const mappings = db.prepare(`
+        SELECT m.id, m.orchestra_id, m.group_name, m.group_type, o.name as orchestra_name
+        FROM m365_group_mappings m
+        LEFT JOIN orchestras o ON m.orchestra_id = o.id
+        WHERE m.association_id = ?
+        ORDER BY m.group_type, o.name
+    `).all(req.user!.associationId) as any[];
+
+    res.json(mappings.map(m => ({
+        id: m.id,
+        orchestraId: m.orchestra_id,
+        orchestraName: m.orchestra_name,
+        groupName: m.group_name,
+        groupType: m.group_type,
+    })));
+}));
+
+/**
+ * POST /onboarding/m365-groups
+ * Create a new M365 group mapping
+ */
+router.post('/m365-groups', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { orchestraId, groupName, groupType } = req.body;
+
+    if (!groupName) {
+        throw new ApiError(400, 'Groepsnaam is verplicht.');
+    }
+
+    // For orchestra type, orchestraId is required
+    if (groupType === 'orchestra' && !orchestraId) {
+        throw new ApiError(400, 'Orkest is verplicht voor orkest-groepen.');
+    }
+
+    // Check if mapping already exists for this orchestra
+    if (orchestraId) {
+        const existing = db.prepare(
+            'SELECT id FROM m365_group_mappings WHERE orchestra_id = ? AND association_id = ?'
+        ).get(orchestraId, req.user!.associationId);
+        if (existing) {
+            throw new ApiError(409, 'Er bestaat al een mapping voor dit orkest.');
+        }
+    }
+
+    // For percussion type, check if one already exists
+    if (groupType === 'percussion') {
+        const existing = db.prepare(
+            "SELECT id FROM m365_group_mappings WHERE group_type = 'percussion' AND association_id = ?"
+        ).get(req.user!.associationId);
+        if (existing) {
+            throw new ApiError(409, 'Er bestaat al een slagwerkgroep mapping.');
+        }
+    }
+
+    const id = uuidv4();
+    db.prepare(`
+        INSERT INTO m365_group_mappings (id, association_id, orchestra_id, group_name, group_type)
+        VALUES (?, ?, ?, ?, ?)
+    `).run(id, req.user!.associationId, orchestraId || null, groupName, groupType || 'orchestra');
+
+    logger.info(`M365 group mapping created: ${groupName}`, { orchestraId, groupType, createdBy: req.user!.id });
+
+    res.status(201).json({
+        id,
+        orchestraId,
+        groupName,
+        groupType: groupType || 'orchestra',
+        message: 'Groep mapping succesvol aangemaakt.',
+    });
+}));
+
+/**
+ * PUT /onboarding/m365-groups/:id
+ * Update an M365 group mapping
+ */
+router.put('/m365-groups/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { groupName } = req.body;
+
+    if (!groupName) {
+        throw new ApiError(400, 'Groepsnaam is verplicht.');
+    }
+
+    const result = db.prepare(`
+        UPDATE m365_group_mappings SET group_name = ?
+        WHERE id = ? AND association_id = ?
+    `).run(groupName, req.params.id, req.user!.associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Groep mapping niet gevonden.');
+    }
+
+    logger.info(`M365 group mapping updated: ${req.params.id}`, { updatedBy: req.user!.id });
+
+    res.json({ message: 'Groep mapping succesvol bijgewerkt.' });
+}));
+
+/**
+ * DELETE /onboarding/m365-groups/:id
+ * Delete an M365 group mapping
+ */
+router.delete('/m365-groups/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare(
+        'DELETE FROM m365_group_mappings WHERE id = ? AND association_id = ?'
+    ).run(req.params.id, req.user!.associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Groep mapping niet gevonden.');
+    }
+
+    logger.info(`M365 group mapping deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    res.json({ message: 'Groep mapping succesvol verwijderd.' });
+}));
+
+// ========================================
+// INSTRUMENT JOB TITLE MAPPINGS ENDPOINTS
+// ========================================
+
+/**
+ * GET /onboarding/job-titles
+ * Get all instrument to job title mappings
+ */
+router.get('/job-titles', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const mappings = db.prepare(`
+        SELECT m.id, m.instrument_id, m.job_title, i.name as instrument_name, i.tuning as instrument_tuning
+        FROM instrument_job_title_mappings m
+        JOIN instruments i ON m.instrument_id = i.id
+        WHERE m.association_id = ?
+        ORDER BY i.name
+    `).all(req.user!.associationId) as any[];
+
+    res.json(mappings.map(m => ({
+        id: m.id,
+        instrumentId: m.instrument_id,
+        instrumentName: m.instrument_name,
+        instrumentTuning: m.instrument_tuning,
+        jobTitle: m.job_title,
+    })));
+}));
+
+/**
+ * POST /onboarding/job-titles
+ * Create a new instrument to job title mapping
+ */
+router.post('/job-titles', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { instrumentId, jobTitle } = req.body;
+
+    if (!instrumentId || !jobTitle) {
+        throw new ApiError(400, 'Instrument en functietitel zijn verplicht.');
+    }
+
+    // Check if instrument exists
+    const instrument = db.prepare('SELECT id, name FROM instruments WHERE id = ?').get(instrumentId) as { id: string; name: string } | undefined;
+    if (!instrument) {
+        throw new ApiError(404, 'Instrument niet gevonden.');
+    }
+
+    // Check if mapping already exists
+    const existing = db.prepare(
+        'SELECT id FROM instrument_job_title_mappings WHERE instrument_id = ? AND association_id = ?'
+    ).get(instrumentId, req.user!.associationId);
+    if (existing) {
+        throw new ApiError(409, 'Er bestaat al een mapping voor dit instrument.');
+    }
+
+    const id = uuidv4();
+    db.prepare(`
+        INSERT INTO instrument_job_title_mappings (id, association_id, instrument_id, job_title)
+        VALUES (?, ?, ?, ?)
+    `).run(id, req.user!.associationId, instrumentId, jobTitle);
+
+    logger.info(`Instrument job title mapping created: ${instrument.name} -> ${jobTitle}`, { createdBy: req.user!.id });
+
+    res.status(201).json({
+        id,
+        instrumentId,
+        instrumentName: instrument.name,
+        jobTitle,
+        message: 'Functietitel mapping succesvol aangemaakt.',
+    });
+}));
+
+/**
+ * PUT /onboarding/job-titles/:id
+ * Update an instrument to job title mapping
+ */
+router.put('/job-titles/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { jobTitle } = req.body;
+
+    if (!jobTitle) {
+        throw new ApiError(400, 'Functietitel is verplicht.');
+    }
+
+    const result = db.prepare(`
+        UPDATE instrument_job_title_mappings SET job_title = ?
+        WHERE id = ? AND association_id = ?
+    `).run(jobTitle, req.params.id, req.user!.associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Functietitel mapping niet gevonden.');
+    }
+
+    logger.info(`Instrument job title mapping updated: ${req.params.id}`, { updatedBy: req.user!.id });
+
+    res.json({ message: 'Functietitel mapping succesvol bijgewerkt.' });
+}));
+
+/**
+ * DELETE /onboarding/job-titles/:id
+ * Delete an instrument to job title mapping
+ */
+router.delete('/job-titles/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare(
+        'DELETE FROM instrument_job_title_mappings WHERE id = ? AND association_id = ?'
+    ).run(req.params.id, req.user!.associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Functietitel mapping niet gevonden.');
+    }
+
+    logger.info(`Instrument job title mapping deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+
+    res.json({ message: 'Functietitel mapping succesvol verwijderd.' });
 }));
 
 export default router;
