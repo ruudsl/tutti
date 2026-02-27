@@ -286,14 +286,24 @@ async function addUserToM365Groups(accessToken: string, userId: string, groupNam
 
             if (addResponse.ok || addResponse.status === 204) {
                 added.push(groupName);
-                logger.info(`User ${userId} added to group ${groupName}`);
-            } else if (addResponse.status === 400) {
-                // User might already be a member
-                added.push(groupName);
+                logger.info(`User ${userId} added to group ${groupName}`, { groupId, status: addResponse.status });
             } else {
-                const errorData = await addResponse.json() as { error?: { message?: string } };
-                logger.warn(`Failed to add user to group ${groupName}`, { error: errorData.error?.message });
-                failed.push(groupName);
+                const errorText = await addResponse.text();
+                let errorData: { error?: { code?: string; message?: string } } = {};
+                try { errorData = JSON.parse(errorText); } catch { /* ignore */ }
+
+                // Status 400 with "already exists" means user is already a member
+                if (addResponse.status === 400 && errorText.includes('already exist')) {
+                    added.push(groupName);
+                    logger.info(`User ${userId} already member of group ${groupName}`);
+                } else {
+                    logger.warn(`Failed to add user to group ${groupName}`, {
+                        status: addResponse.status,
+                        code: errorData.error?.code,
+                        error: errorData.error?.message || errorText.slice(0, 200)
+                    });
+                    failed.push(groupName);
+                }
             }
         } catch (err) {
             logger.error(`Error adding user to group ${groupName}`, { error: err });
