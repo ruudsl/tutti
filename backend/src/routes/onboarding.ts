@@ -30,6 +30,44 @@ const upload = multer({
 
 const router = Router();
 
+/**
+ * Generate a password that meets M365 complexity requirements:
+ * - Minimum 12 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one digit
+ * - At least one special character
+ */
+function generateM365Password(): string {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const digits = '0123456789';
+    const special = '!@#$%&*';
+
+    // Ensure at least one character from each category
+    const required = [
+        uppercase[crypto.randomInt(uppercase.length)],
+        lowercase[crypto.randomInt(lowercase.length)],
+        digits[crypto.randomInt(digits.length)],
+        special[crypto.randomInt(special.length)],
+    ];
+
+    // Fill remaining characters from all categories
+    const allChars = uppercase + lowercase + digits + special;
+    const remaining = Array.from({ length: 8 }, () =>
+        allChars[crypto.randomInt(allChars.length)]
+    );
+
+    // Shuffle all characters together
+    const password = [...required, ...remaining];
+    for (let i = password.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(i + 1);
+        [password[i], password[j]] = [password[j], password[i]];
+    }
+
+    return password.join('');
+}
+
 interface MicrosoftConfig {
     microsoft_client_id: string | null;
     microsoft_client_secret: string | null;
@@ -624,7 +662,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
     }
 
     const userId = uuidv4();
-    const tempPassword = m365Password || crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '');
+    const tempPassword = m365Password || generateM365Password();
     const passwordHash = bcrypt.hashSync(tempPassword, 10);
     let microsoftId: string | null = null;
     let m365Created = false;
