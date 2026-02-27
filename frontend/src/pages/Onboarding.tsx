@@ -18,6 +18,7 @@ import {
   createInstrumentJobTitleMapping,
   updateInstrumentJobTitleMapping,
   deleteInstrumentJobTitleMapping,
+  retryEmailForwarding,
   type OnboardingResponse,
   type InactiveMember,
   type M365GroupMapping,
@@ -179,6 +180,23 @@ export default function Onboarding() {
     },
     onError: (error: any) => {
       showError(error.response?.data?.error || t('onboarding.errorReactivating'));
+    },
+  });
+
+  const retryEmailForwardingMutation = useMutation({
+    mutationFn: retryEmailForwarding,
+    onSuccess: (result) => {
+      showSuccess(result.message);
+      // Update the onboarding result to reflect the successful forwarding
+      if (onboardingResult) {
+        setOnboardingResult({
+          ...onboardingResult,
+          emailForwardingSet: true,
+        });
+      }
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('onboarding.emailForwardingRetryFailed'));
     },
   });
 
@@ -618,6 +636,31 @@ export default function Onboarding() {
                         ))}
                       </ol>
                     </div>
+
+                    {/* Retry email forwarding button when it wasn't set up */}
+                    {onboardingResult.m365Created && onboardingResult.licenseAssigned && !onboardingResult.emailForwardingSet && (
+                      <div
+                        style={{
+                          background: 'var(--warning-bg, #fff3cd)',
+                          border: '1px solid var(--warning)',
+                          borderRadius: '0.5rem',
+                          padding: '1rem',
+                          marginBottom: '1rem',
+                        }}
+                      >
+                        <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{t('onboarding.emailForwardingPending')}</h4>
+                        <p style={{ margin: 0, marginBottom: '0.75rem' }}>{t('onboarding.emailForwardingPendingDesc')}</p>
+                        <button
+                          className="btn btn-warning btn-sm"
+                          onClick={() => retryEmailForwardingMutation.mutate(onboardingResult.userId)}
+                          disabled={retryEmailForwardingMutation.isPending}
+                        >
+                          {retryEmailForwardingMutation.isPending
+                            ? t('onboarding.retryingEmailForwarding')
+                            : t('onboarding.retryEmailForwarding')}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
 

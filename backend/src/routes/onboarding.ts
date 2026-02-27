@@ -262,33 +262,25 @@ async function addUserToM365Groups(accessToken: string, userId: string, groupNam
 /**
  * Set up email forwarding to private email address
  */
-async function setupEmailForwarding(accessToken: string, userId: string, forwardingAddress: string): Promise<boolean> {
-    try {
-        // Configure mailbox forwarding using Exchange Online settings
-        // Note: This requires Exchange Online PowerShell or specific Graph permissions
-        // For now, we'll set the otherMails property and document manual forwarding setup
+/**
+ * Helper function to wait for a specified time
+ */
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-        const updateResponse = await fetch(
-            `https://graph.microsoft.com/v1.0/users/${userId}`,
-            {
-                method: 'PATCH',
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    otherMails: [forwardingAddress],
-                }),
-            }
-        );
-
-        if (!updateResponse.ok) {
-            const errorData = await updateResponse.json() as { error?: { message?: string } };
-            logger.warn('Failed to set otherMails', { error: errorData.error?.message });
-            return false;
-        }
-
-        // Try to set up inbox rule for forwarding (requires Mail.ReadWrite permission)
+/**
+ * Try to create an inbox forwarding rule with retry logic
+ * The mailbox may not be immediately available after user creation
+ */
+async function createForwardingRuleWithRetry(
+    accessToken: string,
+    userId: string,
+    forwardingAddress: string,
+    maxRetries: number = 5,
+    initialDelayMs: number = 3000
+): Promise<boolean> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const ruleResponse = await fetch(
                 `https://graph.microsoft.com/v1.0/users/${userId}/mailFolders/inbox/messageRules`,
@@ -316,17 +308,84 @@ async function setupEmailForwarding(accessToken: string, userId: string, forward
             );
 
             if (ruleResponse.ok) {
-                logger.info(`Email forwarding rule created for user ${userId} to ${forwardingAddress}`);
-                return true;
-            } else {
-                // Rule creation might fail due to permissions, but otherMails was set
-                logger.warn('Could not create forwarding rule, but otherMails was set');
+                logger.info(`Email forwarding rule created for user ${userId} to ${forwardingAddress} (attempt ${attempt})`);
                 return true;
             }
-        } catch (ruleErr) {
-            logger.warn('Could not create forwarding rule', { error: ruleErr });
-            return true; // otherMails was still set successfully
+
+            const errorData = await ruleResponse.json() as { error?: { code?: string; message?: string } };
+            const errorCode = errorData.error?.code;
+            const errorMessage = errorData.error?.message;
+
+            // Check if it's a mailbox not ready error - these are worth retrying
+            const isMailboxNotReady =
+                errorCode === 'MailboxNotEnabledForRESTAPI' ||
+                errorCode === 'ResourceNotFound' ||
+                errorMessage?.includes('mailbox') ||
+                errorMessage?.includes('Mailbox') ||
+                ruleResponse.status === 404;
+
+            if (isMailboxNotReady && attempt < maxRetries) {
+                const delay = initialDelayMs * Math.pow(2, attempt - 1); // Exponential backoff
+                logger.info(`Mailbox not ready, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                await sleep(delay);
+                continue;
+            }
+
+            // Not a retryable error or max retries reached
+            logger.warn(`Could not create forwarding rule after ${attempt} attempts`, {
+                error: errorMessage,
+                code: errorCode,
+                status: ruleResponse.status
+            });
+            return false;
+        } catch (err) {
+            if (attempt < maxRetries) {
+                const delay = initialDelayMs * Math.pow(2, attempt - 1);
+                logger.warn(`Error creating forwarding rule, retrying in ${delay}ms`, { error: err });
+                await sleep(delay);
+                continue;
+            }
+            logger.error('Failed to create forwarding rule after all retries', { error: err });
+            return false;
         }
+    }
+    return false;
+}
+
+async function setupEmailForwarding(accessToken: string, userId: string, forwardingAddress: string): Promise<boolean> {
+    try {
+        // First set otherMails as a backup/reference
+        const updateResponse = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${userId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    otherMails: [forwardingAddress],
+                }),
+            }
+        );
+
+        if (!updateResponse.ok) {
+            const errorData = await updateResponse.json() as { error?: { message?: string } };
+            logger.warn('Failed to set otherMails', { error: errorData.error?.message });
+            // Continue anyway - the forwarding rule is more important
+        }
+
+        // Try to create the forwarding rule with retry logic
+        // This handles the case where the mailbox is not immediately available
+        const ruleCreated = await createForwardingRuleWithRetry(accessToken, userId, forwardingAddress);
+
+        if (ruleCreated) {
+            return true;
+        }
+
+        // If rule creation failed, return false to indicate forwarding was not set up
+        logger.warn('Email forwarding rule could not be created - mailbox may need more time to provision');
+        return false;
     } catch (err) {
         logger.error('Error setting up email forwarding', { error: err });
         return false;
@@ -751,7 +810,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
             } else if (!licenseAssigned) {
                 m365Status += ` ⚠️ Email forwarding niet ingesteld (mailbox niet beschikbaar zonder licentie).`;
             } else {
-                m365Status += ` ⚠️ Email forwarding kon niet worden ingesteld. Configureer dit handmatig in Exchange admin.`;
+                m365Status += ` ⚠️ Email forwarding kon niet direct worden ingesteld (mailbox wordt nog ingericht). Probeer later opnieuw via ledenlijst.`;
             }
         }
 
@@ -859,6 +918,78 @@ router.get('/tasks/:userId', authenticateToken, requireRole('admin'), asyncHandl
         completedAt: task.completed_at,
         createdAt: task.created_at,
     })));
+}));
+
+/**
+ * POST /onboarding/retry-email-forwarding/:userId
+ * Retry setting up email forwarding for an existing user
+ * This is useful when the mailbox wasn't ready during initial onboarding
+ */
+router.post('/retry-email-forwarding/:userId', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+
+    // Get user with their Microsoft ID and private email
+    const user = db.prepare(`
+        SELECT id, email, first_name, last_name, microsoft_id, private_email
+        FROM users WHERE id = ? AND association_id = ?
+    `).get(userId, req.user!.associationId) as { id: string; email: string; first_name: string; last_name: string; microsoft_id: string | null; private_email: string | null } | undefined;
+
+    if (!user) {
+        throw new ApiError(404, 'Gebruiker niet gevonden.');
+    }
+
+    if (!user.microsoft_id) {
+        throw new ApiError(400, 'Gebruiker heeft geen M365 account.');
+    }
+
+    if (!user.private_email) {
+        throw new ApiError(400, 'Gebruiker heeft geen privé emailadres geconfigureerd.');
+    }
+
+    // Get Microsoft config
+    const msConfig = getMicrosoftConfig(req.user!.associationId);
+    if (!msConfig || !msConfig.microsoft_enabled || !msConfig.microsoft_client_id || !msConfig.microsoft_client_secret || !msConfig.microsoft_tenant_id) {
+        throw new ApiError(400, 'Microsoft integratie is niet geconfigureerd.');
+    }
+
+    // Get access token
+    const accessToken = await getAppAccessToken(msConfig);
+
+    // Try to set up email forwarding with retry
+    const success = await setupEmailForwarding(accessToken, user.microsoft_id, user.private_email);
+
+    if (success) {
+        logger.info(`Email forwarding successfully set up for user ${user.email} to ${user.private_email}`);
+
+        // Log success in onboarding tasks
+        db.prepare(`
+            INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, metadata, completed_at)
+            VALUES (?, ?, ?, 'email_forwarding_retry', 'completed', ?, CURRENT_TIMESTAMP)
+        `).run(
+            uuidv4(),
+            userId,
+            req.user!.associationId,
+            JSON.stringify({ privateEmail: user.private_email })
+        );
+
+        res.json({
+            success: true,
+            message: `Email forwarding naar ${user.private_email} is succesvol ingesteld.`,
+        });
+    } else {
+        // Log failure
+        db.prepare(`
+            INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, error_message)
+            VALUES (?, ?, ?, 'email_forwarding_retry', 'failed', ?)
+        `).run(
+            uuidv4(),
+            userId,
+            req.user!.associationId,
+            'Mailbox is mogelijk nog niet beschikbaar. Probeer het later opnieuw.'
+        );
+
+        throw new ApiError(500, 'Email forwarding kon niet worden ingesteld. De mailbox is mogelijk nog niet volledig ingericht. Probeer het over enkele minuten opnieuw.');
+    }
 }));
 
 // ========================================

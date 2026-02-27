@@ -1941,6 +1941,11 @@ export const getOnboardingTasks = async (userId: string): Promise<OnboardingTask
   return data;
 };
 
+export const retryEmailForwarding = async (userId: string): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.post(`/onboarding/retry-email-forwarding/${userId}`);
+  return data;
+};
+
 export const offboardMember = async (userId: string, removeFromM365?: boolean): Promise<OffboardResponse> => {
   const { data } = await api.post(`/onboarding/offboard/${userId}`, { removeFromM365 });
   return data;
