@@ -241,13 +241,20 @@ async function addUserToM365Groups(accessToken: string, userId: string, groupNam
     for (const groupName of groupNames) {
         try {
             // Search for the group by display name
+            // Note: OData filter values should have single quotes escaped as ''
+            const escapedGroupName = groupName.replace(/'/g, "''");
+            const filterParam = encodeURIComponent(`displayName eq '${escapedGroupName}'`);
             const searchResponse = await fetch(
-                `https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '${encodeURIComponent(groupName)}'`,
+                `https://graph.microsoft.com/v1.0/groups?$filter=${filterParam}`,
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );
 
             if (!searchResponse.ok) {
-                logger.warn(`Could not search for group: ${groupName}`);
+                const errorText = await searchResponse.text();
+                logger.warn(`Could not search for group: ${groupName}`, {
+                    status: searchResponse.status,
+                    error: errorText
+                });
                 failed.push(groupName);
                 continue;
             }
