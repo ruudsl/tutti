@@ -76,9 +76,33 @@ async function getAppAccessToken(msConfig: MicrosoftConfig): Promise<string> {
     return tokenData.access_token;
 }
 
+// Supported M365 license SKU part numbers in order of preference
+// The first available license with available seats will be assigned
+const SUPPORTED_LICENSE_SKUS = [
+    // Microsoft 365 Business licenses
+    'MICROSOFT_365_BUSINESS_BASIC',
+    'O365_BUSINESS_ESSENTIALS',
+    'SMB_BUSINESS_ESSENTIALS',
+    'O365_BUSINESS_PREMIUM',
+    'SMB_BUSINESS_PREMIUM',
+    'SPB', // Microsoft 365 Business Premium
+    // Microsoft 365 Enterprise licenses
+    'ENTERPRISEPACK', // Office 365 E3
+    'ENTERPRISEPREMIUM', // Office 365 E5
+    'SPE_E3', // Microsoft 365 E3
+    'SPE_E5', // Microsoft 365 E5
+    'ENTERPRISEPREMIUM_NOPSTNCONF', // Office 365 E5 without Audio Conferencing
+    // Microsoft 365 F licenses (Frontline)
+    'SPE_F1', // Microsoft 365 F3
+    'DESKLESSPACK', // Office 365 F3
+    // Exchange Online standalone
+    'EXCHANGESTANDARD', // Exchange Online (Plan 1)
+    'EXCHANGEENTERPRISE', // Exchange Online (Plan 2)
+];
+
 /**
  * Assign a license to a user in M365
- * Uses the Microsoft 365 Business Basic SKU by default
+ * Searches for any supported license SKU with available seats
  */
 async function assignM365License(accessToken: string, userId: string): Promise<boolean> {
     try {
@@ -95,21 +119,40 @@ async function assignM365License(accessToken: string, userId: string): Promise<b
 
         const skuData = await skuResponse.json() as { value: { skuId: string; skuPartNumber: string; consumedUnits: number; prepaidUnits: { enabled: number } }[] };
 
-        // Look for Microsoft 365 Business Basic (O365_BUSINESS_ESSENTIALS or SMB_BUSINESS_ESSENTIALS)
-        const businessBasicSku = skuData.value.find(sku =>
-            sku.skuPartNumber === 'O365_BUSINESS_ESSENTIALS' ||
-            sku.skuPartNumber === 'SMB_BUSINESS_ESSENTIALS' ||
-            sku.skuPartNumber === 'MICROSOFT_365_BUSINESS_BASIC'
-        );
+        // Log all available SKUs for debugging
+        const availableSkus = skuData.value.map(sku => ({
+            partNumber: sku.skuPartNumber,
+            available: sku.prepaidUnits.enabled - sku.consumedUnits,
+            total: sku.prepaidUnits.enabled,
+        }));
+        logger.info('Available M365 SKUs in tenant', { skus: availableSkus });
 
-        if (!businessBasicSku) {
-            logger.warn('Microsoft 365 Business Basic license not found in tenant');
-            return false;
+        // Find a supported license with available seats (in order of preference)
+        let selectedSku: { skuId: string; skuPartNumber: string; consumedUnits: number; prepaidUnits: { enabled: number } } | undefined;
+
+        for (const supportedSku of SUPPORTED_LICENSE_SKUS) {
+            const sku = skuData.value.find(s => s.skuPartNumber === supportedSku);
+            if (sku && sku.consumedUnits < sku.prepaidUnits.enabled) {
+                selectedSku = sku;
+                break;
+            }
         }
 
-        // Check if licenses are available
-        if (businessBasicSku.consumedUnits >= businessBasicSku.prepaidUnits.enabled) {
-            logger.warn('No available Microsoft 365 Business Basic licenses');
+        if (!selectedSku) {
+            // Log which SKUs were found but had no available seats
+            const foundButNoSeats = skuData.value
+                .filter(s => SUPPORTED_LICENSE_SKUS.includes(s.skuPartNumber))
+                .filter(s => s.consumedUnits >= s.prepaidUnits.enabled)
+                .map(s => s.skuPartNumber);
+
+            if (foundButNoSeats.length > 0) {
+                logger.warn('Found M365 licenses but no seats available', { skus: foundButNoSeats });
+            } else {
+                logger.warn('No supported M365 license found in tenant', {
+                    availableInTenant: skuData.value.map(s => s.skuPartNumber),
+                    supportedSkus: SUPPORTED_LICENSE_SKUS,
+                });
+            }
             return false;
         }
 
@@ -123,7 +166,7 @@ async function assignM365License(accessToken: string, userId: string): Promise<b
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    addLicenses: [{ skuId: businessBasicSku.skuId }],
+                    addLicenses: [{ skuId: selectedSku.skuId }],
                     removeLicenses: [],
                 }),
             }
@@ -131,11 +174,18 @@ async function assignM365License(accessToken: string, userId: string): Promise<b
 
         if (!assignResponse.ok) {
             const errorData = await assignResponse.json() as { error?: { message?: string } };
-            logger.warn('Failed to assign license', { error: errorData.error?.message });
+            logger.warn('Failed to assign license', {
+                error: errorData.error?.message,
+                skuPartNumber: selectedSku.skuPartNumber,
+                userId,
+            });
             return false;
         }
 
-        logger.info(`License assigned to user ${userId}`, { skuPartNumber: businessBasicSku.skuPartNumber });
+        logger.info(`License assigned to user ${userId}`, {
+            skuPartNumber: selectedSku.skuPartNumber,
+            availableAfter: selectedSku.prepaidUnits.enabled - selectedSku.consumedUnits - 1,
+        });
         return true;
     } catch (err) {
         logger.error('Error assigning license', { error: err });
@@ -319,11 +369,33 @@ async function uploadProfilePhotoToM365(accessToken: string, userId: string, pho
  */
 function getJobTitleForInstrument(instrumentId: string, associationId: string): string | null {
     const mapping = db.prepare(`
-        SELECT job_title FROM instrument_job_title_mappings
-        WHERE instrument_id = ? AND association_id = ?
-    `).get(instrumentId, associationId) as { job_title: string } | undefined;
+        SELECT m.job_title, i.name as instrument_name
+        FROM instrument_job_title_mappings m
+        JOIN instruments i ON i.id = m.instrument_id
+        WHERE m.instrument_id = ? AND m.association_id = ?
+    `).get(instrumentId, associationId) as { job_title: string; instrument_name: string } | undefined;
 
-    return mapping?.job_title || null;
+    if (mapping?.job_title) {
+        logger.info(`Job title mapping found for instrument`, {
+            instrumentId,
+            instrumentName: mapping.instrument_name,
+            jobTitle: mapping.job_title,
+        });
+        return mapping.job_title;
+    }
+
+    // Get instrument name for logging
+    const instrument = db.prepare('SELECT name FROM instruments WHERE id = ?')
+        .get(instrumentId) as { name: string } | undefined;
+
+    logger.warn('No job title mapping found for instrument', {
+        instrumentId,
+        instrumentName: instrument?.name || 'unknown',
+        associationId,
+        hint: 'Configureer een job title mapping in Instellingen → M365 Integratie → Functietitel Mappings',
+    });
+
+    return null;
 }
 
 /**
@@ -434,6 +506,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
     let m365Created = false;
     let m365Error: string | null = null;
     let licenseAssigned = false;
+    let jobTitleSet: string | null = null;
     let groupsAdded: string[] = [];
     let groupsFailed: string[] = [];
     let emailForwardingSet = false;
@@ -517,6 +590,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
                     const userData = await createResponse.json() as { id: string };
                     microsoftId = userData.id;
                     m365Created = true;
+                    jobTitleSet = jobTitle; // Track if job title was set
                     logger.info(`M365 user created: ${upn}`, { microsoftId, jobTitle, department, createdBy: req.user!.id });
 
                     // Assign license
@@ -646,18 +720,40 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
 
     if (m365Created) {
         let m365Status = 'Het M365 account is aangemaakt.';
+
+        // License status
         if (licenseAssigned) {
-            m365Status += ' Microsoft 365 Business Basic licentie is toegewezen.';
+            m365Status += ' Licentie is toegewezen.';
+        } else {
+            m365Status += ' ⚠️ WAARSCHUWING: Licentie kon NIET worden toegewezen. Controleer of er beschikbare licenties zijn in het Microsoft 365 admin center.';
         }
+
+        // Job title status
+        if (jobTitleSet) {
+            m365Status += ` Functietitel: "${jobTitleSet}".`;
+        } else if (instrumentIds.length > 0) {
+            m365Status += ' ⚠️ Functietitel niet ingesteld (geen mapping gevonden voor instrument). Configureer dit in Instellingen → M365 Integratie.';
+        }
+
+        // Groups status
         if (groupsAdded.length > 0) {
             m365Status += ` Toegevoegd aan groepen: ${groupsAdded.join(', ')}.`;
         }
         if (groupsFailed.length > 0) {
             m365Status += ` Kon niet toevoegen aan: ${groupsFailed.join(', ')}.`;
         }
-        if (emailForwardingSet && privateEmail) {
-            m365Status += ` Email forwarding naar ${privateEmail} ingesteld.`;
+
+        // Email forwarding status
+        if (privateEmail) {
+            if (emailForwardingSet) {
+                m365Status += ` Email forwarding naar ${privateEmail} ingesteld.`;
+            } else if (!licenseAssigned) {
+                m365Status += ` ⚠️ Email forwarding niet ingesteld (mailbox niet beschikbaar zonder licentie).`;
+            } else {
+                m365Status += ` ⚠️ Email forwarding kon niet worden ingesteld. Configureer dit handmatig in Exchange admin.`;
+            }
         }
+
         if (photoUploaded) {
             m365Status += ' Profielfoto is geüpload.';
         }
@@ -681,6 +777,7 @@ router.post('/member', authenticateToken, requireRole('admin'), upload.single('p
         m365Created,
         m365Error,
         licenseAssigned,
+        jobTitleSet,
         groupsAdded,
         groupsFailed,
         emailForwardingSet,
