@@ -80,6 +80,7 @@ import HealthDashboard from './pages/HealthDashboard';
 // Ticketing
 import MyTickets from './pages/MyTickets';
 import TicketScanner from './pages/TicketScanner';
+import PublicTicketSale from './pages/PublicTicketSale';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
@@ -140,6 +141,8 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      {/* Public ticket sale page - accessible without login */}
+      <Route path="/tickets/:concertId" element={<PublicTicketSale />} />
       <Route
         path="/"
         element={

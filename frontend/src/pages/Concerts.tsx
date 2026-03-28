@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useConcerts,
   useConcert,
@@ -26,7 +27,10 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { AddToCalendarButton } from '../components/CalendarSync';
-import type { Concert } from '../types';
+import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType } from '../api';
+import { showSuccess, showError } from '../utils/toast';
+import { getErrorMessage } from '../utils/errors';
+import type { Concert, TicketType } from '../types';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -84,6 +88,22 @@ export default function Concerts() {
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
+  // Ticket management state
+  const [showAddTicketTypeModal, setShowAddTicketTypeModal] = useState(false);
+  const [editingTicketType, setEditingTicketType] = useState<TicketType | null>(null);
+  const [deletingTicketType, setDeletingTicketType] = useState<TicketType | null>(null);
+  const [ticketTypeFormData, setTicketTypeFormData] = useState({
+    name: '',
+    price: '',
+    quantity: '',
+    description: '',
+    maxPerOrder: '10',
+    saleStart: '',
+    saleEnd: '',
+  });
+
+  const queryClient = useQueryClient();
+
   // Data fetching
   const { data: concertsData, isLoading } = useConcerts({
     search: search || undefined,
@@ -97,6 +117,48 @@ export default function Concerts() {
   const { data: users = [] } = useUsers();
   const { data: musicTitles = [] } = useMusicTitles();
   const { data: pieceHistoryData } = usePieceHistory(searchTitle);
+
+  // Ticket data for the viewing concert
+  const { data: ticketData, refetch: refetchTickets } = useQuery({
+    queryKey: ['concert-tickets', viewingConcert],
+    queryFn: () => getConcertTickets(viewingConcert!),
+    enabled: !!viewingConcert,
+  });
+
+  // Ticket mutations
+  const createTicketTypeMutation = useMutation({
+    mutationFn: (data: { name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string }) =>
+      createTicketType(viewingConcert!, data),
+    onSuccess: () => {
+      showSuccess(t('tickets.ticketTypeCreated'));
+      refetchTickets();
+      setShowAddTicketTypeModal(false);
+      resetTicketTypeForm();
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const updateTicketTypeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<{ name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string }> }) =>
+      updateTicketType(id, data),
+    onSuccess: () => {
+      showSuccess(t('tickets.ticketTypeUpdated'));
+      refetchTickets();
+      setEditingTicketType(null);
+      resetTicketTypeForm();
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const deleteTicketTypeMutation = useMutation({
+    mutationFn: (id: string) => deleteTicketType(id),
+    onSuccess: () => {
+      showSuccess(t('tickets.ticketTypeDeleted'));
+      refetchTickets();
+      setDeletingTicketType(null);
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
 
   // Mutations
   const createMutation = useCreateConcert();
@@ -125,6 +187,71 @@ export default function Concerts() {
       description: '',
       notes: '',
     });
+  };
+
+  const resetTicketTypeForm = () => {
+    setTicketTypeFormData({
+      name: '',
+      price: '',
+      quantity: '',
+      description: '',
+      maxPerOrder: '10',
+      saleStart: '',
+      saleEnd: '',
+    });
+  };
+
+  const handleCreateTicketType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    createTicketTypeMutation.mutate({
+      name: ticketTypeFormData.name,
+      price: parseFloat(ticketTypeFormData.price),
+      quantity: parseInt(ticketTypeFormData.quantity, 10),
+      description: ticketTypeFormData.description || undefined,
+      maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
+      saleStart: ticketTypeFormData.saleStart || undefined,
+      saleEnd: ticketTypeFormData.saleEnd || undefined,
+    });
+  };
+
+  const handleUpdateTicketType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTicketType) return;
+    updateTicketTypeMutation.mutate({
+      id: editingTicketType.id,
+      data: {
+        name: ticketTypeFormData.name,
+        price: parseFloat(ticketTypeFormData.price),
+        quantity: parseInt(ticketTypeFormData.quantity, 10),
+        description: ticketTypeFormData.description || undefined,
+        maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
+        saleStart: ticketTypeFormData.saleStart || undefined,
+        saleEnd: ticketTypeFormData.saleEnd || undefined,
+      },
+    });
+  };
+
+  const openEditTicketTypeModal = (ticketType: TicketType) => {
+    setEditingTicketType(ticketType);
+    setTicketTypeFormData({
+      name: ticketType.name,
+      price: ticketType.price.toString(),
+      quantity: ticketType.quantity.toString(),
+      description: ticketType.description || '',
+      maxPerOrder: ticketType.maxPerOrder.toString(),
+      saleStart: ticketType.saleStart?.split('T')[0] || '',
+      saleEnd: ticketType.saleEnd?.split('T')[0] || '',
+    });
+  };
+
+  const getTicketSaleUrl = (concertId: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/tickets/${concertId}`;
+  };
+
+  const copyTicketUrl = (concertId: string) => {
+    navigator.clipboard.writeText(getTicketSaleUrl(concertId));
+    showSuccess(t('tickets.urlCopied'));
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -665,6 +792,85 @@ export default function Concerts() {
             <p style={{ color: '#666' }}>{t('concerts.noMedia')}</p>
           )}
 
+          {/* Tickets Section */}
+          <div className="flex justify-between items-center mb-2">
+            <h4 style={{ margin: 0 }}>{t('tickets.title')}</h4>
+            <div className="flex gap-2">
+              {ticketData?.ticketTypes && ticketData.ticketTypes.length > 0 && (
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => copyTicketUrl(viewingConcert)}
+                  title={t('tickets.copyUrl')}
+                >
+                  {t('tickets.copyUrl')}
+                </button>
+              )}
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAddTicketTypeModal(true)}>
+                + {t('tickets.addTicketType')}
+              </button>
+            </div>
+          </div>
+          {ticketData?.ticketTypes && ticketData.ticketTypes.length > 0 && (
+            <div className="card mb-3" style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.75rem' }}>
+              <small style={{ color: 'var(--text-muted)' }}>{t('tickets.publicUrl')}:</small>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <code style={{ fontSize: '0.8rem', wordBreak: 'break-all' }}>{getTicketSaleUrl(viewingConcert)}</code>
+              </div>
+            </div>
+          )}
+          {ticketData?.ticketTypes && ticketData.ticketTypes.length > 0 ? (
+            <table className="table mb-3">
+              <thead>
+                <tr>
+                  <th>{t('common.name')}</th>
+                  <th>{t('tickets.price')}</th>
+                  <th>{t('tickets.available')}</th>
+                  <th>{t('tickets.status')}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {ticketData.ticketTypes.map((tt) => (
+                  <tr key={tt.id}>
+                    <td>
+                      <strong>{tt.name}</strong>
+                      {tt.description && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{tt.description}</div>}
+                    </td>
+                    <td>EUR {tt.price.toFixed(2)}</td>
+                    <td>{tt.available} / {tt.quantity}</td>
+                    <td>
+                      {tt.available === 0 ? (
+                        <span className="badge badge-danger">{t('tickets.soldOut')}</span>
+                      ) : tt.onSale ? (
+                        <span className="badge badge-success">{t('tickets.onSale')}</span>
+                      ) : (
+                        <span className="badge badge-warning">{t('tickets.notOnSale')}</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="flex gap-1">
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => openEditTicketTypeModal(tt)}
+                        >
+                          ✏
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => setDeletingTicketType(tt)}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p style={{ color: '#666', marginBottom: '1rem' }}>{t('tickets.noTicketTypes')}</p>
+          )}
+
           {/* Attendance Section */}
           <div className="flex justify-between items-center mb-2">
             <h4 style={{ margin: 0 }}>{t('concerts.attendance')}</h4>
@@ -897,6 +1103,111 @@ export default function Concerts() {
           onConfirm={handleDelete}
           onCancel={() => setDeletingConcert(null)}
           isLoading={deleteMutation.isPending}
+          variant="danger"
+        />
+      )}
+
+      {/* Add/Edit Ticket Type Modal */}
+      {(showAddTicketTypeModal || editingTicketType) && (
+        <FormModal
+          title={editingTicketType ? t('tickets.editTicketType') : t('tickets.addTicketType')}
+          onClose={() => {
+            setShowAddTicketTypeModal(false);
+            setEditingTicketType(null);
+            resetTicketTypeForm();
+          }}
+          onSubmit={editingTicketType ? handleUpdateTicketType : handleCreateTicketType}
+          isSubmitting={createTicketTypeMutation.isPending || updateTicketTypeMutation.isPending}
+        >
+          <div className="form-group">
+            <label className="form-label">{t('common.name')} *</label>
+            <input
+              type="text"
+              className="form-control"
+              value={ticketTypeFormData.name}
+              onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, name: e.target.value })}
+              placeholder={t('tickets.ticketTypePlaceholder')}
+              required
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('tickets.price')} (EUR) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-control"
+                value={ticketTypeFormData.price}
+                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, price: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('tickets.quantity')} *</label>
+              <input
+                type="number"
+                min="1"
+                className="form-control"
+                value={ticketTypeFormData.quantity}
+                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, quantity: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('common.description')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={ticketTypeFormData.description}
+              onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, description: e.target.value })}
+              placeholder={t('tickets.ticketTypeDescPlaceholder')}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('tickets.maxPerOrder')}</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              className="form-control"
+              value={ticketTypeFormData.maxPerOrder}
+              onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, maxPerOrder: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('tickets.saleStart')}</label>
+              <input
+                type="datetime-local"
+                className="form-control"
+                value={ticketTypeFormData.saleStart}
+                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, saleStart: e.target.value })}
+              />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">{t('tickets.saleEnd')}</label>
+              <input
+                type="datetime-local"
+                className="form-control"
+                value={ticketTypeFormData.saleEnd}
+                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, saleEnd: e.target.value })}
+              />
+            </div>
+          </div>
+        </FormModal>
+      )}
+
+      {/* Delete Ticket Type Confirmation */}
+      {deletingTicketType && (
+        <ConfirmDialog
+          title={t('common.delete')}
+          message={t('tickets.deleteTicketTypeConfirm', { name: deletingTicketType.name })}
+          confirmLabel={t('common.delete')}
+          onConfirm={() => deleteTicketTypeMutation.mutate(deletingTicketType.id)}
+          onCancel={() => setDeletingTicketType(null)}
+          isLoading={deleteTicketTypeMutation.isPending}
           variant="danger"
         />
       )}
