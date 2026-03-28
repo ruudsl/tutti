@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
+import { useEffect, lazy, Suspense, useState, useCallback, ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,21 @@ import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ROLES } from './utils/constants';
 
+// Helper to wrap lazy imports with timeout to prevent infinite loading
+function lazyWithTimeout<T extends ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>,
+  timeout = 15000
+): React.LazyExoticComponent<T> {
+  return lazy(() => {
+    return Promise.race([
+      factory(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Chunk loading timed out. Please refresh the page.')), timeout)
+      ),
+    ]);
+  });
+}
+
 // Core pages - loaded immediately
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -21,67 +36,67 @@ import Dashboard from './pages/Dashboard';
 
 // Lazy loaded pages - code-split for better initial load performance
 // Authentication pages
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const MicrosoftCallback = lazy(() => import('./pages/MicrosoftCallback'));
+const ForgotPassword = lazyWithTimeout(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazyWithTimeout(() => import('./pages/ResetPassword'));
+const MicrosoftCallback = lazyWithTimeout(() => import('./pages/MicrosoftCallback'));
 
 // User pages
-const Profile = lazy(() => import('./pages/Profile'));
-const SessionManagement = lazy(() => import('./pages/SessionManagement'));
-const DataExport = lazy(() => import('./pages/DataExport'));
-const MyMusic = lazy(() => import('./pages/MyMusic'));
-const Tools = lazy(() => import('./pages/Tools'));
-const Issues = lazy(() => import('./pages/Issues'));
+const Profile = lazyWithTimeout(() => import('./pages/Profile'));
+const SessionManagement = lazyWithTimeout(() => import('./pages/SessionManagement'));
+const DataExport = lazyWithTimeout(() => import('./pages/DataExport'));
+const MyMusic = lazyWithTimeout(() => import('./pages/MyMusic'));
+const Tools = lazyWithTimeout(() => import('./pages/Tools'));
+const Issues = lazyWithTimeout(() => import('./pages/Issues'));
 
 // Music management (heavy PDF processing)
-const MusicPieces = lazy(() => import('./pages/MusicPieces'));
-const MusicTitles = lazy(() => import('./pages/MusicTitles'));
-const Upload = lazy(() => import('./pages/Upload'));
-const PdfTools = lazy(() => import('./pages/PdfTools'));
-const MusicListManager = lazy(() => import('./pages/MusicListManager'));
-const ImslpBrowser = lazy(() => import('./pages/ImslpBrowser'));
+const MusicPieces = lazyWithTimeout(() => import('./pages/MusicPieces'));
+const MusicTitles = lazyWithTimeout(() => import('./pages/MusicTitles'));
+const Upload = lazyWithTimeout(() => import('./pages/Upload'));
+const PdfTools = lazyWithTimeout(() => import('./pages/PdfTools'));
+const MusicListManager = lazyWithTimeout(() => import('./pages/MusicListManager'));
+const ImslpBrowser = lazyWithTimeout(() => import('./pages/ImslpBrowser'));
 
 // Reference data management
-const Instruments = lazy(() => import('./pages/Instruments'));
-const Genres = lazy(() => import('./pages/Genres'));
-const Loans = lazy(() => import('./pages/Loans'));
+const Instruments = lazyWithTimeout(() => import('./pages/Instruments'));
+const Genres = lazyWithTimeout(() => import('./pages/Genres'));
+const Loans = lazyWithTimeout(() => import('./pages/Loans'));
 
 // Statistics and reporting (charts)
-const Statistics = lazy(() => import('./pages/Statistics'));
-const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const Statistics = lazyWithTimeout(() => import('./pages/Statistics'));
+const AuditLogs = lazyWithTimeout(() => import('./pages/AuditLogs'));
 
 // Admin pages
-const Users = lazy(() => import('./pages/Users'));
-const Orchestras = lazy(() => import('./pages/Orchestras'));
-const Settings = lazy(() => import('./pages/Settings'));
-const ThemeSettings = lazy(() => import('./pages/ThemeSettings'));
-const Changelog = lazy(() => import('./pages/Changelog'));
-const EntraSync = lazy(() => import('./pages/EntraSync'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Users = lazyWithTimeout(() => import('./pages/Users'));
+const Orchestras = lazyWithTimeout(() => import('./pages/Orchestras'));
+const Settings = lazyWithTimeout(() => import('./pages/Settings'));
+const ThemeSettings = lazyWithTimeout(() => import('./pages/ThemeSettings'));
+const Changelog = lazyWithTimeout(() => import('./pages/Changelog'));
+const EntraSync = lazyWithTimeout(() => import('./pages/EntraSync'));
+const Onboarding = lazyWithTimeout(() => import('./pages/Onboarding'));
 
 // Rehearsals and events
-const Rehearsals = lazy(() => import('./pages/Rehearsals'));
-const Concerts = lazy(() => import('./pages/Concerts'));
+const Rehearsals = lazyWithTimeout(() => import('./pages/Rehearsals'));
+const Concerts = lazyWithTimeout(() => import('./pages/Concerts'));
 
 // Equipment and uniforms
-const Equipment = lazy(() => import('./pages/Equipment'));
-const Uniforms = lazy(() => import('./pages/Uniforms'));
+const Equipment = lazyWithTimeout(() => import('./pages/Equipment'));
+const Uniforms = lazyWithTimeout(() => import('./pages/Uniforms'));
 
 // Seating management
-const Seating = lazy(() => import('./pages/Seating'));
-const VoiceParts = lazy(() => import('./pages/VoiceParts'));
-const Occupancy = lazy(() => import('./pages/Occupancy'));
-const NeighborPreferences = lazy(() => import('./pages/NeighborPreferences'));
+const Seating = lazyWithTimeout(() => import('./pages/Seating'));
+const VoiceParts = lazyWithTimeout(() => import('./pages/VoiceParts'));
+const Occupancy = lazyWithTimeout(() => import('./pages/Occupancy'));
+const NeighborPreferences = lazyWithTimeout(() => import('./pages/NeighborPreferences'));
 
 // Other pages
-const MemberDirectory = lazy(() => import('./pages/MemberDirectory'));
-const UserGuide = lazy(() => import('./pages/UserGuide'));
-const PracticeSchedules = lazy(() => import('./pages/PracticeSchedules'));
-const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
+const MemberDirectory = lazyWithTimeout(() => import('./pages/MemberDirectory'));
+const UserGuide = lazyWithTimeout(() => import('./pages/UserGuide'));
+const PracticeSchedules = lazyWithTimeout(() => import('./pages/PracticeSchedules'));
+const HealthDashboard = lazyWithTimeout(() => import('./pages/HealthDashboard'));
 
 // Ticketing
-const MyTickets = lazy(() => import('./pages/MyTickets'));
-const TicketScanner = lazy(() => import('./pages/TicketScanner'));
+const MyTickets = lazyWithTimeout(() => import('./pages/MyTickets'));
+const TicketScanner = lazyWithTimeout(() => import('./pages/TicketScanner'));
 
 /**
  * Loading fallback for lazy-loaded pages
