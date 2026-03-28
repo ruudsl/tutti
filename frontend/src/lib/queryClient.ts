@@ -8,11 +8,11 @@ export const queryClient = new QueryClient({
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - extended for offline support
       retry: 1,
       refetchOnWindowFocus: false,
-      networkMode: 'offlineFirst', // Try cache first for offline support
+      // Use 'online' mode (default) - service worker handles offline caching
+      // 'offlineFirst' can cause queries to hang on initial page load
     },
     mutations: {
       retry: 0,
-      networkMode: 'offlineFirst',
     },
   },
 });
