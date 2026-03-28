@@ -97,10 +97,15 @@ function PageLoadingFallback() {
 }
 
 /**
- * Wrapper for lazy-loaded page components with Suspense
+ * Wrapper for lazy-loaded page components with Suspense and error handling
+ * ErrorBoundary catches chunk loading failures to prevent infinite spinners
  */
 function LazyPage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>;
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
