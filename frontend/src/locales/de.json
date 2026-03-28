@@ -1759,5 +1759,60 @@
       "processHeapTotalMB": "Prozess Heap Gesamt (MB)",
       "processRssMB": "Prozess RSS (MB)"
     }
+  },
+  "notificationPrefs": {
+    "title": "Benachrichtigungseinstellungen",
+    "description": "Wahlen Sie, wie und wann Sie Benachrichtigungen erhalten mochten.",
+    "loadError": "Benachrichtigungseinstellungen konnten nicht geladen werden",
+    "saveError": "Einstellungen konnten nicht gespeichert werden",
+    "saved": "Benachrichtigungseinstellungen gespeichert",
+    "channels": {
+      "title": "Benachrichtigungskanale",
+      "email": "E-Mail",
+      "push": "Push-Benachrichtigungen",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "notConfigured": "nicht konfiguriert"
+    },
+    "types": {
+      "title": "Benachrichtigungstypen",
+      "newMusic": "Neue Musik hinzugefugt",
+      "rehearsalChanges": "Probenanderungen",
+      "seatingUpdates": "Sitzplatz-Updates",
+      "chatMessages": "Chat-Nachrichten",
+      "practiceReminders": "Ubungserinnerungen",
+      "concertReminders": "Konzerterinnerungen"
+    },
+    "telegram": {
+      "link": "Telegram verknupfen",
+      "linked": "Verknupft",
+      "unlink": "Trennen",
+      "linkError": "Telegram-Link konnte nicht generiert werden",
+      "unlinkConfirm": "Mochten Sie Ihr Telegram-Konto wirklich trennen?",
+      "unlinked": "Telegram-Konto getrennt",
+      "unlinkError": "Telegram-Konto konnte nicht getrennt werden",
+      "clickLink": "Klicken Sie auf die Schaltflache unten, um Telegram zu offnen und Ihr Konto zu verknupfen:",
+      "openTelegram": "Telegram offnen",
+      "codeInfo": "Verknupfungscode",
+      "checkStatus": "Verknupfungsstatus prufen"
+    },
+    "whatsapp": {
+      "link": "WhatsApp verknupfen",
+      "linked": "Verknupft",
+      "unlink": "Trennen",
+      "phoneRequired": "Telefonnummer ist erforderlich",
+      "codeRequired": "Verifizierungscode ist erforderlich",
+      "linkError": "Verifizierungscode konnte nicht gesendet werden",
+      "codeSent": "Verifizierungscode an Ihr WhatsApp gesendet",
+      "enterCode": "Geben Sie den Verifizierungscode ein, der an Ihr WhatsApp gesendet wurde:",
+      "enterPhone": "Geben Sie Ihre Telefonnummer ein (einschliesslich Landervorwahl):",
+      "verify": "Verifizieren",
+      "verified": "WhatsApp-Nummer verifiziert",
+      "verifyError": "Ungultiger oder abgelaufener Verifizierungscode",
+      "sendCode": "Code senden",
+      "unlinkConfirm": "Mochten Sie Ihre WhatsApp-Nummer wirklich trennen?",
+      "unlinked": "WhatsApp-Nummer getrennt",
+      "unlinkError": "WhatsApp-Nummer konnte nicht getrennt werden"
+    }
   }
 }

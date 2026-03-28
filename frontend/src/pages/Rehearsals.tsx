@@ -19,6 +19,7 @@ import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondC
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
+import { AddToCalendarButton } from '../components/CalendarSync';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -419,6 +420,9 @@ export default function Rehearsals() {
                 </>
               )}
             </p>
+          </div>
+          <div>
+            <AddToCalendarButton type="rehearsal" id={selectedRehearsal.id} />
           </div>
         </div>
 

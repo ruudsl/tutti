@@ -428,7 +428,7 @@ export async function exchangeGoogleCode(
         throw new Error(`Google OAuth error: ${error}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { access_token: string; refresh_token: string; expires_in: number };
     const expiresAt = new Date(Date.now() + data.expires_in * 1000);
 
     return {
@@ -464,7 +464,7 @@ export async function refreshGoogleToken(
         throw new Error(`Google token refresh error: ${error}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { access_token: string; expires_in: number };
     const expiresAt = new Date(Date.now() + data.expires_in * 1000);
 
     return {
@@ -523,7 +523,7 @@ export async function createGoogleCalendarEvent(
         throw new Error(`Google Calendar API error: ${error}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { id: string };
     return data.id;
 }
 

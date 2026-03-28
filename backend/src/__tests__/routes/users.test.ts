@@ -52,9 +52,10 @@ describe('Users Routes', () => {
 
             expect(response.status).toBe(200);
             expect(response.body).toHaveProperty('data');
-            expect(response.body).toHaveProperty('total');
-            expect(response.body).toHaveProperty('page');
-            expect(response.body).toHaveProperty('limit');
+            expect(response.body).toHaveProperty('pagination');
+            expect(response.body.pagination).toHaveProperty('total');
+            expect(response.body.pagination).toHaveProperty('page');
+            expect(response.body.pagination).toHaveProperty('limit');
             expect(Array.isArray(response.body.data)).toBe(true);
             expect(response.body.data.length).toBeGreaterThanOrEqual(1);
         });
@@ -89,8 +90,8 @@ describe('Users Routes', () => {
 
             expect(response.status).toBe(200);
             expect(response.body.data.length).toBeLessThanOrEqual(3);
-            expect(response.body.page).toBe(1);
-            expect(response.body.limit).toBe(3);
+            expect(response.body.pagination.page).toBe(1);
+            expect(response.body.pagination.limit).toBe(3);
         });
 
         it('should deny access to non-admin users', async () => {

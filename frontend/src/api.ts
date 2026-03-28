@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -2476,6 +2476,149 @@ export const deleteStreamingLink = async (
   platform: 'spotify' | 'apple' | 'youtube'
 ): Promise<void> => {
   await api.delete(`/streaming/music-titles/${titleId}/links/${platform}`);
+};
+
+// ==================== TICKETING ====================
+
+// Get available ticket types for a concert
+export const getConcertTickets = async (concertId: string): Promise<ConcertTicketInfo> => {
+  const { data } = await api.get(`/concerts/${concertId}/tickets`);
+  return data;
+};
+
+// Create a ticket order
+export const createTicketOrder = async (
+  concertId: string,
+  order: {
+    items: { ticketTypeId: string; quantity: number }[];
+    buyerName: string;
+    buyerEmail: string;
+    buyerPhone?: string;
+    notes?: string;
+  }
+): Promise<{ orderId: string; total: number; expiresAt: string; items: { ticketTypeId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[] }> => {
+  const { data } = await api.post(`/concerts/${concertId}/tickets/order`, order);
+  return data;
+};
+
+// Get order details
+export const getTicketOrder = async (orderId: string): Promise<TicketOrder> => {
+  const { data } = await api.get(`/tickets/orders/${orderId}`);
+  return data;
+};
+
+// Initialize payment for an order
+export const payTicketOrder = async (
+  orderId: string,
+  payment: { method?: string; returnUrl?: string }
+): Promise<{ paymentId: string; checkoutUrl: string }> => {
+  const { data } = await api.post(`/tickets/orders/${orderId}/pay`, payment);
+  return data;
+};
+
+// Get ticket details by code
+export const getTicketByCode = async (code: string): Promise<Ticket> => {
+  const { data } = await api.get(`/tickets/${code}`);
+  return data;
+};
+
+// Validate and scan a ticket
+export const validateTicket = async (
+  code: string,
+  concertId?: string
+): Promise<TicketValidationResult> => {
+  const { data } = await api.post(`/tickets/${code}/validate`, { concertId });
+  return data;
+};
+
+// Get current user's tickets
+export const getMyTickets = async (): Promise<Ticket[]> => {
+  const { data } = await api.get('/tickets/my');
+  return data;
+};
+
+// Admin: Create ticket type
+export const createTicketType = async (
+  concertId: string,
+  ticketType: {
+    name: string;
+    price: number;
+    quantity: number;
+    description?: string;
+    saleStart?: string;
+    saleEnd?: string;
+    maxPerOrder?: number;
+  }
+): Promise<TicketType> => {
+  const { data } = await api.post(`/concerts/${concertId}/ticket-types`, ticketType);
+  return data;
+};
+
+// Admin: Update ticket type
+export const updateTicketType = async (
+  ticketTypeId: string,
+  updates: {
+    name?: string;
+    price?: number;
+    quantity?: number;
+    description?: string;
+    saleStart?: string;
+    saleEnd?: string;
+    maxPerOrder?: number;
+  }
+): Promise<{ success: boolean }> => {
+  const { data } = await api.put(`/ticket-types/${ticketTypeId}`, updates);
+  return data;
+};
+
+// Admin: Delete ticket type
+export const deleteTicketType = async (ticketTypeId: string): Promise<{ success: boolean }> => {
+  const { data } = await api.delete(`/ticket-types/${ticketTypeId}`);
+  return data;
+};
+
+// Admin: Get ticket stats for a concert
+export const getConcertTicketStats = async (concertId: string): Promise<TicketStats> => {
+  const { data } = await api.get(`/concerts/${concertId}/ticket-stats`);
+  return data;
+};
+
+// Admin: Get attendee list
+export const getConcertAttendees = async (concertId: string): Promise<AttendeeExport[]> => {
+  const { data } = await api.get(`/concerts/${concertId}/attendees`);
+  return data;
+};
+
+// Admin: Export attendee list as CSV
+export const exportConcertAttendeesCsv = async (concertId: string): Promise<void> => {
+  const response = await api.get(`/concerts/${concertId}/attendees?format=csv`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `attendees-${concertId}.csv`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
+// Admin: Cancel a ticket
+export const cancelTicket = async (ticketId: string): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.post(`/tickets/${ticketId}/cancel`);
+  return data;
+};
+
+// Admin: Refund an order
+export const refundOrder = async (orderId: string, reason?: string): Promise<{ success: boolean; refundId?: string; message: string }> => {
+  const { data } = await api.post(`/tickets/orders/${orderId}/refund`, { reason });
+  return data;
+};
+
+// Mock payment (development only)
+export const mockPayment = async (orderId: string, action: 'pay' | 'cancel'): Promise<{ success: boolean }> => {
+  const { data } = await api.post(`/tickets/orders/${orderId}/mock-payment`, { action });
+  return data;
 };
 
 export default api;

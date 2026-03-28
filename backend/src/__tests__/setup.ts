@@ -10,6 +10,39 @@ vi.mock('../database/connection', () => {
     return import('./testDb');
 });
 
+// Mock the database utilities to use the test database
+vi.mock('../utils/database', async () => {
+    const testDbModule = await import('./testDb');
+    const testDb = testDbModule.default;
+
+    return {
+        withTransaction: <T>(fn: () => T): T => {
+            const transaction = testDb.transaction(fn);
+            return transaction();
+        },
+        getPaginationParams: (query: any) => {
+            const page = Math.max(1, parseInt(query.page) || 1);
+            const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 25));
+            const offset = (page - 1) * limit;
+            return { offset, limit, page };
+        },
+        createPaginatedResult: <T>(data: T[], total: number, page: number, limit: number) => {
+            const totalPages = Math.ceil(total / limit);
+            return {
+                data,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1,
+                },
+            };
+        },
+    };
+});
+
 // Mock email utility to prevent sending actual emails during tests
 vi.mock('../utils/email', () => ({
     sendPasswordResetEmail: vi.fn().mockResolvedValue(true),

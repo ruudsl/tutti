@@ -25,6 +25,7 @@ import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { AddToCalendarButton } from '../components/CalendarSync';
 import type { Concert } from '../types';
 
 export default function Concerts() {
@@ -578,11 +579,16 @@ export default function Concerts() {
           size="large"
         >
           <div className="mb-3">
-            <p><strong>{t('common.date')}:</strong> {concertDetail.date}</p>
-            <p><strong>{t('concerts.location')}:</strong> {concertDetail.location || '-'}</p>
-            {concertDetail.concertType && (
-              <p><strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}</p>
-            )}
+            <div className="flex justify-between items-start">
+              <div>
+                <p><strong>{t('common.date')}:</strong> {concertDetail.date}</p>
+                <p><strong>{t('concerts.location')}:</strong> {concertDetail.location || '-'}</p>
+                {concertDetail.concertType && (
+                  <p><strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}</p>
+                )}
+              </div>
+              <AddToCalendarButton type="concert" id={concertDetail.id} />
+            </div>
           </div>
 
           {/* Program Section */}

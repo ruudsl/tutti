@@ -377,15 +377,15 @@ describe('Auth Routes', () => {
         });
 
         it('should fail with expired token', async () => {
-            // Create expired token
+            // Create expired token with a date that is definitely in the past
             const expiredToken = 'expired-token-' + Date.now();
-            const expiredAt = new Date();
-            expiredAt.setHours(expiredAt.getHours() - 2);
+            // Use a date string that SQLite will recognize as past
+            const expiredAt = '2020-01-01 00:00:00';
 
             testDb.prepare(
                 `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`
-            ).run('token-id-2', memberUser.id, expiredToken, expiredAt.toISOString());
+            ).run('token-id-2', memberUser.id, expiredToken, expiredAt);
 
             const response = await request(app)
                 .post('/api/auth/reset-password')
@@ -471,13 +471,13 @@ describe('Auth Routes', () => {
 
         it('should return error for expired token', async () => {
             const expiredToken = 'expired-validate-token';
-            const expiredAt = new Date();
-            expiredAt.setHours(expiredAt.getHours() - 2);
+            // Use a date string that SQLite will recognize as past
+            const expiredAt = '2020-01-01 00:00:00';
 
             testDb.prepare(
                 `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`
-            ).run('expired-validate-id', memberUser.id, expiredToken, expiredAt.toISOString());
+            ).run('expired-validate-id', memberUser.id, expiredToken, expiredAt);
 
             const response = await request(app)
                 .get('/api/auth/reset-password/validate')

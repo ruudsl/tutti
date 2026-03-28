@@ -431,6 +431,28 @@
     "musicaInfoComposer": "Componist",
     "musicaInfoPublisher": "Uitgever"
   },
+  "streaming": {
+    "title": "Streaming Links",
+    "editLinks": "Streaming Links bewerken",
+    "manageLinks": "Links beheren",
+    "currentLinks": "Huidige links",
+    "noLinks": "Nog geen streaming links toegevoegd.",
+    "openInSpotify": "Openen in Spotify",
+    "openInAppleMusic": "Openen in Apple Music",
+    "openInYouTubeMusic": "Openen in YouTube Music",
+    "openLink": "Open",
+    "preview": "Voorbeluisteren",
+    "playPreview": "Preview afspelen",
+    "stopPreview": "Preview stoppen",
+    "searchForTrack": "Zoek nummer",
+    "searchPlaceholder": "Zoeken op titel...",
+    "searchError": "Kon niet zoeken naar nummers",
+    "linksSaved": "Streaming links opgeslagen",
+    "saveError": "Kon streaming links niet opslaan",
+    "noServicesConfigured": "Er zijn geen streaming diensten geconfigureerd. Neem contact op met een beheerder om Spotify of Apple Music API-inloggegevens in te stellen.",
+    "manualEntry": "Handmatig invoeren",
+    "youtubeMusicUrlPlaceholder": "YouTube Music URL (optioneel)"
+  },
   "upload": {
     "title": "Muziekstukken uploaden",
     "dropzone": "Sleep bestanden hierheen of klik om te selecteren",
@@ -2422,6 +2444,61 @@
       "notConfigured": "Google Agenda integratie is niet geconfigureerd voor deze vereniging",
       "tokenExchange": "Verbinden met Google Agenda mislukt",
       "unknown": "Er is een fout opgetreden"
+    }
+  },
+  "notificationPrefs": {
+    "title": "Notificatie voorkeuren",
+    "description": "Kies hoe en wanneer je notificaties wilt ontvangen.",
+    "loadError": "Kon notificatie voorkeuren niet laden",
+    "saveError": "Kon voorkeuren niet opslaan",
+    "saved": "Notificatie voorkeuren opgeslagen",
+    "channels": {
+      "title": "Notificatiekanalen",
+      "email": "E-mail",
+      "push": "Push notificaties",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "notConfigured": "niet geconfigureerd"
+    },
+    "types": {
+      "title": "Notificatie types",
+      "newMusic": "Nieuwe muziek toegevoegd",
+      "rehearsalChanges": "Repetitie wijzigingen",
+      "seatingUpdates": "Opstelling updates",
+      "chatMessages": "Chat berichten",
+      "practiceReminders": "Oefenherinneringen",
+      "concertReminders": "Concert herinneringen"
+    },
+    "telegram": {
+      "link": "Telegram koppelen",
+      "linked": "Gekoppeld",
+      "unlink": "Ontkoppelen",
+      "linkError": "Kon geen Telegram link genereren",
+      "unlinkConfirm": "Weet je zeker dat je je Telegram account wilt ontkoppelen?",
+      "unlinked": "Telegram account ontkoppeld",
+      "unlinkError": "Kon Telegram account niet ontkoppelen",
+      "clickLink": "Klik op de knop hieronder om Telegram te openen en je account te koppelen:",
+      "openTelegram": "Open Telegram",
+      "codeInfo": "Koppelcode",
+      "checkStatus": "Controleer koppelstatus"
+    },
+    "whatsapp": {
+      "link": "WhatsApp koppelen",
+      "linked": "Gekoppeld",
+      "unlink": "Ontkoppelen",
+      "phoneRequired": "Telefoonnummer is verplicht",
+      "codeRequired": "Verificatiecode is verplicht",
+      "linkError": "Kon geen verificatiecode versturen",
+      "codeSent": "Verificatiecode verstuurd naar je WhatsApp",
+      "enterCode": "Voer de verificatiecode in die naar je WhatsApp is verstuurd:",
+      "enterPhone": "Voer je telefoonnummer in (inclusief landcode):",
+      "verify": "Verifieer",
+      "verified": "WhatsApp nummer geverifieerd",
+      "verifyError": "Ongeldige of verlopen verificatiecode",
+      "sendCode": "Verstuur code",
+      "unlinkConfirm": "Weet je zeker dat je je WhatsApp nummer wilt ontkoppelen?",
+      "unlinked": "WhatsApp nummer ontkoppeld",
+      "unlinkError": "Kon WhatsApp nummer niet ontkoppelen"
     }
   }
 }

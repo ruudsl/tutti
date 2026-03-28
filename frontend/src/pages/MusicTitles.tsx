@@ -12,6 +12,8 @@ import type { MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { searchSheetMusicWebsites } from '../utils/sheetMusic';
+import { StreamingLinks } from '../components/StreamingLinks';
+import { StreamingLinkEditor } from '../components/StreamingLinkEditor';
 import { ImslpSearch } from '../components/ImslpSearch';
 
 // Format seconds to mm:ss string for form input
@@ -69,6 +71,9 @@ export default function MusicTitles() {
   // IMSLP state
   const [showImslpSearch, setShowImslpSearch] = useState(false);
   const [imslpSearchTitle, setImslpSearchTitle] = useState('');
+
+  // Streaming links state
+  const [showStreamingEditor, setShowStreamingEditor] = useState(false);
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -404,6 +409,30 @@ export default function MusicTitles() {
                     <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
                       {t('titles.searchOnSites')}:
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImslpSearchTitle(editingTitle.title);
+                        setShowImslpSearch(true);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        color: 'inherit',
+                        textDecoration: 'none',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                    >
+                      {t('imslp.findOnImslp')}
+                    </button>
                     {searchSheetMusicWebsites(editingTitle.title).map((site) => (
                       <a
                         key={site.name}
@@ -742,8 +771,61 @@ export default function MusicTitles() {
                 </span>
               </label>
             </div>
+
+            {/* Streaming Links Section */}
+            {editingTitle.id && (
+              <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '0.875rem' }}>{t('streaming.title')}</strong>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setShowStreamingEditor(true)}
+                    style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }}
+                  >
+                    {t('streaming.manageLinks')}
+                  </button>
+                </div>
+                {editingTitle.streamingLinks && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <StreamingLinks links={editingTitle.streamingLinks} compact />
+                  </div>
+                )}
+              </div>
+            )}
           </form>
         </Modal>
+      )}
+
+      {/* Streaming Link Editor Modal */}
+      {showStreamingEditor && editingTitle?.id && (
+        <Modal
+          title={t('streaming.editLinks')}
+          onClose={() => setShowStreamingEditor(false)}
+        >
+          <StreamingLinkEditor
+            titleId={editingTitle.id}
+            titleName={editingTitle.title}
+            composer={editingTitle.arranger}
+            currentLinks={editingTitle.streamingLinks}
+            onClose={() => setShowStreamingEditor(false)}
+            onSave={() => refetch()}
+          />
+        </Modal>
+      )}
+
+      {/* IMSLP Search Modal */}
+      {showImslpSearch && (
+        <ImslpSearch
+          onClose={() => {
+            setShowImslpSearch(false);
+            setImslpSearchTitle('');
+          }}
+          initialQuery={imslpSearchTitle}
+          onImportSuccess={() => {
+            refetch();
+          }}
+        />
       )}
     </div>
   );
@@ -757,10 +839,19 @@ interface TitleRowProps {
 }
 
 function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
+  const { t } = useTranslation();
+
+  const hasStreamingLinks = title.streamingLinks && (
+    title.streamingLinks.spotify_url ||
+    title.streamingLinks.apple_music_url ||
+    title.streamingLinks.youtube_music_url
+  );
+
   const hasDetails = (title.lists && title.lists.length > 0) ||
                      title.youtubeUrl ||
                      title.mp3FilePath ||
                      title.description ||
+                     hasStreamingLinks ||
                      (title.instruments && title.instruments.length > 0);
 
   return (
@@ -854,6 +945,15 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
                   <a href={title.youtubeUrl} target="_blank" rel="noopener noreferrer">
                     {title.youtubeUrl}
                   </a>
+                </div>
+              )}
+
+              {hasStreamingLinks && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <strong>{t('streaming.title')}:</strong>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <StreamingLinks links={title.streamingLinks} />
+                  </div>
                 </div>
               )}
 

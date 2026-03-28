@@ -567,3 +567,123 @@ export interface SeatingChart {
   seats: SeatingChartSeat[];
   totalRows: number;
 }
+
+// ==================== TICKETING SYSTEM ====================
+
+export interface TicketType {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  available: number;
+  description: string | null;
+  maxPerOrder: number;
+  onSale: boolean;
+  saleStart: string | null;
+  saleEnd: string | null;
+}
+
+export interface ConcertTicketInfo {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    endDate: string | null;
+    location: string | null;
+    description: string | null;
+    concertType: string | null;
+  };
+  ticketTypes: TicketType[];
+  paymentMethods: string[];
+}
+
+export interface TicketOrderItem {
+  ticketTypeId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface TicketOrder {
+  id: string;
+  concertId: string;
+  concertName: string;
+  concertDate: string;
+  concertLocation: string | null;
+  total: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded' | 'expired';
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string | null;
+  paymentMethod: string | null;
+  expiresAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  items: TicketOrderItem[];
+  tickets?: Ticket[];
+}
+
+export interface Ticket {
+  id: string;
+  code: string;
+  buyerName: string;
+  status: 'valid' | 'used' | 'cancelled' | 'refunded';
+  seatInfo: string | null;
+  purchaseDate: string;
+  usedAt: string | null;
+  ticketType: string;
+  price?: number;
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    endDate?: string | null;
+    location: string | null;
+  };
+  qrCodeDataUrl?: string;
+}
+
+export interface TicketValidationResult {
+  valid: boolean;
+  status: 'valid' | 'used' | 'cancelled' | 'refunded' | 'not_found' | 'wrong_concert' | 'expired';
+  ticket?: {
+    id: string;
+    code: string;
+    buyerName: string;
+    ticketType: string;
+    concertName: string;
+    concertDate: string;
+    usedAt?: string;
+    seatInfo?: string;
+  };
+  message: string;
+}
+
+export interface TicketStats {
+  concertId: string;
+  concertName: string;
+  totalCapacity: number;
+  totalSold: number;
+  totalRevenue: number;
+  ticketTypes: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    sold: number;
+    available: number;
+    revenue: number;
+  }[];
+}
+
+export interface AttendeeExport {
+  ticketCode: string;
+  buyerName: string;
+  buyerEmail: string;
+  ticketType: string;
+  seatInfo: string | null;
+  status: string;
+  purchaseDate: string;
+  usedAt: string | null;
+}

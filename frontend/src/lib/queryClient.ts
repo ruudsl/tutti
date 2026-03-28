@@ -108,4 +108,11 @@ export const queryKeys = {
 
   // Sessions
   sessions: ['sessions'] as const,
+
+  // Tickets
+  concertTickets: (concertId: string) => ['tickets', 'concert', concertId] as const,
+  ticketOrder: (orderId: string) => ['tickets', 'order', orderId] as const,
+  myTickets: ['tickets', 'my'] as const,
+  ticketStats: (concertId: string) => ['tickets', 'stats', concertId] as const,
+  attendees: (concertId: string) => ['tickets', 'attendees', concertId] as const,
 };

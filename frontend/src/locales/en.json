@@ -439,6 +439,28 @@
     "errorUploadMp3": "Error uploading MP3",
     "errorDeleteMp3": "Error deleting MP3"
   },
+  "streaming": {
+    "title": "Streaming Links",
+    "editLinks": "Edit Streaming Links",
+    "manageLinks": "Manage Links",
+    "currentLinks": "Current Links",
+    "noLinks": "No streaming links added yet.",
+    "openInSpotify": "Open in Spotify",
+    "openInAppleMusic": "Open in Apple Music",
+    "openInYouTubeMusic": "Open in YouTube Music",
+    "openLink": "Open",
+    "preview": "Preview",
+    "playPreview": "Play preview",
+    "stopPreview": "Stop preview",
+    "searchForTrack": "Search for Track",
+    "searchPlaceholder": "Search by title...",
+    "searchError": "Could not search for tracks",
+    "linksSaved": "Streaming links saved",
+    "saveError": "Could not save streaming links",
+    "noServicesConfigured": "No streaming services are configured. Contact an administrator to set up Spotify or Apple Music API credentials.",
+    "manualEntry": "Manual Entry",
+    "youtubeMusicUrlPlaceholder": "YouTube Music URL (optional)"
+  },
   "upload": {
     "title": "Upload Music Pieces",
     "dropzone": "Drop files here or click to select",
@@ -2194,6 +2216,61 @@
       "notConfigured": "Google Calendar integration is not configured for this organization",
       "tokenExchange": "Failed to connect to Google Calendar",
       "unknown": "An error occurred"
+    }
+  },
+  "notificationPrefs": {
+    "title": "Notification Preferences",
+    "description": "Choose how and when you want to receive notifications.",
+    "loadError": "Failed to load notification preferences",
+    "saveError": "Failed to save preferences",
+    "saved": "Notification preferences saved",
+    "channels": {
+      "title": "Notification Channels",
+      "email": "Email",
+      "push": "Push notifications",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "notConfigured": "not configured"
+    },
+    "types": {
+      "title": "Notification Types",
+      "newMusic": "New music added",
+      "rehearsalChanges": "Rehearsal changes",
+      "seatingUpdates": "Seating updates",
+      "chatMessages": "Chat messages",
+      "practiceReminders": "Practice reminders",
+      "concertReminders": "Concert reminders"
+    },
+    "telegram": {
+      "link": "Link Telegram",
+      "linked": "Linked",
+      "unlink": "Unlink",
+      "linkError": "Failed to generate Telegram link",
+      "unlinkConfirm": "Are you sure you want to unlink your Telegram account?",
+      "unlinked": "Telegram account unlinked",
+      "unlinkError": "Failed to unlink Telegram account",
+      "clickLink": "Click the button below to open Telegram and link your account:",
+      "openTelegram": "Open Telegram",
+      "codeInfo": "Link code",
+      "checkStatus": "Check link status"
+    },
+    "whatsapp": {
+      "link": "Link WhatsApp",
+      "linked": "Linked",
+      "unlink": "Unlink",
+      "phoneRequired": "Phone number is required",
+      "codeRequired": "Verification code is required",
+      "linkError": "Failed to send verification code",
+      "codeSent": "Verification code sent to your WhatsApp",
+      "enterCode": "Enter the verification code sent to your WhatsApp:",
+      "enterPhone": "Enter your phone number (including country code):",
+      "verify": "Verify",
+      "verified": "WhatsApp number verified",
+      "verifyError": "Invalid or expired verification code",
+      "sendCode": "Send code",
+      "unlinkConfirm": "Are you sure you want to unlink your WhatsApp number?",
+      "unlinked": "WhatsApp number unlinked",
+      "unlinkError": "Failed to unlink WhatsApp number"
     }
   }
 }
