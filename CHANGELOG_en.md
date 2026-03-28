@@ -2,6 +2,11 @@
 
 All notable changes to this application are documented here.
 
+## [1.8.1] - 2026-03-28
+
+### Fixed
+- **Trust proxy configuration** - Added Express `trust proxy` setting for production environments behind a reverse proxy (e.g., Render, Nginx), enabling express-rate-limit to work correctly with X-Forwarded-For headers
+
 ## [1.8.0] - 2026-02-27
 
 ### Added
