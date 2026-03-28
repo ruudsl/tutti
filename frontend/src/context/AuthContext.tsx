@@ -23,32 +23,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
-  const [isLoading, setIsLoading] = useState(() => {
-    try {
-      // Only show loading if we have a token but no cached user
-      const token = localStorage.getItem('token');
-      const cachedUser = localStorage.getItem('user');
-      return !!(token && !cachedUser);
-    } catch {
-      // If localStorage fails, don't show loading spinner
-      return false;
-    }
-  });
+  // Never show loading spinner on initial render - use cached user or redirect to login
+  const [isLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    // Fallback timeout: if auth check takes too long, stop loading spinner
-    const timeout = setTimeout(() => {
-      if (mounted) {
-        setIsLoading(false);
-      }
-    }, 10000); // 10 second max wait
-
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        // Verify token in background and update user data
+        // Verify token in background and update user data (no loading spinner)
         getProfile()
           .then((freshUser) => {
             if (mounted) {
@@ -70,26 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
               setUser(null);
             }
-          })
-          .finally(() => {
-            if (mounted) {
-              clearTimeout(timeout);
-              setIsLoading(false);
-            }
           });
-      } else {
-        clearTimeout(timeout);
-        setIsLoading(false);
       }
     } catch {
-      // If localStorage read fails, stop loading
-      clearTimeout(timeout);
-      setIsLoading(false);
+      // Ignore localStorage errors
     }
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
     };
   }, []);
 
