@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense, ComponentType } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -13,114 +13,73 @@ import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { ROLES } from './utils/constants';
 
-// Helper to wrap lazy imports with timeout to prevent infinite loading
-function lazyWithTimeout<T extends ComponentType<unknown>>(
-  factory: () => Promise<{ default: T }>,
-  timeout = 15000
-): React.LazyExoticComponent<T> {
-  return lazy(() => {
-    return Promise.race([
-      factory(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Chunk loading timed out. Please refresh the page.')), timeout)
-      ),
-    ]);
-  });
-}
-
-// Core pages - loaded immediately
+// All pages - loaded immediately to avoid lazy loading issues
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import MemberDirectory from './pages/MemberDirectory';
 
-// Lazy loaded pages - code-split for better initial load performance
 // Authentication pages
-const ForgotPassword = lazyWithTimeout(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazyWithTimeout(() => import('./pages/ResetPassword'));
-const MicrosoftCallback = lazyWithTimeout(() => import('./pages/MicrosoftCallback'));
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import MicrosoftCallback from './pages/MicrosoftCallback';
 
 // User pages
-const Profile = lazyWithTimeout(() => import('./pages/Profile'));
-const SessionManagement = lazyWithTimeout(() => import('./pages/SessionManagement'));
-const DataExport = lazyWithTimeout(() => import('./pages/DataExport'));
-const MyMusic = lazyWithTimeout(() => import('./pages/MyMusic'));
-const Tools = lazyWithTimeout(() => import('./pages/Tools'));
-const Issues = lazyWithTimeout(() => import('./pages/Issues'));
+import Profile from './pages/Profile';
+import SessionManagement from './pages/SessionManagement';
+import DataExport from './pages/DataExport';
+import MyMusic from './pages/MyMusic';
+import Tools from './pages/Tools';
+import Issues from './pages/Issues';
 
-// Music management (heavy PDF processing)
-const MusicPieces = lazyWithTimeout(() => import('./pages/MusicPieces'));
-const MusicTitles = lazyWithTimeout(() => import('./pages/MusicTitles'));
-const Upload = lazyWithTimeout(() => import('./pages/Upload'));
-const PdfTools = lazyWithTimeout(() => import('./pages/PdfTools'));
-const MusicListManager = lazyWithTimeout(() => import('./pages/MusicListManager'));
-const ImslpBrowser = lazyWithTimeout(() => import('./pages/ImslpBrowser'));
+// Music management
+import MusicPieces from './pages/MusicPieces';
+import MusicTitles from './pages/MusicTitles';
+import Upload from './pages/Upload';
+import PdfTools from './pages/PdfTools';
+import MusicListManager from './pages/MusicListManager';
+import ImslpBrowser from './pages/ImslpBrowser';
 
 // Reference data management
-const Instruments = lazyWithTimeout(() => import('./pages/Instruments'));
-const Genres = lazyWithTimeout(() => import('./pages/Genres'));
-const Loans = lazyWithTimeout(() => import('./pages/Loans'));
+import Instruments from './pages/Instruments';
+import Genres from './pages/Genres';
+import Loans from './pages/Loans';
 
-// Statistics and reporting (charts)
-const Statistics = lazyWithTimeout(() => import('./pages/Statistics'));
-const AuditLogs = lazyWithTimeout(() => import('./pages/AuditLogs'));
+// Statistics and reporting
+import Statistics from './pages/Statistics';
+import AuditLogs from './pages/AuditLogs';
 
 // Admin pages
-const Users = lazyWithTimeout(() => import('./pages/Users'));
-const Orchestras = lazyWithTimeout(() => import('./pages/Orchestras'));
-const Settings = lazyWithTimeout(() => import('./pages/Settings'));
-const ThemeSettings = lazyWithTimeout(() => import('./pages/ThemeSettings'));
-const Changelog = lazyWithTimeout(() => import('./pages/Changelog'));
-const EntraSync = lazyWithTimeout(() => import('./pages/EntraSync'));
-const Onboarding = lazyWithTimeout(() => import('./pages/Onboarding'));
+import Users from './pages/Users';
+import Orchestras from './pages/Orchestras';
+import Settings from './pages/Settings';
+import ThemeSettings from './pages/ThemeSettings';
+import Changelog from './pages/Changelog';
+import EntraSync from './pages/EntraSync';
+import Onboarding from './pages/Onboarding';
 
 // Rehearsals and events
-const Rehearsals = lazyWithTimeout(() => import('./pages/Rehearsals'));
-const Concerts = lazyWithTimeout(() => import('./pages/Concerts'));
+import Rehearsals from './pages/Rehearsals';
+import Concerts from './pages/Concerts';
 
 // Equipment and uniforms
-const Equipment = lazyWithTimeout(() => import('./pages/Equipment'));
-const Uniforms = lazyWithTimeout(() => import('./pages/Uniforms'));
+import Equipment from './pages/Equipment';
+import Uniforms from './pages/Uniforms';
 
 // Seating management
-const Seating = lazyWithTimeout(() => import('./pages/Seating'));
-const VoiceParts = lazyWithTimeout(() => import('./pages/VoiceParts'));
-const Occupancy = lazyWithTimeout(() => import('./pages/Occupancy'));
-const NeighborPreferences = lazyWithTimeout(() => import('./pages/NeighborPreferences'));
+import Seating from './pages/Seating';
+import VoiceParts from './pages/VoiceParts';
+import Occupancy from './pages/Occupancy';
+import NeighborPreferences from './pages/NeighborPreferences';
 
 // Other pages
-const UserGuide = lazyWithTimeout(() => import('./pages/UserGuide'));
-const PracticeSchedules = lazyWithTimeout(() => import('./pages/PracticeSchedules'));
-const HealthDashboard = lazyWithTimeout(() => import('./pages/HealthDashboard'));
+import MemberDirectory from './pages/MemberDirectory';
+import UserGuide from './pages/UserGuide';
+import PracticeSchedules from './pages/PracticeSchedules';
+import HealthDashboard from './pages/HealthDashboard';
 
 // Ticketing
-const MyTickets = lazyWithTimeout(() => import('./pages/MyTickets'));
-const TicketScanner = lazyWithTimeout(() => import('./pages/TicketScanner'));
-
-/**
- * Loading fallback for lazy-loaded pages
- */
-function PageLoadingFallback() {
-  const { t } = useTranslation();
-  return (
-    <div className="loading" style={{ minHeight: '50vh' }} role="status">
-      <div className="spinner" aria-hidden="true"></div>
-      <span className="sr-only">{t('common.loading')}</span>
-    </div>
-  );
-}
-
-/**
- * Wrapper for lazy-loaded page components with Suspense and error handling
- * ErrorBoundary catches chunk loading failures to prevent infinite spinners
- */
-function LazyPage({ children }: { children: React.ReactNode }) {
-  return (
-    <ErrorBoundary>
-      <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
-    </ErrorBoundary>
-  );
-}
+import MyTickets from './pages/MyTickets';
+import TicketScanner from './pages/TicketScanner';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
@@ -161,7 +120,7 @@ function AppRoutes() {
         path="/forgot-password"
         element={
           <PublicRoute>
-            <LazyPage><ForgotPassword /></LazyPage>
+            <ForgotPassword />
           </PublicRoute>
         }
       />
@@ -169,7 +128,7 @@ function AppRoutes() {
         path="/reset-password"
         element={
           <PublicRoute>
-            <LazyPage><ResetPassword /></LazyPage>
+            <ResetPassword />
           </PublicRoute>
         }
       />
@@ -177,7 +136,7 @@ function AppRoutes() {
         path="/auth/microsoft/callback"
         element={
           <PublicRoute>
-            <LazyPage><MicrosoftCallback /></LazyPage>
+            <MicrosoftCallback />
           </PublicRoute>
         }
       />
@@ -190,17 +149,17 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="profile" element={<LazyPage><Profile /></LazyPage>} />
-        <Route path="sessions" element={<LazyPage><SessionManagement /></LazyPage>} />
-        <Route path="data-export" element={<LazyPage><DataExport /></LazyPage>} />
-        <Route path="my-music" element={<LazyPage><MyMusic /></LazyPage>} />
-        <Route path="tools" element={<LazyPage><Tools /></LazyPage>} />
-        <Route path="issues" element={<LazyPage><Issues /></LazyPage>} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="sessions" element={<SessionManagement />} />
+        <Route path="data-export" element={<DataExport />} />
+        <Route path="my-music" element={<MyMusic />} />
+        <Route path="tools" element={<Tools />} />
+        <Route path="issues" element={<Issues />} />
         <Route
           path="music-pieces"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><MusicPieces /></LazyPage>
+              <MusicPieces />
             </PrivateRoute>
           }
         />
@@ -208,7 +167,7 @@ function AppRoutes() {
           path="titles"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><MusicTitles /></LazyPage>
+              <MusicTitles />
             </PrivateRoute>
           }
         />
@@ -216,7 +175,7 @@ function AppRoutes() {
           path="upload"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Upload /></LazyPage>
+              <Upload />
             </PrivateRoute>
           }
         />
@@ -224,7 +183,7 @@ function AppRoutes() {
           path="pdf-tools"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><PdfTools /></LazyPage>
+              <PdfTools />
             </PrivateRoute>
           }
         />
@@ -232,7 +191,7 @@ function AppRoutes() {
           path="imslp"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><ImslpBrowser /></LazyPage>
+              <ImslpBrowser />
             </PrivateRoute>
           }
         />
@@ -240,7 +199,7 @@ function AppRoutes() {
           path="instruments"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Instruments /></LazyPage>
+              <Instruments />
             </PrivateRoute>
           }
         />
@@ -248,7 +207,7 @@ function AppRoutes() {
           path="genres"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Genres /></LazyPage>
+              <Genres />
             </PrivateRoute>
           }
         />
@@ -256,7 +215,7 @@ function AppRoutes() {
           path="loans"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Loans /></LazyPage>
+              <Loans />
             </PrivateRoute>
           }
         />
@@ -264,7 +223,7 @@ function AppRoutes() {
           path="statistics"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Statistics /></LazyPage>
+              <Statistics />
             </PrivateRoute>
           }
         />
@@ -272,7 +231,7 @@ function AppRoutes() {
           path="users"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><Users /></LazyPage>
+              <Users />
             </PrivateRoute>
           }
         />
@@ -280,7 +239,7 @@ function AppRoutes() {
           path="orchestras"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><Orchestras /></LazyPage>
+              <Orchestras />
             </PrivateRoute>
           }
         />
@@ -288,7 +247,7 @@ function AppRoutes() {
           path="lists"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><MusicListManager /></LazyPage>
+              <MusicListManager />
             </PrivateRoute>
           }
         />
@@ -296,7 +255,7 @@ function AppRoutes() {
           path="lists/:orchestraId/:listId"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><MusicListManager /></LazyPage>
+              <MusicListManager />
             </PrivateRoute>
           }
         />
@@ -304,7 +263,7 @@ function AppRoutes() {
           path="settings"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><Settings /></LazyPage>
+              <Settings />
             </PrivateRoute>
           }
         />
@@ -312,7 +271,7 @@ function AppRoutes() {
           path="theme"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><ThemeSettings /></LazyPage>
+              <ThemeSettings />
             </PrivateRoute>
           }
         />
@@ -320,23 +279,16 @@ function AppRoutes() {
           path="changelog"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><Changelog /></LazyPage>
+              <Changelog />
             </PrivateRoute>
           }
         />
-        <Route
-          path="rehearsals"
-          element={
-            <PrivateRoute>
-              <LazyPage><Rehearsals /></LazyPage>
-            </PrivateRoute>
-          }
-        />
+        <Route path="rehearsals" element={<Rehearsals />} />
         <Route
           path="seating"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
-              <LazyPage><Seating /></LazyPage>
+              <Seating />
             </PrivateRoute>
           }
         />
@@ -344,7 +296,7 @@ function AppRoutes() {
           path="voice-parts"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
-              <LazyPage><VoiceParts /></LazyPage>
+              <VoiceParts />
             </PrivateRoute>
           }
         />
@@ -352,7 +304,7 @@ function AppRoutes() {
           path="occupancy"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
-              <LazyPage><Occupancy /></LazyPage>
+              <Occupancy />
             </PrivateRoute>
           }
         />
@@ -360,7 +312,7 @@ function AppRoutes() {
           path="neighbor-preferences"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
-              <LazyPage><NeighborPreferences /></LazyPage>
+              <NeighborPreferences />
             </PrivateRoute>
           }
         />
@@ -368,7 +320,7 @@ function AppRoutes() {
           path="equipment"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
-              <LazyPage><Equipment /></LazyPage>
+              <Equipment />
             </PrivateRoute>
           }
         />
@@ -376,7 +328,7 @@ function AppRoutes() {
           path="uniforms"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE]}>
-              <LazyPage><Uniforms /></LazyPage>
+              <Uniforms />
             </PrivateRoute>
           }
         />
@@ -384,7 +336,7 @@ function AppRoutes() {
           path="concerts"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <LazyPage><Concerts /></LazyPage>
+              <Concerts />
             </PrivateRoute>
           }
         />
@@ -392,7 +344,7 @@ function AppRoutes() {
           path="entra-sync"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><EntraSync /></LazyPage>
+              <EntraSync />
             </PrivateRoute>
           }
         />
@@ -400,18 +352,18 @@ function AppRoutes() {
           path="onboarding"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><Onboarding /></LazyPage>
+              <Onboarding />
             </PrivateRoute>
           }
         />
         <Route path="members" element={<MemberDirectory />} />
-        <Route path="user-guide" element={<LazyPage><UserGuide /></LazyPage>} />
-        <Route path="practice-schedules" element={<LazyPage><PracticeSchedules /></LazyPage>} />
+        <Route path="user-guide" element={<UserGuide />} />
+        <Route path="practice-schedules" element={<PracticeSchedules />} />
         <Route
           path="audit-logs"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><AuditLogs /></LazyPage>
+              <AuditLogs />
             </PrivateRoute>
           }
         />
@@ -419,16 +371,16 @@ function AppRoutes() {
           path="health"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
-              <LazyPage><HealthDashboard /></LazyPage>
+              <HealthDashboard />
             </PrivateRoute>
           }
         />
-        <Route path="my-tickets" element={<LazyPage><MyTickets /></LazyPage>} />
+        <Route path="my-tickets" element={<MyTickets />} />
         <Route
           path="ticket-scanner"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
-              <LazyPage><TicketScanner /></LazyPage>
+              <TicketScanner />
             </PrivateRoute>
           }
         />
@@ -491,8 +443,6 @@ function AppContent() {
 }
 
 export default function App() {
-  // Skip persistence entirely to avoid hydration issues
-  // The queryClient still handles caching in-memory, just not persisted across sessions
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
