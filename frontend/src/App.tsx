@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -492,14 +492,40 @@ function AppContent() {
 }
 
 export default function App() {
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
+
+  // Handle successful cache hydration
+  const onSuccess = useCallback(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Timeout fallback: if hydration takes too long, render anyway
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!isHydrated) {
+        setHydrationTimedOut(true);
+        // Clear potentially corrupted cache
+        try {
+          localStorage.removeItem('harmonie-query-cache');
+        } catch {
+          // Ignore localStorage errors
+        }
+      }
+    }, 2000); // 2 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isHydrated]);
+
   // Use PersistQueryClientProvider for offline support with proper hydration handling
   // This ensures queries wait for cache restoration before fetching
-  if (queryPersister) {
+  if (queryPersister && !hydrationTimedOut) {
     return (
       <ErrorBoundary>
         <PersistQueryClientProvider
           client={queryClient}
           persistOptions={{ persister: queryPersister, ...persistOptions }}
+          onSuccess={onSuccess}
         >
           <AppContent />
         </PersistQueryClientProvider>
@@ -507,7 +533,7 @@ export default function App() {
     );
   }
 
-  // Fallback for SSR or when localStorage is not available
+  // Fallback for SSR, when localStorage is not available, or when hydration timed out
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

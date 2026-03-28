@@ -18,16 +18,27 @@ export const queryClient = new QueryClient({
 });
 
 // Create persister for offline support (used by PersistQueryClientProvider in App.tsx)
+// Wrapped in try-catch to handle corrupted localStorage data
 export const queryPersister = typeof window !== 'undefined'
   ? createSyncStoragePersister({
       storage: window.localStorage,
       key: 'harmonie-query-cache',
+      // Handle corrupted data by returning null (will clear cache)
+      deserialize: (cachedString: string) => {
+        try {
+          return JSON.parse(cachedString);
+        } catch {
+          // Clear corrupted cache
+          window.localStorage.removeItem('harmonie-query-cache');
+          return undefined;
+        }
+      },
     })
   : null;
 
 export const persistOptions = {
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
-  buster: 'v1', // Change this to invalidate cache on breaking changes
+  buster: 'v2', // Bumped to invalidate potentially corrupted cache
 };
 
 /**
