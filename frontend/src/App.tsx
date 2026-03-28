@@ -78,6 +78,10 @@ const UserGuide = lazy(() => import('./pages/UserGuide'));
 const PracticeSchedules = lazy(() => import('./pages/PracticeSchedules'));
 const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
 
+// Ticketing
+const MyTickets = lazy(() => import('./pages/MyTickets'));
+const TicketScanner = lazy(() => import('./pages/TicketScanner'));
+
 /**
  * Loading fallback for lazy-loaded pages
  */
@@ -416,6 +420,15 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <LazyPage><HealthDashboard /></LazyPage>
+            </PrivateRoute>
+          }
+        />
+        <Route path="my-tickets" element={<LazyPage><MyTickets /></LazyPage>} />
+        <Route
+          path="ticket-scanner"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <LazyPage><TicketScanner /></LazyPage>
             </PrivateRoute>
           }
         />
