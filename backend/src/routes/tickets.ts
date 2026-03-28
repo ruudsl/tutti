@@ -161,7 +161,7 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
     const validation = createOrderSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
     const { items, buyerName, buyerEmail, buyerPhone, notes } = validation.data;
@@ -435,7 +435,7 @@ router.post('/tickets/orders/:id/pay', optionalAuth, asyncHandler(async (req: Au
     const validation = payOrderSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
     const { method, returnUrl } = validation.data;
@@ -906,7 +906,7 @@ router.post('/concerts/:id/ticket-types', authenticateToken, requireRole('admin'
     const validation = createTicketTypeSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
     const { name, price, quantity, description, saleStart, saleEnd, maxPerOrder } = validation.data;
@@ -953,7 +953,7 @@ router.put('/ticket-types/:id', authenticateToken, requireRole('admin', 'music_c
     const validation = updateTicketTypeSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
     // Verify ticket type exists and belongs to user's association

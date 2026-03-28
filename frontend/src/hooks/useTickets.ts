@@ -5,7 +5,6 @@ import {
   createTicketOrder,
   getTicketOrder,
   payTicketOrder,
-  getTicketByCode,
   validateTicket,
   getMyTickets,
   createTicketType,
@@ -187,7 +186,7 @@ export function useUpdateTicketType() {
   return useMutation({
     mutationFn: ({
       ticketTypeId,
-      concertId,
+      concertId: _concertId,
       updates,
     }: {
       ticketTypeId: string;
@@ -221,7 +220,7 @@ export function useDeleteTicketType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ ticketTypeId, concertId }: { ticketTypeId: string; concertId: string }) =>
+    mutationFn: ({ ticketTypeId, concertId: _concertId }: { ticketTypeId: string; concertId: string }) =>
       deleteTicketType(ticketTypeId),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concertTickets(concertId) });
@@ -242,7 +241,7 @@ export function useCancelTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ ticketId, concertId }: { ticketId: string; concertId: string }) =>
+    mutationFn: ({ ticketId, concertId: _concertId }: { ticketId: string; concertId: string }) =>
       cancelTicket(ticketId),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ticketStats(concertId) });
@@ -263,7 +262,7 @@ export function useRefundOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ orderId, concertId, reason }: { orderId: string; concertId: string; reason?: string }) =>
+    mutationFn: ({ orderId, concertId: _concertId, reason }: { orderId: string; concertId: string; reason?: string }) =>
       refundOrder(orderId, reason),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ticketStats(concertId) });

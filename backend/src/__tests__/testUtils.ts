@@ -178,7 +178,7 @@ export function createTestInstrument(overrides: Partial<TestInstrument> = {}): T
     const instrument: TestInstrument = {
         id: overrides.id || uuidv4(),
         name: overrides.name || `Test Instrument ${Date.now()}`,
-        tuning: overrides.tuning || null,
+        tuning: overrides.tuning ?? undefined,
         clef: overrides.clef || 'sol',
     };
 
@@ -200,13 +200,13 @@ export function createTestRehearsal(
     const rehearsal: TestRehearsal = {
         id: overrides.id || uuidv4(),
         associationId,
-        orchestraId: overrides.orchestraId || null,
+        orchestraId: overrides.orchestraId ?? undefined,
         date: overrides.date || '2026-04-15',
         startTime: overrides.startTime || '19:30',
         endTime: overrides.endTime || '21:30',
         location: overrides.location || 'Test Location',
         type: overrides.type || 'regular',
-        notes: overrides.notes || null,
+        notes: overrides.notes ?? undefined,
         createdBy,
     };
 
