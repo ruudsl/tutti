@@ -2,7 +2,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../utils/constants';
-import { prefetchRoute } from '../hooks/usePrefetch';
 
 interface NavItem {
   path: string;
@@ -132,8 +131,6 @@ export function ContextSidebar() {
               <NavLink
                 to={item.path}
                 className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                onMouseEnter={() => prefetchRoute(item.path)}
-                onFocus={() => prefetchRoute(item.path)}
               >
                 {t(item.labelKey)}
               </NavLink>
