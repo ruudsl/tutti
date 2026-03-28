@@ -82,6 +82,12 @@ initSentry();
 
 const app = express();
 
+// Trust proxy - required for correct client IP detection behind reverse proxies (e.g., Render, Nginx)
+// This enables express-rate-limit to work correctly with X-Forwarded-For headers
+if (config.isProduction) {
+    app.set('trust proxy', 1);
+}
+
 // Add request ID to each request (should be first middleware)
 app.use(requestIdMiddleware);
 
