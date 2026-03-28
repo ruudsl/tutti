@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
@@ -25,9 +26,6 @@ export default function MyMusic() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.myMusic');
   const [searchParams, setSearchParams] = useSearchParams();
-  const [lists, setLists] = useState<MusicList[]>([]);
-  const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
@@ -38,6 +36,39 @@ export default function MyMusic() {
   const [issuePageNumber, setIssuePageNumber] = useState('');
   const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
+  const listId = searchParams.get('listId');
+
+  // Fetch all music lists with React Query (cached)
+  const { data: lists = [], isLoading: listsLoading } = useQuery({
+    queryKey: ['myMusicLists'],
+    queryFn: getMyMusicLists,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch selected list details with React Query (cached)
+  const { data: selectedList, isLoading: listLoading } = useQuery({
+    queryKey: ['musicList', listId],
+    queryFn: async () => {
+      const data = await getMusicList(listId!);
+      // Log activity for statistics
+      logActivity('view', 'music_list', listId!).catch(() => {});
+      return data;
+    },
+    enabled: !!listId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Reset expanded titles when list changes
+  const prevListId = useMemo(() => listId, [listId]);
+  useMemo(() => {
+    if (listId !== prevListId) {
+      setExpandedTitles(new Set());
+      setCurrentTitleIndex(0);
+    }
+  }, [listId, prevListId]);
+
+  const isLoading = listId ? listLoading : listsLoading;
 
   // Group lists by orchestra
   const orchestraGroups = useMemo((): OrchestraGroup[] => {
@@ -82,51 +113,6 @@ export default function MyMusic() {
     return Array.from(groups.values());
   }, [selectedList?.pieces]);
 
-  useEffect(() => {
-    loadLists();
-  }, []);
-
-  useEffect(() => {
-    const listId = searchParams.get('listId');
-    if (listId) {
-      loadList(listId);
-    } else {
-      setSelectedList(null);
-    }
-  }, [searchParams]);
-
-  const loadLists = async () => {
-    try {
-      const data = await getMyMusicLists();
-      setLists(data);
-
-      // If listId in URL, load that list
-      const listId = searchParams.get('listId');
-      if (listId) {
-        loadList(listId);
-      }
-    } catch (error) {
-      console.error('Error loading lists:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadList = async (listId: string) => {
-    setIsLoading(true);
-    try {
-      const data = await getMusicList(listId);
-      setSelectedList(data);
-      setExpandedTitles(new Set());
-      // Log activity for statistics
-      logActivity('view', 'music_list', listId).catch(() => {});
-    } catch (error) {
-      console.error('Error loading list:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSelectList = (listId: string) => {
     setSearchParams({ listId });
   };
@@ -147,7 +133,6 @@ export default function MyMusic() {
 
   const handleBack = () => {
     setSearchParams({});
-    setSelectedList(null);
   };
 
   const toggleTitle = (key: string) => {
@@ -214,17 +199,8 @@ export default function MyMusic() {
     setIssueMeasureNumber('');
   };
 
-  if (isLoading && !selectedList) {
-    return (
-      <div className="loading" role="status" aria-label={t('accessibility.loadingContent')}>
-        <div className="spinner" aria-hidden="true"></div>
-        <span className="sr-only">{t('common.loading')}</span>
-      </div>
-    );
-  }
-
   // Show single list view with titles grouped as accordion
-  if (selectedList) {
+  if (listId) {
     return (
       <>
       <div>
@@ -232,6 +208,16 @@ export default function MyMusic() {
           ← {t('myMusic.backToOverview')}
         </button>
 
+        {isLoading || !selectedList ? (
+          <div className="card">
+            <div className="card-body">
+              <div className="loading" role="status">
+                <div className="spinner" aria-hidden="true"></div>
+                <span className="sr-only">{t('common.loading')}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="card">
           <div className="card-header">
             <div>
@@ -240,12 +226,7 @@ export default function MyMusic() {
             </div>
           </div>
           <div className="card-body">
-            {isLoading ? (
-              <div className="loading" role="status">
-                <div className="spinner" aria-hidden="true"></div>
-                <span className="sr-only">{t('common.loading')}</span>
-              </div>
-            ) : titleGroups.length > 0 ? (
+            {titleGroups.length > 0 ? (
               <SwipeContainer
                 onSwipeLeft={handleSwipeToNextTitle}
                 onSwipeRight={handleSwipeToPrevTitle}
@@ -405,6 +386,7 @@ export default function MyMusic() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Issue Report Modal */}
@@ -490,7 +472,16 @@ export default function MyMusic() {
     <div>
       <h1 className="mb-3">{t('myMusic.title')}</h1>
 
-      {orchestraGroups.length > 0 ? (
+      {listsLoading ? (
+        <div className="card">
+          <div className="card-body">
+            <div className="loading" role="status">
+              <div className="spinner" aria-hidden="true"></div>
+              <span className="sr-only">{t('common.loading')}</span>
+            </div>
+          </div>
+        </div>
+      ) : orchestraGroups.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {orchestraGroups.map((group) => (
             <div key={group.orchestraId} className="card">
