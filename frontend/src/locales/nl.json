@@ -1530,7 +1530,9 @@
     "concertNotFoundDesc": "Het concert dat je zoekt bestaat niet of is niet beschikbaar.",
     "concertPassed": "Concert Voorbij",
     "concertPassedDesc": "Dit concert heeft al plaatsgevonden. Tickets zijn niet meer beschikbaar.",
-    "checkBackLater": "Kom later terug om te zien of er tickets beschikbaar zijn."
+    "checkBackLater": "Kom later terug om te zien of er tickets beschikbaar zijn.",
+    "noBarcodeDetector": "QR-scanner niet beschikbaar",
+    "useChromeOrManual": "Je browser ondersteunt geen automatische QR-scanning. Gebruik Chrome of voer de ticketcode handmatig in."
   },
   "pageTitle": {
     "dashboard": "Dashboard - Harmonie",

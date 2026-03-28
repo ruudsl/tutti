@@ -18,6 +18,7 @@ export default function TicketScanner() {
   const [lastResult, setLastResult] = useState<TicketValidationResult | null>(null);
   const [scanCount, setScanCount] = useState({ valid: 0, invalid: 0 });
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [hasBarcodeDetector] = useState(() => 'BarcodeDetector' in window);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,21 +97,32 @@ export default function TicketScanner() {
     setManualCode('');
   };
 
+  const scanningRef = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
+
   // QR Scanner using native camera
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
 
-      setIsCameraActive(true);
-      scanQRCode();
+        // Wait for video to be ready before starting scan loop
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().then(() => {
+            setIsCameraActive(true);
+            scanningRef.current = true;
+            scanQRCode();
+          }).catch((err) => {
+            console.error('Failed to play video:', err);
+            showError(t('tickets.cameraError'));
+          });
+        };
+      }
     } catch (error) {
       console.error('Failed to start camera:', error);
       showError(t('tickets.cameraError'));
@@ -118,25 +130,36 @@ export default function TicketScanner() {
   };
 
   const stopCamera = () => {
+    scanningRef.current = false;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
   };
 
   const scanQRCode = async () => {
-    if (!videoRef.current || !canvasRef.current || !isCameraActive) return;
+    if (!videoRef.current || !canvasRef.current || !scanningRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    if (!context) return;
+    if (!context) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
 
-    // Only scan if video is playing
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      requestAnimationFrame(scanQRCode);
+    // Only scan if video is playing and has data
+    if (video.readyState !== video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
       return;
     }
 
@@ -164,16 +187,10 @@ export default function TicketScanner() {
       }
     }
 
-    if (isCameraActive) {
-      requestAnimationFrame(scanQRCode);
+    if (scanningRef.current) {
+      animationFrameRef.current = requestAnimationFrame(scanQRCode);
     }
   };
-
-  useEffect(() => {
-    if (isCameraActive) {
-      scanQRCode();
-    }
-  }, [isCameraActive]);
 
   useEffect(() => {
     return () => {
@@ -293,11 +310,28 @@ export default function TicketScanner() {
                   {t('tickets.stopCamera')}
                 </button>
               ) : (
-                <button className="btn btn-primary" onClick={startCamera}>
+                <button className="btn btn-primary" onClick={startCamera} disabled={!hasBarcodeDetector}>
                   {t('tickets.startCamera')}
                 </button>
               )}
             </div>
+
+            {!hasBarcodeDetector && (
+              <div
+                className="alert"
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: 'rgba(255, 193, 7, 0.15)',
+                  border: '1px solid var(--warning)',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <strong>{t('tickets.noBarcodeDetector')}</strong>
+                <p style={{ margin: '0.5rem 0 0' }}>{t('tickets.useChromeOrManual')}</p>
+              </div>
+            )}
 
             {/* Manual Entry */}
             <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>

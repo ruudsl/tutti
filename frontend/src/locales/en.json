@@ -1547,7 +1547,9 @@
     "concertNotFoundDesc": "The concert you are looking for does not exist or is not available.",
     "concertPassed": "Concert Passed",
     "concertPassedDesc": "This concert has already taken place. Tickets are no longer available.",
-    "checkBackLater": "Check back later to see if tickets become available."
+    "checkBackLater": "Check back later to see if tickets become available.",
+    "noBarcodeDetector": "QR scanner not available",
+    "useChromeOrManual": "Your browser does not support automatic QR scanning. Use Chrome or enter the ticket code manually."
   },
   "sessions": {
     "title": "Active Sessions",

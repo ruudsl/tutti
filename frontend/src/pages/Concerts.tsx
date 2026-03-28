@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   useConcerts,
   useConcert,
@@ -101,8 +101,6 @@ export default function Concerts() {
     saleStart: '',
     saleEnd: '',
   });
-
-  const queryClient = useQueryClient();
 
   // Data fetching
   const { data: concertsData, isLoading } = useConcerts({
