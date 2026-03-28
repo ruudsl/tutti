@@ -29,6 +29,10 @@ export interface PdfViewerProps {
   minZoom?: number;
   /** Maximum zoom level (default: 3) */
   maxZoom?: number;
+  /** Enable dark mode for sheet music (inverts colors) */
+  darkMode?: boolean;
+  /** Auto dark mode based on system preference */
+  autoDarkMode?: boolean;
 }
 
 interface PageCache {
@@ -51,6 +55,8 @@ export function PdfViewer({
   enableZoom = true,
   minZoom = 1,
   maxZoom = 3,
+  darkMode = false,
+  autoDarkMode = false,
 }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -68,6 +74,36 @@ export function PdfViewer({
   const pageCacheRef = useRef<Map<number, PageCache>>(new Map());
   const renderingRef = useRef(false);
   const indicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Dark mode state - respects prop or system preference
+  const [isDarkModeActive, setIsDarkModeActive] = useState(() => {
+    if (darkMode) return true;
+    if (autoDarkMode && typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  // Listen for system dark mode changes
+  useEffect(() => {
+    if (!autoDarkMode) {
+      setIsDarkModeActive(darkMode);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDarkModeActive(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [darkMode, autoDarkMode]);
+
+  // Toggle dark mode function
+  const toggleDarkMode = useCallback(() => {
+    setIsDarkModeActive(prev => !prev);
+  }, []);
 
   // Load PDF document
   useEffect(() => {
@@ -395,13 +431,18 @@ export function PdfViewer({
       style={styles.container}
     >
       {/* PDF Canvas Container */}
-      <div ref={containerRef} style={styles.canvasContainer}>
+      <div ref={containerRef} style={{
+        ...styles.canvasContainer,
+        backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
+      }}>
         <canvas
           ref={canvasRef}
           style={{
             ...styles.canvas,
             ...getTransformStyle,
             opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
+            // Dark mode: invert colors and adjust hue for better readability
+            filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
           }}
         />
       </div>
@@ -451,6 +492,19 @@ export function PdfViewer({
               )}
             </>
           )}
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleDarkMode}
+            style={{
+              ...styles.zoomButton,
+              marginLeft: '0.5rem',
+              backgroundColor: isDarkModeActive ? '#fbbf24' : '#374151',
+            }}
+            aria-label={isDarkModeActive ? 'Light mode' : 'Dark mode'}
+            title={isDarkModeActive ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkModeActive ? '☀️' : '🌙'}
+          </button>
         </div>
 
         <button

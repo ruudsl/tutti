@@ -3,9 +3,13 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { createGenreSchema, updateGenreSchema } from '../validation/schemas';
 
 const router = Router();
+
+// Cache path for invalidation
+const CACHE_PATH = '/api/genres';
 
 /**
  * @swagger
@@ -19,7 +23,7 @@ const router = Router();
  *       200:
  *         description: List of genres
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 300 }), asyncHandler(async (req: AuthRequest, res: Response) => {
     const genres = db.prepare(`
         SELECT id, name, created_at
         FROM genres
@@ -57,7 +61,7 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *       409:
  *         description: Genre already exists
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = createGenreSchema.parse(req.body);
 
     // Check if genre already exists
@@ -96,7 +100,7 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
  *       404:
  *         description: Genre not found
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name } = updateGenreSchema.parse(req.body);
 
     const genre = db.prepare('SELECT id FROM genres WHERE id = ?').get(req.params.id);
@@ -135,7 +139,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  *       404:
  *         description: Genre not found
  */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticateToken, requireRole('admin'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db.prepare('DELETE FROM genres WHERE id = ?').run(req.params.id);
 
     if (result.changes === 0) {

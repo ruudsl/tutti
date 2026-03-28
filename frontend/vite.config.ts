@@ -218,6 +218,38 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks - core React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+
+          // React Query - state management
+          'vendor-query': [
+            '@tanstack/react-query',
+            '@tanstack/react-query-persist-client',
+            '@tanstack/query-sync-storage-persister',
+          ],
+
+          // PDF.js - large library for PDF handling
+          'vendor-pdf': ['pdfjs-dist'],
+
+          // Forms - react-hook-form and validation
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+
+          // DnD Kit - drag and drop
+          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+
+          // i18n - internationalization
+          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+
+          // Utilities
+          'vendor-utils': ['axios', 'date-fns', 'idb', 'ua-parser-js'],
+        },
+      },
+    },
+    // Increase chunk size warning limit for PDF.js
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     esbuildOptions: {

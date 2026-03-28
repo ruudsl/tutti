@@ -8,7 +8,10 @@ import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { DarkModeToggle } from './DarkModeToggle';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ContextSidebar, useHasSidebar } from './ContextSidebar';
-import { QuickActions } from './QuickActions';
+import { QuickActionsMenu } from './QuickActionsMenu';
+import { GlobalSearch, useGlobalSearch } from './GlobalSearch';
+import { RecentItems } from './RecentItems';
+import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
@@ -24,6 +27,9 @@ export default function Layout() {
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Global search state
+  const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = useGlobalSearch();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -203,6 +209,7 @@ export default function Layout() {
           </ul>
 
           <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
+            <RecentItems />
             <DarkModeToggle />
             <LanguageSwitcher compact />
             <Link to="/user-guide" className="btn btn-outline btn-sm">
@@ -263,7 +270,12 @@ export default function Layout() {
         </a>
       </footer>
 
-      <QuickActions />
+      <QuickActionsMenu onOpenSearch={openSearch} />
+
+      <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+
+      <KeyboardShortcutsHelp />
+      <SequenceIndicator />
 
       <OnboardingTour
         forceShow={showOnboarding || undefined}

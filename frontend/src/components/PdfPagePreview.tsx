@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { useLazyLoadMultiple } from '../hooks/useLazyLoad';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -14,7 +15,7 @@ interface PdfPagePreviewProps {
 
 interface PageThumbnail {
   pageNumber: number;
-  dataUrl: string;
+  dataUrl: string | null; // null when not yet rendered
 }
 
 const RANGE_COLORS = [
@@ -40,12 +41,20 @@ export default function PdfPagePreview({
   const [loadedCount, setLoadedCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+
+  // Use lazy loading for thumbnails - only render when visible
+  const { getRef, visibilityStates } = useLazyLoadMultiple({
+    count: totalPages,
+    rootMargin: '200px', // Start loading 200px before visible
+    triggerOnce: true,
+  });
 
   const renderPage = useCallback(async (
     pdf: pdfjsLib.PDFDocumentProxy,
     pageNum: number,
     width: number
-  ): Promise<PageThumbnail> => {
+  ): Promise<string> => {
     const page = await pdf.getPage(pageNum);
     const viewport = page.getViewport({ scale: 1 });
     const scale = width / viewport.width;
@@ -61,12 +70,10 @@ export default function PdfPagePreview({
       viewport: scaledViewport,
     }).promise;
 
-    return {
-      pageNumber: pageNum,
-      dataUrl: canvas.toDataURL('image/jpeg', 0.7),
-    };
+    return canvas.toDataURL('image/jpeg', 0.7);
   }, []);
 
+  // Load PDF and initialize thumbnail placeholders
   useEffect(() => {
     let cancelled = false;
 
@@ -80,33 +87,21 @@ export default function PdfPagePreview({
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-        if (cancelled) return;
+        if (cancelled) {
+          pdf.destroy();
+          return;
+        }
 
+        pdfRef.current = pdf;
         setTotalPages(pdf.numPages);
-        const newThumbnails: PageThumbnail[] = [];
 
-        // Render pages in batches for better performance
-        const batchSize = 4;
-        for (let i = 1; i <= pdf.numPages; i += batchSize) {
-          if (cancelled) return;
-
-          const batch = [];
-          for (let j = i; j < i + batchSize && j <= pdf.numPages; j++) {
-            batch.push(renderPage(pdf, j, thumbnailWidth));
-          }
-
-          const results = await Promise.all(batch);
-          newThumbnails.push(...results);
-
-          if (!cancelled) {
-            setThumbnails([...newThumbnails]);
-            setLoadedCount(newThumbnails.length);
-          }
+        // Initialize thumbnails with null dataUrls (lazy loaded later)
+        const initialThumbnails: PageThumbnail[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          initialThumbnails.push({ pageNumber: i, dataUrl: null });
         }
-
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setThumbnails(initialThumbnails);
+        setLoading(false);
       } catch (err) {
         if (!cancelled) {
           setError('Kon PDF niet laden');
@@ -119,8 +114,46 @@ export default function PdfPagePreview({
 
     return () => {
       cancelled = true;
+      if (pdfRef.current) {
+        pdfRef.current.destroy();
+        pdfRef.current = null;
+      }
     };
-  }, [file, thumbnailWidth, renderPage]);
+  }, [file]);
+
+  // Lazy render thumbnails when they become visible
+  useEffect(() => {
+    if (!pdfRef.current || loading) return;
+
+    const renderVisibleThumbnails = async () => {
+      const pdf = pdfRef.current;
+      if (!pdf) return;
+
+      for (let i = 0; i < visibilityStates.length; i++) {
+        const isVisible = visibilityStates[i];
+        const pageNum = i + 1;
+
+        // Check if this thumbnail needs to be rendered
+        if (isVisible && thumbnails[i]?.dataUrl === null) {
+          try {
+            const dataUrl = await renderPage(pdf, pageNum, thumbnailWidth);
+            setThumbnails((prev) => {
+              const updated = [...prev];
+              if (updated[i]) {
+                updated[i] = { ...updated[i], dataUrl };
+              }
+              return updated;
+            });
+            setLoadedCount((prev) => prev + 1);
+          } catch (err) {
+            console.error(`Failed to render page ${pageNum}:`, err);
+          }
+        }
+      }
+    };
+
+    renderVisibleThumbnails();
+  }, [visibilityStates, thumbnails, loading, renderPage, thumbnailWidth]);
 
   const getPageRangeInfo = (pageNumber: number) => {
     for (let i = 0; i < selectedRanges.length; i++) {
@@ -165,12 +198,14 @@ export default function PdfPagePreview({
           borderRadius: '0.5rem',
         }}
       >
-        {thumbnails.map((thumb) => {
+        {thumbnails.map((thumb, index) => {
           const rangeInfo = getPageRangeInfo(thumb.pageNumber);
+          const isRendered = thumb.dataUrl !== null;
 
           return (
             <div
               key={thumb.pageNumber}
+              ref={getRef(index)}
               className="pdf-thumbnail"
               onClick={() => onPageClick?.(thumb.pageNumber)}
               style={{
@@ -188,17 +223,42 @@ export default function PdfPagePreview({
                   overflow: 'hidden',
                   background: 'white',
                   boxShadow: rangeInfo ? `0 0 8px ${rangeInfo.color}40` : 'var(--shadow)',
+                  // Maintain aspect ratio for placeholder
+                  aspectRatio: isRendered ? undefined : '210 / 297',
+                  minHeight: isRendered ? undefined : '140px',
                 }}
               >
-                <img
-                  src={thumb.dataUrl}
-                  alt={`Pagina ${thumb.pageNumber}`}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block',
-                  }}
-                />
+                {isRendered ? (
+                  <img
+                    src={thumb.dataUrl ?? undefined}
+                    alt={`Pagina ${thumb.pageNumber}`}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f9fafb',
+                    }}
+                  >
+                    <div
+                      className="spinner"
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderWidth: '2px',
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <div
                 style={{

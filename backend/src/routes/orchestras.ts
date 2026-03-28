@@ -3,11 +3,15 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { createOrchestraSchema, updateOrchestraSchema } from '../validation/schemas';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
+
+// Cache path for invalidation
+const CACHE_PATH = '/api/orchestras';
 
 /**
  * @swagger
@@ -21,7 +25,7 @@ const router = Router();
  *       200:
  *         description: List of orchestras
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 300, varyByAssociation: true }), asyncHandler(async (req: AuthRequest, res: Response) => {
     const orchestras = db.prepare(`
         SELECT o.id, o.name, o.created_at,
                (SELECT COUNT(*) FROM user_orchestras WHERE orchestra_id = o.id) as member_count,
@@ -133,7 +137,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  *       400:
  *         description: Orchestra with this name already exists
  */
-router.post('/', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, requireRole('admin'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createOrchestraSchema.parse(req.body);
 
     // Check if orchestra name already exists in this association
@@ -204,7 +208,7 @@ router.post('/', authenticateToken, requireRole('admin'), asyncHandler(async (re
  *       404:
  *         description: Orchestra not found
  */
-router.put('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticateToken, requireRole('admin'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateOrchestraSchema.parse(req.body);
 
     const orchestra = db.prepare(
@@ -263,7 +267,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (
  *       404:
  *         description: Orchestra not found
  */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticateToken, requireRole('admin'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     // Get orchestra name before deletion for audit log
     const orchestraToDelete = db.prepare(
         'SELECT name FROM orchestras WHERE id = ? AND association_id = ?'

@@ -60,6 +60,8 @@ import sectionChatRoutes from './routes/section-chat';
 import notificationsRoutes from './routes/notifications';
 import practiceSchedulesRoutes from './routes/practice-schedules';
 import gdprRoutes from './routes/gdpr';
+import searchRoutes from './routes/search';
+import thumbnailsRoutes from './routes/thumbnails';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 
@@ -206,6 +208,8 @@ app.use('/api/section-chat', sectionChatRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/practice-schedules', practiceSchedulesRoutes);
 app.use('/api/gdpr', gdprRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/thumbnails', thumbnailsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

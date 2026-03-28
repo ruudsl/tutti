@@ -3,12 +3,16 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { createInstrumentSchema, updateInstrumentSchema, addAliasSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
+
+// Cache path for invalidation
+const CACHE_PATH = '/api/instruments';
 
 /**
  * @swagger
@@ -22,7 +26,7 @@ const router = Router();
  *       200:
  *         description: List of instruments
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 300 }), asyncHandler(async (req: AuthRequest, res: Response) => {
     const instruments = db.prepare(`
         SELECT id, name, tuning, clef, created_at
         FROM instruments
@@ -82,7 +86,7 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *       201:
  *         description: Instrument created successfully
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createInstrumentSchema.parse(req.body);
 
     const tuningValue = data.tuning || null;
@@ -163,7 +167,7 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
  *       200:
  *         description: Instrument updated successfully
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateInstrumentSchema.parse(req.body);
 
     const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
@@ -227,7 +231,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  *       200:
  *         description: Instrument deleted successfully
  */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticateToken, requireRole('admin'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     // Get instrument name before deletion for audit log
     const instrumentToDelete = db.prepare('SELECT name FROM instruments WHERE id = ?').get(req.params.id) as { name: string } | undefined;
 
@@ -287,7 +291,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
  *       201:
  *         description: Alias added successfully
  */
-router.post('/:id/aliases', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/:id/aliases', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = addAliasSchema.parse(req.body);
 
     const instrument = db.prepare('SELECT id FROM instruments WHERE id = ?').get(req.params.id);
@@ -341,7 +345,7 @@ router.post('/:id/aliases', authenticateToken, requireRole('admin', 'music_commi
  *       200:
  *         description: Alias deleted successfully
  */
-router.delete('/:id/aliases/:aliasId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id/aliases/:aliasId', authenticateToken, requireRole('admin', 'music_committee'), cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db.prepare(
         'DELETE FROM instrument_aliases WHERE id = ? AND instrument_id = ?'
     ).run(req.params.aliasId, req.params.id);

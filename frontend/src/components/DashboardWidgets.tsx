@@ -1,5 +1,315 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import type { DashboardWidget, WidgetType } from '../hooks/useDashboardWidgets';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+interface WidgetContainerProps {
+  widget: DashboardWidget;
+  isEditMode: boolean;
+  onToggle: () => void;
+  onSizeChange: (size: DashboardWidget['size']) => void;
+  index: number;
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDragEnd: () => void;
+}
+
+export function WidgetContainer({
+  widget,
+  isEditMode,
+  onToggle,
+  onSizeChange,
+  index,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+}: WidgetContainerProps) {
+  const { t } = useTranslation();
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    onDragOver(index);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    onDragEnd();
+  };
+
+  const sizeClass = {
+    small: 'widget-small',
+    medium: 'widget-medium',
+    large: 'widget-large',
+    full: 'widget-full',
+  }[widget.size];
+
+  return (
+    <div
+      className={`widget-wrapper ${sizeClass} ${isDragging ? 'dragging' : ''} ${isEditMode ? 'edit-mode' : ''}`}
+      draggable={isEditMode}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      {isEditMode && (
+        <div className="widget-edit-overlay">
+          <div className="widget-edit-controls">
+            <button
+              className="widget-toggle-btn"
+              onClick={onToggle}
+              title={widget.enabled ? t('dashboard.hideWidget') : t('dashboard.showWidget')}
+            >
+              {widget.enabled ? '👁️' : '👁️‍🗨️'}
+            </button>
+            <select
+              className="widget-size-select"
+              value={widget.size}
+              onChange={(e) => onSizeChange(e.target.value as DashboardWidget['size'])}
+            >
+              <option value="small">{t('dashboard.sizeSmall')}</option>
+              <option value="medium">{t('dashboard.sizeMedium')}</option>
+              <option value="large">{t('dashboard.sizeLarge')}</option>
+              <option value="full">{t('dashboard.sizeFull')}</option>
+            </select>
+            <span className="widget-drag-handle" title={t('dashboard.dragToReorder')}>⋮⋮</span>
+          </div>
+        </div>
+      )}
+      <WidgetRenderer type={widget.type} config={widget.config} />
+    </div>
+  );
+}
+
+// Widget renderer that maps widget type to component
+function WidgetRenderer({ type }: { type: WidgetType; config?: Record<string, unknown> }) {
+  switch (type) {
+    case 'stats':
+      return <StatsWidget />;
+    case 'music-lists':
+      return <MusicListsWidget />;
+    case 'upcoming-rehearsals':
+      return <UpcomingRehearsalsWidget />;
+    case 'recent-activity':
+      return <RecentActivityWidget />;
+    case 'practice-progress':
+      return <PracticeProgressWidget />;
+    case 'favorites':
+      return <FavoritesWidget />;
+    case 'quick-actions':
+      return <QuickActionsWidget />;
+    case 'announcements':
+      return <AnnouncementsWidget />;
+    default:
+      return <div>Unknown widget type: {type}</div>;
+  }
+}
+
+// Dashboard Edit Mode Toggle
+export function DashboardEditToggle({
+  isEditMode,
+  onToggle,
+  onReset,
+}: {
+  isEditMode: boolean;
+  onToggle: () => void;
+  onReset: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="dashboard-edit-toggle">
+      <button
+        className={`btn ${isEditMode ? 'btn-primary' : 'btn-outline'} btn-sm`}
+        onClick={onToggle}
+      >
+        {isEditMode ? t('dashboard.doneEditing') : t('dashboard.customizeDashboard')}
+      </button>
+      {isEditMode && (
+        <button className="btn btn-outline btn-sm" onClick={onReset}>
+          {t('dashboard.resetToDefault')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Stats Widget
+function StatsWidget() {
+  const { t } = useTranslation();
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/activity/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  return (
+    <div className="widget widget-stats">
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-value">{stats?.totalPieces || 0}</div>
+          <div className="stat-label">{t('dashboard.totalPieces')}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{stats?.totalPracticeMinutes || 0}</div>
+          <div className="stat-label">{t('dashboard.practiceMinutes')}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{stats?.downloadsThisMonth || 0}</div>
+          <div className="stat-label">{t('dashboard.downloadsThisMonth')}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Music Lists Widget
+function MusicListsWidget() {
+  const { t } = useTranslation();
+  const { data: lists = [] } = useQuery({
+    queryKey: ['my-music-lists'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/music-lists/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  return (
+    <div className="widget">
+      <div className="widget-header">
+        <h3 className="widget-title">{t('widgets.myMusicLists')}</h3>
+        <Link to="/my-music" className="widget-link">
+          {t('widgets.viewAll')}
+        </Link>
+      </div>
+      <div className="widget-body">
+        {lists.length > 0 ? (
+          <ul className="widget-list">
+            {lists.slice(0, 5).map((list: any) => (
+              <li key={list.id}>
+                <Link to={`/my-music?listId=${list.id}`}>{list.name}</Link>
+                <span className="badge">{list.titleCount || 0}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-light text-sm">{t('widgets.noMusicLists')}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Practice Progress Widget
+function PracticeProgressWidget() {
+  const { t } = useTranslation();
+  const { data: progress } = useQuery({
+    queryKey: ['practice-progress'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/practice/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const weeklyGoal = 120; // 2 hours
+  const percentage = progress ? Math.min((progress.weeklyMinutes / weeklyGoal) * 100, 100) : 0;
+
+  return (
+    <div className="widget">
+      <div className="widget-header">
+        <h3 className="widget-title">{t('widgets.practiceProgress')}</h3>
+        <Link to="/practice-schedules" className="widget-link">
+          {t('widgets.viewAll')}
+        </Link>
+      </div>
+      <div className="widget-body">
+        <div className="progress-bar-container">
+          <div className="progress-bar" style={{ width: `${percentage}%` }} />
+        </div>
+        <p className="text-sm text-center mt-1">
+          {progress?.weeklyMinutes || 0} / {weeklyGoal} {t('widgets.minutesThisWeek')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Favorites Widget
+function FavoritesWidget() {
+  const { t } = useTranslation();
+  const { data: favorites = [] } = useQuery({
+    queryKey: ['favorites'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/favorites`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  return (
+    <div className="widget">
+      <div className="widget-header">
+        <h3 className="widget-title">{t('widgets.favorites')}</h3>
+      </div>
+      <div className="widget-body">
+        {favorites.length > 0 ? (
+          <ul className="widget-list compact">
+            {favorites.slice(0, 5).map((fav: any) => (
+              <li key={fav.id}>
+                <span className="fav-icon">⭐</span>
+                <span>{fav.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-light text-sm">{t('widgets.noFavorites')}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Announcements Widget
+function AnnouncementsWidget() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="widget widget-announcements">
+      <div className="widget-header">
+        <h3 className="widget-title">{t('widgets.announcements')}</h3>
+      </div>
+      <div className="widget-body">
+        <p className="text-light text-sm">{t('widgets.noAnnouncements')}</p>
+      </div>
+    </div>
+  );
+}
 
 // Upcoming Rehearsals Widget
 export function UpcomingRehearsalsWidget() {

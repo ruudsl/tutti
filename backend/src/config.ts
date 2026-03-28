@@ -59,6 +59,11 @@ export const config = {
 
     // CSP Reporting
     cspReportUri: process.env.CSP_REPORT_URI || '',
+
+    // CDN Configuration
+    cdnEnabled: process.env.CDN_ENABLED === 'true',
+    cdnBaseUrl: process.env.CDN_BASE_URL || '',
+    cdnStaticPath: process.env.CDN_STATIC_PATH || '/static',
 };
 
 // Warn in development about default JWT secret
