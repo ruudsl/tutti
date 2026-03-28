@@ -11,8 +11,6 @@ interface Shortcut {
   description: string;
 }
 
-const globalShortcuts: Shortcut[] = [];
-
 export function useKeyboardShortcuts(shortcuts: Shortcut[] = []) {
   const navigate = useNavigate();
 

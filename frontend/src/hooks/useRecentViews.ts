@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRecentViews, recordView, clearRecentViews } from '../api';
-import { queryKeys } from '../lib/queryClient';
 
 export interface RecentView {
   id: string;
