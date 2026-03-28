@@ -24,30 +24,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
   const [isLoading, setIsLoading] = useState(() => {
-    // Only show loading if we have a token but no cached user
-    const token = localStorage.getItem('token');
-    const cachedUser = localStorage.getItem('user');
-    return !!(token && !cachedUser);
+    try {
+      // Only show loading if we have a token but no cached user
+      const token = localStorage.getItem('token');
+      const cachedUser = localStorage.getItem('user');
+      return !!(token && !cachedUser);
+    } catch {
+      // If localStorage fails, don't show loading spinner
+      return false;
+    }
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // Verify token in background and update user data
-      getProfile()
-        .then((freshUser) => {
-          setUser(freshUser);
-          localStorage.setItem('user', JSON.stringify(freshUser));
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
+    let mounted = true;
+
+    // Fallback timeout: if auth check takes too long, stop loading spinner
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second max wait
+
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Verify token in background and update user data
+        getProfile()
+          .then((freshUser) => {
+            if (mounted) {
+              setUser(freshUser);
+              try {
+                localStorage.setItem('user', JSON.stringify(freshUser));
+              } catch {
+                // Ignore localStorage write errors
+              }
+            }
+          })
+          .catch(() => {
+            if (mounted) {
+              try {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+              } catch {
+                // Ignore localStorage errors
+              }
+              setUser(null);
+            }
+          })
+          .finally(() => {
+            if (mounted) {
+              clearTimeout(timeout);
+              setIsLoading(false);
+            }
+          });
+      } else {
+        clearTimeout(timeout);
+        setIsLoading(false);
+      }
+    } catch {
+      // If localStorage read fails, stop loading
+      clearTimeout(timeout);
       setIsLoading(false);
     }
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   const login = async (email: string, password: string, mfaCode?: string): Promise<LoginResponse> => {
