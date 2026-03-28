@@ -188,31 +188,28 @@ router.post('/import', authenticateToken, asyncHandler(async (req: AuthRequest, 
     // Create or get the music_title entry
     let musicTitleId: string | null = null;
 
-    const existingTitle = await db.get<{ id: string }>(
-        `SELECT id FROM music_titles WHERE title = ? AND association_id = ?`,
-        [title, user.associationId]
-    );
+    const existingTitle = db.prepare(
+        `SELECT id FROM music_titles WHERE title = ? AND association_id = ?`
+    ).get(title, user.associationId) as { id: string } | undefined;
 
     if (existingTitle) {
         musicTitleId = existingTitle.id;
 
         // Update IMSLP source info if not already set
-        await db.run(
+        db.prepare(
             `UPDATE music_titles
              SET imslp_work_id = COALESCE(imslp_work_id, ?),
                  imslp_permalink = COALESCE(imslp_permalink, ?),
                  composer = COALESCE(composer, ?),
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?`,
-            [imslpWorkId || null, imslpPermalink || null, composer || null, musicTitleId]
-        );
+             WHERE id = ?`
+        ).run(imslpWorkId || null, imslpPermalink || null, composer || null, musicTitleId);
     } else {
         musicTitleId = uuidv4();
-        await db.run(
+        db.prepare(
             `INSERT INTO music_titles (id, title, composer, arranger, association_id, imslp_work_id, imslp_permalink, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            [musicTitleId, title, composer || null, arranger || null, user.associationId, imslpWorkId || null, imslpPermalink || null]
-        );
+             VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+        ).run(musicTitleId, title, composer || null, arranger || null, user.associationId, imslpWorkId || null, imslpPermalink || null);
     }
 
     // Create a music_piece entry for the PDF
@@ -222,10 +219,9 @@ router.post('/import', authenticateToken, asyncHandler(async (req: AuthRequest, 
     let instrumentId: string | null = null;
     if (instrumentation) {
         // Try to find a matching instrument
-        const instrument = await db.get<{ id: string }>(
-            `SELECT id FROM instruments WHERE association_id = ? AND (name LIKE ? OR name = 'Score' OR name = 'Full Score')`,
-            [user.associationId, `%${instrumentation.split(',')[0].trim()}%`]
-        );
+        const instrument = db.prepare(
+            `SELECT id FROM instruments WHERE association_id = ? AND (name LIKE ? OR name = 'Score' OR name = 'Full Score')`
+        ).get(user.associationId, `%${instrumentation.split(',')[0].trim()}%`) as { id: string } | undefined;
         if (instrument) {
             instrumentId = instrument.id;
         }
@@ -233,36 +229,32 @@ router.post('/import', authenticateToken, asyncHandler(async (req: AuthRequest, 
 
     // If no instrument found, try to get or create a "Score" instrument
     if (!instrumentId) {
-        const scoreInstrument = await db.get<{ id: string }>(
-            `SELECT id FROM instruments WHERE association_id = ? AND name = 'Score'`,
-            [user.associationId]
-        );
+        const scoreInstrument = db.prepare(
+            `SELECT id FROM instruments WHERE association_id = ? AND name = 'Score'`
+        ).get(user.associationId) as { id: string } | undefined;
 
         if (scoreInstrument) {
             instrumentId = scoreInstrument.id;
         } else {
             // Create a Score instrument
             instrumentId = uuidv4();
-            await db.run(
+            db.prepare(
                 `INSERT INTO instruments (id, name, association_id, created_at)
-                 VALUES (?, 'Score', ?, CURRENT_TIMESTAMP)`,
-                [instrumentId, user.associationId]
-            );
+                 VALUES (?, 'Score', ?, CURRENT_TIMESTAMP)`
+            ).run(instrumentId, user.associationId);
         }
     }
 
-    await db.run(
+    db.prepare(
         `INSERT INTO music_pieces (id, title, arranger, instrument_id, file_path, original_filename, association_id, imslp_source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [pieceId, title, arranger || composer || null, instrumentId, filename, filename, user.associationId, imslpPermalink || fileUrl]
-    );
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+    ).run(pieceId, title, arranger || composer || null, instrumentId, filename, filename, user.associationId, imslpPermalink || fileUrl);
 
     // Log the activity
-    await db.run(
+    db.prepare(
         `INSERT INTO activity_log (id, user_id, action_type, entity_type, entity_id, association_id, created_at)
-         VALUES (?, ?, 'import', 'music_piece', ?, ?, CURRENT_TIMESTAMP)`,
-        [uuidv4(), user.id, pieceId, user.associationId]
-    );
+         VALUES (?, ?, 'import', 'music_piece', ?, ?, CURRENT_TIMESTAMP)`
+    ).run(uuidv4(), user.id, pieceId, user.associationId);
 
     res.json({
         message: 'Successfully imported from IMSLP',
