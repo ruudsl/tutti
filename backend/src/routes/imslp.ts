@@ -252,9 +252,9 @@ router.post('/import', authenticateToken, asyncHandler(async (req: AuthRequest, 
     }
 
     await db.run(
-        `INSERT INTO music_pieces (id, title, arranger, instrument_id, file_path, association_id, imslp_source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [pieceId, title, arranger || composer || null, instrumentId, filename, user.associationId, imslpPermalink || fileUrl]
+        `INSERT INTO music_pieces (id, title, arranger, instrument_id, file_path, original_filename, association_id, imslp_source, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [pieceId, title, arranger || composer || null, instrumentId, filename, filename, user.associationId, imslpPermalink || fileUrl]
     );
 
     // Log the activity

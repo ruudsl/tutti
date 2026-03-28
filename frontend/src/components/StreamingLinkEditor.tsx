@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { searchStreamingTracks, updateStreamingLinks, deleteStreamingLink, getStreamingStatus } from '../api';
+import { searchStreamingTracks, updateStreamingLinks, getStreamingStatus } from '../api';
 import type { StreamingLinks } from '../types';
 import { showSuccess, showError } from '../utils/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
