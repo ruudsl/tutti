@@ -8,6 +8,7 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 
@@ -204,7 +205,7 @@ function assignUserToOrchestras(userId: string, orchestraIds: string[]): void {
  * GET /entra/mappings
  * Get all job title to instrument mappings
  */
-router.get('/mappings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/mappings', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const mappings = db.prepare(`
         SELECT m.id, m.job_title, m.instrument_id, i.name as instrument_name, i.tuning as instrument_tuning
         FROM job_title_instrument_mappings m
@@ -220,7 +221,7 @@ router.get('/mappings', authenticateToken, requireRole('admin'), asyncHandler(as
  * POST /entra/mappings
  * Create a new job title to instrument mapping
  */
-router.post('/mappings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/mappings', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { jobTitle, instrumentId } = req.body;
 
     if (!jobTitle || !instrumentId) {
@@ -261,7 +262,7 @@ router.post('/mappings', authenticateToken, requireRole('admin'), asyncHandler(a
  * PUT /entra/mappings/:id
  * Update a job title to instrument mapping
  */
-router.put('/mappings/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/mappings/:id', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { instrumentId } = req.body;
 
     if (!instrumentId) {
@@ -292,7 +293,7 @@ router.put('/mappings/:id', authenticateToken, requireRole('admin'), asyncHandle
  * DELETE /entra/mappings/:id
  * Delete a job title to instrument mapping
  */
-router.delete('/mappings/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/mappings/:id', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db.prepare(
         'DELETE FROM job_title_instrument_mappings WHERE id = ? AND association_id = ?'
     ).run(req.params.id, req.user!.associationId);
@@ -314,7 +315,7 @@ router.delete('/mappings/:id', authenticateToken, requireRole('admin'), asyncHan
  * GET /entra/users
  * Fetch all users from Entra ID with their job titles
  */
-router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/users', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const msConfig = getMicrosoftConfig(req.user!.associationId);
     if (!msConfig) {
         throw new ApiError(400, 'Microsoft integratie is niet geconfigureerd. Configureer eerst de Microsoft SSO.');
@@ -405,7 +406,7 @@ router.get('/users', authenticateToken, requireRole('admin'), asyncHandler(async
  * POST /entra/users/import
  * Import selected users from Entra ID
  */
-router.post('/users/import', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/users/import', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { userIds } = req.body as { userIds: string[] };
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
@@ -524,7 +525,7 @@ router.post('/users/import', authenticateToken, requireRole('admin'), asyncHandl
  * POST /entra/users/sync
  * Sync all users from Entra ID (update existing, create new if applicable)
  */
-router.post('/users/sync', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/users/sync', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { createNew = false } = req.body as { createNew?: boolean };
 
     const msConfig = getMicrosoftConfig(req.user!.associationId);
@@ -646,7 +647,7 @@ router.post('/users/sync', authenticateToken, requireRole('admin'), asyncHandler
  * POST /entra/sync-photos
  * Sync profile photos from Entra ID for all users with a microsoft_id
  */
-router.post('/sync-photos', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/sync-photos', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const msConfig = getMicrosoftConfig(req.user!.associationId);
     if (!msConfig) {
         throw new ApiError(400, 'Microsoft integratie is niet geconfigureerd.');

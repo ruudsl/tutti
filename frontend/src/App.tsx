@@ -50,6 +50,8 @@ import NeighborPreferences from './pages/NeighborPreferences';
 import MemberDirectory from './pages/MemberDirectory';
 import Onboarding from './pages/Onboarding';
 import PracticeSchedules from './pages/PracticeSchedules';
+import SessionManagement from './pages/SessionManagement';
+import DataExport from './pages/DataExport';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -140,6 +142,8 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="sessions" element={<SessionManagement />} />
+        <Route path="data-export" element={<DataExport />} />
         <Route path="my-music" element={<MyMusic />} />
         <Route path="tools" element={<Tools />} />
         <Route path="issues" element={<Issues />} />

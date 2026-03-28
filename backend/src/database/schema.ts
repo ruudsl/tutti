@@ -1091,4 +1091,25 @@ CREATE INDEX IF NOT EXISTS idx_practice_schedules_date ON practice_schedules(tar
 CREATE INDEX IF NOT EXISTS idx_practice_milestones_schedule ON practice_schedule_milestones(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_practice_section_progress_milestone ON practice_section_progress(milestone_id);
 CREATE INDEX IF NOT EXISTS idx_practice_section_progress_instrument ON practice_section_progress(instrument_id);
+
+-- ===========================================
+-- SECURITY: IP WHITELIST
+-- ===========================================
+
+-- IP whitelist for admin route access control
+CREATE TABLE IF NOT EXISTS ip_whitelist (
+    id TEXT PRIMARY KEY,
+    association_id TEXT, -- NULL = global (applies to all associations)
+    ip_address TEXT NOT NULL, -- IP address or CIDR notation (e.g., 192.168.1.0/24)
+    description TEXT, -- Human-readable description (e.g., "Office network")
+    is_enabled BOOLEAN DEFAULT 1,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ip_whitelist_association ON ip_whitelist(association_id);
+CREATE INDEX IF NOT EXISTS idx_ip_whitelist_enabled ON ip_whitelist(is_enabled);
 `;

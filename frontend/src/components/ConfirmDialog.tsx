@@ -1,9 +1,10 @@
+import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'info';
@@ -60,7 +61,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p>{message}</p>
+      {typeof message === 'string' ? <p>{message}</p> : message}
     </Modal>
   );
 }

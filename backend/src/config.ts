@@ -47,6 +47,18 @@ export const config = {
     rateLimitWindowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000), // 15 minutes
     rateLimitMaxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 1000),
     authRateLimitMaxRequests: getEnvNumber('AUTH_RATE_LIMIT_MAX_REQUESTS', 10), // Stricter for auth
+
+    // CSRF Protection
+    csrfEnabled: process.env.CSRF_ENABLED === 'true',
+    csrfCookieName: process.env.CSRF_COOKIE_NAME || 'csrf_token',
+    csrfHeaderName: process.env.CSRF_HEADER_NAME || 'x-csrf-token',
+
+    // IP Whitelisting
+    ipWhitelistEnabled: process.env.IP_WHITELIST_ENABLED === 'true',
+    adminAllowedIps: process.env.ADMIN_ALLOWED_IPS?.split(',').map(ip => ip.trim()).filter(Boolean) || [],
+
+    // CSP Reporting
+    cspReportUri: process.env.CSP_REPORT_URI || '',
 };
 
 // Warn in development about default JWT secret

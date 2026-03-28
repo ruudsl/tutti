@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
@@ -14,6 +15,7 @@ import db from './database/connection';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { csrfTokenMiddleware, validateCsrfToken, getCsrfToken } from './middleware/csrf';
 
 // Import Swagger
 import { swaggerSpec } from './swagger';
@@ -57,14 +59,75 @@ import audioRecordingsRoutes from './routes/audio-recordings';
 import sectionChatRoutes from './routes/section-chat';
 import notificationsRoutes from './routes/notifications';
 import practiceSchedulesRoutes from './routes/practice-schedules';
+import gdprRoutes from './routes/gdpr';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 
 const app = express();
 
+// Content Security Policy configuration for production
+const getContentSecurityPolicy = (): false | { directives: Record<string, string[]> } => {
+    if (!config.isProduction) {
+        return false; // Disable CSP in development for hot reload
+    }
+
+    const directives: Record<string, string[]> = {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+            "'self'",
+            "'unsafe-inline'", // Required for inline event handlers
+            "'unsafe-eval'", // Required for some libraries in development
+            "https://www.youtube.com",
+            "https://s.ytimg.com",
+        ],
+        styleSrc: [
+            "'self'",
+            "'unsafe-inline'", // Required for styled-components / CSS-in-JS
+            "https://fonts.googleapis.com",
+        ],
+        fontSrc: [
+            "'self'",
+            "https://fonts.gstatic.com",
+            "data:",
+        ],
+        imgSrc: [
+            "'self'",
+            "data:",
+            "blob:",
+            "https:",
+        ],
+        mediaSrc: [
+            "'self'",
+            "blob:",
+            "https://www.youtube.com",
+        ],
+        frameSrc: [
+            "'self'",
+            "https://www.youtube.com",
+            "https://www.youtube-nocookie.com",
+        ],
+        connectSrc: [
+            "'self'",
+            config.frontendUrl,
+        ],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+        upgradeInsecureRequests: [],
+    };
+
+    // Add report-uri if configured
+    if (config.cspReportUri) {
+        directives.reportUri = [config.cspReportUri];
+    }
+
+    return { directives };
+};
+
 // Security middleware
 app.use(helmet({
-    contentSecurityPolicy: config.isProduction ? undefined : false, // Disable CSP in development for hot reload
+    contentSecurityPolicy: getContentSecurityPolicy(),
     crossOriginEmbedderPolicy: false, // Allow embedding YouTube videos
 }));
 
@@ -76,6 +139,13 @@ app.use(cors({
 
 // Body parsing
 app.use(express.json());
+
+// Cookie parsing (required for CSRF)
+app.use(cookieParser());
+
+// CSRF protection middleware
+app.use(csrfTokenMiddleware);
+app.use(validateCsrfToken);
 
 // General rate limiting
 const generalLimiter = rateLimit({
@@ -135,11 +205,15 @@ app.use('/api/audio-recordings', audioRecordingsRoutes);
 app.use('/api/section-chat', sectionChatRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/practice-schedules', practiceSchedulesRoutes);
+app.use('/api/gdpr', gdprRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// CSRF token endpoint (for SPAs to get/refresh their token)
+app.get('/api/csrf-token', getCsrfToken);
 
 // Changelog endpoint (language-aware)
 app.get('/api/changelog', (req, res) => {

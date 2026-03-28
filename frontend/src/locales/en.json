@@ -32,7 +32,9 @@
     "none": "None",
     "optional": "optional",
     "required": "required",
-    "sessionExpired": "Session expired. Please log in again."
+    "sessionExpired": "Session expired. Please log in again.",
+    "records": "records",
+    "warning": "Warning"
   },
   "sidebar": {
     "agenda": "Agenda",
@@ -1105,7 +1107,9 @@
     "uniforms": "Uniforms - Harmonie",
     "concerts": "Concert Archive - Harmonie",
     "entraSync": "Entra ID Sync - Harmonie",
-    "onboarding": "Member Management - Harmonie"
+    "onboarding": "Member Management - Harmonie",
+    "sessions": "Active Sessions - Harmonie",
+    "dataExport": "Your Data - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -1350,6 +1354,62 @@
     "endDateExport": "To date",
     "downloadExport": "Download CSV",
     "composer": "Composer"
+  },
+  "sessions": {
+    "title": "Active Sessions",
+    "description": "Here you can see all devices where you are logged in. You can revoke access to individual sessions.",
+    "currentSession": "Current",
+    "lastActive": "Last active",
+    "ipAddress": "IP address",
+    "createdAt": "Logged in",
+    "revoke": "Log out",
+    "revokeAll": "Log out everywhere",
+    "revokeConfirmTitle": "Log out session?",
+    "revokeConfirmMessage": "Are you sure you want to log out this device? The user will need to log in again.",
+    "revokeAllConfirmTitle": "Log out all other sessions?",
+    "revokeAllConfirmMessage": "Are you sure you want to log out {{count}} other session(s)?",
+    "sessionRevoked": "Session logged out",
+    "allSessionsRevoked": "{{count}} session(s) logged out",
+    "noSessions": "No active sessions found."
+  },
+  "dataExport": {
+    "title": "Your Data",
+    "yourData": "Your Data Overview",
+    "dataDescription": "Here you can see what data we store about you. Under GDPR, you have the right to download or delete this data.",
+    "categories": {
+      "profile": "Profile",
+      "sessions": "Sessions",
+      "favorites": "Favorites",
+      "practiceHistory": "Practice History",
+      "activityLog": "Activity Log",
+      "annotations": "PDF Annotations",
+      "audioRecordings": "Audio Recordings",
+      "issues": "Reported Issues",
+      "notificationPreferences": "Notification Preferences"
+    },
+    "totalRecords": "Total: {{count}} records",
+    "exportTitle": "Export Your Data",
+    "downloadYourData": "Download Your Data",
+    "downloadDescription": "Download all your personal data in a portable format.",
+    "downloadButton": "Download Export",
+    "downloadStarted": "Download started",
+    "gdprInfo": "This export contains all personal data we store about you, as required by GDPR Article 20 (Right to data portability).",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountDescription": "You can request deletion of your account and all associated data. This action is irreversible.",
+    "deleteWarning": "Once deleted, your data cannot be recovered. Download an export first if you want to keep a copy.",
+    "requestDeletion": "Request Account Deletion",
+    "confirmDeleteTitle": "Delete Account?",
+    "confirmDeleteMessage": "Are you sure you want to delete your account? This action cannot be undone.",
+    "deleteReason": "Reason for leaving",
+    "deleteReasonPlaceholder": "Optional: Help us improve by sharing why you're leaving...",
+    "confirmDelete": "Delete My Account"
+  },
+  "bluetooth": {
+    "connectPedal": "Connect Pedal",
+    "connecting": "Connecting...",
+    "disconnect": "Disconnect",
+    "batteryLevel": "Battery level",
+    "notSupported": "Bluetooth not supported in this browser"
   },
   "onboarding": {
     "menuItem": "Guided tour",

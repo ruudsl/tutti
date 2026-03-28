@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
@@ -6,6 +6,7 @@ import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { SwipeContainer } from '../components/SwipeContainer';
 
 interface TitleGroup {
   title: string;
@@ -29,6 +30,7 @@ export default function MyMusic() {
   const [isLoading, setIsLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
+  const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
 
   // Issue reporting state
   const [reportingPiece, setReportingPiece] = useState<MusicPiece | null>(null);
@@ -160,6 +162,27 @@ export default function MyMusic() {
     });
   };
 
+  // Swipe navigation for title groups
+  const handleSwipeToNextTitle = useCallback(() => {
+    if (currentTitleIndex < titleGroups.length - 1) {
+      const newIndex = currentTitleIndex + 1;
+      setCurrentTitleIndex(newIndex);
+      const group = titleGroups[newIndex];
+      const key = `${group.title}|||${group.arranger || ''}`;
+      setExpandedTitles(new Set([key]));
+    }
+  }, [currentTitleIndex, titleGroups]);
+
+  const handleSwipeToPrevTitle = useCallback(() => {
+    if (currentTitleIndex > 0) {
+      const newIndex = currentTitleIndex - 1;
+      setCurrentTitleIndex(newIndex);
+      const group = titleGroups[newIndex];
+      const key = `${group.title}|||${group.arranger || ''}`;
+      setExpandedTitles(new Set([key]));
+    }
+  }, [currentTitleIndex, titleGroups]);
+
   const handleReportIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportingPiece || !issueDescription.trim()) return;
@@ -223,97 +246,157 @@ export default function MyMusic() {
                 <span className="sr-only">{t('common.loading')}</span>
               </div>
             ) : titleGroups.length > 0 ? (
-              <div className="title-accordion">
-                {titleGroups.map((group) => {
-                  const key = `${group.title}|||${group.arranger || ''}`;
-                  const isExpanded = expandedTitles.has(key);
+              <SwipeContainer
+                onSwipeLeft={handleSwipeToNextTitle}
+                onSwipeRight={handleSwipeToPrevTitle}
+                threshold={60}
+                visualFeedback={true}
+                showIndicators={titleGroups.length > 1}
+                indicators={{
+                  left: currentTitleIndex < titleGroups.length - 1 ? (
+                    <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                      {titleGroups[currentTitleIndex + 1]?.title.substring(0, 20)}...
+                    </span>
+                  ) : null,
+                  right: currentTitleIndex > 0 ? (
+                    <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                      {titleGroups[currentTitleIndex - 1]?.title.substring(0, 20)}...
+                    </span>
+                  ) : null,
+                }}
+              >
+                {/* Title navigation indicator */}
+                {titleGroups.length > 1 && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1rem',
+                    padding: '0.5rem',
+                    backgroundColor: 'var(--background-secondary)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={handleSwipeToPrevTitle}
+                      disabled={currentTitleIndex === 0}
+                      style={{ opacity: currentTitleIndex === 0 ? 0.5 : 1 }}
+                    >
+                      &#8249;
+                    </button>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', minWidth: '4rem', textAlign: 'center' }}>
+                      {currentTitleIndex + 1} / {titleGroups.length}
+                    </span>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={handleSwipeToNextTitle}
+                      disabled={currentTitleIndex === titleGroups.length - 1}
+                      style={{ opacity: currentTitleIndex === titleGroups.length - 1 ? 0.5 : 1 }}
+                    >
+                      &#8250;
+                    </button>
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('myMusic.swipeHint', 'Swipe to navigate')}
+                    </span>
+                  </div>
+                )}
 
-                  return (
-                    <div key={key} className="title-group">
-                      <button
-                        className={`title-group-header ${isExpanded ? 'expanded' : ''}`}
-                        onClick={() => toggleTitle(key)}
-                        aria-expanded={isExpanded}
-                        type="button"
-                      >
-                        <div className="title-group-info">
-                          <span className="title-group-arrow" aria-hidden="true">
-                            {isExpanded ? '▼' : '▶'}
-                          </span>
-                          <div>
-                            <strong className="title-group-name">{group.title}</strong>
-                            {group.arranger && (
-                              <span className="title-group-arranger"> — {group.arranger}</span>
-                            )}
+                <div className="title-accordion">
+                  {titleGroups.map((group, index) => {
+                    const key = `${group.title}|||${group.arranger || ''}`;
+                    const isExpanded = expandedTitles.has(key);
+
+                    return (
+                      <div key={key} className="title-group">
+                        <button
+                          className={`title-group-header ${isExpanded ? 'expanded' : ''}`}
+                          onClick={() => {
+                            toggleTitle(key);
+                            setCurrentTitleIndex(index);
+                          }}
+                          aria-expanded={isExpanded}
+                          type="button"
+                        >
+                          <div className="title-group-info">
+                            <span className="title-group-arrow" aria-hidden="true">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                            <div>
+                              <strong className="title-group-name">{group.title}</strong>
+                              {group.arranger && (
+                                <span className="title-group-arranger"> -- {group.arranger}</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="title-group-meta">
-                          {group.youtubeUrl && (
-                            <a
-                              href={group.youtubeUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-outline btn-sm"
-                              onClick={(e) => e.stopPropagation()}
-                              aria-label={`YouTube: ${group.title}`}
-                            >
-                              <span aria-hidden="true">▶</span> YouTube
-                            </a>
-                          )}
-                          <span className="badge badge-primary">
-                            {group.pieces.length} {t('myMusic.pieces')}
-                          </span>
-                        </div>
-                      </button>
+                          <div className="title-group-meta">
+                            {group.youtubeUrl && (
+                              <a
+                                href={group.youtubeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-outline btn-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`YouTube: ${group.title}`}
+                              >
+                                <span aria-hidden="true">▶</span> YouTube
+                              </a>
+                            )}
+                            <span className="badge badge-primary">
+                              {group.pieces.length} {t('myMusic.pieces')}
+                            </span>
+                          </div>
+                        </button>
 
-                      {isExpanded && (
-                        <div className="title-group-body">
-                          <table className="table">
-                            <thead>
-                              <tr>
-                                <th scope="col">{t('myMusic.table.instrument')}</th>
-                                <th scope="col">{t('myMusic.table.tuning')}</th>
-                                <th scope="col">{t('myMusic.table.number')}</th>
-                                <th scope="col">{t('myMusic.table.clef')}</th>
-                                <th scope="col"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {group.pieces.map((piece) => (
-                                <tr key={piece.id}>
-                                  <td>{piece.instrumentName || '-'}</td>
-                                  <td>{piece.tuning || '-'}</td>
-                                  <td>{piece.groupNumber || '-'}</td>
-                                  <td>{piece.clef || '-'}</td>
-                                  <td>
-                                    <div className="flex gap-1">
-                                      <button
-                                        className="btn btn-primary btn-sm"
-                                        onClick={() => handleDownload(piece)}
-                                        disabled={downloading === piece.id}
-                                      >
-                                        {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
-                                      </button>
-                                      <button
-                                        className="btn btn-outline btn-sm"
-                                        onClick={() => openReportModal(piece)}
-                                        aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
-                                      >
-                                        <span aria-hidden="true">📝</span>
-                                        <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
-                                      </button>
-                                    </div>
-                                  </td>
+                        {isExpanded && (
+                          <div className="title-group-body">
+                            <table className="table">
+                              <thead>
+                                <tr>
+                                  <th scope="col">{t('myMusic.table.instrument')}</th>
+                                  <th scope="col">{t('myMusic.table.tuning')}</th>
+                                  <th scope="col">{t('myMusic.table.number')}</th>
+                                  <th scope="col">{t('myMusic.table.clef')}</th>
+                                  <th scope="col"></th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                              </thead>
+                              <tbody>
+                                {group.pieces.map((piece) => (
+                                  <tr key={piece.id}>
+                                    <td>{piece.instrumentName || '-'}</td>
+                                    <td>{piece.tuning || '-'}</td>
+                                    <td>{piece.groupNumber || '-'}</td>
+                                    <td>{piece.clef || '-'}</td>
+                                    <td>
+                                      <div className="flex gap-1">
+                                        <button
+                                          className="btn btn-primary btn-sm"
+                                          onClick={() => handleDownload(piece)}
+                                          disabled={downloading === piece.id}
+                                        >
+                                          {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
+                                        </button>
+                                        <button
+                                          className="btn btn-outline btn-sm"
+                                          onClick={() => openReportModal(piece)}
+                                          aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
+                                        >
+                                          <span aria-hidden="true">📝</span>
+                                          <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </SwipeContainer>
             ) : (
               <div className="empty-state">
                 <div className="empty-icon" aria-hidden="true">🎵</div>

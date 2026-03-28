@@ -32,7 +32,9 @@
     "none": "Geen",
     "optional": "optioneel",
     "required": "verplicht",
-    "sessionExpired": "Sessie verlopen. Log opnieuw in."
+    "sessionExpired": "Sessie verlopen. Log opnieuw in.",
+    "records": "records",
+    "warning": "Waarschuwing"
   },
   "sidebar": {
     "agenda": "Agenda",
@@ -1365,7 +1367,65 @@
     "changelog": "Changelog - Harmonie",
     "equipment": "Instrumentenbeheer - Harmonie",
     "uniforms": "Uniformen - Harmonie",
-    "concerts": "Concert-archief - Harmonie"
+    "concerts": "Concert-archief - Harmonie",
+    "sessions": "Actieve sessies - Harmonie",
+    "dataExport": "Mijn gegevens - Harmonie"
+  },
+  "sessions": {
+    "title": "Actieve Sessies",
+    "description": "Hier zie je alle apparaten waarop je bent ingelogd. Je kunt de toegang tot individuele sessies intrekken.",
+    "currentSession": "Huidig",
+    "lastActive": "Laatst actief",
+    "ipAddress": "IP-adres",
+    "createdAt": "Ingelogd",
+    "revoke": "Uitloggen",
+    "revokeAll": "Overal uitloggen",
+    "revokeConfirmTitle": "Sessie uitloggen?",
+    "revokeConfirmMessage": "Weet je zeker dat je dit apparaat wilt uitloggen? De gebruiker moet opnieuw inloggen.",
+    "revokeAllConfirmTitle": "Alle andere sessies uitloggen?",
+    "revokeAllConfirmMessage": "Weet je zeker dat je {{count}} andere sessie(s) wilt uitloggen?",
+    "sessionRevoked": "Sessie uitgelogd",
+    "allSessionsRevoked": "{{count}} sessie(s) uitgelogd",
+    "noSessions": "Geen actieve sessies gevonden."
+  },
+  "dataExport": {
+    "title": "Jouw Gegevens",
+    "yourData": "Overzicht van je gegevens",
+    "dataDescription": "Hier zie je welke gegevens wij over jou opslaan. Onder de AVG heb je het recht om deze gegevens te downloaden of te verwijderen.",
+    "categories": {
+      "profile": "Profiel",
+      "sessions": "Sessies",
+      "favorites": "Favorieten",
+      "practiceHistory": "Oefengeschiedenis",
+      "activityLog": "Activiteitenlog",
+      "annotations": "PDF Annotaties",
+      "audioRecordings": "Audio-opnames",
+      "issues": "Gemelde problemen",
+      "notificationPreferences": "Notificatie-instellingen"
+    },
+    "totalRecords": "Totaal: {{count}} records",
+    "exportTitle": "Download je gegevens",
+    "downloadYourData": "Download je gegevens",
+    "downloadDescription": "Download al je persoonlijke gegevens in een draagbaar formaat.",
+    "downloadButton": "Download Export",
+    "downloadStarted": "Download gestart",
+    "gdprInfo": "Deze export bevat alle persoonlijke gegevens die wij over jou opslaan, zoals vereist door AVG Artikel 20 (Recht op gegevensoverdracht).",
+    "deleteAccountTitle": "Account Verwijderen",
+    "deleteAccountDescription": "Je kunt verwijdering van je account en alle bijbehorende gegevens aanvragen. Deze actie is onomkeerbaar.",
+    "deleteWarning": "Na verwijdering kunnen je gegevens niet worden hersteld. Download eerst een export als je een kopie wilt bewaren.",
+    "requestDeletion": "Accountverwijdering aanvragen",
+    "confirmDeleteTitle": "Account verwijderen?",
+    "confirmDeleteMessage": "Weet je zeker dat je je account wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteReason": "Reden van vertrek",
+    "deleteReasonPlaceholder": "Optioneel: Help ons verbeteren door te delen waarom je vertrekt...",
+    "confirmDelete": "Mijn account verwijderen"
+  },
+  "bluetooth": {
+    "connectPedal": "Verbind pedaal",
+    "connecting": "Verbinden...",
+    "disconnect": "Verbreken",
+    "batteryLevel": "Batterijniveau",
+    "notSupported": "Bluetooth wordt niet ondersteund in deze browser"
   },
   "onboarding": {
     "menuItem": "Rondleiding",

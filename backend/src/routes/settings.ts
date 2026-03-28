@@ -7,6 +7,7 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
@@ -330,7 +331,7 @@ router.get('/logo/:filename', asyncHandler(async (req: AuthRequest, res: Respons
 /**
  * GET /settings/smtp - Get SMTP configuration (admin only)
  */
-router.get('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/smtp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const association = db.prepare(`
         SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_from, smtp_enabled
         FROM associations WHERE id = ?
@@ -354,7 +355,7 @@ router.get('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async 
 /**
  * PUT /settings/smtp - Save SMTP configuration (admin only)
  */
-router.put('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/smtp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { host, port, secure, user, password, from, enabled } = req.body;
 
     if (!host || typeof host !== 'string' || !host.trim()) {
@@ -407,7 +408,7 @@ router.put('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async 
 /**
  * DELETE /settings/smtp - Remove SMTP configuration (admin only)
  */
-router.delete('/smtp', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/smtp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     db.prepare(`
         UPDATE associations
         SET smtp_host = NULL, smtp_port = 587, smtp_secure = 0, smtp_user = NULL, smtp_pass = NULL, smtp_from = NULL, smtp_enabled = 0
@@ -434,7 +435,7 @@ router.delete('/smtp', authenticateToken, requireRole('admin'), asyncHandler(asy
 /**
  * POST /settings/smtp/test - Send a test email (admin only)
  */
-router.post('/smtp/test', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/smtp/test', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const association = db.prepare(`
         SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from
         FROM associations WHERE id = ?

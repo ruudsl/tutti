@@ -6,6 +6,7 @@ import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
 import config from '../config';
 import db from '../database/connection';
@@ -34,7 +35,7 @@ const DB_PATH = config.dbPath;
  *               type: string
  *               format: binary
  */
-router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `harmonie-backup-${timestamp}.zip`;
 
@@ -158,7 +159,7 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
  *       200:
  *         description: Backup information
  */
-router.get('/info', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/info', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
     let dbSize = 0;
     let pdfCount = 0;
     let pdfSize = 0;
@@ -252,7 +253,7 @@ const backupUpload = multer({
  *       400:
  *         description: Invalid backup file
  */
-router.post('/restore', authenticateToken, requireRole('admin'), backupUpload.single('backup'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/restore', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, backupUpload.single('backup'), asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
         throw new ApiError(400, 'Geen backup bestand ontvangen.');
     }

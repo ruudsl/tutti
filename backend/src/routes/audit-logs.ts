@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { authenticateToken, requireRole } from '../middleware/auth';
+import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import db from '../database/connection';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
 
 const router = Router();
 
-// All audit log routes require admin role
-router.use(authenticateToken, requireRole('admin'));
+// All audit log routes require admin role and IP whitelist check
+router.use(authenticateToken, requireRole('admin'), ipWhitelistMiddleware);
 
 // Get audit logs with filters and pagination
 router.get('/', async (req, res) => {
