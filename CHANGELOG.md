@@ -6,6 +6,7 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Opgelost
 - **Trust proxy configuratie** - Express `trust proxy` instelling toegevoegd voor productieomgevingen achter een reverse proxy (bijv. Render, Nginx), waardoor express-rate-limit correct werkt met X-Forwarded-For headers
+- **TypeScript build** - Testbestanden uitgesloten van productie-build om ontbrekende devDependencies fouten te voorkomen
 
 ## [1.8.0] - 2026-02-27
 
