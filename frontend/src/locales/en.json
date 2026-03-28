@@ -1806,5 +1806,86 @@
       "deleteMapping": "Delete mapping",
       "deleteMappingConfirm": "Are you sure you want to delete the mapping for {{instrument}}?"
     }
+  },
+  "audio": {
+    "newRecording": "New recording",
+    "recording": "Recording...",
+    "paused": "Paused",
+    "start": "Start recording",
+    "stop": "Stop",
+    "pause": "Pause",
+    "resume": "Resume",
+    "reRecord": "Record again",
+    "preview": "Preview",
+    "titlePlaceholder": "E.g. Section rehearsal trumpets",
+    "descriptionPlaceholder": "Optional description of the recording",
+    "makePublic": "Visible to all members",
+    "publicDescription": "Public recordings are visible to all members of your association",
+    "microphoneError": "Could not access microphone. Check your browser settings.",
+    "recordings": "Recordings",
+    "myRecordings": "My recordings",
+    "publicRecordings": "Shared recordings",
+    "noRecordings": "No recordings yet",
+    "deleteConfirm": "Are you sure you want to delete this recording?"
+  },
+  "chat": {
+    "channels": "Channels",
+    "noChannels": "You are not yet a member of a section",
+    "noChannelsHint": "Ask an administrator to assign your instrument",
+    "noMessages": "No messages yet. Start the conversation!",
+    "placeholder": "Type a message...",
+    "reply": "Reply",
+    "replyingTo": "Replying to",
+    "edited": "edited",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinnedMessages": "Pinned messages",
+    "confirmDelete": "Are you sure you want to delete this message?"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all notifications",
+    "enablePush": "Enable push notifications",
+    "preferences": {
+      "title": "Notification preferences",
+      "channels": "Channels",
+      "email": "Email notifications",
+      "push": "Push notifications",
+      "types": "Notification types"
+    },
+    "types": {
+      "newMusic": "New music",
+      "newMusicDesc": "When new sheet music is added",
+      "rehearsalChanges": "Rehearsal changes",
+      "rehearsalChangesDesc": "When the rehearsal schedule changes",
+      "seatingUpdates": "Seating updates",
+      "seatingUpdatesDesc": "When the seating arrangement changes",
+      "chatMessages": "Chat messages",
+      "chatMessagesDesc": "New messages in your section",
+      "practiceReminders": "Practice reminders",
+      "practiceRemindersDesc": "Reminders to practice",
+      "concertReminders": "Concert reminders",
+      "concertRemindersDesc": "Reminders for upcoming concerts"
+    }
+  },
+  "practiceSchedules": {
+    "title": "Practice schedules",
+    "create": "New practice schedule",
+    "empty": "No practice schedules found",
+    "targetDate": "Target date",
+    "priority": "Priority",
+    "priorityLow": "Low",
+    "priorityNormal": "Normal",
+    "priorityHigh": "High",
+    "progress": "Progress",
+    "milestones": "Milestones",
+    "noMilestones": "No milestones added yet",
+    "addMilestone": "Add milestone",
+    "milestonePlaceholder": "E.g. Learn notes, Dynamics, Tempo",
+    "confirmDelete": "Are you sure you want to delete this practice schedule?",
+    "overallProgress": "Overall progress",
+    "initializeSections": "Initialize sections"
   }
 }

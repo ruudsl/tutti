@@ -901,4 +901,194 @@ CREATE TABLE IF NOT EXISTS instrument_job_title_mappings (
 
 CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_association ON instrument_job_title_mappings(association_id);
 CREATE INDEX IF NOT EXISTS idx_instrument_job_title_mappings_instrument ON instrument_job_title_mappings(instrument_id);
+
+-- ===========================================
+-- AUDIO RECORDER (Repetitie opnames)
+-- ===========================================
+
+-- Audio opnames van repetities/secties
+CREATE TABLE IF NOT EXISTS audio_recordings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    orchestra_id TEXT,
+    rehearsal_id TEXT, -- Optioneel gekoppeld aan een repetitie
+    music_title_id TEXT, -- Optioneel gekoppeld aan een muziekstuk
+    title TEXT NOT NULL,
+    description TEXT,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL, -- In bytes
+    duration_seconds INTEGER NOT NULL,
+    mime_type TEXT NOT NULL DEFAULT 'audio/webm',
+    recorded_by TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT 0, -- Zichtbaar voor alle leden
+    section_instrument_id TEXT, -- Als het een sectie-opname is
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE SET NULL,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL,
+    FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (section_instrument_id) REFERENCES instruments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_association ON audio_recordings(association_id);
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_orchestra ON audio_recordings(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_rehearsal ON audio_recordings(rehearsal_id);
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_title ON audio_recordings(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_user ON audio_recordings(recorded_by);
+CREATE INDEX IF NOT EXISTS idx_audio_recordings_date ON audio_recordings(created_at);
+
+-- ===========================================
+-- STEMGROEP CHAT (Section Chat)
+-- ===========================================
+
+-- Chat kanalen per stemgroep/sectie
+CREATE TABLE IF NOT EXISTS section_chat_channels (
+    id TEXT PRIMARY KEY,
+    orchestra_id TEXT NOT NULL,
+    instrument_id TEXT NOT NULL, -- Instrument/stemgroep
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+    UNIQUE(orchestra_id, instrument_id)
+);
+
+-- Chat berichten
+CREATE TABLE IF NOT EXISTS section_chat_messages (
+    id TEXT PRIMARY KEY,
+    channel_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    reply_to_id TEXT, -- Voor replies op andere berichten
+    is_pinned BOOLEAN DEFAULT 0,
+    is_edited BOOLEAN DEFAULT 0,
+    edited_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES section_chat_channels(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reply_to_id) REFERENCES section_chat_messages(id) ON DELETE SET NULL
+);
+
+-- Gelezen status per gebruiker per kanaal
+CREATE TABLE IF NOT EXISTS section_chat_read_status (
+    id TEXT PRIMARY KEY,
+    channel_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    last_read_message_id TEXT,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (channel_id) REFERENCES section_chat_channels(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (last_read_message_id) REFERENCES section_chat_messages(id) ON DELETE SET NULL,
+    UNIQUE(channel_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_section_chat_channels_orchestra ON section_chat_channels(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_section_chat_channels_instrument ON section_chat_channels(instrument_id);
+CREATE INDEX IF NOT EXISTS idx_section_chat_messages_channel ON section_chat_messages(channel_id);
+CREATE INDEX IF NOT EXISTS idx_section_chat_messages_user ON section_chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_section_chat_messages_date ON section_chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_channel ON section_chat_read_status(channel_id);
+CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_user ON section_chat_read_status(user_id);
+
+-- ===========================================
+-- UITGEBREIDE PUSH NOTIFICATIES
+-- ===========================================
+
+-- Notificatie voorkeuren per gebruiker
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE,
+    new_music BOOLEAN DEFAULT 1, -- Nieuwe muziek toegevoegd
+    rehearsal_changes BOOLEAN DEFAULT 1, -- Repetitie wijzigingen
+    seating_updates BOOLEAN DEFAULT 1, -- Zitplaats updates
+    chat_messages BOOLEAN DEFAULT 1, -- Nieuwe chat berichten
+    practice_reminders BOOLEAN DEFAULT 1, -- Oefenherinneringen
+    concert_reminders BOOLEAN DEFAULT 1, -- Concert herinneringen
+    email_enabled BOOLEAN DEFAULT 1,
+    push_enabled BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Notificaties queue/history
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL, -- new_music, rehearsal_change, seating_update, chat_message, practice_reminder, concert_reminder
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    data TEXT, -- JSON met extra data (links, IDs, etc.)
+    is_read BOOLEAN DEFAULT 0,
+    sent_push BOOLEAN DEFAULT 0,
+    sent_email BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    read_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_date ON notifications(created_at);
+
+-- ===========================================
+-- REHEARSAL PLANNER (Per-stuk oefen schema's)
+-- ===========================================
+
+-- Oefen schema's per muziekstuk
+CREATE TABLE IF NOT EXISTS practice_schedules (
+    id TEXT PRIMARY KEY,
+    music_title_id TEXT NOT NULL,
+    orchestra_id TEXT NOT NULL,
+    target_date TEXT NOT NULL, -- Datum waarop het stuk klaar moet zijn
+    priority INTEGER DEFAULT 1, -- 1=laag, 2=normaal, 3=hoog
+    notes TEXT, -- Instructies van de dirigent
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(music_title_id, orchestra_id)
+);
+
+-- Mijlpalen/doelen per oefen schema
+CREATE TABLE IF NOT EXISTS practice_schedule_milestones (
+    id TEXT PRIMARY KEY,
+    schedule_id TEXT NOT NULL,
+    title TEXT NOT NULL, -- bijv. "Noten kennen", "Dynamiek", "Tempo"
+    description TEXT,
+    target_date TEXT NOT NULL,
+    is_completed BOOLEAN DEFAULT 0,
+    completed_at DATETIME,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (schedule_id) REFERENCES practice_schedules(id) ON DELETE CASCADE
+);
+
+-- Per-sectie voortgang per mijlpaal
+CREATE TABLE IF NOT EXISTS practice_section_progress (
+    id TEXT PRIMARY KEY,
+    milestone_id TEXT NOT NULL,
+    instrument_id TEXT NOT NULL, -- Sectie/stemgroep
+    status TEXT DEFAULT 'pending', -- pending, in_progress, completed
+    notes TEXT,
+    updated_by TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (milestone_id) REFERENCES practice_schedule_milestones(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(milestone_id, instrument_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_schedules_title ON practice_schedules(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_practice_schedules_orchestra ON practice_schedules(orchestra_id);
+CREATE INDEX IF NOT EXISTS idx_practice_schedules_date ON practice_schedules(target_date);
+CREATE INDEX IF NOT EXISTS idx_practice_milestones_schedule ON practice_schedule_milestones(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_practice_section_progress_milestone ON practice_section_progress(milestone_id);
+CREATE INDEX IF NOT EXISTS idx_practice_section_progress_instrument ON practice_section_progress(instrument_id);
 `;

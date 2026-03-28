@@ -53,6 +53,10 @@ import practiceRoutes from './routes/practice';
 import recentRoutes from './routes/recent';
 import annotationsRoutes from './routes/annotations';
 import sessionsRoutes from './routes/sessions';
+import audioRecordingsRoutes from './routes/audio-recordings';
+import sectionChatRoutes from './routes/section-chat';
+import notificationsRoutes from './routes/notifications';
+import practiceSchedulesRoutes from './routes/practice-schedules';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 
@@ -127,6 +131,10 @@ app.use('/api/practice', practiceRoutes);
 app.use('/api/recent', recentRoutes);
 app.use('/api/annotations', annotationsRoutes);
 app.use('/api/sessions', sessionsRoutes);
+app.use('/api/audio-recordings', audioRecordingsRoutes);
+app.use('/api/section-chat', sectionChatRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/practice-schedules', practiceSchedulesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

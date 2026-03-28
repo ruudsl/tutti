@@ -49,6 +49,7 @@ import Occupancy from './pages/Occupancy';
 import NeighborPreferences from './pages/NeighborPreferences';
 import MemberDirectory from './pages/MemberDirectory';
 import Onboarding from './pages/Onboarding';
+import PracticeSchedules from './pages/PracticeSchedules';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -344,6 +345,7 @@ function AppRoutes() {
         />
         <Route path="members" element={<MemberDirectory />} />
         <Route path="user-guide" element={<UserGuide />} />
+        <Route path="practice-schedules" element={<PracticeSchedules />} />
         <Route
           path="audit-logs"
           element={
