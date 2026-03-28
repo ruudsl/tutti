@@ -20,10 +20,12 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: '📅',
-    basePaths: ['/rehearsals', '/concerts'],
+    basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-scanner'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/my-tickets', labelKey: 'nav.myTickets' },
+      { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
     ],
   },
   {
@@ -41,10 +43,11 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.members',
     icon: '👥',
-    basePaths: ['/members', '/issues'],
+    basePaths: ['/members', '/issues', '/practice-schedules'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
       { path: '/issues', labelKey: 'nav.issues' },
+      { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
     ],
   },
   {
@@ -75,7 +78,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: '⚙️',
-    basePaths: ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs'],
+    basePaths: ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
@@ -85,6 +88,7 @@ const navGroups: NavGroup[] = [
       { path: '/theme', labelKey: 'nav.theme', roles: [ROLES.ADMIN] },
       { path: '/changelog', labelKey: 'nav.changelog', roles: [ROLES.ADMIN] },
       { path: '/audit-logs', labelKey: 'nav.auditLogs', roles: [ROLES.ADMIN] },
+      { path: '/health', labelKey: 'nav.health', roles: [ROLES.ADMIN] },
     ],
   },
 ];

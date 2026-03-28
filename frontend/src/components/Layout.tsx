@@ -81,12 +81,12 @@ export default function Layout() {
   const hasSidebar = useHasSidebar();
 
   // Check if current path is in a navigation group
-  const agendaPaths = ['/rehearsals', '/concerts'];
+  const agendaPaths = ['/rehearsals', '/concerts', '/my-tickets', '/ticket-scanner'];
   const orchestraPaths = ['/seating', '/voice-parts', '/instruments', '/occupancy', '/neighbor-preferences'];
-  const ledenPaths = ['/members', '/issues'];
+  const ledenPaths = ['/members', '/issues', '/practice-schedules'];
   const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'];
   const inventarisPaths = ['/equipment', '/uniforms'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'];
 
   const isAgendaActive = agendaPaths.some(p => location.pathname.startsWith(p));
   const isOrchestraActive = orchestraPaths.some(p => location.pathname.startsWith(p));

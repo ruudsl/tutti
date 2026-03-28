@@ -86,7 +86,9 @@
     "neighborPreferences": "Buurvoorkeuren",
     "onboarding": "Ledenbeheer",
     "myTickets": "Mijn Tickets",
-    "ticketScanner": "Ticket Scanner"
+    "ticketScanner": "Ticket Scanner",
+    "practiceSchedules": "Oefenschema's",
+    "health": "Systeemstatus"
   },
   "roles": {
     "admin": "Beheerder",

@@ -86,7 +86,9 @@
     "neighborPreferences": "Neighbor Preferences",
     "onboarding": "Member Management",
     "myTickets": "My Tickets",
-    "ticketScanner": "Ticket Scanner"
+    "ticketScanner": "Ticket Scanner",
+    "practiceSchedules": "Practice Schedules",
+    "health": "System Health"
   },
   "roles": {
     "admin": "Administrator",

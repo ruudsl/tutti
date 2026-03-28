@@ -80,7 +80,12 @@
     "seating": "Sitzordnung",
     "voiceParts": "Stimmen",
     "occupancy": "Besetzung",
-    "neighborPreferences": "Nachbarvorlieben"
+    "neighborPreferences": "Nachbarvorlieben",
+    "onboarding": "Mitgliederverwaltung",
+    "myTickets": "Meine Tickets",
+    "ticketScanner": "Ticket Scanner",
+    "practiceSchedules": "Übungspläne",
+    "health": "Systemstatus"
   },
   "roles": {
     "admin": "Administrator",
