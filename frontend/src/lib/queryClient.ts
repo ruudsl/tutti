@@ -1,5 +1,4 @@
 import { QueryClient } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 export const queryClient = new QueryClient({
@@ -18,20 +17,18 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Persist queries to localStorage for offline support
-if (typeof window !== 'undefined') {
-  const localStoragePersister = createSyncStoragePersister({
-    storage: window.localStorage,
-    key: 'harmonie-query-cache',
-  });
+// Create persister for offline support (used by PersistQueryClientProvider in App.tsx)
+export const queryPersister = typeof window !== 'undefined'
+  ? createSyncStoragePersister({
+      storage: window.localStorage,
+      key: 'harmonie-query-cache',
+    })
+  : null;
 
-  persistQueryClient({
-    queryClient,
-    persister: localStoragePersister,
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    buster: 'v1', // Change this to invalidate cache on breaking changes
-  });
-}
+export const persistOptions = {
+  maxAge: 1000 * 60 * 60 * 24, // 24 hours
+  buster: 'v1', // Change this to invalidate cache on breaking changes
+};
 
 /**
  * Query keys for consistent cache management

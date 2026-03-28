@@ -2,9 +2,10 @@ import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './hooks/useTheme';
-import { queryClient } from './lib/queryClient';
+import { queryClient, queryPersister, persistOptions } from './lib/queryClient';
 import { Toaster } from './utils/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotFound } from './components/NotFound';
@@ -456,39 +457,61 @@ function AppInit() {
   return null;
 }
 
+function AppContent() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppInit />
+        <AppRoutes />
+        <Toaster
+          toastOptions={{
+            style: {
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+            },
+            success: {
+              iconTheme: {
+                primary: 'var(--success)',
+                secondary: 'white',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: 'var(--danger)',
+                secondary: 'white',
+              },
+            },
+          }}
+        />
+        <OfflineIndicator />
+        <PWAUpdatePrompt />
+        <InstallPrompt />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
 export default function App() {
+  // Use PersistQueryClientProvider for offline support with proper hydration handling
+  // This ensures queries wait for cache restoration before fetching
+  if (queryPersister) {
+    return (
+      <ErrorBoundary>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister: queryPersister, ...persistOptions }}
+        >
+          <AppContent />
+        </PersistQueryClientProvider>
+      </ErrorBoundary>
+    );
+  }
+
+  // Fallback for SSR or when localStorage is not available
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <AppInit />
-            <AppRoutes />
-            <Toaster
-              toastOptions={{
-                style: {
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                },
-                success: {
-                  iconTheme: {
-                    primary: 'var(--success)',
-                    secondary: 'white',
-                  },
-                },
-                error: {
-                  iconTheme: {
-                    primary: 'var(--danger)',
-                    secondary: 'white',
-                  },
-                },
-              }}
-            />
-            <OfflineIndicator />
-            <PWAUpdatePrompt />
-            <InstallPrompt />
-          </AuthProvider>
-        </BrowserRouter>
+        <AppContent />
       </QueryClientProvider>
     </ErrorBoundary>
   );
