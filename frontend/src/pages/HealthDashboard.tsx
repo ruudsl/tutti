@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 interface ServiceStatus {
     status: 'healthy' | 'degraded' | 'unhealthy';
     message?: string;
@@ -31,8 +33,6 @@ interface DetailedHealthResponse {
     };
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 export default function HealthDashboard() {
     const { t } = useTranslation();
     const [autoRefresh, setAutoRefresh] = useState(false);
@@ -41,7 +41,9 @@ export default function HealthDashboard() {
     const { data: healthData, isLoading, error, refetch, isFetching } = useQuery<DetailedHealthResponse>({
         queryKey: ['health-detailed'],
         queryFn: async () => {
+            const token = localStorage.getItem('token');
             const response = await axios.get(`${API_BASE}/api/health/detailed`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
                 withCredentials: true,
             });
             return response.data;
