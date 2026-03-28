@@ -15,6 +15,8 @@ import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHel
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
+import { PrefetchNavLink } from './PrefetchNavLink';
+import { prefetchPriorityRoutes } from '../hooks/usePrefetch';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -27,6 +29,11 @@ export default function Layout() {
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Prefetch priority routes when browser is idle (eliminates spinners)
+  useEffect(() => {
+    prefetchPriorityRoutes();
+  }, []);
 
   // Global search state
   const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = useGlobalSearch();
@@ -136,54 +143,54 @@ export default function Layout() {
               </NavLink>
             </li>
             <li>
-              <NavLink to="/my-music" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <PrefetchNavLink to="/my-music" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 {t('nav.myMusic')}
-              </NavLink>
+              </PrefetchNavLink>
             </li>
             <li>
-              <NavLink to="/rehearsals" className={() => `nav-link ${isAgendaActive ? 'active' : ''}`}>
+              <PrefetchNavLink to="/rehearsals" className={() => `nav-link ${isAgendaActive ? 'active' : ''}`}>
                 {t('sidebar.agenda')}
-              </NavLink>
+              </PrefetchNavLink>
             </li>
             <li>
-              <NavLink to="/members" className={() => `nav-link ${isLedenActive ? 'active' : ''}`}>
+              <PrefetchNavLink to="/members" className={() => `nav-link ${isLedenActive ? 'active' : ''}`}>
                 {t('sidebar.members')}
-              </NavLink>
+              </PrefetchNavLink>
             </li>
             {(isConductor || isMusicCommittee) && (
               <li>
-                <NavLink to="/voice-parts" className={() => `nav-link ${isOrchestraActive ? 'active' : ''}`}>
+                <PrefetchNavLink to="/voice-parts" className={() => `nav-link ${isOrchestraActive ? 'active' : ''}`}>
                   {t('sidebar.orchestra')}
-                </NavLink>
+                </PrefetchNavLink>
               </li>
             )}
             <li>
-              <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              <PrefetchNavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 {t('nav.tools')}
-              </NavLink>
+              </PrefetchNavLink>
             </li>
 
             {isMusicCommittee && (
               <li>
-                <NavLink to="/music-pieces" className={() => `nav-link ${isLibraryActive ? 'active' : ''}`}>
+                <PrefetchNavLink to="/music-pieces" className={() => `nav-link ${isLibraryActive ? 'active' : ''}`}>
                   {t('sidebar.library')}
-                </NavLink>
+                </PrefetchNavLink>
               </li>
             )}
 
             {(isEquipmentCommittee || isUniformsCommittee) && (
               <li>
-                <NavLink to="/equipment" className={() => `nav-link ${isInventarisActive ? 'active' : ''}`}>
+                <PrefetchNavLink to="/equipment" className={() => `nav-link ${isInventarisActive ? 'active' : ''}`}>
                   {t('sidebar.inventory')}
-                </NavLink>
+                </PrefetchNavLink>
               </li>
             )}
 
             {isAdmin && (
               <li>
-                <NavLink to="/users" className={() => `nav-link ${isAdminActive ? 'active' : ''}`}>
+                <PrefetchNavLink to="/users" className={() => `nav-link ${isAdminActive ? 'active' : ''}`}>
                   {t('sidebar.admin')}
-                </NavLink>
+                </PrefetchNavLink>
               </li>
             )}
 
@@ -195,12 +202,12 @@ export default function Layout() {
               </div>
               <div className="mobile-user-actions">
                 <LanguageSwitcher compact />
-                <NavLink to="/user-guide" className="nav-link">
+                <PrefetchNavLink to="/user-guide" className="nav-link">
                   {t('nav.userGuide')}
-                </NavLink>
-                <NavLink to="/profile" className="nav-link">
+                </PrefetchNavLink>
+                <PrefetchNavLink to="/profile" className="nav-link">
                   {t('nav.profile')}
-                </NavLink>
+                </PrefetchNavLink>
                 <button className="btn btn-outline btn-sm" onClick={handleLogout}>
                   {t('nav.logout')}
                 </button>
