@@ -74,6 +74,8 @@ import ticketsRoutes from './routes/tickets';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import healthRoutes from './routes/health';
+import analyticsRoutes from './routes/analytics';
+import maintenanceRoutes from './routes/maintenance';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -237,6 +239,8 @@ app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concer
 
 // Health check routes (basic and detailed)
 app.use('/api/health', healthRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);

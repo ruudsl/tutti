@@ -1318,4 +1318,92 @@ CREATE INDEX IF NOT EXISTS idx_notification_type_channels_user ON notification_t
 CREATE INDEX IF NOT EXISTS idx_telegram_link_codes_code ON telegram_link_codes(code);
 CREATE INDEX IF NOT EXISTS idx_telegram_link_codes_expires ON telegram_link_codes(expires_at);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_verifications_user ON whatsapp_verifications(user_id);
+
+-- ===========================================
+-- MULTI-ORGANIZATION COLLABORATION
+-- ===========================================
+
+-- Shared libraries for inter-association collaboration
+CREATE TABLE IF NOT EXISTS shared_libraries (
+    id TEXT PRIMARY KEY,
+    owner_association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_public BOOLEAN DEFAULT 0, -- If true, any association can request access
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Titles shared in a library
+CREATE TABLE IF NOT EXISTS shared_library_titles (
+    id TEXT PRIMARY KEY,
+    library_id TEXT NOT NULL,
+    title_id TEXT NOT NULL,
+    shared_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    shared_by TEXT NOT NULL,
+    FOREIGN KEY (library_id) REFERENCES shared_libraries(id) ON DELETE CASCADE,
+    FOREIGN KEY (title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (shared_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(library_id, title_id)
+);
+
+-- Access control for shared libraries
+CREATE TABLE IF NOT EXISTS library_access (
+    id TEXT PRIMARY KEY,
+    library_id TEXT NOT NULL,
+    association_id TEXT NOT NULL,
+    access_level TEXT NOT NULL DEFAULT 'view', -- view, download, contribute
+    granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    granted_by TEXT NOT NULL,
+    FOREIGN KEY (library_id) REFERENCES shared_libraries(id) ON DELETE CASCADE,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(library_id, association_id)
+);
+
+-- Collaboration requests between associations
+CREATE TABLE IF NOT EXISTS collaboration_requests (
+    id TEXT PRIMARY KEY,
+    from_association_id TEXT NOT NULL,
+    to_association_id TEXT NOT NULL,
+    library_id TEXT, -- Optional: request access to specific library
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, accepted, rejected
+    message TEXT,
+    response_message TEXT,
+    responded_by TEXT,
+    responded_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (from_association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (library_id) REFERENCES shared_libraries(id) ON DELETE SET NULL,
+    FOREIGN KEY (responded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Imported titles tracking (attribution)
+CREATE TABLE IF NOT EXISTS imported_titles (
+    id TEXT PRIMARY KEY,
+    title_id TEXT NOT NULL, -- The new title in our library
+    source_title_id TEXT NOT NULL, -- The original title from shared library
+    source_library_id TEXT NOT NULL,
+    source_association_id TEXT NOT NULL,
+    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    imported_by TEXT NOT NULL,
+    FOREIGN KEY (title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_library_id) REFERENCES shared_libraries(id) ON DELETE SET NULL,
+    FOREIGN KEY (source_association_id) REFERENCES associations(id) ON DELETE SET NULL,
+    FOREIGN KEY (imported_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_shared_libraries_owner ON shared_libraries(owner_association_id);
+CREATE INDEX IF NOT EXISTS idx_shared_libraries_public ON shared_libraries(is_public);
+CREATE INDEX IF NOT EXISTS idx_shared_library_titles_library ON shared_library_titles(library_id);
+CREATE INDEX IF NOT EXISTS idx_shared_library_titles_title ON shared_library_titles(title_id);
+CREATE INDEX IF NOT EXISTS idx_library_access_library ON library_access(library_id);
+CREATE INDEX IF NOT EXISTS idx_library_access_association ON library_access(association_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_requests_from ON collaboration_requests(from_association_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_requests_to ON collaboration_requests(to_association_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_requests_status ON collaboration_requests(status);
+CREATE INDEX IF NOT EXISTS idx_imported_titles_title ON imported_titles(title_id);
+CREATE INDEX IF NOT EXISTS idx_imported_titles_source ON imported_titles(source_title_id);
 `;
