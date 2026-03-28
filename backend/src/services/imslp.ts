@@ -1,7 +1,8 @@
 import logger from '../utils/logger';
 
-// IMSLP API base URL
+// IMSLP API base URLs
 const IMSLP_API_BASE = 'https://imslp.org/api.php';
+const IMSLP_SEARCH_API = 'https://imslp.org/imslpscripts/API.ISCR.php';
 
 // Rate limiting configuration
 const RATE_LIMIT_DELAY_MS = 1000; // 1 second between requests
@@ -65,6 +66,7 @@ export interface ImslpSearchResult {
 
 /**
  * Search IMSLP for works by title and/or composer
+ * Uses IMSLP's dedicated search API (ISCR) instead of MediaWiki search
  */
 export async function searchImslp(
     query: string,
@@ -72,23 +74,24 @@ export async function searchImslp(
 ): Promise<ImslpSearchResult> {
     await rateLimit();
 
-    // Build search term
-    let searchTerm = query;
-    if (composer) {
-        searchTerm = `${composer} ${query}`;
-    }
-
+    // Use IMSLP's ISCR API for searching
+    // type=1: search by composer, type=2: search by work title
     const params = new URLSearchParams({
-        action: 'query',
-        list: 'search',
-        srsearch: searchTerm,
-        srnamespace: '0', // Main namespace for works
-        srlimit: '50',
-        format: 'json',
-        origin: '*',
+        retformat: 'json',
+        start: '0',
     });
 
-    const url = `${IMSLP_API_BASE}?${params.toString()}`;
+    // If composer is provided, search by composer first
+    if (composer) {
+        params.set('type', '1');
+        params.set('comp', composer);
+    } else {
+        // Search by work title
+        params.set('type', '2');
+        params.set('work', query);
+    }
+
+    const url = `${IMSLP_SEARCH_API}?${params.toString()}`;
     logger.info(`IMSLP search: ${url}`);
 
     try {
@@ -104,55 +107,208 @@ export async function searchImslp(
 
         const data = await response.json() as any;
 
-        if (!data.query?.search) {
-            return {
-                works: [],
-                totalCount: 0,
-                searchUrl: `https://imslp.org/wiki/Special:Search?search=${encodeURIComponent(searchTerm)}`,
-            };
+        // ISCR API returns an object with numeric keys for results
+        // and a "metadata" key with total info
+        const works: ImslpWork[] = [];
+
+        for (const key of Object.keys(data)) {
+            if (key === 'metadata') continue;
+
+            const item = data[key];
+            if (!item || typeof item !== 'object') continue;
+
+            // For composer search (type=1), item.id is the composer name
+            // We need to filter works if a query is provided
+            if (composer && item.id) {
+                // This is a composer result, need to get their works
+                const composerWorks = await searchComposerWorks(item.id, query);
+                works.push(...composerWorks);
+            } else if (item.id && item.permlink) {
+                // This is a work result
+                const work = parseIscrWorkResult(item);
+                // Filter by query if provided
+                if (!query || work.title.toLowerCase().includes(query.toLowerCase())) {
+                    works.push(work);
+                }
+            }
         }
 
-        const works: ImslpWork[] = data.query.search
-            .filter((result: any) => !result.title.startsWith('Category:'))
-            .map((result: any) => parseWorkFromSearchResult(result));
+        // If searching by composer and query, also try direct work search
+        if (composer && query && works.length === 0) {
+            const directSearch = await searchWorksDirect(query, composer);
+            works.push(...directSearch);
+        }
 
+        const searchTerm = composer ? `${composer} ${query}` : query;
         return {
-            works,
-            totalCount: data.query.searchinfo?.totalhits || works.length,
+            works: works.slice(0, 50), // Limit results
+            totalCount: works.length,
             searchUrl: `https://imslp.org/wiki/Special:Search?search=${encodeURIComponent(searchTerm)}`,
         };
     } catch (error: any) {
         logger.error('IMSLP search error:', error.message);
-        throw error;
+        // Fallback to opensearch API
+        return searchImslpFallback(query, composer);
     }
 }
 
 /**
- * Parse a work from a search result
+ * Search for works by a specific composer
  */
-function parseWorkFromSearchResult(result: any): ImslpWork {
-    const title = result.title || '';
+async function searchComposerWorks(composerName: string, query?: string): Promise<ImslpWork[]> {
+    await rateLimit();
 
-    // IMSLP titles are typically in format: "Title (Composer)"
-    const titleMatch = title.match(/^(.+?)\s*\(([^)]+)\)$/);
-    let workTitle = title;
-    let composer = '';
+    const params = new URLSearchParams({
+        retformat: 'json',
+        type: '3', // Get works by composer
+        comp: composerName,
+        start: '0',
+    });
 
-    if (titleMatch) {
-        workTitle = titleMatch[1].trim();
-        composer = titleMatch[2].trim();
+    const url = `${IMSLP_SEARCH_API}?${params.toString()}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+            },
+        });
+
+        if (!response.ok) return [];
+
+        const data = await response.json() as any;
+        const works: ImslpWork[] = [];
+
+        for (const key of Object.keys(data)) {
+            if (key === 'metadata') continue;
+
+            const item = data[key];
+            if (!item || typeof item !== 'object' || !item.id) continue;
+
+            const work = parseIscrWorkResult(item, composerName);
+            // Filter by query if provided
+            if (!query || work.title.toLowerCase().includes(query.toLowerCase())) {
+                works.push(work);
+            }
+        }
+
+        return works;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Direct work search using opensearch API
+ */
+async function searchWorksDirect(query: string, composer?: string): Promise<ImslpWork[]> {
+    await rateLimit();
+
+    const searchTerm = composer ? `${query} ${composer}` : query;
+    const params = new URLSearchParams({
+        action: 'opensearch',
+        search: searchTerm,
+        limit: '50',
+        format: 'json',
+    });
+
+    const url = `${IMSLP_API_BASE}?${params.toString()}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+            },
+        });
+
+        if (!response.ok) return [];
+
+        const data = await response.json() as any;
+
+        // OpenSearch returns [searchterm, [titles], [descriptions], [urls]]
+        if (!Array.isArray(data) || data.length < 4) return [];
+
+        const titles = data[1] as string[];
+        const urls = data[3] as string[];
+
+        return titles
+            .map((title, index) => {
+                const titleMatch = title.match(/^(.+?)\s*\(([^)]+)\)$/);
+                let workTitle = title;
+                let workComposer = '';
+
+                if (titleMatch) {
+                    workTitle = titleMatch[1].trim();
+                    workComposer = titleMatch[2].trim();
+                }
+
+                return {
+                    id: title.replace(/\s+/g, '_'),
+                    title: workTitle,
+                    composer: workComposer,
+                    workCategory: '',
+                    instrumentation: '',
+                    key: extractKeyFromTitle(workTitle),
+                    movements: [],
+                    year: '',
+                    permalink: urls[index] || `https://imslp.org/wiki/${encodeURIComponent(title.replace(/\s+/g, '_'))}`,
+                };
+            })
+            .filter(work => !work.title.startsWith('Category:'));
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Fallback search using opensearch API
+ */
+async function searchImslpFallback(query: string, composer?: string): Promise<ImslpSearchResult> {
+    const searchTerm = composer ? `${composer} ${query}` : query;
+    const works = await searchWorksDirect(query, composer);
+
+    return {
+        works,
+        totalCount: works.length,
+        searchUrl: `https://imslp.org/wiki/Special:Search?search=${encodeURIComponent(searchTerm)}`,
+    };
+}
+
+/**
+ * Parse a work from ISCR API result
+ */
+function parseIscrWorkResult(item: any, defaultComposer?: string): ImslpWork {
+    const id = item.id || '';
+    const permlink = item.permlink || '';
+
+    // ISCR returns work titles, often without composer in title
+    // The permlink usually contains the full wiki page name
+    let title = id;
+    let composer = defaultComposer || '';
+
+    // Try to extract composer from permlink if not provided
+    if (!composer && permlink) {
+        const permlinkMatch = permlink.match(/wiki\/(.+?)$/);
+        if (permlinkMatch) {
+            const pageName = decodeURIComponent(permlinkMatch[1]).replace(/_/g, ' ');
+            const titleMatch = pageName.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (titleMatch) {
+                title = titleMatch[1].trim();
+                composer = titleMatch[2].trim();
+            }
+        }
     }
 
     return {
-        id: result.pageid?.toString() || title.replace(/\s+/g, '_'),
-        title: workTitle,
+        id: id.replace(/\s+/g, '_'),
+        title,
         composer,
-        workCategory: '',
-        instrumentation: '',
-        key: '',
+        workCategory: item.type || '',
+        instrumentation: item.instrumentation || '',
+        key: extractKeyFromTitle(title),
         movements: [],
-        year: '',
-        permalink: `https://imslp.org/wiki/${encodeURIComponent(title.replace(/\s+/g, '_'))}`,
+        year: item.date || '',
+        permalink: permlink.startsWith('http') ? permlink : `https://imslp.org${permlink}`,
     };
 }
 
