@@ -12,6 +12,7 @@ import type { MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { searchSheetMusicWebsites } from '../utils/sheetMusic';
+import { ImslpSearch } from '../components/ImslpSearch';
 
 // Format seconds to mm:ss string for form input
 function formatDurationForForm(seconds: number): string {

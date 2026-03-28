@@ -231,6 +231,7 @@ app.use('/api/gdpr', gdprRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Health check routes (basic and detailed)
 app.use('/api/health', healthRoutes);

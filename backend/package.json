@@ -13,7 +13,10 @@
     "migrate:status": "tsx src/migrations/cli.ts status",
     "migrate:create": "tsx src/migrations/cli.ts create",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run --include='src/__tests__/routes/**/*.test.ts'"
   },
   "dependencies": {
     "@sentry/node": "^10.46.0",

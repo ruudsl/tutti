@@ -275,6 +275,15 @@ export default function Upload() {
           </p>
         </div>
       </div>
+
+      {showImslpSearch && (
+        <ImslpSearch
+          onClose={() => setShowImslpSearch(false)}
+          onImportSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+          }}
+        />
+      )}
     </div>
   );
 }

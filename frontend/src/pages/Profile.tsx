@@ -5,6 +5,7 @@ import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SessionsManager } from '../components/SessionsManager';
 import { GdprExport } from '../components/GdprExport';
+import NotificationPreferences from '../components/NotificationPreferences';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -277,6 +278,13 @@ export default function Profile() {
               </form>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="card mt-3">
+        <div className="card-body">
+          <NotificationPreferences />
         </div>
       </div>
 
