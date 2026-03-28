@@ -69,6 +69,7 @@ import gdprRoutes from './routes/gdpr';
 import searchRoutes from './routes/search';
 import thumbnailsRoutes from './routes/thumbnails';
 import streamingLinksRoutes from './routes/streamingLinks';
+import calendarRoutes from './routes/calendar';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import healthRoutes from './routes/health';

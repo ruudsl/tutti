@@ -9,6 +9,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ImslpSearch } from '../components/ImslpSearch';
 
 interface FileItem {
   file: File;
@@ -22,6 +23,7 @@ export default function Upload() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [showNewList, setShowNewList] = useState(false);
   const [newListName, setNewListName] = useState('');
+  const [showImslpSearch, setShowImslpSearch] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -103,7 +105,15 @@ export default function Upload() {
 
   return (
     <div>
-      <h1 className="mb-3">{t('upload.title')}</h1>
+      <div className="flex justify-between items-center mb-3">
+        <h1>{t('upload.title')}</h1>
+        <button
+          className="btn btn-outline"
+          onClick={() => setShowImslpSearch(true)}
+        >
+          {t('imslp.searchOnImslp')}
+        </button>
+      </div>
 
       <div className="card mb-2">
         <div className="card-header">

@@ -84,7 +84,7 @@ export default function Layout() {
   const agendaPaths = ['/rehearsals', '/concerts'];
   const orchestraPaths = ['/seating', '/voice-parts', '/instruments', '/occupancy', '/neighbor-preferences'];
   const ledenPaths = ['/members', '/issues'];
-  const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools'];
+  const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'];
   const inventarisPaths = ['/equipment', '/uniforms'];
   const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs'];
 
