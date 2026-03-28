@@ -85,13 +85,13 @@ export default function Onboarding() {
   const createJobTitleMappingMutation = useMutation({
     mutationFn: createInstrumentJobTitleMapping,
     onSuccess: () => {
-      showSuccess(t('onboarding.m365Settings.mappingCreated'));
+      showSuccess(t('memberOnboarding.m365Settings.mappingCreated'));
       queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
       setNewMappingInstrumentId('');
       setNewMappingJobTitle('');
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.m365Settings.errorCreatingMapping'));
+      showError(error.response?.data?.error || t('memberOnboarding.m365Settings.errorCreatingMapping'));
     },
   });
 
@@ -99,24 +99,24 @@ export default function Onboarding() {
     mutationFn: ({ id, jobTitle }: { id: string; jobTitle: string }) =>
       updateInstrumentJobTitleMapping(id, jobTitle),
     onSuccess: () => {
-      showSuccess(t('onboarding.m365Settings.mappingUpdated'));
+      showSuccess(t('memberOnboarding.m365Settings.mappingUpdated'));
       queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
       setEditingMapping(null);
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.m365Settings.errorUpdatingMapping'));
+      showError(error.response?.data?.error || t('memberOnboarding.m365Settings.errorUpdatingMapping'));
     },
   });
 
   const deleteJobTitleMappingMutation = useMutation({
     mutationFn: deleteInstrumentJobTitleMapping,
     onSuccess: () => {
-      showSuccess(t('onboarding.m365Settings.mappingDeleted'));
+      showSuccess(t('memberOnboarding.m365Settings.mappingDeleted'));
       queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
       setConfirmDeleteMapping(null);
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.m365Settings.errorDeletingMapping'));
+      showError(error.response?.data?.error || t('memberOnboarding.m365Settings.errorDeletingMapping'));
     },
   });
 
@@ -155,31 +155,31 @@ export default function Onboarding() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.errorCreating'));
+      showError(error.response?.data?.error || t('memberOnboarding.errorCreating'));
     },
   });
 
   const deletePendingMutation = useMutation({
     mutationFn: deletePendingSpondLink,
     onSuccess: () => {
-      showSuccess(t('onboarding.pendingLinkRemoved'));
+      showSuccess(t('memberOnboarding.pendingLinkRemoved'));
       queryClient.invalidateQueries({ queryKey: ['pendingSpondLinks'] });
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.errorRemovingLink'));
+      showError(error.response?.data?.error || t('memberOnboarding.errorRemovingLink'));
     },
   });
 
   const reactivateMutation = useMutation({
     mutationFn: reactivateMember,
     onSuccess: () => {
-      showSuccess(t('onboarding.memberReactivated'));
+      showSuccess(t('memberOnboarding.memberReactivated'));
       setConfirmReactivate(null);
       queryClient.invalidateQueries({ queryKey: ['inactiveMembers'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.errorReactivating'));
+      showError(error.response?.data?.error || t('memberOnboarding.errorReactivating'));
     },
   });
 
@@ -196,7 +196,7 @@ export default function Onboarding() {
       }
     },
     onError: (error: any) => {
-      showError(error.response?.data?.error || t('onboarding.emailForwardingRetryFailed'));
+      showError(error.response?.data?.error || t('memberOnboarding.emailForwardingRetryFailed'));
     },
   });
 
@@ -218,11 +218,11 @@ export default function Onboarding() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        showError(t('onboarding.photoTooLarge'));
+        showError(t('memberOnboarding.photoTooLarge'));
         return;
       }
       if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-        showError(t('onboarding.photoInvalidType'));
+        showError(t('memberOnboarding.photoInvalidType'));
         return;
       }
       setProfilePhoto(file);
@@ -258,7 +258,7 @@ export default function Onboarding() {
     if (onboardingResult?.tempPassword) {
       navigator.clipboard.writeText(onboardingResult.tempPassword);
       setPasswordCopied(true);
-      showSuccess(t('onboarding.passwordCopied'));
+      showSuccess(t('memberOnboarding.passwordCopied'));
     }
   };
 
@@ -273,7 +273,7 @@ export default function Onboarding() {
 
   return (
     <div>
-      <h1 className="mb-3">{t('onboarding.title')}</h1>
+      <h1 className="mb-3">{t('memberOnboarding.title')}</h1>
 
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-3">
@@ -281,13 +281,13 @@ export default function Onboarding() {
           className={`btn ${activeTab === 'onboard' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('onboard')}
         >
-          {t('onboarding.tabNewMember')}
+          {t('memberOnboarding.tabNewMember')}
         </button>
         <button
           className={`btn ${activeTab === 'pending' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('pending')}
         >
-          {t('onboarding.tabPendingLinks')}
+          {t('memberOnboarding.tabPendingLinks')}
           {pendingLinks.length > 0 && (
             <span
               style={{
@@ -307,7 +307,7 @@ export default function Onboarding() {
           className={`btn ${activeTab === 'inactive' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('inactive')}
         >
-          {t('onboarding.tabInactive')}
+          {t('memberOnboarding.tabInactive')}
           {inactiveMembers.length > 0 && (
             <span
               style={{
@@ -328,7 +328,7 @@ export default function Onboarding() {
             className={`btn ${activeTab === 'm365' ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setActiveTab('m365')}
           >
-            {t('onboarding.tabM365Settings')}
+            {t('memberOnboarding.tabM365Settings')}
           </button>
         )}
       </div>
@@ -337,16 +337,16 @@ export default function Onboarding() {
       {activeTab === 'onboard' && (
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('onboarding.newMemberTitle')}</h2>
+            <h2 className="card-title">{t('memberOnboarding.newMemberTitle')}</h2>
           </div>
           <div className="card-body">
             {wizardStep === 'form' ? (
               <form onSubmit={form.handleSubmit(handleSubmit)}>
-                <p className="piece-meta mb-3">{t('onboarding.newMemberDescription')}</p>
+                <p className="piece-meta mb-3">{t('memberOnboarding.newMemberDescription')}</p>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
-                    <label className="form-label">{t('onboarding.firstName')} *</label>
+                    <label className="form-label">{t('memberOnboarding.firstName')} *</label>
                     <input
                       type="text"
                       className="form-control"
@@ -354,7 +354,7 @@ export default function Onboarding() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('onboarding.lastName')} *</label>
+                    <label className="form-label">{t('memberOnboarding.lastName')} *</label>
                     <input
                       type="text"
                       className="form-control"
@@ -364,29 +364,29 @@ export default function Onboarding() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('onboarding.email')} *</label>
+                  <label className="form-label">{t('memberOnboarding.email')} *</label>
                   <input
                     type="email"
                     className="form-control"
                     {...form.register('email', { required: true })}
                   />
-                  <small className="text-secondary">{t('onboarding.emailHint')}</small>
+                  <small className="text-secondary">{t('memberOnboarding.emailHint')}</small>
                 </div>
 
                 {msConfig?.configured && (
                   <div className="form-group">
-                    <label className="form-label">{t('onboarding.privateEmail')}</label>
+                    <label className="form-label">{t('memberOnboarding.privateEmail')}</label>
                     <input
                       type="email"
                       className="form-control"
                       {...form.register('privateEmail')}
                     />
-                    <small className="text-secondary">{t('onboarding.privateEmailHint')}</small>
+                    <small className="text-secondary">{t('memberOnboarding.privateEmailHint')}</small>
                   </div>
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">{t('onboarding.instruments')}</label>
+                  <label className="form-label">{t('memberOnboarding.instruments')}</label>
                   <Controller
                     name="instrumentIds"
                     control={form.control}
@@ -409,11 +409,11 @@ export default function Onboarding() {
                       </select>
                     )}
                   />
-                  <small className="text-secondary">{t('onboarding.instrumentsHint')}</small>
+                  <small className="text-secondary">{t('memberOnboarding.instrumentsHint')}</small>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('onboarding.orchestras')}</label>
+                  <label className="form-label">{t('memberOnboarding.orchestras')}</label>
                   <Controller
                     name="orchestraIds"
                     control={form.control}
@@ -445,25 +445,25 @@ export default function Onboarding() {
                     <div className="form-group">
                       <label className="flex items-center gap-2">
                         <input type="checkbox" {...form.register('createM365Account')} />
-                        {t('onboarding.createM365')}
+                        {t('memberOnboarding.createM365')}
                       </label>
-                      <small className="text-secondary">{t('onboarding.createM365Hint')}</small>
+                      <small className="text-secondary">{t('memberOnboarding.createM365Hint')}</small>
                     </div>
 
                     {form.watch('createM365Account') && hasPercussionGroup && (
                       <div className="form-group">
                         <label className="flex items-center gap-2">
                           <input type="checkbox" {...form.register('addToPercussionGroup')} />
-                          {t('onboarding.addToPercussionGroup')}
+                          {t('memberOnboarding.addToPercussionGroup')}
                         </label>
-                        <small className="text-secondary">{t('onboarding.addToPercussionGroupHint')}</small>
+                        <small className="text-secondary">{t('memberOnboarding.addToPercussionGroupHint')}</small>
                       </div>
                     )}
                   </>
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">{t('onboarding.profilePhoto')}</label>
+                  <label className="form-label">{t('memberOnboarding.profilePhoto')}</label>
                   <div className="flex items-center gap-3">
                     {photoPreview ? (
                       <div style={{ position: 'relative' }}>
@@ -524,11 +524,11 @@ export default function Onboarding() {
                         className="btn btn-outline btn-sm"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        {t('onboarding.selectPhoto')}
+                        {t('memberOnboarding.selectPhoto')}
                       </button>
                     </div>
                   </div>
-                  <small className="text-secondary">{t('onboarding.profilePhotoHint')}</small>
+                  <small className="text-secondary">{t('memberOnboarding.profilePhotoHint')}</small>
                 </div>
 
                 <div className="flex gap-2 mt-4">
@@ -537,7 +537,7 @@ export default function Onboarding() {
                     className="btn btn-primary"
                     disabled={onboardMutation.isPending}
                   >
-                    {onboardMutation.isPending ? t('common.loading') : t('onboarding.createMember')}
+                    {onboardMutation.isPending ? t('common.loading') : t('memberOnboarding.createMember')}
                   </button>
                 </div>
               </form>
@@ -554,7 +554,7 @@ export default function Onboarding() {
                   }}
                 >
                   <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>
-                    {onboardingResult?.success ? t('onboarding.successTitle') : t('onboarding.errorTitle')}
+                    {onboardingResult?.success ? t('memberOnboarding.successTitle') : t('memberOnboarding.errorTitle')}
                   </h3>
                   <p style={{ margin: 0 }}>{onboardingResult?.message}</p>
                 </div>
@@ -562,12 +562,12 @@ export default function Onboarding() {
                 {onboardingResult?.success && (
                   <>
                     <div className="mb-3">
-                      <h4>{t('onboarding.memberDetails')}</h4>
+                      <h4>{t('memberOnboarding.memberDetails')}</h4>
                       <p>
-                        <strong>{t('onboarding.name')}:</strong> {onboardingResult.firstName} {onboardingResult.lastName}
+                        <strong>{t('memberOnboarding.name')}:</strong> {onboardingResult.firstName} {onboardingResult.lastName}
                       </p>
                       <p>
-                        <strong>{t('onboarding.email')}:</strong> {onboardingResult.email}
+                        <strong>{t('memberOnboarding.email')}:</strong> {onboardingResult.email}
                       </p>
                     </div>
 
@@ -579,7 +579,7 @@ export default function Onboarding() {
                         marginBottom: '1rem',
                       }}
                     >
-                      <h4 style={{ marginTop: 0 }}>{t('onboarding.tempPasswordTitle')}</h4>
+                      <h4 style={{ marginTop: 0 }}>{t('memberOnboarding.tempPasswordTitle')}</h4>
                       <div className="flex items-center gap-2">
                         <code
                           style={{
@@ -593,29 +593,29 @@ export default function Onboarding() {
                           {onboardingResult.tempPassword}
                         </code>
                         <button className="btn btn-outline btn-sm" onClick={copyPassword}>
-                          {passwordCopied ? t('onboarding.copied') : t('onboarding.copy')}
+                          {passwordCopied ? t('memberOnboarding.copied') : t('memberOnboarding.copy')}
                         </button>
                       </div>
-                      <small className="text-secondary">{t('onboarding.tempPasswordHint')}</small>
+                      <small className="text-secondary">{t('memberOnboarding.tempPasswordHint')}</small>
                     </div>
 
                     <div className="mb-3">
-                      <h4>{t('onboarding.statusTitle')}</h4>
+                      <h4>{t('memberOnboarding.statusTitle')}</h4>
                       <ul style={{ paddingLeft: '1.5rem' }}>
                         <li style={{ color: 'var(--success)' }}>
-                          {t('onboarding.harmonieCreated')}
+                          {t('memberOnboarding.harmonieCreated')}
                         </li>
                         {onboardingResult.m365Created ? (
                           <li style={{ color: 'var(--success)' }}>
-                            {t('onboarding.m365Created')}
+                            {t('memberOnboarding.m365Created')}
                           </li>
                         ) : onboardingResult.m365Error ? (
                           <li style={{ color: 'var(--danger)' }}>
-                            {t('onboarding.m365Error')}: {onboardingResult.m365Error}
+                            {t('memberOnboarding.m365Error')}: {onboardingResult.m365Error}
                           </li>
                         ) : null}
                         <li style={{ color: 'var(--warning)' }}>
-                          {t('onboarding.spondPending')}
+                          {t('memberOnboarding.spondPending')}
                         </li>
                       </ul>
                     </div>
@@ -629,7 +629,7 @@ export default function Onboarding() {
                         marginBottom: '1rem',
                       }}
                     >
-                      <h4 style={{ marginTop: 0 }}>{t('onboarding.nextStepsTitle')}</h4>
+                      <h4 style={{ marginTop: 0 }}>{t('memberOnboarding.nextStepsTitle')}</h4>
                       <ol style={{ paddingLeft: '1.5rem', margin: 0 }}>
                         {onboardingResult.instructions.map((instruction, idx) => (
                           <li key={idx}>{instruction}</li>
@@ -648,16 +648,16 @@ export default function Onboarding() {
                           marginBottom: '1rem',
                         }}
                       >
-                        <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{t('onboarding.emailForwardingPending')}</h4>
-                        <p style={{ margin: 0, marginBottom: '0.75rem' }}>{t('onboarding.emailForwardingPendingDesc')}</p>
+                        <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{t('memberOnboarding.emailForwardingPending')}</h4>
+                        <p style={{ margin: 0, marginBottom: '0.75rem' }}>{t('memberOnboarding.emailForwardingPendingDesc')}</p>
                         <button
                           className="btn btn-warning btn-sm"
                           onClick={() => retryEmailForwardingMutation.mutate(onboardingResult.userId)}
                           disabled={retryEmailForwardingMutation.isPending}
                         >
                           {retryEmailForwardingMutation.isPending
-                            ? t('onboarding.retryingEmailForwarding')
-                            : t('onboarding.retryEmailForwarding')}
+                            ? t('memberOnboarding.retryingEmailForwarding')
+                            : t('memberOnboarding.retryEmailForwarding')}
                         </button>
                       </div>
                     )}
@@ -665,7 +665,7 @@ export default function Onboarding() {
                 )}
 
                 <button className="btn btn-primary" onClick={handleNewOnboarding}>
-                  {t('onboarding.addAnother')}
+                  {t('memberOnboarding.addAnother')}
                 </button>
               </div>
             )}
@@ -677,25 +677,25 @@ export default function Onboarding() {
       {activeTab === 'pending' && (
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('onboarding.pendingLinksTitle')}</h2>
+            <h2 className="card-title">{t('memberOnboarding.pendingLinksTitle')}</h2>
           </div>
           <div className="card-body">
-            <p className="piece-meta mb-3">{t('onboarding.pendingLinksDescription')}</p>
+            <p className="piece-meta mb-3">{t('memberOnboarding.pendingLinksDescription')}</p>
 
             {pendingLoading ? (
               <div className="loading">
                 <div className="spinner"></div>
               </div>
             ) : pendingLinks.length === 0 ? (
-              <p className="text-secondary">{t('onboarding.noPendingLinks')}</p>
+              <p className="text-secondary">{t('memberOnboarding.noPendingLinks')}</p>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('onboarding.columnName')}</th>
-                    <th>{t('onboarding.columnEmail')}</th>
-                    <th>{t('onboarding.columnExpectedName')}</th>
-                    <th>{t('onboarding.columnCreatedAt')}</th>
+                    <th>{t('memberOnboarding.columnName')}</th>
+                    <th>{t('memberOnboarding.columnEmail')}</th>
+                    <th>{t('memberOnboarding.columnExpectedName')}</th>
+                    <th>{t('memberOnboarding.columnCreatedAt')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -714,7 +714,7 @@ export default function Onboarding() {
                           onClick={() => deletePendingMutation.mutate(link.id)}
                           disabled={deletePendingMutation.isPending}
                         >
-                          {t('onboarding.removePending')}
+                          {t('memberOnboarding.removePending')}
                         </button>
                       </td>
                     </tr>
@@ -730,24 +730,24 @@ export default function Onboarding() {
       {activeTab === 'inactive' && (
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('onboarding.inactiveTitle')}</h2>
+            <h2 className="card-title">{t('memberOnboarding.inactiveTitle')}</h2>
           </div>
           <div className="card-body">
-            <p className="piece-meta mb-3">{t('onboarding.inactiveDescription')}</p>
+            <p className="piece-meta mb-3">{t('memberOnboarding.inactiveDescription')}</p>
 
             {inactiveLoading ? (
               <div className="loading">
                 <div className="spinner"></div>
               </div>
             ) : inactiveMembers.length === 0 ? (
-              <p className="text-secondary">{t('onboarding.noInactive')}</p>
+              <p className="text-secondary">{t('memberOnboarding.noInactive')}</p>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('onboarding.columnName')}</th>
-                    <th>{t('onboarding.columnEmail')}</th>
-                    <th>{t('onboarding.columnOffboardedAt')}</th>
+                    <th>{t('memberOnboarding.columnName')}</th>
+                    <th>{t('memberOnboarding.columnEmail')}</th>
+                    <th>{t('memberOnboarding.columnOffboardedAt')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -764,7 +764,7 @@ export default function Onboarding() {
                           className="btn btn-outline btn-sm"
                           onClick={() => setConfirmReactivate(member)}
                         >
-                          {t('onboarding.reactivate')}
+                          {t('memberOnboarding.reactivate')}
                         </button>
                       </td>
                     </tr>
@@ -780,11 +780,11 @@ export default function Onboarding() {
       {activeTab === 'm365' && msConfig?.configured && (
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('onboarding.m365Settings.title')}</h2>
+            <h2 className="card-title">{t('memberOnboarding.m365Settings.title')}</h2>
           </div>
           <div className="card-body">
-            <h3>{t('onboarding.m365Settings.jobTitleMappingsTitle')}</h3>
-            <p className="piece-meta mb-3">{t('onboarding.m365Settings.jobTitleMappingsDescription')}</p>
+            <h3>{t('memberOnboarding.m365Settings.jobTitleMappingsTitle')}</h3>
+            <p className="piece-meta mb-3">{t('memberOnboarding.m365Settings.jobTitleMappingsDescription')}</p>
 
             {/* Add new mapping form */}
             <div
@@ -795,16 +795,16 @@ export default function Onboarding() {
                 marginBottom: '1rem',
               }}
             >
-              <h4 style={{ marginTop: 0 }}>{t('onboarding.m365Settings.addMapping')}</h4>
+              <h4 style={{ marginTop: 0 }}>{t('memberOnboarding.m365Settings.addMapping')}</h4>
               <div className="grid grid-cols-3 gap-2" style={{ alignItems: 'end' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{t('onboarding.m365Settings.instrument')}</label>
+                  <label className="form-label">{t('memberOnboarding.m365Settings.instrument')}</label>
                   <select
                     className="form-control"
                     value={newMappingInstrumentId}
                     onChange={(e) => setNewMappingInstrumentId(e.target.value)}
                   >
-                    <option value="">{t('onboarding.m365Settings.selectInstrument')}</option>
+                    <option value="">{t('memberOnboarding.m365Settings.selectInstrument')}</option>
                     {instruments
                       .filter((inst) => !jobTitleMappings.some((m) => m.instrumentId === inst.id))
                       .map((inst) => (
@@ -815,11 +815,11 @@ export default function Onboarding() {
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{t('onboarding.m365Settings.jobTitle')}</label>
+                  <label className="form-label">{t('memberOnboarding.m365Settings.jobTitle')}</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder={t('onboarding.m365Settings.jobTitlePlaceholder')}
+                    placeholder={t('memberOnboarding.m365Settings.jobTitlePlaceholder')}
                     value={newMappingJobTitle}
                     onChange={(e) => setNewMappingJobTitle(e.target.value)}
                   />
@@ -840,7 +840,7 @@ export default function Onboarding() {
                 >
                   {createJobTitleMappingMutation.isPending
                     ? t('common.loading')
-                    : t('onboarding.m365Settings.add')}
+                    : t('memberOnboarding.m365Settings.add')}
                 </button>
               </div>
             </div>
@@ -851,13 +851,13 @@ export default function Onboarding() {
                 <div className="spinner"></div>
               </div>
             ) : jobTitleMappings.length === 0 ? (
-              <p className="text-secondary">{t('onboarding.m365Settings.noMappings')}</p>
+              <p className="text-secondary">{t('memberOnboarding.m365Settings.noMappings')}</p>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('onboarding.m365Settings.instrument')}</th>
-                    <th>{t('onboarding.m365Settings.jobTitle')}</th>
+                    <th>{t('memberOnboarding.m365Settings.instrument')}</th>
+                    <th>{t('memberOnboarding.m365Settings.jobTitle')}</th>
                     <th style={{ width: '150px' }}></th>
                   </tr>
                 </thead>
@@ -950,11 +950,11 @@ export default function Onboarding() {
       {/* Reactivate Confirmation Dialog */}
       {confirmReactivate && (
         <ConfirmDialog
-          title={t('onboarding.reactivateTitle')}
-          message={t('onboarding.reactivateConfirm', {
+          title={t('memberOnboarding.reactivateTitle')}
+          message={t('memberOnboarding.reactivateConfirm', {
             name: `${confirmReactivate.firstName} ${confirmReactivate.lastName}`,
           })}
-          confirmLabel={t('onboarding.reactivate')}
+          confirmLabel={t('memberOnboarding.reactivate')}
           onConfirm={() => reactivateMutation.mutate(confirmReactivate.id)}
           onCancel={() => setConfirmReactivate(null)}
           isLoading={reactivateMutation.isPending}
@@ -965,8 +965,8 @@ export default function Onboarding() {
       {/* Delete Mapping Confirmation Dialog */}
       {confirmDeleteMapping && (
         <ConfirmDialog
-          title={t('onboarding.m365Settings.deleteMapping')}
-          message={t('onboarding.m365Settings.deleteMappingConfirm', {
+          title={t('memberOnboarding.m365Settings.deleteMapping')}
+          message={t('memberOnboarding.m365Settings.deleteMappingConfirm', {
             instrument: confirmDeleteMapping.instrumentName,
           })}
           confirmLabel={t('common.delete')}

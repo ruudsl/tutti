@@ -1866,7 +1866,7 @@
     "confirmDelete": "Weet je zeker dat je deze voorkeur wilt verwijderen?",
     "cannotSelectSelf": "Je kunt niet jezelf selecteren als buur"
   },
-  "onboarding": {
+  "memberOnboarding": {
     "title": "Ledenbeheer",
     "tabNewMember": "Nieuw lid",
     "tabPendingLinks": "Wachtende koppelingen",
