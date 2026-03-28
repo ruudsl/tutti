@@ -38,6 +38,7 @@ const MusicTitles = lazy(() => import('./pages/MusicTitles'));
 const Upload = lazy(() => import('./pages/Upload'));
 const PdfTools = lazy(() => import('./pages/PdfTools'));
 const MusicListManager = lazy(() => import('./pages/MusicListManager'));
+const ImslpBrowser = lazy(() => import('./pages/ImslpBrowser'));
 
 // Reference data management
 const Instruments = lazy(() => import('./pages/Instruments'));
@@ -75,6 +76,7 @@ const NeighborPreferences = lazy(() => import('./pages/NeighborPreferences'));
 const MemberDirectory = lazy(() => import('./pages/MemberDirectory'));
 const UserGuide = lazy(() => import('./pages/UserGuide'));
 const PracticeSchedules = lazy(() => import('./pages/PracticeSchedules'));
+const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
 
 /**
  * Loading fallback for lazy-loaded pages
@@ -219,6 +221,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <LazyPage><PdfTools /></LazyPage>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="imslp"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <LazyPage><ImslpBrowser /></LazyPage>
             </PrivateRoute>
           }
         />
@@ -398,6 +408,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <LazyPage><AuditLogs /></LazyPage>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="health"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <LazyPage><HealthDashboard /></LazyPage>
             </PrivateRoute>
           }
         />

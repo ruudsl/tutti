@@ -1713,5 +1713,51 @@
     "select": "auswählen",
     "close": "schließen",
     "deleteRecent": "Löschen"
+  },
+  "health": {
+    "title": "Systemgesundheit",
+    "systemOverview": "Systemubersicht",
+    "services": "Dienste",
+    "systemInfo": "Systeminformationen",
+    "version": "Version",
+    "environment": "Umgebung",
+    "uptime": "Betriebszeit",
+    "lastChecked": "Zuletzt gepruft",
+    "database": "Datenbank",
+    "disk": "Festplattenspeicher",
+    "memory": "Speicher",
+    "latency": "Latenz",
+    "platform": "Plattform",
+    "nodeVersion": "Node Version",
+    "hostname": "Hostname",
+    "cpuCount": "CPU Kerne",
+    "loadAverage": "Systemauslastung (1m, 5m, 15m)",
+    "autoRefresh": "Automatisch aktualisieren",
+    "refresh": "Aktualisieren",
+    "retry": "Erneut versuchen",
+    "errorLoading": "Gesundheitsstatus konnte nicht geladen werden. Prufen Sie, ob Sie Administratorrechte haben.",
+    "days": "T",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s",
+    "status": {
+      "healthy": "Gesund",
+      "degraded": "Beeintrachtigt",
+      "unhealthy": "Ungesund"
+    },
+    "details": {
+      "userCount": "Benutzer",
+      "pieceCount": "Musikstucke",
+      "totalSpaceGB": "Gesamtspeicher (GB)",
+      "freeSpaceGB": "Freier Speicher (GB)",
+      "usedPercentage": "Genutzt (%)",
+      "dataDirSizeMB": "Datenverzeichnis (MB)",
+      "uploadDirSizeMB": "Upload-Verzeichnis (MB)",
+      "totalMemoryMB": "Gesamtspeicher (MB)",
+      "freeMemoryMB": "Freier Speicher (MB)",
+      "processHeapUsedMB": "Prozess Heap Genutzt (MB)",
+      "processHeapTotalMB": "Prozess Heap Gesamt (MB)",
+      "processRssMB": "Prozess RSS (MB)"
+    }
   }
 }

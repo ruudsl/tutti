@@ -371,7 +371,8 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
                mt.grade,
                mt.mp3_file_path,
                mt.is_shared,
-               mt.internal_notes
+               mt.internal_notes,
+               mt.streaming_links
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
         LEFT JOIN music_titles mt ON mp.title = mt.title
@@ -435,6 +436,16 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             ORDER BY o.name, ml.name
         `).all(t.title, req.user!.associationId) as { id: string; name: string; orchestra_name: string }[];
 
+        // Parse streaming links JSON
+        let streamingLinks = null;
+        if (t.streaming_links) {
+            try {
+                streamingLinks = JSON.parse(t.streaming_links);
+            } catch (e) {
+                // Invalid JSON, ignore
+            }
+        }
+
         return {
             id: t.title_id || null,
             title: t.title,
@@ -447,6 +458,7 @@ router.get('/titles', authenticateToken, requireRole('admin', 'music_committee')
             mp3FilePath: t.mp3_file_path,
             isShared: Boolean(t.is_shared),
             internalNotes: t.internal_notes || null,
+            streamingLinks,
             instruments: t.instruments ? t.instruments.split(',') : [],
             onList: listId ? titlesOnList.has(t.title) : undefined,
             genres,

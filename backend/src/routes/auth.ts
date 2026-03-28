@@ -26,7 +26,36 @@ interface User {
     mfa_enabled: boolean;
 }
 
-// Login - Step 1: Verify credentials
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Authenticate user and get JWT token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *           example:
+ *             email: "muzikant@harmonie.nl"
+ *             password: "wachtwoord123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/login', asyncHandler(async (req, res) => {
     const { email, password, mfaCode } = req.body;
 
@@ -95,7 +124,24 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
 }));
 
-// Get current user profile
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current authenticated user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile with instruments and orchestras
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
 router.get('/me', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare(`
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id,
@@ -139,7 +185,34 @@ router.get('/me', authenticateToken, asyncHandler(async (req: AuthRequest, res: 
     });
 }));
 
-// Change password
+/**
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Change password for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ChangePasswordRequest'
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Current password incorrect
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/change-password', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
@@ -172,7 +245,33 @@ router.post('/change-password', authenticateToken, asyncHandler(async (req: Auth
     res.json({ message: 'Wachtwoord succesvol gewijzigd.' });
 }));
 
-// MFA: Generate secret and QR code for setup
+/**
+ * @swagger
+ * /auth/mfa/setup:
+ *   post:
+ *     summary: Generate MFA secret and QR code for setup
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA setup information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 secret:
+ *                   type: string
+ *                   description: MFA secret (save this for backup)
+ *                 qrCode:
+ *                   type: string
+ *                   description: QR code as data URL
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: MFA already enabled
+ */
 router.post('/mfa/setup', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT email, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { email: string; mfa_enabled: boolean } | undefined;
 
@@ -203,7 +302,42 @@ router.post('/mfa/setup', authenticateToken, asyncHandler(async (req: AuthReques
     });
 }));
 
-// MFA: Verify code and enable MFA
+/**
+ * @swagger
+ * /auth/mfa/enable:
+ *   post:
+ *     summary: Verify MFA code and enable MFA
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: 6-digit verification code from authenticator app
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: MFA enabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 mfaEnabled:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Invalid verification code
+ */
 router.post('/mfa/enable', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { code } = req.body;
 
@@ -253,7 +387,44 @@ router.post('/mfa/enable', authenticateToken, asyncHandler(async (req: AuthReque
     });
 }));
 
-// MFA: Disable MFA
+/**
+ * @swagger
+ * /auth/mfa/disable:
+ *   post:
+ *     summary: Disable MFA (requires password confirmation)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: Current password for verification
+ *               code:
+ *                 type: string
+ *                 description: Optional MFA code for extra verification
+ *     responses:
+ *       200:
+ *         description: MFA disabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 mfaEnabled:
+ *                   type: boolean
+ *                   example: false
+ *       401:
+ *         description: Invalid password or MFA code
+ */
 router.post('/mfa/disable', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { password, code } = req.body;
 
@@ -307,7 +478,25 @@ router.post('/mfa/disable', authenticateToken, asyncHandler(async (req: AuthRequ
     });
 }));
 
-// MFA: Get current MFA status
+/**
+ * @swagger
+ * /auth/mfa/status:
+ *   get:
+ *     summary: Get current MFA status for authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: MFA status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mfaEnabled:
+ *                   type: boolean
+ */
 router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { mfa_enabled: boolean } | undefined;
 
@@ -320,7 +509,36 @@ router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthReques
     });
 }));
 
-// Password Reset: Request reset token
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset email
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Response sent (always returns success to prevent email enumeration)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ */
 router.post('/forgot-password', asyncHandler(async (req, res) => {
     const { email } = req.body;
 
@@ -369,7 +587,38 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     res.json({ message: successMessage });
 }));
 
-// Password Reset: Reset password with token
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password using reset token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Reset token received via email
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Invalid or expired token
+ */
 router.post('/reset-password', asyncHandler(async (req, res) => {
     const { token, newPassword } = req.body;
 
@@ -419,7 +668,34 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
     res.json({ message: 'Wachtwoord succesvol gewijzigd. Je kunt nu inloggen met je nieuwe wachtwoord.' });
 }));
 
-// Password Reset: Validate token (check if token is still valid)
+/**
+ * @swagger
+ * /auth/reset-password/validate:
+ *   get:
+ *     summary: Validate a password reset token
+ *     tags: [Auth]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Reset token to validate
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Token is invalid or expired
+ */
 router.get('/reset-password/validate', asyncHandler(async (req, res) => {
     const { token } = req.query;
 

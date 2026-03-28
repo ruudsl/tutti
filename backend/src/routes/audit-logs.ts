@@ -10,7 +10,53 @@ const router = Router();
 // All audit log routes require admin role and IP whitelist check
 router.use(authenticateToken, requireRole('admin'), ipWhitelistMiddleware);
 
-// Get audit logs with filters and pagination
+/**
+ * @swagger
+ * /audit-logs:
+ *   get:
+ *     summary: Get audit logs with filters and pagination
+ *     tags: [Audit Logs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *           enum: [create, update, delete, login, logout, upload]
+ *       - in: query
+ *         name: entityType
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Paginated list of audit logs
+ */
 router.get('/', async (req, res) => {
   try {
     const {

@@ -20,8 +20,12 @@ import { csrfTokenMiddleware, validateCsrfToken, getCsrfToken } from './middlewa
 // Import Swagger
 import { swaggerSpec } from './swagger';
 
-// Import logger
-import logger from './utils/logger';
+// Import centralized logging
+import logger from './logging/logger';
+import { requestIdMiddleware, requestLoggerMiddleware, errorLoggerMiddleware } from './logging/requestLogger';
+
+// Import error monitoring (Sentry)
+import { initSentry, sentryErrorHandler, setupGlobalErrorHandlers, flushSentry } from './monitoring/sentry';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -42,6 +46,7 @@ import rehearsalRoutes from './routes/rehearsals';
 import spondRoutes from './routes/spond';
 import microsoftAuthRoutes from './routes/microsoft-auth';
 import musicaInfoRoutes from './routes/musicainfo';
+import imslpRoutes from './routes/imslp';
 import equipmentRoutes from './routes/equipment';
 import uniformsRoutes from './routes/uniforms';
 import concertsRoutes from './routes/concerts';
@@ -58,14 +63,26 @@ import sessionsRoutes from './routes/sessions';
 import audioRecordingsRoutes from './routes/audio-recordings';
 import sectionChatRoutes from './routes/section-chat';
 import notificationsRoutes from './routes/notifications';
+import notificationChannelsRoutes from './routes/notificationChannels';
 import practiceSchedulesRoutes from './routes/practice-schedules';
 import gdprRoutes from './routes/gdpr';
 import searchRoutes from './routes/search';
 import thumbnailsRoutes from './routes/thumbnails';
+import streamingLinksRoutes from './routes/streamingLinks';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
+import healthRoutes from './routes/health';
+
+// Initialize Sentry error monitoring (must be called before app is created)
+initSentry();
 
 const app = express();
+
+// Add request ID to each request (should be first middleware)
+app.use(requestIdMiddleware);
+
+// Request logging middleware (after request ID)
+app.use(requestLoggerMiddleware);
 
 // Content Security Policy configuration for production
 const getContentSecurityPolicy = (): false | { directives: Record<string, string[]> } => {
@@ -190,6 +207,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
 app.use('/api/musicainfo', musicaInfoRoutes);
+app.use('/api/imslp', imslpRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
@@ -206,15 +224,15 @@ app.use('/api/sessions', sessionsRoutes);
 app.use('/api/audio-recordings', audioRecordingsRoutes);
 app.use('/api/section-chat', sectionChatRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/notification-channels', notificationChannelsRoutes);
 app.use('/api/practice-schedules', practiceSchedulesRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
+app.use('/api/streaming', streamingLinksRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check routes (basic and detailed)
+app.use('/api/health', healthRoutes);
 
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);
@@ -273,6 +291,12 @@ if (config.isProduction) {
 // 404 handler for unknown API routes
 app.use('/api/*', notFoundHandler);
 
+// Error logging middleware (before error handler)
+app.use(errorLoggerMiddleware);
+
+// Sentry error handler (captures errors to Sentry)
+app.use(sentryErrorHandler);
+
 // Central error handling middleware
 app.use(errorHandler);
 
@@ -304,15 +328,20 @@ async function startServer() {
     }
 }
 
-// Global error handlers for safety net
-process.on('unhandledRejection', (reason: unknown) => {
-    logger.error('Unhandled Promise Rejection:', { reason });
+// Setup global error handlers for unhandled rejections and exceptions (including Sentry)
+setupGlobalErrorHandlers();
+
+// Graceful shutdown handler
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    await flushSentry();
+    process.exit(0);
 });
 
-process.on('uncaughtException', (error: Error) => {
-    logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
-    // Give logger time to flush, then exit
-    setTimeout(() => process.exit(1), 1000);
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    await flushSentry();
+    process.exit(0);
 });
 
 startServer();

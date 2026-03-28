@@ -799,6 +799,112 @@ async function initializeDatabase() {
         console.error('Migration: Error seeding default job title mappings', e);
     }
 
+    // Migration: Add streaming_links column to music_titles
+    try {
+        const titleTableInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasStreamingLinks = titleTableInfo.some(col => col.name === 'streaming_links');
+        if (!hasStreamingLinks) {
+            console.log('Migration: Adding streaming_links column to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN streaming_links TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Add IMSLP columns to music_titles and music_pieces
+    try {
+        const titleTableInfo = db.prepare("PRAGMA table_info(music_titles)").all() as { name: string }[];
+        const hasImslpWorkId = titleTableInfo.some(col => col.name === 'imslp_work_id');
+        if (!hasImslpWorkId) {
+            console.log('Migration: Adding IMSLP columns to music_titles...');
+            db.prepare('ALTER TABLE music_titles ADD COLUMN imslp_work_id TEXT').run();
+            db.prepare('ALTER TABLE music_titles ADD COLUMN imslp_permalink TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    try {
+        const pieceTableInfo = db.prepare("PRAGMA table_info(music_pieces)").all() as { name: string }[];
+        const hasImslpSource = pieceTableInfo.some(col => col.name === 'imslp_source');
+        if (!hasImslpSource) {
+            console.log('Migration: Adding imslp_source column to music_pieces...');
+            db.prepare('ALTER TABLE music_pieces ADD COLUMN imslp_source TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
+    // Migration: Create user_calendar_settings table for calendar sync
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_calendar_settings'").get();
+        if (!tables) {
+            console.log('Migration: Creating user_calendar_settings table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS user_calendar_settings (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
+                    feed_token TEXT NOT NULL,
+                    google_refresh_token TEXT,
+                    google_access_token TEXT,
+                    google_token_expires_at TEXT,
+                    google_calendar_id TEXT DEFAULT 'primary',
+                    include_rehearsals BOOLEAN DEFAULT 1,
+                    include_concerts BOOLEAN DEFAULT 1,
+                    last_sync DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_user_calendar_settings_user ON user_calendar_settings(user_id)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_user_calendar_settings_feed_token ON user_calendar_settings(feed_token)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating user_calendar_settings table', e);
+    }
+
+    // Migration: Create oauth_states table for OAuth CSRF protection
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='oauth_states'").get();
+        if (!tables) {
+            console.log('Migration: Creating oauth_states table...');
+            db.prepare(`
+                CREATE TABLE IF NOT EXISTS oauth_states (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    state TEXT NOT NULL UNIQUE,
+                    expires_at DATETIME NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            `).run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_oauth_states_state ON oauth_states(state)').run();
+            db.prepare('CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at)').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        console.error('Migration: Error creating oauth_states table', e);
+    }
+
+    // Migration: Add Google Calendar OAuth columns to associations
+    try {
+        const assocTableInfo = db.prepare("PRAGMA table_info(associations)").all() as { name: string }[];
+        const hasGoogleCalendarClientId = assocTableInfo.some(col => col.name === 'google_calendar_client_id');
+        if (!hasGoogleCalendarClientId) {
+            console.log('Migration: Adding Google Calendar OAuth columns to associations...');
+            db.prepare('ALTER TABLE associations ADD COLUMN google_calendar_client_id TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN google_calendar_client_secret TEXT').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

@@ -50,12 +50,13 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.library',
     icon: '📚',
-    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools'],
+    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/lists', labelKey: 'nav.lists', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/titles', labelKey: 'nav.titles', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/upload', labelKey: 'nav.upload', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/imslp', labelKey: 'nav.imslp', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },

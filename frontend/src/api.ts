@@ -961,6 +961,81 @@ export const getMusicaInfoDetail = async (artnr: string): Promise<MusicaInfoDeta
   return data;
 };
 
+// ========================
+// IMSLP
+// ========================
+
+export interface ImslpWork {
+  id: string;
+  title: string;
+  composer: string;
+  workCategory: string;
+  instrumentation: string;
+  key: string;
+  movements: string[];
+  year: string;
+  permalink: string;
+}
+
+export interface ImslpScore {
+  id: string;
+  filename: string;
+  description: string;
+  pageCount: number;
+  fileUrl: string;
+  uploader: string;
+  uploadDate: string;
+  editor: string;
+  publisher: string;
+  copyright: string;
+  fileSize: string;
+}
+
+export interface ImslpWorkDetail extends ImslpWork {
+  scores: ImslpScore[];
+}
+
+export interface ImslpSearchResult {
+  works: ImslpWork[];
+  totalCount: number;
+  searchUrl: string;
+}
+
+export interface ImslpImportResult {
+  message: string;
+  musicTitleId: string;
+  musicPieceId: string;
+  filename: string;
+  title: string;
+  composer?: string;
+  arranger?: string;
+}
+
+export const searchImslp = async (query: string, composer?: string): Promise<ImslpSearchResult> => {
+  const params: Record<string, string> = { q: query };
+  if (composer) params.composer = composer;
+  const { data } = await api.get('/imslp/search', { params });
+  return data;
+};
+
+export const getImslpWorkDetails = async (workId: string): Promise<ImslpWorkDetail> => {
+  const { data } = await api.get(`/imslp/work/${workId}`);
+  return data;
+};
+
+export const importFromImslp = async (params: {
+  fileUrl: string;
+  title: string;
+  composer?: string;
+  arranger?: string;
+  instrumentation?: string;
+  imslpWorkId?: string;
+  imslpPermalink?: string;
+}): Promise<ImslpImportResult> => {
+  const { data } = await api.post('/imslp/import', params);
+  return data;
+};
+
 // ==================== EQUIPMENT (INSTRUMENTENBEHEER) ====================
 
 export const getEquipmentTypes = async (): Promise<string[]> => {

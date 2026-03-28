@@ -55,7 +55,25 @@ const createNeighborSchema = z.object({
 // ============================================
 
 /**
- * Get all seating sections for an orchestra
+ * @swagger
+ * /seating/sections/{orchestraId}:
+ *   get:
+ *     summary: Get all seating sections for an orchestra
+ *     tags: [Seating]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orchestraId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of seating sections with instruments
+ *       404:
+ *         description: Orchestra not found
  */
 router.get('/sections/:orchestraId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { orchestraId } = req.params;

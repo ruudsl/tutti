@@ -61,6 +61,14 @@ export interface Genre {
   name: string;
 }
 
+export interface StreamingLinks {
+  spotify_url?: string | null;
+  apple_music_url?: string | null;
+  youtube_music_url?: string | null;
+  spotify_preview_url?: string | null;
+  apple_music_preview_url?: string | null;
+}
+
 export interface MusicTitle {
   id?: string;
   title: string;
@@ -73,6 +81,7 @@ export interface MusicTitle {
   mp3FilePath?: string | null;
   isShared?: boolean;
   internalNotes?: string | null;
+  streamingLinks?: StreamingLinks | null;
   instruments: string[];
   genres?: Genre[];
   onList?: boolean;

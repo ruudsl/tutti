@@ -78,7 +78,28 @@ const upload = multer({
   },
 });
 
-// Get PDF info (page count, page sizes)
+/**
+ * @swagger
+ * /pdf-tools/info:
+ *   post:
+ *     summary: Get PDF information (page count, sizes)
+ *     tags: [PDF Tools]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pdf:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: PDF information
+ */
 router.post('/info', authenticateToken, requireRole('music_committee', 'admin'), upload.single('pdf'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {

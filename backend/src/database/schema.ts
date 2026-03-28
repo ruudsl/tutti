@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS music_pieces (
     association_id TEXT NOT NULL,
     is_shared BOOLEAN DEFAULT 0, -- Toegankelijk voor andere verenigingen
     uploaded_by TEXT,
+    imslp_source TEXT, -- IMSLP download URL if imported from IMSLP
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE SET NULL,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -226,6 +227,9 @@ CREATE TABLE IF NOT EXISTS music_titles (
     mp3_file_path TEXT, -- Pad naar MP3 preview bestand
     is_shared BOOLEAN DEFAULT 0, -- Mag gedeeld worden met andere verenigingen
     internal_notes TEXT, -- Interne notities alleen zichtbaar voor muziekcommissie
+    streaming_links TEXT, -- JSON: {spotify_url, apple_music_url, youtube_music_url}
+    imslp_work_id TEXT, -- IMSLP work/page ID
+    imslp_permalink TEXT, -- IMSLP permanent link to work
     association_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -1093,6 +1097,101 @@ CREATE INDEX IF NOT EXISTS idx_practice_section_progress_milestone ON practice_s
 CREATE INDEX IF NOT EXISTS idx_practice_section_progress_instrument ON practice_section_progress(instrument_id);
 
 -- ===========================================
+-- TICKETING SYSTEM (Concert Ticket Sales)
+-- ===========================================
+
+-- Ticket types per concert (e.g., Regular, VIP, Early Bird)
+CREATE TABLE IF NOT EXISTS ticket_types (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    sold INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    sale_start DATETIME,
+    sale_end DATETIME,
+    max_per_order INTEGER DEFAULT 10,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
+);
+
+-- Individual tickets purchased
+CREATE TABLE IF NOT EXISTS tickets (
+    id TEXT PRIMARY KEY,
+    ticket_type_id TEXT NOT NULL,
+    order_id TEXT NOT NULL,
+    user_id TEXT,
+    buyer_name TEXT NOT NULL,
+    buyer_email TEXT NOT NULL,
+    purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'valid', -- valid, used, cancelled, refunded
+    qr_code TEXT NOT NULL UNIQUE,
+    seat_info TEXT,
+    used_at DATETIME,
+    validated_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES ticket_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (validated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Ticket orders (a purchase can contain multiple tickets)
+CREATE TABLE IF NOT EXISTS ticket_orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    concert_id TEXT NOT NULL,
+    total REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, paid, cancelled, refunded, expired
+    payment_id TEXT,
+    payment_method TEXT,
+    buyer_name TEXT NOT NULL,
+    buyer_email TEXT NOT NULL,
+    buyer_phone TEXT,
+    notes TEXT,
+    expires_at DATETIME,
+    paid_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
+);
+
+-- Order line items
+CREATE TABLE IF NOT EXISTS ticket_order_items (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    ticket_type_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_price REAL NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES ticket_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE CASCADE
+);
+
+-- Payment webhook logs for debugging
+CREATE TABLE IF NOT EXISTS payment_webhooks (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL, -- stripe, mollie
+    event_type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    processed BOOLEAN DEFAULT 0,
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_types_concert ON ticket_types(concert_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_order ON tickets(order_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_type ON tickets(ticket_type_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_qr ON tickets(qr_code);
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_ticket_orders_concert ON ticket_orders(concert_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_orders_user ON ticket_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_orders_status ON ticket_orders(status);
+CREATE INDEX IF NOT EXISTS idx_ticket_order_items_order ON ticket_order_items(order_id);
+
+-- ===========================================
 -- SECURITY: IP WHITELIST
 -- ===========================================
 
@@ -1112,4 +1211,111 @@ CREATE TABLE IF NOT EXISTS ip_whitelist (
 
 CREATE INDEX IF NOT EXISTS idx_ip_whitelist_association ON ip_whitelist(association_id);
 CREATE INDEX IF NOT EXISTS idx_ip_whitelist_enabled ON ip_whitelist(is_enabled);
+
+-- ===========================================
+-- CALENDAR SYNC (Google & Apple Calendar)
+-- ===========================================
+
+-- User calendar settings and tokens
+CREATE TABLE IF NOT EXISTS user_calendar_settings (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE,
+    feed_token TEXT NOT NULL, -- Token for iCal feed URL authentication
+    google_refresh_token TEXT, -- Google OAuth refresh token (encrypted)
+    google_access_token TEXT, -- Google OAuth access token
+    google_token_expires_at TEXT, -- When the access token expires
+    google_calendar_id TEXT DEFAULT 'primary', -- Target Google Calendar ID
+    include_rehearsals BOOLEAN DEFAULT 1,
+    include_concerts BOOLEAN DEFAULT 1,
+    last_sync DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- OAuth state tokens for CSRF protection
+CREATE TABLE IF NOT EXISTS oauth_states (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    state TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_calendar_settings_user ON user_calendar_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_calendar_settings_feed_token ON user_calendar_settings(feed_token);
+CREATE INDEX IF NOT EXISTS idx_oauth_states_state ON oauth_states(state);
+CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
+
+-- ===========================================
+-- MULTI-CHANNEL NOTIFICATIONS (WhatsApp, Telegram)
+-- ===========================================
+
+-- User notification channel links (WhatsApp, Telegram, etc.)
+CREATE TABLE IF NOT EXISTS user_notification_channels (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    channel_type TEXT NOT NULL, -- 'whatsapp', 'telegram'
+    channel_id TEXT NOT NULL, -- Phone number for WhatsApp, chat_id for Telegram
+    verified BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, channel_type)
+);
+
+-- Per-channel notification preferences
+CREATE TABLE IF NOT EXISTS notification_channel_preferences (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    channel TEXT NOT NULL, -- 'email', 'push', 'whatsapp', 'telegram'
+    enabled BOOLEAN DEFAULT 1,
+    settings TEXT, -- JSON with channel-specific settings
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, channel)
+);
+
+-- Per notification type channel preferences
+CREATE TABLE IF NOT EXISTS notification_type_channels (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    notification_type TEXT NOT NULL, -- 'new_music', 'rehearsal_change', etc.
+    channels TEXT NOT NULL, -- JSON array of enabled channels for this type
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, notification_type)
+);
+
+-- Telegram link codes (for account linking)
+CREATE TABLE IF NOT EXISTS telegram_link_codes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- WhatsApp verification codes
+CREATE TABLE IF NOT EXISTS whatsapp_verifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE,
+    phone_number TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_notification_channels_user ON user_notification_channels(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_notification_channels_type ON user_notification_channels(channel_type);
+CREATE INDEX IF NOT EXISTS idx_notification_channel_preferences_user ON notification_channel_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_notification_type_channels_user ON notification_type_channels(user_id);
+CREATE INDEX IF NOT EXISTS idx_telegram_link_codes_code ON telegram_link_codes(code);
+CREATE INDEX IF NOT EXISTS idx_telegram_link_codes_expires ON telegram_link_codes(expires_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_verifications_user ON whatsapp_verifications(user_id);
 `;
