@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/node": "^10.46.0",
     "@types/qrcode": "^1.5.6",
     "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
