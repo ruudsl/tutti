@@ -14,17 +14,35 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize user from localStorage for instant loading (no spinner on cold starts)
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cachedUser = localStorage.getItem('user');
+      return cachedUser ? JSON.parse(cachedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    // Only show loading if we have a token but no cached user
+    const token = localStorage.getItem('token');
+    const cachedUser = localStorage.getItem('user');
+    return !!(token && !cachedUser);
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
+      // Verify token in background and update user data
       getProfile()
-        .then(setUser)
+        .then((freshUser) => {
+          setUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        })
         .catch(() => {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          setUser(null);
         })
         .finally(() => setIsLoading(false));
     } else {
