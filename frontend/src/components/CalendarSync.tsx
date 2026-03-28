@@ -313,10 +313,9 @@ export function CalendarSync() {
 interface AddToCalendarButtonProps {
     type: 'rehearsal' | 'concert';
     id: string;
-    title?: string;
 }
 
-export function AddToCalendarButton({ type, id, title }: AddToCalendarButtonProps) {
+export function AddToCalendarButton({ type, id }: AddToCalendarButtonProps) {
     const { t } = useTranslation();
     const [showMenu, setShowMenu] = useState(false);
 
@@ -332,11 +331,6 @@ export function AddToCalendarButton({ type, id, title }: AddToCalendarButtonProp
     };
 
     const handleAddToGoogle = () => {
-        // For single events, Google Calendar can import ICS files directly
-        // Or we can use the Google Calendar URL scheme
-        const baseUrl = window.location.origin;
-        const icsUrl = `${baseUrl}/api/calendar/export/${type}/${id}`;
-
         // Open Google Calendar's import page
         const googleUrl = `https://calendar.google.com/calendar/r/settings/export`;
         window.open(googleUrl, '_blank');

@@ -5,41 +5,53 @@
 
 import { vi, beforeAll, afterAll, beforeEach } from 'vitest';
 
+// Create a synchronous reference to testDb that will be used in mocks
+let testDbInstance: any = null;
+
 // Mock the database module BEFORE importing app
-vi.mock('../database/connection', () => {
-    return import('./testDb');
+vi.mock('../database/connection', async () => {
+    const module = await import('./testDb');
+    testDbInstance = module.default;
+    return module;
 });
 
 // Mock the database utilities to use the test database
 vi.mock('../utils/database', async () => {
+    // Get the test database module
     const testDbModule = await import('./testDb');
-    const testDb = testDbModule.default;
+    const db = testDbModule.default;
+
+    const withTransaction = <T>(fn: () => T): T => {
+        const transaction = db.transaction(fn);
+        return transaction();
+    };
+
+    const getPaginationParams = (query: any) => {
+        const page = Math.max(1, parseInt(query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 25));
+        const offset = (page - 1) * limit;
+        return { offset, limit, page };
+    };
+
+    const createPaginatedResult = <T>(data: T[], total: number, page: number, limit: number) => {
+        const totalPages = Math.ceil(total / limit);
+        return {
+            data,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            },
+        };
+    };
 
     return {
-        withTransaction: <T>(fn: () => T): T => {
-            const transaction = testDb.transaction(fn);
-            return transaction();
-        },
-        getPaginationParams: (query: any) => {
-            const page = Math.max(1, parseInt(query.page) || 1);
-            const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 25));
-            const offset = (page - 1) * limit;
-            return { offset, limit, page };
-        },
-        createPaginatedResult: <T>(data: T[], total: number, page: number, limit: number) => {
-            const totalPages = Math.ceil(total / limit);
-            return {
-                data,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages,
-                    hasNext: page < totalPages,
-                    hasPrev: page > 1,
-                },
-            };
-        },
+        withTransaction,
+        getPaginationParams,
+        createPaginatedResult,
     };
 });
 

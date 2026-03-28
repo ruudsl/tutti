@@ -136,7 +136,7 @@ export class AppleMusicClient {
             throw new Error(`Apple Music API request failed: ${response.status}`);
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     }
 
     /**

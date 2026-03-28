@@ -222,7 +222,7 @@ router.get('/music-titles/:id/links', authenticateToken, asyncHandler(async (req
  *       200:
  *         description: Streaming links updated
  */
-router.post('/music-titles/:id/links', authenticateToken, requireRole(['admin', 'music_committee']), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post('/music-titles/:id/links', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { spotify_url, apple_music_url, youtube_music_url, spotify_preview_url, apple_music_preview_url } = req.body;
 
@@ -308,7 +308,7 @@ router.post('/music-titles/:id/links', authenticateToken, requireRole(['admin', 
  *       200:
  *         description: Streaming link removed
  */
-router.delete('/music-titles/:id/links/:platform', authenticateToken, requireRole(['admin', 'music_committee']), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/music-titles/:id/links/:platform', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id, platform } = req.params;
 
     if (!['spotify', 'apple', 'youtube'].includes(platform)) {

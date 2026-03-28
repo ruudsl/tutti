@@ -400,6 +400,28 @@
     "errorUploadMp3": "Fehler beim Hochladen der MP3",
     "errorDeleteMp3": "Fehler beim Löschen der MP3"
   },
+  "streaming": {
+    "title": "Streaming-Links",
+    "editLinks": "Streaming-Links bearbeiten",
+    "manageLinks": "Links verwalten",
+    "currentLinks": "Aktuelle Links",
+    "noLinks": "Noch keine Streaming-Links hinzugefügt.",
+    "openInSpotify": "In Spotify öffnen",
+    "openInAppleMusic": "In Apple Music öffnen",
+    "openInYouTubeMusic": "In YouTube Music öffnen",
+    "openLink": "Öffnen",
+    "preview": "Vorschau",
+    "playPreview": "Vorschau abspielen",
+    "stopPreview": "Vorschau stoppen",
+    "searchForTrack": "Titel suchen",
+    "searchPlaceholder": "Nach Titel suchen...",
+    "searchError": "Suche nach Titeln fehlgeschlagen",
+    "linksSaved": "Streaming-Links gespeichert",
+    "saveError": "Streaming-Links konnten nicht gespeichert werden",
+    "noServicesConfigured": "Es sind keine Streaming-Dienste konfiguriert. Kontaktieren Sie einen Administrator, um Spotify- oder Apple Music-API-Anmeldedaten einzurichten.",
+    "manualEntry": "Manuelle Eingabe",
+    "youtubeMusicUrlPlaceholder": "YouTube Music URL (optional)"
+  },
   "upload": {
     "title": "Musikstücke hochladen",
     "dropzone": "Dateien hierher ziehen oder klicken zum Auswählen",

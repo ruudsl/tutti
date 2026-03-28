@@ -123,7 +123,7 @@ export class SpotifyClient {
             throw new Error(`Spotify API request failed: ${response.status}`);
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     }
 
     /**
