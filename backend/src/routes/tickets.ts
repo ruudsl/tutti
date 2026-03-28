@@ -1,0 +1,1247 @@
+import { Router, Response, Request } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import db from '../database/connection';
+import { authenticateToken, optionalAuth, requireRole, AuthRequest } from '../middleware/auth';
+import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { z } from 'zod';
+import {
+    generateSecureTicketCode,
+    generateQRCode,
+    sendTicketConfirmationEmail,
+    validateTicket,
+    markTicketAsUsed,
+    getAvailableTickets,
+    reserveTickets,
+    releaseTickets,
+    getConcertTicketStats,
+    exportAttendeeList,
+} from '../services/ticketing';
+import {
+    createPayment,
+    getPaymentStatus,
+    getAvailablePaymentMethods,
+    getPaymentProvider,
+    handleMollieWebhook,
+    verifyStripeWebhook,
+    handleStripeWebhook,
+    createRefund,
+    PaymentMethod,
+} from '../services/payments';
+import logger from '../utils/logger';
+
+const router = Router();
+
+// Validation schemas
+const createTicketTypeSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    price: z.number().min(0, 'Price must be non-negative'),
+    quantity: z.number().int().min(1, 'Quantity must be at least 1'),
+    description: z.string().optional(),
+    saleStart: z.string().datetime().optional(),
+    saleEnd: z.string().datetime().optional(),
+    maxPerOrder: z.number().int().min(1).max(50).default(10),
+});
+
+const updateTicketTypeSchema = createTicketTypeSchema.partial();
+
+const createOrderSchema = z.object({
+    items: z.array(z.object({
+        ticketTypeId: z.string().uuid(),
+        quantity: z.number().int().min(1).max(50),
+    })).min(1, 'At least one ticket required'),
+    buyerName: z.string().min(1, 'Buyer name is required'),
+    buyerEmail: z.string().email('Valid email required'),
+    buyerPhone: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+const payOrderSchema = z.object({
+    method: z.enum(['ideal', 'creditcard', 'bancontact', 'paypal', 'applepay', 'googlepay']).optional(),
+    returnUrl: z.string().url().optional(),
+});
+
+// =============================================
+// PUBLIC ROUTES (with optional auth)
+// =============================================
+
+/**
+ * @swagger
+ * /concerts/{id}/tickets:
+ *   get:
+ *     summary: Get available ticket types for a concert
+ *     tags: [Tickets]
+ */
+router.get('/concerts/:id/tickets', optionalAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+
+    // Check if concert exists
+    const concert = db.prepare(`
+        SELECT id, name, date, end_date, location, description, concert_type
+        FROM concerts
+        WHERE id = ?
+    `).get(concertId) as {
+        id: string;
+        name: string;
+        date: string;
+        end_date: string | null;
+        location: string | null;
+        description: string | null;
+        concert_type: string | null;
+    } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    // Get ticket types
+    const ticketTypes = db.prepare(`
+        SELECT
+            id,
+            name,
+            price,
+            quantity,
+            sold,
+            description,
+            sale_start,
+            sale_end,
+            max_per_order
+        FROM ticket_types
+        WHERE concert_id = ?
+        ORDER BY price ASC
+    `).all(concertId) as {
+        id: string;
+        name: string;
+        price: number;
+        quantity: number;
+        sold: number;
+        description: string | null;
+        sale_start: string | null;
+        sale_end: string | null;
+        max_per_order: number;
+    }[];
+
+    const now = new Date().toISOString();
+
+    res.json({
+        concert: {
+            id: concert.id,
+            name: concert.name,
+            date: concert.date,
+            endDate: concert.end_date,
+            location: concert.location,
+            description: concert.description,
+            concertType: concert.concert_type,
+        },
+        ticketTypes: ticketTypes.map(tt => ({
+            id: tt.id,
+            name: tt.name,
+            price: tt.price,
+            quantity: tt.quantity,
+            available: Math.max(0, tt.quantity - tt.sold),
+            description: tt.description,
+            maxPerOrder: tt.max_per_order,
+            onSale: (!tt.sale_start || tt.sale_start <= now) &&
+                (!tt.sale_end || tt.sale_end >= now),
+            saleStart: tt.sale_start,
+            saleEnd: tt.sale_end,
+        })),
+        paymentMethods: getAvailablePaymentMethods(),
+    });
+}));
+
+/**
+ * @swagger
+ * /concerts/{id}/tickets/order:
+ *   post:
+ *     summary: Create a ticket order
+ *     tags: [Tickets]
+ */
+router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+    const validation = createOrderSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.errors[0].message);
+    }
+
+    const { items, buyerName, buyerEmail, buyerPhone, notes } = validation.data;
+
+    // Check concert exists
+    const concert = db.prepare(`
+        SELECT id, name, date, location, association_id
+        FROM concerts
+        WHERE id = ?
+    `).get(concertId) as {
+        id: string;
+        name: string;
+        date: string;
+        location: string | null;
+        association_id: string;
+    } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    // Verify all ticket types and calculate total
+    let total = 0;
+    const orderItems: { ticketTypeId: string; quantity: number; unitPrice: number; name: string }[] = [];
+
+    for (const item of items) {
+        const ticketType = db.prepare(`
+            SELECT id, name, price, quantity, sold, sale_start, sale_end, max_per_order, concert_id
+            FROM ticket_types
+            WHERE id = ?
+        `).get(item.ticketTypeId) as {
+            id: string;
+            name: string;
+            price: number;
+            quantity: number;
+            sold: number;
+            sale_start: string | null;
+            sale_end: string | null;
+            max_per_order: number;
+            concert_id: string;
+        } | undefined;
+
+        if (!ticketType) {
+            throw new ApiError(400, `Ticket type ${item.ticketTypeId} not found`);
+        }
+
+        if (ticketType.concert_id !== concertId) {
+            throw new ApiError(400, 'Ticket type does not belong to this concert');
+        }
+
+        // Check sale period
+        const now = new Date().toISOString();
+        if (ticketType.sale_start && ticketType.sale_start > now) {
+            throw new ApiError(400, `Sales for "${ticketType.name}" have not started yet`);
+        }
+        if (ticketType.sale_end && ticketType.sale_end < now) {
+            throw new ApiError(400, `Sales for "${ticketType.name}" have ended`);
+        }
+
+        // Check max per order
+        if (item.quantity > ticketType.max_per_order) {
+            throw new ApiError(400, `Maximum ${ticketType.max_per_order} tickets per order for "${ticketType.name}"`);
+        }
+
+        // Check availability
+        const available = ticketType.quantity - ticketType.sold;
+        if (item.quantity > available) {
+            throw new ApiError(400, `Only ${available} tickets available for "${ticketType.name}"`);
+        }
+
+        orderItems.push({
+            ticketTypeId: ticketType.id,
+            quantity: item.quantity,
+            unitPrice: ticketType.price,
+            name: ticketType.name,
+        });
+
+        total += ticketType.price * item.quantity;
+    }
+
+    // Create order with transaction
+    const orderId = uuidv4();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
+
+    const createOrder = db.transaction(() => {
+        // Reserve tickets
+        for (const item of orderItems) {
+            const reservation = reserveTickets(item.ticketTypeId, item.quantity);
+            if (!reservation.success) {
+                throw new ApiError(400, reservation.message);
+            }
+        }
+
+        // Create order
+        db.prepare(`
+            INSERT INTO ticket_orders (id, user_id, concert_id, total, status, buyer_name, buyer_email, buyer_phone, notes, expires_at)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
+        `).run(
+            orderId,
+            req.user?.id || null,
+            concertId,
+            total,
+            buyerName,
+            buyerEmail,
+            buyerPhone || null,
+            notes || null,
+            expiresAt
+        );
+
+        // Create order items
+        for (const item of orderItems) {
+            db.prepare(`
+                INSERT INTO ticket_order_items (id, order_id, ticket_type_id, quantity, unit_price)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(uuidv4(), orderId, item.ticketTypeId, item.quantity, item.unitPrice);
+        }
+    });
+
+    try {
+        createOrder();
+    } catch (error) {
+        logger.error('Failed to create order:', error);
+        throw new ApiError(500, 'Failed to create order');
+    }
+
+    res.status(201).json({
+        orderId,
+        total,
+        expiresAt,
+        items: orderItems.map(item => ({
+            ticketTypeId: item.ticketTypeId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            subtotal: item.unitPrice * item.quantity,
+        })),
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/orders/{id}:
+ *   get:
+ *     summary: Get order details
+ *     tags: [Tickets]
+ */
+router.get('/tickets/orders/:id', optionalAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: orderId } = req.params;
+
+    const order = db.prepare(`
+        SELECT
+            o.id,
+            o.user_id,
+            o.concert_id,
+            o.total,
+            o.status,
+            o.payment_id,
+            o.payment_method,
+            o.buyer_name,
+            o.buyer_email,
+            o.buyer_phone,
+            o.notes,
+            o.expires_at,
+            o.paid_at,
+            o.created_at,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE o.id = ?
+    `).get(orderId) as {
+        id: string;
+        user_id: string | null;
+        concert_id: string;
+        total: number;
+        status: string;
+        payment_id: string | null;
+        payment_method: string | null;
+        buyer_name: string;
+        buyer_email: string;
+        buyer_phone: string | null;
+        notes: string | null;
+        expires_at: string | null;
+        paid_at: string | null;
+        created_at: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    } | undefined;
+
+    if (!order) {
+        throw new ApiError(404, 'Order not found');
+    }
+
+    // Get order items
+    const items = db.prepare(`
+        SELECT
+            oi.ticket_type_id,
+            oi.quantity,
+            oi.unit_price,
+            tt.name
+        FROM ticket_order_items oi
+        JOIN ticket_types tt ON oi.ticket_type_id = tt.id
+        WHERE oi.order_id = ?
+    `).all(orderId) as {
+        ticket_type_id: string;
+        quantity: number;
+        unit_price: number;
+        name: string;
+    }[];
+
+    // Get tickets if order is paid
+    let tickets: {
+        id: string;
+        qrCode: string;
+        status: string;
+        seatInfo: string | null;
+        ticketTypeName: string;
+    }[] = [];
+
+    if (order.status === 'paid') {
+        tickets = db.prepare(`
+            SELECT
+                t.id,
+                t.qr_code as qrCode,
+                t.status,
+                t.seat_info as seatInfo,
+                tt.name as ticketTypeName
+            FROM tickets t
+            JOIN ticket_types tt ON t.ticket_type_id = tt.id
+            WHERE t.order_id = ?
+        `).all(orderId) as typeof tickets;
+    }
+
+    res.json({
+        id: order.id,
+        concertId: order.concert_id,
+        concertName: order.concert_name,
+        concertDate: order.concert_date,
+        concertLocation: order.concert_location,
+        total: order.total,
+        status: order.status,
+        buyerName: order.buyer_name,
+        buyerEmail: order.buyer_email,
+        buyerPhone: order.buyer_phone,
+        paymentMethod: order.payment_method,
+        expiresAt: order.expires_at,
+        paidAt: order.paid_at,
+        createdAt: order.created_at,
+        items: items.map(item => ({
+            ticketTypeId: item.ticket_type_id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            subtotal: item.unit_price * item.quantity,
+        })),
+        tickets,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/orders/{id}/pay:
+ *   post:
+ *     summary: Initialize payment for an order
+ *     tags: [Tickets]
+ */
+router.post('/tickets/orders/:id/pay', optionalAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: orderId } = req.params;
+    const validation = payOrderSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.errors[0].message);
+    }
+
+    const { method, returnUrl } = validation.data;
+
+    // Get order
+    const order = db.prepare(`
+        SELECT
+            o.id,
+            o.total,
+            o.status,
+            o.buyer_name,
+            o.buyer_email,
+            o.expires_at,
+            c.name as concert_name,
+            c.association_id
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE o.id = ?
+    `).get(orderId) as {
+        id: string;
+        total: number;
+        status: string;
+        buyer_name: string;
+        buyer_email: string;
+        expires_at: string | null;
+        concert_name: string;
+        association_id: string;
+    } | undefined;
+
+    if (!order) {
+        throw new ApiError(404, 'Order not found');
+    }
+
+    if (order.status !== 'pending') {
+        throw new ApiError(400, `Order is ${order.status}, cannot pay`);
+    }
+
+    // Check if order expired
+    if (order.expires_at && new Date(order.expires_at) < new Date()) {
+        // Release tickets and mark as expired
+        const items = db.prepare(`
+            SELECT ticket_type_id, quantity FROM ticket_order_items WHERE order_id = ?
+        `).all(orderId) as { ticket_type_id: string; quantity: number }[];
+
+        for (const item of items) {
+            releaseTickets(item.ticket_type_id, item.quantity);
+        }
+
+        db.prepare(`UPDATE ticket_orders SET status = 'expired' WHERE id = ?`).run(orderId);
+        throw new ApiError(400, 'Order has expired');
+    }
+
+    // Get base URL for redirects
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = returnUrl || `${baseUrl}/tickets/orders/${orderId}`;
+    const webhookUrl = `${process.env.API_URL || 'http://localhost:3000'}/api/tickets/webhooks/payment`;
+
+    // Create payment
+    const paymentResult = await createPayment({
+        orderId,
+        amount: order.total,
+        description: `Tickets for ${order.concert_name}`,
+        redirectUrl,
+        webhookUrl,
+        method: method as PaymentMethod,
+        customerEmail: order.buyer_email,
+        customerName: order.buyer_name,
+        metadata: {
+            concert_name: order.concert_name,
+        },
+    });
+
+    if (!paymentResult.success) {
+        throw new ApiError(500, paymentResult.error || 'Failed to create payment');
+    }
+
+    // Update order with payment ID
+    db.prepare(`
+        UPDATE ticket_orders
+        SET payment_id = ?, payment_method = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(paymentResult.paymentId, method || 'unknown', orderId);
+
+    res.json({
+        paymentId: paymentResult.paymentId,
+        checkoutUrl: paymentResult.checkoutUrl,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/webhooks/payment:
+ *   post:
+ *     summary: Handle payment webhook
+ *     tags: [Tickets]
+ */
+router.post('/tickets/webhooks/payment', asyncHandler(async (req: Request, res: Response) => {
+    const provider = getPaymentProvider();
+
+    let result;
+
+    if (provider === 'mollie') {
+        // Mollie sends payment ID in form body
+        const paymentId = req.body.id;
+        if (!paymentId) {
+            throw new ApiError(400, 'Missing payment ID');
+        }
+        result = await handleMollieWebhook(paymentId);
+    } else if (provider === 'stripe') {
+        // Stripe sends signed JSON
+        const signature = req.headers['stripe-signature'] as string;
+        const rawBody = JSON.stringify(req.body);
+
+        const verification = verifyStripeWebhook(rawBody, signature);
+        if (!verification.valid) {
+            throw new ApiError(400, 'Invalid signature');
+        }
+
+        result = await handleStripeWebhook(verification.event as Record<string, unknown>);
+    } else {
+        // Mock payment - check query param or body
+        const orderId = req.body.orderId || req.query.orderId;
+        if (orderId) {
+            result = { success: true, orderId: orderId as string, status: 'paid' };
+        } else {
+            res.status(200).send('OK');
+            return;
+        }
+    }
+
+    if (!result.success) {
+        logger.error('Webhook processing failed:', result.error);
+        res.status(200).send('OK'); // Still return 200 to prevent retries
+        return;
+    }
+
+    if (result.orderId && result.status) {
+        await processPaymentUpdate(result.orderId, result.status);
+    }
+
+    res.status(200).send('OK');
+}));
+
+/**
+ * Process payment status update and create tickets if paid
+ */
+async function processPaymentUpdate(orderId: string, status: string): Promise<void> {
+    const order = db.prepare(`
+        SELECT
+            o.id,
+            o.status,
+            o.buyer_name,
+            o.buyer_email,
+            o.total,
+            o.user_id,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location,
+            c.association_id
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE o.id = ?
+    `).get(orderId) as {
+        id: string;
+        status: string;
+        buyer_name: string;
+        buyer_email: string;
+        total: number;
+        user_id: string | null;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+        association_id: string;
+    } | undefined;
+
+    if (!order || order.status !== 'pending') {
+        return;
+    }
+
+    if (status === 'paid') {
+        // Get order items
+        const items = db.prepare(`
+            SELECT oi.ticket_type_id, oi.quantity, oi.unit_price, tt.name
+            FROM ticket_order_items oi
+            JOIN ticket_types tt ON oi.ticket_type_id = tt.id
+            WHERE oi.order_id = ?
+        `).all(orderId) as {
+            ticket_type_id: string;
+            quantity: number;
+            unit_price: number;
+            name: string;
+        }[];
+
+        // Create tickets
+        const createTickets = db.transaction(() => {
+            for (const item of items) {
+                for (let i = 0; i < item.quantity; i++) {
+                    const ticketId = uuidv4();
+                    const qrCode = generateSecureTicketCode();
+
+                    db.prepare(`
+                        INSERT INTO tickets (id, ticket_type_id, order_id, user_id, buyer_name, buyer_email, qr_code, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'valid')
+                    `).run(
+                        ticketId,
+                        item.ticket_type_id,
+                        orderId,
+                        order.user_id,
+                        order.buyer_name,
+                        order.buyer_email,
+                        qrCode
+                    );
+                }
+            }
+
+            // Update order status
+            db.prepare(`
+                UPDATE ticket_orders
+                SET status = 'paid', paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `).run(orderId);
+        });
+
+        try {
+            createTickets();
+
+            // Send confirmation email
+            const tickets = db.prepare(`
+                SELECT t.qr_code, tt.name as ticket_type_name
+                FROM tickets t
+                JOIN ticket_types tt ON t.ticket_type_id = tt.id
+                WHERE t.order_id = ?
+                LIMIT 1
+            `).get(orderId) as { qr_code: string; ticket_type_name: string } | undefined;
+
+            if (tickets) {
+                const qrDataUrl = await generateQRCode(tickets.qr_code);
+
+                await sendTicketConfirmationEmail({
+                    buyerName: order.buyer_name,
+                    buyerEmail: order.buyer_email,
+                    concertName: order.concert_name,
+                    concertDate: order.concert_date,
+                    concertLocation: order.concert_location || 'TBA',
+                    ticketTypeName: tickets.ticket_type_name,
+                    ticketCode: tickets.qr_code,
+                    qrCodeDataUrl: qrDataUrl,
+                    orderTotal: order.total,
+                    quantity: items.reduce((sum, i) => sum + i.quantity, 0),
+                }, order.association_id);
+            }
+
+            logger.info(`Order ${orderId} paid, tickets created`);
+        } catch (error) {
+            logger.error('Failed to create tickets:', error);
+        }
+    } else if (status === 'cancelled' || status === 'expired' || status === 'failed') {
+        // Release tickets
+        const items = db.prepare(`
+            SELECT ticket_type_id, quantity FROM ticket_order_items WHERE order_id = ?
+        `).all(orderId) as { ticket_type_id: string; quantity: number }[];
+
+        for (const item of items) {
+            releaseTickets(item.ticket_type_id, item.quantity);
+        }
+
+        db.prepare(`
+            UPDATE ticket_orders
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(status, orderId);
+
+        logger.info(`Order ${orderId} ${status}, tickets released`);
+    }
+}
+
+/**
+ * @swagger
+ * /tickets/{code}:
+ *   get:
+ *     summary: Get ticket details by code
+ *     tags: [Tickets]
+ */
+router.get('/tickets/:code', asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { code } = req.params;
+
+    const ticket = db.prepare(`
+        SELECT
+            t.id,
+            t.qr_code,
+            t.buyer_name,
+            t.buyer_email,
+            t.status,
+            t.seat_info,
+            t.purchase_date,
+            t.used_at,
+            tt.name as ticket_type_name,
+            tt.price,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.end_date as concert_end_date,
+            c.location as concert_location
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE t.qr_code = ?
+    `).get(code) as {
+        id: string;
+        qr_code: string;
+        buyer_name: string;
+        buyer_email: string;
+        status: string;
+        seat_info: string | null;
+        purchase_date: string;
+        used_at: string | null;
+        ticket_type_name: string;
+        price: number;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_end_date: string | null;
+        concert_location: string | null;
+    } | undefined;
+
+    if (!ticket) {
+        throw new ApiError(404, 'Ticket not found');
+    }
+
+    // Generate QR code data URL
+    const qrCode = await generateQRCode(ticket.qr_code);
+
+    res.json({
+        id: ticket.id,
+        code: ticket.qr_code,
+        buyerName: ticket.buyer_name,
+        status: ticket.status,
+        seatInfo: ticket.seat_info,
+        purchaseDate: ticket.purchase_date,
+        usedAt: ticket.used_at,
+        ticketType: ticket.ticket_type_name,
+        price: ticket.price,
+        concert: {
+            id: ticket.concert_id,
+            name: ticket.concert_name,
+            date: ticket.concert_date,
+            endDate: ticket.concert_end_date,
+            location: ticket.concert_location,
+        },
+        qrCodeDataUrl: qrCode,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/{code}/validate:
+ *   post:
+ *     summary: Validate and mark ticket as used
+ *     tags: [Tickets]
+ */
+router.post('/tickets/:code/validate', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { code } = req.params;
+    const { concertId } = req.body;
+
+    // First validate
+    const validation = validateTicket(code, concertId);
+
+    if (!validation.valid) {
+        res.json(validation);
+        return;
+    }
+
+    // Mark as used
+    const result = markTicketAsUsed(code, req.user!.id);
+
+    if (!result.success) {
+        throw new ApiError(400, result.message);
+    }
+
+    res.json({
+        valid: true,
+        status: 'used',
+        ticket: validation.ticket,
+        message: 'Ticket validated and marked as used',
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/my:
+ *   get:
+ *     summary: Get current user's tickets
+ *     tags: [Tickets]
+ */
+router.get('/tickets/my', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+
+    // Get tickets by user ID or email
+    const tickets = db.prepare(`
+        SELECT
+            t.id,
+            t.qr_code,
+            t.buyer_name,
+            t.status,
+            t.seat_info,
+            t.purchase_date,
+            t.used_at,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        JOIN ticket_orders o ON t.order_id = o.id
+        WHERE (t.user_id = ? OR t.buyer_email = ?) AND o.status = 'paid'
+        ORDER BY c.date DESC, t.purchase_date DESC
+    `).all(userId, userEmail) as {
+        id: string;
+        qr_code: string;
+        buyer_name: string;
+        status: string;
+        seat_info: string | null;
+        purchase_date: string;
+        used_at: string | null;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    }[];
+
+    res.json(tickets.map(t => ({
+        id: t.id,
+        code: t.qr_code,
+        buyerName: t.buyer_name,
+        status: t.status,
+        seatInfo: t.seat_info,
+        purchaseDate: t.purchase_date,
+        usedAt: t.used_at,
+        ticketType: t.ticket_type_name,
+        concert: {
+            id: t.concert_id,
+            name: t.concert_name,
+            date: t.concert_date,
+            location: t.concert_location,
+        },
+    })));
+}));
+
+// =============================================
+// ADMIN ROUTES
+// =============================================
+
+/**
+ * @swagger
+ * /concerts/{id}/ticket-types:
+ *   post:
+ *     summary: Create a ticket type for a concert
+ *     tags: [Tickets Admin]
+ */
+router.post('/concerts/:id/ticket-types', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+    const validation = createTicketTypeSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.errors[0].message);
+    }
+
+    const { name, price, quantity, description, saleStart, saleEnd, maxPerOrder } = validation.data;
+
+    // Verify concert exists and belongs to user's association
+    const concert = db.prepare(`
+        SELECT id FROM concerts WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as { id: string } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    const id = uuidv4();
+
+    db.prepare(`
+        INSERT INTO ticket_types (id, concert_id, name, price, quantity, description, sale_start, sale_end, max_per_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, concertId, name, price, quantity, description || null, saleStart || null, saleEnd || null, maxPerOrder);
+
+    res.status(201).json({
+        id,
+        name,
+        price,
+        quantity,
+        sold: 0,
+        available: quantity,
+        description,
+        saleStart,
+        saleEnd,
+        maxPerOrder,
+    });
+}));
+
+/**
+ * @swagger
+ * /ticket-types/{id}:
+ *   put:
+ *     summary: Update a ticket type
+ *     tags: [Tickets Admin]
+ */
+router.put('/ticket-types/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const validation = updateTicketTypeSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.errors[0].message);
+    }
+
+    // Verify ticket type exists and belongs to user's association
+    const ticketType = db.prepare(`
+        SELECT tt.id, tt.sold
+        FROM ticket_types tt
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE tt.id = ? AND c.association_id = ?
+    `).get(id, req.user!.associationId) as { id: string; sold: number } | undefined;
+
+    if (!ticketType) {
+        throw new ApiError(404, 'Ticket type not found');
+    }
+
+    const updates = validation.data;
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    if (updates.name !== undefined) {
+        fields.push('name = ?');
+        values.push(updates.name);
+    }
+    if (updates.price !== undefined) {
+        fields.push('price = ?');
+        values.push(updates.price);
+    }
+    if (updates.quantity !== undefined) {
+        // Cannot reduce below sold count
+        if (updates.quantity < ticketType.sold) {
+            throw new ApiError(400, `Cannot reduce quantity below ${ticketType.sold} (already sold)`);
+        }
+        fields.push('quantity = ?');
+        values.push(updates.quantity);
+    }
+    if (updates.description !== undefined) {
+        fields.push('description = ?');
+        values.push(updates.description || null);
+    }
+    if (updates.saleStart !== undefined) {
+        fields.push('sale_start = ?');
+        values.push(updates.saleStart || null);
+    }
+    if (updates.saleEnd !== undefined) {
+        fields.push('sale_end = ?');
+        values.push(updates.saleEnd || null);
+    }
+    if (updates.maxPerOrder !== undefined) {
+        fields.push('max_per_order = ?');
+        values.push(updates.maxPerOrder);
+    }
+
+    if (fields.length === 0) {
+        throw new ApiError(400, 'No fields to update');
+    }
+
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+
+    db.prepare(`
+        UPDATE ticket_types SET ${fields.join(', ')} WHERE id = ?
+    `).run(...values);
+
+    res.json({ success: true });
+}));
+
+/**
+ * @swagger
+ * /ticket-types/{id}:
+ *   delete:
+ *     summary: Delete a ticket type
+ *     tags: [Tickets Admin]
+ */
+router.delete('/ticket-types/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    // Verify ticket type exists and has no sales
+    const ticketType = db.prepare(`
+        SELECT tt.id, tt.sold
+        FROM ticket_types tt
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE tt.id = ? AND c.association_id = ?
+    `).get(id, req.user!.associationId) as { id: string; sold: number } | undefined;
+
+    if (!ticketType) {
+        throw new ApiError(404, 'Ticket type not found');
+    }
+
+    if (ticketType.sold > 0) {
+        throw new ApiError(400, 'Cannot delete ticket type with existing sales');
+    }
+
+    db.prepare('DELETE FROM ticket_types WHERE id = ?').run(id);
+
+    res.json({ success: true });
+}));
+
+/**
+ * @swagger
+ * /concerts/{id}/ticket-stats:
+ *   get:
+ *     summary: Get ticket sales statistics for a concert
+ *     tags: [Tickets Admin]
+ */
+router.get('/concerts/:id/ticket-stats', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+
+    // Verify concert belongs to user's association
+    const concert = db.prepare(`
+        SELECT id FROM concerts WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as { id: string } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    const stats = getConcertTicketStats(concertId);
+
+    if (!stats) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    res.json(stats);
+}));
+
+/**
+ * @swagger
+ * /concerts/{id}/attendees:
+ *   get:
+ *     summary: Export attendee list for a concert
+ *     tags: [Tickets Admin]
+ */
+router.get('/concerts/:id/attendees', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+    const { format } = req.query;
+
+    // Verify concert belongs to user's association
+    const concert = db.prepare(`
+        SELECT id, name FROM concerts WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as { id: string; name: string } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    const attendees = exportAttendeeList(concertId);
+
+    if (format === 'csv') {
+        // Generate CSV
+        const header = 'Ticket Code,Buyer Name,Email,Ticket Type,Seat Info,Status,Purchase Date,Used At\n';
+        const rows = attendees.map(a =>
+            `"${a.ticketCode}","${a.buyerName}","${a.buyerEmail}","${a.ticketType}","${a.seatInfo || ''}","${a.status}","${a.purchaseDate}","${a.usedAt || ''}"`
+        ).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="attendees-${concert.name.replace(/[^a-z0-9]/gi, '_')}.csv"`);
+        res.send(header + rows);
+        return;
+    }
+
+    res.json(attendees);
+}));
+
+/**
+ * @swagger
+ * /tickets/{id}/cancel:
+ *   post:
+ *     summary: Cancel a ticket
+ *     tags: [Tickets Admin]
+ */
+router.post('/tickets/:id/cancel', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: ticketId } = req.params;
+
+    const ticket = db.prepare(`
+        SELECT t.id, t.status, t.ticket_type_id, tt.concert_id
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE t.id = ? AND c.association_id = ?
+    `).get(ticketId, req.user!.associationId) as {
+        id: string;
+        status: string;
+        ticket_type_id: string;
+        concert_id: string;
+    } | undefined;
+
+    if (!ticket) {
+        throw new ApiError(404, 'Ticket not found');
+    }
+
+    if (ticket.status !== 'valid') {
+        throw new ApiError(400, `Cannot cancel ticket with status: ${ticket.status}`);
+    }
+
+    // Cancel ticket and release from sold count
+    db.prepare(`UPDATE tickets SET status = 'cancelled' WHERE id = ?`).run(ticketId);
+    releaseTickets(ticket.ticket_type_id, 1);
+
+    res.json({ success: true, message: 'Ticket cancelled' });
+}));
+
+/**
+ * @swagger
+ * /tickets/orders/{id}/refund:
+ *   post:
+ *     summary: Refund an order
+ *     tags: [Tickets Admin]
+ */
+router.post('/tickets/orders/:id/refund', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: orderId } = req.params;
+    const { reason } = req.body;
+
+    const order = db.prepare(`
+        SELECT o.id, o.payment_id, o.status, o.total
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE o.id = ? AND c.association_id = ?
+    `).get(orderId, req.user!.associationId) as {
+        id: string;
+        payment_id: string | null;
+        status: string;
+        total: number;
+    } | undefined;
+
+    if (!order) {
+        throw new ApiError(404, 'Order not found');
+    }
+
+    if (order.status !== 'paid') {
+        throw new ApiError(400, `Cannot refund order with status: ${order.status}`);
+    }
+
+    if (!order.payment_id) {
+        throw new ApiError(400, 'No payment to refund');
+    }
+
+    // Create refund
+    const refundResult = await createRefund({
+        paymentId: order.payment_id,
+        reason,
+    });
+
+    if (!refundResult.success) {
+        throw new ApiError(500, refundResult.error || 'Failed to create refund');
+    }
+
+    // Update order and tickets
+    const updateRefund = db.transaction(() => {
+        // Update order
+        db.prepare(`
+            UPDATE ticket_orders SET status = 'refunded', updated_at = CURRENT_TIMESTAMP WHERE id = ?
+        `).run(orderId);
+
+        // Cancel all tickets and release counts
+        const tickets = db.prepare(`
+            SELECT t.id, t.ticket_type_id
+            FROM tickets t
+            WHERE t.order_id = ?
+        `).all(orderId) as { id: string; ticket_type_id: string }[];
+
+        for (const ticket of tickets) {
+            db.prepare(`UPDATE tickets SET status = 'refunded' WHERE id = ?`).run(ticket.id);
+            releaseTickets(ticket.ticket_type_id, 1);
+        }
+    });
+
+    updateRefund();
+
+    res.json({
+        success: true,
+        refundId: refundResult.refundId,
+        message: 'Order refunded successfully',
+    });
+}));
+
+/**
+ * Mock payment endpoint for development
+ */
+router.post('/tickets/orders/:id/mock-payment', asyncHandler(async (req: Request, res: Response) => {
+    const { id: orderId } = req.params;
+    const { action } = req.body; // 'pay' or 'cancel'
+
+    if (action === 'pay') {
+        await processPaymentUpdate(orderId, 'paid');
+    } else {
+        await processPaymentUpdate(orderId, 'cancelled');
+    }
+
+    res.json({ success: true });
+}));
+
+export default router;

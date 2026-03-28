@@ -57,3 +57,24 @@ export function generateToken(user: { id: string; email: string; role: string; a
         { expiresIn: config.jwtExpiresIn as jwt.SignOptions['expiresIn'] }
     );
 }
+
+/**
+ * Optional authentication - attaches user if token is present, but allows unauthenticated access
+ */
+export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
+    const authHeader = req.headers['authorization'];
+    const token = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string);
+
+    if (!token) {
+        return next();
+    }
+
+    try {
+        const decoded = jwt.verify(token, config.jwtSecret) as UserPayload;
+        req.user = decoded;
+    } catch {
+        // Ignore invalid tokens in optional auth
+    }
+
+    next();
+}

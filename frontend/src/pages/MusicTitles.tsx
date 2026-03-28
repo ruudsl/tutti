@@ -66,6 +66,10 @@ export default function MusicTitles() {
   const [musicaInfoLoadingDetail, setMusicaInfoLoadingDetail] = useState<string | null>(null);
   const [musicaInfoDetail, setMusicaInfoDetail] = useState<MusicaInfoDetail | null>(null);
 
+  // IMSLP state
+  const [showImslpSearch, setShowImslpSearch] = useState(false);
+  const [imslpSearchTitle, setImslpSearchTitle] = useState('');
+
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
 

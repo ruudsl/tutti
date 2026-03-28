@@ -6,6 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SessionsManager } from '../components/SessionsManager';
 import { GdprExport } from '../components/GdprExport';
 import NotificationPreferences from '../components/NotificationPreferences';
+import { CalendarSync } from '../components/CalendarSync';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -285,6 +286,13 @@ export default function Profile() {
       <div className="card mt-3">
         <div className="card-body">
           <NotificationPreferences />
+        </div>
+      </div>
+
+      {/* Calendar Sync */}
+      <div className="card mt-3">
+        <div className="card-body">
+          <CalendarSync />
         </div>
       </div>
 
