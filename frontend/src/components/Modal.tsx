@@ -7,6 +7,7 @@ interface ModalProps {
   onClose: () => void;
   footer?: ReactNode;
   size?: 'small' | 'medium' | 'large';
+  className?: string;
 }
 
 /**
@@ -16,7 +17,7 @@ interface ModalProps {
  * - Focus trap
  * - Unique ARIA IDs per instance
  */
-export function Modal({ title, children, onClose, footer, size = 'medium' }: ModalProps) {
+export function Modal({ title, children, onClose, footer, size = 'medium', className = '' }: ModalProps) {
   const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
@@ -76,7 +77,7 @@ export function Modal({ title, children, onClose, footer, size = 'medium' }: Mod
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
         ref={modalRef}
-        className={`modal ${sizeClass}`}
+        className={`modal ${sizeClass} ${className}`.trim()}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -112,6 +113,7 @@ interface FormModalProps extends Omit<ModalProps, 'footer'> {
   submitLabel?: string;
   cancelLabel?: string;
   isSubmitting?: boolean;
+  submitDisabled?: boolean;
 }
 
 /**
@@ -125,6 +127,7 @@ export function FormModal({
   submitLabel,
   cancelLabel,
   isSubmitting = false,
+  submitDisabled = false,
   size,
 }: FormModalProps) {
   const { t } = useTranslation();
@@ -154,7 +157,7 @@ export function FormModal({
             type="submit"
             form={formId}
             className="btn btn-primary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || submitDisabled}
           >
             {isSubmitting ? t('accessibility.processing') : (submitLabel || t('common.save'))}
           </button>

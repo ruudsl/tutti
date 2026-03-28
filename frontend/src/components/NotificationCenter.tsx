@@ -14,7 +14,6 @@ import {
 } from '../hooks/useNotifications';
 
 export function NotificationBell() {
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { data: unreadCount } = useUnreadNotificationCount();
 
@@ -173,7 +172,7 @@ export function NotificationPreferencesForm() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
       await registerPush.mutateAsync(subscription);
       setPushSubscribed(true);
