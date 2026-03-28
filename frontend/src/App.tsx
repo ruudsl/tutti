@@ -1,11 +1,10 @@
-import { useEffect, lazy, Suspense, useState, useCallback, ComponentType } from 'react';
+import { useEffect, lazy, Suspense, ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './hooks/useTheme';
-import { queryClient, queryPersister, persistOptions } from './lib/queryClient';
+import { queryClient } from './lib/queryClient';
 import { Toaster } from './utils/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotFound } from './components/NotFound';
@@ -492,48 +491,8 @@ function AppContent() {
 }
 
 export default function App() {
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
-
-  // Handle successful cache hydration
-  const onSuccess = useCallback(() => {
-    setIsHydrated(true);
-  }, []);
-
-  // Timeout fallback: if hydration takes too long, render anyway
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!isHydrated) {
-        setHydrationTimedOut(true);
-        // Clear potentially corrupted cache
-        try {
-          localStorage.removeItem('harmonie-query-cache');
-        } catch {
-          // Ignore localStorage errors
-        }
-      }
-    }, 2000); // 2 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [isHydrated]);
-
-  // Use PersistQueryClientProvider for offline support with proper hydration handling
-  // This ensures queries wait for cache restoration before fetching
-  if (queryPersister && !hydrationTimedOut) {
-    return (
-      <ErrorBoundary>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister: queryPersister, ...persistOptions }}
-          onSuccess={onSuccess}
-        >
-          <AppContent />
-        </PersistQueryClientProvider>
-      </ErrorBoundary>
-    );
-  }
-
-  // Fallback for SSR, when localStorage is not available, or when hydration timed out
+  // Skip persistence entirely to avoid hydration issues
+  // The queryClient still handles caching in-memory, just not persisted across sessions
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
