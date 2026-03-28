@@ -1961,4 +1961,249 @@ export const getInactiveMembers = async (): Promise<InactiveMember[]> => {
   return data;
 };
 
+// ==================== FAVORITES ====================
+
+export interface Favorite {
+  id: string;
+  title: string;
+  arranger: string | null;
+  youtubeUrl: string | null;
+  durationSeconds: number;
+  grade: string | null;
+  pieceCount: number;
+  favoritedAt: string;
+}
+
+export const getFavorites = async (): Promise<Favorite[]> => {
+  const { data } = await api.get('/favorites');
+  return data;
+};
+
+export const addFavorite = async (musicTitleId: string): Promise<{ message: string }> => {
+  const { data } = await api.post('/favorites', { musicTitleId });
+  return data;
+};
+
+export const removeFavorite = async (musicTitleId: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/favorites/${musicTitleId}`);
+  return data;
+};
+
+export const checkFavorite = async (musicTitleId: string): Promise<{ isFavorite: boolean }> => {
+  const { data } = await api.get(`/favorites/check/${musicTitleId}`);
+  return data;
+};
+
+// ==================== PRACTICE TRACKER ====================
+
+export interface PracticeLog {
+  id: string;
+  durationMinutes: number;
+  notes: string | null;
+  practicedAt: string;
+  musicTitle: {
+    id: string;
+    title: string;
+    arranger: string | null;
+  };
+}
+
+export interface PracticeStats {
+  totalMinutes: number;
+  weekMinutes: number;
+  monthMinutes: number;
+  currentStreak: number;
+  mostPracticed: {
+    id: string;
+    title: string;
+    arranger: string | null;
+    totalMinutes: number;
+    sessionCount: number;
+  }[];
+}
+
+export const getPracticeLogs = async (musicTitleId?: string): Promise<PracticeLog[]> => {
+  const { data } = await api.get('/practice', { params: { musicTitleId } });
+  return data;
+};
+
+export const getPracticeStats = async (): Promise<PracticeStats> => {
+  const { data } = await api.get('/practice/stats');
+  return data;
+};
+
+export const logPractice = async (
+  musicTitleId: string,
+  durationMinutes: number,
+  notes?: string
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/practice', { musicTitleId, durationMinutes, notes });
+  return data;
+};
+
+export const deletePracticeLog = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/practice/${id}`);
+  return data;
+};
+
+// ==================== RECENT VIEWS ====================
+
+export interface RecentView {
+  id: string;
+  itemType: string;
+  itemId: string;
+  itemTitle: string;
+  viewedAt: string;
+}
+
+export const getRecentViews = async (type?: string, limit?: number): Promise<RecentView[]> => {
+  const { data } = await api.get('/recent', { params: { type, limit } });
+  return data;
+};
+
+export const recordView = async (
+  itemType: string,
+  itemId: string,
+  itemTitle: string
+): Promise<{ message: string }> => {
+  const { data } = await api.post('/recent', { itemType, itemId, itemTitle });
+  return data;
+};
+
+export const clearRecentViews = async (): Promise<{ message: string }> => {
+  const { data } = await api.delete('/recent');
+  return data;
+};
+
+// ==================== PDF ANNOTATIONS ====================
+
+export interface Annotation {
+  id: string;
+  pageNumber: number;
+  annotationType: 'highlight' | 'note' | 'drawing' | 'text';
+  xPosition: number;
+  yPosition: number;
+  width?: number;
+  height?: number;
+  content?: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getAnnotations = async (
+  musicPieceId: string,
+  pageNumber?: number
+): Promise<Annotation[]> => {
+  const { data } = await api.get(`/annotations/piece/${musicPieceId}`, {
+    params: { pageNumber },
+  });
+  return data;
+};
+
+export const createAnnotation = async (annotation: {
+  musicPieceId: string;
+  pageNumber: number;
+  annotationType: 'highlight' | 'note' | 'drawing' | 'text';
+  xPosition: number;
+  yPosition: number;
+  width?: number;
+  height?: number;
+  content?: string;
+  color?: string;
+}): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/annotations', annotation);
+  return data;
+};
+
+export const updateAnnotation = async (
+  id: string,
+  updates: {
+    xPosition?: number;
+    yPosition?: number;
+    width?: number;
+    height?: number;
+    content?: string;
+    color?: string;
+  }
+): Promise<{ message: string }> => {
+  const { data } = await api.put(`/annotations/${id}`, updates);
+  return data;
+};
+
+export const deleteAnnotation = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/annotations/${id}`);
+  return data;
+};
+
+export const deleteAllAnnotations = async (
+  musicPieceId: string
+): Promise<{ message: string; deleted: number }> => {
+  const { data } = await api.delete(`/annotations/piece/${musicPieceId}`);
+  return data;
+};
+
+// ==================== SESSION MANAGEMENT ====================
+
+export interface UserSession {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  lastActive: string;
+  createdAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+}
+
+export const getSessions = async (): Promise<UserSession[]> => {
+  const { data } = await api.get('/sessions');
+  return data;
+};
+
+export const revokeSession = async (sessionId: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/sessions/${sessionId}`);
+  return data;
+};
+
+export const revokeAllSessions = async (): Promise<{ message: string; revokedCount: number }> => {
+  const { data } = await api.delete('/sessions/all');
+  return data;
+};
+
+// ==================== REORDER TITLES IN LIST ====================
+
+export const reorderTitlesInList = async (
+  listId: string,
+  titleOrder: string[]
+): Promise<{ message: string }> => {
+  const { data } = await api.put(`/music-lists/${listId}/reorder-titles`, { titleOrder });
+  return data;
+};
+
+// ==================== BULK OPERATIONS ====================
+
+export const bulkUpdatePieces = async (
+  pieceIds: string[],
+  updates: {
+    instrumentId?: string | null;
+    addToListId?: string;
+    removeFromListId?: string;
+  }
+): Promise<{ message: string; updated: number }> => {
+  const { data } = await api.put('/music-pieces/bulk', { pieceIds, updates });
+  return data;
+};
+
+export const bulkDeletePieces = async (pieceIds: string[]): Promise<{ message: string; deleted: number }> => {
+  const { data } = await api.delete('/music-pieces/bulk', { data: { pieceIds } });
+  return data;
+};
+
+// ==================== DATA EXPORT (GDPR) ====================
+
+export const exportUserData = async (): Promise<Blob> => {
+  const { data } = await api.get('/users/export-data', { responseType: 'blob' });
+  return data;
+};
+
 export default api;

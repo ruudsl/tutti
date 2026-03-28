@@ -623,4 +623,138 @@ router.post('/:id/photo', authenticateToken, requireRole('admin'), profilePhotoU
     });
 }));
 
+/**
+ * @swagger
+ * /users/export-data:
+ *   get:
+ *     summary: Export all user data (GDPR/AVG compliance)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: JSON file with all user data
+ */
+router.get('/export-data', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+
+    // Get user profile
+    const user = db.prepare(`
+        SELECT id, email, first_name, last_name, role, status, created_at, last_login,
+               profile_photo_path, private_email, onboarded_at, offboarded_at
+        FROM users WHERE id = ?
+    `).get(userId) as any;
+
+    // Get user's instruments
+    const instruments = db.prepare(`
+        SELECT i.name, i.tuning FROM user_instruments ui
+        JOIN instruments i ON ui.instrument_id = i.id
+        WHERE ui.user_id = ?
+    `).all(userId);
+
+    // Get user's orchestras
+    const orchestras = db.prepare(`
+        SELECT o.name FROM user_orchestras uo
+        JOIN orchestras o ON uo.orchestra_id = o.id
+        WHERE uo.user_id = ?
+    `).all(userId);
+
+    // Get user's favorites
+    const favorites = db.prepare(`
+        SELECT mt.title, mt.arranger, uf.created_at as favorited_at
+        FROM user_favorites uf
+        JOIN music_titles mt ON uf.music_title_id = mt.id
+        WHERE uf.user_id = ?
+    `).all(userId);
+
+    // Get user's practice logs
+    const practiceLogs = db.prepare(`
+        SELECT mt.title, pl.duration_minutes, pl.notes, pl.practiced_at
+        FROM practice_logs pl
+        JOIN music_titles mt ON pl.music_title_id = mt.id
+        WHERE pl.user_id = ?
+        ORDER BY pl.practiced_at DESC
+    `).all(userId);
+
+    // Get user's recent views
+    const recentViews = db.prepare(`
+        SELECT item_type, item_title, viewed_at
+        FROM user_recent_views
+        WHERE user_id = ?
+        ORDER BY viewed_at DESC
+    `).all(userId);
+
+    // Get user's annotations count
+    const annotationCount = db.prepare(`
+        SELECT COUNT(*) as count FROM pdf_annotations WHERE user_id = ?
+    `).get(userId) as { count: number };
+
+    // Get user's equipment loans
+    const equipmentLoans = db.prepare(`
+        SELECT e.instrument_type, e.brand_model, el.loan_date, el.return_date
+        FROM equipment_loans el
+        JOIN equipment e ON el.equipment_id = e.id
+        WHERE el.user_id = ?
+    `).all(userId);
+
+    // Get user's uniform assignments
+    const uniformAssignments = db.prepare(`
+        SELECT ui.item_type, ui.size_standard, ua.assigned_date, ua.returned_date
+        FROM uniform_assignments ua
+        JOIN uniform_items ui ON ua.uniform_item_id = ui.id
+        WHERE ua.user_id = ?
+    `).all(userId);
+
+    // Get user's activity log
+    const activityLog = db.prepare(`
+        SELECT action, details, ip_address, created_at
+        FROM activity_log
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1000
+    `).all(userId);
+
+    // Get seating preferences
+    const seatingPreferences = db.prepare(`
+        SELECT u.first_name || ' ' || u.last_name as neighbor_name, sn.preference
+        FROM seating_neighbors sn
+        JOIN users u ON sn.neighbor_user_id = u.id
+        WHERE sn.user_id = ?
+    `).all(userId);
+
+    const exportData = {
+        exportDate: new Date().toISOString(),
+        profile: {
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role,
+            status: user.status,
+            createdAt: user.created_at,
+            lastLogin: user.last_login,
+            privateEmail: user.private_email,
+            onboardedAt: user.onboarded_at,
+            offboardedAt: user.offboarded_at,
+        },
+        instruments,
+        orchestras,
+        favorites,
+        practiceLogs,
+        recentViews,
+        annotationCount: annotationCount.count,
+        equipmentLoans,
+        uniformAssignments,
+        activityLog,
+        seatingPreferences,
+    };
+
+    logger.info(`User ${userId} exported their data`);
+
+    // Set response headers for JSON download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="mijn-data-${new Date().toISOString().split('T')[0]}.json"`);
+
+    res.json(exportData);
+}));
+
 export default router;

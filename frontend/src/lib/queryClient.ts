@@ -90,4 +90,22 @@ export const queryKeys = {
   concertYears: ['concerts', 'years'] as const,
   concertStatistics: ['concerts', 'statistics'] as const,
   pieceHistory: (title: string) => ['concerts', 'piece-history', title] as const,
+
+  // Favorites
+  favorites: ['favorites'] as const,
+  favoriteStatus: (musicTitleId: string) => ['favorites', 'status', musicTitleId] as const,
+
+  // Practice tracker
+  practiceLogs: (musicTitleId?: string) => ['practice', 'logs', musicTitleId] as const,
+  practiceStats: ['practice', 'stats'] as const,
+
+  // Recent views
+  recentViews: (type?: string, limit?: number) => ['recent', type, limit] as const,
+
+  // Annotations
+  annotations: (musicPieceId: string, pageNumber?: number) =>
+    ['annotations', musicPieceId, pageNumber] as const,
+
+  // Sessions
+  sessions: ['sessions'] as const,
 };

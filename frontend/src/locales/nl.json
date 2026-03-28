@@ -1954,5 +1954,93 @@
       "deleteMapping": "Mapping verwijderen",
       "deleteMappingConfirm": "Weet je zeker dat je de mapping voor {{instrument}} wilt verwijderen?"
     }
+  },
+  "quickActions": {
+    "title": "Snelle acties",
+    "upload": "Uploaden",
+    "search": "Zoeken",
+    "myMusic": "Mijn Muziek",
+    "lists": "Lijsten",
+    "rehearsals": "Repetities"
+  },
+  "favorites": {
+    "title": "Favorieten",
+    "add": "Toevoegen aan favorieten",
+    "remove": "Verwijderen uit favorieten",
+    "empty": "Je hebt nog geen favorieten. Klik op het hartje bij een muziekstuk om het toe te voegen.",
+    "added": "Toegevoegd aan favorieten",
+    "removed": "Verwijderd uit favorieten"
+  },
+  "practice": {
+    "title": "Oefenlogboek",
+    "log": "Oefensessie loggen",
+    "duration": "Duur (minuten)",
+    "notes": "Notities",
+    "logged": "Oefensessie opgeslagen",
+    "stats": {
+      "title": "Statistieken",
+      "totalTime": "Totale oefentijd",
+      "weekTime": "Deze week",
+      "monthTime": "Deze maand",
+      "streak": "Huidige streak",
+      "mostPracticed": "Meest geoefend"
+    },
+    "empty": "Je hebt nog geen oefensessies gelogd.",
+    "minutes": "minuten",
+    "hours": "uren",
+    "days": "dagen"
+  },
+  "recent": {
+    "title": "Recent bekeken",
+    "empty": "Je hebt nog geen items bekeken.",
+    "clear": "Geschiedenis wissen"
+  },
+  "sessions": {
+    "title": "Actieve sessies",
+    "current": "Huidige sessie",
+    "lastActive": "Laatst actief",
+    "createdAt": "Ingelogd op",
+    "expiresAt": "Verloopt op",
+    "revoke": "Sessie beëindigen",
+    "revokeAll": "Alle andere sessies beëindigen",
+    "revokeConfirm": "Weet je zeker dat je deze sessie wilt beëindigen?",
+    "revokeAllConfirm": "Weet je zeker dat je alle andere sessies wilt beëindigen?",
+    "revoked": "Sessie beëindigd",
+    "allRevoked": "Alle andere sessies beëindigd"
+  },
+  "annotations": {
+    "title": "Annotaties",
+    "add": "Annotatie toevoegen",
+    "highlight": "Markeren",
+    "note": "Notitie",
+    "text": "Tekst",
+    "drawing": "Tekening",
+    "delete": "Annotatie verwijderen",
+    "deleteAll": "Alle annotaties verwijderen",
+    "color": "Kleur"
+  },
+  "gdpr": {
+    "title": "Gegevens exporteren",
+    "description": "Download al je persoonlijke gegevens in JSON formaat.",
+    "export": "Mijn gegevens downloaden",
+    "exporting": "Bezig met exporteren..."
+  },
+  "bulk": {
+    "title": "Bulk acties",
+    "selected": "geselecteerd",
+    "selectAll": "Alles selecteren",
+    "deselectAll": "Selectie opheffen",
+    "addToList": "Toevoegen aan lijst",
+    "removeFromList": "Verwijderen van lijst",
+    "changeInstrument": "Instrument wijzigen",
+    "delete": "Verwijderen",
+    "deleteConfirm": "Weet je zeker dat je {{count}} stukken wilt verwijderen?",
+    "updated": "{{count}} stukken bijgewerkt",
+    "deleted": "{{count}} stukken verwijderd"
+  },
+  "keyboard": {
+    "title": "Sneltoetsen",
+    "navigation": "Navigatie",
+    "actions": "Acties"
   }
 }

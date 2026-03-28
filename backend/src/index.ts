@@ -48,6 +48,11 @@ import auditLogsRoutes from './routes/audit-logs';
 import seatingRoutes from './routes/seating';
 import seatingNotificationsRoutes from './routes/seating-notifications';
 import onboardingRoutes from './routes/onboarding';
+import favoritesRoutes from './routes/favorites';
+import practiceRoutes from './routes/practice';
+import recentRoutes from './routes/recent';
+import annotationsRoutes from './routes/annotations';
+import sessionsRoutes from './routes/sessions';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 
@@ -117,6 +122,11 @@ app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/seating', seatingRoutes);
 app.use('/api/seating-notifications', seatingNotificationsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/favorites', favoritesRoutes);
+app.use('/api/practice', practiceRoutes);
+app.use('/api/recent', recentRoutes);
+app.use('/api/annotations', annotationsRoutes);
+app.use('/api/sessions', sessionsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -11,12 +11,14 @@ import {
   addTitleToList,
   removeTitleFromList,
   reorderMusicLists,
+  reorderTitlesInList,
   getOrchestras,
   toggleMusicListActive,
   updateTitleMeta,
   getGenres,
   downloadProgramPdf,
 } from '../api';
+import { SortableList, DraggableListItem } from '../components/SortableList';
 import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
@@ -263,6 +265,18 @@ export default function MusicListManager() {
     }
   };
 
+  const handleReorderTitles = async (newTitleOrder: { id: string; title: string }[]) => {
+    if (!selectedList) return;
+
+    try {
+      await reorderTitlesInList(selectedList.id, newTitleOrder.map(t => t.title));
+      // Update local state to reflect new order
+      await loadList(selectedList.id);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Fout bij wijzigen volgorde');
+    }
+  };
+
   const openEditModal = (list: MusicList) => {
     setEditingList(list);
     setListFormName(list.name);
@@ -485,81 +499,78 @@ export default function MusicListManager() {
                 </div>
               </div>
 
-              {/* Titles on list */}
+              {/* Titles on list with drag-and-drop */}
               {titlesOnList.length > 0 && (
                 <div className="mb-2">
                   <h3 className="mb-1">{t('lists.onThisList')} ({titlesOnList.length} {t('lists.titles')})</h3>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                    {titlesOnList.map((titleName) => {
-                      const piecesForTitle = selectedList.pieces.filter(p => p.title === titleName);
-                      const titleData = titles.find(t => t.title === titleName);
-                      return (
-                        <div
-                          key={titleName}
-                          className="flex justify-between items-center"
-                          style={{
-                            padding: '0.5rem',
-                            background: 'var(--background)',
-                            borderRadius: '0.25rem',
-                            marginBottom: '0.25rem',
-                          }}
-                        >
-                          <div style={{ flex: 1 }}>
-                            <strong>{titleName}</strong>
-                            <span className="piece-meta">
-                              {' '}({piecesForTitle.length} {t('lists.parts')})
-                              {titleData?.durationSeconds ? ` • ${formatDuration(titleData.durationSeconds)}` : ''}
-                            </span>
-                            {titleData?.youtubeUrl && (
-                              <a
-                                href={titleData.youtubeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-outline btn-sm"
-                                style={{ marginLeft: '0.5rem' }}
-                              >
-                                ▶
-                              </a>
-                            )}
-                            {titleData?.genres && titleData.genres.length > 0 && (
-                              <div style={{ marginTop: '0.25rem' }}>
-                                {titleData.genres.map(g => (
-                                  <span
-                                    key={g.id}
-                                    className="badge badge-secondary"
-                                    style={{ marginRight: '0.25rem', fontSize: '0.7rem' }}
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
+                    Sleep items om de volgorde te wijzigen
+                  </p>
+                  <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                    <SortableList
+                      items={titlesOnList.map(title => ({ id: title, title }))}
+                      onReorder={handleReorderTitles}
+                      keyExtractor={(item) => item.id}
+                      renderItem={(item) => {
+                        const piecesForTitle = selectedList.pieces.filter(p => p.title === item.title);
+                        const titleData = titles.find(t => t.title === item.title);
+                        return (
+                          <DraggableListItem>
+                            <div className="flex justify-between items-center" style={{ width: '100%' }}>
+                              <div style={{ flex: 1 }}>
+                                <strong>{item.title}</strong>
+                                <span className="piece-meta">
+                                  {' '}({piecesForTitle.length} {t('lists.parts')})
+                                  {titleData?.durationSeconds ? ` • ${formatDuration(titleData.durationSeconds)}` : ''}
+                                </span>
+                                {titleData?.youtubeUrl && (
+                                  <a
+                                    href={titleData.youtubeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-outline btn-sm"
+                                    style={{ marginLeft: '0.5rem' }}
+                                    onClick={(e) => e.stopPropagation()}
                                   >
-                                    {g.name}
-                                  </span>
-                                ))}
+                                    ▶
+                                  </a>
+                                )}
+                                {titleData?.genres && titleData.genres.length > 0 && (
+                                  <div style={{ marginTop: '0.25rem' }}>
+                                    {titleData.genres.map(g => (
+                                      <span
+                                        key={g.id}
+                                        className="badge badge-secondary"
+                                        style={{ marginRight: '0.25rem', fontSize: '0.7rem' }}
+                                      >
+                                        {g.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            {titleData?.description && (
-                              <div className="piece-meta" style={{ fontStyle: 'italic' }}>
-                                {titleData.description}
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                {titleData && (
+                                  <button
+                                    className="btn btn-outline btn-sm"
+                                    onClick={() => setEditingTitle(titleData)}
+                                    title={t('lists.editMetadata')}
+                                  >
+                                    ✏
+                                  </button>
+                                )}
+                                <button
+                                  className="btn btn-danger btn-sm"
+                                  onClick={() => handleRemoveTitle(item.title)}
+                                >
+                                  {t('lists.remove')}
+                                </button>
                               </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            {titleData && (
-                              <button
-                                className="btn btn-outline btn-sm"
-                                onClick={() => setEditingTitle(titleData)}
-                                title={t('lists.editMetadata')}
-                              >
-                                ✏
-                              </button>
-                            )}
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => handleRemoveTitle(titleName)}
-                            >
-                              {t('lists.remove')}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                            </div>
+                          </DraggableListItem>
+                        );
+                      }}
+                    />
                   </div>
                 </div>
               )}

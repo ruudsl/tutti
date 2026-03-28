@@ -8,6 +8,8 @@ import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { DarkModeToggle } from './DarkModeToggle';
 import { Breadcrumbs } from './Breadcrumbs';
 import { ContextSidebar, useHasSidebar } from './ContextSidebar';
+import { QuickActions } from './QuickActions';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
 
@@ -19,6 +21,9 @@ export default function Layout() {
   const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -257,6 +262,8 @@ export default function Layout() {
           {t('feedback.linkText')}
         </a>
       </footer>
+
+      <QuickActions />
 
       <OnboardingTour
         forceShow={showOnboarding || undefined}

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { SessionsManager } from '../components/SessionsManager';
+import { GdprExport } from '../components/GdprExport';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -275,6 +277,20 @@ export default function Profile() {
               </form>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Sessions Management */}
+      <div className="card mt-3">
+        <div className="card-body">
+          <SessionsManager />
+        </div>
+      </div>
+
+      {/* GDPR Data Export */}
+      <div className="card mt-3">
+        <div className="card-body">
+          <GdprExport />
         </div>
       </div>
     </div>

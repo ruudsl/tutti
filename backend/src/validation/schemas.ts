@@ -88,6 +88,58 @@ export const addTitleToListSchema = z.object({
     title: z.string().min(1, 'Titel is verplicht.'),
 });
 
+export const reorderPiecesInListSchema = z.object({
+    titleOrder: z.array(z.string()),
+});
+
+// Favorites schemas
+export const addFavoriteSchema = z.object({
+    musicTitleId: z.string().uuid('Ongeldig titel ID.'),
+});
+
+// Practice log schemas
+export const createPracticeLogSchema = z.object({
+    musicTitleId: z.string().uuid('Ongeldig titel ID.'),
+    durationMinutes: z.number().int().min(1, 'Duur moet minimaal 1 minuut zijn.'),
+    notes: z.string().nullable().optional(),
+});
+
+// PDF annotation schemas
+export const createAnnotationSchema = z.object({
+    musicPieceId: z.string().uuid('Ongeldig stuk ID.'),
+    pageNumber: z.number().int().min(1),
+    annotationType: z.enum(['highlight', 'note', 'drawing', 'text']),
+    xPosition: z.number(),
+    yPosition: z.number(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    content: z.string().optional(),
+    color: z.string().optional(),
+});
+
+export const updateAnnotationSchema = z.object({
+    xPosition: z.number().optional(),
+    yPosition: z.number().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    content: z.string().optional(),
+    color: z.string().optional(),
+});
+
+// Bulk operations schemas
+export const bulkUpdatePiecesSchema = z.object({
+    pieceIds: z.array(z.string().uuid()),
+    updates: z.object({
+        instrumentId: z.string().uuid().nullable().optional(),
+        addToListId: z.string().uuid().optional(),
+        removeFromListId: z.string().uuid().optional(),
+    }),
+});
+
+export const bulkDeletePiecesSchema = z.object({
+    pieceIds: z.array(z.string().uuid()),
+});
+
 // Genre schemas
 export const createGenreSchema = z.object({
     name: z.string().min(1, 'Naam is verplicht.').max(100, 'Naam mag maximaal 100 tekens zijn.'),

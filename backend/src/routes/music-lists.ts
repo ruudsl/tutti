@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { createMusicListSchema, updateMusicListSchema, reorderMusicListsSchema, addPieceToListSchema, addTitleToListSchema } from '../validation/schemas';
+import { createMusicListSchema, updateMusicListSchema, reorderMusicListsSchema, addPieceToListSchema, addTitleToListSchema, reorderPiecesInListSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -1038,6 +1038,74 @@ router.get('/:id/program-pdf', authenticateToken, asyncHandler(async (req: AuthR
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(Buffer.from(pdfBytes));
+}));
+
+/**
+ * @swagger
+ * /music-lists/{id}/reorder-titles:
+ *   put:
+ *     summary: Reorder titles within a music list (drag-and-drop)
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - titleOrder
+ *             properties:
+ *               titleOrder:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of title names in desired order
+ *     responses:
+ *       200:
+ *         description: Titles reordered successfully
+ */
+router.put('/:id/reorder-titles', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = reorderPiecesInListSchema.parse(req.body);
+
+    // Verify list belongs to user's association
+    const list = db.prepare(`
+        SELECT ml.id
+        FROM music_lists ml
+        JOIN orchestras o ON ml.orchestra_id = o.id
+        WHERE ml.id = ? AND o.association_id = ?
+    `).get(req.params.id, req.user!.associationId);
+
+    if (!list) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
+    // Update positions for all pieces in this list based on title order
+    withTransaction(() => {
+        for (let i = 0; i < data.titleOrder.length; i++) {
+            const title = data.titleOrder[i];
+            // Update all pieces with this title to have this position
+            db.prepare(`
+                UPDATE music_list_pieces
+                SET position = ?
+                WHERE music_list_id = ?
+                AND music_piece_id IN (
+                    SELECT id FROM music_pieces WHERE title = ?
+                )
+            `).run(i, req.params.id, title);
+        }
+    });
+
+    logger.info(`Titles reordered in list ${req.params.id}`, { reorderedBy: req.user!.id });
+
+    res.json({ message: 'Volgorde succesvol bijgewerkt.' });
 }));
 
 export default router;

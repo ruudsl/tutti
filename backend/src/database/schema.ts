@@ -130,10 +130,87 @@ CREATE TABLE IF NOT EXISTS music_pieces (
 CREATE TABLE IF NOT EXISTS music_list_pieces (
     music_list_id TEXT NOT NULL,
     music_piece_id TEXT NOT NULL,
+    position INTEGER DEFAULT 0,
     added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (music_list_id, music_piece_id),
     FOREIGN KEY (music_list_id) REFERENCES music_lists(id) ON DELETE CASCADE,
     FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
+);
+
+-- Favoriete muziekstukken per gebruiker
+CREATE TABLE IF NOT EXISTS user_favorites (
+    user_id TEXT NOT NULL,
+    music_title_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, music_title_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
+);
+
+-- Recent bekeken items per gebruiker
+CREATE TABLE IF NOT EXISTS user_recent_views (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    item_title TEXT NOT NULL,
+    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Practice tracking per gebruiker per stuk
+CREATE TABLE IF NOT EXISTS practice_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    music_title_id TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    notes TEXT,
+    practiced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
+);
+
+-- PDF annotaties per gebruiker per stuk
+CREATE TABLE IF NOT EXISTS pdf_annotations (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    music_piece_id TEXT NOT NULL,
+    page_number INTEGER NOT NULL,
+    annotation_type TEXT NOT NULL,
+    x_position REAL NOT NULL,
+    y_position REAL NOT NULL,
+    width REAL,
+    height REAL,
+    content TEXT,
+    color TEXT DEFAULT '#FFFF00',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
+);
+
+-- Push notification subscriptions
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh_key TEXT NOT NULL,
+    auth_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- User sessions voor sessiebeheer
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Titel metadata (YouTube, beschrijving, speelduur per titel)
