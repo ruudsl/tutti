@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
@@ -8,9 +9,8 @@ import {
   getSeatingSections,
   getSeatingAssignments,
   updateSeatingAssignment,
-  getUsers,
 } from '../api';
-import type { Orchestra, SeatingSection, SeatingAssignment, User } from '../types';
+import type { SeatingAssignment } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -20,60 +20,48 @@ export default function VoiceParts() {
   const { t } = useTranslation();
   const { user } = useAuth();
   useDocumentTitle('pageTitle.voiceParts');
+  const queryClient = useQueryClient();
 
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string>('');
-  const [sections, setSections] = useState<SeatingSection[]>([]);
-  const [assignments, setAssignments] = useState<SeatingAssignment[]>([]);
-  const [, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [filterSection, setFilterSection] = useState<string>('');
 
+  // React Query for orchestras
+  const { data: orchestras = [], isLoading } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for sections
+  const { data: sections = [] } = useQuery({
+    queryKey: ['seatingSections', selectedOrchestraId],
+    queryFn: () => getSeatingSections(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for assignments
+  const { data: assignments = [] } = useQuery({
+    queryKey: ['seatingAssignments', selectedOrchestraId],
+    queryFn: () => getSeatingAssignments(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Set initial orchestra
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrchestraId) {
-      loadOrchestraData();
+    if (!selectedOrchestraId && orchestras.length > 0) {
+      setSelectedOrchestraId(orchestras[0].id);
     }
-  }, [selectedOrchestraId]);
+  }, [orchestras, selectedOrchestraId]);
 
-  const loadInitialData = async () => {
-    try {
-      const [orch, allUsers] = await Promise.all([
-        getOrchestras(),
-        isManager ? getUsers() : Promise.resolve([]),
-      ]);
-      setOrchestras(orch);
-      setUsers(allUsers);
-      if (orch.length > 0) {
-        setSelectedOrchestraId(orch[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-      showError(t('common.error'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadOrchestraData = async () => {
-    if (!selectedOrchestraId) return;
-    try {
-      const [sect, assign] = await Promise.all([
-        getSeatingSections(selectedOrchestraId),
-        getSeatingAssignments(selectedOrchestraId),
-      ]);
-      setSections(sect);
-      setAssignments(assign);
-    } catch (e) {
-      console.error(e);
-    }
+  // Helper to refresh data
+  const refreshAssignments = () => {
+    queryClient.invalidateQueries({ queryKey: ['seatingAssignments', selectedOrchestraId] });
   };
 
   const handleStartEdit = (assignment: SeatingAssignment) => {
@@ -86,7 +74,7 @@ export default function VoiceParts() {
       await updateSeatingAssignment(assignmentId, { seatLabel: editValue });
       showSuccess(t('voiceParts.saved'));
       setEditingId(null);
-      loadOrchestraData();
+      refreshAssignments();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }

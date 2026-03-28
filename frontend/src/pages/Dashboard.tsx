@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { getMyMusicLists } from '../api';
 import type { MusicList } from '../types';
@@ -24,43 +25,34 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.dashboard');
-  const [orchestraGroups, setOrchestraGroups] = useState<OrchestraGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: lists = [], isLoading } = useQuery({
+    queryKey: ['myMusicLists'],
+    queryFn: getMyMusicLists,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  const loadData = async () => {
-    try {
-      const listsData = await getMyMusicLists();
-
-      // Group lists by orchestra
-      const groupMap = new Map<string, OrchestraGroup>();
-      for (const list of listsData) {
-        const existing = groupMap.get(list.orchestraId);
-        if (existing) {
-          existing.lists.push(list);
-          existing.totalTitles += list.titleCount || 0;
-          existing.totalDuration += list.totalDuration || 0;
-        } else {
-          groupMap.set(list.orchestraId, {
-            orchestraId: list.orchestraId,
-            orchestraName: list.orchestraName || t('dashboard.unknownOrchestra'),
-            lists: [list],
-            totalTitles: list.titleCount || 0,
-            totalDuration: list.totalDuration || 0,
-          });
-        }
+  // Group lists by orchestra
+  const orchestraGroups = useMemo((): OrchestraGroup[] => {
+    const groupMap = new Map<string, OrchestraGroup>();
+    for (const list of lists) {
+      const existing = groupMap.get(list.orchestraId);
+      if (existing) {
+        existing.lists.push(list);
+        existing.totalTitles += list.titleCount || 0;
+        existing.totalDuration += list.totalDuration || 0;
+      } else {
+        groupMap.set(list.orchestraId, {
+          orchestraId: list.orchestraId,
+          orchestraName: list.orchestraName || t('dashboard.unknownOrchestra'),
+          lists: [list],
+          totalTitles: list.titleCount || 0,
+          totalDuration: list.totalDuration || 0,
+        });
       }
-
-      setOrchestraGroups(Array.from(groupMap.values()));
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+    return Array.from(groupMap.values());
+  }, [lists, t]);
 
   if (isLoading) {
     return (

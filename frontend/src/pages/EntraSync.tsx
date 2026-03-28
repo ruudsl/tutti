@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import {
@@ -16,7 +17,6 @@ import {
   type JobTitleMapping,
   type EntraUsersResponse,
 } from '../api';
-import type { Instrument, MicrosoftConfig } from '../types';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -26,8 +26,20 @@ export default function EntraSync() {
 
   // State
   const [activeTab, setActiveTab] = useState<'users' | 'mappings'>('users');
-  const [msConfig, setMsConfig] = useState<MicrosoftConfig | null>(null);
-  const [isConfigLoading, setIsConfigLoading] = useState(true);
+
+  // React Query for Microsoft config
+  const { data: msConfig = null, isLoading: isConfigLoading } = useQuery({
+    queryKey: ['microsoftConfig'],
+    queryFn: getMicrosoftConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for instruments
+  const { data: instruments = [] } = useQuery({
+    queryKey: ['instruments'],
+    queryFn: getInstruments,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Users state
   const [entraData, setEntraData] = useState<EntraUsersResponse | null>(null);
@@ -42,18 +54,11 @@ export default function EntraSync() {
   // Mappings state
   const [mappings, setMappings] = useState<JobTitleMapping[]>([]);
   const [isLoadingMappings, setIsLoadingMappings] = useState(false);
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [showAddMappingModal, setShowAddMappingModal] = useState(false);
   const [editingMapping, setEditingMapping] = useState<JobTitleMapping | null>(null);
   const [deletingMapping, setDeletingMapping] = useState<JobTitleMapping | null>(null);
   const [mappingFormData, setMappingFormData] = useState({ jobTitle: '', instrumentId: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Load Microsoft config on mount
-  useEffect(() => {
-    loadMicrosoftConfig();
-    loadInstruments();
-  }, []);
 
   // Load data when tab changes
   useEffect(() => {
@@ -65,26 +70,6 @@ export default function EntraSync() {
       }
     }
   }, [activeTab, msConfig?.configured]);
-
-  const loadMicrosoftConfig = async () => {
-    try {
-      const config = await getMicrosoftConfig();
-      setMsConfig(config);
-    } catch {
-      // Not configured
-    } finally {
-      setIsConfigLoading(false);
-    }
-  };
-
-  const loadInstruments = async () => {
-    try {
-      const data = await getInstruments();
-      setInstruments(data);
-    } catch (error) {
-      console.error('Error loading instruments:', error);
-    }
-  };
 
   const loadEntraUsers = async () => {
     setIsLoadingUsers(true);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -7,28 +8,68 @@ import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDe
 import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import type { AssociationSettings, MicrosoftConfig, SmtpConfig } from '../types';
 
 export default function Settings() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.settings');
-  const [settings, setSettings] = useState<AssociationSettings | null>(null);
+  const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Microsoft config state
-  const [msConfig, setMsConfig] = useState<MicrosoftConfig | null>(null);
+  // React Query for settings
+  const { data: settings = null, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for Microsoft config
+  const { data: msConfig = null } = useQuery({
+    queryKey: ['microsoftConfig'],
+    queryFn: getMicrosoftConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for SMTP config
+  const { data: smtpConfig = null } = useQuery({
+    queryKey: ['smtpConfig'],
+    queryFn: getSmtpConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for M365 group mappings
+  const { data: m365GroupMappings = [], isLoading: m365MappingsLoading } = useQuery({
+    queryKey: ['m365GroupMappings'],
+    queryFn: getM365GroupMappings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Initialize display name from settings
+  useEffect(() => {
+    if (settings?.displayName && !displayName) {
+      setDisplayName(settings.displayName);
+    }
+  }, [settings, displayName]);
+
+  // Microsoft config form state
   const [msClientId, setMsClientId] = useState('');
   const [msClientSecret, setMsClientSecret] = useState('');
   const [msTenantId, setMsTenantId] = useState('');
   const [msEnabled, setMsEnabled] = useState(false);
   const [msSaving, setMsSaving] = useState(false);
 
-  // SMTP config state
-  const [smtpConfig, setSmtpConfig] = useState<SmtpConfig | null>(null);
+  // Initialize MS config form from query data
+  useEffect(() => {
+    if (msConfig) {
+      setMsClientId(msConfig.clientId || '');
+      setMsTenantId(msConfig.tenantId || '');
+      setMsEnabled(msConfig.enabled);
+    }
+  }, [msConfig]);
+
+  // SMTP config form state
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState(587);
   const [smtpSecure, setSmtpSecure] = useState(false);
@@ -39,6 +80,18 @@ export default function Settings() {
   const [smtpSaving, setSmtpSaving] = useState(false);
   const [smtpTesting, setSmtpTesting] = useState(false);
 
+  // Initialize SMTP config form from query data
+  useEffect(() => {
+    if (smtpConfig) {
+      setSmtpHost(smtpConfig.host || '');
+      setSmtpPort(smtpConfig.port || 587);
+      setSmtpSecure(smtpConfig.secure || false);
+      setSmtpUser(smtpConfig.user || '');
+      setSmtpFrom(smtpConfig.from || '');
+      setSmtpEnabled(smtpConfig.enabled || false);
+    }
+  }, [smtpConfig]);
+
   // Concert types state
   const [showAddConcertTypeModal, setShowAddConcertTypeModal] = useState(false);
   const [editingConcertType, setEditingConcertType] = useState<{ id: string; value: string; label: string; sortOrder: number } | null>(null);
@@ -46,8 +99,6 @@ export default function Settings() {
   const [concertTypeFormData, setConcertTypeFormData] = useState({ value: '', label: '', sortOrder: 0 });
 
   // M365 group mappings state
-  const [m365GroupMappings, setM365GroupMappings] = useState<M365GroupMapping[]>([]);
-  const [m365MappingsLoading, setM365MappingsLoading] = useState(false);
   const [showAddGroupMappingModal, setShowAddGroupMappingModal] = useState(false);
   const [editingGroupMapping, setEditingGroupMapping] = useState<M365GroupMapping | null>(null);
   const [deletingGroupMapping, setDeletingGroupMapping] = useState<M365GroupMapping | null>(null);
@@ -64,36 +115,11 @@ export default function Settings() {
   const deleteConcertTypeMutation = useDeleteConcertType();
   const initDefaultsMutation = useInitDefaultConcertTypes();
 
-  useEffect(() => {
-    loadSettings();
-    loadMicrosoftConfig();
-    loadSmtpConfig();
-    loadM365GroupMappings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const data = await getSettings();
-      setSettings(data);
-      setDisplayName(data.displayName || '');
-    } catch (error) {
-      console.error('Error loading settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadMicrosoftConfig = async () => {
-    try {
-      const config = await getMicrosoftConfig();
-      setMsConfig(config);
-      setMsClientId(config.clientId || '');
-      setMsTenantId(config.tenantId || '');
-      setMsEnabled(config.enabled);
-    } catch {
-      // Not configured yet, that's fine
-    }
-  };
+  // Helper functions to refresh data
+  const refreshSettings = () => queryClient.invalidateQueries({ queryKey: ['settings'] });
+  const refreshMsConfig = () => queryClient.invalidateQueries({ queryKey: ['microsoftConfig'] });
+  const refreshSmtpConfig = () => queryClient.invalidateQueries({ queryKey: ['smtpConfig'] });
+  const refreshM365Mappings = () => queryClient.invalidateQueries({ queryKey: ['m365GroupMappings'] });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +127,7 @@ export default function Settings() {
     try {
       await updateSettings({ displayName: displayName.trim() || undefined });
       showSuccess(t('settings.saved'));
-      await loadSettings();
+      refreshSettings();
       window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorSaving'));
@@ -131,7 +157,7 @@ export default function Settings() {
     try {
       await uploadLogo(file);
       showSuccess(t('settings.logoUploaded'));
-      await loadSettings();
+      refreshSettings();
       window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorUploadingLogo'));
@@ -149,7 +175,7 @@ export default function Settings() {
     try {
       await removeLogo();
       showSuccess(t('settings.logoRemoved'));
-      await loadSettings();
+      refreshSettings();
       window.dispatchEvent(new Event('settings-updated'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.errorRemovingLogo'));
@@ -172,7 +198,7 @@ export default function Settings() {
       });
       showSuccess(t('settings.microsoft.saved'));
       setMsClientSecret('');
-      await loadMicrosoftConfig();
+      refreshMsConfig();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.microsoft.errorSaving'));
     } finally {
@@ -189,24 +215,9 @@ export default function Settings() {
       setMsClientSecret('');
       setMsTenantId('');
       setMsEnabled(false);
-      setMsConfig(null);
+      refreshMsConfig();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.microsoft.errorRemoving'));
-    }
-  };
-
-  const loadSmtpConfig = async () => {
-    try {
-      const config = await getSmtpConfig();
-      setSmtpConfig(config);
-      setSmtpHost(config.host || '');
-      setSmtpPort(config.port || 587);
-      setSmtpSecure(config.secure);
-      setSmtpUser(config.user || '');
-      setSmtpFrom(config.from || '');
-      setSmtpEnabled(config.enabled);
-    } catch {
-      // Not configured yet
     }
   };
 
@@ -229,7 +240,7 @@ export default function Settings() {
       });
       showSuccess(t('settings.smtp.saved'));
       setSmtpPassword('');
-      await loadSmtpConfig();
+      refreshSmtpConfig();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.smtp.errorSaving'));
     } finally {
@@ -249,7 +260,7 @@ export default function Settings() {
       setSmtpPassword('');
       setSmtpFrom('');
       setSmtpEnabled(false);
-      setSmtpConfig(null);
+      refreshSmtpConfig();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.smtp.errorRemoving'));
     }
@@ -310,18 +321,6 @@ export default function Settings() {
   };
 
   // M365 group mapping handlers
-  const loadM365GroupMappings = async () => {
-    setM365MappingsLoading(true);
-    try {
-      const mappings = await getM365GroupMappings();
-      setM365GroupMappings(mappings);
-    } catch {
-      // Not configured or error
-    } finally {
-      setM365MappingsLoading(false);
-    }
-  };
-
   const handleCreateGroupMapping = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupMappingFormData.groupName.trim()) {
@@ -338,7 +337,7 @@ export default function Settings() {
       showSuccess(t('settings.m365Groups.created'));
       setShowAddGroupMappingModal(false);
       setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
-      await loadM365GroupMappings();
+      refreshM365Mappings();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.m365Groups.errorCreating'));
     } finally {
@@ -358,7 +357,7 @@ export default function Settings() {
       showSuccess(t('settings.m365Groups.updated'));
       setEditingGroupMapping(null);
       setGroupMappingFormData({ orchestraId: '', groupName: '', groupType: 'orchestra' });
-      await loadM365GroupMappings();
+      refreshM365Mappings();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.m365Groups.errorUpdating'));
     } finally {
@@ -372,7 +371,7 @@ export default function Settings() {
       await deleteM365GroupMapping(deletingGroupMapping.id);
       showSuccess(t('settings.m365Groups.deleted'));
       setDeletingGroupMapping(null);
-      await loadM365GroupMappings();
+      refreshM365Mappings();
     } catch (error: any) {
       showError(error.response?.data?.error || t('settings.m365Groups.errorDeleting'));
     }

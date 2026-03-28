@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { getSettings, updateTheme } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -42,25 +43,21 @@ export default function ThemeSettingsPage() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.theme');
   const [theme, setTheme] = useState<ThemeSettings>({ ...DEFAULT_THEME });
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    loadTheme();
-  }, []);
+  // React Query for settings
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const loadTheme = async () => {
-    try {
-      const data = await getSettings();
-      if (data.theme) {
-        setTheme({ ...DEFAULT_THEME, ...data.theme });
-      }
-    } catch (error) {
-      console.error('Error loading theme:', error);
-    } finally {
-      setIsLoading(false);
+  // Initialize theme from settings
+  useEffect(() => {
+    if (settings?.theme) {
+      setTheme({ ...DEFAULT_THEME, ...settings.theme });
     }
-  };
+  }, [settings]);
 
   const handleColorChange = (key: keyof ThemeSettings, value: string) => {
     setTheme(prev => ({ ...prev, [key]: value }));

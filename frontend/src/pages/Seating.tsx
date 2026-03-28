@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
@@ -19,7 +20,7 @@ import {
   updateSeatingSection,
   deleteSeatingSection,
 } from '../api';
-import type { Orchestra, SeatingSection, SeatingAssignment, SeatingChart, User, Instrument } from '../types';
+import type { SeatingSection } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
@@ -32,17 +33,68 @@ export default function Seating() {
   const { t } = useTranslation();
   const { user } = useAuth();
   useDocumentTitle('pageTitle.seating');
+  const queryClient = useQueryClient();
 
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string>('');
-  const [sections, setSections] = useState<SeatingSection[]>([]);
-  const [assignments, setAssignments] = useState<SeatingAssignment[]>([]);
-  const [chart, setChart] = useState<SeatingChart | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [instruments, setInstruments] = useState<Instrument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // React Query for initial data
+  const { data: orchestras = [], isLoading } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    enabled: !!isManager,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: instruments = [] } = useQuery({
+    queryKey: ['instruments'],
+    queryFn: getInstruments,
+    enabled: !!isManager,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for orchestra-specific data
+  const { data: sections = [] } = useQuery({
+    queryKey: ['seatingSections', selectedOrchestraId],
+    queryFn: () => getSeatingSections(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: assignments = [] } = useQuery({
+    queryKey: ['seatingAssignments', selectedOrchestraId],
+    queryFn: () => getSeatingAssignments(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: chart = null } = useQuery({
+    queryKey: ['seatingChart', selectedOrchestraId],
+    queryFn: () => getSeatingChart(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Set initial orchestra
+  useEffect(() => {
+    if (!selectedOrchestraId && orchestras.length > 0) {
+      setSelectedOrchestraId(orchestras[0].id);
+    }
+  }, [orchestras, selectedOrchestraId]);
+
+  // Helper to refresh orchestra data
+  const refreshOrchestraData = () => {
+    queryClient.invalidateQueries({ queryKey: ['seatingSections', selectedOrchestraId] });
+    queryClient.invalidateQueries({ queryKey: ['seatingAssignments', selectedOrchestraId] });
+    queryClient.invalidateQueries({ queryKey: ['seatingChart', selectedOrchestraId] });
+  };
 
   // Form states
   const [activeTab, setActiveTab] = useState<'chart' | 'editor' | 'config' | 'assignments' | 'notifications'>('chart');
@@ -53,59 +105,12 @@ export default function Seating() {
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({ userId: '', sectionId: '', positionInSection: 0, seatLabel: '', notes: '' });
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrchestraId) {
-      loadOrchestraData();
-    }
-  }, [selectedOrchestraId]);
-
-  const loadInitialData = async () => {
-    try {
-      const [orch, allUsers, instr] = await Promise.all([
-        getOrchestras(),
-        isManager ? getUsers() : Promise.resolve([]),
-        isManager ? getInstruments() : Promise.resolve([]),
-      ]);
-      setOrchestras(orch);
-      setUsers(allUsers);
-      setInstruments(instr);
-      if (orch.length > 0) {
-        setSelectedOrchestraId(orch[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-      showError(t('common.error'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadOrchestraData = async () => {
-    if (!selectedOrchestraId) return;
-    try {
-      const [sect, assign, chartData] = await Promise.all([
-        getSeatingSections(selectedOrchestraId),
-        getSeatingAssignments(selectedOrchestraId),
-        getSeatingChart(selectedOrchestraId),
-      ]);
-      setSections(sect);
-      setAssignments(assign);
-      setChart(chartData);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleCreateDefaultLayout = async () => {
     if (!selectedOrchestraId) return;
     try {
       await createDefaultSeatingLayout(selectedOrchestraId);
       showSuccess(t('seating.defaultLayoutCreated'));
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -117,7 +122,7 @@ export default function Seating() {
     try {
       await deleteAllSeatingSections(selectedOrchestraId);
       showSuccess(t('seating.allSectionsDeleted'));
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -146,7 +151,7 @@ export default function Seating() {
       setShowSectionForm(false);
       setEditingSectionId(null);
       setSectionForm({ name: '', rowNumber: 1, instrumentIds: [] });
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -167,7 +172,7 @@ export default function Seating() {
     try {
       await deleteSeatingSection(id);
       showSuccess(t('seating.sectionDeleted'));
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -188,7 +193,7 @@ export default function Seating() {
       showSuccess(t('seating.assignmentCreated'));
       setShowAssignmentForm(false);
       setAssignmentForm({ userId: '', sectionId: '', positionInSection: 0, seatLabel: '', notes: '' });
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -199,7 +204,7 @@ export default function Seating() {
     try {
       await deleteSeatingAssignment(id);
       showSuccess(t('seating.assignmentDeleted'));
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -210,7 +215,7 @@ export default function Seating() {
     try {
       await bulkUpdateSeatingAssignments(selectedOrchestraId, newAssignments);
       showSuccess(t('seating.assignmentsSaved'));
-      loadOrchestraData();
+      refreshOrchestraData();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }

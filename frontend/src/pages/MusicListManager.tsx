@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getMusicLists,
   getMusicList,
@@ -19,7 +20,7 @@ import {
   downloadProgramPdf,
 } from '../api';
 import { SortableList, DraggableListItem } from '../components/SortableList';
-import type { MusicList, MusicPiece, MusicTitle, Orchestra, Genre } from '../types';
+import type { MusicList, MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
 import { FormModal } from '../components/Modal';
@@ -31,14 +32,53 @@ export default function MusicListManager() {
   useDocumentTitle('pageTitle.lists');
   const { orchestraId, listId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [selectedOrchestra, setSelectedOrchestra] = useState<string>(orchestraId || '');
-  const [lists, setLists] = useState<MusicList[]>([]);
-  const [selectedList, setSelectedList] = useState<(MusicList & { pieces: MusicPiece[] }) | null>(null);
-  const [titles, setTitles] = useState<MusicTitle[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [genreFilter, setGenreFilter] = useState<string>('');
+
+  // React Query for orchestras
+  const { data: orchestras = [], isLoading } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for genres
+  const { data: genres = [] } = useQuery({
+    queryKey: ['genres'],
+    queryFn: getGenres,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for lists
+  const { data: lists = [] } = useQuery({
+    queryKey: ['musicLists', selectedOrchestra],
+    queryFn: () => getMusicLists(selectedOrchestra),
+    enabled: !!selectedOrchestra,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for selected list
+  const { data: selectedList } = useQuery({
+    queryKey: ['musicList', listId],
+    queryFn: () => getMusicList(listId!),
+    enabled: !!listId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for titles
+  const { data: titles = [] } = useQuery({
+    queryKey: ['musicTitles', listId, search, genreFilter],
+    queryFn: () => getMusicTitles({
+      search: search || undefined,
+      listId: listId!,
+      genreId: genreFilter || undefined,
+    }),
+    enabled: !!listId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Modals
   const [showAddListModal, setShowAddListModal] = useState(false);
@@ -51,90 +91,26 @@ export default function MusicListManager() {
   // Title metadata modal
   const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
 
-  // Genres
-  const [genres, setGenres] = useState<Genre[]>([]);
-  const [genreFilter, setGenreFilter] = useState<string>('');
-
+  // Set initial orchestra from URL or first available
   useEffect(() => {
-    loadOrchestras();
-    loadGenres();
-  }, []);
-
-  const loadGenres = async () => {
-    try {
-      const data = await getGenres();
-      setGenres(data);
-    } catch (error) {
-      console.error('Error loading genres:', error);
+    if (!selectedOrchestra && orchestras.length > 0) {
+      setSelectedOrchestra(orchestras[0].id);
     }
+  }, [orchestras, selectedOrchestra]);
+
+  // Helper functions to refresh data
+  const refreshLists = () => {
+    queryClient.invalidateQueries({ queryKey: ['musicLists', selectedOrchestra] });
   };
 
-  useEffect(() => {
-    if (selectedOrchestra) {
-      loadLists(selectedOrchestra);
-    }
-  }, [selectedOrchestra]);
-
-  useEffect(() => {
-    if (listId) {
-      loadList(listId);
-      loadTitles(listId);
-    } else {
-      setSelectedList(null);
-    }
-  }, [listId]);
-
-  useEffect(() => {
-    if (listId) {
-      const timer = setTimeout(() => loadTitles(listId), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [search, genreFilter]);
-
-  const loadOrchestras = async () => {
-    try {
-      const data = await getOrchestras();
-      setOrchestras(data);
-      if (data.length > 0 && !selectedOrchestra) {
-        setSelectedOrchestra(data[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading orchestras:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const refreshSelectedList = () => {
+    queryClient.invalidateQueries({ queryKey: ['musicList', listId] });
   };
 
-  const loadLists = async (orchId: string) => {
-    try {
-      const data = await getMusicLists(orchId);
-      setLists(data);
-    } catch (error) {
-      console.error('Error loading lists:', error);
-    }
+  const refreshTitles = () => {
+    queryClient.invalidateQueries({ queryKey: ['musicTitles', listId, search, genreFilter] });
   };
 
-  const loadList = async (id: string) => {
-    try {
-      const data = await getMusicList(id);
-      setSelectedList(data);
-    } catch (error) {
-      console.error('Error loading list:', error);
-    }
-  };
-
-  const loadTitles = async (id: string) => {
-    try {
-      const data = await getMusicTitles({
-        search: search || undefined,
-        listId: id,
-        genreId: genreFilter || undefined,
-      });
-      setTitles(data);
-    } catch (error) {
-      console.error('Error loading titles:', error);
-    }
-  };
 
   const handleSelectOrchestra = (orchId: string) => {
     setSelectedOrchestra(orchId);
@@ -155,7 +131,7 @@ export default function MusicListManager() {
         concertDate: listFormConcertDate || null,
         concertLocation: listFormConcertLocation || null,
       });
-      await loadLists(selectedOrchestra);
+      refreshLists();
       setShowAddListModal(false);
       setListFormName('');
       setListFormType('regular');
@@ -177,9 +153,9 @@ export default function MusicListManager() {
         concertDate: listFormConcertDate || null,
         concertLocation: listFormConcertLocation || null,
       });
-      await loadLists(selectedOrchestra);
+      refreshLists();
       if (selectedList?.id === editingList.id) {
-        await loadList(editingList.id);
+        refreshSelectedList();
       }
       setEditingList(null);
       setListFormName('');
@@ -196,7 +172,7 @@ export default function MusicListManager() {
 
     try {
       await deleteMusicList(id);
-      await loadLists(selectedOrchestra);
+      refreshLists();
       if (selectedList?.id === id) {
         navigate('/lists');
       }
@@ -226,9 +202,9 @@ export default function MusicListManager() {
 
     try {
       const result = await addTitleToList(selectedList.id, title);
-      await loadList(selectedList.id);
-      await loadLists(selectedOrchestra);
-      await loadTitles(selectedList.id);
+      refreshSelectedList();
+      refreshLists();
+      refreshTitles();
       alert(`${result.added} van ${result.total} partijen toegevoegd.`);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij toevoegen titel');
@@ -241,9 +217,9 @@ export default function MusicListManager() {
 
     try {
       await removeTitleFromList(selectedList.id, title);
-      await loadList(selectedList.id);
-      await loadLists(selectedOrchestra);
-      await loadTitles(selectedList.id);
+      refreshSelectedList();
+      refreshLists();
+      refreshTitles();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij verwijderen titel');
     }
@@ -255,13 +231,15 @@ export default function MusicListManager() {
 
     const newLists = [...lists];
     [newLists[index], newLists[newIndex]] = [newLists[newIndex], newLists[index]];
-    setLists(newLists);
+
+    // Optimistically update the cache
+    queryClient.setQueryData(['musicLists', selectedOrchestra], newLists);
 
     try {
       await reorderMusicLists(selectedOrchestra, newLists.map(l => l.id));
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij wijzigen volgorde');
-      await loadLists(selectedOrchestra);
+      refreshLists();
     }
   };
 
@@ -271,7 +249,7 @@ export default function MusicListManager() {
     try {
       await reorderTitlesInList(selectedList.id, newTitleOrder.map(t => t.title));
       // Update local state to reflect new order
-      await loadList(selectedList.id);
+      refreshSelectedList();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij wijzigen volgorde');
     }
@@ -288,7 +266,7 @@ export default function MusicListManager() {
   const handleToggleActive = async (list: MusicList) => {
     try {
       await toggleMusicListActive(list.id);
-      await loadLists(selectedOrchestra);
+      refreshLists();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij wijzigen status');
     }
@@ -313,8 +291,8 @@ export default function MusicListManager() {
       });
       setEditingTitle(null);
       if (listId) {
-        await loadTitles(listId);
-        await loadLists(selectedOrchestra);
+        refreshTitles();
+        refreshLists();
       }
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij opslaan metadata');

@@ -1,30 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { getAuditLogs } from '../api';
 import { SkeletonTableRow } from '../components/Skeleton';
 import { Pagination } from '../components/Pagination';
 
-interface AuditLog {
-  id: string;
-  userId: string;
-  userName: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  entityName?: string;
-  changes?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  createdAt: string;
-}
 
-interface AuditLogsResponse {
-  logs: AuditLog[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
 
 const ACTION_ICONS: Record<string, string> = {
   create: '➕',
@@ -42,12 +24,8 @@ export default function AuditLogs() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.auditLogs');
 
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(25);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [actionFilter, setActionFilter] = useState('');
@@ -56,32 +34,23 @@ export default function AuditLogs() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => {
-    loadLogs();
-  }, [page, actionFilter, entityFilter, userFilter, dateFrom, dateTo]);
+  // React Query for audit logs
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['auditLogs', page, pageSize, actionFilter, entityFilter, userFilter, dateFrom, dateTo],
+    queryFn: () => getAuditLogs({
+      page,
+      pageSize,
+      action: actionFilter || undefined,
+      entityType: entityFilter || undefined,
+      userId: userFilter || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    }),
+    staleTime: 30 * 1000, // 30 seconds for logs
+  });
 
-  const loadLogs = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response: AuditLogsResponse = await getAuditLogs({
-        page,
-        pageSize,
-        action: actionFilter || undefined,
-        entityType: entityFilter || undefined,
-        userId: userFilter || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-      });
-      setLogs(response.logs);
-      setTotal(response.total);
-    } catch (err) {
-      setError(t('auditLogs.errorLoading'));
-      console.error('Error loading audit logs:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const logs = data?.logs || [];
+  const total = data?.total || 0;
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -204,7 +173,7 @@ export default function AuditLogs() {
         </div>
         <div className="card-body flush">
           {error && (
-            <div className="alert alert-danger">{error}</div>
+            <div className="alert alert-danger">{t('auditLogs.errorLoading')}</div>
           )}
 
           {isLoading ? (

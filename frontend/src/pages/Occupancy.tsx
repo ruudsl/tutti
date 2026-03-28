@@ -1,15 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { showError } from '../utils/toast';
 import {
   getOrchestras,
   getSeatingSections,
   getSeatingAssignments,
   getUsers,
-  getInstruments,
 } from '../api';
-import type { Orchestra, SeatingSection, SeatingAssignment, User, Instrument } from '../types';
+import type { SeatingSection, User } from '../types';
 import { SkeletonTable } from '../components/Skeleton';
 
 interface SectionOccupancy {
@@ -23,58 +22,42 @@ export default function Occupancy() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.occupancy');
 
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string>('');
-  const [sections, setSections] = useState<SeatingSection[]>([]);
-  const [assignments, setAssignments] = useState<SeatingAssignment[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [, setInstruments] = useState<Instrument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
+  // React Query for orchestras
+  const { data: orchestras = [], isLoading } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for sections and assignments
+  const { data: sections = [] } = useQuery({
+    queryKey: ['seatingSections', selectedOrchestraId],
+    queryFn: () => getSeatingSections(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: assignments = [] } = useQuery({
+    queryKey: ['seatingAssignments', selectedOrchestraId],
+    queryFn: () => getSeatingAssignments(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Set initial orchestra
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrchestraId) {
-      loadOrchestraData();
+    if (!selectedOrchestraId && orchestras.length > 0) {
+      setSelectedOrchestraId(orchestras[0].id);
     }
-  }, [selectedOrchestraId]);
-
-  const loadInitialData = async () => {
-    try {
-      const [orch, allUsers, instr] = await Promise.all([
-        getOrchestras(),
-        getUsers(),
-        getInstruments(),
-      ]);
-      setOrchestras(orch);
-      setUsers(allUsers);
-      setInstruments(instr);
-      if (orch.length > 0) {
-        setSelectedOrchestraId(orch[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-      showError(t('common.error'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadOrchestraData = async () => {
-    if (!selectedOrchestraId) return;
-    try {
-      const [sect, assign] = await Promise.all([
-        getSeatingSections(selectedOrchestraId),
-        getSeatingAssignments(selectedOrchestraId),
-      ]);
-      setSections(sect);
-      setAssignments(assign);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  }, [orchestras, selectedOrchestraId]);
 
   // Calculate occupancy per section
   const occupancyData = useMemo((): SectionOccupancy[] => {

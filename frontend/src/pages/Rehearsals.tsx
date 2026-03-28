@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
@@ -15,7 +16,7 @@ import {
   getMyAttendanceStatus, updateMyAttendance,
 } from '../api';
 import type { AttendanceMember } from '../api';
-import type { Rehearsal, RehearsalDetail, RehearsalDefaultDay, Orchestra, SpondConfig, SpondGroup, RehearsalSeat } from '../types';
+import type { Rehearsal, RehearsalDetail, SpondGroup, RehearsalSeat } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
@@ -27,16 +28,49 @@ export default function Rehearsals() {
   const { t } = useTranslation();
   const { user } = useAuth();
   useDocumentTitle('pageTitle.rehearsals');
+  const queryClient = useQueryClient();
 
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
-  const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
+  // Date range for rehearsals query
+  const today = new Date().toISOString().split('T')[0];
+  const sixMonthsLater = new Date();
+  sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+  const endDate = sixMonthsLater.toISOString().split('T')[0];
+
+  // Main data queries with React Query
+  const { data: rehearsals = [], isLoading: rehearsalsLoading } = useQuery({
+    queryKey: ['rehearsals', today, endDate],
+    queryFn: () => getRehearsals(today, endDate),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: defaultDays = [] } = useQuery({
+    queryKey: ['defaultDays'],
+    queryFn: getDefaultDays,
+    enabled: !!isManager,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: orchestras = [] } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    enabled: !!isManager,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: spondConfig = null } = useQuery({
+    queryKey: ['spondConfig'],
+    queryFn: getSpondConfig,
+    enabled: user?.role === ROLES.ADMIN,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isLoading = rehearsalsLoading;
+
   const [rehearsalSeating, setRehearsalSeating] = useState<RehearsalSeat[]>([]);
   const [showSeating, setShowSeating] = useState(false);
   const [seatingLoading, setSeatingLoading] = useState(false);
-  const [defaultDays, setDefaultDays] = useState<RehearsalDefaultDay[]>([]);
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedRehearsal, setSelectedRehearsal] = useState<RehearsalDetail | null>(null);
 
   // Form states
@@ -58,7 +92,6 @@ export default function Rehearsals() {
   const [pieces, setPieces] = useState<{ title: string; notes: string }[]>([]);
 
   // Spond
-  const [spondConfig, setSpondConfig] = useState<SpondConfig | null>(null);
   const [showSpondSetup, setShowSpondSetup] = useState(false);
   const [spondForm, setSpondForm] = useState({ username: '', password: '', groupId: '' });
   const [spondGroups, setSpondGroups] = useState<SpondGroup[]>([]);
@@ -87,35 +120,13 @@ export default function Rehearsals() {
   const [canSyncToSpond, setCanSyncToSpond] = useState(false);
   const [updatingAttendance, setUpdatingAttendance] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Helper to refresh data after mutations
+  const refreshRehearsals = () => {
+    queryClient.invalidateQueries({ queryKey: ['rehearsals'] });
+  };
 
-  const loadData = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const sixMonths = new Date();
-      sixMonths.setMonth(sixMonths.getMonth() + 6);
-      const [reh, days, orch] = await Promise.all([
-        getRehearsals(today, sixMonths.toISOString().split('T')[0]),
-        isManager ? getDefaultDays() : Promise.resolve([]),
-        isManager ? getOrchestras() : Promise.resolve([]),
-      ]);
-      setRehearsals(reh);
-      setDefaultDays(days);
-      setOrchestras(orch);
-      // Load Spond config for admins
-      if (isAdmin) {
-        try {
-          const sc = await getSpondConfig();
-          setSpondConfig(sc);
-        } catch { /* Spond not available */ }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
+  const refreshDefaultDays = () => {
+    queryClient.invalidateQueries({ queryKey: ['defaultDays'] });
   };
 
   const loadAttendance = async () => {
@@ -205,7 +216,7 @@ export default function Rehearsals() {
       }
       setShowForm(false);
       setEditingId(null);
-      loadData();
+      refreshRehearsals();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -217,7 +228,7 @@ export default function Rehearsals() {
       await deleteRehearsal(id);
       showSuccess(t('rehearsals.deleted'));
       if (selectedRehearsal?.id === id) setSelectedRehearsal(null);
-      loadData();
+      refreshRehearsals();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -233,7 +244,7 @@ export default function Rehearsals() {
     try {
       await addDefaultDay(defaultForm);
       setShowDefaultForm(false);
-      loadData();
+      refreshDefaultDays();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -242,7 +253,7 @@ export default function Rehearsals() {
   const handleDeleteDefaultDay = async (id: string) => {
     try {
       await deleteDefaultDay(id);
-      loadData();
+      refreshDefaultDays();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -253,7 +264,7 @@ export default function Rehearsals() {
       const result = await generateRehearsals(genFrom, genTo);
       showSuccess(t('rehearsals.generated', { count: result.count }));
       setShowGenerate(false);
-      loadData();
+      refreshRehearsals();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -289,8 +300,7 @@ export default function Rehearsals() {
       showSuccess(t('rehearsals.spond.configSaved'));
       setShowSpondSetup(false);
       setSpondForm({ username: '', password: '', groupId: '' });
-      const sc = await getSpondConfig();
-      setSpondConfig(sc);
+      queryClient.invalidateQueries({ queryKey: ['spondConfig'] });
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.spond.loginFailed'));
     }
@@ -301,7 +311,7 @@ export default function Rehearsals() {
     try {
       await removeSpondConfig();
       showSuccess(t('rehearsals.spond.configRemoved'));
-      setSpondConfig({ configured: false });
+      queryClient.invalidateQueries({ queryKey: ['spondConfig'] });
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -324,7 +334,7 @@ export default function Rehearsals() {
     try {
       const result = await syncSpond();
       showSuccess(t('rehearsals.spond.syncSuccess', { count: result.synced }));
-      loadData();
+      refreshRehearsals();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     } finally {
@@ -340,7 +350,7 @@ export default function Rehearsals() {
       if (selectedRehearsal?.id === rehearsalId) {
         handleOpenDetail(rehearsalId);
       }
-      loadData();
+      refreshRehearsals();
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     } finally {

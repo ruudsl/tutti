@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
@@ -10,7 +11,6 @@ import {
   deleteSeatingNeighbor,
   getUsers,
 } from '../api';
-import type { Orchestra, SeatingNeighbor, User } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -20,14 +20,44 @@ export default function NeighborPreferences() {
   const { t } = useTranslation();
   const { user } = useAuth();
   useDocumentTitle('pageTitle.neighborPreferences');
+  const queryClient = useQueryClient();
 
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
-  const [orchestras, setOrchestras] = useState<Orchestra[]>([]);
   const [selectedOrchestraId, setSelectedOrchestraId] = useState<string>('');
-  const [neighbors, setNeighbors] = useState<SeatingNeighbor[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // React Query for orchestras
+  const { data: orchestras = [], isLoading } = useQuery({
+    queryKey: ['orchestras'],
+    queryFn: getOrchestras,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    enabled: !!isManager,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: neighbors = [] } = useQuery({
+    queryKey: ['seatingNeighbors', selectedOrchestraId],
+    queryFn: () => getSeatingNeighbors(selectedOrchestraId),
+    enabled: !!selectedOrchestraId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Set initial orchestra
+  useEffect(() => {
+    if (!selectedOrchestraId && orchestras.length > 0) {
+      setSelectedOrchestraId(orchestras[0].id);
+    }
+  }, [orchestras, selectedOrchestraId]);
+
+  // Helper to refresh neighbors
+  const refreshNeighbors = () => {
+    queryClient.invalidateQueries({ queryKey: ['seatingNeighbors', selectedOrchestraId] });
+  };
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -39,45 +69,6 @@ export default function NeighborPreferences() {
 
   // Filter
   const [filterType, setFilterType] = useState<string>('');
-
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrchestraId) {
-      loadOrchestraData();
-    }
-  }, [selectedOrchestraId]);
-
-  const loadInitialData = async () => {
-    try {
-      const [orch, allUsers] = await Promise.all([
-        getOrchestras(),
-        isManager ? getUsers() : Promise.resolve([]),
-      ]);
-      setOrchestras(orch);
-      setUsers(allUsers);
-      if (orch.length > 0) {
-        setSelectedOrchestraId(orch[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-      showError(t('common.error'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadOrchestraData = async () => {
-    if (!selectedOrchestraId) return;
-    try {
-      const neighborData = await getSeatingNeighbors(selectedOrchestraId);
-      setNeighbors(neighborData);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +89,7 @@ export default function NeighborPreferences() {
       showSuccess(t('neighborPreferences.saved'));
       setShowForm(false);
       setFormData({ userId: '', neighborUserId: '', preference: 'preferred' });
-      loadOrchestraData();
+      refreshNeighbors();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
@@ -110,7 +101,7 @@ export default function NeighborPreferences() {
     try {
       await deleteSeatingNeighbor(id);
       showSuccess(t('neighborPreferences.deleted'));
-      loadOrchestraData();
+      refreshNeighbors();
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
     }
