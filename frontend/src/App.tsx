@@ -32,6 +32,7 @@ function lazyWithTimeout<T extends ComponentType<unknown>>(
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import MemberDirectory from './pages/MemberDirectory';
 
 // Lazy loaded pages - code-split for better initial load performance
 // Authentication pages
@@ -88,7 +89,6 @@ const Occupancy = lazyWithTimeout(() => import('./pages/Occupancy'));
 const NeighborPreferences = lazyWithTimeout(() => import('./pages/NeighborPreferences'));
 
 // Other pages
-const MemberDirectory = lazyWithTimeout(() => import('./pages/MemberDirectory'));
 const UserGuide = lazyWithTimeout(() => import('./pages/UserGuide'));
 const PracticeSchedules = lazyWithTimeout(() => import('./pages/PracticeSchedules'));
 const HealthDashboard = lazyWithTimeout(() => import('./pages/HealthDashboard'));
@@ -404,7 +404,7 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
-        <Route path="members" element={<LazyPage><MemberDirectory /></LazyPage>} />
+        <Route path="members" element={<MemberDirectory />} />
         <Route path="user-guide" element={<LazyPage><UserGuide /></LazyPage>} />
         <Route path="practice-schedules" element={<LazyPage><PracticeSchedules /></LazyPage>} />
         <Route
