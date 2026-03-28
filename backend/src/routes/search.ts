@@ -370,6 +370,17 @@ router.get('/suggestions', authenticateToken, asyncHandler(async (req: AuthReque
 router.get('/recent', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
 
+  // Ensure table exists
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS user_recent_searches (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      query TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `).run();
+
   const recentSearches = db.prepare(`
     SELECT id, query, created_at as timestamp
     FROM user_recent_searches
