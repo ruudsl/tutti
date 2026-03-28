@@ -84,7 +84,9 @@
     "voiceParts": "Voice Parts",
     "occupancy": "Occupancy",
     "neighborPreferences": "Neighbor Preferences",
-    "onboarding": "Member Management"
+    "onboarding": "Member Management",
+    "myTickets": "My Tickets",
+    "ticketScanner": "Ticket Scanner"
   },
   "roles": {
     "admin": "Administrator",
