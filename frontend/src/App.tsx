@@ -104,17 +104,7 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 }
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
-  const { user, isLoading } = useAuth();
-  const { t } = useTranslation();
-
-  if (isLoading) {
-    return (
-      <div className="loading" style={{ minHeight: '100vh' }} role="status" aria-label={t('accessibility.loadingContent')}>
-        <div className="spinner" aria-hidden="true"></div>
-        <span className="sr-only">{t('common.loading')}</span>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -128,17 +118,7 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  const { t } = useTranslation();
-
-  if (isLoading) {
-    return (
-      <div className="loading" style={{ minHeight: '100vh' }} role="status" aria-label={t('accessibility.loadingContent')}>
-        <div className="spinner" aria-hidden="true"></div>
-        <span className="sr-only">{t('common.loading')}</span>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   if (user) {
     return <Navigate to="/" />;

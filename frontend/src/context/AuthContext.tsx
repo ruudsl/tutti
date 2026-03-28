@@ -4,7 +4,6 @@ import { login as apiLogin, getProfile } from '../api';
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
   login: (email: string, password: string, mfaCode?: string) => Promise<LoginResponse>;
   loginWithToken: (token: string, user: User) => void;
   logout: () => void;
@@ -23,8 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
-  // Never show loading spinner on initial render - use cached user or redirect to login
-  const [isLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -101,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithToken, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, login, loginWithToken, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
