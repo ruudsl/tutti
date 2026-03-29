@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/migrations/cli.js up && node dist/index.js",
     "db:init": "tsx src/database/init.ts",
     "migrate:up": "tsx src/migrations/cli.ts up",
     "migrate:down": "tsx src/migrations/cli.ts down",
