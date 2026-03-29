@@ -12,6 +12,7 @@ import {
   deleteTicketType,
   getConcertTicketStats,
   getConcertAttendees,
+  getSeatHeatmapData,
   exportConcertAttendeesCsv,
   cancelTicket,
   refundOrder,
@@ -71,6 +72,17 @@ export function useAttendees(concertId: string) {
   return useQuery({
     queryKey: queryKeys.attendees(concertId),
     queryFn: () => getConcertAttendees(concertId),
+    enabled: !!concertId,
+  });
+}
+
+/**
+ * Hook to fetch seat heatmap data for a concert
+ */
+export function useSeatHeatmap(concertId: string) {
+  return useQuery({
+    queryKey: ['seatHeatmap', concertId],
+    queryFn: () => getSeatHeatmapData(concertId),
     enabled: !!concertId,
   });
 }

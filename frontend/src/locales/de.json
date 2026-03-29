@@ -1041,6 +1041,24 @@
     "loadingContent": "Inhalt wird geladen",
     "errorOccurred": "Ein Fehler ist aufgetreten"
   },
+  "accessibilityInfo": {
+    "title": "Informationen zur Barrierefreiheit",
+    "available": "Informationen zur Barrierefreiheit verfügbar",
+    "wheelchairSpaces": "Rollstuhlplätze",
+    "wheelchairSpacesCount": "{{count}} Rollstuhlplatz/-plätze verfügbar",
+    "companionSpaces": "Begleitplätze",
+    "companionSpacesCount": "{{count}} Begleitplatz/-plätze verfügbar",
+    "hearingLoop": "Induktionsschleife",
+    "hearingLoopAvailable": "Induktionsschleife vorhanden",
+    "accessibleParking": "Barrierefreies Parken",
+    "additionalInfo": "Zusätzliche Informationen",
+    "noInfoAvailable": "Für diese Veranstaltung wurden keine Informationen zur Barrierefreiheit angegeben. Bitte kontaktieren Sie uns für Unterstützung.",
+    "contactTitle": "Fragen zur Barrierefreiheit?",
+    "contactDescription": "Wenn Sie Fragen zur Barrierefreiheit haben oder besondere Unterstützung benötigen, kontaktieren Sie uns bitte:",
+    "emailSubject": "Frage zur Barrierefreiheit",
+    "emailContact": "E-Mail an {{email}}",
+    "phoneContact": "Anrufen: {{phone}}"
+  },
   "changelog": {
     "title": "Changelog",
     "description": "Übersicht aller Änderungen und Updates in der Anwendung."
@@ -1331,7 +1349,22 @@
     "startDate": "Von Datum",
     "endDateExport": "Bis Datum",
     "downloadExport": "CSV herunterladen",
-    "composer": "Komponist"
+    "composer": "Komponist",
+    "accessibility": {
+      "sectionTitle": "Barrierefreiheit",
+      "wheelchairSpaces": "Rollstuhlplätze",
+      "wheelchairSpacesHelp": "Anzahl der verfügbaren Rollstuhlplätze",
+      "companionSpaces": "Begleitplätze",
+      "companionSpacesHelp": "Anzahl der Begleitplätze für Rollstuhlfahrer",
+      "hearingLoop": "Induktionsschleife",
+      "hearingLoopAvailable": "Induktionsschleife am Veranstaltungsort vorhanden",
+      "parkingInfo": "Informationen zum barrierefreien Parken",
+      "parkingInfoPlaceholder": "Beschreiben Sie die barrierefreien Parkmöglichkeiten...",
+      "additionalInfo": "Zusätzliche Informationen zur Barrierefreiheit",
+      "additionalInfoPlaceholder": "Weitere Informationen zur Barrierefreiheit für Besucher...",
+      "contactEmail": "E-Mail für Barrierefreiheitsfragen",
+      "contactPhone": "Telefon für Barrierefreiheitsfragen"
+    }
   },
   "onboarding": {
     "menuItem": "Rundgang",
@@ -1797,6 +1830,41 @@
       "processRssMB": "Prozess RSS (MB)"
     }
   },
+  "predictions": {
+    "title": "Verkaufsprognosen",
+    "chartTitle": "Prognostizierte vs. tatsaechliche Ticketverkaeufe",
+    "predictedSales": "Prognostizierte Verkaeufe",
+    "currentSales": "Aktuelle Verkaeufe",
+    "predictedRevenue": "Prognostizierter Umsatz",
+    "daysUntilConcert": "Tage bis zum Konzert",
+    "salesProgress": "Verkaufsfortschritt",
+    "actualSold": "Tatsaechlich verkauft",
+    "predictedMark": "Prognostiziert",
+    "salesForecast": "Verkaufsprognose",
+    "keyFactors": "Wichtige Faktoren",
+    "noFactors": "Keine wichtigen Faktoren identifiziert.",
+    "pricingSuggestion": "Preisvorschlag",
+    "currentPrice": "Aktueller Durchschnittspreis",
+    "suggestedPrice": "Empfohlener Preis",
+    "priceRange": "Preisbereich",
+    "demandLevel": "Nachfrageniveau",
+    "noDataAvailable": "Noch keine Prognosedaten verfuegbar. Beginnen Sie mit dem Verkauf, um Prognosen zu generieren.",
+    "confidenceInterval": "Konfidenzintervall",
+    "tickets": "Tickets",
+    "errorLoading": "Prognosedaten konnten nicht geladen werden.",
+    "disclaimer": "Hinweis",
+    "disclaimerText": "Diese Prognosen basieren auf historischen Daten und statistischer Analyse. Die tatsaechlichen Ergebnisse koennen aufgrund externer Faktoren wie Wetter, konkurrierender Veranstaltungen oder Marketingmassnahmen abweichen.",
+    "confidence": {
+      "low": "Niedrige Konfidenz",
+      "medium": "Mittlere Konfidenz",
+      "high": "Hohe Konfidenz"
+    },
+    "demand": {
+      "low": "Niedrige Nachfrage",
+      "medium": "Mittlere Nachfrage",
+      "high": "Hohe Nachfrage"
+    }
+  },
   "guestList": {
     "title": "Gästeliste",
     "addGuest": "Gast hinzufügen",
@@ -1920,6 +1988,36 @@
       "unlinkConfirm": "Mochten Sie Ihre WhatsApp-Nummer wirklich trennen?",
       "unlinked": "WhatsApp-Nummer getrennt",
       "unlinkError": "WhatsApp-Nummer konnte nicht getrennt werden"
+    }
+  },
+  "socialLogin": {
+    "orContinueWith": "oder weiter mit",
+    "continueWithGoogle": "Weiter mit Google",
+    "continueWithFacebook": "Weiter mit Facebook",
+    "popupBlocked": "Pop-up blockiert. Bitte erlauben Sie Pop-ups fur diese Seite.",
+    "error": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "disclaimer": "Wir verwenden Ihre Daten nur, um Ihnen Ihr Ticket zu senden."
+  },
+  "tickets": {
+    "email": {
+      "subject": "Ihre Tickets fur {{concertName}}",
+      "thankYou": "Vielen Dank fur Ihren Kauf!",
+      "details": "Hier sind Ihre Ticketdetails:",
+      "showQR": "Bitte zeigen Sie den QR-Code am Eingang vor.",
+      "confirmation": "Diese E-Mail dient als Ihre Ticketbestatigung.",
+      "questions": "Fragen? Kontaktieren Sie uns vor Ort.",
+      "greeting": "Sehr geehrte/r",
+      "regards": "Mit freundlichen Grussen",
+      "team": "Das Harmonie Team",
+      "date": "Datum",
+      "location": "Ort",
+      "ticketType": "Ticketart",
+      "quantity": "Anzahl",
+      "total": "Gesamt",
+      "ticketCode": "Ihr Ticketcode",
+      "yourTickets": "Ihre Tickets",
+      "findQRInAccount": "Sie finden den QR-Code in der HTML-Version dieser E-Mail oder in Ihrem Konto unter \"Meine Tickets\".",
+      "lookForward": "Wir freuen uns auf Sie!"
     }
   }
 }

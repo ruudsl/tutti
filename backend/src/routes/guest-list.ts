@@ -554,7 +554,7 @@ router.post('/guest-list/:id/send-tickets', authenticateToken, requireRole('admi
             qrCodeDataUrl: tickets[0].qrDataUrl,
             orderTotal: 0,
             quantity: entry.ticket_count,
-        }, entry.association_id);
+        }, entry.association_id, 'nl');
 
         logger.info(`Guest tickets sent: ${entry.name} (${entry.email}) - ${entry.ticket_count} tickets`, {
             guestId: id,
@@ -689,7 +689,7 @@ router.post('/concerts/:id/guest-list/send-all', authenticateToken, requireRole(
                 qrCodeDataUrl: tickets[0].qrDataUrl,
                 orderTotal: 0,
                 quantity: guestEntry.ticket_count,
-            }, guestEntry.association_id);
+            }, guestEntry.association_id, 'nl');
 
             successCount++;
         } catch (error) {

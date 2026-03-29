@@ -16,6 +16,7 @@ import {
     getConcertTicketStats,
     exportAttendeeList,
 } from '../services/ticketing';
+import { getSalesPredictionSummary } from '../services/salesPredictions';
 import {
     createPayment,
     getPaymentStatus,
@@ -27,6 +28,13 @@ import {
     createRefund,
     PaymentMethod,
 } from '../services/payments';
+import {
+    verifyCaptcha,
+    shouldRequireCaptcha,
+    trackCheckoutRequest,
+    isCaptchaEnabled,
+    getCaptchaSiteKey,
+} from '../services/captcha';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -40,6 +48,8 @@ const createTicketTypeSchema = z.object({
     saleStart: z.string().datetime().optional(),
     saleEnd: z.string().datetime().optional(),
     maxPerOrder: z.number().int().min(1).max(50).default(10),
+    serviceFee: z.number().min(0, 'Service fee must be non-negative').default(0),
+    showServiceFeeSeparate: z.boolean().default(false),
 });
 
 const updateTicketTypeSchema = createTicketTypeSchema.partial();
@@ -53,6 +63,8 @@ const createOrderSchema = z.object({
     buyerEmail: z.string().email('Valid email required'),
     buyerPhone: z.string().optional(),
     notes: z.string().optional(),
+    captchaToken: z.string().optional(),
+    language: z.enum(['nl', 'en', 'de']).default('nl'),
 });
 
 const payOrderSchema = z.object({
@@ -104,7 +116,9 @@ router.get('/concerts/:id/tickets', optionalAuth, asyncHandler(async (req: AuthR
             description,
             sale_start,
             sale_end,
-            max_per_order
+            max_per_order,
+            service_fee,
+            show_service_fee_separate
         FROM ticket_types
         WHERE concert_id = ?
         ORDER BY price ASC
@@ -118,6 +132,8 @@ router.get('/concerts/:id/tickets', optionalAuth, asyncHandler(async (req: AuthR
         sale_start: string | null;
         sale_end: string | null;
         max_per_order: number;
+        service_fee: number;
+        show_service_fee_separate: number;
     }[];
 
     const now = new Date().toISOString();
@@ -144,8 +160,14 @@ router.get('/concerts/:id/tickets', optionalAuth, asyncHandler(async (req: AuthR
                 (!tt.sale_end || tt.sale_end >= now),
             saleStart: tt.sale_start,
             saleEnd: tt.sale_end,
+            serviceFee: tt.service_fee || 0,
+            showServiceFeeSeparate: Boolean(tt.show_service_fee_separate),
         })),
         paymentMethods: getAvailablePaymentMethods(),
+        captcha: {
+            enabled: isCaptchaEnabled(),
+            siteKey: getCaptchaSiteKey(),
+        },
     });
 }));
 
@@ -164,7 +186,16 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
         throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const { items, buyerName, buyerEmail, buyerPhone, notes } = validation.data;
+    const { items, buyerName, buyerEmail, buyerPhone, notes, captchaToken, language } = validation.data;
+
+    // Get client IP address
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+        || req.socket.remoteAddress
+        || 'unknown';
+    const userAgent = req.headers['user-agent'] || '';
+
+    // Track checkout request for rate limiting
+    trackCheckoutRequest(clientIp);
 
     // Check concert exists
     const concert = db.prepare(`
@@ -184,12 +215,13 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
     }
 
     // Verify all ticket types and calculate total
-    let total = 0;
-    const orderItems: { ticketTypeId: string; quantity: number; unitPrice: number; name: string }[] = [];
+    let subtotal = 0;
+    let totalServiceFee = 0;
+    const orderItems: { ticketTypeId: string; quantity: number; unitPrice: number; serviceFee: number; name: string; showServiceFeeSeparate: boolean }[] = [];
 
     for (const item of items) {
         const ticketType = db.prepare(`
-            SELECT id, name, price, quantity, sold, sale_start, sale_end, max_per_order, concert_id
+            SELECT id, name, price, quantity, sold, sale_start, sale_end, max_per_order, concert_id, service_fee, show_service_fee_separate
             FROM ticket_types
             WHERE id = ?
         `).get(item.ticketTypeId) as {
@@ -202,6 +234,8 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
             sale_end: string | null;
             max_per_order: number;
             concert_id: string;
+            service_fee: number;
+            show_service_fee_separate: number;
         } | undefined;
 
         if (!ticketType) {
@@ -232,14 +266,33 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
             throw new ApiError(400, `Only ${available} tickets available for "${ticketType.name}"`);
         }
 
+        const serviceFee = ticketType.service_fee || 0;
         orderItems.push({
             ticketTypeId: ticketType.id,
             quantity: item.quantity,
             unitPrice: ticketType.price,
+            serviceFee: serviceFee,
             name: ticketType.name,
+            showServiceFeeSeparate: Boolean(ticketType.show_service_fee_separate),
         });
 
-        total += ticketType.price * item.quantity;
+        subtotal += ticketType.price * item.quantity;
+        totalServiceFee += serviceFee * item.quantity;
+    }
+    const total = subtotal + totalServiceFee;
+
+    // CAPTCHA verification
+    let captchaVerified = false;
+    if (shouldRequireCaptcha(clientIp, total)) {
+        if (!captchaToken) {
+            throw new ApiError(400, 'CAPTCHA verification required');
+        }
+
+        const captchaResult = await verifyCaptcha(captchaToken, clientIp);
+        if (!captchaResult.success) {
+            throw new ApiError(400, captchaResult.error || 'CAPTCHA verification failed');
+        }
+        captchaVerified = true;
     }
 
     // Create order with transaction
@@ -257,8 +310,8 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
 
         // Create order
         db.prepare(`
-            INSERT INTO ticket_orders (id, user_id, concert_id, total, status, buyer_name, buyer_email, buyer_phone, notes, expires_at)
-            VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
+            INSERT INTO ticket_orders (id, user_id, concert_id, total, status, buyer_name, buyer_email, buyer_phone, notes, expires_at, captcha_verified, ip_address, user_agent, language)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
             orderId,
             req.user?.id || null,
@@ -268,7 +321,11 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
             buyerEmail,
             buyerPhone || null,
             notes || null,
-            expiresAt
+            expiresAt,
+            captchaVerified ? 1 : 0,
+            clientIp,
+            userAgent,
+            language
         );
 
         // Create order items
@@ -287,16 +344,24 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
         throw new ApiError(500, 'Failed to create order');
     }
 
+    // Check if any item shows service fee separately
+    const showServiceFeeSeparate = orderItems.some(item => item.showServiceFeeSeparate);
+
     res.status(201).json({
         orderId,
+        subtotal,
+        serviceFee: totalServiceFee,
         total,
+        showServiceFeeSeparate,
         expiresAt,
         items: orderItems.map(item => ({
             ticketTypeId: item.ticketTypeId,
             name: item.name,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            serviceFee: item.serviceFee,
             subtotal: item.unitPrice * item.quantity,
+            serviceFeeTotal: item.serviceFee * item.quantity,
         })),
     });
 }));
@@ -591,6 +656,7 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
             o.buyer_email,
             o.total,
             o.user_id,
+            o.language,
             c.id as concert_id,
             c.name as concert_name,
             c.date as concert_date,
@@ -606,6 +672,7 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
         buyer_email: string;
         total: number;
         user_id: string | null;
+        language: string | null;
         concert_id: string;
         concert_name: string;
         concert_date: string;
@@ -675,6 +742,8 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
 
             if (tickets) {
                 const qrDataUrl = await generateQRCode(tickets.qr_code);
+                // Type-safe language extraction with fallback to 'nl'
+                const orderLanguage = (order.language === 'en' || order.language === 'de') ? order.language : 'nl';
 
                 await sendTicketConfirmationEmail({
                     buyerName: order.buyer_name,
@@ -687,7 +756,7 @@ async function processPaymentUpdate(orderId: string, status: string): Promise<vo
                     qrCodeDataUrl: qrDataUrl,
                     orderTotal: order.total,
                     quantity: items.reduce((sum, i) => sum + i.quantity, 0),
-                }, order.association_id);
+                }, order.association_id, orderLanguage);
             }
 
             logger.info(`Order ${orderId} paid, tickets created`);
@@ -909,7 +978,7 @@ router.post('/concerts/:id/ticket-types', authenticateToken, requireRole('admin'
         throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const { name, price, quantity, description, saleStart, saleEnd, maxPerOrder } = validation.data;
+    const { name, price, quantity, description, saleStart, saleEnd, maxPerOrder, serviceFee, showServiceFeeSeparate } = validation.data;
 
     // Verify concert exists and belongs to user's association
     const concert = db.prepare(`
@@ -923,9 +992,9 @@ router.post('/concerts/:id/ticket-types', authenticateToken, requireRole('admin'
     const id = uuidv4();
 
     db.prepare(`
-        INSERT INTO ticket_types (id, concert_id, name, price, quantity, description, sale_start, sale_end, max_per_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, concertId, name, price, quantity, description || null, saleStart || null, saleEnd || null, maxPerOrder);
+        INSERT INTO ticket_types (id, concert_id, name, price, quantity, description, sale_start, sale_end, max_per_order, service_fee, show_service_fee_separate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, concertId, name, price, quantity, description || null, saleStart || null, saleEnd || null, maxPerOrder, serviceFee || 0, showServiceFeeSeparate ? 1 : 0);
 
     res.status(201).json({
         id,
@@ -938,6 +1007,8 @@ router.post('/concerts/:id/ticket-types', authenticateToken, requireRole('admin'
         saleStart,
         saleEnd,
         maxPerOrder,
+        serviceFee: serviceFee || 0,
+        showServiceFeeSeparate: showServiceFeeSeparate || false,
     });
 }));
 
@@ -1003,6 +1074,14 @@ router.put('/ticket-types/:id', authenticateToken, requireRole('admin', 'music_c
     if (updates.maxPerOrder !== undefined) {
         fields.push('max_per_order = ?');
         values.push(updates.maxPerOrder);
+    }
+    if (updates.serviceFee !== undefined) {
+        fields.push('service_fee = ?');
+        values.push(updates.serviceFee);
+    }
+    if (updates.showServiceFeeSeparate !== undefined) {
+        fields.push('show_service_fee_separate = ?');
+        values.push(updates.showServiceFeeSeparate ? 1 : 0);
     }
 
     if (fields.length === 0) {
@@ -1076,6 +1155,241 @@ router.get('/concerts/:id/ticket-stats', authenticateToken, requireRole('admin',
     }
 
     res.json(stats);
+}));
+
+/**
+ * @swagger
+ * /concerts/{id}/seats/heatmap-data:
+ *   get:
+ *     summary: Get seat sales heatmap data for a concert
+ *     tags: [Tickets Admin]
+ *     description: Returns sales velocity, popularity, and price performance data per section/seat
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Concert ID
+ *     responses:
+ *       200:
+ *         description: Heatmap data with section and seat metrics
+ *       404:
+ *         description: Concert not found
+ */
+router.get('/concerts/:id/seats/heatmap-data', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+
+    // Verify concert belongs to user's association
+    const concert = db.prepare(`
+        SELECT c.id, c.name, c.date, c.association_id
+        FROM concerts c
+        WHERE c.id = ? AND c.association_id = ?
+    `).get(concertId, req.user!.associationId) as {
+        id: string;
+        name: string;
+        date: string;
+        association_id: string;
+    } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    // Get ticket types for this concert
+    const ticketTypes = db.prepare(`
+        SELECT id, name, price, quantity, sold, sale_start, sale_end
+        FROM ticket_types
+        WHERE concert_id = ?
+    `).all(concertId) as {
+        id: string;
+        name: string;
+        price: number;
+        quantity: number;
+        sold: number;
+        sale_start: string | null;
+        sale_end: string | null;
+    }[];
+
+    // Get all sold tickets with their sale timestamps
+    const soldTickets = db.prepare(`
+        SELECT
+            t.id,
+            t.ticket_type_id,
+            t.seat_info,
+            t.created_at as sold_at,
+            t.status,
+            tt.name as ticket_type_name,
+            tt.price,
+            tt.sale_start
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        WHERE tt.concert_id = ? AND t.status IN ('valid', 'used')
+        ORDER BY t.created_at ASC
+    `).all(concertId) as {
+        id: string;
+        ticket_type_id: string;
+        seat_info: string | null;
+        sold_at: string;
+        status: string;
+        ticket_type_name: string;
+        price: number;
+        sale_start: string | null;
+    }[];
+
+    // Calculate total capacity and sold
+    const totalCapacity = ticketTypes.reduce((sum, tt) => sum + tt.quantity, 0);
+    const totalSold = ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
+
+    // Determine sales period
+    const salesPeriodStart = ticketTypes.reduce((earliest, tt) => {
+        if (!tt.sale_start) return earliest;
+        return earliest && earliest < tt.sale_start ? earliest : tt.sale_start;
+    }, null as string | null) || concert.date;
+
+    const now = new Date().toISOString();
+    const salesPeriodEnd = now < concert.date ? now : concert.date;
+
+    // Calculate section-level metrics (using ticket types as sections)
+    const sectionData = ticketTypes.map(tt => {
+        const sectionTickets = soldTickets.filter(t => t.ticket_type_id === tt.id);
+        const revenue = sectionTickets.length * tt.price;
+
+        // Calculate sales velocity (tickets per day)
+        const saleStartDate = tt.sale_start ? new Date(tt.sale_start) : new Date(salesPeriodStart);
+        const daysSinceStart = Math.max(1, (new Date().getTime() - saleStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        const salesVelocity = tt.sold / daysSinceStart;
+
+        // Calculate time to sell out (if sold out)
+        let timeToSellOut: number | null = null;
+        if (tt.sold >= tt.quantity && sectionTickets.length > 0) {
+            const firstSale = new Date(sectionTickets[0].sold_at);
+            const lastSale = new Date(sectionTickets[sectionTickets.length - 1].sold_at);
+            timeToSellOut = (lastSale.getTime() - firstSale.getTime()) / (1000 * 60 * 60); // hours
+        }
+
+        // Calculate popularity score (0-100)
+        const percentSold = tt.quantity > 0 ? (tt.sold / tt.quantity) * 100 : 0;
+        const velocityBonus = Math.min(20, salesVelocity * 5);
+        const popularityScore = Math.min(100, percentSold * 0.8 + velocityBonus);
+
+        // Calculate price performance score (0-100)
+        // Higher price with high sales = better performance
+        const avgPrice = ticketTypes.reduce((sum, t) => sum + t.price, 0) / ticketTypes.length || 1;
+        const priceRatio = tt.price / avgPrice;
+        const salesRatio = tt.quantity > 0 ? tt.sold / tt.quantity : 0;
+        const pricePerformanceScore = Math.min(100, (salesRatio * 100) * (0.5 + priceRatio * 0.5));
+
+        return {
+            sectionId: tt.id,
+            sectionName: tt.name,
+            capacity: tt.quantity,
+            sold: tt.sold,
+            revenue,
+            averagePrice: tt.price,
+            salesVelocity: Math.round(salesVelocity * 100) / 100,
+            timeToSellOut,
+            popularityScore: Math.round(popularityScore),
+            pricePerformanceScore: Math.round(pricePerformanceScore),
+        };
+    });
+
+    // Define seat data type
+    type SeatDataItem = {
+        seatId: string;
+        sectionId: string;
+        rowLabel: string;
+        seatLabel: string;
+        x: number;
+        y: number;
+        status: 'sold' | 'available' | 'reserved' | 'held';
+        soldAt: string | null;
+        price: number | null;
+        ticketTypeId: string;
+        ticketTypeName: string;
+        timeToSell: number | null;
+        salesSpeedPercentile: number | null;
+    };
+
+    // Calculate seat-level metrics (simulated from ticket data since we don't have actual seats)
+    // In a real implementation, this would map to actual venue seat data
+    const seatData: SeatDataItem[] = soldTickets.map((ticket) => {
+        const ticketType = ticketTypes.find(tt => tt.id === ticket.ticket_type_id);
+        const saleStart = ticket.sale_start ? new Date(ticket.sale_start) : new Date(salesPeriodStart);
+        const soldAt = new Date(ticket.sold_at);
+        const timeToSell = (soldAt.getTime() - saleStart.getTime()) / 1000; // seconds
+
+        // Calculate sales speed percentile (where in the selling order this ticket was)
+        const sectionTickets = soldTickets.filter(t => t.ticket_type_id === ticket.ticket_type_id);
+        const positionInSection = sectionTickets.findIndex(t => t.id === ticket.id);
+        const salesSpeedPercentile = sectionTickets.length > 1
+            ? Math.round((1 - positionInSection / (sectionTickets.length - 1)) * 100)
+            : 50;
+
+        // Generate pseudo-coordinates for visualization (grid layout)
+        const sectionIndex = ticketTypes.findIndex(tt => tt.id === ticket.ticket_type_id);
+        const seatsPerRow = Math.ceil(Math.sqrt(ticketType?.quantity || 10));
+        const row = Math.floor(positionInSection / seatsPerRow);
+        const col = positionInSection % seatsPerRow;
+
+        return {
+            seatId: ticket.id,
+            sectionId: ticket.ticket_type_id,
+            rowLabel: `R${row + 1}`,
+            seatLabel: `${col + 1}`,
+            x: sectionIndex * 150 + col * 20 + 50,
+            y: row * 20 + 80,
+            status: 'sold' as const,
+            soldAt: ticket.sold_at,
+            price: ticket.price,
+            ticketTypeId: ticket.ticket_type_id,
+            ticketTypeName: ticket.ticket_type_name,
+            timeToSell,
+            salesSpeedPercentile,
+        };
+    });
+
+    // Add unsold seat placeholders
+    ticketTypes.forEach((tt, sectionIndex) => {
+        const soldInSection = soldTickets.filter(t => t.ticket_type_id === tt.id).length;
+        const unsoldCount = tt.quantity - soldInSection;
+        const seatsPerRow = Math.ceil(Math.sqrt(tt.quantity));
+
+        for (let i = 0; i < unsoldCount; i++) {
+            const position = soldInSection + i;
+            const row = Math.floor(position / seatsPerRow);
+            const col = position % seatsPerRow;
+
+            seatData.push({
+                seatId: `unsold-${tt.id}-${i}`,
+                sectionId: tt.id,
+                rowLabel: `R${row + 1}`,
+                seatLabel: `${col + 1}`,
+                x: sectionIndex * 150 + col * 20 + 50,
+                y: row * 20 + 80,
+                status: 'available',
+                soldAt: null,
+                price: tt.price,
+                ticketTypeId: tt.id,
+                ticketTypeName: tt.name,
+                timeToSell: null,
+                salesSpeedPercentile: null,
+            });
+        }
+    });
+
+    res.json({
+        concertId: concert.id,
+        concertName: concert.name,
+        concertDate: concert.date,
+        totalCapacity,
+        totalSold,
+        sections: sectionData,
+        seats: seatData,
+        salesPeriodStart,
+        salesPeriodEnd,
+    });
 }));
 
 /**
@@ -1544,6 +1858,64 @@ router.get('/tickets/sales/export', authenticateToken, requireRole('admin', 'mus
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="ticket-sales-${new Date().toISOString().split('T')[0]}.csv"`);
     res.send(header + rows);
+}));
+
+/**
+ * @swagger
+ * /concerts/{id}/tickets/predictions:
+ *   get:
+ *     summary: Get AI-based ticket sales predictions for a concert
+ *     tags: [Tickets Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Concert ID
+ *     responses:
+ *       200:
+ *         description: Sales prediction data
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Concert not found
+ */
+router.get('/concerts/:id/tickets/predictions', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+
+    // Verify concert exists and belongs to user's association
+    const concert = db.prepare(`
+        SELECT id, name, date, venue_type, concert_type
+        FROM concerts
+        WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as {
+        id: string;
+        name: string;
+        date: string;
+        venue_type: string | null;
+        concert_type: string | null;
+    } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    // Get sales prediction data
+    const predictionData = getSalesPredictionSummary(concertId);
+
+    res.json({
+        concert: {
+            id: concert.id,
+            name: concert.name,
+            date: concert.date,
+            venueType: concert.venue_type,
+            concertType: concert.concert_type,
+        },
+        ...predictionData,
+    });
 }));
 
 /**

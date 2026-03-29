@@ -28,6 +28,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { AddToCalendarButton } from '../components/CalendarSync';
+import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
 import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
@@ -101,6 +102,8 @@ export default function Concerts() {
     maxPerOrder: '10',
     saleStart: '',
     saleEnd: '',
+    serviceFee: '',
+    showServiceFeeSeparate: false,
   });
 
   // Data fetching
@@ -126,7 +129,7 @@ export default function Concerts() {
 
   // Ticket mutations
   const createTicketTypeMutation = useMutation({
-    mutationFn: (data: { name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string }) =>
+    mutationFn: (data: { name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string; serviceFee?: number; showServiceFeeSeparate?: boolean }) =>
       createTicketType(viewingConcert!, data),
     onSuccess: () => {
       showSuccess(t('tickets.ticketTypeCreated'));
@@ -138,7 +141,7 @@ export default function Concerts() {
   });
 
   const updateTicketTypeMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<{ name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string }> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<{ name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string; serviceFee?: number; showServiceFeeSeparate?: boolean }> }) =>
       updateTicketType(id, data),
     onSuccess: () => {
       showSuccess(t('tickets.ticketTypeUpdated'));
@@ -197,6 +200,8 @@ export default function Concerts() {
       maxPerOrder: '10',
       saleStart: '',
       saleEnd: '',
+      serviceFee: '',
+      showServiceFeeSeparate: false,
     });
   };
 
@@ -219,6 +224,8 @@ export default function Concerts() {
       maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
       saleStart: toISODateTime(ticketTypeFormData.saleStart),
       saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
+      serviceFee: ticketTypeFormData.serviceFee ? parseFloat(ticketTypeFormData.serviceFee) : 0,
+      showServiceFeeSeparate: ticketTypeFormData.showServiceFeeSeparate,
     });
   };
 
@@ -235,6 +242,8 @@ export default function Concerts() {
         maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
         saleStart: toISODateTime(ticketTypeFormData.saleStart),
         saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
+        serviceFee: ticketTypeFormData.serviceFee ? parseFloat(ticketTypeFormData.serviceFee) : 0,
+        showServiceFeeSeparate: ticketTypeFormData.showServiceFeeSeparate,
       },
     });
   };
@@ -258,6 +267,8 @@ export default function Concerts() {
       maxPerOrder: ticketType.maxPerOrder.toString(),
       saleStart: toDateTimeLocal(ticketType.saleStart),
       saleEnd: toDateTimeLocal(ticketType.saleEnd),
+      serviceFee: ticketType.serviceFee ? ticketType.serviceFee.toString() : '',
+      showServiceFeeSeparate: ticketType.showServiceFeeSeparate || false,
     });
   };
 
@@ -492,7 +503,10 @@ export default function Concerts() {
                 <tbody>
                   {concerts.map((concert) => (
                     <tr key={concert.id}>
-                      <td><strong>{concert.name}</strong></td>
+                      <td>
+                        <strong>{concert.name}</strong>
+                        <AccessibilityIndicator hasAccessibilityInfo={concert.hasAccessibilityInfo || false} />
+                      </td>
                       <td>{concert.date}</td>
                       <td>{concert.location || '-'}</td>
                       <td>{concert.concertType ? getConcertTypeLabel(concert.concertType) : '-'}</td>
@@ -734,6 +748,21 @@ export default function Concerts() {
               <AddToCalendarButton type="concert" id={concertDetail.id} />
             </div>
           </div>
+
+          {/* Accessibility Info Section */}
+          {(concertDetail.wheelchairSpaces || concertDetail.companionSpaces ||
+            concertDetail.hearingLoopAvailable || concertDetail.accessibleParkingInfo ||
+            concertDetail.accessibilityInfo) && (
+            <AccessibilityInfo
+              wheelchairSpaces={concertDetail.wheelchairSpaces || 0}
+              companionSpaces={concertDetail.companionSpaces || 0}
+              hearingLoopAvailable={concertDetail.hearingLoopAvailable || false}
+              accessibleParkingInfo={concertDetail.accessibleParkingInfo || undefined}
+              additionalInfo={concertDetail.accessibilityInfo || undefined}
+              contactEmail={concertDetail.accessibilityContactEmail || undefined}
+              contactPhone={concertDetail.accessibilityContactPhone || undefined}
+            />
+          )}
 
           {/* Program Section */}
           <div className="flex justify-between items-center mb-2">
@@ -1218,6 +1247,35 @@ export default function Concerts() {
                 onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, saleEnd: e.target.value })}
               />
             </div>
+          </div>
+          <hr style={{ margin: '1rem 0' }} />
+          <div className="form-group">
+            <label className="form-label">{t('tickets.ticketTypeServiceFee')}</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="form-control"
+              value={ticketTypeFormData.serviceFee}
+              onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, serviceFee: e.target.value })}
+              placeholder="0.00"
+            />
+            <small style={{ color: 'var(--text-light)' }}>
+              {t('tickets.ticketTypeServiceFeeHelp')}
+            </small>
+          </div>
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={ticketTypeFormData.showServiceFeeSeparate}
+                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, showServiceFeeSeparate: e.target.checked })}
+              />
+              {t('tickets.showServiceFeeSeparate')}
+            </label>
+            <small style={{ color: 'var(--text-light)', display: 'block', marginTop: '0.25rem' }}>
+              {t('tickets.showServiceFeeSeparateHelp')}
+            </small>
           </div>
         </FormModal>
       )}

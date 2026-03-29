@@ -398,6 +398,11 @@ export interface Concert {
   programCount: number;
   attendanceCount: number;
   mediaCount: number;
+  // Accessibility fields
+  wheelchairSpaces?: number | null;
+  companionSpaces?: number | null;
+  hearingLoopAvailable?: boolean;
+  hasAccessibilityInfo?: boolean;
   createdBy: {
     id: string;
     firstName: string;
@@ -447,10 +452,15 @@ export interface ConcertAttendance {
   notes: string | null;
 }
 
-export interface ConcertDetail extends Omit<Concert, 'programCount' | 'attendanceCount' | 'mediaCount'> {
+export interface ConcertDetail extends Omit<Concert, 'programCount' | 'attendanceCount' | 'mediaCount' | 'hasAccessibilityInfo'> {
   program: ConcertProgramItem[];
   media: ConcertMedia[];
   attendance: ConcertAttendance[];
+  // Full accessibility info for detail view
+  accessibleParkingInfo?: string | null;
+  accessibilityInfo?: string | null;
+  accessibilityContactEmail?: string | null;
+  accessibilityContactPhone?: string | null;
 }
 
 export interface ConcertStatistics {
@@ -581,6 +591,8 @@ export interface TicketType {
   onSale: boolean;
   saleStart: string | null;
   saleEnd: string | null;
+  serviceFee: number;
+  showServiceFeeSeparate: boolean;
 }
 
 export interface ConcertTicketInfo {
@@ -595,6 +607,10 @@ export interface ConcertTicketInfo {
   };
   ticketTypes: TicketType[];
   paymentMethods: string[];
+  captcha?: {
+    enabled: boolean;
+    siteKey: string | null;
+  };
 }
 
 export interface TicketOrderItem {
@@ -819,4 +835,238 @@ export interface MollieStatus {
     status: string;
     updatedAt: string;
   }[];
+}
+
+// ==================== TICKET DASHBOARD ====================
+
+export interface TicketDashboardTicketType {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  sold: number;
+  available: number;
+  revenue: number;
+}
+
+export interface TicketDashboardOrder {
+  id: string;
+  buyerName: string;
+  buyerEmail: string;
+  total: number;
+  ticketCount: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded' | 'expired';
+  createdAt: string;
+}
+
+export interface TicketDashboardSalesOverTime {
+  date: string;
+  ticketsSold: number;
+  revenue: number;
+}
+
+export interface TicketDashboard {
+  concertId: string;
+  concertName: string;
+  concertDate: string;
+  concertLocation: string | null;
+  // Sales counters
+  totalTicketsSold: number;
+  totalCapacity: number;
+  // Revenue
+  revenueToday: number;
+  revenueThisWeek: number;
+  revenueAllTime: number;
+  // Sales by ticket type
+  ticketTypes: TicketDashboardTicketType[];
+  // Sales over time (last 30 days)
+  salesOverTime: TicketDashboardSalesOverTime[];
+  // Recent orders
+  recentOrders: TicketDashboardOrder[];
+  // Guest list count
+  guestListTickets: number;
+}
+
+// ==================== TICKET TRANSFERS ====================
+
+export interface TicketTransfer {
+  id: string;
+  ticketId: string;
+  ticket: {
+    id: string;
+    code: string;
+    ticketType: string;
+    concert: {
+      id: string;
+      name: string;
+      date: string;
+      location: string | null;
+    };
+  };
+  recipientEmail: string;
+  recipientName: string;
+  transferCode: string;
+  status: 'pending' | 'accepted' | 'cancelled' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface TicketTransferHistory {
+  id: string;
+  ticketId: string;
+  ticket: {
+    id: string;
+    code: string;
+    ticketType: string;
+    concert: {
+      id: string;
+      name: string;
+      date: string;
+    };
+  };
+  fromEmail: string;
+  fromName: string;
+  toEmail: string;
+  toName: string;
+  status: 'pending' | 'accepted' | 'cancelled' | 'expired';
+  transferredAt: string;
+}
+
+export interface TransferableTicket {
+  id: string;
+  code: string;
+  ticketType: string;
+  buyerName: string;
+  status: 'valid';
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    location: string | null;
+  };
+  hasPendingTransfer: boolean;
+}
+
+// ==================== SALES PREDICTIONS ====================
+
+export interface SalesPrediction {
+  predictedTotalSales: number;
+  predictedRevenue: number;
+  confidenceLevel: 'low' | 'medium' | 'high';
+  factors: string[];
+  dailyPredictions: { date: string; predictedSales: number }[];
+}
+
+export interface PricingSuggestion {
+  currentPrice: number;
+  suggestedPrice: number;
+  priceRange: { min: number; max: number };
+  demandLevel: 'low' | 'medium' | 'high';
+  reasoning: string[];
+}
+
+export interface SalesPredictionResponse {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    venueType: string | null;
+    concertType: string | null;
+  };
+  prediction: SalesPrediction;
+  pricing: PricingSuggestion;
+  currentStats: {
+    totalCapacity: number;
+    totalSold: number;
+    currentRevenue: number;
+    fillRate: number;
+    daysUntilConcert: number;
+  };
+}
+
+// ==================== VENUE LAYOUT & SEAT HEATMAP ====================
+
+export interface VenueSection {
+  id: string;
+  name: string;
+  rowNumber: number;
+  capacity: number;
+  sortOrder: number;
+}
+
+export interface VenueRow {
+  id: string;
+  sectionId: string;
+  rowLabel: string;
+  seatCount: number;
+  sortOrder: number;
+}
+
+export interface VenueSeat {
+  id: string;
+  rowId: string;
+  sectionId: string;
+  seatLabel: string;
+  x: number;
+  y: number;
+}
+
+export interface VenueLayout {
+  id: string;
+  concertId: string;
+  name: string;
+  sections: VenueSection[];
+  rows: VenueRow[];
+  seats: VenueSeat[];
+  width: number;
+  height: number;
+}
+
+export interface SeatHeatmapData {
+  concertId: string;
+  concertName: string;
+  concertDate: string;
+  totalCapacity: number;
+  totalSold: number;
+  sections: SectionHeatmapData[];
+  seats: SeatSalesData[];
+  // Time range for the sales data
+  salesPeriodStart: string;
+  salesPeriodEnd: string;
+}
+
+export interface SectionHeatmapData {
+  sectionId: string;
+  sectionName: string;
+  capacity: number;
+  sold: number;
+  revenue: number;
+  averagePrice: number;
+  // Sales velocity metrics
+  salesVelocity: number; // seats sold per day
+  timeToSellOut: number | null; // hours to sell out, null if not sold out
+  popularityScore: number; // 0-100 score
+  // Price performance
+  pricePerformanceScore: number; // 0-100, higher = sells well at this price
+}
+
+export interface SeatSalesData {
+  seatId: string;
+  sectionId: string;
+  rowLabel: string;
+  seatLabel: string;
+  // Position for heatmap rendering
+  x: number;
+  y: number;
+  // Sales data
+  status: 'available' | 'sold' | 'reserved' | 'held';
+  soldAt: string | null;
+  price: number | null;
+  ticketTypeId: string | null;
+  ticketTypeName: string | null;
+  // Calculated metrics
+  timeToSell: number | null; // seconds from sale start to sold
+  salesSpeedPercentile: number | null; // 0-100, where in the selling order this seat was
 }

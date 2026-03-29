@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType, SeatHeatmapData } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -2496,6 +2496,7 @@ export const createTicketOrder = async (
     buyerEmail: string;
     buyerPhone?: string;
     notes?: string;
+    captchaToken?: string;
   }
 ): Promise<{ orderId: string; total: number; expiresAt: string; items: { ticketTypeId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[] }> => {
   const { data } = await api.post(`/concerts/${concertId}/tickets/order`, order);
@@ -2590,6 +2591,12 @@ export const getConcertAttendees = async (concertId: string): Promise<AttendeeEx
   return data;
 };
 
+// Admin: Get seat heatmap data for a concert
+export const getSeatHeatmapData = async (concertId: string): Promise<SeatHeatmapData> => {
+  const { data } = await api.get(`/concerts/${concertId}/seats/heatmap-data`);
+  return data;
+};
+
 // Admin: Export attendee list as CSV
 export const exportConcertAttendeesCsv = async (concertId: string): Promise<void> => {
   const response = await api.get(`/concerts/${concertId}/attendees?format=csv`, {
@@ -2626,7 +2633,13 @@ export const mockPayment = async (orderId: string, action: 'pay' | 'cancel'): Pr
 // TICKET SALES ADMIN API
 // =============================================
 
-import type { TicketSalesResponse, PaymentDetails } from './types';
+import type { TicketSalesResponse, PaymentDetails, TicketDashboard, SalesPredictionResponse } from './types';
+
+// Get ticket dashboard data for a concert
+export const getTicketDashboard = async (concertId: string): Promise<TicketDashboard> => {
+  const { data } = await api.get(`/tickets/dashboard/${concertId}`);
+  return data;
+};
 
 // Get all ticket sales/orders for admin overview
 export const getTicketSales = async (params?: {
@@ -2644,6 +2657,12 @@ export const getTicketSales = async (params?: {
 // Get payment details from Mollie/Stripe for an order
 export const getPaymentDetails = async (orderId: string): Promise<PaymentDetails> => {
   const { data } = await api.get(`/tickets/sales/${orderId}/payment-details`);
+  return data;
+};
+
+// Get AI-based ticket sales predictions for a concert (admin only)
+export const getSalesPredictions = async (concertId: string): Promise<SalesPredictionResponse> => {
+  const { data } = await api.get(`/concerts/${concertId}/tickets/predictions`);
   return data;
 };
 
@@ -2797,6 +2816,59 @@ export const testMollieConnection = async (): Promise<{
   error?: string;
 }> => {
   const { data } = await api.get('/payment-settings/mollie/test');
+  return data;
+};
+
+// =============================================
+// TICKET TRANSFERS API
+// =============================================
+
+import type { TicketTransfer, TicketTransferHistory, TransferableTicket } from './types';
+
+// Get user's transferable tickets
+export const getTransferableTickets = async (): Promise<TransferableTicket[]> => {
+  const { data } = await api.get('/tickets/transferable');
+  return data;
+};
+
+// Initiate a ticket transfer
+export const initiateTicketTransfer = async (
+  ticketId: string,
+  transfer: { recipientEmail: string; recipientName: string }
+): Promise<{ transfer: TicketTransfer; message: string }> => {
+  const { data } = await api.post(`/tickets/${ticketId}/transfer`, transfer);
+  return data;
+};
+
+// Get pending transfers (outgoing)
+export const getPendingTransfers = async (): Promise<TicketTransfer[]> => {
+  const { data } = await api.get('/tickets/transfers');
+  return data;
+};
+
+// Cancel a pending transfer
+export const cancelTicketTransfer = async (transferId: string): Promise<{ success: boolean; message: string }> => {
+  const { data } = await api.delete(`/tickets/transfers/${transferId}`);
+  return data;
+};
+
+// Accept a ticket transfer (for recipient)
+export const acceptTicketTransfer = async (
+  transferCode: string
+): Promise<{ success: boolean; ticket: Ticket; message: string }> => {
+  const { data } = await api.post(`/tickets/transfers/${transferCode}/accept`);
+  return data;
+};
+
+// Get transfer details by code (for accept page)
+export const getTransferByCode = async (transferCode: string): Promise<TicketTransfer> => {
+  const { data } = await api.get(`/tickets/transfers/${transferCode}`);
+  return data;
+};
+
+// Get transfer history
+export const getTransferHistory = async (): Promise<TicketTransferHistory[]> => {
+  const { data } = await api.get('/tickets/transfers/history');
   return data;
 };
 

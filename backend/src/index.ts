@@ -45,6 +45,7 @@ import settingsRoutes from './routes/settings';
 import rehearsalRoutes from './routes/rehearsals';
 import spondRoutes from './routes/spond';
 import microsoftAuthRoutes from './routes/microsoft-auth';
+import socialAuthRoutes from './routes/social-auth';
 import musicaInfoRoutes from './routes/musicainfo';
 import imslpRoutes from './routes/imslp';
 import equipmentRoutes from './routes/equipment';
@@ -73,6 +74,8 @@ import calendarRoutes from './routes/calendar';
 import ticketsRoutes from './routes/tickets';
 import guestListRoutes from './routes/guest-list';
 import paymentSettingsRoutes from './routes/payment-settings';
+import discountCodesRoutes from './routes/discount-codes';
+import venueLayoutsRoutes from './routes/venue-layouts';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import healthRoutes from './routes/health';
@@ -202,6 +205,7 @@ app.use('/api/auth/login', authLimiter);
 
 // API Routes (more specific prefixes first)
 app.use('/api/auth/microsoft', microsoftAuthRoutes);
+app.use('/api/auth/social', socialAuthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/instruments', instrumentsRoutes);
@@ -246,6 +250,8 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
 app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
 app.use('/api/payment-settings', paymentSettingsRoutes);
+app.use('/api/discount-codes', discountCodesRoutes);
+app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 
 // Health check routes (basic and detailed)
 app.use('/api/health', healthRoutes);

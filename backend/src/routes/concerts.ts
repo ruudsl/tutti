@@ -42,6 +42,14 @@ const createConcertSchema = z.object({
     concertType: z.string().optional(),
     description: z.string().optional(),
     notes: z.string().optional(),
+    // Accessibility fields
+    wheelchairSpaces: z.number().int().min(0).optional(),
+    companionSpaces: z.number().int().min(0).optional(),
+    hearingLoopAvailable: z.boolean().optional(),
+    accessibleParkingInfo: z.string().optional(),
+    accessibilityInfo: z.string().optional(),
+    accessibilityContactEmail: z.string().email().optional().or(z.literal('')),
+    accessibilityContactPhone: z.string().optional(),
 });
 
 const updateConcertSchema = createConcertSchema.partial();
@@ -514,6 +522,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         programCount: concert.program_count,
         attendanceCount: concert.attendance_count,
         mediaCount: concert.media_count,
+        // Accessibility fields for list view (summary)
+        wheelchairSpaces: concert.wheelchair_spaces,
+        companionSpaces: concert.companion_spaces,
+        hearingLoopAvailable: concert.hearing_loop_available === 1,
+        hasAccessibilityInfo: !!(concert.wheelchair_spaces || concert.companion_spaces ||
+            concert.hearing_loop_available || concert.accessible_parking_info || concert.accessibility_info),
         createdBy: concert.created_by ? {
             id: concert.created_by,
             firstName: concert.created_by_first_name,
@@ -603,6 +617,14 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
         concertType: concert.concert_type,
         description: concert.description,
         notes: concert.notes,
+        // Accessibility fields
+        wheelchairSpaces: concert.wheelchair_spaces,
+        companionSpaces: concert.companion_spaces,
+        hearingLoopAvailable: concert.hearing_loop_available === 1,
+        accessibleParkingInfo: concert.accessible_parking_info,
+        accessibilityInfo: concert.accessibility_info,
+        accessibilityContactEmail: concert.accessibility_contact_email,
+        accessibilityContactPhone: concert.accessibility_contact_phone,
         createdBy: concert.created_by ? {
             id: concert.created_by,
             firstName: concert.created_by_first_name,
@@ -665,12 +687,19 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
     db.prepare(`
         INSERT INTO concerts (
             id, association_id, name, date, end_date, location,
-            venue_type, concert_type, description, notes, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            venue_type, concert_type, description, notes, created_by,
+            wheelchair_spaces, companion_spaces, hearing_loop_available,
+            accessible_parking_info, accessibility_info,
+            accessibility_contact_email, accessibility_contact_phone
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         id, req.user!.associationId, data.name, data.date, data.endDate || null,
         data.location || null, data.venueType || null, data.concertType || null,
-        data.description || null, data.notes || null, req.user!.id
+        data.description || null, data.notes || null, req.user!.id,
+        data.wheelchairSpaces ?? null, data.companionSpaces ?? null,
+        data.hearingLoopAvailable ?? null, data.accessibleParkingInfo || null,
+        data.accessibilityInfo || null, data.accessibilityContactEmail || null,
+        data.accessibilityContactPhone || null
     );
 
     logger.info(`Concert created: ${data.name}`, { id, createdBy: req.user!.id });
@@ -708,11 +737,21 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
             concert_type = COALESCE(?, concert_type),
             description = COALESCE(?, description),
             notes = COALESCE(?, notes),
+            wheelchair_spaces = COALESCE(?, wheelchair_spaces),
+            companion_spaces = COALESCE(?, companion_spaces),
+            hearing_loop_available = COALESCE(?, hearing_loop_available),
+            accessible_parking_info = COALESCE(?, accessible_parking_info),
+            accessibility_info = COALESCE(?, accessibility_info),
+            accessibility_contact_email = COALESCE(?, accessibility_contact_email),
+            accessibility_contact_phone = COALESCE(?, accessibility_contact_phone),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `).run(
         data.name, data.date, data.endDate, data.location,
         data.venueType, data.concertType, data.description, data.notes,
+        data.wheelchairSpaces, data.companionSpaces, data.hearingLoopAvailable,
+        data.accessibleParkingInfo, data.accessibilityInfo,
+        data.accessibilityContactEmail, data.accessibilityContactPhone,
         req.params.id
     );
 

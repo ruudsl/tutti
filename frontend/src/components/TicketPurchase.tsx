@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
@@ -6,6 +6,7 @@ import { getConcertTickets, createTicketOrder, payTicketOrder, mockPayment } fro
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { TicketType } from '../types';
+import CaptchaWidget from './CaptchaWidget';
 
 interface TicketPurchaseProps {
   concertId: string;
@@ -27,12 +28,22 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
   });
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('ideal');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Fetch concert ticket info
   const { data: ticketInfo, isLoading: isLoadingTickets } = useQuery({
     queryKey: queryKeys.concertTickets(concertId),
     queryFn: () => getConcertTickets(concertId),
   });
+
+  // CAPTCHA handlers
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setCaptchaToken(token);
+  }, []);
+
+  const handleCaptchaExpire = useCallback(() => {
+    setCaptchaToken(null);
+  }, []);
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -46,6 +57,7 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
         buyerName: buyerInfo.name,
         buyerEmail: buyerInfo.email,
         buyerPhone: buyerInfo.phone || undefined,
+        captchaToken: captchaToken || undefined,
       });
     },
     onSuccess: (data) => {
@@ -93,23 +105,29 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
   });
 
   // Calculate totals
-  const { totalTickets, totalPrice, selectedItems } = useMemo(() => {
-    if (!ticketInfo) return { totalTickets: 0, totalPrice: 0, selectedItems: [] };
+  const { totalTickets, subtotal, totalServiceFee, totalPrice, selectedItems, showServiceFeeSeparate } = useMemo(() => {
+    if (!ticketInfo) return { totalTickets: 0, subtotal: 0, totalServiceFee: 0, totalPrice: 0, selectedItems: [], showServiceFeeSeparate: false };
 
-    let total = 0;
+    let sub = 0;
+    let serviceFeeSum = 0;
     let count = 0;
+    let showSeparate = false;
     const items: { ticketType: TicketType; quantity: number }[] = [];
 
     ticketInfo.ticketTypes.forEach((tt) => {
       const qty = selectedTickets[tt.id] || 0;
       if (qty > 0) {
-        total += tt.price * qty;
+        sub += tt.price * qty;
+        serviceFeeSum += (tt.serviceFee || 0) * qty;
         count += qty;
+        if (tt.showServiceFeeSeparate) {
+          showSeparate = true;
+        }
         items.push({ ticketType: tt, quantity: qty });
       }
     });
 
-    return { totalTickets: count, totalPrice: total, selectedItems: items };
+    return { totalTickets: count, subtotal: sub, totalServiceFee: serviceFeeSum, totalPrice: sub + serviceFeeSum, selectedItems: items, showServiceFeeSeparate: showSeparate };
   }, [ticketInfo, selectedTickets]);
 
   const handleQuantityChange = (ticketTypeId: string, quantity: number, maxAvailable: number, maxPerOrder: number) => {
@@ -266,11 +284,29 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
                         <span>EUR {(ticketType.price * quantity).toFixed(2)}</span>
                       </div>
                     ))}
+                    {showServiceFeeSeparate && totalServiceFee > 0 && (
+                      <>
+                        <hr />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                          <span>{t('tickets.subtotal')}</span>
+                          <span>EUR {subtotal.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--text-light)' }}>
+                          <span>{t('tickets.serviceFee')}</span>
+                          <span>EUR {totalServiceFee.toFixed(2)}</span>
+                        </div>
+                      </>
+                    )}
                     <hr />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.125rem' }}>
                       <span>{t('tickets.total')}</span>
                       <span>EUR {totalPrice.toFixed(2)}</span>
                     </div>
+                    {showServiceFeeSeparate && totalServiceFee > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginTop: '0.5rem', marginBottom: 0 }}>
+                        {t('tickets.serviceFeeInfo')}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -341,6 +377,19 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
                   <span>EUR {(ticketType.price * quantity).toFixed(2)}</span>
                 </div>
               ))}
+              {showServiceFeeSeparate && totalServiceFee > 0 && (
+                <>
+                  <hr />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span>{t('tickets.subtotal')}</span>
+                    <span>EUR {subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--text-light)' }}>
+                    <span>{t('tickets.serviceFee')}</span>
+                    <span>EUR {totalServiceFee.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
               <hr />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.125rem' }}>
                 <span>{t('tickets.total')}</span>
@@ -348,6 +397,18 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
               </div>
             </div>
           </div>
+
+          {/* CAPTCHA verification */}
+          {ticketInfo?.captcha?.enabled && ticketInfo.captcha.siteKey && (
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <CaptchaWidget
+                siteKey={ticketInfo.captcha.siteKey}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+                theme="auto"
+              />
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button
@@ -361,7 +422,7 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
               type="submit"
               className="btn btn-primary"
               style={{ flex: 1 }}
-              disabled={createOrderMutation.isPending}
+              disabled={createOrderMutation.isPending || (ticketInfo?.captcha?.enabled && !captchaToken)}
             >
               {createOrderMutation.isPending ? t('common.loading') : t('tickets.placeOrder')}
             </button>

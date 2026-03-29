@@ -123,4 +123,10 @@ export const queryKeys = {
   myTickets: ['tickets', 'my'] as const,
   ticketStats: (concertId: string) => ['tickets', 'stats', concertId] as const,
   attendees: (concertId: string) => ['tickets', 'attendees', concertId] as const,
+
+  // Ticket Transfers
+  transferableTickets: ['tickets', 'transferable'] as const,
+  pendingTransfers: ['tickets', 'transfers', 'pending'] as const,
+  transferHistory: ['tickets', 'transfers', 'history'] as const,
+  transferByCode: (code: string) => ['tickets', 'transfers', 'code', code] as const,
 };

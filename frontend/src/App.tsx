@@ -85,6 +85,8 @@ import GuestList from './pages/GuestList';
 import PaymentSettings from './pages/PaymentSettings';
 import PublicTicketSale from './pages/PublicTicketSale';
 import MockPayment from './pages/MockPayment';
+import TicketTransfer from './pages/TicketTransfer';
+import AcceptTransfer from './pages/AcceptTransfer';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
@@ -149,6 +151,8 @@ function AppRoutes() {
       <Route path="/tickets/:concertId" element={<PublicTicketSale />} />
       {/* Mock payment page for development */}
       <Route path="/tickets/orders/:orderId/mock-payment" element={<MockPayment />} />
+      {/* Accept ticket transfer - accessible without login (handles redirect) */}
+      <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
       <Route
         path="/"
         element={
@@ -385,6 +389,7 @@ function AppRoutes() {
           }
         />
         <Route path="my-tickets" element={<MyTickets />} />
+        <Route path="tickets/transfer" element={<TicketTransfer />} />
         <Route
           path="ticket-sales"
           element={
