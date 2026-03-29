@@ -80,6 +80,7 @@ import HealthDashboard from './pages/HealthDashboard';
 // Ticketing
 import MyTickets from './pages/MyTickets';
 import TicketScanner from './pages/TicketScanner';
+import TicketSales from './pages/TicketSales';
 import PublicTicketSale from './pages/PublicTicketSale';
 import MockPayment from './pages/MockPayment';
 
@@ -382,6 +383,14 @@ function AppRoutes() {
           }
         />
         <Route path="my-tickets" element={<MyTickets />} />
+        <Route
+          path="ticket-sales"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <TicketSales />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="ticket-scanner"
           element={

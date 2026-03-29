@@ -2622,4 +2622,49 @@ export const mockPayment = async (orderId: string, action: 'pay' | 'cancel'): Pr
   return data;
 };
 
+// =============================================
+// TICKET SALES ADMIN API
+// =============================================
+
+import type { TicketSalesResponse, PaymentDetails } from './types';
+
+// Get all ticket sales/orders for admin overview
+export const getTicketSales = async (params?: {
+  concertId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}): Promise<TicketSalesResponse> => {
+  const { data } = await api.get('/tickets/sales', { params });
+  return data;
+};
+
+// Get payment details from Mollie/Stripe for an order
+export const getPaymentDetails = async (orderId: string): Promise<PaymentDetails> => {
+  const { data } = await api.get(`/tickets/sales/${orderId}/payment-details`);
+  return data;
+};
+
+// Export ticket sales as CSV
+export const exportTicketSalesCsv = async (params?: {
+  concertId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<void> => {
+  const response = await api.get('/tickets/sales/export', {
+    params,
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ticket-sales-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
+
 export default api;

@@ -687,3 +687,61 @@ export interface AttendeeExport {
   purchaseDate: string;
   usedAt: string | null;
 }
+
+// Ticket Sales Admin types
+export interface TicketSaleOrder {
+  id: string;
+  concertId: string;
+  concertName: string;
+  concertDate: string;
+  concertLocation: string | null;
+  total: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded' | 'expired';
+  paymentId: string | null;
+  paymentMethod: string | null;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string | null;
+  expiresAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  ticketCount: number;
+  items: {
+    ticketTypeId: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
+}
+
+export interface TicketSalesResponse {
+  orders: TicketSaleOrder[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    totalOrders: number;
+    paidOrders: number;
+    totalRevenue: number;
+    pendingOrders: number;
+    refundedOrders: number;
+  };
+}
+
+export interface PaymentDetails {
+  orderId: string;
+  paymentId: string | null;
+  provider: 'mollie' | 'stripe' | null;
+  details: {
+    id: string;
+    status: string;
+    amount: number;
+    method?: string;
+    paidAt?: string;
+    metadata?: Record<string, string>;
+  } | null;
+}

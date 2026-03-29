@@ -1229,6 +1229,324 @@ router.post('/tickets/orders/:id/refund', authenticateToken, requireRole('admin'
 }));
 
 /**
+ * @swagger
+ * /tickets/sales:
+ *   get:
+ *     summary: Get all ticket sales/orders for admin overview
+ *     tags: [Tickets Admin]
+ */
+router.get('/tickets/sales', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { concertId, status, startDate, endDate, page = '1', limit = '50' } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Build query conditions
+    const conditions: string[] = ['c.association_id = ?'];
+    const params: unknown[] = [req.user!.associationId];
+
+    if (concertId) {
+        conditions.push('o.concert_id = ?');
+        params.push(concertId);
+    }
+
+    if (status) {
+        conditions.push('o.status = ?');
+        params.push(status);
+    }
+
+    if (startDate) {
+        conditions.push('o.created_at >= ?');
+        params.push(startDate);
+    }
+
+    if (endDate) {
+        conditions.push('o.created_at <= ?');
+        params.push(endDate);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Get total count
+    const countResult = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE ${whereClause}
+    `).get(...params) as { count: number };
+
+    // Get orders with details
+    const orders = db.prepare(`
+        SELECT
+            o.id,
+            o.concert_id,
+            o.total,
+            o.status,
+            o.payment_id,
+            o.payment_method,
+            o.buyer_name,
+            o.buyer_email,
+            o.buyer_phone,
+            o.expires_at,
+            o.paid_at,
+            o.created_at,
+            o.updated_at,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location,
+            (SELECT COUNT(*) FROM tickets t WHERE t.order_id = o.id) as ticket_count
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE ${whereClause}
+        ORDER BY o.created_at DESC
+        LIMIT ? OFFSET ?
+    `).all(...params, limitNum, offset) as {
+        id: string;
+        concert_id: string;
+        total: number;
+        status: string;
+        payment_id: string | null;
+        payment_method: string | null;
+        buyer_name: string;
+        buyer_email: string;
+        buyer_phone: string | null;
+        expires_at: string | null;
+        paid_at: string | null;
+        created_at: string;
+        updated_at: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+        ticket_count: number;
+    }[];
+
+    // Get order items for each order
+    const orderIds = orders.map(o => o.id);
+    let orderItemsMap: Record<string, { ticketTypeId: string; name: string; quantity: number; unitPrice: number }[]> = {};
+
+    if (orderIds.length > 0) {
+        const orderItems = db.prepare(`
+            SELECT
+                oi.order_id,
+                oi.ticket_type_id,
+                oi.quantity,
+                oi.unit_price,
+                tt.name
+            FROM ticket_order_items oi
+            JOIN ticket_types tt ON oi.ticket_type_id = tt.id
+            WHERE oi.order_id IN (${orderIds.map(() => '?').join(',')})
+        `).all(...orderIds) as {
+            order_id: string;
+            ticket_type_id: string;
+            quantity: number;
+            unit_price: number;
+            name: string;
+        }[];
+
+        for (const item of orderItems) {
+            if (!orderItemsMap[item.order_id]) {
+                orderItemsMap[item.order_id] = [];
+            }
+            orderItemsMap[item.order_id].push({
+                ticketTypeId: item.ticket_type_id,
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.unit_price,
+            });
+        }
+    }
+
+    // Calculate summary stats
+    const statsResult = db.prepare(`
+        SELECT
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END) as paid_orders,
+            SUM(CASE WHEN o.status = 'paid' THEN o.total ELSE 0 END) as total_revenue,
+            SUM(CASE WHEN o.status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+            SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END) as refunded_orders
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE ${whereClause}
+    `).get(...params) as {
+        total_orders: number;
+        paid_orders: number;
+        total_revenue: number;
+        pending_orders: number;
+        refunded_orders: number;
+    };
+
+    res.json({
+        orders: orders.map(o => ({
+            id: o.id,
+            concertId: o.concert_id,
+            concertName: o.concert_name,
+            concertDate: o.concert_date,
+            concertLocation: o.concert_location,
+            total: o.total,
+            status: o.status,
+            paymentId: o.payment_id,
+            paymentMethod: o.payment_method,
+            buyerName: o.buyer_name,
+            buyerEmail: o.buyer_email,
+            buyerPhone: o.buyer_phone,
+            expiresAt: o.expires_at,
+            paidAt: o.paid_at,
+            createdAt: o.created_at,
+            updatedAt: o.updated_at,
+            ticketCount: o.ticket_count,
+            items: orderItemsMap[o.id] || [],
+        })),
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total: countResult.count,
+            totalPages: Math.ceil(countResult.count / limitNum),
+        },
+        summary: {
+            totalOrders: statsResult.total_orders,
+            paidOrders: statsResult.paid_orders,
+            totalRevenue: statsResult.total_revenue || 0,
+            pendingOrders: statsResult.pending_orders,
+            refundedOrders: statsResult.refunded_orders,
+        },
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/sales/{orderId}/payment-details:
+ *   get:
+ *     summary: Get payment details from Mollie/Stripe for an order
+ *     tags: [Tickets Admin]
+ */
+router.get('/tickets/sales/:orderId/payment-details', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { orderId } = req.params;
+
+    // Get order with payment info
+    const order = db.prepare(`
+        SELECT o.id, o.payment_id, o.status
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        WHERE o.id = ? AND c.association_id = ?
+    `).get(orderId, req.user!.associationId) as {
+        id: string;
+        payment_id: string | null;
+        status: string;
+    } | undefined;
+
+    if (!order) {
+        throw new ApiError(404, 'Order not found');
+    }
+
+    if (!order.payment_id) {
+        res.json({
+            orderId: order.id,
+            paymentId: null,
+            provider: null,
+            details: null,
+        });
+        return;
+    }
+
+    // Fetch payment details from provider
+    const paymentDetails = await getPaymentStatus(order.payment_id);
+    const provider = getPaymentProvider();
+
+    res.json({
+        orderId: order.id,
+        paymentId: order.payment_id,
+        provider,
+        details: paymentDetails,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/sales/export:
+ *   get:
+ *     summary: Export all sales data as CSV
+ *     tags: [Tickets Admin]
+ */
+router.get('/tickets/sales/export', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { concertId, status, startDate, endDate } = req.query;
+
+    // Build query conditions
+    const conditions: string[] = ['c.association_id = ?'];
+    const params: unknown[] = [req.user!.associationId];
+
+    if (concertId) {
+        conditions.push('o.concert_id = ?');
+        params.push(concertId);
+    }
+
+    if (status) {
+        conditions.push('o.status = ?');
+        params.push(status);
+    }
+
+    if (startDate) {
+        conditions.push('o.created_at >= ?');
+        params.push(startDate);
+    }
+
+    if (endDate) {
+        conditions.push('o.created_at <= ?');
+        params.push(endDate);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const orders = db.prepare(`
+        SELECT
+            o.id as order_id,
+            o.buyer_name,
+            o.buyer_email,
+            o.buyer_phone,
+            o.total,
+            o.status,
+            o.payment_id,
+            o.payment_method,
+            o.paid_at,
+            o.created_at,
+            c.name as concert_name,
+            c.date as concert_date,
+            GROUP_CONCAT(tt.name || ' x' || oi.quantity, ', ') as items
+        FROM ticket_orders o
+        JOIN concerts c ON o.concert_id = c.id
+        LEFT JOIN ticket_order_items oi ON oi.order_id = o.id
+        LEFT JOIN ticket_types tt ON oi.ticket_type_id = tt.id
+        WHERE ${whereClause}
+        GROUP BY o.id
+        ORDER BY o.created_at DESC
+    `).all(...params) as {
+        order_id: string;
+        buyer_name: string;
+        buyer_email: string;
+        buyer_phone: string | null;
+        total: number;
+        status: string;
+        payment_id: string | null;
+        payment_method: string | null;
+        paid_at: string | null;
+        created_at: string;
+        concert_name: string;
+        concert_date: string;
+        items: string | null;
+    }[];
+
+    // Generate CSV
+    const header = 'Order ID,Concert,Concert Date,Buyer Name,Email,Phone,Items,Total,Status,Payment ID,Payment Method,Paid At,Created At\n';
+    const rows = orders.map(o =>
+        `"${o.order_id}","${o.concert_name}","${o.concert_date}","${o.buyer_name}","${o.buyer_email}","${o.buyer_phone || ''}","${o.items || ''}","${o.total.toFixed(2)}","${o.status}","${o.payment_id || ''}","${o.payment_method || ''}","${o.paid_at || ''}","${o.created_at}"`
+    ).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="ticket-sales-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(header + rows);
+}));
+
+/**
  * Mock payment endpoint for development
  */
 router.post('/tickets/orders/:id/mock-payment', asyncHandler(async (req: Request, res: Response) => {

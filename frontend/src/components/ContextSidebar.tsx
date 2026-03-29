@@ -20,11 +20,12 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: '📅',
-    basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-scanner'],
+    basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
+      { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
     ],
   },
