@@ -611,10 +611,22 @@ CREATE TABLE IF NOT EXISTS concerts (
     description TEXT,
     notes TEXT,
     created_by TEXT,
+    -- Accessibility fields
+    wheelchair_spaces INTEGER DEFAULT 0,
+    companion_spaces INTEGER DEFAULT 0,
+    hearing_loop_available BOOLEAN DEFAULT 0,
+    accessible_parking_info TEXT,
+    accessibility_info TEXT,
+    accessibility_contact_email TEXT,
+    accessibility_contact_phone TEXT,
+    -- Venue layout (for seated events)
+    venue_layout_id TEXT,
+    is_seated_event BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (venue_layout_id) REFERENCES venue_layouts(id) ON DELETE SET NULL
 );
 
 -- Concert programma (gespeelde stukken)
