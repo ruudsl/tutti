@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
@@ -812,6 +813,12 @@ export default function Concerts() {
           <div className="flex justify-between items-center mb-2">
             <h4 style={{ margin: 0 }}>{t('tickets.title')}</h4>
             <div className="flex gap-2">
+              <Link
+                to={`/concerts/${viewingConcert}/guest-list`}
+                className="btn btn-outline btn-sm"
+              >
+                {t('guestList.title')}
+              </Link>
               {ticketData?.ticketTypes && ticketData.ticketTypes.length > 0 && (
                 <button
                   className="btn btn-outline btn-sm"

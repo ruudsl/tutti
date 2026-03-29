@@ -71,6 +71,7 @@ import thumbnailsRoutes from './routes/thumbnails';
 import streamingLinksRoutes from './routes/streamingLinks';
 import calendarRoutes from './routes/calendar';
 import ticketsRoutes from './routes/tickets';
+import guestListRoutes from './routes/guest-list';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import healthRoutes from './routes/health';
@@ -242,6 +243,7 @@ app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
+app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
 
 // Health check routes (basic and detailed)
 app.use('/api/health', healthRoutes);

@@ -505,7 +505,7 @@ export interface ConcertTicketStats {
     }[];
 }
 
-export function getConcertTicketStats(concertId: string): ConcertTicketStats | null {
+export function getConcertTicketStats(concertId: string): ConcertTicketStats & { guestListTickets?: number } | null {
     const concert = db.prepare(`
         SELECT id, name FROM concerts WHERE id = ?
     `).get(concertId) as { id: string; name: string } | undefined;
@@ -524,6 +524,15 @@ export function getConcertTicketStats(concertId: string): ConcertTicketStats | n
         quantity: number;
         sold: number;
     }[];
+
+    // Count guest list tickets (free tickets sent via guest list)
+    const guestListStats = db.prepare(`
+        SELECT COALESCE(SUM(ticket_count), 0) as total_tickets
+        FROM guest_list
+        WHERE concert_id = ? AND tickets_sent = 1
+    `).get(concertId) as { total_tickets: number };
+
+    const guestListTickets = guestListStats.total_tickets;
 
     let totalCapacity = 0;
     let totalSold = 0;
@@ -546,6 +555,9 @@ export function getConcertTicketStats(concertId: string): ConcertTicketStats | n
         };
     });
 
+    // Add guest list tickets to total sold count
+    totalSold += guestListTickets;
+
     return {
         concertId: concert.id,
         concertName: concert.name,
@@ -553,6 +565,7 @@ export function getConcertTicketStats(concertId: string): ConcertTicketStats | n
         totalSold,
         totalRevenue,
         ticketTypes: mappedTicketTypes,
+        guestListTickets,
     };
 }
 
@@ -571,20 +584,21 @@ export interface AttendeeExport {
 }
 
 export function exportAttendeeList(concertId: string): AttendeeExport[] {
+    // Get paid tickets (including guest list tickets which have payment_method='guest_list')
     return db.prepare(`
         SELECT
             t.qr_code as ticketCode,
             t.buyer_name as buyerName,
             t.buyer_email as buyerEmail,
-            tt.name as ticketType,
+            COALESCE(tt.name, 'Gratis Ticket') as ticketType,
             t.seat_info as seatInfo,
             t.status,
             t.purchase_date as purchaseDate,
             t.used_at as usedAt
         FROM tickets t
-        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        LEFT JOIN ticket_types tt ON t.ticket_type_id = tt.id
         JOIN ticket_orders o ON t.order_id = o.id
-        WHERE tt.concert_id = ? AND o.status = 'paid'
+        WHERE o.concert_id = ? AND o.status = 'paid'
         ORDER BY t.buyer_name ASC
     `).all(concertId) as AttendeeExport[];
 }

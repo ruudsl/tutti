@@ -1406,4 +1406,31 @@ CREATE INDEX IF NOT EXISTS idx_collaboration_requests_to ON collaboration_reques
 CREATE INDEX IF NOT EXISTS idx_collaboration_requests_status ON collaboration_requests(status);
 CREATE INDEX IF NOT EXISTS idx_imported_titles_title ON imported_titles(title_id);
 CREATE INDEX IF NOT EXISTS idx_imported_titles_source ON imported_titles(source_title_id);
+
+-- ===========================================
+-- GUEST LIST (Free Tickets / Comps)
+-- ===========================================
+
+-- Guest list entries for free tickets
+CREATE TABLE IF NOT EXISTS guest_list (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    ticket_count INTEGER NOT NULL DEFAULT 1,
+    ticket_type_id TEXT, -- Optional: link to specific ticket type for statistics
+    notes TEXT,
+    tickets_sent BOOLEAN DEFAULT 0,
+    sent_at DATETIME,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_guest_list_concert ON guest_list(concert_id);
+CREATE INDEX IF NOT EXISTS idx_guest_list_email ON guest_list(email);
+CREATE INDEX IF NOT EXISTS idx_guest_list_sent ON guest_list(tickets_sent);
 `;

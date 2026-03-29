@@ -745,3 +745,46 @@ export interface PaymentDetails {
     metadata?: Record<string, string>;
   } | null;
 }
+
+// ==================== GUEST LIST (FREE TICKETS) ====================
+
+export interface GuestListEntry {
+  id: string;
+  concertId: string;
+  concertName?: string;
+  concertDate?: string;
+  name: string;
+  email: string;
+  ticketCount: number;
+  ticketTypeId: string | null;
+  ticketTypeName?: string;
+  notes: string | null;
+  ticketsSent: boolean;
+  sentAt: string | null;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  tickets?: Ticket[];
+}
+
+export interface GuestListSummary {
+  totalGuests: number;
+  totalTickets: number;
+  ticketsSent: number;
+  ticketsPending: number;
+}
+
+export interface GuestListResponse {
+  entries: GuestListEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: GuestListSummary;
+}

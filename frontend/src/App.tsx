@@ -81,6 +81,7 @@ import HealthDashboard from './pages/HealthDashboard';
 import MyTickets from './pages/MyTickets';
 import TicketScanner from './pages/TicketScanner';
 import TicketSales from './pages/TicketSales';
+import GuestList from './pages/GuestList';
 import PublicTicketSale from './pages/PublicTicketSale';
 import MockPayment from './pages/MockPayment';
 
@@ -388,6 +389,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <TicketSales />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="concerts/:concertId/guest-list"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              <GuestList />
             </PrivateRoute>
           }
         />

@@ -2667,4 +2667,72 @@ export const exportTicketSalesCsv = async (params?: {
   window.URL.revokeObjectURL(url);
 };
 
+// =============================================
+// GUEST LIST API (Free Tickets / Comps)
+// =============================================
+
+import type { GuestListResponse, GuestListEntry } from './types';
+
+// Get guest list for a concert
+export const getGuestList = async (concertId: string, params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  ticketsSent?: boolean;
+}): Promise<GuestListResponse> => {
+  const { data } = await api.get(`/concerts/${concertId}/guest-list`, { params });
+  return data;
+};
+
+// Add a guest to the guest list
+export const addGuest = async (concertId: string, guest: {
+  name: string;
+  email: string;
+  ticketCount: number;
+  ticketTypeId?: string | null;
+  notes?: string | null;
+}): Promise<GuestListEntry> => {
+  const { data } = await api.post(`/concerts/${concertId}/guest-list`, guest);
+  return data;
+};
+
+// Update a guest list entry
+export const updateGuest = async (guestId: string, guest: Partial<{
+  name: string;
+  email: string;
+  ticketCount: number;
+  ticketTypeId: string | null;
+  notes: string | null;
+}>): Promise<GuestListEntry> => {
+  const { data } = await api.put(`/guest-list/${guestId}`, guest);
+  return data;
+};
+
+// Delete a guest from the guest list
+export const deleteGuest = async (guestId: string): Promise<void> => {
+  await api.delete(`/guest-list/${guestId}`);
+};
+
+// Send tickets to a guest
+export const sendGuestTickets = async (guestId: string): Promise<{
+  success: boolean;
+  orderId: string;
+  ticketCount: number;
+  tickets: { id: string; code: string }[];
+}> => {
+  const { data } = await api.post(`/guest-list/${guestId}/send-tickets`);
+  return data;
+};
+
+// Send tickets to all guests who haven't received them yet
+export const sendAllGuestTickets = async (concertId: string): Promise<{
+  success: boolean;
+  sent: number;
+  failed: number;
+  errors?: string[];
+}> => {
+  const { data } = await api.post(`/concerts/${concertId}/guest-list/send-all`);
+  return data;
+};
+
 export default api;
