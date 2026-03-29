@@ -1415,6 +1415,8 @@ CREATE INDEX IF NOT EXISTS idx_imported_titles_source ON imported_titles(source_
 CREATE TABLE IF NOT EXISTS guest_list (
     id TEXT PRIMARY KEY,
     concert_id TEXT NOT NULL,
+    order_number TEXT, -- Auto-generated order number (e.g., GL-2024-001)
+    organisation TEXT, -- Organisation name for the guest
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     ticket_count INTEGER NOT NULL DEFAULT 1,
@@ -1422,15 +1424,59 @@ CREATE TABLE IF NOT EXISTS guest_list (
     notes TEXT,
     tickets_sent BOOLEAN DEFAULT 0,
     sent_at DATETIME,
+    order_id TEXT, -- Link to ticket_orders when tickets are sent
     created_by TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
     FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE SET NULL,
+    FOREIGN KEY (order_id) REFERENCES ticket_orders(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_guest_list_concert ON guest_list(concert_id);
 CREATE INDEX IF NOT EXISTS idx_guest_list_email ON guest_list(email);
 CREATE INDEX IF NOT EXISTS idx_guest_list_sent ON guest_list(tickets_sent);
+CREATE INDEX IF NOT EXISTS idx_guest_list_order ON guest_list(order_id);
+
+-- ===========================================
+-- PAYMENT SETTINGS (Mollie/Stripe Configuration)
+-- ===========================================
+
+-- Payment provider settings per association
+CREATE TABLE IF NOT EXISTS payment_settings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL UNIQUE,
+    provider TEXT NOT NULL DEFAULT 'mollie', -- 'mollie' or 'stripe'
+    mollie_profile_id TEXT, -- Mollie profile/organization ID
+    mollie_api_key_encrypted TEXT, -- Encrypted API key
+    stripe_account_id TEXT, -- Stripe Connect account ID
+    stripe_publishable_key TEXT,
+    pass_fees_to_customer BOOLEAN DEFAULT 0, -- Whether to add payment fees to ticket price
+    is_connected BOOLEAN DEFAULT 0,
+    can_receive_payments BOOLEAN DEFAULT 0,
+    can_receive_payouts BOOLEAN DEFAULT 0,
+    connected_at DATETIME,
+    last_status_check DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- Payment method fees (for displaying to users)
+CREATE TABLE IF NOT EXISTS payment_method_fees (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    method TEXT NOT NULL, -- 'ideal', 'creditcard', 'bancontact', etc.
+    provider_fee REAL NOT NULL DEFAULT 0, -- Fee charged by provider (e.g., 0.35)
+    customer_fee REAL NOT NULL DEFAULT 0, -- Fee passed to customer
+    is_enabled BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, method)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_settings_association ON payment_settings(association_id);
+CREATE INDEX IF NOT EXISTS idx_payment_method_fees_association ON payment_method_fees(association_id);
 `;

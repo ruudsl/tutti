@@ -15,6 +15,7 @@ const router = Router();
 
 // Validation schemas
 const createGuestSchema = z.object({
+    organisation: z.string().optional().nullable(),
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Valid email required'),
     ticketCount: z.number().int().min(1, 'At least 1 ticket required').max(20, 'Maximum 20 tickets'),
@@ -23,6 +24,21 @@ const createGuestSchema = z.object({
 });
 
 const updateGuestSchema = createGuestSchema.partial();
+
+/**
+ * Generate order number for guest list entry
+ * Format: GL-YYYY-NNN (e.g., GL-2024-001)
+ */
+function generateOrderNumber(concertId: string): string {
+    const year = new Date().getFullYear();
+    const count = db.prepare(`
+        SELECT COUNT(*) as count FROM guest_list
+        WHERE concert_id = ? AND order_number IS NOT NULL
+    `).get(concertId) as { count: number };
+
+    const num = (count.count + 1).toString().padStart(3, '0');
+    return `GL-${year}-${num}`;
+}
 
 // =============================================
 // GUEST LIST ROUTES (Admin only)
@@ -77,6 +93,8 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
         SELECT
             gl.id,
             gl.concert_id,
+            gl.order_number,
+            gl.organisation,
             gl.name,
             gl.email,
             gl.ticket_count,
@@ -84,6 +102,7 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
             gl.notes,
             gl.tickets_sent,
             gl.sent_at,
+            gl.order_id,
             gl.created_at,
             gl.updated_at,
             c.name as concert_name,
@@ -102,6 +121,8 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
     `).all(...params, limit, offset) as {
         id: string;
         concert_id: string;
+        order_number: string | null;
+        organisation: string | null;
         name: string;
         email: string;
         ticket_count: number;
@@ -109,6 +130,7 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
         notes: string | null;
         tickets_sent: number;
         sent_at: string | null;
+        order_id: string | null;
         created_at: string;
         updated_at: string;
         concert_name: string;
@@ -141,6 +163,8 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
             concertId: e.concert_id,
             concertName: e.concert_name,
             concertDate: e.concert_date,
+            orderNumber: e.order_number,
+            organisation: e.organisation,
             name: e.name,
             email: e.email,
             ticketCount: e.ticket_count,
@@ -149,6 +173,7 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
             notes: e.notes,
             ticketsSent: e.tickets_sent === 1,
             sentAt: e.sent_at,
+            orderId: e.order_id,
             createdBy: e.created_by_id ? {
                 id: e.created_by_id,
                 firstName: e.created_by_first_name!,
@@ -184,10 +209,10 @@ router.post('/concerts/:id/guest-list', authenticateToken, requireRole('admin', 
     const validation = createGuestSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const { name, email, ticketCount, ticketTypeId, notes } = validation.data;
+    const { organisation, name, email, ticketCount, ticketTypeId, notes } = validation.data;
 
     // Check if concert exists
     const concert = db.prepare(`
@@ -210,15 +235,17 @@ router.post('/concerts/:id/guest-list', authenticateToken, requireRole('admin', 
     }
 
     const id = uuidv4();
+    const orderNumber = generateOrderNumber(concertId);
 
     db.prepare(`
-        INSERT INTO guest_list (id, concert_id, name, email, ticket_count, ticket_type_id, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, concertId, name, email, ticketCount, ticketTypeId || null, notes || null, req.user!.id);
+        INSERT INTO guest_list (id, concert_id, order_number, organisation, name, email, ticket_count, ticket_type_id, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, concertId, orderNumber, organisation || null, name, email, ticketCount, ticketTypeId || null, notes || null, req.user!.id);
 
     logger.info(`Guest added to list: ${name} (${email}) for concert ${concert.name}`, {
         guestId: id,
         concertId,
+        orderNumber,
         ticketCount,
         addedBy: req.user!.id,
     });
@@ -226,6 +253,8 @@ router.post('/concerts/:id/guest-list', authenticateToken, requireRole('admin', 
     res.status(201).json({
         id,
         concertId,
+        orderNumber,
+        organisation: organisation || null,
         name,
         email,
         ticketCount,
@@ -249,7 +278,7 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
     const validation = updateGuestSchema.safeParse(req.body);
 
     if (!validation.success) {
-        throw new ApiError(400, validation.error.errors[0].message);
+        throw new ApiError(400, validation.error.issues[0].message);
     }
 
     // Check if entry exists
@@ -265,7 +294,7 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
         throw new ApiError(400, 'Cannot modify entry after tickets have been sent');
     }
 
-    const { name, email, ticketCount, ticketTypeId, notes } = validation.data;
+    const { organisation, name, email, ticketCount, ticketTypeId, notes } = validation.data;
 
     // Check if ticket type exists if provided
     if (ticketTypeId) {
@@ -282,6 +311,10 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
     const updates: string[] = [];
     const params: (string | number | null)[] = [];
 
+    if (organisation !== undefined) {
+        updates.push('organisation = ?');
+        params.push(organisation);
+    }
     if (name !== undefined) {
         updates.push('name = ?');
         params.push(name);
@@ -325,6 +358,8 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
     `).get(id) as {
         id: string;
         concert_id: string;
+        order_number: string | null;
+        organisation: string | null;
         name: string;
         email: string;
         ticket_count: number;
@@ -332,6 +367,7 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
         notes: string | null;
         tickets_sent: number;
         sent_at: string | null;
+        order_id: string | null;
         created_at: string;
         updated_at: string;
         concert_name: string;
@@ -344,6 +380,8 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
         concertId: updated.concert_id,
         concertName: updated.concert_name,
         concertDate: updated.concert_date,
+        orderNumber: updated.order_number,
+        organisation: updated.organisation,
         name: updated.name,
         email: updated.email,
         ticketCount: updated.ticket_count,
@@ -352,6 +390,7 @@ router.put('/guest-list/:id', authenticateToken, requireRole('admin', 'music_com
         notes: updated.notes,
         ticketsSent: updated.tickets_sent === 1,
         sentAt: updated.sent_at,
+        orderId: updated.order_id,
         createdAt: updated.created_at,
         updatedAt: updated.updated_at,
     });
@@ -477,10 +516,10 @@ router.post('/guest-list/:id/send-tickets', authenticateToken, requireRole('admi
             tickets.push({ id: ticketId, code: ticketCode, qrDataUrl: '' });
         }
 
-        // Mark as sent
+        // Mark as sent and link order
         db.prepare(`
-            UPDATE guest_list SET tickets_sent = 1, sent_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-        `).run(id);
+            UPDATE guest_list SET tickets_sent = 1, sent_at = CURRENT_TIMESTAMP, order_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+        `).run(orderId, id);
     });
 
     try {

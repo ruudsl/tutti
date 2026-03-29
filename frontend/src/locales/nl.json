@@ -1608,7 +1608,37 @@
     "sendConfirmMessage": "Wil je {{count}} ticket(s) versturen naar {{name}}?",
     "sendConfirmEmail": "De tickets worden verzonden naar {{email}}.",
     "sendAllConfirmTitle": "Alle Tickets Versturen",
-    "sendAllConfirmMessage": "Wil je {{count}} tickets versturen naar alle gasten die nog geen tickets hebben ontvangen?"
+    "sendAllConfirmMessage": "Wil je {{count}} tickets versturen naar alle gasten die nog geen tickets hebben ontvangen?",
+    "orderNumber": "Ordernummer",
+    "organisation": "Organisatie",
+    "organisationPlaceholder": "bijv. Sponsor, Partner, Pers"
+  },
+  "paymentSettings": {
+    "title": "Betalingsinstellingen",
+    "connect": "Verbinden",
+    "disconnect": "Verbinding verbreken",
+    "connectMollie": "Mollie verbinden",
+    "connectSuccess": "Succesvol verbonden met {{name}}",
+    "disconnectSuccess": "Mollie verbinding verbroken",
+    "disconnectConfirmTitle": "Verbinding verbreken?",
+    "disconnectConfirmMessage": "Weet je zeker dat je de Mollie verbinding wilt verbreken? Online ticketverkoop wordt hiermee uitgeschakeld.",
+    "testConnection": "Test verbinding",
+    "connectionOk": "Verbinding werkt correct",
+    "connectionFailed": "Verbinding mislukt",
+    "apiKey": "API-sleutel",
+    "apiKeyHelp": "Vind je live API-sleutel in je Mollie Dashboard onder Developers > API Keys",
+    "connectedSince": "Verbonden sinds",
+    "connectedMessage": "Je Mollie account is verbonden en klaar om betalingen te ontvangen.",
+    "notConnected": "Geen Mollie account verbonden. Verbind je account om online ticketverkoop in te schakelen.",
+    "canReceivePayments": "Kan betalingen ontvangen",
+    "canReceivePayouts": "Kan uitbetalingen ontvangen",
+    "feesOverview": "Kosten per betaalmethode",
+    "paymentMethod": "Betaalmethode",
+    "providerFee": "Mollie kosten",
+    "customerFee": "Klantkosten",
+    "feeSettings": "Kosteninstelling",
+    "passFeesToCustomer": "Transactiekosten doorberekenen aan klant",
+    "passFeesToCustomerHelp": "Wanneer ingeschakeld worden de transactiekosten bovenop de ticketprijs berekend."
   },
   "pageTitle": {
     "dashboard": "Dashboard - Harmonie",
@@ -1644,7 +1674,8 @@
     "guestList": "Gastenlijst - Harmonie",
     "ticketScanner": "Ticket Scanner - Harmonie",
     "sessions": "Actieve sessies - Harmonie",
-    "dataExport": "Mijn gegevens - Harmonie"
+    "dataExport": "Mijn gegevens - Harmonie",
+    "paymentSettings": "Betalingsinstellingen - Harmonie"
   },
   "sessions": {
     "title": "Actieve Sessies",

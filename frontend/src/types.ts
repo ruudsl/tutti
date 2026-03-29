@@ -753,6 +753,8 @@ export interface GuestListEntry {
   concertId: string;
   concertName?: string;
   concertDate?: string;
+  orderNumber: string | null;
+  organisation: string | null;
   name: string;
   email: string;
   ticketCount: number;
@@ -761,6 +763,7 @@ export interface GuestListEntry {
   notes: string | null;
   ticketsSent: boolean;
   sentAt: string | null;
+  orderId: string | null;
   createdBy: {
     id: string;
     firstName: string;
@@ -787,4 +790,33 @@ export interface GuestListResponse {
     totalPages: number;
   };
   summary: GuestListSummary;
+}
+
+// ==================== PAYMENT SETTINGS ====================
+
+export interface PaymentMethodFee {
+  method: string;
+  providerFee: number;
+  customerFee: number;
+  isEnabled: boolean;
+}
+
+export interface PaymentSettings {
+  provider: 'mollie' | 'stripe' | null;
+  isConnected: boolean;
+  canReceivePayments: boolean;
+  canReceivePayouts: boolean;
+  profileId: string | null;
+  passFeesToCustomer: boolean;
+  connectedAt: string | null;
+  fees: PaymentMethodFee[];
+}
+
+export interface MollieStatus {
+  operational: boolean;
+  incidents: {
+    name: string;
+    status: string;
+    updatedAt: string;
+  }[];
 }

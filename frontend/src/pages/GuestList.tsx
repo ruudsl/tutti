@@ -32,6 +32,7 @@ export default function GuestList() {
 
   // Form state
   const [formData, setFormData] = useState({
+    organisation: '',
     name: '',
     email: '',
     ticketCount: 1,
@@ -68,6 +69,7 @@ export default function GuestList() {
   const addMutation = useMutation({
     mutationFn: (guest: typeof formData) => addGuest(concertId!, {
       ...guest,
+      organisation: guest.organisation || null,
       ticketTypeId: guest.ticketTypeId || null,
       notes: guest.notes || null,
     }),
@@ -136,6 +138,7 @@ export default function GuestList() {
 
   const resetForm = () => {
     setFormData({
+      organisation: '',
       name: '',
       email: '',
       ticketCount: 1,
@@ -147,6 +150,7 @@ export default function GuestList() {
   const openEditModal = (entry: GuestListEntry) => {
     setSelectedEntry(entry);
     setFormData({
+      organisation: entry.organisation || '',
       name: entry.name,
       email: entry.email,
       ticketCount: entry.ticketCount,
@@ -274,24 +278,33 @@ export default function GuestList() {
           <table className="table">
             <thead>
               <tr>
+                <th>{t('guestList.orderNumber')}</th>
+                <th>{t('guestList.organisation')}</th>
                 <th>{t('guestList.guest')}</th>
                 <th>{t('guestList.ticketCount')}</th>
-                <th>{t('guestList.ticketType')}</th>
-                <th>{t('common.status')}</th>
                 <th>{t('guestList.addedBy')}</th>
+                <th>{t('common.status')}</th>
                 <th style={{ width: 120 }}></th>
               </tr>
             </thead>
             <tbody>
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
                     {t('guestList.noGuests')}
                   </td>
                 </tr>
               ) : (
                 entries.map((entry) => (
                   <tr key={entry.id}>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {entry.orderNumber || '-'}
+                      </span>
+                    </td>
+                    <td>
+                      {entry.organisation || <span style={{ color: 'var(--text-light)' }}>-</span>}
+                    </td>
                     <td>
                       <div style={{ fontWeight: 500 }}>{entry.name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{entry.email}</div>
@@ -305,7 +318,16 @@ export default function GuestList() {
                       <span style={{ fontSize: '1.125rem', fontWeight: 500 }}>{entry.ticketCount}</span>
                     </td>
                     <td>
-                      {entry.ticketTypeName || <span style={{ color: 'var(--text-light)' }}>{t('guestList.defaultTicket')}</span>}
+                      {entry.createdBy ? (
+                        <div style={{ fontSize: '0.875rem' }}>
+                          {entry.createdBy.firstName} {entry.createdBy.lastName}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-light)' }}>-</span>
+                      )}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                        {formatDate(entry.createdAt)}
+                      </div>
                     </td>
                     <td>
                       {entry.ticketsSent ? (
@@ -322,18 +344,6 @@ export default function GuestList() {
                           {formatDate(entry.sentAt)}
                         </div>
                       )}
-                    </td>
-                    <td>
-                      {entry.createdBy ? (
-                        <div style={{ fontSize: '0.875rem' }}>
-                          {entry.createdBy.firstName} {entry.createdBy.lastName}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>-</span>
-                      )}
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                        {formatDate(entry.createdAt)}
-                      </div>
                     </td>
                     <td>
                       <div className="flex gap-1">
@@ -405,6 +415,16 @@ export default function GuestList() {
           title={t('guestList.addGuest')}
         >
         <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(formData); }}>
+          <div className="form-group">
+            <label className="form-label">{t('guestList.organisation')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.organisation}
+              onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
+              placeholder={t('guestList.organisationPlaceholder')}
+            />
+          </div>
           <div className="form-group">
             <label className="form-label">{t('guestList.name')} *</label>
             <input
@@ -482,6 +502,16 @@ export default function GuestList() {
           title={t('guestList.editGuest')}
         >
         <form onSubmit={(e) => { e.preventDefault(); if (selectedEntry) updateMutation.mutate({ id: selectedEntry.id, ...formData }); }}>
+          <div className="form-group">
+            <label className="form-label">{t('guestList.organisation')}</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.organisation}
+              onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
+              placeholder={t('guestList.organisationPlaceholder')}
+            />
+          </div>
           <div className="form-group">
             <label className="form-label">{t('guestList.name')} *</label>
             <input

@@ -1173,7 +1173,8 @@
     "guestList": "Guest List - Harmonie",
     "ticketScanner": "Ticket Scanner - Harmonie",
     "sessions": "Active Sessions - Harmonie",
-    "dataExport": "Your Data - Harmonie"
+    "dataExport": "Your Data - Harmonie",
+    "paymentSettings": "Payment Settings - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -1627,7 +1628,37 @@
     "sendConfirmMessage": "Do you want to send {{count}} ticket(s) to {{name}}?",
     "sendConfirmEmail": "The tickets will be sent to {{email}}.",
     "sendAllConfirmTitle": "Send All Tickets",
-    "sendAllConfirmMessage": "Do you want to send {{count}} tickets to all guests who haven't received tickets yet?"
+    "sendAllConfirmMessage": "Do you want to send {{count}} tickets to all guests who haven't received tickets yet?",
+    "orderNumber": "Order Number",
+    "organisation": "Organisation",
+    "organisationPlaceholder": "e.g. Sponsor, Partner, Press"
+  },
+  "paymentSettings": {
+    "title": "Payment Settings",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connectMollie": "Connect Mollie",
+    "connectSuccess": "Successfully connected to {{name}}",
+    "disconnectSuccess": "Mollie connection disconnected",
+    "disconnectConfirmTitle": "Disconnect?",
+    "disconnectConfirmMessage": "Are you sure you want to disconnect the Mollie connection? Online ticket sales will be disabled.",
+    "testConnection": "Test connection",
+    "connectionOk": "Connection working correctly",
+    "connectionFailed": "Connection failed",
+    "apiKey": "API Key",
+    "apiKeyHelp": "Find your live API key in your Mollie Dashboard under Developers > API Keys",
+    "connectedSince": "Connected since",
+    "connectedMessage": "Your Mollie account is connected and ready to receive payments.",
+    "notConnected": "No Mollie account connected. Connect your account to enable online ticket sales.",
+    "canReceivePayments": "Can receive payments",
+    "canReceivePayouts": "Can receive payouts",
+    "feesOverview": "Fees per payment method",
+    "paymentMethod": "Payment Method",
+    "providerFee": "Mollie fee",
+    "customerFee": "Customer fee",
+    "feeSettings": "Fee settings",
+    "passFeesToCustomer": "Pass transaction fees to customer",
+    "passFeesToCustomerHelp": "When enabled, transaction fees will be added on top of the ticket price."
   },
   "sessions": {
     "title": "Active Sessions",

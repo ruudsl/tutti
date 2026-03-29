@@ -2691,6 +2691,7 @@ export const addGuest = async (concertId: string, guest: {
   ticketCount: number;
   ticketTypeId?: string | null;
   notes?: string | null;
+  organisation?: string | null;
 }): Promise<GuestListEntry> => {
   const { data } = await api.post(`/concerts/${concertId}/guest-list`, guest);
   return data;
@@ -2703,6 +2704,7 @@ export const updateGuest = async (guestId: string, guest: Partial<{
   ticketCount: number;
   ticketTypeId: string | null;
   notes: string | null;
+  organisation: string | null;
 }>): Promise<GuestListEntry> => {
   const { data } = await api.put(`/guest-list/${guestId}`, guest);
   return data;
@@ -2732,6 +2734,69 @@ export const sendAllGuestTickets = async (concertId: string): Promise<{
   errors?: string[];
 }> => {
   const { data } = await api.post(`/concerts/${concertId}/guest-list/send-all`);
+  return data;
+};
+
+// =============================================
+// PAYMENT SETTINGS API
+// =============================================
+
+import type { PaymentSettings, MollieStatus } from './types';
+
+// Get payment settings
+export const getPaymentSettings = async (): Promise<PaymentSettings> => {
+  const { data } = await api.get('/payment-settings');
+  return data;
+};
+
+// Update payment settings
+export const updatePaymentSettings = async (settings: {
+  passFeesToCustomer?: boolean;
+}): Promise<{ success: boolean }> => {
+  const { data } = await api.put('/payment-settings', settings);
+  return data;
+};
+
+// Update payment method fee
+export const updatePaymentMethodFee = async (method: string, fee: {
+  customerFee: number;
+  isEnabled?: boolean;
+}): Promise<{ success: boolean }> => {
+  const { data } = await api.put(`/payment-settings/fees/${method}`, fee);
+  return data;
+};
+
+// Connect Mollie account
+export const connectMollie = async (apiKey: string): Promise<{
+  success: boolean;
+  profileId: string;
+  organisationName: string;
+  canReceivePayments: boolean;
+}> => {
+  const { data } = await api.post('/payment-settings/mollie/connect', { apiKey });
+  return data;
+};
+
+// Disconnect Mollie account
+export const disconnectMollie = async (): Promise<{ success: boolean }> => {
+  const { data } = await api.post('/payment-settings/mollie/disconnect');
+  return data;
+};
+
+// Get Mollie status
+export const getMollieStatus = async (): Promise<MollieStatus & { statusDescription?: string }> => {
+  const { data } = await api.get('/payment-settings/mollie/status');
+  return data;
+};
+
+// Test Mollie connection
+export const testMollieConnection = async (): Promise<{
+  connected: boolean;
+  canReceivePayments: boolean;
+  canReceivePayouts: boolean;
+  error?: string;
+}> => {
+  const { data } = await api.get('/payment-settings/mollie/test');
   return data;
 };
 

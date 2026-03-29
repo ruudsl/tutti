@@ -82,6 +82,7 @@ import MyTickets from './pages/MyTickets';
 import TicketScanner from './pages/TicketScanner';
 import TicketSales from './pages/TicketSales';
 import GuestList from './pages/GuestList';
+import PaymentSettings from './pages/PaymentSettings';
 import PublicTicketSale from './pages/PublicTicketSale';
 import MockPayment from './pages/MockPayment';
 
@@ -405,6 +406,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
               <TicketScanner />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="payment-settings"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <PaymentSettings />
             </PrivateRoute>
           }
         />
