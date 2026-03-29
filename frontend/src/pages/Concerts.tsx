@@ -199,6 +199,15 @@ export default function Concerts() {
     });
   };
 
+  // Convert datetime-local value to ISO 8601 format
+  const toISODateTime = (localDateTime: string): string | undefined => {
+    if (!localDateTime) return undefined;
+    // datetime-local gives "YYYY-MM-DDTHH:mm", we need full ISO with timezone
+    const date = new Date(localDateTime);
+    if (isNaN(date.getTime())) return undefined;
+    return date.toISOString();
+  };
+
   const handleCreateTicketType = async (e: React.FormEvent) => {
     e.preventDefault();
     createTicketTypeMutation.mutate({
@@ -207,8 +216,8 @@ export default function Concerts() {
       quantity: parseInt(ticketTypeFormData.quantity, 10),
       description: ticketTypeFormData.description || undefined,
       maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
-      saleStart: ticketTypeFormData.saleStart || undefined,
-      saleEnd: ticketTypeFormData.saleEnd || undefined,
+      saleStart: toISODateTime(ticketTypeFormData.saleStart),
+      saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
     });
   };
 
@@ -223,10 +232,19 @@ export default function Concerts() {
         quantity: parseInt(ticketTypeFormData.quantity, 10),
         description: ticketTypeFormData.description || undefined,
         maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
-        saleStart: ticketTypeFormData.saleStart || undefined,
-        saleEnd: ticketTypeFormData.saleEnd || undefined,
+        saleStart: toISODateTime(ticketTypeFormData.saleStart),
+        saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
       },
     });
+  };
+
+  // Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
+  const toDateTimeLocal = (isoDate: string | null): string => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return '';
+    // Format as YYYY-MM-DDTHH:mm for datetime-local input
+    return date.toISOString().slice(0, 16);
   };
 
   const openEditTicketTypeModal = (ticketType: TicketType) => {
@@ -237,8 +255,8 @@ export default function Concerts() {
       quantity: ticketType.quantity.toString(),
       description: ticketType.description || '',
       maxPerOrder: ticketType.maxPerOrder.toString(),
-      saleStart: ticketType.saleStart?.split('T')[0] || '',
-      saleEnd: ticketType.saleEnd?.split('T')[0] || '',
+      saleStart: toDateTimeLocal(ticketType.saleStart),
+      saleEnd: toDateTimeLocal(ticketType.saleEnd),
     });
   };
 
@@ -823,7 +841,7 @@ export default function Concerts() {
                   <th>{t('common.name')}</th>
                   <th>{t('tickets.price')}</th>
                   <th>{t('tickets.available')}</th>
-                  <th>{t('tickets.status')}</th>
+                  <th>{t('common.status')}</th>
                   <th></th>
                 </tr>
               </thead>
