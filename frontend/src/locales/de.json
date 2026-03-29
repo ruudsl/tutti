@@ -86,7 +86,8 @@
     "ticketSales": "Ticketverkauf",
     "ticketScanner": "Ticket Scanner",
     "practiceSchedules": "Übungspläne",
-    "health": "Systemstatus"
+    "health": "Systemstatus",
+    "paymentSettings": "Zahlungen"
   },
   "roles": {
     "admin": "Administrator",

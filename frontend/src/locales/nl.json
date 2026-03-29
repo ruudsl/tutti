@@ -89,7 +89,8 @@
     "ticketSales": "Ticketverkoop",
     "ticketScanner": "Ticket Scanner",
     "practiceSchedules": "Oefenschema's",
-    "health": "Systeemstatus"
+    "health": "Systeemstatus",
+    "paymentSettings": "Betalingen"
   },
   "roles": {
     "admin": "Beheerder",

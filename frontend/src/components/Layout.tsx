@@ -86,7 +86,7 @@ export default function Layout() {
   const ledenPaths = ['/members', '/issues', '/practice-schedules'];
   const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'];
   const inventarisPaths = ['/equipment', '/uniforms'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'];
+  const adminPaths = ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'];
 
   const isAgendaActive = agendaPaths.some(p => location.pathname.startsWith(p));
   const isOrchestraActive = orchestraPaths.some(p => location.pathname.startsWith(p));

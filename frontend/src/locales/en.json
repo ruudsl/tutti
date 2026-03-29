@@ -89,7 +89,8 @@
     "ticketSales": "Ticket Sales",
     "ticketScanner": "Ticket Scanner",
     "practiceSchedules": "Practice Schedules",
-    "health": "System Health"
+    "health": "System Health",
+    "paymentSettings": "Payments"
   },
   "roles": {
     "admin": "Administrator",
