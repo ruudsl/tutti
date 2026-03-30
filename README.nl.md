@@ -1,4 +1,4 @@
-# Tutti Muziek App
+# Harmonie Muziek App
 
 ![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
@@ -26,7 +26,7 @@ Een complete webapplicatie voor het beheren van muziekstukken, repetities, conce
 
 ## Overzicht
 
-Tutti is een multi-tenant webapplicatie ontworpen voor harmonieorkesten, fanfares en brassbands. De applicatie centraliseert het beheer van muziekstukken (PDF's), repetitieplanningen, concertprogramma's, leningen van muziekmateriaal en ledenbeheer. Meerdere verenigingen kunnen dezelfde installatie delen en optioneel muziek met elkaar delen.
+Harmonie is een multi-tenant webapplicatie ontworpen voor harmonieorkesten, fanfares en brassbands. De applicatie centraliseert het beheer van muziekstukken (PDF's), repetitieplanningen, concertprogramma's, leningen van muziekmateriaal en ledenbeheer. Meerdere verenigingen kunnen dezelfde installatie delen en optioneel muziek met elkaar delen.
 
 ### Kernfunctionaliteit
 
@@ -256,8 +256,8 @@ flowchart LR
 
 ```bash
 # 1. Clone de repository
-git clone https://github.com/ruudsl/tutti.git
-cd tutti
+git clone https://github.com/ruudsl/harmonie.git
+cd harmonie
 
 # 2. Installeer alle dependencies (backend + frontend)
 npm install
@@ -280,7 +280,7 @@ De applicatie is nu beschikbaar op:
 ### Standaard inloggegevens
 
 Bij de eerste start wordt automatisch een admin-account aangemaakt:
-- **E-mail:** `admin@tutti.nl`
+- **E-mail:** `admin@harmonie.nl`
 - **Wachtwoord:** wordt gegenereerd en getoond in de console-output
 
 Je kunt ook vooraf een wachtwoord instellen via de environment variable `ADMIN_INIT_PASSWORD`.
@@ -297,7 +297,7 @@ Je kunt ook vooraf een wachtwoord instellen via de environment variable `ADMIN_I
 | `PORT` | `3001` | Poort voor de API server |
 | `JWT_SECRET` | *(dev-only default)* | **Verplicht in productie!** Genereer met `openssl rand -hex 32` |
 | `JWT_EXPIRES_IN` | `7d` | Geldigheidsduur JWT tokens (bijv. `1d`, `12h`) |
-| `DB_PATH` | `./data/tutti.db` | Pad naar SQLite database bestand |
+| `DB_PATH` | `./data/harmonie.db` | Pad naar SQLite database bestand |
 | `UPLOAD_DIR` | `./uploads` | Map voor geüploade PDF bestanden |
 | `MP3_UPLOAD_DIR` | `./uploads/mp3` | Map voor geüploade MP3 bestanden |
 | `MAX_FILE_SIZE` | `52428800` | Max bestandsgrootte in bytes (standaard 50MB) |
@@ -384,10 +384,10 @@ npm test --workspace=frontend && npm test --workspace=backend
 
 2. **Klik op "New" → "Web Service"**
 
-3. **Connect je GitHub repository** en selecteer de tutti repository
+3. **Connect je GitHub repository** en selecteer de harmonie repository
 
 4. **Configureer de service:**
-   - **Name:** `tutti-backend`
+   - **Name:** `harmonie-backend`
    - **Region:** Frankfurt (EU Central)
    - **Root Directory:** `backend`
    - **Runtime:** Node
@@ -401,7 +401,7 @@ npm test --workspace=frontend && npm test --workspace=backend
    | `NODE_ENV` | `production` |
    | `PORT` | `10000` |
    | `JWT_SECRET` | *(genereer met `openssl rand -hex 32`)* |
-   | `DB_PATH` | `/opt/render/project/data/tutti.db` |
+   | `DB_PATH` | `/opt/render/project/data/harmonie.db` |
    | `UPLOAD_DIR` | `/opt/render/project/data/uploads` |
    | `MP3_UPLOAD_DIR` | `/opt/render/project/data/uploads/mp3` |
    | `FRONTEND_URL` | *(vul later in na frontend deployment)* |
@@ -426,7 +426,7 @@ npm test --workspace=frontend && npm test --workspace=backend
 
    | Key | Value |
    |---|---|
-   | `VITE_API_URL` | Backend URL + `/api`, bijv. `https://tutti-backend.onrender.com/api` |
+   | `VITE_API_URL` | Backend URL + `/api`, bijv. `https://harmonie-backend.onrender.com/api` |
 
 5. **Deploy** en noteer de frontend URL
 
@@ -479,7 +479,7 @@ Authorization: Bearer <token>
 ## Projectstructuur
 
 ```
-tutti/
+harmonie/
 ├── backend/
 │   ├── src/
 │   │   ├── config.ts              # Configuratie en environment variables
