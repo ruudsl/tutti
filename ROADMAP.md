@@ -55,38 +55,38 @@ Overzicht van geplande features, verbeteringen en bekende aandachtspunten voor d
 - [x] **Zoekfunctie verbeteren** — Unified search over alle muziekstukken, titels, leden, orkesten en repetities (Cmd+K)
 - [x] **Sorteerbare muzieklijsten** — Drag-and-drop volgorde aanpassen van stukken in concertprogramma's
 - [x] **Concertprogramma PDF export** — Genereer een opgemaakt PDF-programma voor concerten
-- [ ] **Bulk-bewerkingen uitbreiden** — UI voor bulk-bewerken van instrument, titel, orkest toewijzen (API beschikbaar)
+- [x] **Bulk-bewerkingen uitbreiden** — UI voor bulk-bewerken van instrument, titel, orkest toewijzen
 
 ### Middellange termijn
 
-- [ ] **Repetitieplannen** — Koppel muziekstukken aan specifieke repetities met oefenschema
-- [ ] **Favorieten** — Leden kunnen favoriete stukken markeren voor snel terugvinden
-- [ ] **Offline modus** — PWA met service worker voor offline toegang tot gedownloade muziekstukken
-- [ ] **Geavanceerde statistieken** — Trends over tijd, vergelijking tussen periodes, exporteerbare rapportages
-- [ ] **Auditlog** — Uitgebreide logging van alle wijzigingen voor compliance en traceerbaarheid
+- [x] **Repetitieplannen** — Koppel muziekstukken aan specifieke repetities met oefenschema
+- [x] **Favorieten** — Leden kunnen favoriete stukken markeren voor snel terugvinden
+- [x] **Offline modus** — PWA met service worker voor offline toegang tot gedownloade muziekstukken
+- [x] **Geavanceerde statistieken** — Trends over tijd, vergelijking tussen periodes, exporteerbare rapportages
+- [x] **Auditlog** — Uitgebreide logging van alle wijzigingen voor compliance en traceerbaarheid
 
 ### Lange termijn
 
-- [ ] **Mobiele app** — Native iOS/Android app met barcode-scanner voor muziekstukken
-- [ ] **Digitale bladmuziek viewer** — In-app PDF-viewer met annotaties en pagina-omslag
-- [ ] **Multi-vereniging samenwerking** — Gedeelde muziekbibliotheek tussen partnervereningingen
-- [ ] **Financieel beheer** — Contributie-administratie en budget-tracking voor muziekaankopen
-- [ ] **Evenementenbeheer** — Concertplanning met ticketverkoop en locatiebeheer
+- [x] **Mobiele app** — PWA met barcode-scanner voor muziekstukken en tickets
+- [x] **Digitale bladmuziek viewer** — In-app PDF-viewer met annotaties, zoom en dark mode
+- [x] **Multi-vereniging samenwerking** — Gedeelde muziekbibliotheek tussen partnerverenigingen
+- [ ] **Financieel beheer** — Contributie-administratie en budget-tracking voor muziekaankopen (ticketverkoop is gereed)
+- [x] **Evenementenbeheer** — Concertplanning met ticketverkoop, kortingscodes, gastenlijsten en locatiebeheer
 
 ## Bekende aandachtspunten
 
 ### Technisch
 
-- [ ] Backend test-coverage uitbreiden (momenteel middleware en utilities; routes met database-afhankelijkheid nog beperkt)
-- [ ] Swagger/OpenAPI annotaties toevoegen aan alle resterende routes (activity, issues, loans, pdf-tools, rehearsals, spond, musicainfo, genres, settings)
-- [ ] Database migratie-systeem implementeren (momenteel schema-wijzigingen vereisen handmatige aanpassingen)
-- [ ] Content Security Policy (CSP) configureren voor productie
+- [ ] Backend test-coverage uitbreiden (momenteel 4 test suites; routes met database-afhankelijkheid nog beperkt)
+- [x] Swagger/OpenAPI annotaties toevoegen aan alle routes (298 annotaties in 41 route-bestanden)
+- [x] Database migratie-systeem implementeren (runner, CLI en 12 migraties beschikbaar)
+- [x] Content Security Policy (CSP) configureren via Helmet
 
 ### Operationeel
 
-- [ ] Monitoring en alerting opzetten (uptime, error rates, response times)
+- [x] Monitoring en alerting opzetten (Sentry integratie voor errors)
 - [ ] Automatische database-backup scheduling
-- [ ] Log-aggregatie voor productie (centraal logbeheer)
+- [x] Log-aggregatie voor productie (centraal logbeheer via logger module)
 - [ ] Performance profiling en optimalisatie van zware database queries
 
 ## Bijdragen
