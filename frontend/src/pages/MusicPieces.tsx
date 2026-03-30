@@ -5,11 +5,14 @@ import {
   useUpdateMusicPiece,
   useDeleteMusicPiece,
   useDeleteMusicPiecesBulk,
+  useBulkUpdatePieces,
   useRefreshInstrumentLinks,
 } from '../hooks/useMusicPieces';
+import { useMyMusicLists } from '../hooks/useMusicLists';
 import { useInstruments } from '../hooks/useInstruments';
 import { useAuth } from '../context/AuthContext';
 import { downloadMusicPiece, logActivity } from '../api';
+import { Modal } from '../components/Modal';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -33,6 +36,12 @@ export default function MusicPieces() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showBulkInstrumentModal, setShowBulkInstrumentModal] = useState(false);
+  const [showBulkAddToListModal, setShowBulkAddToListModal] = useState(false);
+  const [showBulkRemoveFromListModal, setShowBulkRemoveFromListModal] = useState(false);
+  const [bulkInstrumentId, setBulkInstrumentId] = useState<string>('');
+  const [bulkListId, setBulkListId] = useState<string>('');
+  const [showBulkActionsMenu, setShowBulkActionsMenu] = useState(false);
   const [page, setPage] = useState(1);
 
   const canManage = user && ([ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] as string[]).includes(user.role);
@@ -62,6 +71,7 @@ export default function MusicPieces() {
   // TanStack Query hooks
   const { data: paginatedData, isLoading: piecesLoading } = useMusicPiecesPaginated(filters);
   const { data: instruments = [], isLoading: instrumentsLoading } = useInstruments();
+  const { data: musicLists = [] } = useMyMusicLists();
 
   const pieces = paginatedData?.data ?? [];
   const totalPieces = paginatedData?.total ?? 0;
@@ -70,6 +80,7 @@ export default function MusicPieces() {
   const updateMutation = useUpdateMusicPiece();
   const deleteMutation = useDeleteMusicPiece();
   const bulkDeleteMutation = useDeleteMusicPiecesBulk();
+  const bulkUpdateMutation = useBulkUpdatePieces();
   const refreshMutation = useRefreshInstrumentLinks();
 
   const isLoading = piecesLoading || instrumentsLoading;
@@ -122,6 +133,48 @@ export default function MusicPieces() {
       onSuccess: () => {
         setSelectedIds(new Set());
         setShowBulkDeleteConfirm(false);
+      },
+    });
+  };
+
+  const handleBulkInstrumentChange = () => {
+    if (selectedIds.size === 0) return;
+    bulkUpdateMutation.mutate({
+      pieceIds: Array.from(selectedIds),
+      updates: { instrumentId: bulkInstrumentId || null },
+    }, {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setShowBulkInstrumentModal(false);
+        setBulkInstrumentId('');
+      },
+    });
+  };
+
+  const handleBulkAddToList = () => {
+    if (selectedIds.size === 0 || !bulkListId) return;
+    bulkUpdateMutation.mutate({
+      pieceIds: Array.from(selectedIds),
+      updates: { addToListId: bulkListId },
+    }, {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setShowBulkAddToListModal(false);
+        setBulkListId('');
+      },
+    });
+  };
+
+  const handleBulkRemoveFromList = () => {
+    if (selectedIds.size === 0 || !bulkListId) return;
+    bulkUpdateMutation.mutate({
+      pieceIds: Array.from(selectedIds),
+      updates: { removeFromListId: bulkListId },
+    }, {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setShowBulkRemoveFromListModal(false);
+        setBulkListId('');
       },
     });
   };
@@ -216,12 +269,107 @@ export default function MusicPieces() {
               <span className="text-sm text-light">
                 {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
               </span>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => setShowBulkDeleteConfirm(true)}
-              >
-                {t('musicPieces.bulk.deleteSelected')}
-              </button>
+              <div className="dropdown" style={{ position: 'relative' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowBulkActionsMenu(!showBulkActionsMenu)}
+                  aria-expanded={showBulkActionsMenu}
+                  aria-haspopup="true"
+                >
+                  {t('bulk.title')} ▾
+                </button>
+                {showBulkActionsMenu && (
+                  <div
+                    className="dropdown-menu show"
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      minWidth: '200px',
+                      backgroundColor: 'var(--card-bg)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      zIndex: 1000,
+                    }}
+                  >
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowBulkActionsMenu(false);
+                        setShowBulkInstrumentModal(true);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {t('bulk.changeInstrument')}
+                    </button>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowBulkActionsMenu(false);
+                        setShowBulkAddToListModal(true);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {t('bulk.addToList')}
+                    </button>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowBulkActionsMenu(false);
+                        setShowBulkRemoveFromListModal(true);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {t('bulk.removeFromList')}
+                    </button>
+                    <hr style={{ margin: '0.25rem 0', borderColor: 'var(--border-color)' }} />
+                    <button
+                      className="dropdown-item text-danger"
+                      onClick={() => {
+                        setShowBulkActionsMenu(false);
+                        setShowBulkDeleteConfirm(true);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--danger)',
+                      }}
+                    >
+                      {t('bulk.delete')}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -451,6 +599,135 @@ export default function MusicPieces() {
           confirmLabel={t('common.delete')}
           isLoading={bulkDeleteMutation.isPending}
         />
+      )}
+
+      {/* Bulk Change Instrument Modal */}
+      {showBulkInstrumentModal && (
+        <Modal title={t('bulk.changeInstrument')} onClose={() => setShowBulkInstrumentModal(false)}>
+          <p className="text-light mb-2">
+            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
+          </p>
+          <div className="form-group">
+            <label className="form-label">{t('musicPieces.edit.instrument')}</label>
+            <select
+              className="form-control form-select"
+              value={bulkInstrumentId}
+              onChange={(e) => setBulkInstrumentId(e.target.value)}
+            >
+              <option value="">{t('musicPieces.edit.selectInstrument')}</option>
+              {instruments.map((instrument) => (
+                <option key={instrument.id} value={instrument.id}>
+                  {instrument.name}
+                </option>
+              ))}
+            </select>
+            <small className="text-light">
+              {t('bulk.instrumentHelp')}
+            </small>
+          </div>
+          <div className="flex gap-1 justify-end mt-2">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowBulkInstrumentModal(false);
+                setBulkInstrumentId('');
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleBulkInstrumentChange}
+              disabled={bulkUpdateMutation.isPending}
+            >
+              {bulkUpdateMutation.isPending ? t('common.loading') : t('common.save')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Add to List Modal */}
+      {showBulkAddToListModal && (
+        <Modal title={t('bulk.addToList')} onClose={() => setShowBulkAddToListModal(false)}>
+          <p className="text-light mb-2">
+            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
+          </p>
+          <div className="form-group">
+            <label className="form-label">{t('bulk.selectList')}</label>
+            <select
+              className="form-control form-select"
+              value={bulkListId}
+              onChange={(e) => setBulkListId(e.target.value)}
+            >
+              <option value="">{t('bulk.selectListPlaceholder')}</option>
+              {musicLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} {list.orchestraName ? `(${list.orchestraName})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-1 justify-end mt-2">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowBulkAddToListModal(false);
+                setBulkListId('');
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleBulkAddToList}
+              disabled={!bulkListId || bulkUpdateMutation.isPending}
+            >
+              {bulkUpdateMutation.isPending ? t('common.loading') : t('common.add')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Remove from List Modal */}
+      {showBulkRemoveFromListModal && (
+        <Modal title={t('bulk.removeFromList')} onClose={() => setShowBulkRemoveFromListModal(false)}>
+          <p className="text-light mb-2">
+            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
+          </p>
+          <div className="form-group">
+            <label className="form-label">{t('bulk.selectList')}</label>
+            <select
+              className="form-control form-select"
+              value={bulkListId}
+              onChange={(e) => setBulkListId(e.target.value)}
+            >
+              <option value="">{t('bulk.selectListPlaceholder')}</option>
+              {musicLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} {list.orchestraName ? `(${list.orchestraName})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-1 justify-end mt-2">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowBulkRemoveFromListModal(false);
+                setBulkListId('');
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={handleBulkRemoveFromList}
+              disabled={!bulkListId || bulkUpdateMutation.isPending}
+            >
+              {bulkUpdateMutation.isPending ? t('common.loading') : t('common.delete')}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

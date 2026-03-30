@@ -2596,7 +2596,10 @@
     "delete": "Verwijderen",
     "deleteConfirm": "Weet je zeker dat je {{count}} stukken wilt verwijderen?",
     "updated": "{{count}} stukken bijgewerkt",
-    "deleted": "{{count}} stukken verwijderd"
+    "deleted": "{{count}} stukken verwijderd",
+    "selectList": "Selecteer lijst",
+    "selectListPlaceholder": "Kies een lijst...",
+    "instrumentHelp": "Laat leeg om het instrument te verwijderen"
   },
   "keyboard": {
     "title": "Sneltoetsen",

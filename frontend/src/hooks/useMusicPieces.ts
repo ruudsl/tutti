@@ -6,6 +6,7 @@ import {
   updateMusicPiece,
   deleteMusicPiece,
   deleteMusicPiecesBulk,
+  bulkUpdatePieces,
   refreshInstrumentLinks,
   type PaginatedResponse,
 } from '../api';
@@ -101,6 +102,32 @@ export function useDeleteMusicPiecesBulk() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess(`${result.count} muziekstukken verwijderd`);
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+}
+
+/**
+ * Hook to bulk update music pieces (instrument, add/remove from list)
+ */
+export function useBulkUpdatePieces() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ pieceIds, updates }: {
+      pieceIds: string[];
+      updates: {
+        instrumentId?: string | null;
+        addToListId?: string;
+        removeFromListId?: string;
+      };
+    }) => bulkUpdatePieces(pieceIds, updates),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      showSuccess(`${result.updated} muziekstukken bijgewerkt`);
     },
     onError: (error) => {
       showError(getErrorMessage(error));

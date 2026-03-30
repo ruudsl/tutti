@@ -2019,5 +2019,21 @@
       "findQRInAccount": "Sie finden den QR-Code in der HTML-Version dieser E-Mail oder in Ihrem Konto unter \"Meine Tickets\".",
       "lookForward": "Wir freuen uns auf Sie!"
     }
+  },
+  "bulk": {
+    "title": "Massenaktionen",
+    "selected": "ausgewahlt",
+    "selectAll": "Alle auswahlen",
+    "deselectAll": "Auswahl aufheben",
+    "addToList": "Zur Liste hinzufugen",
+    "removeFromList": "Von Liste entfernen",
+    "changeInstrument": "Instrument andern",
+    "delete": "Loschen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie {{count}} Stucke loschen mochten?",
+    "updated": "{{count}} Stucke aktualisiert",
+    "deleted": "{{count}} Stucke geloscht",
+    "selectList": "Liste auswahlen",
+    "selectListPlaceholder": "Liste wahlen...",
+    "instrumentHelp": "Leer lassen, um das Instrument zu entfernen"
   }
 }

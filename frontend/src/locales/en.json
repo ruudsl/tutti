@@ -2746,5 +2746,21 @@
     "popupBlocked": "Pop-up blocked. Please allow pop-ups for this site.",
     "error": "Something went wrong with login. Please try again.",
     "disclaimer": "We only use your information to send you your ticket."
+  },
+  "bulk": {
+    "title": "Bulk actions",
+    "selected": "selected",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "addToList": "Add to list",
+    "removeFromList": "Remove from list",
+    "changeInstrument": "Change instrument",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete {{count}} pieces?",
+    "updated": "{{count}} pieces updated",
+    "deleted": "{{count}} pieces deleted",
+    "selectList": "Select list",
+    "selectListPlaceholder": "Choose a list...",
+    "instrumentHelp": "Leave empty to remove the instrument"
   }
 }
