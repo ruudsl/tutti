@@ -1156,4 +1156,102 @@ router.delete('/:id/attendance/:attendanceId', authenticateToken, requireRole('a
     res.json({ message: 'Bezetting verwijderd.' });
 }));
 
+/**
+ * @swagger
+ * /concerts/{id}/scanned-tickets:
+ *   get:
+ *     summary: Get all scanned tickets for a concert (attendees who checked in)
+ *     tags: [Concerts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Concert ID
+ *     responses:
+ *       200:
+ *         description: List of scanned tickets with attendee information
+ */
+router.get('/:id/scanned-tickets', authenticateToken, requireRole('admin', 'board', 'ticket_scanner'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify concert belongs to association
+    const concert = db.prepare(`
+        SELECT id, name, date FROM concerts
+        WHERE id = ? AND association_id = ?
+    `).get(req.params.id, req.user!.associationId) as { id: string; name: string; date: string } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert niet gevonden.');
+    }
+
+    // Get all scanned tickets for this concert
+    const scannedTickets = db.prepare(`
+        SELECT
+            t.id,
+            t.buyer_name,
+            t.buyer_email,
+            t.used_at as scanned_at,
+            t.seat_info,
+            t.status,
+            tt.name as ticket_type_name,
+            tt.price as ticket_price,
+            u.first_name as validator_first_name,
+            u.last_name as validator_last_name
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        LEFT JOIN users u ON t.validated_by = u.id
+        WHERE tt.concert_id = ? AND t.used_at IS NOT NULL
+        ORDER BY t.used_at DESC
+    `).all(req.params.id) as {
+        id: string;
+        buyer_name: string;
+        buyer_email: string;
+        scanned_at: string;
+        seat_info: string | null;
+        status: string;
+        ticket_type_name: string;
+        ticket_price: number;
+        validator_first_name: string | null;
+        validator_last_name: string | null;
+    }[];
+
+    // Get summary stats
+    const totalTickets = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        WHERE tt.concert_id = ?
+    `).get(req.params.id) as { count: number };
+
+    const scannedCount = scannedTickets.length;
+
+    res.json({
+        concert: {
+            id: concert.id,
+            name: concert.name,
+            date: concert.date,
+        },
+        summary: {
+            totalTickets: totalTickets.count,
+            scannedCount,
+            scanPercentage: totalTickets.count > 0
+                ? Math.round((scannedCount / totalTickets.count) * 100)
+                : 0,
+        },
+        scannedTickets: scannedTickets.map(ticket => ({
+            id: ticket.id,
+            buyerName: ticket.buyer_name,
+            buyerEmail: ticket.buyer_email,
+            scannedAt: ticket.scanned_at,
+            seatInfo: ticket.seat_info,
+            status: ticket.status,
+            ticketTypeName: ticket.ticket_type_name,
+            ticketPrice: ticket.ticket_price,
+            validatedBy: ticket.validator_first_name && ticket.validator_last_name
+                ? `${ticket.validator_first_name} ${ticket.validator_last_name}`
+                : null,
+        })),
+    });
+}));
+
 export default router;

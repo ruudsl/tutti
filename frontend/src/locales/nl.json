@@ -1656,7 +1656,13 @@
     "manageGuestList": "Gastenlijst Beheren",
     "noConcertSelected": "Geen concert geselecteerd.",
     "loadError": "Kon dashboard data niet laden.",
-    "sold": "Verkocht"
+    "sold": "Verkocht",
+    "scannedTickets": "Gescande Tickets",
+    "scannedSummary": "{{scanned}} van {{total}} tickets gescand ({{percentage}}%)",
+    "showAttendees": "Toon Bezoekers",
+    "scannedAt": "Gescand Om",
+    "validatedBy": "Gescand Door",
+    "noScannedTickets": "Er zijn nog geen tickets gescand."
   },
   "heatmap": {
     "title": "Verkoop Heatmap",

@@ -1701,7 +1701,13 @@
     "manageGuestList": "Manage Guest List",
     "noConcertSelected": "No concert selected.",
     "loadError": "Could not load dashboard data.",
-    "sold": "Sold"
+    "sold": "Sold",
+    "scannedTickets": "Scanned Tickets",
+    "scannedSummary": "{{scanned}} of {{total}} tickets scanned ({{percentage}}%)",
+    "showAttendees": "Show Attendees",
+    "scannedAt": "Scanned At",
+    "validatedBy": "Scanned By",
+    "noScannedTickets": "No tickets have been scanned yet."
   },
   "heatmap": {
     "title": "Sales Heatmap",

@@ -2666,6 +2666,14 @@ export const getSalesPredictions = async (concertId: string): Promise<SalesPredi
   return data;
 };
 
+// Get scanned tickets (attendees) for a concert
+import type { ScannedTicketsResponse } from './types';
+
+export const getScannedTickets = async (concertId: string): Promise<ScannedTicketsResponse> => {
+  const { data } = await api.get(`/concerts/${concertId}/scanned-tickets`);
+  return data;
+};
+
 // Export ticket sales as CSV
 export const exportTicketSalesCsv = async (params?: {
   concertId?: string;

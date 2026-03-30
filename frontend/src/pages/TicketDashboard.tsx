@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { getTicketDashboard, getSeatHeatmapData } from '../api';
+import { getTicketDashboard, getSeatHeatmapData, getScannedTickets } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SkeletonTable, Skeleton } from '../components/Skeleton';
 import SeatHeatmap from '../components/SeatHeatmap';
-import type { TicketDashboard as TicketDashboardType, TicketDashboardTicketType, TicketDashboardSalesOverTime, VenueLayout, SeatHeatmapData } from '../types';
+import type { TicketDashboard as TicketDashboardType, TicketDashboardTicketType, TicketDashboardSalesOverTime, VenueLayout, SeatHeatmapData, ScannedTicketsResponse } from '../types';
 
 // CSS for counter animation
 const counterAnimationStyles = `
@@ -371,6 +371,9 @@ export default function TicketDashboard() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [heatmapMode, setHeatmapMode] = useState<'sales_speed' | 'popularity' | 'price_performance'>('sales_speed');
 
+  // Scanned tickets state
+  const [showScannedTickets, setShowScannedTickets] = useState(false);
+
   // Fetch dashboard data with auto-refresh every 30 seconds
   const { data, isLoading, error } = useQuery<TicketDashboardType>({
     queryKey: ['ticketDashboard', concertId],
@@ -385,6 +388,14 @@ export default function TicketDashboard() {
     queryKey: ['seatHeatmap', concertId],
     queryFn: () => getSeatHeatmapData(concertId!),
     enabled: !!concertId && showHeatmap,
+  });
+
+  // Fetch scanned tickets when enabled
+  const { data: scannedData, isLoading: scannedLoading } = useQuery<ScannedTicketsResponse>({
+    queryKey: ['scannedTickets', concertId],
+    queryFn: () => getScannedTickets(concertId!),
+    enabled: !!concertId && showScannedTickets,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   // Create a simple venue layout from ticket types for the heatmap
@@ -701,6 +712,73 @@ export default function TicketDashboard() {
               {t('ticketDashboard.manageGuestList')}
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Scanned Tickets / Attendance */}
+      <div className="card mt-3">
+        <div className="card-body">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h4 style={{ margin: 0 }}>{t('ticketDashboard.scannedTickets')}</h4>
+              {scannedData && (
+                <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-light)' }}>
+                  {t('ticketDashboard.scannedSummary', {
+                    scanned: scannedData.summary.scannedCount,
+                    total: scannedData.summary.totalTickets,
+                    percentage: scannedData.summary.scanPercentage,
+                  })}
+                </p>
+              )}
+            </div>
+            <button
+              className={`btn btn-sm ${showScannedTickets ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setShowScannedTickets(!showScannedTickets)}
+            >
+              {showScannedTickets ? t('common.hide') : t('ticketDashboard.showAttendees')}
+            </button>
+          </div>
+
+          {showScannedTickets && (
+            <>
+              {scannedLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <div className="spinner" style={{ margin: '0 auto 1rem' }} />
+                  <p style={{ color: 'var(--text-light)' }}>{t('common.loading')}</p>
+                </div>
+              ) : scannedData && scannedData.scannedTickets.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t('ticketDashboard.scannedAt')}</th>
+                        <th>{t('tickets.buyer')}</th>
+                        <th>{t('tickets.ticketType')}</th>
+                        <th>{t('ticketDashboard.validatedBy')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scannedData.scannedTickets.map((ticket) => (
+                        <tr key={ticket.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(ticket.scannedAt)}</td>
+                          <td>
+                            <div style={{ fontWeight: 500 }}>{ticket.buyerName}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{ticket.buyerEmail}</div>
+                          </td>
+                          <td>{ticket.ticketTypeName}</td>
+                          <td style={{ color: 'var(--text-light)' }}>{ticket.validatedBy || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '2rem' }}>
+                  {t('ticketDashboard.noScannedTickets')}
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

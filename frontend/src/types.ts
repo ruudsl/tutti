@@ -887,6 +887,36 @@ export interface TicketDashboard {
   guestListTickets: number;
 }
 
+// ==================== SCANNED TICKETS (ATTENDANCE) ====================
+
+export interface ScannedTicket {
+  id: string;
+  buyerName: string;
+  buyerEmail: string;
+  scannedAt: string;
+  seatInfo: string | null;
+  status: string;
+  ticketTypeName: string;
+  ticketPrice: number;
+  validatedBy: string | null;
+}
+
+export interface ScannedTicketsSummary {
+  totalTickets: number;
+  scannedCount: number;
+  scanPercentage: number;
+}
+
+export interface ScannedTicketsResponse {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+  };
+  summary: ScannedTicketsSummary;
+  scannedTickets: ScannedTicket[];
+}
+
 // ==================== TICKET TRANSFERS ====================
 
 export interface TicketTransfer {
