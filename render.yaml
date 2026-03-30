@@ -22,7 +22,7 @@ services:
     region: frankfurt
     plan: free
     rootDir: backend
-    buildCommand: npm install && npm run build
+    buildCommand: cp ../CHANGELOG*.md . && npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:

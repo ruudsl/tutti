@@ -265,8 +265,16 @@ app.get('/api/csrf-token', getCsrfToken);
 app.get('/api/changelog', (req, res) => {
     const lang = (req.query.lang as string) || 'nl';
     const suffix = lang === 'nl' ? '' : `_${lang}`;
-    const changelogPath = path.join(__dirname, `../../CHANGELOG${suffix}.md`);
-    const fallbackPath = path.join(__dirname, '../../CHANGELOG.md');
+
+    // In production (Render), CHANGELOG files are copied to backend/ during build
+    // In development, they're in the repo root (../../ from dist/)
+    const prodPath = path.join(__dirname, `../CHANGELOG${suffix}.md`);
+    const devPath = path.join(__dirname, `../../CHANGELOG${suffix}.md`);
+    const changelogPath = fs.existsSync(prodPath) ? prodPath : devPath;
+
+    const prodFallback = path.join(__dirname, '../CHANGELOG.md');
+    const devFallback = path.join(__dirname, '../../CHANGELOG.md');
+    const fallbackPath = fs.existsSync(prodFallback) ? prodFallback : devFallback;
 
     if (fs.existsSync(changelogPath)) {
         const content = fs.readFileSync(changelogPath, 'utf-8');
