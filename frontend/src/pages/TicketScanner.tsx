@@ -259,19 +259,21 @@ export default function TicketScanner() {
                 margin: '0 auto 1rem',
               }}
             >
+              {/* Video element always rendered but hidden when inactive */}
+              <video
+                ref={videoRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: isCameraActive ? 'block' : 'none',
+                }}
+                playsInline
+                muted
+              />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
               {isCameraActive ? (
                 <>
-                  <video
-                    ref={videoRef}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                    playsInline
-                    muted
-                  />
-                  <canvas ref={canvasRef} style={{ display: 'none' }} />
                   {/* Scan overlay */}
                   <div
                     style={{
