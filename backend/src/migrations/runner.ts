@@ -88,7 +88,7 @@ export function getLastAppliedMigration(): MigrationRecord | undefined {
 export async function loadMigrationFiles(): Promise<Migration[]> {
     const migrationsDir = path.join(__dirname, '.');
     const files = fs.readdirSync(migrationsDir)
-        .filter(f => f.match(/^\d{14}_.*\.(ts|js)$/))
+        .filter(f => f.match(/^\d{14}_.*\.(ts|js)$/) && !f.endsWith('.d.ts'))
         .sort();
 
     const migrations: Migration[] = [];
