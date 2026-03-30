@@ -834,22 +834,29 @@ router.get('/tickets/my', authenticateToken, asyncHandler(async (req: AuthReques
         concert_location: string | null;
     }[];
 
-    res.json(tickets.map(t => ({
-        id: t.id,
-        code: t.qr_code,
-        buyerName: t.buyer_name,
-        status: t.status,
-        seatInfo: t.seat_info,
-        purchaseDate: t.purchase_date,
-        usedAt: t.used_at,
-        ticketType: t.ticket_type_name,
-        concert: {
-            id: t.concert_id,
-            name: t.concert_name,
-            date: t.concert_date,
-            location: t.concert_location,
-        },
-    })));
+    // Generate QR codes for all tickets in parallel
+    const ticketsWithQR = await Promise.all(tickets.map(async (t) => {
+        const qrCodeDataUrl = await generateQRCode(t.qr_code);
+        return {
+            id: t.id,
+            code: t.qr_code,
+            buyerName: t.buyer_name,
+            status: t.status,
+            seatInfo: t.seat_info,
+            purchaseDate: t.purchase_date,
+            usedAt: t.used_at,
+            ticketType: t.ticket_type_name,
+            concert: {
+                id: t.concert_id,
+                name: t.concert_name,
+                date: t.concert_date,
+                location: t.concert_location,
+            },
+            qrCodeDataUrl,
+        };
+    }));
+
+    res.json(ticketsWithQR);
 }));
 
 /**
