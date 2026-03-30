@@ -2,6 +2,21 @@
 
 All notable changes to this application are documented here.
 
+## [1.9.0] - 2026-03-30
+
+### Added
+- **Push notifications** — Web push notifications with VAPID for new music pieces, rehearsal changes and announcements. Supports multiple channels: push, email, WhatsApp and Telegram
+- **Notification preferences** — Users can configure which channel they want to receive notifications per notification type
+- **Global search** — Unified search (Cmd+K / Ctrl+K) across music pieces, members, orchestras, lists and rehearsals with autocomplete and recent searches
+- **Sortable concert programs** — Drag-and-drop with @dnd-kit to reorder pieces in concert programs
+- **Concert program PDF export** — Generate professionally formatted PDF program booklets with title page, numbered piece list and total duration
+- **PWA support** — Progressive Web App with service worker, offline page and install capability
+
+### Improved
+- Notification center with dropdown for recent notifications and preferences
+- Keyboard navigation in search results (arrow keys, Home/End)
+- Search suggestions with 200ms debounce for better performance
+
 ## [1.8.1] - 2026-03-28
 
 ### Fixed

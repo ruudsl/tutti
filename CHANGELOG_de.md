@@ -2,6 +2,21 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.9.0] - 2026-03-30
+
+### Hinzugefügt
+- **Push-Benachrichtigungen** — Web-Push-Benachrichtigungen mit VAPID für neue Musikstücke, Probenänderungen und Ankündigungen. Unterstützt mehrere Kanäle: Push, E-Mail, WhatsApp und Telegram
+- **Benachrichtigungseinstellungen** — Benutzer können pro Benachrichtigungstyp einstellen, über welchen Kanal sie Meldungen erhalten möchten
+- **Globale Suche** — Einheitliche Suche (Cmd+K / Strg+K) über Musikstücke, Mitglieder, Orchester, Listen und Proben mit Autocomplete und letzten Suchanfragen
+- **Sortierbare Konzertprogramme** — Drag-and-Drop mit @dnd-kit zum Neuordnen von Stücken in Konzertprogrammen
+- **Konzertprogramm PDF-Export** — Erstellen Sie professionell formatierte PDF-Programmhefte mit Titelseite, nummerierter Stückliste und Gesamtdauer
+- **PWA-Unterstützung** — Progressive Web App mit Service Worker, Offline-Seite und Installationsmöglichkeit
+
+### Verbessert
+- Benachrichtigungszentrum mit Dropdown für aktuelle Benachrichtigungen und Einstellungen
+- Tastaturnavigation in Suchergebnissen (Pfeiltasten, Home/End)
+- Suchvorschläge mit 200ms Debounce für bessere Leistung
+
 ## [1.8.1] - 2026-03-28
 
 ### Behoben

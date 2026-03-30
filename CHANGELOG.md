@@ -2,6 +2,21 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.9.0] - 2026-03-30
+
+### Toegevoegd
+- **Push notificaties** — Web push notificaties met VAPID voor nieuwe muziekstukken, repetitiewijzigingen en aankondigingen. Ondersteunt meerdere kanalen: push, e-mail, WhatsApp en Telegram
+- **Notificatievoorkeuren** — Gebruikers kunnen per notificatietype instellen via welk kanaal zij meldingen willen ontvangen
+- **Globale zoekfunctie** — Unified search (Cmd+K / Ctrl+K) over muziekstukken, leden, orkesten, lijsten en repetities met autocomplete en recente zoekopdrachten
+- **Sorteerbare concertprogramma's** — Drag-and-drop met @dnd-kit om de volgorde van stukken in concertprogramma's aan te passen
+- **Concertprogramma PDF export** — Genereer professioneel opgemaakte PDF-programmaboekjes met titelpagina, genummerde stukkenlijst en totale speelduur
+- **PWA ondersteuning** — Progressive Web App met service worker, offline pagina en installatiemogelijkheid
+
+### Verbeterd
+- Notificatiecentrum met dropdown voor recente meldingen en voorkeuren
+- Toetsenbordnavigatie in zoekresultaten (pijltjes, Home/End)
+- Zoeksuggesties met 200ms debounce voor betere performance
+
 ## [1.8.1] - 2026-03-28
 
 ### Opgelost

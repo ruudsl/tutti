@@ -51,11 +51,11 @@ Overzicht van geplande features, verbeteringen en bekende aandachtspunten voor d
 
 ### Korte termijn
 
-- [ ] **Notificaties** — Push-notificaties of e-mail bij nieuwe muziekstukken, repetitiewijzigingen, of opgeloste issues
-- [ ] **Zoekfunctie verbeteren** — Full-text zoeken over alle muziekstukken, titels en leden
-- [ ] **Bulk-bewerkingen** — Meerdere muziekstukken tegelijk bewerken (instrument, titel, orkest toewijzen)
-- [ ] **Sorteerbare muzieklijsten** — Drag-and-drop volgorde aanpassen van stukken in concertprogramma's
-- [ ] **Concertprogramma PDF export** — Genereer een opgemaakt PDF-programma voor concerten
+- [x] **Notificaties** — Push-notificaties, e-mail, WhatsApp en Telegram bij nieuwe muziekstukken, repetitiewijzigingen, of opgeloste issues
+- [x] **Zoekfunctie verbeteren** — Unified search over alle muziekstukken, titels, leden, orkesten en repetities (Cmd+K)
+- [x] **Sorteerbare muzieklijsten** — Drag-and-drop volgorde aanpassen van stukken in concertprogramma's
+- [x] **Concertprogramma PDF export** — Genereer een opgemaakt PDF-programma voor concerten
+- [ ] **Bulk-bewerkingen uitbreiden** — UI voor bulk-bewerken van instrument, titel, orkest toewijzen (API beschikbaar)
 
 ### Middellange termijn
 
