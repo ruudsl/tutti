@@ -4,6 +4,23 @@ export const id = '20260329000001';
 export const name = 'ticketing_enhancements';
 
 /**
+ * Helper to check if a column exists in a table
+ */
+function columnExists(table: string, column: string): boolean {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    return columns.some(c => c.name === column);
+}
+
+/**
+ * Helper to add column if it doesn't exist
+ */
+function addColumnIfNotExists(table: string, column: string, definition: string): void {
+    if (!columnExists(table, column)) {
+        db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+}
+
+/**
  * Run the migration
  */
 export function up(): void {
@@ -12,11 +29,9 @@ export function up(): void {
     // =============================================
 
     // Add early-bird pricing fields to ticket_types
-    db.exec(`
-        ALTER TABLE ticket_types ADD COLUMN early_bird_price REAL;
-        ALTER TABLE ticket_types ADD COLUMN early_bird_end_date DATETIME;
-        ALTER TABLE ticket_types ADD COLUMN early_bird_quantity INTEGER;
-    `);
+    addColumnIfNotExists('ticket_types', 'early_bird_price', 'REAL');
+    addColumnIfNotExists('ticket_types', 'early_bird_end_date', 'DATETIME');
+    addColumnIfNotExists('ticket_types', 'early_bird_quantity', 'INTEGER');
 
     // =============================================
     // GROUP DISCOUNTS (STAFFEL PRICING)
@@ -119,11 +134,13 @@ export function up(): void {
         );
 
         CREATE INDEX IF NOT EXISTS idx_venue_seats_layout ON venue_seats(layout_id);
+    `);
 
-        -- Link concert to a venue layout
-        ALTER TABLE concerts ADD COLUMN venue_layout_id TEXT REFERENCES venue_layouts(id) ON DELETE SET NULL;
-        ALTER TABLE concerts ADD COLUMN is_seated_event BOOLEAN DEFAULT 0;
+    // Link concert to a venue layout
+    addColumnIfNotExists('concerts', 'venue_layout_id', 'TEXT REFERENCES venue_layouts(id) ON DELETE SET NULL');
+    addColumnIfNotExists('concerts', 'is_seated_event', 'BOOLEAN DEFAULT 0');
 
+    db.exec(`
         -- Reserved/sold seats for a concert
         CREATE TABLE IF NOT EXISTS concert_seat_reservations (
             id TEXT PRIMARY KEY,
@@ -149,22 +166,18 @@ export function up(): void {
     // RESERVATION EXTENSION
     // =============================================
 
-    db.exec(`
-        ALTER TABLE ticket_orders ADD COLUMN extension_count INTEGER DEFAULT 0;
-        ALTER TABLE ticket_orders ADD COLUMN max_extensions INTEGER DEFAULT 2;
-    `);
+    addColumnIfNotExists('ticket_orders', 'extension_count', 'INTEGER DEFAULT 0');
+    addColumnIfNotExists('ticket_orders', 'max_extensions', 'INTEGER DEFAULT 2');
 
     // =============================================
     // ACCESSIBILITY INFORMATION
     // =============================================
 
-    db.exec(`
-        ALTER TABLE concerts ADD COLUMN accessibility_info TEXT; -- JSON with accessibility options
-        ALTER TABLE concerts ADD COLUMN wheelchair_spaces INTEGER DEFAULT 0;
-        ALTER TABLE concerts ADD COLUMN companion_spaces INTEGER DEFAULT 0;
-        ALTER TABLE concerts ADD COLUMN hearing_loop_available BOOLEAN DEFAULT 0;
-        ALTER TABLE concerts ADD COLUMN accessible_parking_info TEXT;
-    `);
+    addColumnIfNotExists('concerts', 'accessibility_info', 'TEXT');
+    addColumnIfNotExists('concerts', 'wheelchair_spaces', 'INTEGER DEFAULT 0');
+    addColumnIfNotExists('concerts', 'companion_spaces', 'INTEGER DEFAULT 0');
+    addColumnIfNotExists('concerts', 'hearing_loop_available', 'BOOLEAN DEFAULT 0');
+    addColumnIfNotExists('concerts', 'accessible_parking_info', 'TEXT');
 
     // =============================================
     // INVOICE GENERATION
@@ -211,10 +224,8 @@ export function up(): void {
     // SERVICE FEE SETTINGS
     // =============================================
 
-    db.exec(`
-        ALTER TABLE ticket_types ADD COLUMN service_fee REAL DEFAULT 0;
-        ALTER TABLE ticket_types ADD COLUMN show_service_fee_separate BOOLEAN DEFAULT 0;
-    `);
+    addColumnIfNotExists('ticket_types', 'service_fee', 'REAL DEFAULT 0');
+    addColumnIfNotExists('ticket_types', 'show_service_fee_separate', 'BOOLEAN DEFAULT 0');
 
     // =============================================
     // TICKET SALES ANALYTICS
@@ -259,12 +270,12 @@ export function up(): void {
 
         CREATE INDEX IF NOT EXISTS idx_ticket_transfers_ticket ON ticket_transfers(ticket_id);
         CREATE INDEX IF NOT EXISTS idx_ticket_transfers_code ON ticket_transfers(transfer_code);
-
-        -- Add transfer tracking to tickets
-        ALTER TABLE tickets ADD COLUMN original_buyer_email TEXT;
-        ALTER TABLE tickets ADD COLUMN transfer_count INTEGER DEFAULT 0;
-        ALTER TABLE tickets ADD COLUMN max_transfers INTEGER DEFAULT 1;
     `);
+
+    // Add transfer tracking to tickets
+    addColumnIfNotExists('tickets', 'original_buyer_email', 'TEXT');
+    addColumnIfNotExists('tickets', 'transfer_count', 'INTEGER DEFAULT 0');
+    addColumnIfNotExists('tickets', 'max_transfers', 'INTEGER DEFAULT 1');
 
     // =============================================
     // RATE LIMITING / BOT PROTECTION
@@ -298,11 +309,9 @@ export function up(): void {
     // CAPTCHA TRACKING
     // =============================================
 
-    db.exec(`
-        ALTER TABLE ticket_orders ADD COLUMN captcha_verified BOOLEAN DEFAULT 0;
-        ALTER TABLE ticket_orders ADD COLUMN ip_address TEXT;
-        ALTER TABLE ticket_orders ADD COLUMN user_agent TEXT;
-    `);
+    addColumnIfNotExists('ticket_orders', 'captcha_verified', 'BOOLEAN DEFAULT 0');
+    addColumnIfNotExists('ticket_orders', 'ip_address', 'TEXT');
+    addColumnIfNotExists('ticket_orders', 'user_agent', 'TEXT');
 
     // =============================================
     // OFFLINE SCANNER SUPPORT
@@ -345,12 +354,12 @@ export function up(): void {
     // DYNAMIC QR CODES
     // =============================================
 
-    db.exec(`
-        -- QR code rotation for fraud prevention
-        ALTER TABLE tickets ADD COLUMN qr_secret TEXT;
-        ALTER TABLE tickets ADD COLUMN qr_rotation_interval INTEGER DEFAULT 300; -- seconds, 0 = no rotation
-        ALTER TABLE tickets ADD COLUMN last_qr_rotation DATETIME;
+    // QR code rotation for fraud prevention
+    addColumnIfNotExists('tickets', 'qr_secret', 'TEXT');
+    addColumnIfNotExists('tickets', 'qr_rotation_interval', 'INTEGER DEFAULT 300');
+    addColumnIfNotExists('tickets', 'last_qr_rotation', 'DATETIME');
 
+    db.exec(`
         -- QR validation attempts (for detecting sharing)
         CREATE TABLE IF NOT EXISTS qr_validation_attempts (
             id TEXT PRIMARY KEY,
@@ -373,17 +382,13 @@ export function up(): void {
     // MULTILINGUAL TICKET EMAILS
     // =============================================
 
-    db.exec(`
-        ALTER TABLE ticket_orders ADD COLUMN language TEXT DEFAULT 'nl';
-    `);
+    addColumnIfNotExists('ticket_orders', 'language', "TEXT DEFAULT 'nl'");
 
     // =============================================
     // SOCIAL LOGIN TRACKING
     // =============================================
 
-    db.exec(`
-        ALTER TABLE ticket_orders ADD COLUMN auth_provider TEXT; -- google, facebook, email
-    `);
+    addColumnIfNotExists('ticket_orders', 'auth_provider', 'TEXT');
 }
 
 /**
