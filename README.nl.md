@@ -93,9 +93,9 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph FE["Frontend Modules"]
-        Pages["📄 24 Pages"]
-        Components["🧩 19 Components"]
-        Hooks["🪝 10 Custom Hooks"]
+        Pages["📄 50 Pages"]
+        Components["🧩 60 Components"]
+        Hooks["🪝 32 Custom Hooks"]
         Utils["🔧 Utilities"]
     end
 
@@ -106,7 +106,7 @@ flowchart LR
         AdminRoutes["⚙️ Admin Routes"]
     end
 
-    subgraph DB["Database (25+ Tabellen)"]
+    subgraph DB["Database (87 Tabellen)"]
         Users["users"]
         Music["music_pieces"]
         Lists["music_lists"]
@@ -486,12 +486,12 @@ harmonie/
 │   │   ├── index.ts               # Express server entry point
 │   │   ├── database/
 │   │   │   ├── connection.ts      # SQLite connectie (sql.js wrapper)
-│   │   │   ├── schema.ts          # Database schema (25+ tabellen)
+│   │   │   ├── schema.ts          # Database schema (87 tabellen)
 │   │   │   └── init.ts            # Initialisatie script
 │   │   ├── middleware/
 │   │   │   ├── auth.ts            # JWT authenticatie & autorisatie
 │   │   │   └── errorHandler.ts    # Centrale error handling
-│   │   ├── routes/                # 18 API route modules
+│   │   ├── routes/                # 51 API route modules
 │   │   │   ├── auth.ts            # Login, MFA, wachtwoord-reset
 │   │   │   ├── users.ts           # Ledenbeheer
 │   │   │   ├── instruments.ts     # Instrumenten & aliassen
@@ -524,9 +524,9 @@ harmonie/
 │   │   ├── api.ts                 # Axios API client met alle endpoints
 │   │   ├── types.ts               # TypeScript type definities
 │   │   ├── App.tsx                # Root component met routing
-│   │   ├── pages/                 # 24 pagina-componenten
-│   │   ├── components/            # 19 herbruikbare componenten
-│   │   ├── hooks/                 # 10 custom React hooks
+│   │   ├── pages/                 # 50 pagina-componenten
+│   │   ├── components/            # 60 herbruikbare componenten
+│   │   ├── hooks/                 # 32 custom React hooks
 │   │   ├── context/               # Auth context (login state)
 │   │   ├── lib/                   # React Query configuratie
 │   │   ├── utils/                 # Utility functies met tests
