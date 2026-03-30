@@ -75,7 +75,10 @@ class DatabaseWrapper {
 
     exec(sql: string): void {
         this.ensureInit().run(sql);
-        this.save();
+        // Only save if not inside a transaction (transaction will save on commit)
+        if (!this.inTransaction) {
+            this.save();
+        }
     }
 
     runStatement(sql: string, params: any[] = []): { changes: number; lastInsertRowid: number } {
