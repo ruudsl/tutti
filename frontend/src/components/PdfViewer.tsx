@@ -74,6 +74,8 @@ export function PdfViewer({
   const pageCacheRef = useRef<Map<number, PageCache>>(new Map());
   const renderingRef = useRef(false);
   const indicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
 
   // Dark mode state - respects prop or system preference
   const [isDarkModeActive, setIsDarkModeActive] = useState(() => {
@@ -361,6 +363,33 @@ export function PdfViewer({
     }
   }, [swipeRef]);
 
+  // Mouse drag-to-pan when zoomed
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isZoomed || !containerRef.current) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: containerRef.current.scrollLeft,
+      scrollTop: containerRef.current.scrollTop,
+    };
+  }, [isZoomed]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || !dragStartRef.current || !containerRef.current) return;
+    e.preventDefault();
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    containerRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
+    containerRef.current.scrollTop = dragStartRef.current.scrollTop - dy;
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -432,7 +461,13 @@ export function PdfViewer({
       style={styles.container}
     >
       {/* PDF Canvas Container */}
-      <div ref={containerRef} style={{
+      <div
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
         ...styles.canvasContainer,
         backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
         ...(isZoomed ? {
@@ -441,7 +476,8 @@ export function PdfViewer({
           alignItems: 'flex-start',
           justifyContent: 'flex-start',
           touchAction: 'pan-x pan-y',
-          cursor: 'grab',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
         } : {}),
       }}>
         <canvas
