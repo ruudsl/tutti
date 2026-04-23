@@ -114,17 +114,18 @@ export function PdfViewer({
       setError(null);
 
       try {
-        let data: ArrayBuffer | string;
+        let loadingTask: pdfjsLib.PDFDocumentLoadingTask;
 
         if (file) {
-          data = await file.arrayBuffer();
+          const data = await file.arrayBuffer();
+          loadingTask = pdfjsLib.getDocument({ data });
         } else if (url) {
-          data = url;
+          loadingTask = pdfjsLib.getDocument(url);
         } else {
           throw new Error('No PDF source provided');
         }
 
-        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const pdf = await loadingTask.promise;
 
         if (cancelled) return;
 
