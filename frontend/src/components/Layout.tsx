@@ -7,7 +7,6 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { DarkModeToggle } from './DarkModeToggle';
 import { Breadcrumbs } from './Breadcrumbs';
-import { ContextSidebar, useHasSidebar } from './ContextSidebar';
 import { QuickActionsMenu } from './QuickActionsMenu';
 import { GlobalSearch, useGlobalSearch } from './GlobalSearch';
 import { RecentItems } from './RecentItems';
@@ -15,6 +14,130 @@ import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHel
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import type { AssociationSettings } from '../types';
+
+interface SidebarNavItem {
+  path: string;
+  labelKey: string;
+  roles?: string[];
+}
+
+interface SidebarNavGroup {
+  titleKey: string;
+  icon: string;
+  basePaths: string[];
+  items: SidebarNavItem[];
+}
+
+const navGroups: SidebarNavGroup[] = [
+  {
+    titleKey: 'nav.dashboard',
+    icon: '🏠',
+    basePaths: ['/'],
+    items: [
+      { path: '/', labelKey: 'nav.dashboard' },
+    ],
+  },
+  {
+    titleKey: 'nav.myMusic',
+    icon: '🎵',
+    basePaths: ['/my-music'],
+    items: [
+      { path: '/my-music', labelKey: 'nav.myMusic' },
+    ],
+  },
+  {
+    titleKey: 'sidebar.agenda',
+    icon: '📅',
+    basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
+    items: [
+      { path: '/rehearsals', labelKey: 'nav.rehearsals' },
+      { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/my-tickets', labelKey: 'nav.myTickets' },
+      { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.members',
+    icon: '👥',
+    basePaths: ['/members', '/issues', '/practice-schedules'],
+    items: [
+      { path: '/members', labelKey: 'nav.memberDirectory' },
+      { path: '/issues', labelKey: 'nav.issues' },
+      { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
+    ],
+  },
+  {
+    titleKey: 'sidebar.orchestra',
+    icon: '🎻',
+    basePaths: ['/seating', '/instruments', '/voice-parts', '/occupancy', '/neighbor-preferences'],
+    items: [
+      { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/instruments', labelKey: 'nav.instruments', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+    ],
+  },
+  {
+    titleKey: 'nav.tools',
+    icon: '🔧',
+    basePaths: ['/tools'],
+    items: [
+      { path: '/tools', labelKey: 'nav.tools' },
+    ],
+  },
+  {
+    titleKey: 'sidebar.library',
+    icon: '📚',
+    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
+    items: [
+      { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/lists', labelKey: 'nav.lists', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/titles', labelKey: 'nav.titles', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/upload', labelKey: 'nav.upload', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/imslp', labelKey: 'nav.imslp', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/statistics', labelKey: 'nav.statistics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.inventory',
+    icon: '📦',
+    basePaths: ['/equipment', '/uniforms'],
+    items: [
+      { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+      { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.admin',
+    icon: '⚙️',
+    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
+    items: [
+      { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
+      { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
+      { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
+      { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
+      { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
+      { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
+      { path: '/theme', labelKey: 'nav.theme', roles: [ROLES.ADMIN] },
+      { path: '/changelog', labelKey: 'nav.changelog', roles: [ROLES.ADMIN] },
+      { path: '/audit-logs', labelKey: 'nav.auditLogs', roles: [ROLES.ADMIN] },
+      { path: '/health', labelKey: 'nav.health', roles: [ROLES.ADMIN] },
+    ],
+  },
+];
+
+// Bottom tabs for mobile - the 4 most common sections + More
+const mobileBottomTabs = [
+  { path: '/', labelKey: 'nav.dashboard', icon: '🏠', exact: true },
+  { path: '/my-music', labelKey: 'nav.myMusic', icon: '🎵' },
+  { path: '/rehearsals', labelKey: 'nav.rehearsals', icon: '📅' },
+  { path: '/members', labelKey: 'sidebar.members', icon: '👥' },
+];
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -24,6 +147,9 @@ export default function Layout() {
   const [brandSettings, setBrandSettings] = useState<AssociationSettings | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+  });
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
@@ -47,6 +173,11 @@ export default function Layout() {
       document.body.style.overflow = '';
     };
   }, [mobileMenuOpen]);
+
+  // Persist sidebar collapsed state
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const handleRestartOnboarding = () => {
     if (user) {
@@ -73,36 +204,51 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const isAdmin = user?.role === ROLES.ADMIN;
-  const isConductor = user?.role === ROLES.CONDUCTOR || isAdmin;
-  const isMusicCommittee = user?.role === ROLES.MUSIC_COMMITTEE || isAdmin;
-  const isEquipmentCommittee = user?.role === ROLES.EQUIPMENT_COMMITTEE || isAdmin;
-  const isUniformsCommittee = user?.role === ROLES.UNIFORMS_COMMITTEE || isAdmin;
-  const hasSidebar = useHasSidebar();
+  const userRole = user?.role || '';
 
-  // Check if current path is in a navigation group
-  const agendaPaths = ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'];
-  const orchestraPaths = ['/seating', '/voice-parts', '/instruments', '/occupancy', '/neighbor-preferences'];
-  const ledenPaths = ['/members', '/issues', '/practice-schedules'];
-  const libraryPaths = ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'];
-  const inventarisPaths = ['/equipment', '/uniforms'];
-  const adminPaths = ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'];
+  // Filter nav groups based on user role
+  const visibleGroups = navGroups.filter(group => {
+    const visibleItems = group.items.filter(item => {
+      if (!item.roles) return true;
+      return item.roles.includes(userRole);
+    });
+    return visibleItems.length > 0;
+  });
 
-  const isAgendaActive = agendaPaths.some(p => location.pathname.startsWith(p));
-  const isOrchestraActive = orchestraPaths.some(p => location.pathname.startsWith(p));
-  const isLedenActive = ledenPaths.some(p => location.pathname.startsWith(p));
-  const isLibraryActive = libraryPaths.some(p => location.pathname.startsWith(p));
-  const isInventarisActive = inventarisPaths.some(p => location.pathname.startsWith(p));
-  const isAdminActive = adminPaths.some(p => location.pathname.startsWith(p));
+  // Check if a group is active based on current path
+  const isGroupActive = (group: SidebarNavGroup) => {
+    // Special case for dashboard - exact match only
+    if (group.basePaths.length === 1 && group.basePaths[0] === '/') {
+      return location.pathname === '/';
+    }
+    return group.basePaths.some(p => location.pathname.startsWith(p));
+  };
+
+  // Check if a bottom tab is active
+  const isTabActive = (tab: typeof mobileBottomTabs[0]) => {
+    if (tab.exact) return location.pathname === tab.path;
+    return location.pathname.startsWith(tab.path);
+  };
+
+  // Check if current path is not covered by bottom tabs (for "More" highlight)
+  const isMoreActive = !mobileBottomTabs.some(tab => isTabActive(tab));
 
   return (
-    <div className="app">
+    <div className={`app app-with-sidebar ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
       <a href="#main-content" className="skip-to-content">
         {t('accessibility.skipToContent')}
       </a>
 
-      <nav className="navbar" aria-label={t('accessibility.mainNavigation')}>
-        <div className="navbar-content">
+      {/* Top header bar */}
+      <header className="app-header" aria-label={t('accessibility.mainNavigation')}>
+        <div className="header-left">
+          <button
+            className="sidebar-toggle-btn desktop-only"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? t('nav.expandSidebar', 'Zijbalk uitklappen') : t('nav.collapseSidebar', 'Zijbalk inklappen')}
+          >
+            <span aria-hidden="true">{sidebarCollapsed ? '☰' : '✕'}</span>
+          </button>
           <Link to="/" className="navbar-brand">
             {brandSettings?.logoUrl ? (
               <img
@@ -115,148 +261,238 @@ export default function Layout() {
             )}
             {' '}{brandSettings?.displayName || 'Harmonie'}
           </Link>
-
-          <button
-            className="hamburger-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-            aria-expanded={mobileMenuOpen}
-          >
-            <span className={`hamburger-icon ${mobileMenuOpen ? 'open' : ''}`}>
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
-          </button>
-
-          <ul className={`navbar-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <li>
-              <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
-                {t('nav.dashboard')}
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/my-music" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                {t('nav.myMusic')}
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/rehearsals" className={() => `nav-link ${isAgendaActive ? 'active' : ''}`}>
-                {t('sidebar.agenda')}
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="/members" className={() => `nav-link ${isLedenActive ? 'active' : ''}`}>
-                {t('sidebar.members')}
-              </NavLink>
-            </li>
-            {(isConductor || isMusicCommittee) && (
-              <li>
-                <NavLink to="/voice-parts" className={() => `nav-link ${isOrchestraActive ? 'active' : ''}`}>
-                  {t('sidebar.orchestra')}
-                </NavLink>
-              </li>
-            )}
-            <li>
-              <NavLink to="/tools" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                {t('nav.tools')}
-              </NavLink>
-            </li>
-
-            {isMusicCommittee && (
-              <li>
-                <NavLink to="/music-pieces" className={() => `nav-link ${isLibraryActive ? 'active' : ''}`}>
-                  {t('sidebar.library')}
-                </NavLink>
-              </li>
-            )}
-
-            {(isEquipmentCommittee || isUniformsCommittee) && (
-              <li>
-                <NavLink to="/equipment" className={() => `nav-link ${isInventarisActive ? 'active' : ''}`}>
-                  {t('sidebar.inventory')}
-                </NavLink>
-              </li>
-            )}
-
-            {isAdmin && (
-              <li>
-                <NavLink to="/users" className={() => `nav-link ${isAdminActive ? 'active' : ''}`}>
-                  {t('sidebar.admin')}
-                </NavLink>
-              </li>
-            )}
-
-            {/* Mobile user section */}
-            <li className="mobile-user-section">
-              <div className="mobile-user-info">
-                <div className="user-name">{user?.firstName} {user?.lastName}</div>
-                <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
-              </div>
-              <div className="mobile-user-actions">
-                <LanguageSwitcher compact />
-                <NavLink to="/user-guide" className="nav-link">
-                  {t('nav.userGuide')}
-                </NavLink>
-                <NavLink to="/profile" className="nav-link">
-                  {t('nav.profile')}
-                </NavLink>
-                <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-                  {t('nav.logout')}
-                </button>
-              </div>
-            </li>
-          </ul>
-
-          <div className="navbar-user" aria-label={t('accessibility.userMenu')}>
-            <RecentItems />
-            <DarkModeToggle />
-            <LanguageSwitcher compact />
-            <Link to="/user-guide" className="btn btn-outline btn-sm">
-              {t('nav.userGuide')}
-            </Link>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={handleRestartOnboarding}
-              title={t('onboarding.menuItem')}
-            >
-              {t('onboarding.menuItem')}
-            </button>
-            <Link to="/profile" className="user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="user-name">{user?.firstName} {user?.lastName}</div>
-              <div className="user-role">
-                {user?.role && t(`roles.${user.role}`)}
-              </div>
-            </Link>
-            <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-              {t('nav.logout')}
-            </button>
-          </div>
         </div>
 
-        {/* Mobile menu overlay */}
-        {mobileMenuOpen && (
+        <div className="header-right">
+          <button
+            className="header-search-btn"
+            onClick={openSearch}
+            title={t('search.placeholder', 'Zoeken (Cmd+K)')}
+            aria-label={t('search.label', 'Zoeken')}
+          >
+            <span aria-hidden="true">🔍</span>
+          </button>
+          <RecentItems />
+          <DarkModeToggle />
+          <LanguageSwitcher compact />
+          <Link to="/profile" className="user-info header-user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="user-name">{user?.firstName} {user?.lastName}</div>
+            <div className="user-role">
+              {user?.role && t(`roles.${user.role}`)}
+            </div>
+          </Link>
+          <button className="btn btn-outline btn-sm" onClick={handleLogout}>
+            {t('nav.logout')}
+          </button>
+        </div>
+      </header>
+
+      <div className="app-body">
+        {/* Desktop sidebar navigation */}
+        <aside className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t('accessibility.mainNavigation')}>
+          <nav className="sidebar-main-nav">
+            {visibleGroups.map(group => {
+              const active = isGroupActive(group);
+              const isSingleItem = group.items.length === 1;
+              const visibleItems = group.items.filter(item => {
+                if (!item.roles) return true;
+                return item.roles.includes(userRole);
+              });
+
+              if (isSingleItem) {
+                // Single-item groups render as direct links
+                return (
+                  <NavLink
+                    key={group.titleKey}
+                    to={visibleItems[0].path}
+                    end={visibleItems[0].path === '/'}
+                    className={({ isActive }) => `sidebar-direct-link ${isActive ? 'active' : ''}`}
+                    title={sidebarCollapsed ? t(group.titleKey) : undefined}
+                  >
+                    <span className="sidebar-item-icon" aria-hidden="true">{group.icon}</span>
+                    <span className="sidebar-item-label">{t(group.titleKey)}</span>
+                  </NavLink>
+                );
+              }
+
+              // Multi-item groups render as collapsible sections
+              return (
+                <div key={group.titleKey} className={`sidebar-group ${active ? 'active' : ''}`}>
+                  <NavLink
+                    to={visibleItems[0].path}
+                    className={`sidebar-group-header ${active ? 'active' : ''}`}
+                    title={sidebarCollapsed ? t(group.titleKey) : undefined}
+                  >
+                    <span className="sidebar-item-icon" aria-hidden="true">{group.icon}</span>
+                    <span className="sidebar-item-label">{t(group.titleKey)}</span>
+                    {visibleItems.length > 1 && (
+                      <span className="sidebar-group-arrow" aria-hidden="true">
+                        {active ? '▾' : '›'}
+                      </span>
+                    )}
+                  </NavLink>
+                  {active && !sidebarCollapsed && (
+                    <ul className="sidebar-group-items">
+                      {visibleItems.map(item => (
+                        <li key={item.path}>
+                          <NavLink
+                            to={item.path}
+                            className={({ isActive }) => `sidebar-sub-link ${isActive ? 'active' : ''}`}
+                          >
+                            {t(item.labelKey)}
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Sidebar footer with secondary links */}
+          <div className="sidebar-footer">
+            <NavLink
+              to="/user-guide"
+              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+              title={sidebarCollapsed ? t('nav.userGuide') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">📖</span>
+              <span className="sidebar-item-label">{t('nav.userGuide')}</span>
+            </NavLink>
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+              title={sidebarCollapsed ? t('nav.profile') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">👤</span>
+              <span className="sidebar-item-label">{t('nav.profile')}</span>
+            </NavLink>
+            <button
+              className="sidebar-direct-link sidebar-footer-link"
+              onClick={handleRestartOnboarding}
+              title={sidebarCollapsed ? t('onboarding.menuItem') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">🎓</span>
+              <span className="sidebar-item-label">{t('onboarding.menuItem')}</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content area */}
+        <main id="main-content" className="main-content">
+          <Breadcrumbs />
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="mobile-bottom-tabs" aria-label={t('nav.mobileNavigation', 'Navigatie')}>
+        {mobileBottomTabs.map(tab => (
+          <NavLink
+            key={tab.path}
+            to={tab.path}
+            end={tab.exact}
+            className={`bottom-tab ${isTabActive(tab) ? 'active' : ''}`}
+          >
+            <span className="bottom-tab-icon" aria-hidden="true">{tab.icon}</span>
+            <span className="bottom-tab-label">{t(tab.labelKey)}</span>
+          </NavLink>
+        ))}
+        <button
+          className={`bottom-tab ${mobileMenuOpen ? 'active' : ''} ${isMoreActive ? 'active' : ''}`}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label={t('nav.more', 'Meer')}
+          aria-expanded={mobileMenuOpen}
+        >
+          <span className="bottom-tab-icon" aria-hidden="true">☰</span>
+          <span className="bottom-tab-label">{t('nav.more', 'Meer')}</span>
+        </button>
+      </nav>
+
+      {/* Mobile full menu overlay */}
+      {mobileMenuOpen && (
+        <>
           <div
             className="mobile-menu-overlay"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
-        )}
-      </nav>
+          <div className="mobile-menu-panel">
+            <div className="mobile-menu-header">
+              <div className="mobile-user-info">
+                <div className="user-name">{user?.firstName} {user?.lastName}</div>
+                <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
+              </div>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label={t('nav.closeMenu')}
+              >
+                ✕
+              </button>
+            </div>
+            <nav className="mobile-menu-nav">
+              {visibleGroups.map(group => {
+                const visibleItems = group.items.filter(item => {
+                  if (!item.roles) return true;
+                  return item.roles.includes(userRole);
+                });
 
-      {hasSidebar ? (
-        <div className="main-with-sidebar">
-          <ContextSidebar />
-          <main id="main-content" className="main-content">
-            <Breadcrumbs />
-            <Outlet />
-          </main>
-        </div>
-      ) : (
-        <main id="main-content" className="main-content">
-          <Breadcrumbs />
-          <Outlet />
-        </main>
+                if (visibleItems.length === 1) {
+                  return (
+                    <NavLink
+                      key={group.titleKey}
+                      to={visibleItems[0].path}
+                      end={visibleItems[0].path === '/'}
+                      className={({ isActive }) => `mobile-menu-link ${isActive ? 'active' : ''}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span className="mobile-menu-icon" aria-hidden="true">{group.icon}</span>
+                      {t(group.titleKey)}
+                    </NavLink>
+                  );
+                }
+
+                return (
+                  <div key={group.titleKey} className="mobile-menu-group">
+                    <div className="mobile-menu-group-title">
+                      <span className="mobile-menu-icon" aria-hidden="true">{group.icon}</span>
+                      {t(group.titleKey)}
+                    </div>
+                    {visibleItems.map(item => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={({ isActive }) => `mobile-menu-sublink ${isActive ? 'active' : ''}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {t(item.labelKey)}
+                      </NavLink>
+                    ))}
+                  </div>
+                );
+              })}
+            </nav>
+            <div className="mobile-menu-footer">
+              <NavLink to="/user-guide" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                <span className="mobile-menu-icon" aria-hidden="true">📖</span>
+                {t('nav.userGuide')}
+              </NavLink>
+              <NavLink to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                <span className="mobile-menu-icon" aria-hidden="true">👤</span>
+                {t('nav.profile')}
+              </NavLink>
+              <div className="mobile-menu-actions">
+                <DarkModeToggle />
+                <LanguageSwitcher compact />
+                <button className="btn btn-outline btn-sm" onClick={handleLogout}>
+                  {t('nav.logout')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       <footer className="app-footer">
