@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,9 @@ import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { SwipeContainer } from '../components/SwipeContainer';
+import { PdfViewer } from '../components/PdfViewer';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 interface TitleGroup {
   title: string;
@@ -29,6 +32,12 @@ export default function MyMusic() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
+
+  // PDF viewer state
+  const [viewingPiece, setViewingPiece] = useState<MusicPiece | null>(null);
+  const [viewerBlobUrl, setViewerBlobUrl] = useState<string | null>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const viewerBlobUrlRef = useRef<string | null>(null);
 
   // Issue reporting state
   const [reportingPiece, setReportingPiece] = useState<MusicPiece | null>(null);
@@ -112,6 +121,58 @@ export default function MyMusic() {
 
     return Array.from(groups.values());
   }, [selectedList?.pieces]);
+
+  // Fetch PDF as blob when a piece is selected for viewing
+  useEffect(() => {
+    if (!viewingPiece) {
+      // Clean up previous blob URL
+      if (viewerBlobUrlRef.current) {
+        URL.revokeObjectURL(viewerBlobUrlRef.current);
+        viewerBlobUrlRef.current = null;
+      }
+      setViewerBlobUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    setViewerLoading(true);
+    setViewerBlobUrl(null);
+
+    const token = localStorage.getItem('token');
+    fetch(`${API_BASE}/music-pieces/${viewingPiece.id}/download`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load PDF');
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        viewerBlobUrlRef.current = url;
+        setViewerBlobUrl(url);
+        setViewerLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        showError(t('errors.generic'));
+        setViewerLoading(false);
+        setViewingPiece(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewingPiece, t]);
+
+  // Revoke blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (viewerBlobUrlRef.current) {
+        URL.revokeObjectURL(viewerBlobUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleSelectList = (listId: string) => {
     setSearchParams({ listId });
@@ -359,6 +420,13 @@ export default function MyMusic() {
                                         </button>
                                         <button
                                           className="btn btn-outline btn-sm"
+                                          onClick={() => setViewingPiece(piece)}
+                                          title={t('myMusic.viewPdf', 'Bekijken')}
+                                        >
+                                          👁 {t('myMusic.view', 'Bekijk')}
+                                        </button>
+                                        <button
+                                          className="btn btn-outline btn-sm"
                                           onClick={() => openReportModal(piece)}
                                           aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
                                         >
@@ -388,6 +456,32 @@ export default function MyMusic() {
         </div>
         )}
       </div>
+
+      {/* PDF Viewer Modal */}
+      {viewingPiece && (
+        <Modal
+          title={`${viewingPiece.title}${viewingPiece.instrumentName ? ` - ${viewingPiece.instrumentName}` : ''}`}
+          onClose={() => setViewingPiece(null)}
+          size="large"
+        >
+          <div style={{ height: '75vh' }}>
+            {viewerLoading ? (
+              <div className="loading" role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <div className="spinner" aria-hidden="true"></div>
+                <span className="sr-only">{t('common.loading')}</span>
+              </div>
+            ) : viewerBlobUrl ? (
+              <PdfViewer
+                url={viewerBlobUrl}
+                fitMode="contain"
+                enableSwipe={true}
+                enableZoom={true}
+                autoDarkMode={true}
+              />
+            ) : null}
+          </div>
+        </Modal>
+      )}
 
       {/* Issue Report Modal */}
       {reportingPiece && (

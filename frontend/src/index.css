@@ -2860,6 +2860,47 @@ select:focus-visible,
   color: var(--primary);
 }
 
+/* Rehearsal widget items */
+.widget-list .rehearsal-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.rehearsal-date {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--primary);
+  white-space: nowrap;
+  min-width: 5rem;
+}
+
+.rehearsal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.rehearsal-orchestra {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* Widget empty states */
+.widget-empty-state {
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+.widget-empty-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  opacity: 0.4;
+}
+
 .progress-bar-container {
   background: var(--border);
   border-radius: 9999px;

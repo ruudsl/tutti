@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardWidget, WidgetType } from '../hooks/useDashboardWidgets';
+import { getUpcomingRehearsals } from '../api';
+import type { Rehearsal } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -212,7 +214,10 @@ function MusicListsWidget() {
             ))}
           </ul>
         ) : (
-          <p className="text-light text-sm">{t('widgets.noMusicLists')}</p>
+          <div className="widget-empty-state">
+            <span className="widget-empty-icon" aria-hidden="true">🎵</span>
+            <p className="text-light text-sm">{t('widgets.noMusicLists')}</p>
+          </div>
         )}
       </div>
     </div>
@@ -288,7 +293,11 @@ function FavoritesWidget() {
             ))}
           </ul>
         ) : (
-          <p className="text-light text-sm">{t('widgets.noFavorites')}</p>
+          <div className="widget-empty-state">
+            <span className="widget-empty-icon" aria-hidden="true">⭐</span>
+            <p className="text-light text-sm">{t('widgets.noFavorites')}</p>
+            <Link to="/my-music" className="btn btn-outline btn-sm mt-1">{t('nav.myMusic')}</Link>
+          </div>
         )}
       </div>
     </div>
@@ -314,6 +323,10 @@ function AnnouncementsWidget() {
 // Upcoming Rehearsals Widget
 export function UpcomingRehearsalsWidget() {
   const { t } = useTranslation();
+  const { data: rehearsals = [], isLoading } = useQuery<Rehearsal[]>({
+    queryKey: ['upcoming-rehearsals'],
+    queryFn: () => getUpcomingRehearsals(3),
+  });
 
   return (
     <div className="widget">
@@ -324,7 +337,43 @@ export function UpcomingRehearsalsWidget() {
         </Link>
       </div>
       <div className="widget-body">
-        <p className="text-light text-sm">{t('widgets.noUpcomingRehearsals')}</p>
+        {isLoading ? (
+          <p className="text-light text-sm">{t('common.loading')}</p>
+        ) : rehearsals.length > 0 ? (
+          <ul className="widget-list">
+            {rehearsals.map((rehearsal) => (
+              <li key={rehearsal.id} className="rehearsal-item">
+                <div className="rehearsal-date">
+                  {new Date(rehearsal.date).toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </div>
+                <div className="rehearsal-details">
+                  {rehearsal.orchestra_name && (
+                    <span className="rehearsal-orchestra">{rehearsal.orchestra_name}</span>
+                  )}
+                  {rehearsal.start_time && (
+                    <span className="rehearsal-time">
+                      {rehearsal.start_time}
+                      {rehearsal.end_time ? ` – ${rehearsal.end_time}` : ''}
+                    </span>
+                  )}
+                  {rehearsal.location && (
+                    <span className="rehearsal-location">{rehearsal.location}</span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="widget-empty-state">
+            <span className="widget-empty-icon" aria-hidden="true">📅</span>
+            <p className="text-light text-sm">{t('widgets.noUpcomingRehearsals')}</p>
+            <Link to="/rehearsals" className="btn btn-outline btn-sm mt-1">{t('nav.rehearsals')}</Link>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -340,7 +389,10 @@ export function RecentActivityWidget() {
         <h3 className="widget-title">{t('widgets.recentActivity')}</h3>
       </div>
       <div className="widget-body">
-        <p className="text-light text-sm">{t('widgets.noRecentActivity')}</p>
+        <div className="widget-empty-state">
+            <span className="widget-empty-icon" aria-hidden="true">📋</span>
+            <p className="text-light text-sm">{t('widgets.noRecentActivity')}</p>
+          </div>
       </div>
     </div>
   );

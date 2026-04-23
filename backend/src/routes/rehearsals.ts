@@ -254,6 +254,49 @@ router.get('/attendance/summary', authenticateToken, asyncHandler(async (req: Au
 }));
 
 /**
+ * GET /rehearsals/upcoming - Get the next N upcoming rehearsals for the authenticated user
+ * Filters by today's date and forward, limited to `limit` results (default 3)
+ */
+router.get('/upcoming', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const limit = parseInt((req.query.limit as string) || '3', 10);
+    const isManager = REHEARSAL_MANAGERS.includes(req.user!.role);
+
+    let sql = `
+        SELECT r.*, u.first_name || ' ' || u.last_name as created_by_name,
+            o.name as orchestra_name,
+            (SELECT COUNT(*) FROM rehearsal_pieces rp WHERE rp.rehearsal_id = r.id) as piece_count,
+            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'accepted') as accepted_count,
+            (SELECT COUNT(*) FROM rehearsal_attendance ra WHERE ra.rehearsal_id = r.id AND ra.status = 'declined') as declined_count
+        FROM rehearsals r
+        LEFT JOIN users u ON r.created_by = u.id
+        LEFT JOIN orchestras o ON r.orchestra_id = o.id
+        WHERE r.association_id = ?
+        AND r.date >= date('now')
+    `;
+    const params: any[] = [req.user!.associationId];
+
+    // Filter by user's orchestras for non-managers
+    if (!isManager) {
+        const orchestraIds = getUserOrchestraIds(req.user!.id);
+        if (orchestraIds.length > 0) {
+            const placeholders = orchestraIds.map(() => '?').join(', ');
+            sql += ` AND (r.orchestra_id IS NULL OR r.orchestra_id IN (${placeholders}))`;
+            params.push(...orchestraIds);
+        } else {
+            sql += ' AND r.orchestra_id IS NULL';
+        }
+    }
+
+    sql += ' ORDER BY r.date, r.start_time';
+    sql += ' LIMIT ?';
+    params.push(limit);
+
+    const rehearsals = db.prepare(sql).all(...params);
+
+    res.json(rehearsals);
+}));
+
+/**
  * GET /rehearsals - Get rehearsals (optionally filtered by date range)
  * Regular members only see rehearsals for their orchestras (or orchestra_id=NULL which are for everyone)
  * Managers see all rehearsals
