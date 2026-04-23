@@ -279,7 +279,12 @@
       "submit": "Submit report",
       "submitting": "Loading...",
       "success": "Issue successfully reported"
-    }
+    },
+    "view": "View",
+    "viewPdf": "View PDF",
+    "swipeHint": "Swipe to navigate",
+    "downloadAll": "Download all",
+    "downloadingAll": "Downloading..."
   },
   "tools": {
     "title": "Music Tools",
@@ -1194,7 +1199,12 @@
     "sessions": "Active Sessions - Harmonie",
     "dataExport": "Your Data - Harmonie",
     "paymentSettings": "Payment Settings - Harmonie",
-    "ticketDashboard": "Ticket Dashboard - Harmonie"
+    "ticketDashboard": "Ticket Dashboard - Harmonie",
+    "seating": "Seating - Harmonie",
+    "voiceParts": "Voice Parts - Harmonie",
+    "occupancy": "Occupancy - Harmonie",
+    "neighborPreferences": "Neighbor Preferences - Harmonie",
+    "memberDirectory": "Member Directory - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -1616,9 +1626,7 @@
     "paidAt": "Paid at",
     "buyerInfo": "Buyer Information",
     "items": "Items",
-    "ticketType": "Ticket Type",
     "unitPrice": "Unit Price",
-    "subtotal": "Subtotal",
     "paymentDetails": "Payment Details",
     "paymentProvider": "Payment Provider",
     "paymentId": "Payment ID",
@@ -2189,13 +2197,6 @@
       "step4": "Copy your Account SID and Auth Token from the Console",
       "step5": "Enter the details above and test the connection"
     }
-  },
-  "pageTitle": {
-    "seating": "Seating - Harmonie",
-    "voiceParts": "Voice Parts - Harmonie",
-    "occupancy": "Occupancy - Harmonie",
-    "neighborPreferences": "Neighbor Preferences - Harmonie",
-    "memberDirectory": "Member Directory - Harmonie"
   },
   "memberDirectory": {
     "title": "Member Directory",

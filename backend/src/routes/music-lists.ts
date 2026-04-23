@@ -1,5 +1,8 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+import archiver from 'archiver';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -7,6 +10,8 @@ import { createMusicListSchema, updateMusicListSchema, reorderMusicListsSchema, 
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 
 const router = Router();
 
@@ -281,6 +286,120 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
         })),
     });
 }));
+
+/**
+ * @swagger
+ * /music-lists/{listId}/download-zip:
+ *   get:
+ *     summary: Download all music pieces in a list as a zip file
+ *     tags: [Music Lists]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: listId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Zip file containing all matching PDFs
+ *       404:
+ *         description: Music list not found
+ */
+router.get('/:listId/download-zip', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const list = db.prepare(`
+            SELECT ml.id, ml.name, o.name as orchestra_name
+            FROM music_lists ml
+            JOIN orchestras o ON ml.orchestra_id = o.id
+            WHERE ml.id = ? AND o.association_id = ?
+        `).get(req.params.listId, req.user!.associationId) as { id: string; name: string; orchestra_name: string } | undefined;
+
+        if (!list) {
+            return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });
+        }
+
+        // Get user's instruments for filtering
+        const userInstruments = db.prepare(`
+            SELECT instrument_id FROM user_instruments WHERE user_id = ?
+        `).all(req.user!.id) as { instrument_id: string }[];
+
+        const instrumentIds = userInstruments.map(i => i.instrument_id);
+
+        // Get pieces in this list, filtered by user's instruments for regular members
+        let pieces: any[];
+        if (req.user!.role === 'admin' || req.user!.role === 'music_committee') {
+            pieces = db.prepare(`
+                SELECT mp.id, mp.title, mp.file_path, mp.original_filename,
+                       i.name as instrument_name, mp.group_number
+                FROM music_pieces mp
+                JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                LEFT JOIN instruments i ON mp.instrument_id = i.id
+                WHERE mlp.music_list_id = ?
+                ORDER BY mp.title, i.name, mp.group_number
+            `).all(req.params.listId);
+        } else {
+            if (instrumentIds.length === 0) {
+                pieces = [];
+            } else {
+                const placeholders = instrumentIds.map(() => '?').join(',');
+                pieces = db.prepare(`
+                    SELECT mp.id, mp.title, mp.file_path, mp.original_filename,
+                           i.name as instrument_name, mp.group_number
+                    FROM music_pieces mp
+                    JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
+                    LEFT JOIN instruments i ON mp.instrument_id = i.id
+                    WHERE mlp.music_list_id = ? AND mp.instrument_id IN (${placeholders})
+                    ORDER BY mp.title, i.name, mp.group_number
+                `).all(req.params.listId, ...instrumentIds);
+            }
+        }
+
+        if (pieces.length === 0) {
+            return res.status(404).json({ error: 'Geen muziekstukken gevonden voor deze lijst.' });
+        }
+
+        // Build list of valid files
+        const validFiles: { filePath: string; archiveName: string }[] = [];
+        for (const piece of pieces) {
+            if (!piece.file_path) continue;
+            const fullPath = path.join(UPLOAD_DIR, piece.file_path);
+            if (!fs.existsSync(fullPath)) continue;
+
+            // Build a descriptive filename: title - instrument - group.pdf
+            const parts = [piece.title];
+            if (piece.instrument_name) parts.push(piece.instrument_name);
+            if (piece.group_number) parts.push(String(piece.group_number));
+            const ext = path.extname(piece.original_filename || '.pdf') || '.pdf';
+            const archiveName = parts.join(' - ').replace(/[/\\?%*:|"<>]/g, '_') + ext;
+
+            validFiles.push({ filePath: fullPath, archiveName });
+        }
+
+        if (validFiles.length === 0) {
+            return res.status(404).json({ error: 'Geen bestanden gevonden voor deze lijst.' });
+        }
+
+        const safeName = list.name.replace(/[/\\?%*:|"<>]/g, '_');
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeName}.zip"`);
+
+        const archive = archiver('zip', { zlib: { level: 5 } });
+        archive.pipe(res);
+
+        for (const file of validFiles) {
+            archive.file(file.filePath, { name: file.archiveName });
+        }
+
+        await archive.finalize();
+    } catch (error) {
+        logger.error('Error creating download zip for music list:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Fout bij aanmaken van zip bestand.' });
+        }
+    }
+});
 
 /**
  * @swagger

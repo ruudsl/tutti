@@ -30,6 +30,7 @@ export default function MyMusic() {
   useDocumentTitle('pageTitle.myMusic');
   const [searchParams, setSearchParams] = useSearchParams();
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
 
@@ -192,6 +193,32 @@ export default function MyMusic() {
     }
   };
 
+  const handleDownloadAll = async () => {
+    if (!listId) return;
+    setDownloadingAll(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/music-lists/${listId}/download-zip`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+      a.download = filenameMatch ? filenameMatch[1] : 'muziek.zip';
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading all:', error);
+      showError(t('errors.generic'));
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
   const handleBack = () => {
     setSearchParams({});
   };
@@ -285,6 +312,13 @@ export default function MyMusic() {
               <h2 className="card-title">{selectedList.name}</h2>
               <span className="piece-meta">{selectedList.orchestraName}</span>
             </div>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+            >
+              {downloadingAll ? t('myMusic.downloadingAll') : `⬇ ${t('myMusic.downloadAll')}`}
+            </button>
           </div>
           <div className="card-body">
             {titleGroups.length > 0 ? (
