@@ -34,7 +34,16 @@
     "required": "verplicht",
     "sessionExpired": "Sessie verlopen. Log opnieuw in.",
     "records": "records",
-    "warning": "Waarschuwing"
+    "warning": "Waarschuwing",
+    "title": "Titel",
+    "orchestra": "Orkest",
+    "notes": "Notities",
+    "allOrchestras": "Alle orkesten",
+    "create": "Aanmaken"
+  },
+  "music": {
+    "title": "Muziekstuk",
+    "composer": "Componist"
   },
   "sidebar": {
     "agenda": "Agenda",

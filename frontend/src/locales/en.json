@@ -34,7 +34,16 @@
     "required": "required",
     "sessionExpired": "Session expired. Please log in again.",
     "records": "records",
-    "warning": "Warning"
+    "warning": "Warning",
+    "title": "Title",
+    "orchestra": "Orchestra",
+    "notes": "Notes",
+    "allOrchestras": "All orchestras",
+    "create": "Create"
+  },
+  "music": {
+    "title": "Music piece",
+    "composer": "Composer"
   },
   "sidebar": {
     "agenda": "Agenda",

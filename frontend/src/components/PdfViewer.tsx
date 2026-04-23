@@ -440,6 +440,8 @@ export function PdfViewer({
           ref={canvasRef}
           style={{
             ...styles.canvas,
+            // Only constrain to container at default zoom; when zoomed, let canvas overflow for scrolling
+            ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none' } : {}),
             ...getTransformStyle,
             opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
             // Dark mode: invert colors and adjust hue for better readability
