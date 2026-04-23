@@ -10,6 +10,7 @@ import { updateMusicPieceSchema, updateTitleMetaSchema, shareMusicPieceSchema, b
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import { notifyOrchestra } from './notifications';
 
 const router = Router();
 
@@ -1102,6 +1103,37 @@ router.post('/upload', authenticateToken, requireRole('admin', 'music_committee'
         uploaded: results,
         errors: errors.length > 0 ? errors : undefined,
     });
+
+    // Fire-and-forget: notify orchestra members about new music
+    if (results.length > 0) {
+        const notifTitle = results.length === 1
+            ? `Nieuw muziekstuk: ${results[0].title}`
+            : `${results.length} nieuwe muziekstukken toegevoegd`;
+        const notifBody = results.length === 1
+            ? `${results[0].title} is beschikbaar gesteld.`
+            : `Er zijn ${results.length} nieuwe muziekstukken beschikbaar gesteld.`;
+        const notifData = { count: results.length, listId: listId || null };
+
+        if (listId) {
+            // Notify the specific orchestra that owns this music list
+            const musicList = db.prepare(
+                'SELECT orchestra_id FROM music_lists WHERE id = ?'
+            ).get(listId) as { orchestra_id: string } | undefined;
+            if (musicList?.orchestra_id) {
+                notifyOrchestra(musicList.orchestra_id, 'new_music', notifTitle, notifBody, notifData, req.user!.id)
+                    .catch((err: Error) => logger.error('Failed to send new_music notification', { error: err.message }));
+            }
+        } else {
+            // No specific list – notify all orchestras in the association
+            const orchestras = db.prepare(
+                'SELECT id FROM orchestras WHERE association_id = ?'
+            ).all(req.user!.associationId) as { id: string }[];
+            for (const orch of orchestras) {
+                notifyOrchestra(orch.id, 'new_music', notifTitle, notifBody, notifData, req.user!.id)
+                    .catch((err: Error) => logger.error('Failed to send new_music notification', { error: err.message }));
+            }
+        }
+    }
 }));
 
 /**

@@ -4,6 +4,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import { notifyOrchestra } from './notifications';
 
 const router = Router();
 
@@ -412,6 +413,24 @@ router.post('/', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHan
     logger.info('Rehearsal created', { id, date, type, orchestraId, associationId: req.user!.associationId });
 
     res.status(201).json({ id, date, startTime, endTime, location, type: type || 'regular', notes, orchestraId: orchestraId || null });
+
+    // Fire-and-forget: notify orchestra members about the new rehearsal
+    const rehearsalType = type || 'regular';
+    const notifTitle = rehearsalType === 'extra' ? 'Extra repetitie gepland' : 'Nieuwe repetitie gepland';
+    const notifBody = `Er is een repetitie gepland op ${date} van ${startTime} tot ${endTime}${location ? ` (${location})` : ''}.`;
+    const notifData = { rehearsalId: id, date, type: rehearsalType };
+
+    if (orchestraId) {
+        notifyOrchestra(orchestraId, 'rehearsal_change', notifTitle, notifBody, notifData, req.user!.id)
+            .catch((err: Error) => logger.error('Failed to send rehearsal_change notification', { error: err.message }));
+    } else {
+        // No specific orchestra – notify all orchestras in the association
+        const orchestras = db.prepare('SELECT id FROM orchestras WHERE association_id = ?').all(req.user!.associationId) as { id: string }[];
+        for (const orch of orchestras) {
+            notifyOrchestra(orch.id, 'rehearsal_change', notifTitle, notifBody, notifData, req.user!.id)
+                .catch((err: Error) => logger.error('Failed to send rehearsal_change notification', { error: err.message }));
+        }
+    }
 }));
 
 /**
@@ -421,7 +440,7 @@ router.put('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncH
     const { id } = req.params;
     const { date, startTime, endTime, location, type, notes, orchestraId } = req.body;
 
-    const existing = db.prepare('SELECT id FROM rehearsals WHERE id = ? AND association_id = ?').get(id, req.user!.associationId) as any;
+    const existing = db.prepare('SELECT id, orchestra_id, date as existing_date FROM rehearsals WHERE id = ? AND association_id = ?').get(id, req.user!.associationId) as any;
     if (!existing) {
         throw new ApiError(404, 'Repetitie niet gevonden.');
     }
@@ -433,6 +452,33 @@ router.put('/:id', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncH
     `).run(date, startTime, endTime, location || null, type || 'regular', notes || null, orchestraId || null, id, req.user!.associationId);
 
     res.json({ message: 'Repetitie bijgewerkt.' });
+
+    // Fire-and-forget: notify orchestra members about the rehearsal change
+    const updatedType = type || 'regular';
+    const effectiveOrchestraId = orchestraId || existing.orchestra_id || null;
+    const updatedDate = date || existing.existing_date;
+
+    let updateNotifTitle: string;
+    let updateNotifBody: string;
+    if (updatedType === 'cancelled') {
+        updateNotifTitle = 'Repetitie geannuleerd';
+        updateNotifBody = `De repetitie van ${updatedDate} is geannuleerd.`;
+    } else {
+        updateNotifTitle = 'Repetitie gewijzigd';
+        updateNotifBody = `De repetitie van ${updatedDate} is gewijzigd: ${startTime}–${endTime}${location ? ` (${location})` : ''}.`;
+    }
+    const updateNotifData = { rehearsalId: id, date: updatedDate, type: updatedType };
+
+    if (effectiveOrchestraId) {
+        notifyOrchestra(effectiveOrchestraId, 'rehearsal_change', updateNotifTitle, updateNotifBody, updateNotifData, req.user!.id)
+            .catch((err: Error) => logger.error('Failed to send rehearsal_change notification', { error: err.message }));
+    } else {
+        const orchestras = db.prepare('SELECT id FROM orchestras WHERE association_id = ?').all(req.user!.associationId) as { id: string }[];
+        for (const orch of orchestras) {
+            notifyOrchestra(orch.id, 'rehearsal_change', updateNotifTitle, updateNotifBody, updateNotifData, req.user!.id)
+                .catch((err: Error) => logger.error('Failed to send rehearsal_change notification', { error: err.message }));
+        }
+    }
 }));
 
 /**

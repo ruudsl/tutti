@@ -12,9 +12,17 @@
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
-    "start": "npm run start --workspace=backend"
+    "start": "npm run start --workspace=backend",
+    "lint": "eslint backend/src frontend/src",
+    "lint:fix": "eslint backend/src frontend/src --fix",
+    "format": "prettier --write \"backend/src/**/*.{ts,tsx}\" \"frontend/src/**/*.{ts,tsx,css}\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^8.2.2",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.8.3",
+    "typescript-eslint": "^8.59.0"
   }
 }
