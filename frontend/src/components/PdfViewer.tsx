@@ -429,33 +429,29 @@ export function PdfViewer({
     <div
       ref={swipeRef}
       className={`pdf-viewer ${className}`}
-      style={{
-        ...styles.container,
-        // When zoomed, allow overflow so the canvas container can scroll
-        ...(isZoomed ? { overflow: 'visible' } : {}),
-      }}
+      style={styles.container}
     >
       {/* PDF Canvas Container */}
       <div ref={containerRef} style={{
         ...styles.canvasContainer,
         backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
-        // When zoomed, enable full panning and align to top-left for scrolling
         ...(isZoomed ? {
-          touchAction: 'pan-x pan-y',
-          cursor: 'grab',
+          // When zoomed: scrollable in all directions, content at top-left
+          overflow: 'scroll',
           alignItems: 'flex-start',
           justifyContent: 'flex-start',
+          touchAction: 'pan-x pan-y',
+          cursor: 'grab',
         } : {}),
       }}>
         <canvas
           ref={canvasRef}
           style={{
             ...styles.canvas,
-            // Only constrain to container at default zoom; when zoomed, let canvas overflow for scrolling
-            ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none' } : {}),
+            // When zoomed, remove size constraints so canvas can be larger than container
+            ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none', flexShrink: 0 } : {}),
             ...getTransformStyle,
             opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
-            // Dark mode: invert colors and adjust hue for better readability
             filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
           }}
         />
