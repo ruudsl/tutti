@@ -429,12 +429,23 @@ export function PdfViewer({
     <div
       ref={swipeRef}
       className={`pdf-viewer ${className}`}
-      style={styles.container}
+      style={{
+        ...styles.container,
+        // When zoomed, allow overflow so the canvas container can scroll
+        ...(isZoomed ? { overflow: 'visible' } : {}),
+      }}
     >
       {/* PDF Canvas Container */}
       <div ref={containerRef} style={{
         ...styles.canvasContainer,
         backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
+        // When zoomed, enable full panning and align to top-left for scrolling
+        ...(isZoomed ? {
+          touchAction: 'pan-x pan-y',
+          cursor: 'grab',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
+        } : {}),
       }}>
         <canvas
           ref={canvasRef}
