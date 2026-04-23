@@ -297,7 +297,11 @@
     "viewPdf": "View PDF",
     "swipeHint": "Swipe to navigate",
     "downloadAll": "Download all",
-    "downloadingAll": "Downloading..."
+    "downloadingAll": "Downloading...",
+    "makeOffline": "Make offline",
+    "makingOffline": "Caching...",
+    "offlineReady": "Available offline",
+    "cachedPieces": "{{count}} pieces cached"
   },
   "tools": {
     "title": "Music Tools",
@@ -1879,6 +1883,24 @@
     "sessionRevoked": "Session logged out",
     "allSessionsRevoked": "{{count}} session(s) logged out",
     "noSessions": "No active sessions found."
+  },
+  "annotations": {
+    "title": "Annotations",
+    "add": "Add annotation",
+    "highlight": "Highlight",
+    "note": "Note",
+    "text": "Text",
+    "drawing": "Drawing",
+    "delete": "Delete",
+    "deleteAll": "Delete all annotations",
+    "color": "Color",
+    "placeholder": "Type your annotation...",
+    "noAnnotations": "No annotations on this page",
+    "saved": "Annotation saved",
+    "deleted": "Annotation deleted",
+    "pageLabel": "Page {{page}}",
+    "showAnnotations": "Show annotations",
+    "hideAnnotations": "Hide annotations"
   },
   "dataExport": {
     "title": "Your Data",

@@ -2,9 +2,19 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useSwipeGesture, SwipeDirection } from '../hooks/useSwipeGesture';
+import { useTranslation } from 'react-i18next';
+import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+export interface PdfAnnotation {
+  id: string;
+  pageNumber: number;
+  content: string;
+  color: string;
+  createdAt: string;
+}
 
 export interface PdfViewerProps {
   /** PDF file to display */
@@ -33,6 +43,12 @@ export interface PdfViewerProps {
   darkMode?: boolean;
   /** Auto dark mode based on system preference */
   autoDarkMode?: boolean;
+  /** Music piece ID for annotations */
+  musicPieceId?: string;
+  /** External annotations (controlled mode) */
+  annotations?: PdfAnnotation[];
+  /** Callback when an annotation is added */
+  onAnnotationAdd?: (annotation: PdfAnnotation) => void;
 }
 
 interface PageCache {
@@ -57,7 +73,11 @@ export function PdfViewer({
   maxZoom = 3,
   darkMode = false,
   autoDarkMode = false,
+  musicPieceId,
+  annotations: externalAnnotations,
+  onAnnotationAdd,
 }: PdfViewerProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -76,6 +96,14 @@ export function PdfViewer({
   const indicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+
+  // Annotations state
+  const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
+  const [annotations, setAnnotations] = useState<PdfAnnotation[]>([]);
+  const [newAnnotationText, setNewAnnotationText] = useState('');
+  const [newAnnotationColor, setNewAnnotationColor] = useState('#fbbf24');
+  const [annotationsLoading, setAnnotationsLoading] = useState(false);
+  const [annotationFeedback, setAnnotationFeedback] = useState<string | null>(null);
 
   // Dark mode state - respects prop or system preference
   const [isDarkModeActive, setIsDarkModeActive] = useState(() => {
@@ -106,6 +134,93 @@ export function PdfViewer({
   const toggleDarkMode = useCallback(() => {
     setIsDarkModeActive(prev => !prev);
   }, []);
+
+  // Load annotations when musicPieceId changes or when using external annotations
+  useEffect(() => {
+    if (externalAnnotations !== undefined) {
+      setAnnotations(externalAnnotations);
+      return;
+    }
+    if (!musicPieceId) return;
+
+    setAnnotationsLoading(true);
+    getAnnotations(musicPieceId)
+      .then((data) => {
+        // Map API response (annotationType-based) to our simplified PdfAnnotation shape
+        const mapped: PdfAnnotation[] = (data as any[]).map((a) => ({
+          id: a.id,
+          pageNumber: a.pageNumber,
+          content: a.content || '',
+          color: a.color || '#fbbf24',
+          createdAt: a.createdAt,
+        }));
+        setAnnotations(mapped);
+      })
+      .catch(() => {
+        // Silently fail – annotations are optional
+      })
+      .finally(() => setAnnotationsLoading(false));
+  }, [musicPieceId, externalAnnotations]);
+
+  // Show transient feedback message
+  const showFeedback = useCallback((msg: string) => {
+    setAnnotationFeedback(msg);
+    setTimeout(() => setAnnotationFeedback(null), 2500);
+  }, []);
+
+  // Annotations for the current page
+  const currentPageAnnotations = useMemo(
+    () => annotations.filter((a) => a.pageNumber === currentPage),
+    [annotations, currentPage]
+  );
+
+  // Pages that have at least one annotation (for dot indicators)
+  const pagesWithAnnotations = useMemo(
+    () => new Set(annotations.map((a) => a.pageNumber)),
+    [annotations]
+  );
+
+  const handleAddAnnotation = useCallback(async () => {
+    if (!newAnnotationText.trim()) return;
+    if (!musicPieceId) return;
+
+    try {
+      const result = await createAnnotation({
+        musicPieceId,
+        pageNumber: currentPage,
+        annotationType: 'note',
+        xPosition: 0,
+        yPosition: 0,
+        content: newAnnotationText.trim(),
+        color: newAnnotationColor,
+      } as any);
+
+      const newAnnotation: PdfAnnotation = {
+        id: result.id,
+        pageNumber: currentPage,
+        content: newAnnotationText.trim(),
+        color: newAnnotationColor,
+        createdAt: new Date().toISOString(),
+      };
+
+      setAnnotations((prev) => [...prev, newAnnotation]);
+      setNewAnnotationText('');
+      showFeedback(t('annotations.saved'));
+      onAnnotationAdd?.(newAnnotation);
+    } catch {
+      // Silently fail
+    }
+  }, [musicPieceId, currentPage, newAnnotationText, newAnnotationColor, t, onAnnotationAdd, showFeedback]);
+
+  const handleDeleteAnnotation = useCallback(async (id: string) => {
+    try {
+      await deleteAnnotation(id);
+      setAnnotations((prev) => prev.filter((a) => a.id !== id));
+      showFeedback(t('annotations.deleted'));
+    } catch {
+      // Silently fail
+    }
+  }, [t, showFeedback]);
 
   // Load PDF document
   useEffect(() => {
@@ -454,131 +569,269 @@ export function PdfViewer({
     );
   }
 
+  const hasAnnotationsSupport = !!musicPieceId;
+
   return (
     <div
       ref={swipeRef}
       className={`pdf-viewer ${className}`}
-      style={styles.container}
+      style={{ ...styles.container, flexDirection: 'row' }}
     >
-      {/* PDF Canvas Container */}
-      <div
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{
-        ...styles.canvasContainer,
-        backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
-        ...(isZoomed ? {
-          // When zoomed: scrollable in all directions, content at top-left
-          overflow: 'scroll',
-          alignItems: 'flex-start',
-          justifyContent: 'flex-start',
-          touchAction: 'pan-x pan-y',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          userSelect: 'none',
-        } : {}),
-      }}>
-        <canvas
-          ref={canvasRef}
-          style={{
-            ...styles.canvas,
-            // When zoomed, remove size constraints so canvas can be larger than container
-            ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none', flexShrink: 0 } : {}),
-            ...getTransformStyle,
-            opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
-            filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
-          }}
-        />
-      </div>
-
-      {/* Page Indicator */}
-      {showPageIndicator && (
+      {/* Main viewer area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        {/* PDF Canvas Container */}
         <div
+          ref={containerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           style={{
-            ...styles.pageIndicator,
-            opacity: showIndicator || isSwipeActive ? 1 : 0,
-          }}
-        >
-          <span style={styles.pageText}>
-            {currentPage} / {totalPages}
-          </span>
-        </div>
-      )}
-
-      {/* Navigation Controls */}
-      <div style={styles.controls}>
-        <button
-          onClick={previousPage}
-          disabled={currentPage <= 1}
-          style={{
-            ...styles.navButton,
-            opacity: currentPage <= 1 ? 0.3 : 1,
-          }}
-          aria-label="Previous page"
-        >
-          &#8249;
-        </button>
-
-        <div style={styles.zoomControls}>
-          {enableZoom && (
-            <>
-              <button onClick={handleZoomOut} style={styles.zoomButton} aria-label="Zoom out">
-                -
-              </button>
-              <span style={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
-              <button onClick={handleZoomIn} style={styles.zoomButton} aria-label="Zoom in">
-                +
-              </button>
-              {isZoomed && (
-                <button onClick={handleZoomReset} style={styles.zoomButton} aria-label="Reset zoom">
-                  Reset
-                </button>
-              )}
-            </>
-          )}
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
+          ...styles.canvasContainer,
+          backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
+          ...(isZoomed ? {
+            // When zoomed: scrollable in all directions, content at top-left
+            overflow: 'scroll',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            touchAction: 'pan-x pan-y',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+          } : {}),
+        }}>
+          <canvas
+            ref={canvasRef}
             style={{
-              ...styles.zoomButton,
-              marginLeft: '0.5rem',
-              backgroundColor: isDarkModeActive ? '#fbbf24' : '#374151',
+              ...styles.canvas,
+              // When zoomed, remove size constraints so canvas can be larger than container
+              ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none', flexShrink: 0 } : {}),
+              ...getTransformStyle,
+              opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
+              filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
             }}
-            aria-label={isDarkModeActive ? 'Light mode' : 'Dark mode'}
-            title={isDarkModeActive ? 'Switch to light mode' : 'Switch to dark mode'}
+          />
+        </div>
+
+        {/* Page Indicator */}
+        {showPageIndicator && (
+          <div
+            style={{
+              ...styles.pageIndicator,
+              opacity: showIndicator || isSwipeActive ? 1 : 0,
+            }}
           >
-            {isDarkModeActive ? '☀️' : '🌙'}
+            <span style={styles.pageText}>
+              {currentPage} / {totalPages}
+            </span>
+            {pagesWithAnnotations.has(currentPage) && (
+              <span style={{ marginLeft: '0.5rem', color: '#fbbf24' }}>&#9679;</span>
+            )}
+          </div>
+        )}
+
+        {/* Navigation Controls */}
+        <div style={styles.controls}>
+          <button
+            onClick={previousPage}
+            disabled={currentPage <= 1}
+            style={{
+              ...styles.navButton,
+              opacity: currentPage <= 1 ? 0.3 : 1,
+            }}
+            aria-label="Previous page"
+          >
+            &#8249;
+          </button>
+
+          <div style={styles.zoomControls}>
+            {enableZoom && (
+              <>
+                <button onClick={handleZoomOut} style={styles.zoomButton} aria-label="Zoom out">
+                  -
+                </button>
+                <span style={styles.zoomLevel}>{Math.round(zoom * 100)}%</span>
+                <button onClick={handleZoomIn} style={styles.zoomButton} aria-label="Zoom in">
+                  +
+                </button>
+                {isZoomed && (
+                  <button onClick={handleZoomReset} style={styles.zoomButton} aria-label="Reset zoom">
+                    Reset
+                  </button>
+                )}
+              </>
+            )}
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggleDarkMode}
+              style={{
+                ...styles.zoomButton,
+                marginLeft: '0.5rem',
+                backgroundColor: isDarkModeActive ? '#fbbf24' : '#374151',
+              }}
+              aria-label={isDarkModeActive ? 'Light mode' : 'Dark mode'}
+              title={isDarkModeActive ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDarkModeActive ? '☀️' : '🌙'}
+            </button>
+            {/* Annotations toggle */}
+            {hasAnnotationsSupport && (
+              <button
+                onClick={() => setShowAnnotationsPanel(prev => !prev)}
+                style={{
+                  ...styles.zoomButton,
+                  marginLeft: '0.25rem',
+                  backgroundColor: showAnnotationsPanel ? '#fbbf24' : 'transparent',
+                  color: showAnnotationsPanel ? '#1f2937' : 'var(--text, #333)',
+                  position: 'relative',
+                  minWidth: '2rem',
+                }}
+                aria-label={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
+                title={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
+              >
+                &#9998;
+                {annotations.length > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    fontSize: '0.6rem',
+                    width: '14px',
+                    height: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                  }}>
+                    {annotations.length > 9 ? '9+' : annotations.length}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={nextPage}
+            disabled={currentPage >= totalPages}
+            style={{
+              ...styles.navButton,
+              opacity: currentPage >= totalPages ? 0.3 : 1,
+            }}
+            aria-label="Next page"
+          >
+            &#8250;
           </button>
         </div>
 
-        <button
-          onClick={nextPage}
-          disabled={currentPage >= totalPages}
-          style={{
-            ...styles.navButton,
-            opacity: currentPage >= totalPages ? 0.3 : 1,
-          }}
-          aria-label="Next page"
-        >
-          &#8250;
-        </button>
+        {/* Swipe hint overlay */}
+        {isSwipeActive && (
+          <div style={styles.swipeHintOverlay}>
+            {swipeOffset < -30 && currentPage < totalPages && (
+              <div style={{ ...styles.swipeHint, right: '1rem' }}>
+                Next &rarr;
+              </div>
+            )}
+            {swipeOffset > 30 && currentPage > 1 && (
+              <div style={{ ...styles.swipeHint, left: '1rem' }}>
+                &larr; Previous
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Annotation feedback toast */}
+        {annotationFeedback && (
+          <div style={styles.feedbackToast}>
+            {annotationFeedback}
+          </div>
+        )}
       </div>
 
-      {/* Swipe hint overlay */}
-      {isSwipeActive && (
-        <div style={styles.swipeHintOverlay}>
-          {swipeOffset < -30 && currentPage < totalPages && (
-            <div style={{ ...styles.swipeHint, right: '1rem' }}>
-              Next &rarr;
+      {/* Annotations Sidebar */}
+      {hasAnnotationsSupport && showAnnotationsPanel && (
+        <div style={styles.annotationsSidebar}>
+          <div style={styles.annotationsHeader}>
+            <span style={styles.annotationsTitle}>{t('annotations.title')}</span>
+            <span style={styles.annotationsPageLabel}>
+              {t('annotations.pageLabel', { page: currentPage })}
+            </span>
+          </div>
+
+          {/* Add annotation form */}
+          <div style={styles.addAnnotationForm}>
+            <textarea
+              value={newAnnotationText}
+              onChange={(e) => setNewAnnotationText(e.target.value)}
+              placeholder={t('annotations.placeholder')}
+              style={styles.annotationTextarea}
+              rows={3}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  handleAddAnnotation();
+                }
+              }}
+            />
+            <div style={styles.addAnnotationControls}>
+              <div style={styles.colorPicker}>
+                {['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#a78bfa'].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewAnnotationColor(color)}
+                    style={{
+                      ...styles.colorDot,
+                      backgroundColor: color,
+                      outline: newAnnotationColor === color ? `2px solid ${color}` : 'none',
+                      outlineOffset: '2px',
+                    }}
+                    aria-label={color}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={handleAddAnnotation}
+                disabled={!newAnnotationText.trim()}
+                style={{
+                  ...styles.addButton,
+                  opacity: newAnnotationText.trim() ? 1 : 0.4,
+                }}
+              >
+                {t('annotations.add')}
+              </button>
             </div>
-          )}
-          {swipeOffset > 30 && currentPage > 1 && (
-            <div style={{ ...styles.swipeHint, left: '1rem' }}>
-              &larr; Previous
-            </div>
-          )}
+          </div>
+
+          {/* Annotation list for current page */}
+          <div style={styles.annotationList}>
+            {annotationsLoading ? (
+              <div style={styles.annotationsEmpty}>{t('common.loading')}</div>
+            ) : currentPageAnnotations.length === 0 ? (
+              <div style={styles.annotationsEmpty}>{t('annotations.noAnnotations')}</div>
+            ) : (
+              currentPageAnnotations.map((annotation) => (
+                <div key={annotation.id} style={styles.annotationItem}>
+                  <div style={styles.annotationItemHeader}>
+                    <span
+                      style={{
+                        ...styles.annotationColorDot,
+                        backgroundColor: annotation.color,
+                      }}
+                    />
+                    <button
+                      onClick={() => handleDeleteAnnotation(annotation.id)}
+                      style={styles.deleteAnnotationButton}
+                      title={t('annotations.delete')}
+                      aria-label={t('annotations.delete')}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <p style={styles.annotationContent}>{annotation.content}</p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -649,6 +902,8 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'opacity 0.3s ease',
     zIndex: 10,
     pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
   },
   pageText: {
     fontVariantNumeric: 'tabular-nums',
@@ -734,6 +989,146 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '0.5rem',
     fontSize: '0.875rem',
     fontWeight: 500,
+  },
+  // Annotations sidebar
+  annotationsSidebar: {
+    width: '260px',
+    minWidth: '260px',
+    display: 'flex',
+    flexDirection: 'column',
+    borderLeft: '1px solid var(--border-color, #e5e7eb)',
+    backgroundColor: 'var(--background, white)',
+    overflow: 'hidden',
+  },
+  annotationsHeader: {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '0.75rem 1rem',
+    borderBottom: '1px solid var(--border-color, #e5e7eb)',
+    backgroundColor: 'var(--background-secondary, #f9fafb)',
+  },
+  annotationsTitle: {
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    color: 'var(--text, #111827)',
+  },
+  annotationsPageLabel: {
+    fontSize: '0.75rem',
+    color: 'var(--text-light, #6b7280)',
+    marginTop: '0.125rem',
+  },
+  addAnnotationForm: {
+    padding: '0.75rem',
+    borderBottom: '1px solid var(--border-color, #e5e7eb)',
+  },
+  annotationTextarea: {
+    width: '100%',
+    resize: 'vertical',
+    border: '1px solid var(--border-color, #d1d5db)',
+    borderRadius: '0.375rem',
+    padding: '0.5rem',
+    fontSize: '0.8125rem',
+    fontFamily: 'inherit',
+    color: 'var(--text, #111827)',
+    backgroundColor: 'var(--background, white)',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+  addAnnotationControls: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '0.5rem',
+    gap: '0.5rem',
+  },
+  colorPicker: {
+    display: 'flex',
+    gap: '0.25rem',
+    alignItems: 'center',
+  },
+  colorDot: {
+    width: '1rem',
+    height: '1rem',
+    borderRadius: '50%',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+    flexShrink: 0,
+  },
+  addButton: {
+    padding: '0.375rem 0.75rem',
+    backgroundColor: 'var(--primary, #3b82f6)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.375rem',
+    fontSize: '0.8125rem',
+    fontWeight: 500,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  annotationList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '0.5rem',
+  },
+  annotationsEmpty: {
+    padding: '1rem',
+    textAlign: 'center',
+    fontSize: '0.8125rem',
+    color: 'var(--text-light, #9ca3af)',
+  },
+  annotationItem: {
+    backgroundColor: 'var(--background-secondary, #f9fafb)',
+    borderRadius: '0.375rem',
+    padding: '0.5rem 0.625rem',
+    marginBottom: '0.5rem',
+    border: '1px solid var(--border-color, #e5e7eb)',
+  },
+  annotationItemHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '0.25rem',
+  },
+  annotationColorDot: {
+    width: '0.625rem',
+    height: '0.625rem',
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
+  deleteAnnotationButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--text-light, #9ca3af)',
+    fontSize: '1rem',
+    lineHeight: 1,
+    padding: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  annotationContent: {
+    margin: 0,
+    fontSize: '0.8125rem',
+    color: 'var(--text, #374151)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+  },
+  feedbackToast: {
+    position: 'absolute',
+    bottom: '4rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    color: 'white',
+    padding: '0.4rem 1rem',
+    borderRadius: '1rem',
+    fontSize: '0.8125rem',
+    fontWeight: 500,
+    zIndex: 20,
+    pointerEvents: 'none',
+    whiteSpace: 'nowrap',
   },
 };
 

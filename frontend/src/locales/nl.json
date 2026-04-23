@@ -279,7 +279,11 @@
     "viewPdf": "Bekijken",
     "swipeHint": "Veeg om te navigeren",
     "downloadAll": "Alles downloaden",
-    "downloadingAll": "Bezig met downloaden..."
+    "downloadingAll": "Bezig met downloaden...",
+    "makeOffline": "Offline beschikbaar maken",
+    "makingOffline": "Bezig met cachen...",
+    "offlineReady": "Offline beschikbaar",
+    "cachedPieces": "{{count}} stukken gecached"
   },
   "tools": {
     "title": "Muziek Tools",
@@ -2481,15 +2485,22 @@
     "noSessions": "Geen actieve sessies gevonden."
   },
   "annotations": {
-    "title": "Annotaties",
-    "add": "Annotatie toevoegen",
+    "title": "Aantekeningen",
+    "add": "Aantekening toevoegen",
     "highlight": "Markeren",
     "note": "Notitie",
     "text": "Tekst",
     "drawing": "Tekening",
-    "delete": "Annotatie verwijderen",
+    "delete": "Verwijderen",
     "deleteAll": "Alle annotaties verwijderen",
-    "color": "Kleur"
+    "color": "Kleur",
+    "placeholder": "Typ je aantekening...",
+    "noAnnotations": "Geen aantekeningen op deze pagina",
+    "saved": "Aantekening opgeslagen",
+    "deleted": "Aantekening verwijderd",
+    "pageLabel": "Pagina {{page}}",
+    "showAnnotations": "Aantekeningen tonen",
+    "hideAnnotations": "Aantekeningen verbergen"
   },
   "gdpr": {
     "title": "Gegevens exporteren",

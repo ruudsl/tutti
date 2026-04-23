@@ -9,6 +9,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { SwipeContainer } from '../components/SwipeContainer';
 import { PdfViewer } from '../components/PdfViewer';
+import { cacheListPdfs, isPdfCached, getCachedPdf } from '../lib/pdfCache';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -33,6 +34,9 @@ export default function MyMusic() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
+  const [cachingList, setCachingList] = useState(false);
+  const [cacheProgress, setCacheProgress] = useState({ cached: 0, total: 0 });
+  const [cachedPieces, setCachedPieces] = useState<Set<string>>(new Set());
 
   // PDF viewer state
   const [viewingPiece, setViewingPiece] = useState<MusicPiece | null>(null);
@@ -139,14 +143,21 @@ export default function MyMusic() {
     setViewerLoading(true);
     setViewerBlobUrl(null);
 
-    const token = localStorage.getItem('token');
-    fetch(`${API_BASE}/music-pieces/${viewingPiece.id}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load PDF');
-        return res.blob();
-      })
+    const loadPdf = async () => {
+      // Prefer the cached version if available
+      const cachedResponse = await getCachedPdf(viewingPiece.id);
+      if (cachedResponse) {
+        return cachedResponse.blob();
+      }
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/music-pieces/${viewingPiece.id}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to load PDF');
+      return res.blob();
+    };
+
+    loadPdf()
       .then((blob) => {
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
@@ -174,6 +185,29 @@ export default function MyMusic() {
       }
     };
   }, []);
+
+  // Check which pieces are already cached whenever the selected list changes
+  useEffect(() => {
+    if (!selectedList?.pieces?.length) {
+      setCachedPieces(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      selectedList.pieces.map(async (piece) => {
+        const cached = await isPdfCached(piece.id);
+        return cached ? piece.id : null;
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      setCachedPieces(new Set(results.filter((id): id is string => id !== null)));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedList]);
 
   const handleSelectList = (listId: string) => {
     setSearchParams({ listId });
@@ -216,6 +250,31 @@ export default function MyMusic() {
       showError(t('errors.generic'));
     } finally {
       setDownloadingAll(false);
+    }
+  };
+
+  const handleMakeOffline = async () => {
+    if (!selectedList?.pieces?.length) return;
+    setCachingList(true);
+    setCacheProgress({ cached: 0, total: selectedList.pieces.length });
+    try {
+      await cacheListPdfs(selectedList.pieces, (cached, total) => {
+        setCacheProgress({ cached, total });
+      });
+      // Refresh cached piece status after caching is done
+      const results = await Promise.all(
+        selectedList.pieces.map(async (piece) => {
+          const cached = await isPdfCached(piece.id);
+          return cached ? piece.id : null;
+        }),
+      );
+      setCachedPieces(new Set(results.filter((id): id is string => id !== null)));
+      showSuccess(t('myMusic.offlineReady'));
+    } catch {
+      showError(t('errors.generic'));
+    } finally {
+      setCachingList(false);
+      setCacheProgress({ cached: 0, total: 0 });
     }
   };
 
@@ -312,13 +371,25 @@ export default function MyMusic() {
               <h2 className="card-title">{selectedList.name}</h2>
               <span className="piece-meta">{selectedList.orchestraName}</span>
             </div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={handleDownloadAll}
-              disabled={downloadingAll}
-            >
-              {downloadingAll ? t('myMusic.downloadingAll') : `⬇ ${t('myMusic.downloadAll')}`}
-            </button>
+            <div className="flex gap-1" style={{ alignItems: 'center' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={handleMakeOffline}
+                disabled={cachingList || downloadingAll}
+                title={t('myMusic.makeOffline')}
+              >
+                {cachingList
+                  ? `${t('myMusic.makingOffline')} (${cacheProgress.cached}/${cacheProgress.total})`
+                  : `📥 ${t('myMusic.makeOffline')}`}
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={handleDownloadAll}
+                disabled={downloadingAll || cachingList}
+              >
+                {downloadingAll ? t('myMusic.downloadingAll') : `⬇ ${t('myMusic.downloadAll')}`}
+              </button>
+            </div>
           </div>
           <div className="card-body">
             {titleGroups.length > 0 ? (
@@ -439,7 +510,18 @@ export default function MyMusic() {
                               <tbody>
                                 {group.pieces.map((piece) => (
                                   <tr key={piece.id}>
-                                    <td>{piece.instrumentName || '-'}</td>
+                                    <td>
+                                      <span>{piece.instrumentName || '-'}</span>
+                                      {cachedPieces.has(piece.id) && (
+                                        <span
+                                          title={t('myMusic.offlineReady')}
+                                          aria-label={t('myMusic.offlineReady')}
+                                          style={{ marginLeft: '0.35rem', fontSize: '0.75rem', color: 'var(--success, #22c55e)' }}
+                                        >
+                                          ✓
+                                        </span>
+                                      )}
+                                    </td>
                                     <td>{piece.tuning || '-'}</td>
                                     <td>{piece.groupNumber || '-'}</td>
                                     <td>{piece.clef || '-'}</td>
@@ -507,6 +589,7 @@ export default function MyMusic() {
             ) : viewerBlobUrl ? (
               <PdfViewer
                 url={viewerBlobUrl}
+                musicPieceId={viewingPiece.id}
                 fitMode="contain"
                 enableSwipe={true}
                 enableZoom={true}
