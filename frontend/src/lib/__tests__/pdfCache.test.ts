@@ -10,18 +10,21 @@ import {
 } from '../pdfCache';
 
 // In-memory mock of the Cache API
-function createMockCache(): Cache & { _store: Map<string, Response> } {
+function createMockCache() {
   const store = new Map<string, Response>();
-  const toKey = (req: string | { url: string }) =>
-    typeof req === 'string' ? req : req.url;
+  const toKey = (req: RequestInfo | URL): string => {
+    if (typeof req === 'string') return req;
+    if (req instanceof URL) return req.href;
+    return req.url;
+  };
   return {
     async put(url: string, response: Response) {
       store.set(url, response);
     },
-    async match(req: string | { url: string }) {
+    async match(req: RequestInfo | URL) {
       return store.get(toKey(req));
     },
-    async delete(req: string | { url: string }) {
+    async delete(req: RequestInfo | URL) {
       return store.delete(toKey(req));
     },
     async keys() {
@@ -37,7 +40,7 @@ function createMockCache(): Cache & { _store: Map<string, Response> } {
       return [];
     },
     _store: store,
-  };
+  } as Cache & { _store: Map<string, Response> };
 }
 
 describe('pdfCache', () => {
