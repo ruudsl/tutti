@@ -301,7 +301,9 @@
     "makeOffline": "Make offline",
     "makingOffline": "Caching...",
     "offlineReady": "Available offline",
-    "cachedPieces": "{{count}} pieces cached"
+    "cachedPieces": "{{count}} pieces cached",
+    "compactView": "Compact view",
+    "fullView": "Full view"
   },
   "tools": {
     "title": "Music Tools",

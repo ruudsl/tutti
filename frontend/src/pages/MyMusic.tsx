@@ -51,6 +51,18 @@ export default function MyMusic() {
   const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
 
+  // View mode: 'full' | 'compact' - compact hides arranger/groupNumber/clef/tuning columns
+  const [compactView, setCompactView] = useState(() => {
+    return localStorage.getItem('myMusic-compactView') === 'true';
+  });
+  const toggleCompactView = () => {
+    setCompactView((prev) => {
+      const next = !prev;
+      localStorage.setItem('myMusic-compactView', String(next));
+      return next;
+    });
+  };
+
   const listId = searchParams.get('listId');
 
   // Fetch all music lists with React Query (cached)
@@ -373,6 +385,13 @@ export default function MyMusic() {
             </div>
             <div className="flex gap-1" style={{ alignItems: 'center' }}>
               <button
+                className={`btn btn-sm ${compactView ? 'btn-primary' : 'btn-outline'}`}
+                onClick={toggleCompactView}
+                title={compactView ? t('myMusic.fullView', 'Volledige weergave') : t('myMusic.compactView', 'Compacte weergave')}
+              >
+                {compactView ? '☰' : '⋮'}
+              </button>
+              <button
                 className="btn btn-outline btn-sm"
                 onClick={handleMakeOffline}
                 disabled={cachingList || downloadingAll}
@@ -501,9 +520,9 @@ export default function MyMusic() {
                               <thead>
                                 <tr>
                                   <th scope="col">{t('myMusic.table.instrument')}</th>
-                                  <th scope="col">{t('myMusic.table.tuning')}</th>
-                                  <th scope="col">{t('myMusic.table.number')}</th>
-                                  <th scope="col">{t('myMusic.table.clef')}</th>
+                                  {!compactView && <th scope="col">{t('myMusic.table.tuning')}</th>}
+                                  {!compactView && <th scope="col">{t('myMusic.table.number')}</th>}
+                                  {!compactView && <th scope="col">{t('myMusic.table.clef')}</th>}
                                   <th scope="col"></th>
                                 </tr>
                               </thead>
@@ -512,6 +531,11 @@ export default function MyMusic() {
                                   <tr key={piece.id}>
                                     <td>
                                       <span>{piece.instrumentName || '-'}</span>
+                                      {compactView && (piece.tuning || piece.groupNumber || piece.clef) && (
+                                        <span className="text-muted text-xs" style={{ marginLeft: '0.5rem' }}>
+                                          {[piece.tuning, piece.groupNumber, piece.clef].filter(Boolean).join(' · ')}
+                                        </span>
+                                      )}
                                       {cachedPieces.has(piece.id) && (
                                         <span
                                           title={t('myMusic.offlineReady')}
@@ -522,9 +546,9 @@ export default function MyMusic() {
                                         </span>
                                       )}
                                     </td>
-                                    <td>{piece.tuning || '-'}</td>
-                                    <td>{piece.groupNumber || '-'}</td>
-                                    <td>{piece.clef || '-'}</td>
+                                    {!compactView && <td>{piece.tuning || '-'}</td>}
+                                    {!compactView && <td>{piece.groupNumber || '-'}</td>}
+                                    {!compactView && <td>{piece.clef || '-'}</td>}
                                     <td>
                                       <div className="flex gap-1">
                                         <button

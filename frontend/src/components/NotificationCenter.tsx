@@ -14,28 +14,48 @@ import {
 } from '../hooks/useNotifications';
 
 export function NotificationBell() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { data: unreadCount } = useUnreadNotificationCount();
+  const count = typeof unreadCount === 'number' ? unreadCount : (unreadCount as any)?.count ?? 0;
+
+  // Close dropdown on escape and click outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.notification-bell-wrapper')) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="dropdown dropdown-end">
+    <div className="notification-bell-wrapper">
       <button
-        className="btn btn-ghost btn-circle"
+        className="notification-bell-btn"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={t('notifications.title', 'Meldingen')}
+        aria-expanded={isOpen}
       >
-        <div className="indicator">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          {unreadCount && unreadCount > 0 && (
-            <span className="badge badge-primary badge-xs indicator-item">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </div>
+        <span className="notification-bell-icon" aria-hidden="true">🔔</span>
+        {count > 0 && (
+          <span className="notification-bell-badge">
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
       </button>
       {isOpen && (
-        <div className="dropdown-content z-50 mt-2 w-80 bg-base-100 rounded-box shadow-lg border">
+        <div className="notification-bell-dropdown">
           <NotificationDropdown onClose={() => setIsOpen(false)} />
         </div>
       )}
@@ -81,61 +101,49 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="max-h-96 overflow-hidden flex flex-col">
-      <div className="p-3 border-b flex justify-between items-center bg-base-200">
-        <span className="font-semibold">{t('notifications.title')}</span>
+    <div className="notification-dropdown-panel">
+      <div className="notification-dropdown-header">
+        <span className="text-semibold">{t('notifications.title', 'Meldingen')}</span>
         <button
-          className="btn btn-ghost btn-xs"
+          className="btn btn-outline btn-sm"
           onClick={() => markAllRead.mutate()}
           disabled={markAllRead.isPending}
         >
-          {t('notifications.markAllRead')}
+          {t('notifications.markAllRead', 'Alles als gelezen')}
         </button>
       </div>
-      <div className="overflow-y-auto flex-1">
+      <div className="notification-dropdown-body">
         {isLoading ? (
-          <div className="flex justify-center p-4">
-            <span className="loading loading-spinner" />
+          <div className="notification-loading">
+            <div className="spinner" aria-hidden="true"></div>
           </div>
-        ) : notifications?.length === 0 ? (
-          <div className="text-center p-4 text-base-content/60">
-            {t('notifications.empty')}
+        ) : !notifications || notifications.length === 0 ? (
+          <div className="notification-empty">
+            <span className="notification-empty-icon" aria-hidden="true">🔔</span>
+            <p className="text-light text-sm">{t('notifications.empty', 'Geen meldingen')}</p>
           </div>
         ) : (
-          notifications?.map((notification) => (
+          notifications.map((notification) => (
             <button
               key={notification.id}
-              className={`w-full p-3 text-left hover:bg-base-200 border-b ${
-                !notification.isRead ? 'bg-primary/5' : ''
-              }`}
+              className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
               onClick={() => handleClick(notification)}
             >
-              <div className="flex gap-3">
-                <span className="text-xl">{getIcon(notification.type)}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{notification.title}</div>
-                  <div className="text-sm text-base-content/70 line-clamp-2">
-                    {notification.body}
-                  </div>
-                  <div className="text-xs text-base-content/50 mt-1">
-                    {formatDistanceToNow(new Date(notification.createdAt), {
-                      addSuffix: true,
-                      locale,
-                    })}
-                  </div>
+              <span className="notification-item-icon" aria-hidden="true">{getIcon(notification.type)}</span>
+              <div className="notification-item-content">
+                <div className="notification-item-title">{notification.title}</div>
+                <div className="notification-item-body">{notification.body}</div>
+                <div className="notification-item-time">
+                  {formatDistanceToNow(new Date(notification.createdAt), {
+                    addSuffix: true,
+                    locale,
+                  })}
                 </div>
-                {!notification.isRead && (
-                  <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
-                )}
               </div>
+              {!notification.isRead && <span className="notification-item-dot" aria-hidden="true"></span>}
             </button>
           ))
         )}
-      </div>
-      <div className="p-2 border-t bg-base-200">
-        <a href="/notifications" className="btn btn-ghost btn-sm btn-block">
-          {t('notifications.viewAll')}
-        </a>
       </div>
     </div>
   );

@@ -283,7 +283,9 @@
     "makeOffline": "Offline beschikbaar maken",
     "makingOffline": "Bezig met cachen...",
     "offlineReady": "Offline beschikbaar",
-    "cachedPieces": "{{count}} stukken gecached"
+    "cachedPieces": "{{count}} stukken gecached",
+    "compactView": "Compacte weergave",
+    "fullView": "Volledige weergave"
   },
   "tools": {
     "title": "Muziek Tools",

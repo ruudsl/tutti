@@ -9,6 +9,7 @@ import { DarkModeToggle } from './DarkModeToggle';
 import { Breadcrumbs } from './Breadcrumbs';
 import { QuickActionsMenu } from './QuickActionsMenu';
 import { GlobalSearch, useGlobalSearch } from './GlobalSearch';
+import { NotificationBell } from './NotificationCenter';
 import { RecentItems } from './RecentItems';
 import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -272,6 +273,7 @@ export default function Layout() {
           >
             <span aria-hidden="true">🔍</span>
           </button>
+          <NotificationBell />
           <RecentItems />
           <DarkModeToggle />
           <LanguageSwitcher compact />

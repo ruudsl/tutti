@@ -281,7 +281,9 @@
     "makeOffline": "Offline verfügbar machen",
     "makingOffline": "Wird gespeichert...",
     "offlineReady": "Offline verfügbar",
-    "cachedPieces": "{{count}} Stücke gespeichert"
+    "cachedPieces": "{{count}} Stücke gespeichert",
+    "compactView": "Kompakte Ansicht",
+    "fullView": "Vollständige Ansicht"
   },
   "annotations": {
     "title": "Anmerkungen",
