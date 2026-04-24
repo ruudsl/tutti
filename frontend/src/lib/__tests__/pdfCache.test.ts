@@ -10,7 +10,7 @@ import {
 } from '../pdfCache';
 
 // In-memory mock of the Cache API
-function createMockCache() {
+function createMockCache(): Cache & { _store: Map<string, Response> } {
   const store = new Map<string, Response>();
   const toKey = (req: string | { url: string }) =>
     typeof req === 'string' ? req : req.url;
@@ -25,8 +25,16 @@ function createMockCache() {
       return store.delete(toKey(req));
     },
     async keys() {
-      // Return URL-bearing objects that work with both cache.match and new URL(req.url)
       return Array.from(store.keys()).map((url) => ({ url }) as unknown as Request);
+    },
+    async add() {
+      throw new Error('Not implemented');
+    },
+    async addAll() {
+      throw new Error('Not implemented');
+    },
+    async matchAll() {
+      return [];
     },
     _store: store,
   };
@@ -40,11 +48,10 @@ describe('pdfCache', () => {
     mockCache = createMockCache();
 
     // Mock caches global
-    // @ts-expect-error - caches doesn't exist in jsdom by default
     global.caches = {
       open: vi.fn(async () => mockCache),
       delete: vi.fn(async () => true),
-    };
+    } as unknown as CacheStorage;
 
     // Mock fetch
     fetchMock = vi.fn();
