@@ -6,7 +6,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-*[Nederlandse versie](README.nl.md)*
+*[Nederlandse versie](README.nl.md) · [Deutsche Version](README.de.md)*
 
 A complete web application for managing sheet music, rehearsals, concert programs, and member organization for concert bands and brass bands.
 

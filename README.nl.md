@@ -6,6 +6,8 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
+*[English](README.md) · [Deutsche Version](README.de.md)*
+
 Een complete webapplicatie voor het beheren van muziekstukken, repetities, concertprogramma's en ledenorganisatie binnen harmonieorkesten en fanfares.
 
 ## Inhoudsopgave
