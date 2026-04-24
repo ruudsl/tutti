@@ -77,6 +77,9 @@ flowchart TB
         MusicaInfo["MusicaInfo.net\n(Metadata)"]
         Entra["Microsoft Entra ID\n(SSO)"]
         SMTP["SMTP Server\n(Email)"]
+        Mollie["Mollie\n(Ticket Payments)"]
+        Notifications["Telegram / WhatsApp /\nWeb Push (Notifications)"]
+        Streaming["IMSLP / Spotify /\nApple Music"]
     end
 
     Browser <--> Frontend
@@ -145,10 +148,12 @@ flowchart LR
 └─────────────┘  └───────────┘
        │
        ▼
-┌─────────────────────────────────┐
-│      External Services          │
-│  Spond · MusicaInfo · Entra ID  │
-└─────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│         External Services               │
+│  Spond · MusicaInfo · Entra ID · SMTP   │
+│  Mollie · Telegram · WhatsApp · IMSLP   │
+│  Spotify · Apple Music · Web Push       │
+└─────────────────────────────────────────┘
 ```
 
 ### Design Decisions
