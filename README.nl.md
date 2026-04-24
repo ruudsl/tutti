@@ -93,8 +93,8 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph FE["Frontend Modules"]
-        Pages["📄 50 Pages"]
-        Components["🧩 60 Components"]
+        Pages["📄 51 Pages"]
+        Components["🧩 61 Components"]
         Hooks["🪝 32 Custom Hooks"]
         Utils["🔧 Utilities"]
     end
@@ -212,6 +212,29 @@ flowchart LR
 - **Meldingen** — Leden kunnen fouten in bladmuziek melden (verkeerde noten, ontbrekende pagina's)
 - **Workflow** — Status tracking: open → in review → opgelost/afgewezen
 
+### Concerten & Ticketing
+
+- **Concertbeheer** — Aanmaken en beheren van concerten met datum, locatie en programma
+- **Kaartverkoop** — Online tickets verkopen met aanpasbare prijzen en stoelcategorieën
+- **Publieke Ticketshop** — Klantgerichte pagina voor ticketaankoop
+- **Ticket Scanner** — QR-code scanning voor toegangscontrole
+- **Ticket Overdracht** — Klanten kunnen tickets overdragen aan anderen
+- **Gastenlijst** — Beheer van gratis tickets en VIP-gasten
+- **Betaalinstellingen** — Configuratie van betaalproviders en prijzen
+- **Ticket Dashboard** — Verkoopoverzicht en statistieken
+
+### Zitplaatsen & Orkestopstelling
+
+- **Zitplaatsschema's** — Visuele editor voor zitplaatsindeling
+- **Buurvoorkeuren** — Leden kunnen zitvoorkeuren aangeven
+- **Stemgroepen** — Organiseer muzikanten per sectie/stemgroep
+- **Bezettingsoverzicht** — Zie welke plaatsen bezet zijn per repetitie/concert
+
+### Oefenen & Planning
+
+- **Oefenschema's** — Maak en deel individuele of sectie-oefenschema's
+- **IMSLP Browser** — Zoek en link naar gratis bladmuziek op IMSLP.org
+
 ### Beveiliging & Authenticatie
 
 - **JWT tokens** — Veilige authenticatie met configureerbare geldigheidsduur
@@ -220,6 +243,14 @@ flowchart LR
 - **Wachtwoord reset** — Via e-mail met beveiligde tokens
 - **Rate limiting** — Bescherming tegen brute-force aanvallen
 - **Helmet** — HTTP security headers
+
+### Beheer & Monitoring
+
+- **Audit Logs** — Beveiligingslogboek met gebruikersacties
+- **Sessiebeheer** — Bekijk en beëindig actieve gebruikerssessies
+- **Health Dashboard** — Systeemstatus en prestatiemonitoring
+- **Data Export** — AVG-conforme export van persoonsgegevens
+- **Entra Sync** — Automatische gebruikerssynchronisatie met Microsoft Entra ID
 
 ### Overige features
 
@@ -524,8 +555,8 @@ tutti/
 │   │   ├── api.ts                 # Axios API client met alle endpoints
 │   │   ├── types.ts               # TypeScript type definities
 │   │   ├── App.tsx                # Root component met routing
-│   │   ├── pages/                 # 50 pagina-componenten
-│   │   ├── components/            # 60 herbruikbare componenten
+│   │   ├── pages/                 # 51 pagina-componenten
+│   │   ├── components/            # 61 herbruikbare componenten
 │   │   ├── hooks/                 # 32 custom React hooks
 │   │   ├── context/               # Auth context (login state)
 │   │   ├── lib/                   # React Query configuratie

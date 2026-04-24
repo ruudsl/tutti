@@ -95,8 +95,8 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph FE["Frontend Modules"]
-        Pages["📄 50 Pages"]
-        Components["🧩 60 Components"]
+        Pages["📄 51 Pages"]
+        Components["🧩 61 Components"]
         Hooks["🪝 32 Custom Hooks"]
         Utils["🔧 Utilities"]
     end
@@ -214,6 +214,29 @@ flowchart LR
 - **Reports** — Members can report errors in sheet music (wrong notes, missing pages)
 - **Workflow** — Status tracking: open → in review → resolved/rejected
 
+### Concerts & Ticketing
+
+- **Concert Management** — Create and manage concerts with date, location, and program
+- **Ticket Sales** — Sell tickets online with customizable pricing and seat categories
+- **Public Ticket Shop** — Customer-facing ticket purchase page
+- **Ticket Scanner** — QR code scanning for entrance validation
+- **Ticket Transfers** — Allow customers to transfer tickets to others
+- **Guest List** — Manage complimentary tickets and VIP guests
+- **Payment Settings** — Configure payment providers and pricing
+- **Ticket Dashboard** — Sales overview and statistics
+
+### Seating & Orchestra Layout
+
+- **Seating Charts** — Visual seating arrangement editor
+- **Neighbor Preferences** — Members can indicate seating preferences
+- **Voice Parts** — Organize musicians by section/voice part
+- **Occupancy Overview** — See which seats are filled per rehearsal/concert
+
+### Practice & Scheduling
+
+- **Practice Schedules** — Create and share individual or section practice schedules
+- **IMSLP Browser** — Search and link to free sheet music on IMSLP.org
+
 ### Security & Authentication
 
 - **JWT Tokens** — Secure authentication with configurable validity period
@@ -222,6 +245,14 @@ flowchart LR
 - **Password Reset** — Via email with secure tokens
 - **Rate Limiting** — Protection against brute-force attacks
 - **Helmet** — HTTP security headers
+
+### Administration & Monitoring
+
+- **Audit Logs** — Security event logging with user actions
+- **Session Management** — View and revoke active user sessions
+- **Health Dashboard** — System status and performance monitoring
+- **Data Export** — GDPR-compliant personal data export
+- **Entra Sync** — Automatic user synchronization with Microsoft Entra ID
 
 ### Other Features
 
@@ -526,8 +557,8 @@ tutti/
 │   │   ├── api.ts                 # Axios API client with all endpoints
 │   │   ├── types.ts               # TypeScript type definitions
 │   │   ├── App.tsx                # Root component with routing
-│   │   ├── pages/                 # 50 page components
-│   │   ├── components/            # 60 reusable components
+│   │   ├── pages/                 # 51 page components
+│   │   ├── components/            # 61 reusable components
 │   │   ├── hooks/                 # 32 custom React hooks
 │   │   ├── context/               # Auth context (login state)
 │   │   ├── lib/                   # React Query configuration
