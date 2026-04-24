@@ -4,11 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import logger from '../utils/logger';
 
-// Telegram Bot API configuration
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API_URL = TELEGRAM_BOT_TOKEN
-    ? `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
-    : null;
+// Telegram Bot API configuration (env var fallback)
+const TELEGRAM_BOT_TOKEN_ENV = process.env.TELEGRAM_BOT_TOKEN;
 
 export interface TelegramMessage {
     chatId: string | number;
@@ -67,23 +64,82 @@ export interface TelegramUpdate {
 }
 
 /**
- * Check if Telegram Bot is configured
+ * Resolve the Telegram bot token and API URL for a given association (or env fallback).
+ * Returns null if no token is available.
  */
-export function isTelegramConfigured(): boolean {
-    return !!TELEGRAM_BOT_TOKEN;
+export function getTelegramConfig(associationId?: string): { botToken: string; apiUrl: string } | null {
+    if (associationId) {
+        try {
+            const row = db.prepare(`
+                SELECT telegram_bot_token, telegram_enabled
+                FROM associations
+                WHERE id = ?
+            `).get(associationId) as { telegram_bot_token: string | null; telegram_enabled: number } | undefined;
+
+            if (row && row.telegram_enabled && row.telegram_bot_token) {
+                const botToken = row.telegram_bot_token;
+                return { botToken, apiUrl: `https://api.telegram.org/bot${botToken}` };
+            }
+        } catch (error) {
+            logger.debug('getTelegramConfig: DB lookup failed, falling back to env', error);
+        }
+    }
+
+    // Fall back to environment variable
+    if (TELEGRAM_BOT_TOKEN_ENV) {
+        return {
+            botToken: TELEGRAM_BOT_TOKEN_ENV,
+            apiUrl: `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN_ENV}`,
+        };
+    }
+
+    return null;
+}
+
+/**
+ * Check if Telegram Bot is configured.
+ * - With associationId: true if DB config for that association OR env vars are set.
+ * - Without associationId: true if ANY association has it configured OR env vars are set.
+ */
+export function isTelegramConfigured(associationId?: string): boolean {
+    if (associationId) {
+        return getTelegramConfig(associationId) !== null;
+    }
+
+    // No associationId: check env vars first
+    if (TELEGRAM_BOT_TOKEN_ENV) {
+        return true;
+    }
+
+    // Check if any association has Telegram enabled
+    try {
+        const row = db.prepare(`
+            SELECT 1 FROM associations
+            WHERE telegram_enabled = 1 AND telegram_bot_token IS NOT NULL
+            LIMIT 1
+        `).get();
+        return !!row;
+    } catch (error) {
+        logger.debug('isTelegramConfigured: DB lookup failed', error);
+        return false;
+    }
 }
 
 /**
  * Send a message via Telegram Bot API
  */
-export async function sendTelegramMessage(message: TelegramMessage): Promise<number | null> {
-    if (!TELEGRAM_API_URL) {
+export async function sendTelegramMessage(
+    message: TelegramMessage,
+    associationId?: string,
+): Promise<number | null> {
+    const config = getTelegramConfig(associationId);
+    if (!config) {
         logger.warn('Telegram Bot not configured');
         return null;
     }
 
     try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
+        const response = await axios.post(`${config.apiUrl}/sendMessage`, {
             chat_id: message.chatId,
             text: message.text,
             parse_mode: message.parseMode || 'HTML',
@@ -112,7 +168,8 @@ export async function sendTelegramNotification(
     userId: string,
     title: string,
     body: string,
-    data?: Record<string, any>
+    data?: Record<string, any>,
+    associationId?: string,
 ): Promise<boolean> {
     // Get user's Telegram channel info
     const channel = db.prepare(`
@@ -138,12 +195,15 @@ export async function sendTelegramNotification(
         };
     }
 
-    const messageId = await sendTelegramMessage({
-        chatId: channel.channel_id,
-        text: formattedMessage,
-        parseMode: 'HTML',
-        replyMarkup,
-    });
+    const messageId = await sendTelegramMessage(
+        {
+            chatId: channel.channel_id,
+            text: formattedMessage,
+            parseMode: 'HTML',
+            replyMarkup,
+        },
+        associationId,
+    );
 
     return messageId !== null;
 }
@@ -184,13 +244,14 @@ export function storeLinkCode(userId: string, code: string): void {
 /**
  * Get bot username for deep link
  */
-export async function getBotUsername(): Promise<string | null> {
-    if (!TELEGRAM_API_URL) {
+export async function getBotUsername(associationId?: string): Promise<string | null> {
+    const config = getTelegramConfig(associationId);
+    if (!config) {
         return null;
     }
 
     try {
-        const response = await axios.get(`${TELEGRAM_API_URL}/getMe`);
+        const response = await axios.get(`${config.apiUrl}/getMe`);
         if (response.data.ok) {
             return response.data.result.username;
         }
@@ -204,8 +265,11 @@ export async function getBotUsername(): Promise<string | null> {
 /**
  * Generate a Telegram deep link for account linking
  */
-export async function generateLinkUrl(userId: string): Promise<{ code: string; url: string } | null> {
-    const botUsername = await getBotUsername();
+export async function generateLinkUrl(
+    userId: string,
+    associationId?: string,
+): Promise<{ code: string; url: string } | null> {
+    const botUsername = await getBotUsername(associationId);
     if (!botUsername) {
         return null;
     }
@@ -220,7 +284,11 @@ export async function generateLinkUrl(userId: string): Promise<{ code: string; u
 /**
  * Handle /start command with link code
  */
-export async function handleStartCommand(chatId: number, linkCode?: string): Promise<string> {
+export async function handleStartCommand(
+    chatId: number,
+    linkCode?: string,
+    associationId?: string,
+): Promise<string> {
     if (!linkCode) {
         return `Welkom bij de Harmonie notificatie bot!
 
@@ -364,7 +432,7 @@ Gebruik /stop om de koppeling te verwijderen.`;
 /**
  * Process incoming Telegram update (webhook)
  */
-export async function processUpdate(update: TelegramUpdate): Promise<void> {
+export async function processUpdate(update: TelegramUpdate, associationId?: string): Promise<void> {
     if (update.message?.text) {
         const chatId = update.message.chat.id;
         const text = update.message.text;
@@ -373,7 +441,7 @@ export async function processUpdate(update: TelegramUpdate): Promise<void> {
 
         if (text.startsWith('/start')) {
             const linkCode = text.split(' ')[1]; // /start <code>
-            response = await handleStartCommand(chatId, linkCode);
+            response = await handleStartCommand(chatId, linkCode, associationId);
         } else if (text === '/stop') {
             response = await handleStopCommand(chatId);
         } else if (text === '/settings') {
@@ -385,17 +453,17 @@ export async function processUpdate(update: TelegramUpdate): Promise<void> {
         }
 
         if (typeof response === 'string') {
-            await sendTelegramMessage({ chatId, text: response });
+            await sendTelegramMessage({ chatId, text: response }, associationId);
         } else {
-            await sendTelegramMessage({ chatId, text: response.text, replyMarkup: response.replyMarkup });
+            await sendTelegramMessage({ chatId, text: response.text, replyMarkup: response.replyMarkup }, associationId);
         }
     }
 
     // Handle callback queries (button presses) if needed in the future
     if (update.callback_query) {
-        // Acknowledge the callback query
-        if (TELEGRAM_API_URL) {
-            await axios.post(`${TELEGRAM_API_URL}/answerCallbackQuery`, {
+        const config = getTelegramConfig(associationId);
+        if (config) {
+            await axios.post(`${config.apiUrl}/answerCallbackQuery`, {
                 callback_query_id: update.callback_query.id,
             });
         }
@@ -405,14 +473,15 @@ export async function processUpdate(update: TelegramUpdate): Promise<void> {
 /**
  * Set up webhook for Telegram bot
  */
-export async function setWebhook(webhookUrl: string): Promise<boolean> {
-    if (!TELEGRAM_API_URL) {
+export async function setWebhook(webhookUrl: string, associationId?: string): Promise<boolean> {
+    const config = getTelegramConfig(associationId);
+    if (!config) {
         logger.warn('Telegram Bot not configured');
         return false;
     }
 
     try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/setWebhook`, {
+        const response = await axios.post(`${config.apiUrl}/setWebhook`, {
             url: webhookUrl,
             allowed_updates: ['message', 'callback_query'],
         });
@@ -433,13 +502,14 @@ export async function setWebhook(webhookUrl: string): Promise<boolean> {
 /**
  * Delete webhook (switch to polling mode)
  */
-export async function deleteWebhook(): Promise<boolean> {
-    if (!TELEGRAM_API_URL) {
+export async function deleteWebhook(associationId?: string): Promise<boolean> {
+    const config = getTelegramConfig(associationId);
+    if (!config) {
         return false;
     }
 
     try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/deleteWebhook`);
+        const response = await axios.post(`${config.apiUrl}/deleteWebhook`);
         return response.data.ok;
     } catch (error) {
         logger.error('Failed to delete Telegram webhook:', error);
@@ -448,6 +518,7 @@ export async function deleteWebhook(): Promise<boolean> {
 }
 
 export default {
+    getTelegramConfig,
     isTelegramConfigured,
     sendTelegramMessage,
     sendTelegramNotification,

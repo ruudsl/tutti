@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
+import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getTelegramConfig, saveTelegramConfig, deleteTelegramConfig, getWhatsAppConfig, saveWhatsAppConfig, deleteWhatsAppConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDeleteConcertType, useInitDefaultConcertTypes } from '../hooks/useConcerts';
@@ -36,6 +36,20 @@ export default function Settings() {
   const { data: smtpConfig = null } = useQuery({
     queryKey: ['smtpConfig'],
     queryFn: getSmtpConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for Telegram config
+  const { data: telegramConfig = null } = useQuery({
+    queryKey: ['telegramConfig'],
+    queryFn: getTelegramConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // React Query for WhatsApp config
+  const { data: whatsappConfig = null } = useQuery({
+    queryKey: ['whatsappConfig'],
+    queryFn: getWhatsAppConfig,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -92,6 +106,39 @@ export default function Settings() {
     }
   }, [smtpConfig]);
 
+  // Telegram config form state
+  const [telegramBotToken, setTelegramBotToken] = useState('');
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [telegramSaving, setTelegramSaving] = useState(false);
+
+  // Initialize Telegram config from query data
+  useEffect(() => {
+    if (telegramConfig) {
+      setTelegramEnabled(telegramConfig.enabled || false);
+    }
+  }, [telegramConfig]);
+
+  // WhatsApp config form state
+  const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'twilio'>('meta');
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [whatsappMetaPhoneNumberId, setWhatsappMetaPhoneNumberId] = useState('');
+  const [whatsappMetaAccessToken, setWhatsappMetaAccessToken] = useState('');
+  const [whatsappTwilioAccountSid, setWhatsappTwilioAccountSid] = useState('');
+  const [whatsappTwilioAuthToken, setWhatsappTwilioAuthToken] = useState('');
+  const [whatsappTwilioFrom, setWhatsappTwilioFrom] = useState('');
+  const [whatsappSaving, setWhatsappSaving] = useState(false);
+
+  // Initialize WhatsApp config from query data
+  useEffect(() => {
+    if (whatsappConfig) {
+      setWhatsappProvider(whatsappConfig.provider || 'meta');
+      setWhatsappEnabled(whatsappConfig.enabled || false);
+      setWhatsappMetaPhoneNumberId(whatsappConfig.meta?.phoneNumberId || '');
+      setWhatsappTwilioAccountSid(whatsappConfig.twilio?.accountSid || '');
+      setWhatsappTwilioFrom(whatsappConfig.twilio?.whatsappFrom || '');
+    }
+  }, [whatsappConfig]);
+
   // Concert types state
   const [showAddConcertTypeModal, setShowAddConcertTypeModal] = useState(false);
   const [editingConcertType, setEditingConcertType] = useState<{ id: string; value: string; label: string; sortOrder: number } | null>(null);
@@ -119,6 +166,8 @@ export default function Settings() {
   const refreshSettings = () => queryClient.invalidateQueries({ queryKey: ['settings'] });
   const refreshMsConfig = () => queryClient.invalidateQueries({ queryKey: ['microsoftConfig'] });
   const refreshSmtpConfig = () => queryClient.invalidateQueries({ queryKey: ['smtpConfig'] });
+  const refreshTelegramConfig = () => queryClient.invalidateQueries({ queryKey: ['telegramConfig'] });
+  const refreshWhatsAppConfig = () => queryClient.invalidateQueries({ queryKey: ['whatsappConfig'] });
   const refreshM365Mappings = () => queryClient.invalidateQueries({ queryKey: ['m365GroupMappings'] });
 
   const handleSave = async (e: React.FormEvent) => {
@@ -275,6 +324,82 @@ export default function Settings() {
       showError(error.response?.data?.error || t('settings.smtp.testFailed'));
     } finally {
       setSmtpTesting(false);
+    }
+  };
+
+  const handleTelegramSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTelegramSaving(true);
+    try {
+      const result = await saveTelegramConfig({
+        botToken: telegramBotToken.trim() || undefined,
+        enabled: telegramEnabled,
+      });
+      showSuccess(result.message || t('settings.telegram.saved'));
+      setTelegramBotToken('');
+      refreshTelegramConfig();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.telegram.errorSaving'));
+    } finally {
+      setTelegramSaving(false);
+    }
+  };
+
+  const handleTelegramDelete = async () => {
+    if (!confirm(t('settings.telegram.removeConfirm'))) return;
+    try {
+      const result = await deleteTelegramConfig();
+      showSuccess(result.message || t('settings.telegram.deleted'));
+      setTelegramBotToken('');
+      setTelegramEnabled(false);
+      refreshTelegramConfig();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.telegram.errorRemoving'));
+    }
+  };
+
+  const handleWhatsAppSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWhatsappSaving(true);
+    try {
+      const result = await saveWhatsAppConfig({
+        provider: whatsappProvider,
+        enabled: whatsappEnabled,
+        meta: whatsappProvider === 'meta' ? {
+          phoneNumberId: whatsappMetaPhoneNumberId.trim() || undefined,
+          accessToken: whatsappMetaAccessToken.trim() || undefined,
+        } : undefined,
+        twilio: whatsappProvider === 'twilio' ? {
+          accountSid: whatsappTwilioAccountSid.trim() || undefined,
+          authToken: whatsappTwilioAuthToken.trim() || undefined,
+          whatsappFrom: whatsappTwilioFrom.trim() || undefined,
+        } : undefined,
+      });
+      showSuccess(result.message || t('settings.whatsapp.saved'));
+      setWhatsappMetaAccessToken('');
+      setWhatsappTwilioAuthToken('');
+      refreshWhatsAppConfig();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.whatsapp.errorSaving'));
+    } finally {
+      setWhatsappSaving(false);
+    }
+  };
+
+  const handleWhatsAppDelete = async () => {
+    if (!confirm(t('settings.whatsapp.removeConfirm'))) return;
+    try {
+      const result = await deleteWhatsAppConfig();
+      showSuccess(result.message || t('settings.whatsapp.deleted'));
+      setWhatsappMetaPhoneNumberId('');
+      setWhatsappMetaAccessToken('');
+      setWhatsappTwilioAccountSid('');
+      setWhatsappTwilioAuthToken('');
+      setWhatsappTwilioFrom('');
+      setWhatsappEnabled(false);
+      refreshWhatsAppConfig();
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('settings.whatsapp.errorRemoving'));
     }
   };
 
@@ -675,7 +800,7 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="card">
+      <div className="card mb-3">
         <div className="card-header">
           <h2 className="card-title">{t('settings.smtp.title')}</h2>
         </div>
@@ -806,6 +931,220 @@ export default function Settings() {
                     {t('settings.smtp.remove')}
                   </button>
                 </>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Telegram */}
+      <div className="card mb-3">
+        <div className="card-header">
+          <h2 className="card-title">{t('settings.telegram.title')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('settings.telegram.description')}</p>
+
+          <form onSubmit={handleTelegramSave}>
+            <div className="form-group">
+              <label htmlFor="telegramBotToken" className="form-label">
+                {t('settings.telegram.botToken')}
+              </label>
+              <input
+                type="password"
+                id="telegramBotToken"
+                className="form-control"
+                value={telegramBotToken}
+                onChange={(e) => setTelegramBotToken(e.target.value)}
+                placeholder={telegramConfig?.configured && telegramConfig.tokenPreview
+                  ? telegramConfig.tokenPreview
+                  : t('settings.telegram.botTokenPlaceholder')}
+              />
+              <p className="piece-meta" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                {t('settings.telegram.botTokenHelp')}{' '}
+                <a href="https://core.telegram.org/bots#6-botfather" target="_blank" rel="noopener noreferrer">
+                  BotFather
+                </a>
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={telegramEnabled}
+                  onChange={(e) => setTelegramEnabled(e.target.checked)}
+                />
+                {t('settings.telegram.enable')}
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={telegramSaving}
+              >
+                {telegramSaving ? t('common.loading') : t('common.save')}
+              </button>
+              {telegramConfig?.configured && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleTelegramDelete}
+                >
+                  {t('settings.telegram.remove')}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* WhatsApp */}
+      <div className="card mb-3">
+        <div className="card-header">
+          <h2 className="card-title">{t('settings.whatsapp.title')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('settings.whatsapp.description')}</p>
+
+          <form onSubmit={handleWhatsAppSave}>
+            <div className="form-group">
+              <label className="form-label">{t('settings.whatsapp.provider')}</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="whatsappProvider"
+                    value="meta"
+                    checked={whatsappProvider === 'meta'}
+                    onChange={() => setWhatsappProvider('meta')}
+                  />
+                  {t('settings.whatsapp.metaProvider')}
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="whatsappProvider"
+                    value="twilio"
+                    checked={whatsappProvider === 'twilio'}
+                    onChange={() => setWhatsappProvider('twilio')}
+                  />
+                  {t('settings.whatsapp.twilioProvider')}
+                </label>
+              </div>
+            </div>
+
+            {whatsappProvider === 'meta' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="whatsappMetaPhoneNumberId" className="form-label">
+                    {t('settings.whatsapp.phoneNumberId')}
+                  </label>
+                  <input
+                    type="text"
+                    id="whatsappMetaPhoneNumberId"
+                    className="form-control"
+                    value={whatsappMetaPhoneNumberId}
+                    onChange={(e) => setWhatsappMetaPhoneNumberId(e.target.value)}
+                    placeholder={whatsappConfig?.meta?.phoneNumberId || t('settings.whatsapp.phoneNumberIdPlaceholder')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="whatsappMetaAccessToken" className="form-label">
+                    {t('settings.whatsapp.accessToken')}
+                  </label>
+                  <input
+                    type="password"
+                    id="whatsappMetaAccessToken"
+                    className="form-control"
+                    value={whatsappMetaAccessToken}
+                    onChange={(e) => setWhatsappMetaAccessToken(e.target.value)}
+                    placeholder={whatsappConfig?.meta?.configured && whatsappConfig.meta.accessTokenPreview
+                      ? whatsappConfig.meta.accessTokenPreview
+                      : t('settings.whatsapp.accessTokenPlaceholder')}
+                  />
+                </div>
+              </>
+            )}
+
+            {whatsappProvider === 'twilio' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="whatsappTwilioAccountSid" className="form-label">
+                    {t('settings.whatsapp.accountSid')}
+                  </label>
+                  <input
+                    type="text"
+                    id="whatsappTwilioAccountSid"
+                    className="form-control"
+                    value={whatsappTwilioAccountSid}
+                    onChange={(e) => setWhatsappTwilioAccountSid(e.target.value)}
+                    placeholder={whatsappConfig?.twilio?.accountSid || t('settings.whatsapp.accountSidPlaceholder')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="whatsappTwilioAuthToken" className="form-label">
+                    {t('settings.whatsapp.authToken')}
+                  </label>
+                  <input
+                    type="password"
+                    id="whatsappTwilioAuthToken"
+                    className="form-control"
+                    value={whatsappTwilioAuthToken}
+                    onChange={(e) => setWhatsappTwilioAuthToken(e.target.value)}
+                    placeholder={whatsappConfig?.twilio?.configured && whatsappConfig.twilio.authTokenPreview
+                      ? whatsappConfig.twilio.authTokenPreview
+                      : t('settings.whatsapp.authTokenPlaceholder')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="whatsappTwilioFrom" className="form-label">
+                    {t('settings.whatsapp.from')}
+                  </label>
+                  <input
+                    type="text"
+                    id="whatsappTwilioFrom"
+                    className="form-control"
+                    value={whatsappTwilioFrom}
+                    onChange={(e) => setWhatsappTwilioFrom(e.target.value)}
+                    placeholder="whatsapp:+14155238886"
+                  />
+                  <p className="piece-meta" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    {t('settings.whatsapp.fromHelp')}
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={whatsappEnabled}
+                  onChange={(e) => setWhatsappEnabled(e.target.checked)}
+                />
+                {t('settings.whatsapp.enable')}
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={whatsappSaving}
+              >
+                {whatsappSaving ? t('common.loading') : t('common.save')}
+              </button>
+              {whatsappConfig?.configured && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleWhatsAppDelete}
+                >
+                  {t('settings.whatsapp.remove')}
+                </button>
               )}
             </div>
           </form>

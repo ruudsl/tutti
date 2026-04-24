@@ -3,16 +3,16 @@ import crypto from 'crypto';
 import db from '../database/connection';
 import logger from '../utils/logger';
 
-// WhatsApp Business API / Twilio WhatsApp configuration
+// WhatsApp Business API / Twilio WhatsApp configuration (env var fallback)
 const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
-const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+const WHATSAPP_PHONE_NUMBER_ID_ENV = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const WHATSAPP_ACCESS_TOKEN_ENV = process.env.WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_WEBHOOK_VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || crypto.randomBytes(32).toString('hex');
 
-// Twilio WhatsApp alternative
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_WHATSAPP_FROM = process.env.TWILIO_WHATSAPP_FROM; // e.g., 'whatsapp:+14155238886'
+// Twilio WhatsApp alternative (env var fallback)
+const TWILIO_ACCOUNT_SID_ENV = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN_ENV = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_WHATSAPP_FROM_ENV = process.env.TWILIO_WHATSAPP_FROM; // e.g., 'whatsapp:+14155238886'
 
 export interface WhatsAppMessage {
     to: string; // Phone number with country code (e.g., +31612345678)
@@ -29,32 +29,135 @@ export interface WhatsAppDeliveryStatus {
     errorMessage?: string;
 }
 
+export type WhatsAppConfig =
+    | { provider: 'meta'; phoneNumberId: string; accessToken: string; apiUrl: string }
+    | { provider: 'twilio'; accountSid: string; authToken: string; whatsappFrom: string };
+
 /**
- * Check if WhatsApp is configured
+ * Resolve the WhatsApp configuration for a given association (or env fallback).
+ * Returns null if no configuration is available.
  */
-export function isWhatsAppConfigured(): boolean {
-    // Check for Meta WhatsApp Business API
-    if (WHATSAPP_PHONE_NUMBER_ID && WHATSAPP_ACCESS_TOKEN) {
+export function getWhatsAppConfig(associationId?: string): WhatsAppConfig | null {
+    if (associationId) {
+        try {
+            const row = db.prepare(`
+                SELECT whatsapp_provider, whatsapp_enabled,
+                       whatsapp_phone_number_id, whatsapp_access_token,
+                       twilio_account_sid, twilio_auth_token, twilio_whatsapp_from
+                FROM associations
+                WHERE id = ?
+            `).get(associationId) as {
+                whatsapp_provider: string | null;
+                whatsapp_enabled: number;
+                whatsapp_phone_number_id: string | null;
+                whatsapp_access_token: string | null;
+                twilio_account_sid: string | null;
+                twilio_auth_token: string | null;
+                twilio_whatsapp_from: string | null;
+            } | undefined;
+
+            if (row && row.whatsapp_enabled) {
+                if (
+                    row.whatsapp_provider === 'meta' &&
+                    row.whatsapp_phone_number_id &&
+                    row.whatsapp_access_token
+                ) {
+                    return {
+                        provider: 'meta',
+                        phoneNumberId: row.whatsapp_phone_number_id,
+                        accessToken: row.whatsapp_access_token,
+                        apiUrl: WHATSAPP_API_URL,
+                    };
+                }
+
+                if (
+                    row.whatsapp_provider === 'twilio' &&
+                    row.twilio_account_sid &&
+                    row.twilio_auth_token &&
+                    row.twilio_whatsapp_from
+                ) {
+                    return {
+                        provider: 'twilio',
+                        accountSid: row.twilio_account_sid,
+                        authToken: row.twilio_auth_token,
+                        whatsappFrom: row.twilio_whatsapp_from,
+                    };
+                }
+            }
+        } catch (error) {
+            logger.debug('getWhatsAppConfig: DB lookup failed, falling back to env', error);
+        }
+    }
+
+    // Fall back to environment variables — prefer Meta if both are set
+    if (WHATSAPP_PHONE_NUMBER_ID_ENV && WHATSAPP_ACCESS_TOKEN_ENV) {
+        return {
+            provider: 'meta',
+            phoneNumberId: WHATSAPP_PHONE_NUMBER_ID_ENV,
+            accessToken: WHATSAPP_ACCESS_TOKEN_ENV,
+            apiUrl: WHATSAPP_API_URL,
+        };
+    }
+
+    if (TWILIO_ACCOUNT_SID_ENV && TWILIO_AUTH_TOKEN_ENV && TWILIO_WHATSAPP_FROM_ENV) {
+        return {
+            provider: 'twilio',
+            accountSid: TWILIO_ACCOUNT_SID_ENV,
+            authToken: TWILIO_AUTH_TOKEN_ENV,
+            whatsappFrom: TWILIO_WHATSAPP_FROM_ENV,
+        };
+    }
+
+    return null;
+}
+
+/**
+ * Check if WhatsApp is configured.
+ * - With associationId: true if DB config for that association OR env vars are set.
+ * - Without associationId: true if ANY association has it configured OR env vars are set.
+ */
+export function isWhatsAppConfigured(associationId?: string): boolean {
+    if (associationId) {
+        return getWhatsAppConfig(associationId) !== null;
+    }
+
+    // No associationId: check env vars first
+    if (
+        (WHATSAPP_PHONE_NUMBER_ID_ENV && WHATSAPP_ACCESS_TOKEN_ENV) ||
+        (TWILIO_ACCOUNT_SID_ENV && TWILIO_AUTH_TOKEN_ENV && TWILIO_WHATSAPP_FROM_ENV)
+    ) {
         return true;
     }
-    // Check for Twilio WhatsApp
-    if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_WHATSAPP_FROM) {
-        return true;
+
+    // Check if any association has WhatsApp enabled
+    try {
+        const row = db.prepare(`
+            SELECT 1 FROM associations
+            WHERE whatsapp_enabled = 1
+              AND whatsapp_provider IS NOT NULL
+              AND (
+                (whatsapp_provider = 'meta'   AND whatsapp_phone_number_id IS NOT NULL AND whatsapp_access_token IS NOT NULL)
+                OR
+                (whatsapp_provider = 'twilio' AND twilio_account_sid IS NOT NULL AND twilio_auth_token IS NOT NULL AND twilio_whatsapp_from IS NOT NULL)
+              )
+            LIMIT 1
+        `).get();
+        return !!row;
+    } catch (error) {
+        logger.debug('isWhatsAppConfigured: DB lookup failed', error);
+        return false;
     }
-    return false;
 }
 
 /**
  * Send a WhatsApp message using Meta WhatsApp Business API
  */
-async function sendMetaWhatsAppMessage(message: WhatsAppMessage): Promise<string | null> {
-    if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
-        logger.warn('Meta WhatsApp Business API not configured');
-        return null;
-    }
-
+async function sendMetaWhatsAppMessage(
+    message: WhatsAppMessage,
+    config: Extract<WhatsAppConfig, { provider: 'meta' }>,
+): Promise<string | null> {
     try {
-        const url = `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+        const url = `${config.apiUrl}/${config.phoneNumberId}/messages`;
 
         let payload: Record<string, any> = {
             messaging_product: 'whatsapp',
@@ -93,7 +196,7 @@ async function sendMetaWhatsAppMessage(message: WhatsAppMessage): Promise<string
 
         const response = await axios.post(url, payload, {
             headers: {
-                'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+                'Authorization': `Bearer ${config.accessToken}`,
                 'Content-Type': 'application/json',
             },
         });
@@ -110,14 +213,12 @@ async function sendMetaWhatsAppMessage(message: WhatsAppMessage): Promise<string
 /**
  * Send a WhatsApp message using Twilio
  */
-async function sendTwilioWhatsAppMessage(message: WhatsAppMessage): Promise<string | null> {
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_FROM) {
-        logger.warn('Twilio WhatsApp not configured');
-        return null;
-    }
-
+async function sendTwilioWhatsAppMessage(
+    message: WhatsAppMessage,
+    config: Extract<WhatsAppConfig, { provider: 'twilio' }>,
+): Promise<string | null> {
     try {
-        const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`;
 
         const formattedTo = message.to.startsWith('whatsapp:')
             ? message.to
@@ -132,15 +233,15 @@ async function sendTwilioWhatsAppMessage(message: WhatsAppMessage): Promise<stri
         }
 
         const params = new URLSearchParams({
-            From: TWILIO_WHATSAPP_FROM,
+            From: config.whatsappFrom,
             To: formattedTo,
             Body: body,
         });
 
         const response = await axios.post(url, params.toString(), {
             auth: {
-                username: TWILIO_ACCOUNT_SID,
-                password: TWILIO_AUTH_TOKEN,
+                username: config.accountSid,
+                password: config.authToken,
             },
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -157,21 +258,24 @@ async function sendTwilioWhatsAppMessage(message: WhatsAppMessage): Promise<stri
 }
 
 /**
- * Send a WhatsApp message (auto-detects provider)
+ * Send a WhatsApp message (auto-detects provider from config)
  */
-export async function sendWhatsAppMessage(message: WhatsAppMessage): Promise<string | null> {
-    // Prefer Meta WhatsApp Business API
-    if (WHATSAPP_PHONE_NUMBER_ID && WHATSAPP_ACCESS_TOKEN) {
-        return sendMetaWhatsAppMessage(message);
+export async function sendWhatsAppMessage(
+    message: WhatsAppMessage,
+    associationId?: string,
+): Promise<string | null> {
+    const config = getWhatsAppConfig(associationId);
+
+    if (!config) {
+        logger.warn('No WhatsApp provider configured');
+        return null;
     }
 
-    // Fall back to Twilio
-    if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_WHATSAPP_FROM) {
-        return sendTwilioWhatsAppMessage(message);
+    if (config.provider === 'meta') {
+        return sendMetaWhatsAppMessage(message, config);
     }
 
-    logger.warn('No WhatsApp provider configured');
-    return null;
+    return sendTwilioWhatsAppMessage(message, config);
 }
 
 /**
@@ -181,7 +285,8 @@ export async function sendWhatsAppNotification(
     userId: string,
     title: string,
     body: string,
-    data?: Record<string, any>
+    data?: Record<string, any>,
+    associationId?: string,
 ): Promise<boolean> {
     // Get user's WhatsApp channel info
     const channel = db.prepare(`
@@ -194,12 +299,15 @@ export async function sendWhatsAppNotification(
         return false;
     }
 
-    const messageId = await sendWhatsAppMessage({
-        to: channel.channel_id,
-        templateName: 'harmonie_notification',
-        templateLanguage: 'nl',
-        templateParams: [title, body],
-    });
+    const messageId = await sendWhatsAppMessage(
+        {
+            to: channel.channel_id,
+            templateName: 'harmonie_notification',
+            templateLanguage: 'nl',
+            templateParams: [title, body],
+        },
+        associationId,
+    );
 
     return messageId !== null;
 }
@@ -214,13 +322,20 @@ export function generateVerificationCode(): string {
 /**
  * Send WhatsApp verification code
  */
-export async function sendVerificationCode(phoneNumber: string, code: string): Promise<boolean> {
-    const messageId = await sendWhatsAppMessage({
-        to: phoneNumber,
-        templateName: 'harmonie_verification',
-        templateLanguage: 'nl',
-        templateParams: [code],
-    });
+export async function sendVerificationCode(
+    phoneNumber: string,
+    code: string,
+    associationId?: string,
+): Promise<boolean> {
+    const messageId = await sendWhatsAppMessage(
+        {
+            to: phoneNumber,
+            templateName: 'harmonie_verification',
+            templateLanguage: 'nl',
+            templateParams: [code],
+        },
+        associationId,
+    );
 
     return messageId !== null;
 }
@@ -317,6 +432,7 @@ export function parseIncomingMessage(payload: any): { from: string; text: string
 }
 
 export default {
+    getWhatsAppConfig,
     isWhatsAppConfigured,
     sendWhatsAppMessage,
     sendWhatsAppNotification,

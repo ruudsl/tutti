@@ -244,6 +244,20 @@ export interface SmtpConfig {
   configured: boolean;
 }
 
+export interface TelegramConfig {
+  tokenPreview: string;
+  configured: boolean;
+  enabled: boolean;
+}
+
+export interface WhatsAppConfig {
+  provider: 'meta' | 'twilio';
+  enabled: boolean;
+  configured: boolean;
+  meta: { phoneNumberId: string; accessTokenPreview: string; configured: boolean };
+  twilio: { accountSid: string; authTokenPreview: string; whatsappFrom: string; configured: boolean };
+}
+
 // ==================== EQUIPMENT (INSTRUMENTENBEHEER) ====================
 
 export interface Equipment {

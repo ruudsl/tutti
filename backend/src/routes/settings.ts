@@ -481,4 +481,229 @@ router.post('/smtp/test', authenticateToken, requireRole('admin'), ipWhitelistMi
     }
 }));
 
+// =============================================
+// TELEGRAM CONFIGURATION
+// =============================================
+
+/**
+ * GET /settings/telegram - Get Telegram bot configuration (admin only)
+ */
+router.get('/telegram', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT telegram_bot_token, telegram_enabled
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as { telegram_bot_token: string | null; telegram_enabled: number } | undefined;
+
+    if (!association) {
+        throw new ApiError(404, 'Vereniging niet gevonden.');
+    }
+
+    const token = association.telegram_bot_token || '';
+    res.json({
+        // Return a masked preview only; never return the full token
+        tokenPreview: token ? `${token.slice(0, 8)}${'•'.repeat(20)}` : '',
+        configured: !!token,
+        enabled: !!association.telegram_enabled,
+    });
+}));
+
+/**
+ * PUT /settings/telegram - Save Telegram bot configuration (admin only)
+ */
+router.put('/telegram', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { botToken, enabled } = req.body as { botToken?: string; enabled?: boolean };
+
+    // Preserve existing token if not provided
+    const existing = db.prepare('SELECT telegram_bot_token FROM associations WHERE id = ?').get(req.user!.associationId) as { telegram_bot_token: string | null } | undefined;
+    const finalToken = (typeof botToken === 'string' && botToken.trim()) ? botToken.trim() : existing?.telegram_bot_token || null;
+
+    if (enabled && !finalToken) {
+        throw new ApiError(400, 'Een bot token is vereist om Telegram in te schakelen.');
+    }
+
+    db.prepare(`
+        UPDATE associations
+        SET telegram_bot_token = ?, telegram_enabled = ?
+        WHERE id = ?
+    `).run(finalToken, enabled ? 1 : 0, req.user!.associationId);
+
+    logger.info('Telegram config updated', { associationId: req.user!.associationId, updatedBy: req.user!.id });
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId || '',
+        'Telegram configuratie',
+        { enabled: !!enabled, configured: !!finalToken },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({ message: 'Telegram-instellingen opgeslagen.' });
+}));
+
+/**
+ * DELETE /settings/telegram - Remove Telegram configuration (admin only)
+ */
+router.delete('/telegram', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    db.prepare(`
+        UPDATE associations
+        SET telegram_bot_token = NULL, telegram_enabled = 0
+        WHERE id = ?
+    `).run(req.user!.associationId);
+
+    logger.info('Telegram config removed', { associationId: req.user!.associationId, removedBy: req.user!.id });
+    res.json({ message: 'Telegram-instellingen verwijderd.' });
+}));
+
+// =============================================
+// WHATSAPP CONFIGURATION
+// =============================================
+
+/**
+ * GET /settings/whatsapp - Get WhatsApp configuration (admin only)
+ */
+router.get('/whatsapp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT whatsapp_provider, whatsapp_enabled,
+               whatsapp_phone_number_id, whatsapp_access_token,
+               twilio_account_sid, twilio_auth_token, twilio_whatsapp_from
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as {
+        whatsapp_provider: string | null;
+        whatsapp_enabled: number;
+        whatsapp_phone_number_id: string | null;
+        whatsapp_access_token: string | null;
+        twilio_account_sid: string | null;
+        twilio_auth_token: string | null;
+        twilio_whatsapp_from: string | null;
+    } | undefined;
+
+    if (!association) {
+        throw new ApiError(404, 'Vereniging niet gevonden.');
+    }
+
+    const provider = (association.whatsapp_provider === 'twilio' ? 'twilio' : 'meta') as 'meta' | 'twilio';
+    const metaConfigured = !!(association.whatsapp_phone_number_id && association.whatsapp_access_token);
+    const twilioConfigured = !!(association.twilio_account_sid && association.twilio_auth_token && association.twilio_whatsapp_from);
+
+    res.json({
+        provider,
+        enabled: !!association.whatsapp_enabled,
+        configured: provider === 'meta' ? metaConfigured : twilioConfigured,
+        meta: {
+            phoneNumberId: association.whatsapp_phone_number_id || '',
+            accessTokenPreview: association.whatsapp_access_token
+                ? `${association.whatsapp_access_token.slice(0, 6)}${'•'.repeat(20)}`
+                : '',
+            configured: metaConfigured,
+        },
+        twilio: {
+            accountSid: association.twilio_account_sid || '',
+            authTokenPreview: association.twilio_auth_token
+                ? `${association.twilio_auth_token.slice(0, 6)}${'•'.repeat(20)}`
+                : '',
+            whatsappFrom: association.twilio_whatsapp_from || '',
+            configured: twilioConfigured,
+        },
+    });
+}));
+
+/**
+ * PUT /settings/whatsapp - Save WhatsApp configuration (admin only)
+ */
+router.put('/whatsapp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const body = req.body as {
+        provider?: 'meta' | 'twilio';
+        enabled?: boolean;
+        meta?: { phoneNumberId?: string; accessToken?: string };
+        twilio?: { accountSid?: string; authToken?: string; whatsappFrom?: string };
+    };
+
+    if (body.provider && body.provider !== 'meta' && body.provider !== 'twilio') {
+        throw new ApiError(400, 'Provider moet "meta" of "twilio" zijn.');
+    }
+
+    // Preserve existing secrets when the client doesn't send them
+    const existing = db.prepare(`
+        SELECT whatsapp_access_token, twilio_auth_token
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as { whatsapp_access_token: string | null; twilio_auth_token: string | null } | undefined;
+
+    const phoneNumberId = body.meta?.phoneNumberId?.trim() || null;
+    const accessToken = body.meta?.accessToken?.trim() || existing?.whatsapp_access_token || null;
+    const accountSid = body.twilio?.accountSid?.trim() || null;
+    const authToken = body.twilio?.authToken?.trim() || existing?.twilio_auth_token || null;
+    const whatsappFrom = body.twilio?.whatsappFrom?.trim() || null;
+
+    const provider = body.provider || 'meta';
+
+    const metaConfigured = !!(phoneNumberId && accessToken);
+    const twilioConfigured = !!(accountSid && authToken && whatsappFrom);
+
+    if (body.enabled) {
+        if (provider === 'meta' && !metaConfigured) {
+            throw new ApiError(400, 'Meta WhatsApp vereist een Phone Number ID en Access Token.');
+        }
+        if (provider === 'twilio' && !twilioConfigured) {
+            throw new ApiError(400, 'Twilio WhatsApp vereist Account SID, Auth Token en From-nummer.');
+        }
+    }
+
+    db.prepare(`
+        UPDATE associations
+        SET whatsapp_provider = ?,
+            whatsapp_enabled = ?,
+            whatsapp_phone_number_id = ?,
+            whatsapp_access_token = ?,
+            twilio_account_sid = ?,
+            twilio_auth_token = ?,
+            twilio_whatsapp_from = ?
+        WHERE id = ?
+    `).run(
+        provider,
+        body.enabled ? 1 : 0,
+        phoneNumberId,
+        accessToken,
+        accountSid,
+        authToken,
+        whatsappFrom,
+        req.user!.associationId
+    );
+
+    logger.info('WhatsApp config updated', { associationId: req.user!.associationId, updatedBy: req.user!.id, provider });
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId || '',
+        'WhatsApp configuratie',
+        { provider, enabled: !!body.enabled },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({ message: 'WhatsApp-instellingen opgeslagen.' });
+}));
+
+/**
+ * DELETE /settings/whatsapp - Remove WhatsApp configuration (admin only)
+ */
+router.delete('/whatsapp', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    db.prepare(`
+        UPDATE associations
+        SET whatsapp_provider = NULL,
+            whatsapp_enabled = 0,
+            whatsapp_phone_number_id = NULL,
+            whatsapp_access_token = NULL,
+            twilio_account_sid = NULL,
+            twilio_auth_token = NULL,
+            twilio_whatsapp_from = NULL
+        WHERE id = ?
+    `).run(req.user!.associationId);
+
+    logger.info('WhatsApp config removed', { associationId: req.user!.associationId, removedBy: req.user!.id });
+    res.json({ message: 'WhatsApp-instellingen verwijderd.' });
+}));
+
 export default router;

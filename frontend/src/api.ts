@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType, SeatHeatmapData } from './types';
+import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, TelegramConfig, WhatsAppConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType, SeatHeatmapData } from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -888,6 +888,45 @@ export const removeSmtpConfig = async (): Promise<void> => {
 
 export const testSmtpConfig = async (): Promise<{ message: string }> => {
   const { data } = await api.post('/settings/smtp/test');
+  return data;
+};
+
+// Telegram Configuration
+export type { TelegramConfig, WhatsAppConfig };
+
+export const getTelegramConfig = async (): Promise<TelegramConfig> => {
+  const { data } = await api.get('/settings/telegram');
+  return data;
+};
+
+export const saveTelegramConfig = async (config: { botToken?: string; enabled: boolean }): Promise<{ message: string }> => {
+  const { data } = await api.put('/settings/telegram', config);
+  return data;
+};
+
+export const deleteTelegramConfig = async (): Promise<{ message: string }> => {
+  const { data } = await api.delete('/settings/telegram');
+  return data;
+};
+
+// WhatsApp Configuration
+export const getWhatsAppConfig = async (): Promise<WhatsAppConfig> => {
+  const { data } = await api.get('/settings/whatsapp');
+  return data;
+};
+
+export const saveWhatsAppConfig = async (config: {
+  provider: 'meta' | 'twilio';
+  enabled: boolean;
+  meta?: { phoneNumberId?: string; accessToken?: string };
+  twilio?: { accountSid?: string; authToken?: string; whatsappFrom?: string };
+}): Promise<{ message: string }> => {
+  const { data } = await api.put('/settings/whatsapp', config);
+  return data;
+};
+
+export const deleteWhatsAppConfig = async (): Promise<{ message: string }> => {
+  const { data } = await api.delete('/settings/whatsapp');
   return data;
 };
 
