@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SessionsManager } from '../components/SessionsManager';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { GdprExport } from '../components/GdprExport';
 import NotificationPreferences from '../components/NotificationPreferences';
 import { CalendarSync } from '../components/CalendarSync';
@@ -124,6 +125,12 @@ export default function Profile() {
             </div>
             <div className="mb-2">
               <strong>{t('profile.mfaStatus')}:</strong> {user?.mfaEnabled ? t('profile.mfaEnabled') : t('profile.mfaDisabled')}
+            </div>
+            <div className="mb-2">
+              <strong>{t('profile.language')}:</strong>
+              <div className="mt-1">
+                <LanguageSwitcher />
+              </div>
             </div>
           </div>
         </div>

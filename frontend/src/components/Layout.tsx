@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../utils/constants';
-import { LanguageSwitcher } from './LanguageSwitcher';
 import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { DarkModeToggle } from './DarkModeToggle';
 import { Breadcrumbs } from './Breadcrumbs';
@@ -276,7 +275,6 @@ export default function Layout() {
           <NotificationBell />
           <RecentItems />
           <DarkModeToggle />
-          <LanguageSwitcher compact />
           <Link to="/profile" className="user-info header-user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="user-name">{user?.firstName} {user?.lastName}</div>
             <div className="user-role">
@@ -487,7 +485,6 @@ export default function Layout() {
               </NavLink>
               <div className="mobile-menu-actions">
                 <DarkModeToggle />
-                <LanguageSwitcher compact />
                 <button className="btn btn-outline btn-sm" onClick={handleLogout}>
                   {t('nav.logout')}
                 </button>

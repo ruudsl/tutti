@@ -179,6 +179,7 @@
     "mfaStatus": "MFA",
     "mfaEnabled": "Ingeschakeld",
     "mfaDisabled": "Uitgeschakeld",
+    "language": "Taal",
     "changePassword": {
       "title": "Wachtwoord wijzigen",
       "current": "Huidig wachtwoord",

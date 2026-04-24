@@ -179,6 +179,7 @@
     "mfaStatus": "MFA",
     "mfaEnabled": "Aktiviert",
     "mfaDisabled": "Deaktiviert",
+    "language": "Sprache",
     "changePassword": {
       "title": "Passwort ändern",
       "current": "Aktuelles Passwort",
