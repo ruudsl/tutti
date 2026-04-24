@@ -2,6 +2,42 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.10.0] - 2026-04-24
+
+### Toegevoegd
+- **In-app PDF viewer** — Bekijk bladmuziek direct in de app zonder eerst te downloaden. Ondersteunt zoom, swipe-navigatie tussen pagina's, click-and-drag pannen bij zoom, en dark mode voor betere leesbaarheid
+- **PDF annotaties** — Leden kunnen per pagina persoonlijke aantekeningen toevoegen aan bladmuziek, met kleurkeuze. Annotaties zijn privé en blijven bewaard
+- **Offline PDF caching** — Knop "Offline beschikbaar maken" per muzieklijst cachet alle PDFs voor offline gebruik. Groene vinkjes tonen welke stukken zijn gecached
+- **Download alles** — Zip-download van alle PDFs in een muzieklijst tegelijk
+- **Compacte weergave** — Toggle in MyMusic om tuning/nummer/sleutel kolommen inline te tonen voor beter mobiel gebruik
+- **Dashboard widgets** — Herontworpen dashboard met widgets voor aankomende repetities, snelle acties, oefenvoortgang, favorieten en recente activiteit. Drag-and-drop herschikken en aan/uit te schakelen
+- **Notificatiebel in header** — Prominente notificatiebel met ongelezen teller en dropdown voor recente meldingen
+- **Mollie live/test API keys** — Configureer zowel een live als een test API key en wissel tussen de modes. Waarschuwingsbadge als testmodus actief is
+- **Telegram & WhatsApp UI configuratie** — Admins kunnen Telegram bot tokens en WhatsApp credentials (Meta of Twilio) configureren vanuit de Instellingen-pagina, zonder environment variables
+- **Navigatie herontwerp** — Persistente zijbalk op desktop met inklapbare rolgebaseerde secties, mobiele bottom tab bar met "Meer" slide-up paneel voor volledige navigatie
+- **Design token systeem** — Uitgebreid CSS custom property systeem (kleuren, typografie, spacing, shadows) met utility classes voor consistente UI-ontwikkeling
+- **E-mailnotificatie triggers** — Automatische notificaties bij nieuwe muziek upload en repetitie wijzigingen/annuleringen
+- **ESLint + Prettier** — Flat config met TypeScript en React Hooks regels, scripts voor `lint` en `format`
+- **Duitse README** — Complete README.de.md vertaling met architectuurdiagrammen
+
+### Verbeterd
+- Globale zoekfunctie-knop (🔍) toegevoegd aan de header
+- Lege states in dashboard widgets met iconen en actie-links
+- Architectuurdiagrammen in README's bijgewerkt met alle huidige external services (Mollie, Telegram, WhatsApp, Web Push, IMSLP, Spotify, Apple Music)
+- 938 ontbrekende Duitse vertaling-keys aangevuld, 46 ticket-strings handmatig vertaald
+- Dubbele JSON-keys in `nl.json`, `en.json` en `de.json` samengevoegd
+- Tokens in instellingen-API worden gemaskeerd teruggegeven voor betere beveiliging
+
+### Opgelost
+- PDF viewer "Could not load PDF" fout — blob URLs werden als raw data doorgegeven in plaats van als URL
+- PDF viewer zoom werkte visueel niet — canvas had `maxWidth: 100%` beperkingen die vergroting terugschaalden
+- PDF viewer pannen/scrollen bij zoom — canvas in flexbox container kreeg `flex-shrink: 0` bij zoom
+- Ontbrekende vertalingen op oefenschema pagina (`common.orchestra`, `common.notes`, `music.title`, etc.)
+
+### Tests
+- 47 nieuwe tests toegevoegd (annotations route, instruments route, pdfCache utility)
+- Totale test coverage: backend 249 tests (+30), frontend 59 tests (+17)
+
 ## [1.9.0] - 2026-03-30
 
 ### Toegevoegd

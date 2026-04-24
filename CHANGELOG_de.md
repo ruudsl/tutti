@@ -2,6 +2,42 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.10.0] - 2026-04-24
+
+### Hinzugefügt
+- **In-App PDF-Viewer** — Noten direkt in der App ansehen, ohne sie erst herunterzuladen. Unterstützt Zoom, Wisch-Navigation zwischen Seiten, Klick-und-Ziehen-Panning bei Zoom und Dunkelmodus für bessere Lesbarkeit
+- **PDF-Anmerkungen** — Mitglieder können persönliche Anmerkungen pro Seite zu Noten hinzufügen, mit Farbauswahl. Anmerkungen sind privat und bleiben erhalten
+- **Offline PDF-Caching** — Schaltfläche "Offline verfügbar machen" pro Musikliste speichert alle PDFs für die Offline-Nutzung. Grüne Häkchen zeigen, welche Stücke gespeichert sind
+- **Alle herunterladen** — Zip-Download aller PDFs einer Musikliste auf einmal
+- **Kompakte Ansicht** — Umschalter in Meine Musik, um Stimmung/Nummer/Schlüssel-Spalten inline anzuzeigen — besser für mobile Nutzung
+- **Dashboard-Widgets** — Neu gestaltetes Dashboard mit Widgets für kommende Proben, Schnellaktionen, Übungsfortschritt, Favoriten und letzte Aktivitäten. Drag-and-Drop-Neuordnung und Ein-/Ausblenden
+- **Benachrichtigungsglocke im Header** — Prominente Benachrichtigungsglocke mit Zähler für ungelesene und Dropdown für aktuelle Meldungen
+- **Mollie Live/Test API-Schlüssel** — Sowohl einen Live- als auch einen Test-API-Schlüssel konfigurieren und zwischen den Modi umschalten. Warnungs-Badge wenn Testmodus aktiv ist
+- **Telegram & WhatsApp UI-Konfiguration** — Administratoren können Telegram-Bot-Tokens und WhatsApp-Zugangsdaten (Meta oder Twilio) über die Einstellungs-Seite konfigurieren, ohne Umgebungsvariablen
+- **Navigations-Neugestaltung** — Persistente Seitenleiste auf dem Desktop mit einklappbaren rollenbasierten Sektionen, mobile Tab-Leiste unten mit "Mehr"-Panel für vollständige Navigation
+- **Design-Token-System** — Erweitertes CSS-Custom-Property-System (Farben, Typografie, Abstände, Schatten) mit Utility-Klassen für konsistente UI-Entwicklung
+- **E-Mail-Benachrichtigungs-Trigger** — Automatische Benachrichtigungen bei neuen Musik-Uploads und Proben-Änderungen/Stornierungen
+- **ESLint + Prettier** — Flat Config mit TypeScript- und React-Hooks-Regeln, Scripts für `lint` und `format`
+- **Deutsche README** — Vollständige README.de.md-Übersetzung mit Architektur-Diagrammen
+
+### Verbessert
+- Globale Suchen-Schaltfläche (🔍) im Header hinzugefügt
+- Leere Zustände in Dashboard-Widgets mit Symbolen und Aktions-Links
+- Architektur-Diagramme in den README-Dateien aktualisiert, um alle aktuellen externen Dienste widerzuspiegeln (Mollie, Telegram, WhatsApp, Web Push, IMSLP, Spotify, Apple Music)
+- 938 fehlende deutsche Übersetzungs-Schlüssel ergänzt, 46 Ticket-Strings manuell übersetzt
+- Doppelte JSON-Schlüssel in `nl.json`, `en.json` und `de.json` zusammengeführt
+- Tokens werden in Einstellungs-API-Antworten maskiert zurückgegeben für bessere Sicherheit
+
+### Behoben
+- PDF-Viewer "Could not load PDF"-Fehler — Blob-URLs wurden als Rohdaten anstatt als URL übergeben
+- PDF-Viewer-Zoom hatte keine sichtbare Wirkung — Canvas `maxWidth: 100%`-Einschränkungen skalierten ihn wieder herunter
+- PDF-Viewer-Panning/-Scrollen bei Zoom — Canvas im Flex-Container erhält jetzt `flex-shrink: 0` beim Zoomen
+- Fehlende Übersetzungen auf der Übungsplan-Seite (`common.orchestra`, `common.notes`, `music.title` usw.)
+
+### Tests
+- 47 neue Tests hinzugefügt (Annotations-Route, Instruments-Route, pdfCache-Utility)
+- Gesamte Testabdeckung: Backend 249 Tests (+30), Frontend 59 Tests (+17)
+
 ## [1.9.0] - 2026-03-30
 
 ### Hinzugefügt

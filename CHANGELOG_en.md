@@ -2,6 +2,42 @@
 
 All notable changes to this application are documented here.
 
+## [1.10.0] - 2026-04-24
+
+### Added
+- **In-app PDF viewer** — View sheet music directly in the app without downloading first. Supports zoom, swipe navigation between pages, click-and-drag panning when zoomed, and dark mode for better readability
+- **PDF annotations** — Members can add personal per-page notes to sheet music with color selection. Annotations are private and persist across sessions
+- **Offline PDF caching** — "Make available offline" button per music list caches all PDFs for offline use. Green checkmarks show which pieces are cached
+- **Download all** — Zip download of all PDFs in a music list at once
+- **Compact view** — Toggle in MyMusic to show tuning/number/clef columns inline for better mobile experience
+- **Dashboard widgets** — Redesigned dashboard with widgets for upcoming rehearsals, quick actions, practice progress, favorites, and recent activity. Drag-and-drop reordering and toggle visibility
+- **Notification bell in header** — Prominent notification bell with unread count badge and dropdown for recent notifications
+- **Mollie live/test API keys** — Configure both a live and a test API key and toggle between modes. Warning badge when test mode is active
+- **Telegram & WhatsApp UI configuration** — Admins can configure Telegram bot tokens and WhatsApp credentials (Meta or Twilio) from the Settings page, without environment variables
+- **Navigation redesign** — Persistent sidebar on desktop with collapsible role-based sections, mobile bottom tab bar with "More" slide-up panel for full navigation
+- **Design token system** — Expanded CSS custom property system (colors, typography, spacing, shadows) with utility classes for consistent UI development
+- **Email notification triggers** — Automatic notifications on new music uploads and rehearsal changes/cancellations
+- **ESLint + Prettier** — Flat config with TypeScript and React Hooks rules, `lint` and `format` scripts
+- **German README** — Complete README.de.md translation with architecture diagrams
+
+### Improved
+- Global search button (🔍) added to the header
+- Dashboard widget empty states with icons and action links
+- Architecture diagrams in READMEs updated to reflect all current external services (Mollie, Telegram, WhatsApp, Web Push, IMSLP, Spotify, Apple Music)
+- 938 missing German translation keys filled in, 46 ticket strings manually translated
+- Duplicate JSON keys in `nl.json`, `en.json` and `de.json` merged
+- Tokens are masked in settings API responses for better security
+
+### Fixed
+- PDF viewer "Could not load PDF" error — blob URLs were passed as raw data instead of as a URL
+- PDF viewer zoom had no visible effect — canvas `maxWidth: 100%` constraints scaled it back down
+- PDF viewer panning/scrolling when zoomed — canvas in flex container now gets `flex-shrink: 0` when zoomed
+- Missing translations on the practice schedule page (`common.orchestra`, `common.notes`, `music.title`, etc.)
+
+### Tests
+- 47 new tests added (annotations route, instruments route, pdfCache utility)
+- Total test coverage: backend 249 tests (+30), frontend 59 tests (+17)
+
 ## [1.9.0] - 2026-03-30
 
 ### Added
