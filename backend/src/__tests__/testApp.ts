@@ -11,6 +11,8 @@ import authRoutes from '../routes/auth';
 import usersRoutes from '../routes/users';
 import orchestrasRoutes from '../routes/orchestras';
 import rehearsalRoutes from '../routes/rehearsals';
+import annotationsRoutes from '../routes/annotations';
+import instrumentsRoutes from '../routes/instruments';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -26,6 +28,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/orchestras', orchestrasRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
+app.use('/api/annotations', annotationsRoutes);
+app.use('/api/instruments', instrumentsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
