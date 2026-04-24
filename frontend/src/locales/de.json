@@ -32,7 +32,18 @@
     "none": "Keine",
     "optional": "optional",
     "required": "erforderlich",
-    "sessionExpired": "Sitzung abgelaufen. Bitte erneut anmelden."
+    "sessionExpired": "Sitzung abgelaufen. Bitte erneut anmelden.",
+    "records": "Einträge",
+    "warning": "Warnung",
+    "title": "Titel",
+    "orchestra": "Orchester",
+    "notes": "Notizen",
+    "allOrchestras": "Alle Orchester",
+    "create": "Erstellen"
+  },
+  "music": {
+    "title": "Musikstück",
+    "composer": "Komponist"
   },
   "sidebar": {
     "agenda": "Kalender",
@@ -69,6 +80,11 @@
     "profile": "Profil",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
+    "expandSidebar": "Seitenleiste ausklappen",
+    "collapseSidebar": "Seitenleiste einklappen",
+    "more": "Mehr",
+    "mobileNavigation": "Navigation",
+    "imslp": "IMSLP",
     "inventory": "Inventar",
     "equipment": "Instrumente",
     "uniforms": "Uniformen",
@@ -209,7 +225,20 @@
     "viewAllMusic": "Alle Musik anzeigen",
     "notAddedToLists": "Sie wurden noch keinen Musiklisten hinzugefügt.",
     "accountSecurity": "Kontosicherheit",
-    "administration": "Verwaltung"
+    "administration": "Verwaltung",
+    "customizeDashboard": "Anpassen",
+    "doneEditing": "Fertig",
+    "resetToDefault": "Zurücksetzen",
+    "hideWidget": "Widget ausblenden",
+    "showWidget": "Widget anzeigen",
+    "dragToReorder": "Ziehen zum Umordnen",
+    "sizeSmall": "Klein",
+    "sizeMedium": "Mittel",
+    "sizeLarge": "Groß",
+    "sizeFull": "Volle Breite",
+    "totalPieces": "Stücke gesamt",
+    "practiceMinutes": "Übungsminuten",
+    "downloadsThisMonth": "Downloads diesen Monat"
   },
   "myMusic": {
     "title": "Meine Musik",
@@ -243,7 +272,52 @@
       "submit": "Meldung senden",
       "submitting": "Laden...",
       "success": "Fehler erfolgreich gemeldet"
-    }
+    },
+    "view": "Ansehen",
+    "viewPdf": "Anzeigen",
+    "swipeHint": "Wischen zum Navigieren",
+    "downloadAll": "Alle herunterladen",
+    "downloadingAll": "Wird heruntergeladen...",
+    "makeOffline": "Offline verfügbar machen",
+    "makingOffline": "Wird gespeichert...",
+    "offlineReady": "Offline verfügbar",
+    "cachedPieces": "{{count}} Stücke gespeichert"
+  },
+  "annotations": {
+    "title": "Anmerkungen",
+    "add": "Anmerkung hinzufügen",
+    "placeholder": "Anmerkung eingeben...",
+    "noAnnotations": "Keine Anmerkungen auf dieser Seite",
+    "delete": "Löschen",
+    "saved": "Anmerkung gespeichert",
+    "deleted": "Anmerkung gelöscht",
+    "pageLabel": "Seite {{page}}",
+    "showAnnotations": "Anmerkungen anzeigen",
+    "hideAnnotations": "Anmerkungen ausblenden"
+  },
+  "widgets": {
+    "upcomingRehearsals": "Kommende Proben",
+    "recentActivity": "Letzte Aktivitäten",
+    "quickActions": "Schnellaktionen",
+    "newMusic": "Neue Musik",
+    "myMusicLists": "Meine Musiklisten",
+    "practiceProgress": "Übungsfortschritt",
+    "favorites": "Favoriten",
+    "announcements": "Ankündigungen",
+    "viewAll": "Alle anzeigen",
+    "noUpcomingRehearsals": "Keine bevorstehenden Proben.",
+    "noRecentActivity": "Keine letzten Aktivitäten.",
+    "noNewMusic": "Keine neue Musik.",
+    "noMusicLists": "Keine Musiklisten verfügbar.",
+    "noFavorites": "Noch keine Favoriten.",
+    "noAnnouncements": "Keine Ankündigungen.",
+    "minutesThisWeek": "Minuten diese Woche",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "justNow": "Gerade eben",
+    "minutesAgo": "vor {{count}} Min.",
+    "hoursAgo": "vor {{count}} Std.",
+    "daysAgo": "vor {{count}} Tag(en)"
   },
   "tools": {
     "title": "Musik-Werkzeuge",
@@ -1105,7 +1179,16 @@
     "ticketScanner": "Ticket-Scanner - Harmonie",
     "sessions": "Aktive Sitzungen - Harmonie",
     "dataExport": "Ihre Daten - Harmonie",
-    "paymentSettings": "Zahlungseinstellungen - Harmonie"
+    "paymentSettings": "Zahlungseinstellungen - Harmonie",
+    "seating": "Sitzordnung - Harmonie",
+    "voiceParts": "Stimmenzuordnung - Harmonie",
+    "occupancy": "Besetzungsübersicht - Harmonie",
+    "neighborPreferences": "Nachbarvorlieben - Harmonie",
+    "memberDirectory": "Mitgliederverzeichnis - Harmonie",
+    "imslpBrowser": "IMSLP-Browser - Harmonie",
+    "ticketDashboard": "Ticket-Dashboard - Harmonie",
+    "userGuide": "Benutzerhandbuch - Harmonie",
+    "auditLogs": "Audit-Protokolle - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -1657,13 +1740,6 @@
       "step4": "Kopieren Sie Ihre Account SID und Auth Token aus der Console",
       "step5": "Geben Sie die Daten oben ein und testen Sie die Verbindung"
     }
-  },
-  "pageTitle": {
-    "seating": "Sitzordnung - Harmonie",
-    "voiceParts": "Stimmenzuordnung - Harmonie",
-    "occupancy": "Besetzungsübersicht - Harmonie",
-    "neighborPreferences": "Nachbarvorlieben - Harmonie",
-    "memberDirectory": "Mitgliederverzeichnis - Harmonie"
   },
   "memberDirectory": {
     "title": "Mitgliederverzeichnis",
