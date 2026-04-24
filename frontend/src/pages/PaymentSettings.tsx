@@ -9,6 +9,8 @@ import {
   disconnectMollie,
   getMollieStatus,
   testMollieConnection,
+  setMollieMode,
+  deleteMollieKey,
 } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
@@ -32,31 +34,27 @@ export default function PaymentSettings() {
 
   const queryClient = useQueryClient();
 
-  // State
-  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectModalMode, setConnectModalMode] = useState<'live' | 'test' | null>(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [editingFee, setEditingFee] = useState<{ method: string; customerFee: number } | null>(null);
 
-  // Fetch settings
   const { data: settings, isLoading } = useQuery({
     queryKey: ['paymentSettings'],
     queryFn: getPaymentSettings,
   });
 
-  // Fetch Mollie status
   const { data: mollieStatus } = useQuery({
     queryKey: ['mollieStatus'],
     queryFn: getMollieStatus,
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Mutations
   const connectMutation = useMutation({
-    mutationFn: (key: string) => connectMollie(key),
+    mutationFn: (args: { key: string; mode: 'live' | 'test' }) => connectMollie(args.key, args.mode),
     onSuccess: (data) => {
       showSuccess(t('paymentSettings.connectSuccess', { name: data.organisationName }));
-      setShowConnectModal(false);
+      setConnectModalMode(null);
       setApiKey('');
       queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
     },
@@ -68,6 +66,28 @@ export default function PaymentSettings() {
     onSuccess: () => {
       showSuccess(t('paymentSettings.disconnectSuccess'));
       setShowDisconnectConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const setModeMutation = useMutation({
+    mutationFn: (mode: 'live' | 'test') => setMollieMode(mode),
+    onSuccess: (data) => {
+      showSuccess(
+        data.mode === 'live'
+          ? t('paymentSettings.switchedToLive', 'Gewijzigd naar live modus')
+          : t('paymentSettings.switchedToTest', 'Gewijzigd naar test modus')
+      );
+      queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+
+  const deleteKeyMutation = useMutation({
+    mutationFn: (mode: 'live' | 'test') => deleteMollieKey(mode),
+    onSuccess: () => {
+      showSuccess(t('paymentSettings.keyDeleted', 'API-sleutel verwijderd'));
       queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
     },
     onError: (error) => showError(getErrorMessage(error)),
@@ -106,12 +126,8 @@ export default function PaymentSettings() {
     onError: (error) => showError(getErrorMessage(error)),
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('nl-NL', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
 
   if (isLoading) {
     return (
@@ -125,6 +141,11 @@ export default function PaymentSettings() {
       </div>
     );
   }
+
+  const liveConfigured = settings?.liveKeyConfigured;
+  const testConfigured = settings?.testKeyConfigured;
+  const activeMode = settings?.mode || 'live';
+  const anyKeyConfigured = liveConfigured || testConfigured;
 
   return (
     <div>
@@ -142,14 +163,19 @@ export default function PaymentSettings() {
                 rel="noopener noreferrer"
                 style={{ fontSize: '0.875rem', color: 'var(--primary)' }}
               >
-                Status: {mollieStatus?.operational ? (
-                  <span style={{ color: 'var(--success)' }}>{mollieStatus?.statusDescription || 'Operational'}</span>
+                Status:{' '}
+                {mollieStatus?.operational ? (
+                  <span style={{ color: 'var(--success)' }}>
+                    {mollieStatus?.statusDescription || 'Operational'}
+                  </span>
                 ) : (
-                  <span style={{ color: 'var(--warning)' }}>{mollieStatus?.statusDescription || 'Issues detected'}</span>
+                  <span style={{ color: 'var(--warning)' }}>
+                    {mollieStatus?.statusDescription || 'Issues detected'}
+                  </span>
                 )}
               </a>
             </div>
-            {settings?.isConnected ? (
+            {settings?.isConnected && (
               <button
                 className="btn btn-outline btn-sm"
                 onClick={() => testConnectionMutation.mutate()}
@@ -157,30 +183,163 @@ export default function PaymentSettings() {
               >
                 {testConnectionMutation.isPending ? t('common.loading') : t('paymentSettings.testConnection')}
               </button>
+            )}
+          </div>
+
+          {/* Active Mode Toggle */}
+          {anyKeyConfigured && (
+            <div className="card mb-3" style={{ background: 'var(--background)', padding: '1rem' }}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <strong>{t('paymentSettings.activeMode', 'Actieve modus')}:</strong>
+                <div className="flex gap-1" role="tablist">
+                  <button
+                    role="tab"
+                    aria-selected={activeMode === 'live'}
+                    className={`btn btn-sm ${activeMode === 'live' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setModeMutation.mutate('live')}
+                    disabled={
+                      !liveConfigured || setModeMutation.isPending || activeMode === 'live'
+                    }
+                    title={!liveConfigured ? t('paymentSettings.noLiveKey', 'Geen live sleutel geconfigureerd') : ''}
+                  >
+                    {t('paymentSettings.liveMode', 'Live')}
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={activeMode === 'test'}
+                    className={`btn btn-sm ${activeMode === 'test' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setModeMutation.mutate('test')}
+                    disabled={
+                      !testConfigured || setModeMutation.isPending || activeMode === 'test'
+                    }
+                    title={!testConfigured ? t('paymentSettings.noTestKey', 'Geen test sleutel geconfigureerd') : ''}
+                  >
+                    {t('paymentSettings.testMode', 'Test')}
+                  </button>
+                </div>
+                {activeMode === 'test' && (
+                  <span
+                    className="badge"
+                    style={{
+                      background: 'var(--warning-light)',
+                      color: 'var(--warning)',
+                      border: '1px solid var(--warning)',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    {t('paymentSettings.testModeWarning', 'Testmodus actief — er worden geen echte betalingen verwerkt')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Live Key Section */}
+          <div className="mb-3">
+            <div className="flex justify-between items-center mb-1">
+              <strong>{t('paymentSettings.liveApiKey', 'Live API-sleutel')}</strong>
+              {liveConfigured && activeMode === 'live' && (
+                <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
+                  ✓ {t('paymentSettings.active', 'Actief')}
+                </span>
+              )}
+            </div>
+            {liveConfigured ? (
+              <div className="flex gap-1 items-center">
+                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                  live_••••••••••••••
+                </span>
+                {settings?.liveProfileId && (
+                  <span className="text-muted text-sm ml-2">({settings.liveProfileId})</span>
+                )}
+                <div style={{ marginLeft: 'auto' }}>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => {
+                      setApiKey('');
+                      setConnectModalMode('live');
+                    }}
+                  >
+                    {t('paymentSettings.replace', 'Vervangen')}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm ml-1"
+                    style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                    onClick={() => deleteKeyMutation.mutate('live')}
+                    disabled={deleteKeyMutation.isPending}
+                  >
+                    {t('common.delete')}
+                  </button>
+                </div>
+              </div>
             ) : (
-              <button className="btn btn-primary" onClick={() => setShowConnectModal(true)}>
-                {t('paymentSettings.connect')}
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setApiKey('');
+                  setConnectModalMode('live');
+                }}
+              >
+                {t('paymentSettings.addLiveKey', 'Live sleutel toevoegen')}
               </button>
             )}
           </div>
 
-          {settings?.isConnected ? (
-            <div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>Mollie ID</div>
-                  <div style={{ fontFamily: 'monospace' }}>{settings.profileId}</div>
-                </div>
-                <div>
-                  <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('paymentSettings.connectedSince')}</div>
-                  <div>
-                    {settings.connectedAt
-                      ? new Date(settings.connectedAt).toLocaleDateString('nl-NL')
-                      : '-'}
-                  </div>
+          {/* Test Key Section */}
+          <div className="mb-3">
+            <div className="flex justify-between items-center mb-1">
+              <strong>{t('paymentSettings.testApiKey', 'Test API-sleutel')}</strong>
+              {testConfigured && activeMode === 'test' && (
+                <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
+                  ✓ {t('paymentSettings.active', 'Actief')}
+                </span>
+              )}
+            </div>
+            {testConfigured ? (
+              <div className="flex gap-1 items-center">
+                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                  test_••••••••••••••
+                </span>
+                {settings?.testProfileId && (
+                  <span className="text-muted text-sm ml-2">({settings.testProfileId})</span>
+                )}
+                <div style={{ marginLeft: 'auto' }}>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => {
+                      setApiKey('');
+                      setConnectModalMode('test');
+                    }}
+                  >
+                    {t('paymentSettings.replace', 'Vervangen')}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm ml-1"
+                    style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                    onClick={() => deleteKeyMutation.mutate('test')}
+                    disabled={deleteKeyMutation.isPending}
+                  >
+                    {t('common.delete')}
+                  </button>
                 </div>
               </div>
+            ) : (
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setApiKey('');
+                  setConnectModalMode('test');
+                }}
+              >
+                {t('paymentSettings.addTestKey', 'Test sleutel toevoegen')}
+              </button>
+            )}
+          </div>
 
+          {settings?.isConnected && (
+            <>
               <div
                 className="card mb-3"
                 style={{
@@ -220,8 +379,10 @@ export default function PaymentSettings() {
               >
                 {t('paymentSettings.disconnect')}
               </button>
-            </div>
-          ) : (
+            </>
+          )}
+
+          {!anyKeyConfigured && (
             <div
               className="card"
               style={{
@@ -333,12 +494,19 @@ export default function PaymentSettings() {
       )}
 
       {/* Connect Mollie Modal */}
-      {showConnectModal && (
-        <Modal onClose={() => setShowConnectModal(false)} title={t('paymentSettings.connectMollie')}>
+      {connectModalMode && (
+        <Modal
+          onClose={() => setConnectModalMode(null)}
+          title={
+            connectModalMode === 'live'
+              ? t('paymentSettings.addLiveKey', 'Live sleutel toevoegen')
+              : t('paymentSettings.addTestKey', 'Test sleutel toevoegen')
+          }
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              connectMutation.mutate(apiKey);
+              connectMutation.mutate({ key: apiKey, mode: connectModalMode });
             }}
           >
             <div className="form-group">
@@ -348,13 +516,17 @@ export default function PaymentSettings() {
                 className="form-control"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="live_xxxxxxxxxxxxxxxxxx"
+                placeholder={connectModalMode === 'live' ? 'live_xxxxxxxxxxxxxxxxxx' : 'test_xxxxxxxxxxxxxxxxxx'}
                 required
               />
-              <small style={{ color: 'var(--text-light)' }}>{t('paymentSettings.apiKeyHelp')}</small>
+              <small style={{ color: 'var(--text-light)' }}>
+                {connectModalMode === 'live'
+                  ? t('paymentSettings.liveKeyHelp', 'Deze sleutel begint met "live_" en wordt gebruikt voor echte betalingen.')
+                  : t('paymentSettings.testKeyHelp', 'Deze sleutel begint met "test_" en is alleen voor testdoeleinden.')}
+              </small>
             </div>
             <div className="flex justify-end gap-2 mt-3">
-              <button type="button" className="btn btn-outline" onClick={() => setShowConnectModal(false)}>
+              <button type="button" className="btn btn-outline" onClick={() => setConnectModalMode(null)}>
                 {t('common.cancel')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={connectMutation.isPending}>

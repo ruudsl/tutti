@@ -2794,19 +2794,35 @@ export const updatePaymentMethodFee = async (method: string, fee: {
 };
 
 // Connect Mollie account
-export const connectMollie = async (apiKey: string): Promise<{
+export const connectMollie = async (
+  apiKey: string,
+  mode?: 'live' | 'test'
+): Promise<{
   success: boolean;
   profileId: string;
   organisationName: string;
   canReceivePayments: boolean;
+  mode: 'live' | 'test';
 }> => {
-  const { data } = await api.post('/payment-settings/mollie/connect', { apiKey });
+  const { data } = await api.post('/payment-settings/mollie/connect', { apiKey, mode });
   return data;
 };
 
-// Disconnect Mollie account
+// Disconnect Mollie account (removes both live and test keys)
 export const disconnectMollie = async (): Promise<{ success: boolean }> => {
   const { data } = await api.post('/payment-settings/mollie/disconnect');
+  return data;
+};
+
+// Set active Mollie mode (live/test)
+export const setMollieMode = async (mode: 'live' | 'test'): Promise<{ success: boolean; mode: 'live' | 'test' }> => {
+  const { data } = await api.put('/payment-settings/mollie/mode', { mode });
+  return data;
+};
+
+// Delete a specific Mollie API key (live or test)
+export const deleteMollieKey = async (mode: 'live' | 'test'): Promise<{ success: boolean }> => {
+  const { data } = await api.delete(`/payment-settings/mollie/key/${mode}`);
   return data;
 };
 

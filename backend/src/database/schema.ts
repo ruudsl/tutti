@@ -1460,8 +1460,11 @@ CREATE TABLE IF NOT EXISTS payment_settings (
     id TEXT PRIMARY KEY,
     association_id TEXT NOT NULL UNIQUE,
     provider TEXT NOT NULL DEFAULT 'mollie', -- 'mollie' or 'stripe'
-    mollie_profile_id TEXT, -- Mollie profile/organization ID
-    mollie_api_key_encrypted TEXT, -- Encrypted API key
+    mollie_profile_id TEXT, -- Mollie profile/organization ID (live)
+    mollie_api_key_encrypted TEXT, -- Encrypted LIVE API key
+    mollie_test_profile_id TEXT, -- Mollie profile/organization ID (test)
+    mollie_test_api_key_encrypted TEXT, -- Encrypted TEST API key
+    mollie_mode TEXT NOT NULL DEFAULT 'live', -- 'live' or 'test' - which key is active
     stripe_account_id TEXT, -- Stripe Connect account ID
     stripe_publishable_key TEXT,
     pass_fees_to_customer BOOLEAN DEFAULT 0, -- Whether to add payment fees to ticket price

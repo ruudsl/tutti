@@ -823,6 +823,11 @@ export interface PaymentSettings {
   canReceivePayments: boolean;
   canReceivePayouts: boolean;
   profileId: string | null;
+  mode: 'live' | 'test';
+  liveKeyConfigured: boolean;
+  testKeyConfigured: boolean;
+  liveProfileId: string | null;
+  testProfileId: string | null;
   passFeesToCustomer: boolean;
   connectedAt: string | null;
   fees: PaymentMethodFee[];

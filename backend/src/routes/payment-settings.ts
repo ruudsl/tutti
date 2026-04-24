@@ -34,7 +34,20 @@ const updateFeeSchema = z.object({
 
 const connectMollieSchema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
+    mode: z.enum(['live', 'test']).optional(),
 });
+
+const setModeSchema = z.object({
+    mode: z.enum(['live', 'test']),
+});
+
+/**
+ * Detect mode from API key prefix.
+ * Mollie keys are prefixed with `live_` or `test_`.
+ */
+function detectModeFromKey(key: string): 'live' | 'test' {
+    return key.startsWith('test_') ? 'test' : 'live';
+}
 
 // =============================================
 // PAYMENT SETTINGS ROUTES
@@ -58,6 +71,10 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
         association_id: string;
         provider: string;
         mollie_profile_id: string | null;
+        mollie_test_profile_id: string | null;
+        mollie_api_key_encrypted: string | null;
+        mollie_test_api_key_encrypted: string | null;
+        mollie_mode: string | null;
         pass_fees_to_customer: number;
         is_connected: number;
         can_receive_payments: number;
@@ -78,6 +95,10 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
             association_id: associationId,
             provider: 'mollie',
             mollie_profile_id: null,
+            mollie_test_profile_id: null,
+            mollie_api_key_encrypted: null,
+            mollie_test_api_key_encrypted: null,
+            mollie_mode: 'live',
             pass_fees_to_customer: 0,
             is_connected: 0,
             can_receive_payments: 0,
@@ -107,12 +128,23 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
         is_enabled: number;
     }[];
 
+    const mode = (settings.mollie_mode as 'live' | 'test') || 'live';
+    const activeKeyConfigured =
+        mode === 'test' ? !!settings.mollie_test_api_key_encrypted : !!settings.mollie_api_key_encrypted;
+    const activeProfileId =
+        mode === 'test' ? settings.mollie_test_profile_id : settings.mollie_profile_id;
+
     res.json({
         provider: settings.provider,
-        isConnected: settings.is_connected === 1,
+        isConnected: settings.is_connected === 1 && activeKeyConfigured,
         canReceivePayments: settings.can_receive_payments === 1,
         canReceivePayouts: settings.can_receive_payouts === 1,
-        profileId: settings.mollie_profile_id,
+        profileId: activeProfileId,
+        mode,
+        liveKeyConfigured: !!settings.mollie_api_key_encrypted,
+        testKeyConfigured: !!settings.mollie_test_api_key_encrypted,
+        liveProfileId: settings.mollie_profile_id,
+        testProfileId: settings.mollie_test_profile_id,
         passFeesToCustomer: settings.pass_fees_to_customer === 1,
         connectedAt: settings.connected_at,
         fees: fees.map(f => ({
@@ -200,7 +232,8 @@ router.post('/mollie/connect', authenticateToken, requireRole('admin'), asyncHan
         throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const { apiKey } = validation.data;
+    const { apiKey, mode: explicitMode } = validation.data;
+    const mode = explicitMode || detectModeFromKey(apiKey);
 
     // Verify API key by fetching organization info
     try {
@@ -236,21 +269,39 @@ router.post('/mollie/connect', authenticateToken, requireRole('admin'), asyncHan
         // For now, we store it as-is (in production, use proper encryption)
         const encryptedKey = Buffer.from(apiKey).toString('base64');
 
-        db.prepare(`
-            UPDATE payment_settings
-            SET mollie_profile_id = ?,
-                mollie_api_key_encrypted = ?,
-                is_connected = 1,
-                can_receive_payments = ?,
-                can_receive_payouts = 1,
-                connected_at = CURRENT_TIMESTAMP,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE association_id = ?
-        `).run(orgData.id, encryptedKey, canReceivePayments ? 1 : 0, associationId);
+        // Save key to the appropriate column based on mode
+        if (mode === 'test') {
+            db.prepare(`
+                UPDATE payment_settings
+                SET mollie_test_profile_id = ?,
+                    mollie_test_api_key_encrypted = ?,
+                    mollie_mode = 'test',
+                    is_connected = 1,
+                    can_receive_payments = ?,
+                    can_receive_payouts = 1,
+                    connected_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE association_id = ?
+            `).run(orgData.id, encryptedKey, canReceivePayments ? 1 : 0, associationId);
+        } else {
+            db.prepare(`
+                UPDATE payment_settings
+                SET mollie_profile_id = ?,
+                    mollie_api_key_encrypted = ?,
+                    mollie_mode = 'live',
+                    is_connected = 1,
+                    can_receive_payments = ?,
+                    can_receive_payouts = 1,
+                    connected_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE association_id = ?
+            `).run(orgData.id, encryptedKey, canReceivePayments ? 1 : 0, associationId);
+        }
 
-        logger.info(`Mollie connected for association ${associationId}`, {
+        logger.info(`Mollie connected for association ${associationId} in ${mode} mode`, {
             profileId: orgData.id,
             associationId,
+            mode,
         });
 
         res.json({
@@ -258,12 +309,120 @@ router.post('/mollie/connect', authenticateToken, requireRole('admin'), asyncHan
             profileId: orgData.id,
             organisationName: orgData.name,
             canReceivePayments,
+            mode,
         });
     } catch (error) {
         if (error instanceof ApiError) throw error;
         logger.error('Failed to connect Mollie:', error);
         throw new ApiError(500, 'Failed to connect to Mollie');
     }
+}));
+
+/**
+ * Switch active Mollie mode (live/test)
+ */
+router.put('/mollie/mode', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const validation = setModeSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.issues[0].message);
+    }
+
+    const { mode } = validation.data;
+
+    // Verify that the key for the requested mode is configured
+    const row = db.prepare(`
+        SELECT mollie_api_key_encrypted, mollie_test_api_key_encrypted
+        FROM payment_settings WHERE association_id = ?
+    `).get(associationId) as {
+        mollie_api_key_encrypted: string | null;
+        mollie_test_api_key_encrypted: string | null;
+    } | undefined;
+
+    const keyForMode =
+        mode === 'test' ? row?.mollie_test_api_key_encrypted : row?.mollie_api_key_encrypted;
+
+    if (!keyForMode) {
+        throw new ApiError(
+            400,
+            mode === 'test'
+                ? 'Geen test API-sleutel geconfigureerd.'
+                : 'Geen live API-sleutel geconfigureerd.'
+        );
+    }
+
+    db.prepare(`
+        UPDATE payment_settings
+        SET mollie_mode = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE association_id = ?
+    `).run(mode, associationId);
+
+    logger.info(`Mollie mode changed to ${mode} for association ${associationId}`);
+
+    res.json({ success: true, mode });
+}));
+
+/**
+ * Delete a specific Mollie API key (live or test) without fully disconnecting
+ */
+router.delete('/mollie/key/:mode', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const mode = req.params.mode;
+
+    if (mode !== 'live' && mode !== 'test') {
+        throw new ApiError(400, 'Invalid mode. Use live or test.');
+    }
+
+    if (mode === 'test') {
+        db.prepare(`
+            UPDATE payment_settings
+            SET mollie_test_api_key_encrypted = NULL,
+                mollie_test_profile_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE association_id = ?
+        `).run(associationId);
+    } else {
+        db.prepare(`
+            UPDATE payment_settings
+            SET mollie_api_key_encrypted = NULL,
+                mollie_profile_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE association_id = ?
+        `).run(associationId);
+    }
+
+    // If we just deleted the active key, update connection flags and switch mode if possible
+    const row = db.prepare(`
+        SELECT mollie_api_key_encrypted, mollie_test_api_key_encrypted, mollie_mode
+        FROM payment_settings WHERE association_id = ?
+    `).get(associationId) as {
+        mollie_api_key_encrypted: string | null;
+        mollie_test_api_key_encrypted: string | null;
+        mollie_mode: string;
+    };
+
+    const activeKey =
+        row.mollie_mode === 'test' ? row.mollie_test_api_key_encrypted : row.mollie_api_key_encrypted;
+
+    if (!activeKey) {
+        const otherMode = row.mollie_mode === 'test' ? 'live' : 'test';
+        const otherKey =
+            otherMode === 'test' ? row.mollie_test_api_key_encrypted : row.mollie_api_key_encrypted;
+
+        db.prepare(`
+            UPDATE payment_settings
+            SET mollie_mode = ?,
+                is_connected = ?,
+                can_receive_payments = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE association_id = ?
+        `).run(otherKey ? otherMode : row.mollie_mode, otherKey ? 1 : 0, otherKey ? 1 : 0, associationId);
+    }
+
+    logger.info(`Mollie ${mode} key deleted for association ${associationId}`);
+
+    res.json({ success: true });
 }));
 
 /**
@@ -276,6 +435,8 @@ router.post('/mollie/disconnect', authenticateToken, requireRole('admin'), async
         UPDATE payment_settings
         SET mollie_profile_id = NULL,
             mollie_api_key_encrypted = NULL,
+            mollie_test_profile_id = NULL,
+            mollie_test_api_key_encrypted = NULL,
             is_connected = 0,
             can_receive_payments = 0,
             can_receive_payouts = 0,
@@ -340,10 +501,19 @@ router.get('/mollie/test', authenticateToken, requireRole('admin'), asyncHandler
     const associationId = req.user!.associationId;
 
     const settings = db.prepare(`
-        SELECT mollie_api_key_encrypted FROM payment_settings WHERE association_id = ?
-    `).get(associationId) as { mollie_api_key_encrypted: string | null } | undefined;
+        SELECT mollie_api_key_encrypted, mollie_test_api_key_encrypted, mollie_mode
+        FROM payment_settings WHERE association_id = ?
+    `).get(associationId) as {
+        mollie_api_key_encrypted: string | null;
+        mollie_test_api_key_encrypted: string | null;
+        mollie_mode: string | null;
+    } | undefined;
 
-    if (!settings?.mollie_api_key_encrypted) {
+    const mode = (settings?.mollie_mode as 'live' | 'test') || 'live';
+    const encryptedKey =
+        mode === 'test' ? settings?.mollie_test_api_key_encrypted : settings?.mollie_api_key_encrypted;
+
+    if (!encryptedKey) {
         return res.json({
             connected: false,
             canReceivePayments: false,
@@ -352,7 +522,7 @@ router.get('/mollie/test', authenticateToken, requireRole('admin'), asyncHandler
     }
 
     // Decrypt API key (basic base64 for now)
-    const apiKey = Buffer.from(settings.mollie_api_key_encrypted, 'base64').toString('utf-8');
+    const apiKey = Buffer.from(encryptedKey, 'base64').toString('utf-8');
 
     try {
         // Check organization
