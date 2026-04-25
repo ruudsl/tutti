@@ -3101,5 +3101,27 @@
     "subtotal": "Subtotaal",
     "total": "Totaal",
     "info": "Servicekosten worden berekend per ticket"
+  },
+  "cloudImport": {
+    "onedrive": "Aus OneDrive importieren",
+    "googleDrive": "Aus Google Drive importieren",
+    "onedriveTitle": "OneDrive-Dateien auswählen",
+    "searchPdfs": "PDF-Dateien suchen...",
+    "noFiles": "Keine Dateien gefunden.",
+    "importSelected": "Ausgewählte importieren",
+    "imported": "Dateien importiert",
+    "someFailed": "Dateien fehlgeschlagen"
+  },
+  "googleDriveSettings": {
+    "title": "Google Drive Integration",
+    "description": "Erlauben Sie Benutzern, Notenmaterial aus Google Drive zu importieren. Erstellen Sie eine OAuth Client ID und einen API-Schlüssel in der Google Cloud Console.",
+    "consoleLink": "Google Cloud Console öffnen →",
+    "clientId": "OAuth Client ID",
+    "apiKey": "API-Schlüssel",
+    "enable": "Google Drive Import aktivieren",
+    "saved": "Google Drive Einstellungen gespeichert.",
+    "removed": "Google Drive Einstellungen entfernt.",
+    "requiredFields": "Client ID und API-Schlüssel sind erforderlich.",
+    "confirmRemove": "Möchten Sie diese Einstellungen wirklich entfernen?"
   }
 }

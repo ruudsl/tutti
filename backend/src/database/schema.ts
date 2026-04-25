@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS associations (
     smtp_pass TEXT,
     smtp_from TEXT,
     smtp_enabled BOOLEAN DEFAULT 0,
+    google_drive_client_id TEXT,
+    google_drive_api_key TEXT,
+    google_drive_enabled BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

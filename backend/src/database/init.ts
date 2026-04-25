@@ -905,6 +905,21 @@ async function initializeDatabase() {
         // Table might not exist yet
     }
 
+    // Migration: Add Google Drive picker columns to associations
+    try {
+        const assocTableInfo = db.prepare("PRAGMA table_info(associations)").all() as { name: string }[];
+        const hasGoogleDriveClientId = assocTableInfo.some(col => col.name === 'google_drive_client_id');
+        if (!hasGoogleDriveClientId) {
+            console.log('Migration: Adding Google Drive picker columns to associations...');
+            db.prepare('ALTER TABLE associations ADD COLUMN google_drive_client_id TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN google_drive_api_key TEXT').run();
+            db.prepare('ALTER TABLE associations ADD COLUMN google_drive_enabled BOOLEAN DEFAULT 0').run();
+            console.log('Migration complete');
+        }
+    } catch (e) {
+        // Table might not exist yet
+    }
+
     console.log('Database initialization complete!');
 }
 

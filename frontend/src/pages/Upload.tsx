@@ -10,6 +10,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ImslpSearch } from '../components/ImslpSearch';
+import { CloudFilePicker } from '../components/CloudFilePicker';
 
 interface FileItem {
   file: File;
@@ -216,6 +217,16 @@ export default function Upload() {
               {t('upload.filenameFormat')}: Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf
             </p>
           </FileDropzone>
+
+          <div className="mt-2">
+            <CloudFilePicker
+              listId={selectedList || undefined}
+              onImported={() => {
+                queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+                queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+              }}
+            />
+          </div>
 
           {files.length > 0 && (
             <div className="upload-list">

@@ -2864,5 +2864,27 @@
     "selectList": "Select list",
     "selectListPlaceholder": "Choose a list...",
     "instrumentHelp": "Leave empty to remove the instrument"
+  },
+  "cloudImport": {
+    "onedrive": "Import from OneDrive",
+    "googleDrive": "Import from Google Drive",
+    "onedriveTitle": "Select OneDrive files",
+    "searchPdfs": "Search PDF files...",
+    "noFiles": "No files found.",
+    "importSelected": "Import selected",
+    "imported": "files imported",
+    "someFailed": "files failed to import"
+  },
+  "googleDriveSettings": {
+    "title": "Google Drive integration",
+    "description": "Allow users to import sheet music from Google Drive. Create an OAuth Client ID and API Key in Google Cloud Console.",
+    "consoleLink": "Open Google Cloud Console →",
+    "clientId": "OAuth Client ID",
+    "apiKey": "API Key",
+    "enable": "Enable Google Drive import",
+    "saved": "Google Drive settings saved.",
+    "removed": "Google Drive settings removed.",
+    "requiredFields": "Client ID and API Key are required.",
+    "confirmRemove": "Are you sure you want to remove these settings?"
   }
 }

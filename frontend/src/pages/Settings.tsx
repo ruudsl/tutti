@@ -8,6 +8,7 @@ import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDe
 import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { GoogleDriveSettings } from '../components/GoogleDriveSettings';
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -1150,6 +1151,8 @@ export default function Settings() {
           </form>
         </div>
       </div>
+
+      <GoogleDriveSettings />
 
       <div className="card mb-3">
         <div className="card-header">

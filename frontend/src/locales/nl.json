@@ -3091,5 +3091,27 @@
     "subtotal": "Subtotaal",
     "total": "Totaal",
     "info": "Servicekosten worden berekend per ticket"
+  },
+  "cloudImport": {
+    "onedrive": "Importeer uit OneDrive",
+    "googleDrive": "Importeer uit Google Drive",
+    "onedriveTitle": "OneDrive bestanden selecteren",
+    "searchPdfs": "Zoek PDF bestanden...",
+    "noFiles": "Geen bestanden gevonden.",
+    "importSelected": "Importeer geselecteerde",
+    "imported": "bestanden geïmporteerd",
+    "someFailed": "bestanden mislukt"
+  },
+  "googleDriveSettings": {
+    "title": "Google Drive integratie",
+    "description": "Sta gebruikers toe om bladmuziek te importeren vanuit Google Drive. Maak een OAuth Client ID en API Key aan in de Google Cloud Console.",
+    "consoleLink": "Open Google Cloud Console →",
+    "clientId": "OAuth Client ID",
+    "apiKey": "API Key",
+    "enable": "Google Drive import inschakelen",
+    "saved": "Google Drive instellingen opgeslagen.",
+    "removed": "Google Drive instellingen verwijderd.",
+    "requiredFields": "Client ID en API Key zijn verplicht.",
+    "confirmRemove": "Weet je zeker dat je deze instellingen wilt verwijderen?"
   }
 }

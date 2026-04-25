@@ -1076,6 +1076,90 @@ export const importFromImslp = async (params: {
   return data;
 };
 
+// ==================== CLOUD IMPORT (OneDrive / Google Drive) ====================
+
+export interface CloudImportConfig {
+  onedrive: {
+    enabled: boolean;
+    clientId: string | null;
+    tenantId: string;
+  };
+  googleDrive: {
+    enabled: boolean;
+    clientId: string | null;
+    apiKey: string | null;
+  };
+}
+
+export interface CloudImportFile {
+  id: string;
+  name: string;
+  downloadUrl?: string;
+}
+
+export interface CloudImportResult {
+  message: string;
+  uploaded: Array<{
+    id: string;
+    filename: string;
+    title: string;
+    instrumentId: string | null;
+    instrumentFound: boolean;
+  }>;
+  errors?: Array<{ filename: string; error: string }>;
+}
+
+export const getCloudImportConfig = async (): Promise<CloudImportConfig> => {
+  const { data } = await api.get('/cloud-import/config');
+  return data;
+};
+
+export const importFromOneDrive = async (params: {
+  files: CloudImportFile[];
+  accessToken: string;
+  listId?: string;
+}): Promise<CloudImportResult> => {
+  const { data } = await api.post('/cloud-import/onedrive', params);
+  return data;
+};
+
+export const importFromGoogleDrive = async (params: {
+  files: CloudImportFile[];
+  accessToken: string;
+  listId?: string;
+}): Promise<CloudImportResult> => {
+  const { data } = await api.post('/cloud-import/google-drive', params);
+  return data;
+};
+
+// ==================== GOOGLE DRIVE SETTINGS ====================
+
+export interface GoogleDriveSettings {
+  clientId: string;
+  apiKey: string;
+  enabled: boolean;
+  configured: boolean;
+}
+
+export const getGoogleDriveSettings = async (): Promise<GoogleDriveSettings> => {
+  const { data } = await api.get('/settings/google-drive');
+  return data;
+};
+
+export const updateGoogleDriveSettings = async (params: {
+  clientId: string;
+  apiKey: string;
+  enabled: boolean;
+}): Promise<{ message: string }> => {
+  const { data } = await api.put('/settings/google-drive', params);
+  return data;
+};
+
+export const deleteGoogleDriveSettings = async (): Promise<{ message: string }> => {
+  const { data } = await api.delete('/settings/google-drive');
+  return data;
+};
+
 // ==================== EQUIPMENT (INSTRUMENTENBEHEER) ====================
 
 export const getEquipmentTypes = async (): Promise<string[]> => {

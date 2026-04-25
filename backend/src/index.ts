@@ -48,6 +48,7 @@ import microsoftAuthRoutes from './routes/microsoft-auth';
 import socialAuthRoutes from './routes/social-auth';
 import musicaInfoRoutes from './routes/musicainfo';
 import imslpRoutes from './routes/imslp';
+import cloudImportRoutes from './routes/cloud-import';
 import equipmentRoutes from './routes/equipment';
 import uniformsRoutes from './routes/uniforms';
 import concertsRoutes from './routes/concerts';
@@ -113,6 +114,9 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
             "'unsafe-eval'", // Required for some libraries in development
             "https://www.youtube.com",
             "https://s.ytimg.com",
+            "https://alcdn.msauth.net",
+            "https://apis.google.com",
+            "https://accounts.google.com",
         ],
         styleSrc: [
             "'self'",
@@ -139,10 +143,17 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
             "'self'",
             "https://www.youtube.com",
             "https://www.youtube-nocookie.com",
+            "https://accounts.google.com",
+            "https://docs.google.com",
+            "https://login.microsoftonline.com",
         ],
         connectSrc: [
             "'self'",
             config.frontendUrl,
+            "https://graph.microsoft.com",
+            "https://login.microsoftonline.com",
+            "https://www.googleapis.com",
+            "https://accounts.google.com",
         ],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
@@ -224,6 +235,7 @@ app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
 app.use('/api/musicainfo', musicaInfoRoutes);
 app.use('/api/imslp', imslpRoutes);
+app.use('/api/cloud-import', cloudImportRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);

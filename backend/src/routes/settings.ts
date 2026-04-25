@@ -706,4 +706,91 @@ router.delete('/whatsapp', authenticateToken, requireRole('admin'), ipWhitelistM
     res.json({ message: 'WhatsApp-instellingen verwijderd.' });
 }));
 
+/**
+ * GET /settings/google-drive - Get Google Drive picker configuration (admin only)
+ */
+router.get('/google-drive', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db.prepare(`
+        SELECT google_drive_client_id, google_drive_api_key, google_drive_enabled
+        FROM associations WHERE id = ?
+    `).get(req.user!.associationId) as any;
+
+    if (!association) {
+        throw new ApiError(404, 'Vereniging niet gevonden.');
+    }
+
+    res.json({
+        clientId: association.google_drive_client_id || '',
+        apiKey: association.google_drive_api_key || '',
+        enabled: !!association.google_drive_enabled,
+        configured: !!(association.google_drive_client_id && association.google_drive_api_key),
+    });
+}));
+
+/**
+ * PUT /settings/google-drive - Save Google Drive picker configuration (admin only)
+ */
+router.put('/google-drive', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { clientId, apiKey, enabled } = req.body;
+
+    if (!clientId || typeof clientId !== 'string' || !clientId.trim()) {
+        throw new ApiError(400, 'Google Drive Client ID is verplicht.');
+    }
+    if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
+        throw new ApiError(400, 'Google Drive API Key is verplicht.');
+    }
+
+    db.prepare(`
+        UPDATE associations
+        SET google_drive_client_id = ?, google_drive_api_key = ?, google_drive_enabled = ?
+        WHERE id = ?
+    `).run(
+        clientId.trim(),
+        apiKey.trim(),
+        enabled ? 1 : 0,
+        req.user!.associationId
+    );
+
+    logger.info('Google Drive config updated', { associationId: req.user!.associationId, updatedBy: req.user!.id });
+
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'settings',
+        req.user!.associationId || '',
+        'Google Drive configuratie',
+        { enabled: !!enabled },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({ message: 'Google Drive-instellingen opgeslagen.' });
+}));
+
+/**
+ * DELETE /settings/google-drive - Remove Google Drive picker configuration (admin only)
+ */
+router.delete('/google-drive', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, asyncHandler(async (req: AuthRequest, res: Response) => {
+    db.prepare(`
+        UPDATE associations
+        SET google_drive_client_id = NULL, google_drive_api_key = NULL, google_drive_enabled = 0
+        WHERE id = ?
+    `).run(req.user!.associationId);
+
+    logger.info('Google Drive config removed', { associationId: req.user!.associationId, removedBy: req.user!.id });
+
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'settings',
+        req.user!.associationId || '',
+        'Google Drive configuratie',
+        undefined,
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({ message: 'Google Drive-instellingen verwijderd.' });
+}));
+
 export default router;
