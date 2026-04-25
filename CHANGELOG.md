@@ -2,6 +2,31 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.11.0] - 2026-04-25
+
+### Toegevoegd
+- **Cloud import (OneDrive/SharePoint & Google Drive)** — Importeer bladmuziek rechtstreeks vanuit OneDrive/SharePoint of Google Drive zonder eerst te downloaden. Bestanden worden server-side opgehaald via access tokens en geparseerd zoals reguliere uploads
+- **Google Drive instellingen** — Aparte configuratiekaart in Instellingen voor OAuth Client ID en API Key (Picker API + Drive API)
+- **Rolgebaseerde handleiding** — User Guide secties worden gefilterd op basis van gebruikersrol (member, conductor, music_committee, admin) met uitgebreide HTML-content in alle drie de talen
+- **Rolgebaseerde rondleiding** — Onboarding Tour heeft aparte stappen per rol: admin (6), music_committee (7), conductor (5), member (6), elk met op maat gemaakte uitleg en navigatie-doelen
+- **Lucide icoonsysteem** — Centrale `Icon`-component met 60+ vector iconen (SF Symbols-stijl) ter vervanging van 145+ emoji's verspreid over 36 bestanden
+- **iOS-style bottom sheets op mobiel** — Modals op smartphones glijden van onderen omhoog met een "grabber" handvat en safe-area padding, conform Apple HIG
+
+### Verbeterd (Apple HIG-uitlijning)
+- **Tap-targets** — Minimum 44×44pt voor alle knoppen (Apple HIG vereiste), ook icoon-only knoppen
+- **Border-radius** — Buttons 10px, cards 14px, modals 16-20px voor een natuurlijker iOS-gevoel
+- **Animatie-easing** — Vervangen door iOS easing curves (`cubic-bezier(0.25, 0.1, 0.25, 1)`) plus spring-curve voor speelse animaties
+- **Login pagina** — Paarse gradient vervangen door neutrale achtergrond met radial accent gradients en frosted-glass kaart (`backdrop-filter: blur(28px)`)
+- **Grote pagina-titels** — iOS-style large titles (32-34px bold) met SF Pro letter-spacing op pagina-headers
+- **Spacing scale** — Uitgebreid met `--space-16` en `--space-20` (64/80px) voor betere 8pt-grid uitlijning
+- **Button press-animatie** — Subtiele `scale(0.97)` op active state voor tactiele feedback
+- **Modal animaties** — Entrance animatie met fade + lift, blur backdrop op overlay
+- **Talenswitcher verplaatst** — Van bovenste navigatiebalk naar gebruikersinstellingen (profiel)
+
+### Documentatie
+- **Cloud import in README's** — Toegevoegd aan README.md, README.nl.md en README.de.md inclusief architectuurdiagrammen, configuratie-instructies (OAuth setup) en API endpoint referenties
+- **Changelog vertalingen** — Volledige Engelse en Duitse changelog met alle versies
+
 ## [1.10.0] - 2026-04-24
 
 ### Toegevoegd

@@ -2,6 +2,31 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.11.0] - 2026-04-25
+
+### Hinzugefügt
+- **Cloud-Import (OneDrive/SharePoint & Google Drive)** — Importieren Sie Noten direkt aus OneDrive/SharePoint oder Google Drive, ohne sie erst herunterzuladen. Dateien werden serverseitig über Access Tokens abgerufen und wie reguläre Uploads geparst
+- **Google Drive-Einstellungen** — Separate Konfigurationskarte in den Einstellungen für OAuth Client ID und API-Schlüssel (Picker API + Drive API)
+- **Rollenbasiertes Benutzerhandbuch** — Handbuch-Abschnitte werden nach Benutzerrolle gefiltert (member, conductor, music_committee, admin) mit umfassenden HTML-Inhalten in allen drei Sprachen
+- **Rollenbasierter Rundgang** — Onboarding-Tour hat separate Pfade pro Rolle: admin (6), music_committee (7), conductor (5), member (6), jeweils mit maßgeschneiderten Erklärungen und Navigationszielen
+- **Lucide-Icon-System** — Zentrale `Icon`-Komponente mit 60+ Vektor-Icons (SF Symbols-Stil) ersetzt 145+ Emojis in 36 Dateien
+- **iOS-Style Bottom Sheets auf Mobilgeräten** — Modals auf Smartphones gleiten von unten nach oben mit einem „Grabber"-Griff und Safe-Area-Padding, gemäß Apple HIG
+
+### Verbessert (Apple HIG-Ausrichtung)
+- **Touch-Ziele** — Mindestens 44×44pt für alle Schaltflächen (Apple HIG-Anforderung), auch für Icon-Only-Buttons
+- **Border-Radius** — Buttons 10px, Karten 14px, Modals 16-20px für ein natürlicheres iOS-Gefühl
+- **Animations-Easing** — Ersetzt durch iOS Easing-Kurven (`cubic-bezier(0.25, 0.1, 0.25, 1)`) plus Spring-Kurve für verspielte Animationen
+- **Login-Seite** — Lila Gradient ersetzt durch neutralen Hintergrund mit radialen Akzent-Gradienten und Frosted-Glass-Karte (`backdrop-filter: blur(28px)`)
+- **Große Seitentitel** — iOS-Style Large Titles (32-34px bold) mit SF Pro Letter-Spacing auf Seitenkopfzeilen
+- **Spacing-Skala** — Erweitert mit `--space-16` und `--space-20` (64/80px) für bessere 8pt-Grid-Ausrichtung
+- **Button-Press-Animation** — Subtiles `scale(0.97)` im Active-Zustand für taktiles Feedback
+- **Modal-Animationen** — Eingangsanimation mit Fade + Lift, Blur-Backdrop auf Overlay
+- **Sprachumschalter verschoben** — Von der oberen Navigationsleiste zu den Benutzereinstellungen (Profil)
+
+### Dokumentation
+- **Cloud-Import in READMEs** — Zu README.md, README.nl.md und README.de.md hinzugefügt, einschließlich Architekturdiagrammen, Konfigurationsanweisungen (OAuth-Setup) und API-Endpunkt-Referenzen
+- **Changelog-Übersetzungen** — Vollständige englische und deutsche Changelogs mit allen Versionen
+
 ## [1.10.0] - 2026-04-24
 
 ### Hinzugefügt

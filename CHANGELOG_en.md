@@ -2,6 +2,31 @@
 
 All notable changes to this application are documented here.
 
+## [1.11.0] - 2026-04-25
+
+### Added
+- **Cloud import (OneDrive/SharePoint & Google Drive)** — Import sheet music directly from OneDrive/SharePoint or Google Drive without downloading first. Files are fetched server-side using access tokens and parsed like regular uploads
+- **Google Drive settings** — Separate configuration card in Settings for OAuth Client ID and API Key (Picker API + Drive API)
+- **Role-based User Guide** — Guide sections are filtered by user role (member, conductor, music_committee, admin) with comprehensive HTML content in all three languages
+- **Role-based Onboarding Tour** — Onboarding tour has separate paths per role: admin (6), music_committee (7), conductor (5), member (6), each with tailored explanations and navigation targets
+- **Lucide icon system** — Central `Icon` component with 60+ vector icons (SF Symbols-style) replacing 145+ emojis across 36 files
+- **iOS-style bottom sheets on mobile** — Modals on smartphones slide up from below with a "grabber" handle and safe-area padding, per Apple HIG
+
+### Improved (Apple HIG alignment)
+- **Tap targets** — Minimum 44×44pt for all buttons (Apple HIG requirement), including icon-only buttons
+- **Border radius** — Buttons 10px, cards 14px, modals 16-20px for a more natural iOS feel
+- **Animation easing** — Replaced with iOS easing curves (`cubic-bezier(0.25, 0.1, 0.25, 1)`) plus spring curve for playful animations
+- **Login page** — Purple gradient replaced with neutral background featuring radial accent gradients and frosted-glass card (`backdrop-filter: blur(28px)`)
+- **Large page titles** — iOS-style large titles (32-34px bold) with SF Pro letter-spacing on page headers
+- **Spacing scale** — Extended with `--space-16` and `--space-20` (64/80px) for better 8pt-grid alignment
+- **Button press animation** — Subtle `scale(0.97)` on active state for tactile feedback
+- **Modal animations** — Entrance animation with fade + lift, blur backdrop on overlay
+- **Language switcher relocated** — From top navigation bar to user settings (profile)
+
+### Documentation
+- **Cloud import in READMEs** — Added to README.md, README.nl.md and README.de.md including architecture diagrams, configuration instructions (OAuth setup) and API endpoint references
+- **Changelog translations** — Full English and German changelogs with all versions
+
 ## [1.10.0] - 2026-04-24
 
 ### Added
