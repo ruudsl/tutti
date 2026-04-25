@@ -260,7 +260,7 @@ export default function Layout() {
             ) : (
               <Icon name="music" size={22} />
             )}
-            {' '}{brandSettings?.displayName || 'Harmonie'}
+            {' '}{brandSettings?.displayName || 'Tutti'}
           </Link>
         </div>
 

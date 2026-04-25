@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 /**
  * Sets the document title based on the provided i18n key.
- * Falls back to "Harmonie" if no key is provided.
  * Updates automatically when language changes.
  */
 export function useDocumentTitle(titleKey: string) {

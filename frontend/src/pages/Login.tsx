@@ -16,7 +16,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [microsoftEnabled, setMicrosoftEnabled] = useState(false);
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
-  const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({ displayName: 'Harmonie', logoUrl: null });
+  const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({ displayName: 'Tutti', logoUrl: null });
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();

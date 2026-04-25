@@ -1,6 +1,6 @@
 {
-  "name": "Harmonie Muziek App",
-  "short_name": "Harmonie",
+  "name": "Tutti Muziek App",
+  "short_name": "Tutti",
   "description": "Muziekvereniging beheer applicatie",
   "start_url": "/",
   "display": "standalone",
