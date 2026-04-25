@@ -13,6 +13,7 @@ import { RecentItems } from './RecentItems';
 import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
+import { Icon, type IconName } from './Icon';
 import type { AssociationSettings } from '../types';
 
 interface SidebarNavItem {
@@ -23,7 +24,7 @@ interface SidebarNavItem {
 
 interface SidebarNavGroup {
   titleKey: string;
-  icon: string;
+  icon: IconName;
   basePaths: string[];
   items: SidebarNavItem[];
 }
@@ -31,7 +32,7 @@ interface SidebarNavGroup {
 const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'nav.dashboard',
-    icon: '🏠',
+    icon: 'home',
     basePaths: ['/'],
     items: [
       { path: '/', labelKey: 'nav.dashboard' },
@@ -39,7 +40,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'nav.myMusic',
-    icon: '🎵',
+    icon: 'music',
     basePaths: ['/my-music'],
     items: [
       { path: '/my-music', labelKey: 'nav.myMusic' },
@@ -47,7 +48,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.agenda',
-    icon: '📅',
+    icon: 'calendar',
     basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
@@ -59,7 +60,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.members',
-    icon: '👥',
+    icon: 'users',
     basePaths: ['/members', '/issues', '/practice-schedules'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
@@ -69,7 +70,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.orchestra',
-    icon: '🎻',
+    icon: 'music2',
     basePaths: ['/seating', '/instruments', '/voice-parts', '/occupancy', '/neighbor-preferences'],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
@@ -81,7 +82,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'nav.tools',
-    icon: '🔧',
+    icon: 'wrench',
     basePaths: ['/tools'],
     items: [
       { path: '/tools', labelKey: 'nav.tools' },
@@ -89,7 +90,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.library',
-    icon: '📚',
+    icon: 'book',
     basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -105,7 +106,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.inventory',
-    icon: '📦',
+    icon: 'package',
     basePaths: ['/equipment', '/uniforms'],
     items: [
       { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
@@ -114,7 +115,7 @@ const navGroups: SidebarNavGroup[] = [
   },
   {
     titleKey: 'sidebar.admin',
-    icon: '⚙️',
+    icon: 'settings',
     basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
@@ -132,11 +133,11 @@ const navGroups: SidebarNavGroup[] = [
 ];
 
 // Bottom tabs for mobile - the 4 most common sections + More
-const mobileBottomTabs = [
-  { path: '/', labelKey: 'nav.dashboard', icon: '🏠', exact: true },
-  { path: '/my-music', labelKey: 'nav.myMusic', icon: '🎵' },
-  { path: '/rehearsals', labelKey: 'nav.rehearsals', icon: '📅' },
-  { path: '/members', labelKey: 'sidebar.members', icon: '👥' },
+const mobileBottomTabs: { path: string; labelKey: string; icon: IconName; exact?: boolean }[] = [
+  { path: '/', labelKey: 'nav.dashboard', icon: 'home', exact: true },
+  { path: '/my-music', labelKey: 'nav.myMusic', icon: 'music' },
+  { path: '/rehearsals', labelKey: 'nav.rehearsals', icon: 'calendar' },
+  { path: '/members', labelKey: 'sidebar.members', icon: 'users' },
 ];
 
 export default function Layout() {
@@ -247,7 +248,7 @@ export default function Layout() {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             aria-label={sidebarCollapsed ? t('nav.expandSidebar', 'Zijbalk uitklappen') : t('nav.collapseSidebar', 'Zijbalk inklappen')}
           >
-            <span aria-hidden="true">{sidebarCollapsed ? '☰' : '✕'}</span>
+            <Icon name={sidebarCollapsed ? 'expand' : 'collapse'} size={20} />
           </button>
           <Link to="/" className="navbar-brand">
             {brandSettings?.logoUrl ? (
@@ -257,7 +258,7 @@ export default function Layout() {
                 style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '4px' }}
               />
             ) : (
-              <span aria-hidden="true">🎵</span>
+              <Icon name="music" size={22} />
             )}
             {' '}{brandSettings?.displayName || 'Harmonie'}
           </Link>
@@ -270,7 +271,7 @@ export default function Layout() {
             title={t('search.placeholder', 'Zoeken (Cmd+K)')}
             aria-label={t('search.label', 'Zoeken')}
           >
-            <span aria-hidden="true">🔍</span>
+            <Icon name="search" size={18} />
           </button>
           <NotificationBell />
           <RecentItems />
@@ -309,7 +310,9 @@ export default function Layout() {
                     className={({ isActive }) => `sidebar-direct-link ${isActive ? 'active' : ''}`}
                     title={sidebarCollapsed ? t(group.titleKey) : undefined}
                   >
-                    <span className="sidebar-item-icon" aria-hidden="true">{group.icon}</span>
+                    <span className="sidebar-item-icon" aria-hidden="true">
+                      <Icon name={group.icon} size={20} />
+                    </span>
                     <span className="sidebar-item-label">{t(group.titleKey)}</span>
                   </NavLink>
                 );
@@ -323,11 +326,13 @@ export default function Layout() {
                     className={`sidebar-group-header ${active ? 'active' : ''}`}
                     title={sidebarCollapsed ? t(group.titleKey) : undefined}
                   >
-                    <span className="sidebar-item-icon" aria-hidden="true">{group.icon}</span>
+                    <span className="sidebar-item-icon" aria-hidden="true">
+                      <Icon name={group.icon} size={20} />
+                    </span>
                     <span className="sidebar-item-label">{t(group.titleKey)}</span>
                     {visibleItems.length > 1 && (
                       <span className="sidebar-group-arrow" aria-hidden="true">
-                        {active ? '▾' : '›'}
+                        <Icon name={active ? 'chevronDown' : 'chevronRight'} size={14} />
                       </span>
                     )}
                   </NavLink>
@@ -357,7 +362,9 @@ export default function Layout() {
               className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
               title={sidebarCollapsed ? t('nav.userGuide') : undefined}
             >
-              <span className="sidebar-item-icon" aria-hidden="true">📖</span>
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="book" size={18} />
+              </span>
               <span className="sidebar-item-label">{t('nav.userGuide')}</span>
             </NavLink>
             <NavLink
@@ -365,7 +372,9 @@ export default function Layout() {
               className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
               title={sidebarCollapsed ? t('nav.profile') : undefined}
             >
-              <span className="sidebar-item-icon" aria-hidden="true">👤</span>
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="user" size={18} />
+              </span>
               <span className="sidebar-item-label">{t('nav.profile')}</span>
             </NavLink>
             <button
@@ -373,7 +382,9 @@ export default function Layout() {
               onClick={handleRestartOnboarding}
               title={sidebarCollapsed ? t('onboarding.menuItem') : undefined}
             >
-              <span className="sidebar-item-icon" aria-hidden="true">🎓</span>
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="graduationCap" size={18} />
+              </span>
               <span className="sidebar-item-label">{t('onboarding.menuItem')}</span>
             </button>
           </div>
@@ -395,7 +406,9 @@ export default function Layout() {
             end={tab.exact}
             className={`bottom-tab ${isTabActive(tab) ? 'active' : ''}`}
           >
-            <span className="bottom-tab-icon" aria-hidden="true">{tab.icon}</span>
+            <span className="bottom-tab-icon" aria-hidden="true">
+              <Icon name={tab.icon} size={22} />
+            </span>
             <span className="bottom-tab-label">{t(tab.labelKey)}</span>
           </NavLink>
         ))}
@@ -405,7 +418,9 @@ export default function Layout() {
           aria-label={t('nav.more', 'Meer')}
           aria-expanded={mobileMenuOpen}
         >
-          <span className="bottom-tab-icon" aria-hidden="true">☰</span>
+          <span className="bottom-tab-icon" aria-hidden="true">
+            <Icon name="menu" size={22} />
+          </span>
           <span className="bottom-tab-label">{t('nav.more', 'Meer')}</span>
         </button>
       </nav>
@@ -425,11 +440,11 @@ export default function Layout() {
                 <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
               </div>
               <button
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline btn-sm btn-icon"
                 onClick={() => setMobileMenuOpen(false)}
                 aria-label={t('nav.closeMenu')}
               >
-                ✕
+                <Icon name="close" size={18} />
               </button>
             </div>
             <nav className="mobile-menu-nav">
@@ -448,7 +463,9 @@ export default function Layout() {
                       className={({ isActive }) => `mobile-menu-link ${isActive ? 'active' : ''}`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span className="mobile-menu-icon" aria-hidden="true">{group.icon}</span>
+                      <span className="mobile-menu-icon" aria-hidden="true">
+                        <Icon name={group.icon} size={20} />
+                      </span>
                       {t(group.titleKey)}
                     </NavLink>
                   );
@@ -457,7 +474,9 @@ export default function Layout() {
                 return (
                   <div key={group.titleKey} className="mobile-menu-group">
                     <div className="mobile-menu-group-title">
-                      <span className="mobile-menu-icon" aria-hidden="true">{group.icon}</span>
+                      <span className="mobile-menu-icon" aria-hidden="true">
+                        <Icon name={group.icon} size={20} />
+                      </span>
                       {t(group.titleKey)}
                     </div>
                     {visibleItems.map(item => (
@@ -476,11 +495,15 @@ export default function Layout() {
             </nav>
             <div className="mobile-menu-footer">
               <NavLink to="/user-guide" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                <span className="mobile-menu-icon" aria-hidden="true">📖</span>
+                <span className="mobile-menu-icon" aria-hidden="true">
+                  <Icon name="book" size={20} />
+                </span>
                 {t('nav.userGuide')}
               </NavLink>
               <NavLink to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-                <span className="mobile-menu-icon" aria-hidden="true">👤</span>
+                <span className="mobile-menu-icon" aria-hidden="true">
+                  <Icon name="user" size={20} />
+                </span>
                 {t('nav.profile')}
               </NavLink>
               <div className="mobile-menu-actions">

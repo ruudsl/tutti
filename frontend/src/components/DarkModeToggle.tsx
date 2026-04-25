@@ -1,9 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { Icon } from './Icon';
 
 export function DarkModeToggle() {
   const { t } = useTranslation();
   const { isDark, toggleDarkMode, mode } = useDarkMode();
+
+  const iconName = mode === 'system' ? 'monitor' : isDark ? 'moon' : 'sun';
 
   return (
     <button
@@ -14,7 +17,7 @@ export function DarkModeToggle() {
       aria-pressed={isDark}
     >
       <span className="dark-mode-icon" aria-hidden="true">
-        {mode === 'system' ? '🖥️' : isDark ? '🌙' : '☀️'}
+        <Icon name={iconName} size={18} />
       </span>
     </button>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useId, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from './Icon';
 
 interface ModalProps {
   title: string;
@@ -92,7 +93,7 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
             aria-label={t('accessibility.closeModal')}
             type="button"
           >
-            <span aria-hidden="true">&times;</span>
+            <Icon name="close" size={20} />
           </button>
         </div>
         <div className="modal-body">

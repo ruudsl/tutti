@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { Icon } from '../components/Icon';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import api, { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api';
 
@@ -89,7 +90,12 @@ export default function Login() {
               style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', marginBottom: '0.5rem' }}
             />
           ) : null}
-          <h1>{branding.logoUrl ? '' : <span aria-hidden="true">🎵 </span>}{branding.displayName}</h1>
+          <h1>
+            {!branding.logoUrl && (
+              <Icon name="music" size={28} className="login-brand-icon" />
+            )}
+            {branding.displayName}
+          </h1>
         </div>
 
         <form onSubmit={handleSubmit}>

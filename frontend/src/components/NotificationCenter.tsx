@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
+import { Icon } from './Icon';
 import {
   useNotifications,
   useUnreadNotificationCount,
@@ -47,7 +48,9 @@ export function NotificationBell() {
         aria-label={t('notifications.title', 'Meldingen')}
         aria-expanded={isOpen}
       >
-        <span className="notification-bell-icon" aria-hidden="true">🔔</span>
+        <span className="notification-bell-icon" aria-hidden="true">
+          <Icon name="bell" size={18} />
+        </span>
         {count > 0 && (
           <span className="notification-bell-badge">
             {count > 99 ? '99+' : count}
@@ -119,7 +122,9 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
           </div>
         ) : !notifications || notifications.length === 0 ? (
           <div className="notification-empty">
-            <span className="notification-empty-icon" aria-hidden="true">🔔</span>
+            <span className="notification-empty-icon" aria-hidden="true">
+              <Icon name="bell" size={32} />
+            </span>
             <p className="text-light text-sm">{t('notifications.empty', 'Geen meldingen')}</p>
           </div>
         ) : (
