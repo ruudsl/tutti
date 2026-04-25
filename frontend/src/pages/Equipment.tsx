@@ -13,6 +13,7 @@ import {
   useRecordEquipmentMaintenance,
 } from '../hooks/useEquipment';
 import { useUsers } from '../hooks/useUsers';
+import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -367,7 +368,7 @@ export default function Equipment() {
                         onClick={() => setViewingEquipment(item.id)}
                         title={t('common.edit')}
                       >
-                        👁
+                        <Icon name="eye" size={16} />
                       </button>
                       {item.status === 'available' && (
                         <button
@@ -381,13 +382,13 @@ export default function Equipment() {
                         className="btn btn-outline btn-sm"
                         onClick={() => openEditModal(item)}
                       >
-                        ✏
+                        <Icon name="pencil" size={16} />
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeletingEquipment(item)}
                       >
-                        🗑
+                        <Icon name="trash" size={16} />
                       </button>
                     </div>
                   </td>

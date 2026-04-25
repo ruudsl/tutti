@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from './Icon';
 
 interface TunerProps {
   compact?: boolean;
@@ -208,7 +209,7 @@ export function Tuner({ compact = false }: TunerProps) {
             onClick={toggleListening}
             title={isListening ? t('tools.tuner.stopTitle') : t('tools.tuner.startTitle')}
           >
-            {isListening ? '⏹' : '🎤'}
+            <Icon name={isListening ? 'square' : 'mic'} size={18} />
           </button>
           {isListening && note ? (
             <>
@@ -365,7 +366,8 @@ export function Tuner({ compact = false }: TunerProps) {
           onClick={toggleListening}
           style={{ width: '100%' }}
         >
-          {isListening ? `⏹ ${t('tools.tuner.stop')}` : `🎤 ${t('tools.tuner.start')}`}
+          <Icon name={isListening ? 'square' : 'mic'} size={18} />{' '}
+          {isListening ? t('tools.tuner.stop') : t('tools.tuner.start')}
         </button>
 
         {isListening && (

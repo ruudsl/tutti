@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardWidget, WidgetType } from '../hooks/useDashboardWidgets';
 import { getUpcomingRehearsals } from '../api';
+import { Icon, type IconName } from './Icon';
 import type { Rehearsal } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -71,7 +72,7 @@ export function WidgetContainer({
               onClick={onToggle}
               title={widget.enabled ? t('dashboard.hideWidget') : t('dashboard.showWidget')}
             >
-              {widget.enabled ? '👁️' : '👁️‍🗨️'}
+              <Icon name={widget.enabled ? 'eye' : 'eyeOff'} size={16} />
             </button>
             <select
               className="widget-size-select"
@@ -215,7 +216,9 @@ function MusicListsWidget() {
           </ul>
         ) : (
           <div className="widget-empty-state">
-            <span className="widget-empty-icon" aria-hidden="true">🎵</span>
+            <span className="widget-empty-icon" aria-hidden="true">
+              <Icon name="music" size={32} />
+            </span>
             <p className="text-light text-sm">{t('widgets.noMusicLists')}</p>
           </div>
         )}
@@ -369,7 +372,9 @@ export function UpcomingRehearsalsWidget() {
           </ul>
         ) : (
           <div className="widget-empty-state">
-            <span className="widget-empty-icon" aria-hidden="true">📅</span>
+            <span className="widget-empty-icon" aria-hidden="true">
+              <Icon name="calendar" size={32} />
+            </span>
             <p className="text-light text-sm">{t('widgets.noUpcomingRehearsals')}</p>
             <Link to="/rehearsals" className="btn btn-outline btn-sm mt-1">{t('nav.rehearsals')}</Link>
           </div>
@@ -390,7 +395,9 @@ export function RecentActivityWidget() {
       </div>
       <div className="widget-body">
         <div className="widget-empty-state">
-            <span className="widget-empty-icon" aria-hidden="true">📋</span>
+            <span className="widget-empty-icon" aria-hidden="true">
+              <Icon name="clipboard" size={32} />
+            </span>
             <p className="text-light text-sm">{t('widgets.noRecentActivity')}</p>
           </div>
       </div>
@@ -402,11 +409,11 @@ export function RecentActivityWidget() {
 export function QuickActionsWidget() {
   const { t } = useTranslation();
 
-  const actions = [
-    { to: '/my-music', icon: '🎵', label: t('nav.myMusic') },
-    { to: '/rehearsals', icon: '📅', label: t('nav.rehearsals') },
-    { to: '/tools', icon: '🔧', label: t('nav.tools') },
-    { to: '/issues', icon: '⚠️', label: t('nav.issues') },
+  const actions: { to: string; icon: IconName; label: string }[] = [
+    { to: '/my-music', icon: 'music', label: t('nav.myMusic') },
+    { to: '/rehearsals', icon: 'calendar', label: t('nav.rehearsals') },
+    { to: '/tools', icon: 'wrench', label: t('nav.tools') },
+    { to: '/issues', icon: 'warning', label: t('nav.issues') },
   ];
 
   return (
@@ -418,7 +425,9 @@ export function QuickActionsWidget() {
         <div className="quick-actions-grid">
           {actions.map((action) => (
             <Link key={action.to} to={action.to} className="quick-action-btn">
-              <span className="quick-action-icon" aria-hidden="true">{action.icon}</span>
+              <span className="quick-action-icon" aria-hidden="true">
+                <Icon name={action.icon} size={24} />
+              </span>
               <span className="quick-action-label">{action.label}</span>
             </Link>
           ))}

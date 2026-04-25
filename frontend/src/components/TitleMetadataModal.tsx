@@ -5,6 +5,7 @@ import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
 import { parseDuration } from '../utils/format';
 import { searchSheetMusicWebsites } from '../utils/sheetMusic';
 import { Modal } from './Modal';
+import { Icon } from './Icon';
 import type { MusicTitle, Genre } from '../types';
 
 interface TitleMetaForm {
@@ -182,7 +183,7 @@ export function TitleMetadataModal({
                 }}
                 title={t('titles.searchOnSites')}
               >
-                🔍
+                <Icon name="search" size={16} />
               </button>
               <div
                 style={{
@@ -369,7 +370,7 @@ export function TitleMetadataModal({
               disabled={!form.youtubeUrl || fetchingYouTube}
               title={t('titles.fetchVideoInfo')}
             >
-              {fetchingYouTube ? '...' : '📥'}
+              {fetchingYouTube ? '...' : <Icon name="download" size={16} />}
             </button>
           </div>
           {youtubeMeta && (

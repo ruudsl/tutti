@@ -6,6 +6,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { Icon } from '../components/Icon';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -307,7 +308,7 @@ export default function Loans() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">📦</div>
+              <div className="empty-icon"><Icon name="package" size={48} /></div>
               <p>{t('loans.noLoans')}</p>
             </div>
           )}

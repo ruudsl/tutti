@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useDropzone, FileRejection, Accept } from 'react-dropzone';
 import { showError } from '../utils/toast';
 import { formatFileSize } from '../utils/format';
+import { Icon } from '../components/Icon';
 
 interface FileDropzoneProps {
   onFilesAccepted: (files: File[]) => void;
@@ -69,7 +70,7 @@ export function FileDropzone({
       <input {...getInputProps()} />
       {children || (
         <>
-          <div className="dropzone-icon" aria-hidden="true">📁</div>
+          <div className="dropzone-icon" aria-hidden="true"><Icon name="folder" size={48} /></div>
           <p className="dropzone-text">
             {isDragActive ? (
               'Laat bestanden hier los...'

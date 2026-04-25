@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Icon } from '../components/Icon';
 import {
   getMusicLists,
   getMusicList,
@@ -393,7 +394,7 @@ export default function MusicListManager() {
                       title={list.isActive !== false ? t('lists.activeToggle') : t('lists.inactiveToggle')}
                       style={{ minWidth: '2rem' }}
                     >
-                      {list.isActive !== false ? '✓' : '○'}
+                      {list.isActive !== false ? <Icon name="check" size={16} /> : <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid currentColor', display: 'inline-block' }} />}
                     </button>
                     <button
                       className="btn btn-outline btn-sm"
@@ -425,14 +426,14 @@ export default function MusicListManager() {
                       onClick={() => openEditModal(list)}
                       title={t('lists.rename')}
                     >
-                      ✏
+                      <Icon name="pencil" size={16} />
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={() => handleDeleteList(list.id)}
                       title={t('common.delete')}
                     >
-                      🗑
+                      <Icon name="trash" size={16} />
                     </button>
                   </div>
                 </div>
@@ -534,7 +535,7 @@ export default function MusicListManager() {
                                     onClick={() => setEditingTitle(titleData)}
                                     title={t('lists.editMetadata')}
                                   >
-                                    ✏
+                                    <Icon name="pencil" size={16} />
                                   </button>
                                 )}
                                 <button
@@ -608,7 +609,7 @@ export default function MusicListManager() {
                             onClick={() => setEditingTitle(title)}
                             title="Bewerk metadata"
                           >
-                            ✏
+                            <Icon name="pencil" size={16} />
                           </button>
                           <button
                             className="btn btn-primary btn-sm"

@@ -6,6 +6,7 @@ import type { ImslpWork, ImslpWorkDetail, ImslpScore } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SkeletonCard } from '../components/Skeleton';
+import { Icon } from '../components/Icon';
 
 export default function ImslpBrowser() {
   const { t } = useTranslation();
@@ -187,14 +188,14 @@ export default function ImslpBrowser() {
 
             {!searching && !hasSearched && (
               <div className="empty-state">
-                <div className="empty-icon">🎼</div>
+                <div className="empty-icon"><Icon name="fileText" size={48} /></div>
                 <p>{t('imslp.searchPrompt')}</p>
               </div>
             )}
 
             {!searching && hasSearched && works.length === 0 && (
               <div className="empty-state">
-                <div className="empty-icon">🔍</div>
+                <div className="empty-icon"><Icon name="search" size={48} /></div>
                 <p>{t('imslp.noResults')}</p>
                 {searchUrl && (
                   <a
@@ -251,7 +252,7 @@ export default function ImslpBrowser() {
           <div className="card-body">
             {!selectedWork ? (
               <div className="empty-state">
-                <div className="empty-icon">📋</div>
+                <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
                 <p>{t('imslp.selectWorkPrompt')}</p>
               </div>
             ) : (

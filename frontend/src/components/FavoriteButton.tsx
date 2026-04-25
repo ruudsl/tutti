@@ -1,4 +1,5 @@
 import { useFavorites, useFavoriteStatus } from '../hooks/useFavorites';
+import { Icon } from './Icon';
 
 interface FavoriteButtonProps {
   musicTitleId: string;
@@ -20,9 +21,9 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
   };
 
   const sizes = {
-    sm: { fontSize: '1rem', padding: '0.25rem' },
-    md: { fontSize: '1.25rem', padding: '0.5rem' },
-    lg: { fontSize: '1.5rem', padding: '0.75rem' },
+    sm: { iconSize: 16, padding: '0.25rem' },
+    md: { iconSize: 20, padding: '0.5rem' },
+    lg: { iconSize: 24, padding: '0.75rem' },
   };
 
   return (
@@ -37,7 +38,7 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.25rem',
-        ...sizes[size],
+        padding: sizes[size].padding,
         color: isFavorite ? 'var(--danger)' : 'var(--text-light)',
         transition: 'color 0.2s, transform 0.1s',
       }}
@@ -48,7 +49,11 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
-      <span>{isFavorite ? '♥' : '♡'}</span>
+      <Icon
+        name="heart"
+        size={sizes[size].iconSize}
+        className={isFavorite ? 'is-favorite' : ''}
+      />
       {showLabel && <span style={{ fontSize: '0.875rem' }}>{isFavorite ? 'Favoriet' : 'Favoriet'}</span>}
     </button>
   );

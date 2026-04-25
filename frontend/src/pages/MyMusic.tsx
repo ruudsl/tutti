@@ -10,6 +10,7 @@ import { Modal } from '../components/Modal';
 import { SwipeContainer } from '../components/SwipeContainer';
 import { PdfViewer } from '../components/PdfViewer';
 import { cacheListPdfs, isPdfCached, getCachedPdf } from '../lib/pdfCache';
+import { Icon } from '../components/Icon';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -389,7 +390,7 @@ export default function MyMusic() {
                 onClick={toggleCompactView}
                 title={compactView ? t('myMusic.fullView', 'Volledige weergave') : t('myMusic.compactView', 'Compacte weergave')}
               >
-                {compactView ? '☰' : '⋮'}
+                <Icon name="menu" size={16} />
               </button>
               <button
                 className="btn btn-outline btn-sm"
@@ -397,9 +398,11 @@ export default function MyMusic() {
                 disabled={cachingList || downloadingAll}
                 title={t('myMusic.makeOffline')}
               >
-                {cachingList
-                  ? `${t('myMusic.makingOffline')} (${cacheProgress.cached}/${cacheProgress.total})`
-                  : `📥 ${t('myMusic.makeOffline')}`}
+                {cachingList ? (
+                  `${t('myMusic.makingOffline')} (${cacheProgress.cached}/${cacheProgress.total})`
+                ) : (
+                  <><Icon name="download" size={16} /> {t('myMusic.makeOffline')}</>
+                )}
               </button>
               <button
                 className="btn btn-outline btn-sm"
@@ -540,9 +543,9 @@ export default function MyMusic() {
                                         <span
                                           title={t('myMusic.offlineReady')}
                                           aria-label={t('myMusic.offlineReady')}
-                                          style={{ marginLeft: '0.35rem', fontSize: '0.75rem', color: 'var(--success, #22c55e)' }}
+                                          style={{ marginLeft: '0.35rem', color: 'var(--success, #22c55e)', display: 'inline-flex' }}
                                         >
-                                          ✓
+                                          <Icon name="check" size={14} />
                                         </span>
                                       )}
                                     </td>
@@ -563,14 +566,14 @@ export default function MyMusic() {
                                           onClick={() => setViewingPiece(piece)}
                                           title={t('myMusic.viewPdf', 'Bekijken')}
                                         >
-                                          👁 {t('myMusic.view', 'Bekijk')}
+                                          <Icon name="eye" size={14} /> {t('myMusic.view', 'Bekijk')}
                                         </button>
                                         <button
                                           className="btn btn-outline btn-sm"
                                           onClick={() => openReportModal(piece)}
                                           aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
                                         >
-                                          <span aria-hidden="true">📝</span>
+                                          <Icon name="pencil" size={14} />
                                           <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
                                         </button>
                                       </div>
@@ -588,7 +591,7 @@ export default function MyMusic() {
               </SwipeContainer>
             ) : (
               <div className="empty-state">
-                <div className="empty-icon" aria-hidden="true">🎵</div>
+                <div className="empty-icon" aria-hidden="true"><Icon name="music" size={48} /></div>
                 <p>{t('myMusic.noPieces')}</p>
               </div>
             )}
@@ -754,7 +757,7 @@ export default function MyMusic() {
         <div className="card">
           <div className="card-body">
             <div className="empty-state">
-              <div className="empty-icon" aria-hidden="true">📋</div>
+              <div className="empty-icon" aria-hidden="true"><Icon name="clipboard" size={48} /></div>
               <h3>{t('myMusic.noLists')}</h3>
               <p>{t('myMusic.noListsDescription')}</p>
             </div>

@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../utils/constants';
+import { Icon, type IconName } from './Icon';
 
 interface NavItem {
   path: string;
@@ -11,7 +12,7 @@ interface NavItem {
 
 interface NavGroup {
   titleKey: string;
-  icon: string;
+  icon: IconName;
   basePaths: string[]; // Routes that trigger this sidebar
   items: NavItem[];
 }
@@ -19,7 +20,7 @@ interface NavGroup {
 const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
-    icon: '📅',
+    icon: 'calendar',
     basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
@@ -31,7 +32,7 @@ const navGroups: NavGroup[] = [
   },
   {
     titleKey: 'sidebar.orchestra',
-    icon: '🎻',
+    icon: 'music2',
     basePaths: ['/seating', '/instruments', '/voice-parts', '/occupancy', '/neighbor-preferences'],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
@@ -43,7 +44,7 @@ const navGroups: NavGroup[] = [
   },
   {
     titleKey: 'sidebar.members',
-    icon: '👥',
+    icon: 'users',
     basePaths: ['/members', '/issues', '/practice-schedules'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
@@ -53,7 +54,7 @@ const navGroups: NavGroup[] = [
   },
   {
     titleKey: 'sidebar.library',
-    icon: '📚',
+    icon: 'book',
     basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -69,7 +70,7 @@ const navGroups: NavGroup[] = [
   },
   {
     titleKey: 'sidebar.inventory',
-    icon: '📦',
+    icon: 'package',
     basePaths: ['/equipment', '/uniforms'],
     items: [
       { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
@@ -78,7 +79,7 @@ const navGroups: NavGroup[] = [
   },
   {
     titleKey: 'sidebar.admin',
-    icon: '⚙️',
+    icon: 'settings',
     basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
@@ -123,7 +124,9 @@ export function ContextSidebar() {
   return (
     <aside className="context-sidebar" aria-label={t(activeGroup.titleKey)}>
       <div className="sidebar-header">
-        <span className="sidebar-icon" aria-hidden="true">{activeGroup.icon}</span>
+        <span className="sidebar-icon" aria-hidden="true">
+          <Icon name={activeGroup.icon} size={20} />
+        </span>
         <span className="sidebar-title">{t(activeGroup.titleKey)}</span>
       </div>
       <nav className="sidebar-nav">

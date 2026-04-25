@@ -5,19 +5,18 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { getAuditLogs } from '../api';
 import { SkeletonTableRow } from '../components/Skeleton';
 import { Pagination } from '../components/Pagination';
+import { Icon, type IconName } from '../components/Icon';
 
-
-
-const ACTION_ICONS: Record<string, string> = {
-  create: '➕',
-  update: '✏️',
-  delete: '🗑️',
-  login: '🔐',
-  logout: '🚪',
-  upload: '📤',
-  download: '📥',
-  share: '🔗',
-  restore: '🔄',
+const ACTION_ICONS: Record<string, IconName> = {
+  create: 'plus',
+  update: 'pencil',
+  delete: 'trash',
+  login: 'lock',
+  logout: 'logout',
+  upload: 'upload',
+  download: 'download',
+  share: 'link',
+  restore: 'refresh',
 };
 
 export default function AuditLogs() {
@@ -59,8 +58,8 @@ export default function AuditLogs() {
     return date.toLocaleString();
   };
 
-  const getActionIcon = (action: string) => {
-    return ACTION_ICONS[action] || '📋';
+  const getActionIcon = (action: string): IconName => {
+    return ACTION_ICONS[action] || 'clipboard';
   };
 
   const formatChanges = (changes?: string) => {
@@ -195,7 +194,7 @@ export default function AuditLogs() {
             </table>
           ) : logs.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">📋</div>
+              <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
               <p>{t('auditLogs.noLogs')}</p>
             </div>
           ) : (
@@ -218,7 +217,7 @@ export default function AuditLogs() {
                     <td>{log.userName}</td>
                     <td>
                       <span className="audit-action">
-                        <span aria-hidden="true">{getActionIcon(log.action)}</span>
+                        <Icon name={getActionIcon(log.action)} size={16} />
                         {t(`auditLogs.actions.${log.action}`, { defaultValue: log.action })}
                       </span>
                     </td>

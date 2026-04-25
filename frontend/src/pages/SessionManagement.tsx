@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Icon, type IconName } from '../components/Icon';
 import { UAParser } from 'ua-parser-js';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -50,10 +51,10 @@ function parseUserAgent(userAgent: string | null): {
   device: string;
   browser: string;
   os: string;
-  icon: string;
+  icon: IconName;
 } {
   if (!userAgent) {
-    return { device: 'Unknown', browser: '', os: '', icon: '💻' };
+    return { device: 'Unknown', browser: '', os: '', icon: 'laptop' };
   }
 
   const parser = new UAParser(userAgent);
@@ -63,12 +64,11 @@ function parseUserAgent(userAgent: string | null): {
   const browser = result.browser.name || 'Unknown';
   const os = result.os.name || 'Unknown';
 
-  let icon = '💻';
-  if (device === 'mobile') icon = '📱';
-  else if (device === 'tablet') icon = '📱';
-  else if (os?.toLowerCase().includes('mac')) icon = '🖥️';
-  else if (os?.toLowerCase().includes('windows')) icon = '🪟';
-  else if (os?.toLowerCase().includes('linux')) icon = '🐧';
+  let icon: IconName = 'laptop';
+  if (device === 'mobile' || device === 'tablet') icon = 'smartphone';
+  else if (os?.toLowerCase().includes('mac')) icon = 'monitor';
+  else if (os?.toLowerCase().includes('windows')) icon = 'monitor';
+  else if (os?.toLowerCase().includes('linux')) icon = 'monitor';
 
   return {
     device: device === 'desktop' ? `${browser} on ${os}` : `${device} - ${browser}`,
@@ -178,7 +178,7 @@ export default function SessionManagement() {
               className={`session-card ${session.isCurrent ? 'current' : ''}`}
             >
               <div className="session-info">
-                <span className="session-icon">{ua.icon}</span>
+                <span className="session-icon"><Icon name={ua.icon} size={24} /></span>
                 <div className="session-details">
                   <div className="session-device">
                     {ua.device}
@@ -217,7 +217,7 @@ export default function SessionManagement() {
 
         {sessions.length === 0 && (
           <div className="empty-state">
-            <div className="empty-icon">🔐</div>
+            <div className="empty-icon"><Icon name="lock" size={48} /></div>
             <p>{t('sessions.noSessions')}</p>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
+import { Icon } from './Icon';
 import {
   getSeatingNotificationSettings,
   saveSeatingNotificationSettings,
@@ -180,14 +181,14 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
               className={`btn ${formData.notification_type === 'whatsapp' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFormData({ ...formData, notification_type: 'whatsapp' })}
             >
-              📱 WhatsApp
+              <Icon name="smartphone" size={16} /> WhatsApp
             </button>
             <button
               type="button"
               className={`btn ${formData.notification_type === 'webhook' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setFormData({ ...formData, notification_type: 'webhook' })}
             >
-              🔗 Webhook
+              <Icon name="webhook" size={16} /> Webhook
             </button>
           </div>
         </div>

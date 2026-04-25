@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Icon, type IconName } from '../components/Icon';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -62,16 +63,16 @@ async function requestDeletion(reason?: string): Promise<{ message: string; requ
   return res.json();
 }
 
-const categoryIcons: Record<string, string> = {
-  profile: '👤',
-  sessions: '🔐',
-  favorites: '⭐',
-  practiceHistory: '🎵',
-  activityLog: '📊',
-  annotations: '✏️',
-  audioRecordings: '🎤',
-  issues: '📝',
-  notificationPreferences: '🔔',
+const categoryIcons: Record<string, IconName> = {
+  profile: 'user',
+  sessions: 'lock',
+  favorites: 'heart',
+  practiceHistory: 'music',
+  activityLog: 'chart',
+  annotations: 'pencil',
+  audioRecordings: 'mic',
+  issues: 'pencil',
+  notificationPreferences: 'bell',
 };
 
 export default function DataExport() {
@@ -144,7 +145,7 @@ export default function DataExport() {
               {summary?.categories.map(category => (
                 <div key={category.name} className="data-category">
                   <div className="data-category-name">
-                    <span>{categoryIcons[category.name] || '📁'}</span>
+                    <Icon name={categoryIcons[category.name] || 'folder'} size={18} />
                     <span>{t(`dataExport.categories.${category.name}`)}</span>
                   </div>
                   <span className="data-category-count">
@@ -167,7 +168,7 @@ export default function DataExport() {
           </div>
           <div className="card-body">
             <div className="data-export-card">
-              <div className="data-export-icon">📥</div>
+              <div className="data-export-icon"><Icon name="download" size={48} /></div>
               <h3>{t('dataExport.downloadYourData')}</h3>
               <p className="piece-meta">{t('dataExport.downloadDescription')}</p>
 

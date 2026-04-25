@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useBluetoothPedal } from '../hooks/useBluetoothPedal';
+import { Icon } from './Icon';
 
 interface BluetoothPedalIndicatorProps {
   onPageNext?: () => void;
@@ -39,7 +40,7 @@ export function BluetoothPedalIndicator({
           <span>{deviceName}</span>
           {showBattery && batteryLevel !== null && (
             <span title={t('bluetooth.batteryLevel')}>
-              {batteryLevel <= 20 ? '🪫' : batteryLevel <= 50 ? '🔋' : '🔋'} {batteryLevel}%
+              <Icon name={batteryLevel <= 20 ? 'batteryLow' : 'battery'} size={16} /> {batteryLevel}%
             </span>
           )}
           <button

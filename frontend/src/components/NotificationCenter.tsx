@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import {
   useNotifications,
   useUnreadNotificationCount,
@@ -84,22 +84,22 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string): IconName => {
     switch (type) {
       case 'new_music':
-        return '🎵';
+        return 'music';
       case 'rehearsal_change':
-        return '📅';
+        return 'calendar';
       case 'seating_update':
-        return '🪑';
+        return 'chair';
       case 'chat_message':
-        return '💬';
+        return 'message';
       case 'practice_reminder':
-        return '🎺';
+        return 'music2';
       case 'concert_reminder':
-        return '🎭';
+        return 'drama';
       default:
-        return '🔔';
+        return 'bell';
     }
   };
 
@@ -134,7 +134,9 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
               className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
               onClick={() => handleClick(notification)}
             >
-              <span className="notification-item-icon" aria-hidden="true">{getIcon(notification.type)}</span>
+              <span className="notification-item-icon" aria-hidden="true">
+                <Icon name={getIcon(notification.type)} size={20} />
+              </span>
               <div className="notification-item-content">
                 <div className="notification-item-title">{notification.title}</div>
                 <div className="notification-item-body">{notification.body}</div>

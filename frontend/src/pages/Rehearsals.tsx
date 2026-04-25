@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
+import { Icon } from '../components/Icon';
 import {
   getRehearsals, createRehearsal, updateRehearsal, deleteRehearsal,
   getRehearsal, updateRehearsalPieces,
@@ -1118,9 +1119,13 @@ export default function Rehearsals() {
                     )}
                     {(r.accepted_count > 0 || r.declined_count > 0) && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                        <span style={{ color: 'var(--success)' }}>✓{r.accepted_count}</span>
+                        <span style={{ color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                          <Icon name="check" size={12} />{r.accepted_count}
+                        </span>
                         {' '}
-                        <span style={{ color: 'var(--danger)' }}>✗{r.declined_count}</span>
+                        <span style={{ color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                          <Icon name="close" size={12} />{r.declined_count}
+                        </span>
                       </span>
                     )}
                     {isManager && (

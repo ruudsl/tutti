@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Icon } from '../components/Icon';
 import {
   getPaymentSettings,
   updatePaymentSettings,
@@ -241,8 +242,8 @@ export default function PaymentSettings() {
             <div className="flex justify-between items-center mb-1">
               <strong>{t('paymentSettings.liveApiKey', 'Live API-sleutel')}</strong>
               {liveConfigured && activeMode === 'live' && (
-                <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
-                  ✓ {t('paymentSettings.active', 'Actief')}
+                <span style={{ color: 'var(--success)', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Icon name="check" size={14} /> {t('paymentSettings.active', 'Actief')}
                 </span>
               )}
             </div>
@@ -292,8 +293,8 @@ export default function PaymentSettings() {
             <div className="flex justify-between items-center mb-1">
               <strong>{t('paymentSettings.testApiKey', 'Test API-sleutel')}</strong>
               {testConfigured && activeMode === 'test' && (
-                <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
-                  ✓ {t('paymentSettings.active', 'Actief')}
+                <span style={{ color: 'var(--success)', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Icon name="check" size={14} /> {t('paymentSettings.active', 'Actief')}
                 </span>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { Component, ReactNode, ErrorInfo } from 'react';
 import i18n from '../i18n';
+import { Icon } from './Icon';
 
 interface Props {
   children: ReactNode;
@@ -46,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="error-boundary" role="alert">
           <div className="error-boundary-content">
-            <div className="error-boundary-icon" aria-hidden="true">⚠️</div>
+            <div className="error-boundary-icon" aria-hidden="true"><Icon name="warning" size={48} /></div>
             <h1>{t('errorBoundary.title')}</h1>
             <p>{t('errorBoundary.description')}</p>
             {import.meta.env.DEV && this.state.error && (

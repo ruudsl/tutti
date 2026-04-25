@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getMusicTitles } from '../api';
+import { Icon } from '../components/Icon';
 import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '../hooks/useGenres';
 import { queryKeys } from '../lib/queryClient';
 import { FormModal } from '../components/Modal';
@@ -143,7 +144,7 @@ export default function Genres() {
                           aria-label={`${t('common.edit')}: ${genre.name}`}
                           title={t('common.edit')}
                         >
-                          <span aria-hidden="true">✏</span>
+                          <Icon name="pencil" size={16} />
                         </button>
                         {isAdmin && (
                           <button
@@ -152,7 +153,7 @@ export default function Genres() {
                             aria-label={`${t('common.delete')}: ${genre.name}`}
                             title={t('common.delete')}
                           >
-                            <span aria-hidden="true">🗑</span>
+                            <Icon name="trash" size={16} />
                           </button>
                         )}
                       </div>

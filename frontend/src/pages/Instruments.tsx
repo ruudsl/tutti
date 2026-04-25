@@ -9,6 +9,7 @@ import {
   useDeleteInstrumentAlias,
 } from '../hooks/useInstruments';
 import { FormModal } from '../components/Modal';
+import { Icon } from '../components/Icon';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import type { Instrument } from '../types';
@@ -186,7 +187,7 @@ export default function Instruments() {
                         aria-label={`${t('common.edit')}: ${instrument.name}`}
                         title={t('common.edit')}
                       >
-                        <span aria-hidden="true">✏</span>
+                        <Icon name="pencil" size={16} />
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
@@ -194,7 +195,7 @@ export default function Instruments() {
                         aria-label={`${t('common.delete')}: ${instrument.name}`}
                         title={t('common.delete')}
                       >
-                        <span aria-hidden="true">🗑</span>
+                        <Icon name="trash" size={16} />
                       </button>
                     </div>
                   </td>

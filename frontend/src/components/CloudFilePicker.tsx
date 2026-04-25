@@ -4,6 +4,7 @@ import { getCloudImportConfig, importFromOneDrive, importFromGoogleDrive } from 
 import type { CloudImportConfig, CloudImportFile, CloudImportResult } from '../api';
 import { showError, showSuccess } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
+import { Icon } from './Icon';
 
 declare global {
   interface Window {
@@ -115,7 +116,7 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
             onClick={() => setOneDriveOpen(true)}
             disabled={importing}
           >
-            <span aria-hidden="true">☁️</span> {t('cloudImport.onedrive', 'Importeer uit OneDrive')}
+            <Icon name="cloud" size={18} /> {t('cloudImport.onedrive', 'Importeer uit OneDrive')}
           </button>
         )}
         {config.googleDrive.enabled && (
@@ -293,7 +294,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
         <div className="modal-header">
           <h2>{t('cloudImport.onedriveTitle', 'OneDrive bestanden selecteren')}</h2>
           <button className="btn-close" onClick={onClose} aria-label={t('common.close')}>
-            ✕
+            <Icon name="close" size={20} />
           </button>
         </div>
         <div className="modal-body">
@@ -355,14 +356,14 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
                         gap: '0.5rem',
                       }}
                     >
-                      <span aria-hidden="true">{item.folder ? '📁' : '📄'}</span>
+                      <Icon name={item.folder ? 'folder' : 'fileText'} size={18} />
                       <span style={{ flex: 1 }}>{item.name}</span>
                       {item.file && (
                         <small style={{ color: 'var(--text-muted, #666)' }}>
                           {(item.size / 1024).toFixed(0)} KB
                         </small>
                       )}
-                      {item.file && selected.has(item.id) && <span aria-hidden="true">✓</span>}
+                      {item.file && selected.has(item.id) && <Icon name="check" size={16} />}
                     </li>
                   ))}
                 </ul>
@@ -471,7 +472,7 @@ function GoogleDriveButton({ config, disabled, onPick }: GoogleDriveButtonProps)
       onClick={openPicker}
       disabled={disabled || loading}
     >
-      <span aria-hidden="true">📁</span>{' '}
+      <Icon name="folder" size={18} />{' '}
       {loading ? t('common.loading', 'Laden...') : t('cloudImport.googleDrive', 'Importeer uit Google Drive')}
     </button>
   );

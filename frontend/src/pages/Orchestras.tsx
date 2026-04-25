@@ -21,6 +21,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Orchestra, MusicList } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { Icon } from '../components/Icon';
 
 export default function Orchestras() {
   const { t } = useTranslation();
@@ -223,14 +224,14 @@ export default function Orchestras() {
                         onClick={() => openEditModal(orchestra)}
                         title={t('common.edit')}
                       >
-                        ✏
+                        <Icon name="pencil" size={16} />
                       </button>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeletingOrchestra(orchestra)}
                         title={t('common.delete')}
                       >
-                        🗑
+                        <Icon name="trash" size={16} />
                       </button>
                     </div>
                   </div>
@@ -301,14 +302,14 @@ export default function Orchestras() {
                               onClick={() => openEditListModal(list)}
                               title={t('common.edit')}
                             >
-                              ✏
+                              <Icon name="pencil" size={16} />
                             </button>
                             <button
                               className="btn btn-danger btn-sm"
                               onClick={() => setDeletingList(list)}
                               title={t('common.delete')}
                             >
-                              🗑
+                              <Icon name="trash" size={16} />
                             </button>
                           </div>
                         </div>
@@ -325,7 +326,7 @@ export default function Orchestras() {
           <div className="card">
             <div className="card-body">
               <div className="empty-state">
-                <div className="empty-icon">🎺</div>
+                <div className="empty-icon"><Icon name="music2" size={48} /></div>
                 <p>{t('orchestras.selectToView')}</p>
               </div>
             </div>

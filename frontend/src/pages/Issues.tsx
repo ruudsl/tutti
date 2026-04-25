@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { Icon } from '../components/Icon';
 import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
@@ -255,7 +256,7 @@ export default function Issues() {
                           onClick={() => handleDelete(issue)}
                           title={t('common.delete')}
                         >
-                          🗑
+                          <Icon name="trash" size={16} />
                         </button>
                       )}
                     </td>
@@ -265,7 +266,7 @@ export default function Issues() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">📋</div>
+              <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
               <p>{t('issues.noIssuesDescription')}</p>
             </div>
           )}

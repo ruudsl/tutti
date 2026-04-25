@@ -4,6 +4,7 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useSwipeGesture, SwipeDirection } from '../hooks/useSwipeGesture';
 import { useTranslation } from 'react-i18next';
 import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
+import { Icon } from './Icon';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -671,7 +672,7 @@ export function PdfViewer({
               aria-label={isDarkModeActive ? 'Light mode' : 'Dark mode'}
               title={isDarkModeActive ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDarkModeActive ? '☀️' : '🌙'}
+              <Icon name={isDarkModeActive ? 'sun' : 'moon'} size={16} />
             </button>
             {/* Annotations toggle */}
             {hasAnnotationsSupport && (

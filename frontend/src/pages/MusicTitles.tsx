@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMusicTitles } from '../hooks/useMusicTitles';
+import { Icon } from '../components/Icon';
 import { useGenres } from '../hooks/useGenres';
 import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url, searchMusicaInfo, getMusicaInfoDetail } from '../api';
 import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
@@ -346,7 +347,7 @@ export default function MusicTitles() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">🎵</div>
+              <div className="empty-icon"><Icon name="music" size={48} /></div>
               <p>{t('titles.noTitles')}</p>
             </div>
           )}
@@ -390,7 +391,7 @@ export default function MusicTitles() {
                     }}
                     title={t('titles.searchOnSites')}
                   >
-                    🔍
+                    <Icon name="search" size={16} />
                   </button>
                   <div
                     style={{
@@ -601,7 +602,7 @@ export default function MusicTitles() {
                   disabled={!titleMetaForm.youtubeUrl || fetchingYouTube}
                   title={t('titles.fetchVideoInfo')}
                 >
-                  {fetchingYouTube ? '...' : '📥'}
+                  {fetchingYouTube ? '...' : <Icon name="download" size={16} />}
                 </button>
               </div>
               {youtubeMeta && (
@@ -649,13 +650,13 @@ export default function MusicTitles() {
                     onClick={handleMp3Delete}
                     title={t('common.delete')}
                   >
-                    🗑
+                    <Icon name="trash" size={16} />
                   </button>
                 </div>
               ) : pendingMp3File ? (
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
-                  <span style={{ flex: 1 }}>
-                    📎 {pendingMp3File.name}
+                  <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icon name="paperclip" size={16} /> {pendingMp3File.name}
                     <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
                       ({(pendingMp3File.size / 1024 / 1024).toFixed(1)} MB)
                     </span>
@@ -697,7 +698,9 @@ export default function MusicTitles() {
                     onClick={() => mp3InputRef.current?.click()}
                     disabled={uploadingMp3}
                   >
-                    {uploadingMp3 ? t('upload.uploading') : `📤 ${t('titles.selectMp3')}`}
+                    {uploadingMp3 ? t('upload.uploading') : (
+                      <><Icon name="upload" size={16} /> {t('titles.selectMp3')}</>
+                    )}
                   </button>
                   {!editingTitle?.id && (
                     <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
@@ -907,7 +910,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
             onClick={onEdit}
             title="Bewerk metadata"
           >
-            ✏
+            <Icon name="pencil" size={16} />
           </button>
         </td>
       </tr>

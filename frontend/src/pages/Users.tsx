@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
+import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
@@ -378,7 +379,7 @@ export default function Users() {
                           aria-label={`${t('common.edit')}: ${user.firstName} ${user.lastName}`}
                           title={t('common.edit')}
                         >
-                          <span aria-hidden="true">✏</span>
+                          <Icon name="pencil" size={16} />
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
@@ -386,7 +387,7 @@ export default function Users() {
                           aria-label={`${t('common.delete')}: ${user.firstName} ${user.lastName}`}
                           title={t('common.delete')}
                         >
-                          <span aria-hidden="true">🗑</span>
+                          <Icon name="trash" size={16} />
                         </button>
                       </div>
                     </td>
@@ -471,13 +472,13 @@ export default function Users() {
                               className="btn btn-outline btn-sm"
                               onClick={() => openEditModal(user)}
                             >
-                              ✏
+                              <Icon name="pencil" size={16} />
                             </button>
                             <button
                               className="btn btn-danger btn-sm"
                               onClick={() => setDeletingUser(user)}
                             >
-                              🗑
+                              <Icon name="trash" size={16} />
                             </button>
                           </div>
                         </td>

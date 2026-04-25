@@ -1,6 +1,7 @@
 import {
   Home,
   Music,
+  Music2,
   Calendar,
   Users,
   Wrench,
@@ -20,17 +21,47 @@ import {
   PanelLeftOpen,
   ChevronDown,
   ChevronRight,
-  Music2,
   Hand,
   Upload,
+  Download,
   FileText,
   ListMusic,
   PartyPopper,
   Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check,
+  ClipboardList,
+  Folder,
+  Smartphone,
+  Mic,
+  MicOff,
+  Lock,
+  AlertTriangle,
+  Link as LinkIcon,
+  RotateCw,
+  Cloud,
+  CloudOff,
+  Heart,
+  Plus,
+  LogOut,
+  Paperclip,
+  Square,
+  MessageCircle,
+  Drama,
+  Armchair,
+  Battery,
+  BatteryLow,
+  WifiOff,
+  Webhook,
+  BarChart3,
+  Laptop,
+  Globe,
   type LucideIcon,
 } from 'lucide-react';
 
-const iconMap: Record<string, LucideIcon> = {
+const iconMap = {
   home: Home,
   music: Music,
   music2: Music2,
@@ -55,14 +86,47 @@ const iconMap: Record<string, LucideIcon> = {
   chevronRight: ChevronRight,
   hand: Hand,
   upload: Upload,
+  download: Download,
   fileText: FileText,
   listMusic: ListMusic,
   partyPopper: PartyPopper,
   pencil: Pencil,
-};
+  trash: Trash2,
+  eye: Eye,
+  eyeOff: EyeOff,
+  check: Check,
+  clipboard: ClipboardList,
+  folder: Folder,
+  smartphone: Smartphone,
+  mic: Mic,
+  micOff: MicOff,
+  lock: Lock,
+  warning: AlertTriangle,
+  link: LinkIcon,
+  refresh: RotateCw,
+  cloud: Cloud,
+  cloudOff: CloudOff,
+  heart: Heart,
+  plus: Plus,
+  logout: LogOut,
+  paperclip: Paperclip,
+  square: Square,
+  message: MessageCircle,
+  drama: Drama,
+  chair: Armchair,
+  battery: Battery,
+  batteryLow: BatteryLow,
+  wifiOff: WifiOff,
+  webhook: Webhook,
+  chart: BarChart3,
+  laptop: Laptop,
+  globe: Globe,
+} satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof iconMap;
 
 interface IconProps {
-  name: keyof typeof iconMap;
+  name: IconName;
   size?: number;
   strokeWidth?: number;
   className?: string;
@@ -81,5 +145,3 @@ export function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: I
     />
   );
 }
-
-export type IconName = keyof typeof iconMap;

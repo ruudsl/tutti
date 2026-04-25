@@ -16,6 +16,7 @@ import {
   useUniformAvailabilityBySize,
 } from '../hooks/useUniforms';
 import { useUsers } from '../hooks/useUsers';
+import { Icon } from '../components/Icon';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -383,7 +384,7 @@ export default function Uniforms() {
                             className="btn btn-outline btn-sm"
                             onClick={() => setViewingItem(item.id)}
                           >
-                            👁
+                            <Icon name="eye" size={16} />
                           </button>
                           {item.status === 'available' && (
                             <button
@@ -405,13 +406,13 @@ export default function Uniforms() {
                             className="btn btn-outline btn-sm"
                             onClick={() => openEditModal(item)}
                           >
-                            ✏
+                            <Icon name="pencil" size={16} />
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => setDeletingItem(item)}
                           >
-                            🗑
+                            <Icon name="trash" size={16} />
                           </button>
                         </div>
                       </td>
@@ -469,7 +470,7 @@ export default function Uniforms() {
                           className="btn btn-danger btn-sm"
                           onClick={() => deleteSetMutation.mutate(set.id)}
                         >
-                          🗑
+                          <Icon name="trash" size={16} />
                         </button>
                       </td>
                     </tr>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
+import { Icon } from './Icon';
 
 export interface OfflineScannerProps {
     concertId: string;
@@ -88,7 +89,7 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
         };
         const handleOffline = () => {
             setIsOnline(false);
-            toast(t('offlineScanner.nowOffline'), { icon: '📴' });
+            toast(t('offlineScanner.nowOffline'), { icon: <Icon name="wifiOff" size={16} /> });
         };
 
         window.addEventListener('online', handleOnline);

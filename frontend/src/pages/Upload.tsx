@@ -11,6 +11,7 @@ import { getErrorMessage } from '../utils/errors';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ImslpSearch } from '../components/ImslpSearch';
 import { CloudFilePicker } from '../components/CloudFilePicker';
+import { Icon } from '../components/Icon';
 
 interface FileItem {
   file: File;
@@ -209,7 +210,7 @@ export default function Upload() {
             onFilesAccepted={handleFilesAccepted}
             disabled={uploadMutation.isPending}
           >
-            <div className="dropzone-icon">📄</div>
+            <div className="dropzone-icon"><Icon name="fileText" size={48} /></div>
             <p className="dropzone-text">
               {t('upload.dragPdfHere')} <strong>{t('upload.clickToSelect')}</strong>
             </p>

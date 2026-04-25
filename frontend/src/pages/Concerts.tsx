@@ -22,6 +22,7 @@ import {
   useExportBumaStemra,
 } from '../hooks/useConcerts';
 import { useUsers } from '../hooks/useUsers';
+import { Icon } from '../components/Icon';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -519,19 +520,19 @@ export default function Concerts() {
                             className="btn btn-outline btn-sm"
                             onClick={() => setViewingConcert(concert.id)}
                           >
-                            👁
+                            <Icon name="eye" size={16} />
                           </button>
                           <button
                             className="btn btn-outline btn-sm"
                             onClick={() => openEditModal(concert)}
                           >
-                            ✏
+                            <Icon name="pencil" size={16} />
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => setDeletingConcert(concert)}
                           >
-                            🗑
+                            <Icon name="trash" size={16} />
                           </button>
                         </div>
                       </td>
@@ -797,7 +798,7 @@ export default function Concerts() {
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteProgramMutation.mutate({ concertId: viewingConcert, programId: item.id })}
                       >
-                        🗑
+                        <Icon name="trash" size={16} />
                       </button>
                     </td>
                   </tr>
@@ -829,7 +830,7 @@ export default function Concerts() {
                     className="btn btn-danger btn-sm mt-1"
                     onClick={() => deleteMediaMutation.mutate({ concertId: viewingConcert, mediaId: m.id })}
                   >
-                    🗑
+                    <Icon name="trash" size={16} />
                   </button>
                 </div>
               ))}
@@ -905,13 +906,13 @@ export default function Concerts() {
                           className="btn btn-outline btn-sm"
                           onClick={() => openEditTicketTypeModal(tt)}
                         >
-                          ✏
+                          <Icon name="pencil" size={16} />
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => setDeletingTicketType(tt)}
                         >
-                          🗑
+                          <Icon name="trash" size={16} />
                         </button>
                       </div>
                     </td>
@@ -949,7 +950,7 @@ export default function Concerts() {
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteAttendanceMutation.mutate({ concertId: viewingConcert, attendanceId: a.id })}
                       >
-                        🗑
+                        <Icon name="trash" size={16} />
                       </button>
                     </td>
                   </tr>

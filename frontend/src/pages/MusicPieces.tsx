@@ -9,6 +9,7 @@ import {
   useRefreshInstrumentLinks,
 } from '../hooks/useMusicPieces';
 import { useMyMusicLists } from '../hooks/useMusicLists';
+import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
 import { useAuth } from '../context/AuthContext';
 import { downloadMusicPiece, logActivity } from '../api';
@@ -222,7 +223,9 @@ export default function MusicPieces() {
           disabled={refreshMutation.isPending}
           title={t('musicPieces.refreshLinks')}
         >
-          {refreshMutation.isPending ? t('musicPieces.refreshing') : `🔄 ${t('musicPieces.refreshLinks')}`}
+          {refreshMutation.isPending ? t('musicPieces.refreshing') : (
+            <><Icon name="refresh" size={16} /> {t('musicPieces.refreshLinks')}</>
+          )}
         </button>
       </div>
 
@@ -448,7 +451,7 @@ export default function MusicPieces() {
                           aria-label={`${t('common.edit')}: ${piece.title}`}
                           title={t('common.edit')}
                         >
-                          <span aria-hidden="true">✏</span>
+                          <Icon name="pencil" size={16} />
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
@@ -456,7 +459,7 @@ export default function MusicPieces() {
                           aria-label={`${t('common.delete')}: ${piece.title}`}
                           title={t('common.delete')}
                         >
-                          <span aria-hidden="true">🗑</span>
+                          <Icon name="trash" size={16} />
                         </button>
                       </div>
                     </td>
@@ -466,7 +469,7 @@ export default function MusicPieces() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">🎵</div>
+              <div className="empty-icon"><Icon name="music" size={48} /></div>
               <p>{t('musicPieces.noPieces')}</p>
             </div>
           )}
