@@ -76,6 +76,7 @@ flowchart TB
         Spond["Spond API\n(Anwesenheit)"]
         MusicaInfo["MusicaInfo.net\n(Metadaten)"]
         Entra["Microsoft Entra ID\n(SSO)"]
+        CloudStorage["OneDrive / Google Drive\n(Cloud-Import)"]
         SMTP["SMTP Server\n(E-Mail)"]
         Mollie["Mollie\n(Ticketzahlungen)"]
         Notifications["Telegram / WhatsApp /\nWeb Push (Benachrichtigungen)"]
@@ -151,8 +152,8 @@ flowchart LR
 ┌─────────────────────────────────────────┐
 │         External Services               │
 │  Spond · MusicaInfo · Entra ID · SMTP   │
-│  Mollie · Telegram · WhatsApp · IMSLP   │
-│  Spotify · Apple Music · Web Push       │
+│  OneDrive · Google Drive · Mollie       │
+│  Telegram · WhatsApp · IMSLP · Web Push │
 └─────────────────────────────────────────┘
 ```
 
@@ -180,6 +181,7 @@ flowchart LR
 ### Notenverwaltung
 
 - **Hochladen** — PDFs per Drag-and-Drop in die Dropzone ziehen; Metadaten werden automatisch aus dem Dateinamen geparst (`Titel_Arrangeur_Instrument_Tonart_Gruppennummer_Schlüssel.pdf`)
+- **Cloud-Import** — Noten direkt aus OneDrive/SharePoint oder Google Drive importieren, ohne sie vorher herunterzuladen
 - **Notenblätter** — Noten pro Instrument mit Filtern nach Titel, Instrument und Orchester
 - **Notentitel** — Metadaten pro Titel: Komponist, Arrangeur, Genre, Spieldauer, Schwierigkeitsgrad, YouTube-Link
 - **MusicaInfo.net-Integration** — Metadaten (Spieldauer, Schwierigkeitsgrad, Verlag) automatisch suchen und importieren
@@ -344,6 +346,20 @@ Sie können auch vorab ein Passwort über die Umgebungsvariable `ADMIN_INIT_PASS
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate-Limit-Fenster in ms (Standard 15 Min.) |
 | `RATE_LIMIT_MAX_REQUESTS` | `100` | Maximale Anfragen pro Fenster |
 | `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5` | Maximale Anmeldeversuche pro Fenster |
+
+### Cloud-Import-Einstellungen (in-App)
+
+Cloud-Import-Einstellungen werden pro Verein über die Einstellungen-Seite konfiguriert:
+
+**OneDrive/SharePoint:**
+- Verwendet vorhandene Microsoft Entra ID-Konfiguration
+- Erfordert den Bereich `Files.Read.All` in Ihrer Azure App-Registrierung
+
+**Google Drive:**
+- Konfigurieren über Einstellungen → Google Drive
+- Erfordert ein Google Cloud-Projekt mit aktivierter Picker API und Drive API
+- OAuth-Client-ID: In der Google Cloud Console erstellen (Webanwendungstyp)
+- API-Schlüssel: In der Google Cloud Console mit Picker API-Zugriff erstellen
 
 ### Frontend (`frontend/.env.local`)
 
@@ -510,6 +526,7 @@ Authorization: Bearer <token>
 | Aktivität | `/api/activity/*` | Protokollierung und Statistiken |
 | MusicaInfo | `/api/musicainfo/*` | Metadatensuche über MusicaInfo.net |
 | PDF-Tools | `/api/pdf-tools/*` | PDF zusammenführen, extrahieren, transponieren |
+| Cloud-Import | `/api/cloud-import/*` | OneDrive- und Google Drive-Dateiimport |
 | Einstellungen | `/api/settings/*` | Vereinseinstellungen, Theme, SMTP |
 | Backup | `/api/backup/*` | Datenbank-Backup und -Restore |
 | Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |

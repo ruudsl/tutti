@@ -76,6 +76,7 @@ flowchart TB
         Spond["Spond API\n(Attendance)"]
         MusicaInfo["MusicaInfo.net\n(Metadata)"]
         Entra["Microsoft Entra ID\n(SSO)"]
+        CloudStorage["OneDrive / Google Drive\n(Cloud Import)"]
         SMTP["SMTP Server\n(Email)"]
         Mollie["Mollie\n(Ticket Payments)"]
         Notifications["Telegram / WhatsApp /\nWeb Push (Notifications)"]
@@ -151,8 +152,8 @@ flowchart LR
 ┌─────────────────────────────────────────┐
 │         External Services               │
 │  Spond · MusicaInfo · Entra ID · SMTP   │
-│  Mollie · Telegram · WhatsApp · IMSLP   │
-│  Spotify · Apple Music · Web Push       │
+│  OneDrive · Google Drive · Mollie       │
+│  Telegram · WhatsApp · IMSLP · Web Push │
 └─────────────────────────────────────────┘
 ```
 
@@ -180,6 +181,7 @@ flowchart LR
 ### Music Management
 
 - **Upload** — Drag and drop PDFs to the dropzone; metadata is automatically parsed from the filename (`Title_arranger_instrument_key_groupnumber_clef.pdf`)
+- **Cloud Import** — Import sheet music directly from OneDrive/SharePoint or Google Drive without downloading first
 - **Music Pieces** — Sheet music per instrument with filters on title, instrument, and orchestra
 - **Music Titles** — Metadata per title: composer, arranger, genre, duration, difficulty level, YouTube link
 - **MusicaInfo.net Integration** — Search and import metadata (duration, difficulty, publisher) automatically
@@ -344,6 +346,20 @@ You can also preset a password via the environment variable `ADMIN_INIT_PASSWORD
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms (default 15 min) |
 | `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per window |
 | `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5` | Max login attempts per window |
+
+### Cloud Import Settings (in-app)
+
+Cloud import settings are configured per organization via the Settings page:
+
+**OneDrive/SharePoint:**
+- Uses existing Microsoft Entra ID configuration
+- Requires the `Files.Read.All` scope to be added to your Azure App Registration
+
+**Google Drive:**
+- Configure via Settings → Google Drive
+- Requires a Google Cloud project with Picker API and Drive API enabled
+- OAuth Client ID: Created in Google Cloud Console (Web Application type)
+- API Key: Created in Google Cloud Console with Picker API access
 
 ### Frontend (`frontend/.env.local`)
 
@@ -510,6 +526,7 @@ Authorization: Bearer <token>
 | Activity | `/api/activity/*` | Logging and statistics |
 | MusicaInfo | `/api/musicainfo/*` | Metadata lookup via MusicaInfo.net |
 | PDF Tools | `/api/pdf-tools/*` | PDF merge, extract, transpose |
+| Cloud Import | `/api/cloud-import/*` | OneDrive and Google Drive file import |
 | Settings | `/api/settings/*` | Organization settings, theme, SMTP |
 | Backup | `/api/backup/*` | Database backup and restore |
 | Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |

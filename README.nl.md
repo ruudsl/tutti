@@ -76,6 +76,7 @@ flowchart TB
         Spond["Spond API\n(Aanwezigheid)"]
         MusicaInfo["MusicaInfo.net\n(Metadata)"]
         Entra["Microsoft Entra ID\n(SSO)"]
+        CloudStorage["OneDrive / Google Drive\n(Cloud Import)"]
         SMTP["SMTP Server\n(E-mail)"]
         Mollie["Mollie\n(Ticketbetalingen)"]
         Notifications["Telegram / WhatsApp /\nWeb Push (Notificaties)"]
@@ -151,8 +152,8 @@ flowchart LR
 ┌─────────────────────────────────────────┐
 │         External Services               │
 │  Spond · MusicaInfo · Entra ID · SMTP   │
-│  Mollie · Telegram · WhatsApp · IMSLP   │
-│  Spotify · Apple Music · Web Push       │
+│  OneDrive · Google Drive · Mollie       │
+│  Telegram · WhatsApp · IMSLP · Web Push │
 └─────────────────────────────────────────┘
 ```
 
@@ -180,6 +181,7 @@ flowchart LR
 ### Muziekbeheer
 
 - **Upload** — Sleep PDF's naar de dropzone; metadata wordt automatisch geparseerd uit de bestandsnaam (`Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf`)
+- **Cloud Import** — Importeer bladmuziek rechtstreeks vanuit OneDrive/SharePoint of Google Drive zonder eerst te downloaden
 - **Muziekstukken** — Bladmuziek per instrument met filters op titel, instrument en orkest
 - **Muziektitels** — Metadata per titel: componist, arrangeur, genre, speelduur, moeilijkheidsgraad, YouTube-link
 - **MusicaInfo.net integratie** — Zoek en importeer metadata (speelduur, moeilijkheidsgraad, uitgever) automatisch
@@ -344,6 +346,20 @@ Je kunt ook vooraf een wachtwoord instellen via de environment variable `ADMIN_I
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit venster in ms (standaard 15 min) |
 | `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per venster |
 | `AUTH_RATE_LIMIT_MAX_REQUESTS` | `5` | Max login pogingen per venster |
+
+### Cloud Import Instellingen (in-app)
+
+Cloud import instellingen worden per vereniging geconfigureerd via de Instellingen pagina:
+
+**OneDrive/SharePoint:**
+- Gebruikt bestaande Microsoft Entra ID configuratie
+- Vereist de `Files.Read.All` scope in je Azure App Registration
+
+**Google Drive:**
+- Configureer via Instellingen → Google Drive
+- Vereist een Google Cloud project met Picker API en Drive API ingeschakeld
+- OAuth Client ID: Aanmaken in Google Cloud Console (Web Application type)
+- API Key: Aanmaken in Google Cloud Console met Picker API toegang
 
 ### Frontend (`frontend/.env.local`)
 
@@ -510,6 +526,7 @@ Authorization: Bearer <token>
 | Activiteit | `/api/activity/*` | Logging en statistieken |
 | MusicaInfo | `/api/musicainfo/*` | Metadata opzoeken via MusicaInfo.net |
 | PDF Tools | `/api/pdf-tools/*` | PDF samenvoegen, extraheren, transponeren |
+| Cloud Import | `/api/cloud-import/*` | OneDrive en Google Drive bestand import |
 | Instellingen | `/api/settings/*` | Verenigingsinstellingen, thema, SMTP |
 | Backup | `/api/backup/*` | Database backup en restore |
 | Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |
