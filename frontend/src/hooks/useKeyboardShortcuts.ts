@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export interface Shortcut {
@@ -45,6 +45,15 @@ let globalState: KeyboardShortcutsState = {
 const stateListeners: Set<() => void> = new Set();
 
 function setGlobalState(update: Partial<KeyboardShortcutsState>) {
+  let changed = false;
+  for (const key in update) {
+    const k = key as keyof KeyboardShortcutsState;
+    if (globalState[k] !== update[k]) {
+      changed = true;
+      break;
+    }
+  }
+  if (!changed) return;
   globalState = { ...globalState, ...update };
   stateListeners.forEach((listener) => listener());
 }
@@ -68,7 +77,9 @@ export function useKeyboardShortcutsState() {
   };
 }
 
-export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = []) {
+const EMPTY_SHORTCUTS: Shortcut[] = [];
+
+export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHORTCUTS) {
   const navigate = useNavigate();
   const sequenceTimeoutRef = useRef<number | null>(null);
   const pendingKeyRef = useRef<string | null>(null);
@@ -83,8 +94,8 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = []) {
     setGlobalState({ pendingSequence: null });
   }, []);
 
-  // Default navigation shortcuts
-  const defaultShortcuts: Shortcut[] = [
+  // Default navigation shortcuts (memoized so identity is stable across renders)
+  const defaultShortcuts = useMemo<Shortcut[]>(() => [
     // General
     {
       key: '?',
@@ -95,11 +106,9 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = []) {
     {
       key: 'Escape',
       action: () => {
-        // Close help modal or any open modal
         if (globalState.isHelpOpen) {
           setGlobalState({ isHelpOpen: false });
         }
-        // Emit close event for other listeners
         emitShortcutEvent('close');
       },
       description: 'shortcuts.closeModal',
@@ -130,127 +139,25 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = []) {
     },
 
     // Go-to navigation (G + key sequences)
-    {
-      key: 'h',
-      sequence: 'g',
-      action: () => navigate('/'),
-      description: 'shortcuts.goHome',
-      category: 'navigation',
-    },
-    {
-      key: 'm',
-      sequence: 'g',
-      action: () => navigate('/my-music'),
-      description: 'shortcuts.goMyMusic',
-      category: 'navigation',
-    },
-    {
-      key: 's',
-      sequence: 'g',
-      action: () => navigate('/settings'),
-      description: 'shortcuts.goSettings',
-      category: 'navigation',
-    },
-    {
-      key: 'l',
-      sequence: 'g',
-      action: () => navigate('/lists'),
-      description: 'shortcuts.goLists',
-      category: 'navigation',
-    },
-    {
-      key: 'r',
-      sequence: 'g',
-      action: () => navigate('/rehearsals'),
-      description: 'shortcuts.goRehearsals',
-      category: 'navigation',
-    },
-    {
-      key: 'p',
-      sequence: 'g',
-      action: () => navigate('/profile'),
-      description: 'shortcuts.goProfile',
-      category: 'navigation',
-    },
-    {
-      key: 't',
-      sequence: 'g',
-      action: () => navigate('/titles'),
-      description: 'shortcuts.goTitles',
-      category: 'navigation',
-    },
-    {
-      key: 'c',
-      sequence: 'g',
-      action: () => navigate('/concerts'),
-      description: 'shortcuts.goConcerts',
-      category: 'navigation',
-    },
-    {
-      key: 'u',
-      sequence: 'g',
-      action: () => navigate('/upload'),
-      description: 'shortcuts.goUpload',
-      category: 'navigation',
-    },
+    { key: 'h', sequence: 'g', action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
+    { key: 'm', sequence: 'g', action: () => navigate('/my-music'), description: 'shortcuts.goMyMusic', category: 'navigation' },
+    { key: 's', sequence: 'g', action: () => navigate('/settings'), description: 'shortcuts.goSettings', category: 'navigation' },
+    { key: 'l', sequence: 'g', action: () => navigate('/lists'), description: 'shortcuts.goLists', category: 'navigation' },
+    { key: 'r', sequence: 'g', action: () => navigate('/rehearsals'), description: 'shortcuts.goRehearsals', category: 'navigation' },
+    { key: 'p', sequence: 'g', action: () => navigate('/profile'), description: 'shortcuts.goProfile', category: 'navigation' },
+    { key: 't', sequence: 'g', action: () => navigate('/titles'), description: 'shortcuts.goTitles', category: 'navigation' },
+    { key: 'c', sequence: 'g', action: () => navigate('/concerts'), description: 'shortcuts.goConcerts', category: 'navigation' },
+    { key: 'u', sequence: 'g', action: () => navigate('/upload'), description: 'shortcuts.goUpload', category: 'navigation' },
 
     // Alt + key navigation (legacy support)
-    {
-      key: 'h',
-      alt: true,
-      action: () => navigate('/'),
-      description: 'shortcuts.goHome',
-      category: 'navigation',
-    },
-    {
-      key: 'm',
-      alt: true,
-      action: () => navigate('/my-music'),
-      description: 'shortcuts.goMyMusic',
-      category: 'navigation',
-    },
-    {
-      key: 'l',
-      alt: true,
-      action: () => navigate('/lists'),
-      description: 'shortcuts.goLists',
-      category: 'navigation',
-    },
-    {
-      key: 't',
-      alt: true,
-      action: () => navigate('/titles'),
-      description: 'shortcuts.goTitles',
-      category: 'navigation',
-    },
-    {
-      key: 'u',
-      alt: true,
-      action: () => navigate('/upload'),
-      description: 'shortcuts.goUpload',
-      category: 'navigation',
-    },
-    {
-      key: 'r',
-      alt: true,
-      action: () => navigate('/rehearsals'),
-      description: 'shortcuts.goRehearsals',
-      category: 'navigation',
-    },
-    {
-      key: 'p',
-      alt: true,
-      action: () => navigate('/profile'),
-      description: 'shortcuts.goProfile',
-      category: 'navigation',
-    },
-    {
-      key: 's',
-      alt: true,
-      action: () => navigate('/settings'),
-      description: 'shortcuts.goSettings',
-      category: 'navigation',
-    },
+    { key: 'h', alt: true, action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
+    { key: 'm', alt: true, action: () => navigate('/my-music'), description: 'shortcuts.goMyMusic', category: 'navigation' },
+    { key: 'l', alt: true, action: () => navigate('/lists'), description: 'shortcuts.goLists', category: 'navigation' },
+    { key: 't', alt: true, action: () => navigate('/titles'), description: 'shortcuts.goTitles', category: 'navigation' },
+    { key: 'u', alt: true, action: () => navigate('/upload'), description: 'shortcuts.goUpload', category: 'navigation' },
+    { key: 'r', alt: true, action: () => navigate('/rehearsals'), description: 'shortcuts.goRehearsals', category: 'navigation' },
+    { key: 'p', alt: true, action: () => navigate('/profile'), description: 'shortcuts.goProfile', category: 'navigation' },
+    { key: 's', alt: true, action: () => navigate('/settings'), description: 'shortcuts.goSettings', category: 'navigation' },
     {
       key: '/',
       ctrl: true,
@@ -265,9 +172,12 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = []) {
       description: 'shortcuts.focusSearch',
       category: 'actions',
     },
-  ];
+  ], [navigate]);
 
-  const allShortcuts = [...defaultShortcuts, ...additionalShortcuts];
+  const allShortcuts = useMemo(
+    () => [...defaultShortcuts, ...additionalShortcuts],
+    [defaultShortcuts, additionalShortcuts]
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

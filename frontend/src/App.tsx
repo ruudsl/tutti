@@ -4,7 +4,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './hooks/useTheme';
-import { useDarkMode } from './hooks/useDarkMode';
 import { queryClient } from './lib/queryClient';
 import { Toaster } from './utils/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -433,13 +432,12 @@ function AppRoutes() {
 }
 
 /**
- * Syncs the HTML lang attribute with the current i18n language (WCAG 3.1.1),
- * loads the association theme, and initializes dark mode preference.
+ * Syncs the HTML lang attribute with the current i18n language (WCAG 3.1.1)
+ * and loads the association theme.
  */
 function AppInit() {
   const { i18n } = useTranslation();
   useTheme();
-  useDarkMode();
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
