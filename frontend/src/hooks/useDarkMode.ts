@@ -4,6 +4,36 @@ type DarkModePreference = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'harmonie-dark-mode';
 
+// Inline color overrides for dark mode. These have to be applied as inline
+// styles on <html> to beat the inline styles set by useTheme (which has higher
+// specificity than any class or attribute selector).
+const DARK_VARS: Record<string, string> = {
+  '--background': '#0f172a',
+  '--surface': '#1e293b',
+  '--surface-hover': '#334155',
+  '--text': '#f1f5f9',
+  '--text-light': '#94a3b8',
+  '--text-muted': '#64748b',
+  '--border': '#334155',
+  '--border-strong': '#475569',
+  '--shadow': '0 1px 3px rgba(0, 0, 0, 0.3)',
+  '--shadow-md': '0 4px 6px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15)',
+  '--shadow-lg': '0 4px 6px rgba(0, 0, 0, 0.4)',
+  '--shadow-xl': '0 10px 25px rgba(0, 0, 0, 0.35)',
+};
+
+function applyDarkInlineVars(root: HTMLElement) {
+  for (const [key, value] of Object.entries(DARK_VARS)) {
+    root.style.setProperty(key, value);
+  }
+}
+
+function clearDarkInlineVars(root: HTMLElement) {
+  for (const key of Object.keys(DARK_VARS)) {
+    root.style.removeProperty(key);
+  }
+}
+
 export function useDarkMode() {
   const [mode, setMode] = useState<DarkModePreference>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -35,17 +65,40 @@ export function useDarkMode() {
   // Calculate if dark mode is active
   const isDark = mode === 'dark' || (mode === 'system' && systemPrefersDark);
 
-  // Apply dark mode class to document
+  // Apply dark mode class + inline variable overrides to document.
+  // Inline styles are necessary because useTheme also writes inline styles,
+  // and inline styles trump class/attribute selectors. A MutationObserver
+  // re-applies dark vars whenever something else (e.g. useTheme's async load)
+  // mutates the html element's inline style.
   useEffect(() => {
     const root = document.documentElement;
 
-    if (isDark) {
-      root.classList.add('dark-mode');
-      root.setAttribute('data-theme', 'dark');
-    } else {
+    if (!isDark) {
       root.classList.remove('dark-mode');
       root.setAttribute('data-theme', 'light');
+      clearDarkInlineVars(root);
+      return;
     }
+
+    root.classList.add('dark-mode');
+    root.setAttribute('data-theme', 'dark');
+    applyDarkInlineVars(root);
+
+    let reapplyScheduled = false;
+    const observer = new MutationObserver(() => {
+      // Bail if any of our dark vars have been clobbered, then reapply once
+      // per microtask to avoid feedback loops.
+      const stillDark = root.style.getPropertyValue('--background') === DARK_VARS['--background'];
+      if (stillDark || reapplyScheduled) return;
+      reapplyScheduled = true;
+      queueMicrotask(() => {
+        reapplyScheduled = false;
+        applyDarkInlineVars(root);
+      });
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['style'] });
+
+    return () => observer.disconnect();
   }, [isDark]);
 
   // Persist preference
