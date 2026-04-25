@@ -21,6 +21,12 @@ import {
   ChevronDown,
   ChevronRight,
   Music2,
+  Hand,
+  Upload,
+  FileText,
+  ListMusic,
+  PartyPopper,
+  Pencil,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -47,6 +53,12 @@ const iconMap: Record<string, LucideIcon> = {
   expand: PanelLeftOpen,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  hand: Hand,
+  upload: Upload,
+  fileText: FileText,
+  listMusic: ListMusic,
+  partyPopper: PartyPopper,
+  pencil: Pencil,
 };
 
 interface IconProps {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../utils/constants';
+import { Icon } from '../components/Icon';
 
 interface GuideSection {
   id: string;
@@ -139,7 +140,9 @@ export default function UserGuide() {
 
           {filteredSections.length === 0 && (
             <div className="empty-state">
-              <div className="empty-icon">📚</div>
+              <div className="empty-icon">
+                <Icon name="book" size={48} />
+              </div>
               <p>{t('userGuide.noResults')}</p>
             </div>
           )}

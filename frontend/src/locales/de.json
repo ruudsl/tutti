@@ -3123,5 +3123,171 @@
     "removed": "Google Drive Einstellungen entfernt.",
     "requiredFields": "Client ID und API-Schlüssel sind erforderlich.",
     "confirmRemove": "Möchten Sie diese Einstellungen wirklich entfernen?"
+  },
+  "userGuide": {
+    "title": "Benutzerhandbuch",
+    "subtitle": "Lernen Sie, wie Sie die Musikverwaltungs-Anwendung nutzen",
+    "searchPlaceholder": "Handbuch durchsuchen...",
+    "navigation": "Handbuch-Navigation",
+    "noResults": "Keine Abschnitte für Ihre Suche gefunden.",
+    "needHelp": "Weitere Hilfe benötigt?",
+    "contactSupport": "Support kontaktieren",
+    "sections": {
+      "gettingStarted": {
+        "title": "Erste Schritte",
+        "content": "<p>Willkommen bei der Musikverwaltungs-Anwendung! Diese Anleitung hilft Ihnen beim Einstieg.</p><h3>Erste Schritte</h3><ul><li><strong>Dashboard</strong> — Ihre persönliche Übersicht mit anstehenden Proben und aktueller Musik</li><li><strong>Meine Musik</strong> — Ihre zugewiesenen Noten anzeigen und herunterladen</li><li><strong>Proben</strong> — Den Probenplan einsehen und Anwesenheit registrieren</li></ul><p>Nutzen Sie die Seitenleiste zur Navigation. Auf Mobilgeräten tippen Sie auf das Menüsymbol unten.</p>"
+      },
+      "myMusic": {
+        "title": "Meine Musik",
+        "content": "<p>Die Seite <strong>Meine Musik</strong> zeigt alle Noten, die Ihrem Instrument/Ihren Instrumenten zugewiesen sind.</p><h3>Funktionen</h3><ul><li><strong>Filtern</strong> — Nach Orchester filtern oder nach Titel suchen</li><li><strong>Herunterladen</strong> — Klicken Sie auf den Download-Button, um PDFs zu speichern</li><li><strong>Vorschau</strong> — Klicken Sie auf ein Stück, um es im Browser anzuzeigen</li><li><strong>Audio</strong> — Einige Stücke enthalten MP3-Aufnahmen zum Anhören</li></ul><p>Noten werden automatisch basierend auf Ihrem Instrumentenprofil zugewiesen. Kontaktieren Sie die Musikkommission, wenn etwas fehlt.</p>"
+      },
+      "downloadMusic": {
+        "title": "Musik herunterladen",
+        "content": "<p>Sie können Noten auf verschiedene Weisen herunterladen:</p><h3>Einzelner Download</h3><p>Klicken Sie auf das Download-Symbol neben einem Stück, um das PDF zu speichern.</p><h3>Massendownload</h3><p>Wählen Sie mehrere Stücke mit den Kontrollkästchen aus und nutzen Sie dann \"Ausgewählte herunterladen\".</p><h3>Offline-Zugriff</h3><p>Heruntergeladene PDFs werden auch für Offline-Nutzung zwischengespeichert. Besuchen Sie die Seite Meine Musik, während Sie online sind, um Ihre Musik vorab zu laden.</p>"
+      },
+      "reportIssues": {
+        "title": "Probleme melden",
+        "content": "<p>Einen Fehler in Ihren Noten gefunden? Fehlende Seiten oder falsche Noten?</p><h3>So melden Sie</h3><ol><li>Gehen Sie zu <strong>Meldungen</strong> im Bereich Mitglieder</li><li>Klicken Sie auf <strong>Neue Meldung</strong></li><li>Wählen Sie das betroffene Stück und beschreiben Sie das Problem</li><li>Die Musikkommission wird es prüfen und beheben</li></ol><p>Sie können den Status Ihrer Meldungen in der Übersicht verfolgen.</p>"
+      },
+      "rehearsals": {
+        "title": "Proben",
+        "content": "<p>Die Seite <strong>Proben</strong> zeigt den Probenplan für alle Ihre Orchester.</p><h3>Funktionen</h3><ul><li><strong>Kalenderansicht</strong> — Anstehende und vergangene Proben anzeigen</li><li><strong>Details</strong> — Klicken Sie auf eine Probe für Zeit, Ort und Notizen</li><li><strong>Anwesenheit</strong> — Bei Verbindung mit Spond wird die Anwesenheit automatisch synchronisiert</li></ul><p>Reguläre Proben werden automatisch generiert. Zusätzliche Proben und Absagen sind deutlich gekennzeichnet.</p>"
+      },
+      "tools": {
+        "title": "Musiktools",
+        "content": "<p>Die Seite <strong>Tools</strong> bietet hilfreiche Werkzeuge für Musiker:</p><h3>Verfügbare Tools</h3><ul><li><strong>Metronom</strong> — Üben mit einstellbarem Tempo und Taktart</li><li><strong>Stimmgerät</strong> — Stimmen Sie Ihr Instrument mit dem Mikrofon Ihres Geräts</li></ul><p>Diese Tools funktionieren offline und sind für effektives Üben konzipiert.</p>"
+      },
+      "profile": {
+        "title": "Profileinstellungen",
+        "content": "<p>Verwalten Sie Ihr Konto unter <strong>Profil</strong>:</p><h3>Was Sie ändern können</h3><ul><li><strong>Persönliche Daten</strong> — Name und E-Mail aktualisieren</li><li><strong>Passwort</strong> — Passwort ändern</li><li><strong>Zwei-Faktor-Auth</strong> — MFA für zusätzliche Sicherheit aktivieren</li><li><strong>Sprache</strong> — Zwischen Niederländisch, Englisch und Deutsch wechseln</li><li><strong>Design</strong> — Hell, Dunkel oder Systemdesign wählen</li><li><strong>Benachrichtigungen</strong> — Konfigurieren, wie Sie benachrichtigt werden möchten</li></ul>"
+      },
+      "uploadMusic": {
+        "title": "Musik hochladen",
+        "content": "<p>Als Mitglied der Musikkommission können Sie neue Noten hochladen.</p><h3>So laden Sie hoch</h3><ol><li>Gehen Sie zu <strong>Hochladen</strong> im Bereich Bibliothek</li><li>Ziehen Sie PDF-Dateien hinein oder klicken Sie zum Durchsuchen</li><li>Dateien werden automatisch geparst: <code>Titel_Arrangeur_Instrument_Tonart_Gruppe_Schlüssel.pdf</code></li><li>Überprüfen und passen Sie Metadaten vor der Bestätigung an</li></ol><h3>Cloud-Import</h3><p>Sie können auch direkt aus OneDrive oder Google Drive importieren, ohne vorher herunterzuladen.</p><h3>Tipps</h3><ul><li>Verwenden Sie konsistente Benennung für automatisches Parsen</li><li>Verknüpfen Sie Stücke mit vorhandenen Titeln für bessere Organisation</li><li>Fügen Sie MP3-Aufnahmen als Übe-Referenz hinzu</li></ul>"
+      },
+      "manageLists": {
+        "title": "Musiklisten verwalten",
+        "content": "<p>Erstellen und verwalten Sie Konzertprogramme und Setlisten.</p><h3>Eine Liste erstellen</h3><ol><li>Gehen Sie zu <strong>Listen</strong> im Bereich Bibliothek</li><li>Klicken Sie auf <strong>Neue Liste</strong></li><li>Fügen Sie Name, Orchester, Datum und optionale Beschreibung hinzu</li><li>Fügen Sie Stücke durch Suche in der Bibliothek hinzu</li></ol><h3>Funktionen</h3><ul><li><strong>Drag and Drop</strong> — Stücke einfach neu anordnen</li><li><strong>Zeitberechnung</strong> — Gesamtdauer wird automatisch berechnet</li><li><strong>Kommissionsnotizen</strong> — Interne Notizen hinzufügen (nur für Kommission sichtbar)</li><li><strong>Exportieren</strong> — PDF-Programme zum Drucken generieren</li></ul>"
+      },
+      "manageMembers": {
+        "title": "Mitglieder verwalten",
+        "content": "<p>Als Administrator können Sie alle Mitgliederkonten verwalten.</p><h3>Mitgliederverwaltung</h3><ul><li><strong>Mitglieder hinzufügen</strong> — Konten manuell erstellen oder per E-Mail einladen</li><li><strong>Profile bearbeiten</strong> — Info, Instrumente und Orchesterzuweisungen aktualisieren</li><li><strong>Rollen zuweisen</strong> — Berechtigungen festlegen (Mitglied, Dirigent, Musikkommission, Admin)</li><li><strong>Deaktivieren</strong> — Konten deaktivieren ohne Daten zu löschen</li></ul><h3>Entra ID Sync</h3><p>Bei Verbindung mit Microsoft Entra ID können Mitglieder automatisch aus Ihrem Organisationsverzeichnis synchronisiert werden.</p><h3>Massenimport</h3><p>Mehrere Mitglieder gleichzeitig per CSV-Upload importieren.</p>"
+      }
+    }
+  },
+  "onboarding": {
+    "menuItem": "Rundgang starten",
+    "welcomeTitle": "Willkommen in der App!",
+    "welcomeDescription": "Lassen Sie uns Ihnen einen kurzen Rundgang durch die wichtigsten Funktionen geben. Es dauert nur eine Minute.",
+    "startTour": "Rundgang starten",
+    "skip": "Überspringen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "finish": "Fertig",
+    "goToPage": "Zu dieser Seite gehen",
+    "admin": {
+      "welcome": {
+        "title": "Willkommen, Administrator!",
+        "description": "Als Admin haben Sie volle Kontrolle über die Anwendung. Lassen Sie uns die wichtigsten Bereiche durchgehen."
+      },
+      "orchestras": {
+        "title": "Orchester",
+        "description": "Beginnen Sie mit der Einrichtung Ihrer Orchester. Jedes Orchester kann eigene Mitglieder, Repertoire und Probenplan haben."
+      },
+      "members": {
+        "title": "Mitgliederverwaltung",
+        "description": "Fügen Sie Mitglieder zum System hinzu. Sie können Konten manuell erstellen, per E-Mail einladen oder mit Microsoft Entra ID synchronisieren."
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "description": "Konfigurieren Sie Ihre Organisation: Branding, Integrationen (Spond, Microsoft SSO), E-Mail-Einstellungen und mehr."
+      },
+      "rehearsals": {
+        "title": "Proben",
+        "description": "Richten Sie Standard-Probentage für jedes Orchester ein. Einzelne Proben werden automatisch generiert."
+      },
+      "done": {
+        "title": "Fertig!",
+        "description": "Sie kennen jetzt die Grundlagen. Erkunden Sie die anderen Bereiche, wenn Sie bereit sind. Das Benutzerhandbuch enthält detailliertere Informationen."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Willkommen, Musikkommission!",
+        "description": "Als Mitglied der Musikkommission verwalten Sie die Notenbibliothek. Schauen wir uns an, was Sie tun können."
+      },
+      "upload": {
+        "title": "Musik hochladen",
+        "description": "Laden Sie hier PDF-Noten hoch. Dateien werden automatisch geparst, wenn Sie die Namenskonvention verwenden: Titel_Arrangeur_Instrument_Tonart.pdf"
+      },
+      "lists": {
+        "title": "Musiklisten",
+        "description": "Erstellen Sie Konzertprogramme und Repertoirelisten. Fügen Sie Stücke hinzu, ordnen Sie sie neu und berechnen Sie die Gesamtdauer."
+      },
+      "pieces": {
+        "title": "Musikstücke",
+        "description": "Durchsuchen Sie alle hochgeladenen Noten. Filtern Sie nach Instrument, Orchester oder suchen Sie nach Titel."
+      },
+      "titles": {
+        "title": "Titel",
+        "description": "Verwalten Sie die Titeldatenbank mit Komponist, Arrangeur, Genre und Dauerinformationen. Verknüpfen Sie mit MusicaInfo.net für automatische Metadaten."
+      },
+      "instruments": {
+        "title": "Instrumente",
+        "description": "Konfigurieren Sie Instrumente und ihre Aliase. Dies hilft beim automatischen Matching beim Hochladen von Musik."
+      },
+      "done": {
+        "title": "Bereit zum Start!",
+        "description": "Sie sind bereit, die Musikbibliothek zu verwalten. Schauen Sie ins Benutzerhandbuch für detaillierte Anweisungen."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Willkommen, Dirigent!",
+        "description": "Als Dirigent können Sie Proben verwalten und das Repertoire einsehen. Werfen wir einen kurzen Blick darauf."
+      },
+      "rehearsals": {
+        "title": "Proben",
+        "description": "Sehen und verwalten Sie den Probenplan. Sie können zusätzliche Proben hinzufügen, Termine absagen und die Anwesenheit einsehen."
+      },
+      "pieces": {
+        "title": "Noten durchsuchen",
+        "description": "Sehen Sie alle verfügbaren Noten für Ihre Orchester. Zeigen Sie PDFs an und hören Sie Aufnahmen."
+      },
+      "mymusic": {
+        "title": "Meine Musik",
+        "description": "Ihre persönliche Musikseite zeigt Stücke, die Ihrem Instrument/Ihren Instrumenten zugewiesen sind. Laden Sie sie zum Üben herunter."
+      },
+      "done": {
+        "title": "Alles fertig!",
+        "description": "Sie sind bereit loszulegen. Das Benutzerhandbuch hat weitere Informationen, falls Sie sie benötigen."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Willkommen!",
+        "description": "Diese App hilft Ihnen, auf Ihre Noten zuzugreifen und über Proben informiert zu bleiben. Lassen Sie uns Sie herumführen."
+      },
+      "mymusic": {
+        "title": "Meine Musik",
+        "description": "Finden Sie hier alle Ihre Noten, gefiltert nach Ihrem Instrument. Laden Sie PDFs herunter oder zeigen Sie sie im Browser an."
+      },
+      "rehearsals": {
+        "title": "Proben",
+        "description": "Sehen Sie den Probenplan für Ihr Orchester. Zusätzliche Proben und Absagen sind deutlich gekennzeichnet."
+      },
+      "issues": {
+        "title": "Probleme melden",
+        "description": "Einen Fehler in Ihren Noten gefunden? Melden Sie ihn hier und die Musikkommission wird ihn beheben."
+      },
+      "profile": {
+        "title": "Ihr Profil",
+        "description": "Aktualisieren Sie Ihre persönlichen Daten, ändern Sie Ihr Passwort und passen Sie Benachrichtigungseinstellungen an."
+      },
+      "done": {
+        "title": "Das war's!",
+        "description": "Sie sind fertig eingerichtet. Wenn Sie später Hilfe benötigen, schauen Sie ins Benutzerhandbuch oder kontaktieren Sie die Musikkommission."
+      }
+    }
   }
 }

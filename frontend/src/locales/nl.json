@@ -3113,5 +3113,171 @@
     "removed": "Google Drive instellingen verwijderd.",
     "requiredFields": "Client ID en API Key zijn verplicht.",
     "confirmRemove": "Weet je zeker dat je deze instellingen wilt verwijderen?"
+  },
+  "userGuide": {
+    "title": "Handleiding",
+    "subtitle": "Leer hoe je de muziekbeheer-applicatie gebruikt",
+    "searchPlaceholder": "Zoek in de handleiding...",
+    "navigation": "Handleiding navigatie",
+    "noResults": "Geen secties gevonden voor je zoekopdracht.",
+    "needHelp": "Meer hulp nodig?",
+    "contactSupport": "Neem contact op met support",
+    "sections": {
+      "gettingStarted": {
+        "title": "Aan de slag",
+        "content": "<p>Welkom bij de muziekbeheer-applicatie! Deze handleiding helpt je op weg.</p><h3>Eerste stappen</h3><ul><li><strong>Dashboard</strong> — Je persoonlijke overzicht met aankomende repetities en recente muziek</li><li><strong>Mijn Muziek</strong> — Bekijk en download je toegewezen bladmuziek</li><li><strong>Repetities</strong> — Bekijk het repetitieschema en registreer aanwezigheid</li></ul><p>Gebruik de zijbalk om door de functies te navigeren. Op mobiel tik je op het menu-icoon onderaan.</p>"
+      },
+      "myMusic": {
+        "title": "Mijn Muziek",
+        "content": "<p>De pagina <strong>Mijn Muziek</strong> toont alle bladmuziek die aan jouw instrument(en) is toegewezen.</p><h3>Functies</h3><ul><li><strong>Filteren</strong> — Filter op orkest of zoek op titel</li><li><strong>Downloaden</strong> — Klik op de downloadknop om PDF's op te slaan</li><li><strong>Voorvertoning</strong> — Klik op een stuk om het in de browser te bekijken</li><li><strong>Audio</strong> — Sommige stukken bevatten MP3-opnames die je kunt beluisteren</li></ul><p>Bladmuziek wordt automatisch toegewezen op basis van je instrumentprofiel. Neem contact op met de muziekcommissie als er iets mist.</p>"
+      },
+      "downloadMusic": {
+        "title": "Muziek downloaden",
+        "content": "<p>Je kunt bladmuziek op verschillende manieren downloaden:</p><h3>Individuele download</h3><p>Klik op het downloadicoon naast een stuk om de PDF op te slaan.</p><h3>Bulk download</h3><p>Selecteer meerdere stukken met de vakjes en gebruik de knop \"Geselecteerde downloaden\".</p><h3>Offline toegang</h3><p>Gedownloade PDF's worden ook gecached voor offline gebruik. Bezoek de Mijn Muziek pagina terwijl je online bent om je muziek vooraf te laden.</p>"
+      },
+      "reportIssues": {
+        "title": "Problemen melden",
+        "content": "<p>Een fout gevonden in je bladmuziek? Ontbrekende pagina's of verkeerde noten?</p><h3>Hoe te melden</h3><ol><li>Ga naar <strong>Meldingen</strong> in de sectie Leden</li><li>Klik op <strong>Nieuwe melding</strong></li><li>Selecteer het betreffende stuk en beschrijf het probleem</li><li>De muziekcommissie zal het bekijken en oplossen</li></ol><p>Je kunt de status van je meldingen volgen in het Meldingenoverzicht.</p>"
+      },
+      "rehearsals": {
+        "title": "Repetities",
+        "content": "<p>De pagina <strong>Repetities</strong> toont het repetitieschema voor al je orkesten.</p><h3>Functies</h3><ul><li><strong>Kalenderweergave</strong> — Zie aankomende en afgelopen repetities</li><li><strong>Details</strong> — Klik op een repetitie voor tijd, locatie en notities</li><li><strong>Aanwezigheid</strong> — Als gekoppeld aan Spond, wordt aanwezigheid automatisch gesynchroniseerd</li></ul><p>Reguliere repetities worden automatisch gegenereerd. Extra repetities en annuleringen zijn duidelijk gemarkeerd.</p>"
+      },
+      "tools": {
+        "title": "Muziektools",
+        "content": "<p>De pagina <strong>Tools</strong> biedt handige hulpmiddelen voor muzikanten:</p><h3>Beschikbare tools</h3><ul><li><strong>Metronoom</strong> — Oefen met instelbaar tempo en maatsoort</li><li><strong>Stemapparaat</strong> — Stem je instrument met de microfoon van je apparaat</li></ul><p>Deze tools werken offline en zijn ontworpen om je effectief te helpen oefenen.</p>"
+      },
+      "profile": {
+        "title": "Profielinstellingen",
+        "content": "<p>Beheer je account in <strong>Profiel</strong>:</p><h3>Wat je kunt wijzigen</h3><ul><li><strong>Persoonlijke info</strong> — Update je naam en e-mail</li><li><strong>Wachtwoord</strong> — Wijzig je wachtwoord</li><li><strong>Twee-factor auth</strong> — Schakel MFA in voor extra beveiliging</li><li><strong>Taal</strong> — Wissel tussen Nederlands, Engels en Duits</li><li><strong>Thema</strong> — Kies licht, donker of systeemthema</li><li><strong>Notificaties</strong> — Configureer hoe je op de hoogte gehouden wilt worden</li></ul>"
+      },
+      "uploadMusic": {
+        "title": "Muziek uploaden",
+        "content": "<p>Als lid van de muziekcommissie kun je nieuwe bladmuziek uploaden.</p><h3>Hoe te uploaden</h3><ol><li>Ga naar <strong>Upload</strong> in de sectie Bibliotheek</li><li>Sleep PDF-bestanden of klik om te bladeren</li><li>Bestanden worden automatisch geparsed: <code>Titel_Arrangeur_Instrument_Toonsoort_Groep_Sleutel.pdf</code></li><li>Bekijk en pas metadata aan voordat je bevestigt</li></ol><h3>Cloud import</h3><p>Je kunt ook direct importeren vanuit OneDrive of Google Drive zonder eerst te downloaden.</p><h3>Tips</h3><ul><li>Gebruik consistente naamgeving voor automatische parsing</li><li>Koppel stukken aan bestaande titels voor betere organisatie</li><li>Voeg MP3-opnames toe als oefeningsreferentie</li></ul>"
+      },
+      "manageLists": {
+        "title": "Muzieklijsten beheren",
+        "content": "<p>Maak en beheer concertprogramma's en setlists.</p><h3>Een lijst maken</h3><ol><li>Ga naar <strong>Lijsten</strong> in de sectie Bibliotheek</li><li>Klik op <strong>Nieuwe lijst</strong></li><li>Voeg een naam, orkest, datum en optionele beschrijving toe</li><li>Voeg stukken toe door in de bibliotheek te zoeken</li></ol><h3>Functies</h3><ul><li><strong>Slepen en neerzetten</strong> — Herorden stukken eenvoudig</li><li><strong>Tijdsberekening</strong> — Totale duur wordt automatisch berekend</li><li><strong>Commissienotities</strong> — Voeg interne notities toe (alleen zichtbaar voor commissie)</li><li><strong>Exporteren</strong> — Genereer PDF-programma's voor print</li></ul>"
+      },
+      "manageMembers": {
+        "title": "Leden beheren",
+        "content": "<p>Als beheerder kun je alle ledenaccounts beheren.</p><h3>Ledenbeheer</h3><ul><li><strong>Leden toevoegen</strong> — Maak handmatig nieuwe accounts aan of nodig uit via e-mail</li><li><strong>Profielen bewerken</strong> — Update info, instrumenten en orkesttoewijzingen</li><li><strong>Rollen toewijzen</strong> — Stel machtigingen in (lid, dirigent, muziekcommissie, beheerder)</li><li><strong>Deactiveren</strong> — Schakel accounts uit zonder gegevens te verwijderen</li></ul><h3>Entra ID sync</h3><p>Als gekoppeld aan Microsoft Entra ID, kunnen leden automatisch worden gesynchroniseerd vanuit je organisatie-directory.</p><h3>Bulk import</h3><p>Importeer meerdere leden tegelijk met CSV-upload.</p>"
+      }
+    }
+  },
+  "onboarding": {
+    "menuItem": "Start rondleiding",
+    "welcomeTitle": "Welkom bij de app!",
+    "welcomeDescription": "Laat ons je een korte rondleiding geven van de belangrijkste functies. Het duurt maar een minuut.",
+    "startTour": "Start rondleiding",
+    "skip": "Sla over",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "finish": "Voltooien",
+    "goToPage": "Ga naar deze pagina",
+    "admin": {
+      "welcome": {
+        "title": "Welkom, beheerder!",
+        "description": "Als beheerder heb je volledige controle over de applicatie. Laten we de belangrijkste onderdelen doornemen."
+      },
+      "orchestras": {
+        "title": "Orkesten",
+        "description": "Begin met het instellen van je orkesten. Elk orkest kan eigen leden, repertoire en repetitieschema hebben."
+      },
+      "members": {
+        "title": "Ledenbeheer",
+        "description": "Voeg leden toe aan het systeem. Je kunt handmatig accounts aanmaken, uitnodigen via e-mail, of synchroniseren met Microsoft Entra ID."
+      },
+      "settings": {
+        "title": "Instellingen",
+        "description": "Configureer je organisatie: branding, integraties (Spond, Microsoft SSO), e-mailinstellingen en meer."
+      },
+      "rehearsals": {
+        "title": "Repetities",
+        "description": "Stel standaard repetitiedagen in voor elk orkest. Individuele repetities worden automatisch gegenereerd."
+      },
+      "done": {
+        "title": "Je bent klaar!",
+        "description": "Je kent nu de basis. Verken de andere secties wanneer je er klaar voor bent. De Handleiding bevat meer gedetailleerde informatie."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Welkom, muziekcommissie!",
+        "description": "Als lid van de muziekcommissie beheer je de bladmuziekbibliotheek. Laten we kijken wat je kunt doen."
+      },
+      "upload": {
+        "title": "Muziek uploaden",
+        "description": "Upload hier PDF-bladmuziek. Bestanden worden automatisch geparsed als je de naamgeving gebruikt: Titel_Arrangeur_Instrument_Toonsoort.pdf"
+      },
+      "lists": {
+        "title": "Muzieklijsten",
+        "description": "Maak concertprogramma's en repertoirelijsten. Voeg stukken toe, herorden ze en bereken de totale duur."
+      },
+      "pieces": {
+        "title": "Muziekstukken",
+        "description": "Blader door alle geüploade bladmuziek. Filter op instrument, orkest of zoek op titel."
+      },
+      "titles": {
+        "title": "Titels",
+        "description": "Beheer de titeldatabase met componist, arrangeur, genre en duurinformatie. Koppel met MusicaInfo.net voor automatische metadata."
+      },
+      "instruments": {
+        "title": "Instrumenten",
+        "description": "Configureer instrumenten en hun aliassen. Dit helpt bij automatische matching bij het uploaden van muziek."
+      },
+      "done": {
+        "title": "Klaar om te beginnen!",
+        "description": "Je bent klaar om de muziekbibliotheek te beheren. Bekijk de Handleiding voor gedetailleerde instructies."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Welkom, dirigent!",
+        "description": "Als dirigent kun je repetities beheren en het repertoire bekijken. Laten we een snelle blik werpen."
+      },
+      "rehearsals": {
+        "title": "Repetities",
+        "description": "Bekijk en beheer het repetitieschema. Je kunt extra repetities toevoegen, sessies annuleren en aanwezigheid bekijken."
+      },
+      "pieces": {
+        "title": "Bladmuziek bekijken",
+        "description": "Bekijk alle beschikbare bladmuziek voor je orkesten. Bekijk PDF's en beluister opnames."
+      },
+      "mymusic": {
+        "title": "Mijn Muziek",
+        "description": "Je persoonlijke muziekpagina toont stukken toegewezen aan jouw instrument(en). Download ze om te oefenen."
+      },
+      "done": {
+        "title": "Helemaal klaar!",
+        "description": "Je bent klaar om te beginnen. De Handleiding heeft meer informatie als je die nodig hebt."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Welkom!",
+        "description": "Deze app helpt je bij het toegang krijgen tot je bladmuziek en op de hoogte blijven van repetities. Laten we je rondleiden."
+      },
+      "mymusic": {
+        "title": "Mijn Muziek",
+        "description": "Vind hier al je bladmuziek, gefilterd op je instrument. Download PDF's of bekijk ze in de browser."
+      },
+      "rehearsals": {
+        "title": "Repetities",
+        "description": "Bekijk het repetitieschema voor je orkest. Extra repetities en annuleringen zijn duidelijk gemarkeerd."
+      },
+      "issues": {
+        "title": "Problemen melden",
+        "description": "Een fout gevonden in je bladmuziek? Meld het hier en de muziekcommissie zal het oplossen."
+      },
+      "profile": {
+        "title": "Je Profiel",
+        "description": "Update je persoonlijke gegevens, wijzig je wachtwoord en pas notificatievoorkeuren aan."
+      },
+      "done": {
+        "title": "Dat was het!",
+        "description": "Je bent helemaal klaar. Als je later hulp nodig hebt, bekijk de Handleiding of neem contact op met de muziekcommissie."
+      }
+    }
   }
 }

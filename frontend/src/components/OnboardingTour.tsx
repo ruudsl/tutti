@@ -2,46 +2,47 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { Icon, type IconName } from './Icon';
 
 interface TourStep {
   titleKey: string;
   descriptionKey: string;
-  icon: string;
+  icon: IconName;
   navigateTo?: string;
 }
 
 const TOUR_STEPS: Record<string, TourStep[]> = {
   admin: [
-    { titleKey: 'onboarding.admin.welcome.title', descriptionKey: 'onboarding.admin.welcome.description', icon: '👋' },
-    { titleKey: 'onboarding.admin.orchestras.title', descriptionKey: 'onboarding.admin.orchestras.description', icon: '🎺', navigateTo: '/orchestras' },
-    { titleKey: 'onboarding.admin.members.title', descriptionKey: 'onboarding.admin.members.description', icon: '👥', navigateTo: '/users' },
-    { titleKey: 'onboarding.admin.settings.title', descriptionKey: 'onboarding.admin.settings.description', icon: '⚙️', navigateTo: '/settings' },
-    { titleKey: 'onboarding.admin.rehearsals.title', descriptionKey: 'onboarding.admin.rehearsals.description', icon: '📅', navigateTo: '/rehearsals' },
-    { titleKey: 'onboarding.admin.done.title', descriptionKey: 'onboarding.admin.done.description', icon: '🎉' },
+    { titleKey: 'onboarding.admin.welcome.title', descriptionKey: 'onboarding.admin.welcome.description', icon: 'hand' },
+    { titleKey: 'onboarding.admin.orchestras.title', descriptionKey: 'onboarding.admin.orchestras.description', icon: 'music2', navigateTo: '/orchestras' },
+    { titleKey: 'onboarding.admin.members.title', descriptionKey: 'onboarding.admin.members.description', icon: 'users', navigateTo: '/users' },
+    { titleKey: 'onboarding.admin.settings.title', descriptionKey: 'onboarding.admin.settings.description', icon: 'settings', navigateTo: '/settings' },
+    { titleKey: 'onboarding.admin.rehearsals.title', descriptionKey: 'onboarding.admin.rehearsals.description', icon: 'calendar', navigateTo: '/rehearsals' },
+    { titleKey: 'onboarding.admin.done.title', descriptionKey: 'onboarding.admin.done.description', icon: 'partyPopper' },
   ],
   music_committee: [
-    { titleKey: 'onboarding.mc.welcome.title', descriptionKey: 'onboarding.mc.welcome.description', icon: '👋' },
-    { titleKey: 'onboarding.mc.upload.title', descriptionKey: 'onboarding.mc.upload.description', icon: '📤', navigateTo: '/upload' },
-    { titleKey: 'onboarding.mc.lists.title', descriptionKey: 'onboarding.mc.lists.description', icon: '📋', navigateTo: '/lists' },
-    { titleKey: 'onboarding.mc.pieces.title', descriptionKey: 'onboarding.mc.pieces.description', icon: '🎵', navigateTo: '/music-pieces' },
-    { titleKey: 'onboarding.mc.titles.title', descriptionKey: 'onboarding.mc.titles.description', icon: '🎼', navigateTo: '/titles' },
-    { titleKey: 'onboarding.mc.instruments.title', descriptionKey: 'onboarding.mc.instruments.description', icon: '🎷', navigateTo: '/instruments' },
-    { titleKey: 'onboarding.mc.done.title', descriptionKey: 'onboarding.mc.done.description', icon: '🎉' },
+    { titleKey: 'onboarding.mc.welcome.title', descriptionKey: 'onboarding.mc.welcome.description', icon: 'hand' },
+    { titleKey: 'onboarding.mc.upload.title', descriptionKey: 'onboarding.mc.upload.description', icon: 'upload', navigateTo: '/upload' },
+    { titleKey: 'onboarding.mc.lists.title', descriptionKey: 'onboarding.mc.lists.description', icon: 'listMusic', navigateTo: '/lists' },
+    { titleKey: 'onboarding.mc.pieces.title', descriptionKey: 'onboarding.mc.pieces.description', icon: 'music', navigateTo: '/music-pieces' },
+    { titleKey: 'onboarding.mc.titles.title', descriptionKey: 'onboarding.mc.titles.description', icon: 'fileText', navigateTo: '/titles' },
+    { titleKey: 'onboarding.mc.instruments.title', descriptionKey: 'onboarding.mc.instruments.description', icon: 'music2', navigateTo: '/instruments' },
+    { titleKey: 'onboarding.mc.done.title', descriptionKey: 'onboarding.mc.done.description', icon: 'partyPopper' },
   ],
   conductor: [
-    { titleKey: 'onboarding.conductor.welcome.title', descriptionKey: 'onboarding.conductor.welcome.description', icon: '👋' },
-    { titleKey: 'onboarding.conductor.rehearsals.title', descriptionKey: 'onboarding.conductor.rehearsals.description', icon: '📅', navigateTo: '/rehearsals' },
-    { titleKey: 'onboarding.conductor.pieces.title', descriptionKey: 'onboarding.conductor.pieces.description', icon: '🎵' },
-    { titleKey: 'onboarding.conductor.mymusic.title', descriptionKey: 'onboarding.conductor.mymusic.description', icon: '🎶', navigateTo: '/my-music' },
-    { titleKey: 'onboarding.conductor.done.title', descriptionKey: 'onboarding.conductor.done.description', icon: '🎉' },
+    { titleKey: 'onboarding.conductor.welcome.title', descriptionKey: 'onboarding.conductor.welcome.description', icon: 'hand' },
+    { titleKey: 'onboarding.conductor.rehearsals.title', descriptionKey: 'onboarding.conductor.rehearsals.description', icon: 'calendar', navigateTo: '/rehearsals' },
+    { titleKey: 'onboarding.conductor.pieces.title', descriptionKey: 'onboarding.conductor.pieces.description', icon: 'music' },
+    { titleKey: 'onboarding.conductor.mymusic.title', descriptionKey: 'onboarding.conductor.mymusic.description', icon: 'music', navigateTo: '/my-music' },
+    { titleKey: 'onboarding.conductor.done.title', descriptionKey: 'onboarding.conductor.done.description', icon: 'partyPopper' },
   ],
   member: [
-    { titleKey: 'onboarding.member.welcome.title', descriptionKey: 'onboarding.member.welcome.description', icon: '👋' },
-    { titleKey: 'onboarding.member.mymusic.title', descriptionKey: 'onboarding.member.mymusic.description', icon: '🎵', navigateTo: '/my-music' },
-    { titleKey: 'onboarding.member.rehearsals.title', descriptionKey: 'onboarding.member.rehearsals.description', icon: '📅', navigateTo: '/rehearsals' },
-    { titleKey: 'onboarding.member.issues.title', descriptionKey: 'onboarding.member.issues.description', icon: '📝', navigateTo: '/issues' },
-    { titleKey: 'onboarding.member.profile.title', descriptionKey: 'onboarding.member.profile.description', icon: '👤', navigateTo: '/profile' },
-    { titleKey: 'onboarding.member.done.title', descriptionKey: 'onboarding.member.done.description', icon: '🎉' },
+    { titleKey: 'onboarding.member.welcome.title', descriptionKey: 'onboarding.member.welcome.description', icon: 'hand' },
+    { titleKey: 'onboarding.member.mymusic.title', descriptionKey: 'onboarding.member.mymusic.description', icon: 'music', navigateTo: '/my-music' },
+    { titleKey: 'onboarding.member.rehearsals.title', descriptionKey: 'onboarding.member.rehearsals.description', icon: 'calendar', navigateTo: '/rehearsals' },
+    { titleKey: 'onboarding.member.issues.title', descriptionKey: 'onboarding.member.issues.description', icon: 'pencil', navigateTo: '/issues' },
+    { titleKey: 'onboarding.member.profile.title', descriptionKey: 'onboarding.member.profile.description', icon: 'user', navigateTo: '/profile' },
+    { titleKey: 'onboarding.member.done.title', descriptionKey: 'onboarding.member.done.description', icon: 'partyPopper' },
   ],
 };
 
@@ -68,7 +69,9 @@ function WelcomeDialog({ onStart, onSkip }: { onStart: () => void; onSkip: () =>
   return (
     <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-welcome-title">
       <div className="onboarding-card onboarding-welcome">
-        <div className="onboarding-icon">👋</div>
+        <div className="onboarding-icon">
+          <Icon name="hand" size={40} />
+        </div>
         <h2 id="onboarding-welcome-title">{t('onboarding.welcomeTitle')}</h2>
         <p>{t('onboarding.welcomeDescription')}</p>
         <div className="onboarding-actions">
@@ -110,7 +113,7 @@ function TourStepView({
     <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-step-title">
       <div className="onboarding-card">
         <button className="onboarding-close" onClick={onSkip} aria-label={t('common.close')} type="button">
-          &times;
+          <Icon name="close" size={20} />
         </button>
         <div className="onboarding-progress">
           {Array.from({ length: totalSteps }, (_, i) => (
@@ -120,7 +123,9 @@ function TourStepView({
             />
           ))}
         </div>
-        <div className="onboarding-icon">{step.icon}</div>
+        <div className="onboarding-icon">
+          <Icon name={step.icon} size={40} />
+        </div>
         <h2 id="onboarding-step-title">{t(step.titleKey)}</h2>
         <p>{t(step.descriptionKey)}</p>
         {step.navigateTo && onNavigate && (

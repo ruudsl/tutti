@@ -2886,5 +2886,171 @@
     "removed": "Google Drive settings removed.",
     "requiredFields": "Client ID and API Key are required.",
     "confirmRemove": "Are you sure you want to remove these settings?"
+  },
+  "userGuide": {
+    "title": "User Guide",
+    "subtitle": "Learn how to use the music management application",
+    "searchPlaceholder": "Search the guide...",
+    "navigation": "Guide navigation",
+    "noResults": "No sections found for your search.",
+    "needHelp": "Need more help?",
+    "contactSupport": "Contact support",
+    "sections": {
+      "gettingStarted": {
+        "title": "Getting Started",
+        "content": "<p>Welcome to the music management application! This guide will help you get started.</p><h3>First steps</h3><ul><li><strong>Dashboard</strong> — Your personal overview with upcoming rehearsals and recent music</li><li><strong>My Music</strong> — View and download your assigned sheet music</li><li><strong>Rehearsals</strong> — See the rehearsal schedule and register attendance</li></ul><p>Use the sidebar navigation to explore different features. On mobile, tap the menu icon at the bottom.</p>"
+      },
+      "myMusic": {
+        "title": "My Music",
+        "content": "<p>The <strong>My Music</strong> page shows all sheet music assigned to your instrument(s).</p><h3>Features</h3><ul><li><strong>Filter</strong> — Filter by orchestra or search by title</li><li><strong>Download</strong> — Click the download button to save PDFs</li><li><strong>Preview</strong> — Click a piece to preview it in the browser</li><li><strong>Audio</strong> — Some pieces include MP3 recordings you can listen to</li></ul><p>Sheet music is automatically assigned based on your instrument profile. Contact the music committee if something is missing.</p>"
+      },
+      "downloadMusic": {
+        "title": "Downloading Music",
+        "content": "<p>You can download sheet music in several ways:</p><h3>Individual download</h3><p>Click the download icon next to any piece to save the PDF.</p><h3>Bulk download</h3><p>Select multiple pieces using the checkboxes, then use the \"Download selected\" button.</p><h3>Offline access</h3><p>Downloaded PDFs are also cached for offline use. Visit the My Music page while online to pre-load your music.</p>"
+      },
+      "reportIssues": {
+        "title": "Reporting Issues",
+        "content": "<p>Found an error in your sheet music? Missing pages or wrong notes?</p><h3>How to report</h3><ol><li>Go to <strong>Issue Center</strong> in the Members section</li><li>Click <strong>New Issue</strong></li><li>Select the affected piece and describe the problem</li><li>The music committee will review and fix it</li></ol><p>You can track the status of your reports in the Issue Center.</p>"
+      },
+      "rehearsals": {
+        "title": "Rehearsals",
+        "content": "<p>The <strong>Rehearsals</strong> page shows the rehearsal schedule for all your orchestras.</p><h3>Features</h3><ul><li><strong>Calendar view</strong> — See upcoming and past rehearsals</li><li><strong>Details</strong> — Click a rehearsal for time, location, and notes</li><li><strong>Attendance</strong> — If connected to Spond, attendance is synced automatically</li></ul><p>Regular rehearsals are generated automatically. Extra rehearsals and cancellations are clearly marked.</p>"
+      },
+      "tools": {
+        "title": "Music Tools",
+        "content": "<p>The <strong>Tools</strong> page provides helpful utilities for musicians:</p><h3>Available tools</h3><ul><li><strong>Metronome</strong> — Practice with adjustable tempo and time signature</li><li><strong>Tuner</strong> — Tune your instrument using your device's microphone</li></ul><p>These tools work offline and are designed to help you practice effectively.</p>"
+      },
+      "profile": {
+        "title": "Profile Settings",
+        "content": "<p>Manage your account in <strong>Profile</strong>:</p><h3>What you can change</h3><ul><li><strong>Personal info</strong> — Update your name and email</li><li><strong>Password</strong> — Change your password</li><li><strong>Two-factor auth</strong> — Enable MFA for extra security</li><li><strong>Language</strong> — Switch between Dutch, English, and German</li><li><strong>Theme</strong> — Choose light, dark, or system theme</li><li><strong>Notifications</strong> — Configure how you want to be notified</li></ul>"
+      },
+      "uploadMusic": {
+        "title": "Uploading Music",
+        "content": "<p>As a music committee member, you can upload new sheet music.</p><h3>How to upload</h3><ol><li>Go to <strong>Upload</strong> in the Library section</li><li>Drag and drop PDF files, or click to browse</li><li>Files are automatically parsed: <code>Title_Arranger_Instrument_Key_Group_Clef.pdf</code></li><li>Review and adjust metadata before confirming</li></ol><h3>Cloud import</h3><p>You can also import directly from OneDrive or Google Drive without downloading first.</p><h3>Tips</h3><ul><li>Use consistent naming for automatic parsing</li><li>Link pieces to existing titles for better organization</li><li>Add MP3 recordings for practice reference</li></ul>"
+      },
+      "manageLists": {
+        "title": "Managing Music Lists",
+        "content": "<p>Create and manage concert programs and setlists.</p><h3>Creating a list</h3><ol><li>Go to <strong>Lists</strong> in the Library section</li><li>Click <strong>New List</strong></li><li>Add a name, orchestra, date, and optional description</li><li>Add pieces by searching the library</li></ol><h3>Features</h3><ul><li><strong>Drag and drop</strong> — Reorder pieces easily</li><li><strong>Time calculation</strong> — Total duration is calculated automatically</li><li><strong>Committee notes</strong> — Add internal notes (only visible to committee)</li><li><strong>Export</strong> — Generate PDF programs for print</li></ul>"
+      },
+      "manageMembers": {
+        "title": "Managing Members",
+        "content": "<p>As an administrator, you can manage all member accounts.</p><h3>Member management</h3><ul><li><strong>Add members</strong> — Create new accounts manually or invite via email</li><li><strong>Edit profiles</strong> — Update info, instruments, and orchestra assignments</li><li><strong>Assign roles</strong> — Set permissions (member, conductor, music committee, admin)</li><li><strong>Deactivate</strong> — Disable accounts without deleting data</li></ul><h3>Entra ID sync</h3><p>If connected to Microsoft Entra ID, members can be synced automatically from your organization directory.</p><h3>Bulk import</h3><p>Import multiple members at once using CSV upload.</p>"
+      }
+    }
+  },
+  "onboarding": {
+    "menuItem": "Start Tour",
+    "welcomeTitle": "Welcome to the app!",
+    "welcomeDescription": "Let us give you a quick tour of the main features. It only takes a minute.",
+    "startTour": "Start tour",
+    "skip": "Skip for now",
+    "previous": "Previous",
+    "next": "Next",
+    "finish": "Finish",
+    "goToPage": "Go to this page",
+    "admin": {
+      "welcome": {
+        "title": "Welcome, Administrator!",
+        "description": "As an admin, you have full control over the application. Let's walk through the key areas."
+      },
+      "orchestras": {
+        "title": "Orchestras",
+        "description": "Start by setting up your orchestras. Each orchestra can have its own members, repertoire, and rehearsal schedule."
+      },
+      "members": {
+        "title": "Member Management",
+        "description": "Add members to the system. You can create accounts manually, invite via email, or sync with Microsoft Entra ID."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Configure your organization: branding, integrations (Spond, Microsoft SSO), email settings, and more."
+      },
+      "rehearsals": {
+        "title": "Rehearsals",
+        "description": "Set up default rehearsal days for each orchestra. Individual rehearsals will be generated automatically."
+      },
+      "done": {
+        "title": "You're all set!",
+        "description": "You now know the basics. Explore the other sections when you're ready. The User Guide has more detailed information."
+      }
+    },
+    "mc": {
+      "welcome": {
+        "title": "Welcome, Music Committee!",
+        "description": "As part of the music committee, you manage the sheet music library. Let's see what you can do."
+      },
+      "upload": {
+        "title": "Upload Music",
+        "description": "Upload PDF sheet music here. Files are parsed automatically if you use the naming convention: Title_Arranger_Instrument_Key.pdf"
+      },
+      "lists": {
+        "title": "Music Lists",
+        "description": "Create concert programs and repertoire lists. Add pieces, reorder them, and calculate total duration."
+      },
+      "pieces": {
+        "title": "Music Pieces",
+        "description": "Browse all uploaded sheet music. Filter by instrument, orchestra, or search by title."
+      },
+      "titles": {
+        "title": "Titles",
+        "description": "Manage the title database with composer, arranger, genre, and duration information. Link to MusicaInfo.net for automatic metadata."
+      },
+      "instruments": {
+        "title": "Instruments",
+        "description": "Configure instruments and their aliases. This helps with automatic matching when uploading music."
+      },
+      "done": {
+        "title": "Ready to go!",
+        "description": "You're set up to manage the music library. Check the User Guide for detailed instructions."
+      }
+    },
+    "conductor": {
+      "welcome": {
+        "title": "Welcome, Conductor!",
+        "description": "As a conductor, you can manage rehearsals and view the repertoire. Let's take a quick look."
+      },
+      "rehearsals": {
+        "title": "Rehearsals",
+        "description": "View and manage the rehearsal schedule. You can add extra rehearsals, cancel sessions, and see attendance."
+      },
+      "pieces": {
+        "title": "Browse Music",
+        "description": "View all available sheet music for your orchestras. Preview PDFs and listen to recordings."
+      },
+      "mymusic": {
+        "title": "My Music",
+        "description": "Your personal music page shows pieces assigned to your instrument(s). Download them for practice."
+      },
+      "done": {
+        "title": "All done!",
+        "description": "You're ready to start. The User Guide has more information if you need it."
+      }
+    },
+    "member": {
+      "welcome": {
+        "title": "Welcome!",
+        "description": "This app helps you access your sheet music and stay updated on rehearsals. Let's show you around."
+      },
+      "mymusic": {
+        "title": "My Music",
+        "description": "Find all your sheet music here, filtered by your instrument. Download PDFs or preview them in the browser."
+      },
+      "rehearsals": {
+        "title": "Rehearsals",
+        "description": "See the rehearsal schedule for your orchestra. Extra rehearsals and cancellations are clearly marked."
+      },
+      "issues": {
+        "title": "Report Issues",
+        "description": "Found a mistake in your sheet music? Report it here and the music committee will fix it."
+      },
+      "profile": {
+        "title": "Your Profile",
+        "description": "Update your personal info, change your password, and adjust notification preferences."
+      },
+      "done": {
+        "title": "That's it!",
+        "description": "You're all set. If you need help later, check the User Guide or contact the music committee."
+      }
+    }
   }
 }
