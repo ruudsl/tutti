@@ -53,6 +53,10 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
         left: rect.left,
         width: rect.width,
         zIndex: 9999,
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.5rem',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       });
     }
   }, [isOpen]);
@@ -116,9 +120,9 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
         </button>
 
         {isOpen && createPortal(
-          <div ref={dropdownRef} className="bg-base-100 border border-base-300 rounded-lg shadow-lg" style={dropdownStyle}>
+          <div ref={dropdownRef} style={dropdownStyle}>
             {/* Filter input */}
-            <div className="p-2 border-b border-base-300">
+            <div style={{ padding: '0.5rem', borderBottom: '1px solid #e5e7eb' }}>
               <input
                 type="text"
                 className="input input-sm input-bordered w-full"
@@ -126,28 +130,40 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 autoFocus
+                style={{ backgroundColor: '#fff' }}
               />
             </div>
 
             {/* Genre list */}
-            <ul className="max-h-60 overflow-y-auto p-1">
+            <ul style={{ maxHeight: '15rem', overflowY: 'auto', padding: '0.25rem', margin: 0, listStyle: 'none', backgroundColor: '#fff' }}>
               {isLoading ? (
-                <li className="px-4 py-2 text-center">
+                <li style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
                   <span className="loading loading-spinner loading-sm" />
                 </li>
               ) : filteredGenres.length === 0 ? (
-                <li className="px-4 py-2 text-base-content/60">{t('metadata.noResults')}</li>
+                <li style={{ padding: '0.5rem 1rem', color: '#6b7280' }}>{t('metadata.noResults')}</li>
               ) : (
                 filteredGenres.map((genre) => {
                   const isSelected = value.includes(genre.uri);
                   return (
                     <li key={genre.uri}>
-                      <label className="flex items-center gap-2 px-3 py-2 hover:bg-base-200 rounded cursor-pointer">
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '0.25rem',
+                        cursor: 'pointer',
+                        backgroundColor: '#fff',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                      >
                         <input
                           type="checkbox"
-                          className="checkbox checkbox-sm"
                           checked={isSelected}
                           onChange={() => handleToggle(genre.uri)}
+                          style={{ width: '1rem', height: '1rem' }}
                         />
                         <span>{genre.labels[lang] || genre.label}</span>
                       </label>
@@ -158,7 +174,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
             </ul>
 
             {/* Actions */}
-            <div className="p-2 border-t border-base-300 flex justify-end gap-2">
+            <div style={{ padding: '0.5rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
