@@ -1,40 +1,35 @@
 # Tutti Roadmap
 
-Dit document beschrijft de geplande ontwikkeling van Tutti, gefinancierd door een NLnet-subsidie van EUR 50.000 voor 12 maanden.
+Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 maanden.
 
 ---
 
 ## Overzicht Werkpakketten
 
-| WP | Titel | Uren | Budget (EUR) | Status |
-|----|-------|------|--------------|--------|
-| 1 | Onafhankelijke security audit | extern | 5.000 | ⬜ Gepland |
-| 2 | Security audit remediation | 65h | 5.525 | ⬜ Gepland |
-| 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | 3.825 | ⬜ Gepland |
-| 4 | Docker packaging + self-hosting guide | 50h | 4.250 | ⬜ Gepland |
-| 5 | Open music metadata (MusicXML / JSKOS) | 75h | 6.375 | ⬜ Gepland |
-| 6 | Privacy-by-design review + GDPR hardening | 45h | 3.825 | ⬜ Gepland |
-| 7 | Community docs, onboarding, multilingual README | 45h | 3.825 | ⬜ Gepland |
-| 8 | CI/CD hardening + test coverage >80% | 50h | 4.250 | ⬜ Gepland |
-| 9 | Community outreach (KNMO, federaties) | 25h | 2.125 | ⬜ Gepland |
-| 10 | PWA hardening + mobile UX | 55h | 4.675 | 🔄 Deels |
-| 11 | Pilot deployments (2-3 verenigingen) | 45h | 3.825 | ⬜ Gepland |
-| — | Contingency (~5%) | — | 2.500 | — |
-| **Totaal** | | **500h + audit** | **50.000** | |
-
-Uurtarief: EUR 85/uur (cost-recovery)
+| WP | Titel | Uren | Status |
+|----|-------|------|--------|
+| 1 | Onafhankelijke security audit | extern | ⬜ Gepland |
+| 2 | Security audit remediation | 65h | ⬜ Gepland |
+| 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ⬜ Gepland |
+| 4 | Docker packaging + self-hosting guide | 50h | ⬜ Gepland |
+| 5 | Open music metadata (MusicXML / JSKOS) | 75h | ⬜ Gepland |
+| 6 | Privacy-by-design review + GDPR hardening | 45h | ⬜ Gepland |
+| 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
+| 8 | CI/CD hardening + test coverage >80% | 50h | ⬜ Gepland |
+| 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
+| 10 | PWA hardening + mobile UX | 55h | 🔄 Deels |
+| 11 | Pilot deployments (2-3 verenigingen) | 45h | ⬜ Gepland |
+| **Totaal** | | **500h + audit** |
 
 ---
 
 ## WP1: Onafhankelijke Security Audit
 
-**Budget:** EUR 5.000 (externe contractor)  
 **Doorlooptijd:** 2-3 weken  
 **Afhankelijkheden:** Geen
 
 ### Scope
 - Volledige security audit door onafhankelijke derde partij
-- NLnet's eigen security audit partners kunnen worden gebruikt
 - Focus op multi-tenant data isolatie, authenticatie, file uploads
 
 ### Deliverables
@@ -46,7 +41,6 @@ Uurtarief: EUR 85/uur (cost-recovery)
 
 ## WP2: Security Audit Remediation
 
-**Budget:** EUR 5.525 (65 uur)  
 **Doorlooptijd:** 3-4 weken  
 **Afhankelijkheden:** WP1
 
@@ -67,7 +61,6 @@ Remediatie van alle bevindingen uit WP1, typisch:
 
 ## WP3: WCAG 2.1 AA Accessibility Audit + Fixes
 
-**Budget:** EUR 3.825 (45 uur)  
 **Doorlooptijd:** 3 weken  
 **Afhankelijkheden:** Geen
 
@@ -89,7 +82,6 @@ Formele audit van WCAG 2.1 AA compliance:
 
 ## WP4: Docker Packaging + Self-Hosting Guide
 
-**Budget:** EUR 4.250 (50 uur)  
 **Doorlooptijd:** 3 weken  
 **Afhankelijkheden:** Geen
 
@@ -111,7 +103,6 @@ Formele audit van WCAG 2.1 AA compliance:
 
 ## WP5: Open Music Metadata (MusicXML / JSKOS)
 
-**Budget:** EUR 6.375 (75 uur)  
 **Doorlooptijd:** 4-5 weken  
 **Afhankelijkheden:** Geen
 
@@ -132,7 +123,6 @@ Integratie van open muziek metadata standaarden:
 
 ## WP6: Privacy-by-Design Review + GDPR Hardening
 
-**Budget:** EUR 3.825 (45 uur)  
 **Doorlooptijd:** 3 weken  
 **Afhankelijkheden:** Geen
 
@@ -156,7 +146,6 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ## WP7: Community Docs, Onboarding, Multilingual README
 
-**Budget:** EUR 3.825 (45 uur)  
 **Doorlooptijd:** 3 weken  
 **Afhankelijkheden:** WP4 (voor deployment docs)
 
@@ -179,7 +168,6 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ## WP8: CI/CD Hardening + Test Coverage >80%
 
-**Budget:** EUR 4.250 (50 uur)  
 **Doorlooptijd:** 3-4 weken  
 **Afhankelijkheden:** Geen
 
@@ -207,7 +195,6 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ## WP9: Community Outreach (KNMO, Federaties)
 
-**Budget:** EUR 2.125 (25 uur)  
 **Doorlooptijd:** Doorlopend  
 **Afhankelijkheden:** WP7 (docs), WP11 (pilots)
 
@@ -227,7 +214,6 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ## WP10: PWA Hardening + Mobile UX
 
-**Budget:** EUR 4.675 (55 uur)  
 **Doorlooptijd:** 4 weken  
 **Afhankelijkheden:** Geen
 
@@ -260,7 +246,6 @@ Fase 1-4 zijn geïmplementeerd:
 
 ## WP11: Pilot Deployments (2-3 Verenigingen)
 
-**Budget:** EUR 3.825 (45 uur)  
 **Doorlooptijd:** 6-8 weken  
 **Afhankelijkheden:** WP4 (Docker), WP7 (docs)
 
