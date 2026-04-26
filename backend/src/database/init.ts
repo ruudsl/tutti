@@ -1,6 +1,7 @@
 import db from './connection';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { instrumentSeeds, genreSeeds, type VocabularySeed } from './seeds/vocabularySeeds';
 
 // Standaard genres voor muziekstukken
 const defaultGenres = [
@@ -918,6 +919,41 @@ async function initializeDatabase() {
         }
     } catch (e) {
         // Table might not exist yet
+    }
+
+    // WP5: Seed vocabulary cache for JSKOS concepts (instruments, genres)
+    try {
+        const existingVocab = db.prepare('SELECT COUNT(*) as count FROM vocabulary_cache').get() as { count: number };
+
+        if (existingVocab.count === 0) {
+            console.log('Seeding JSKOS vocabulary cache...');
+            const insertVocab = db.prepare(`
+                INSERT OR IGNORE INTO vocabulary_cache
+                (uri, vocabulary_type, pref_label, alt_labels, broader, narrower, notation, fetched_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            `);
+
+            const allSeeds: VocabularySeed[] = [...instrumentSeeds, ...genreSeeds];
+            let seeded = 0;
+
+            for (const seed of allSeeds) {
+                insertVocab.run(
+                    seed.uri,
+                    seed.vocabulary_type,
+                    JSON.stringify(seed.pref_label),
+                    seed.alt_labels ? JSON.stringify(seed.alt_labels) : null,
+                    seed.broader ? JSON.stringify(seed.broader) : null,
+                    seed.narrower ? JSON.stringify(seed.narrower) : null,
+                    seed.notation || null
+                );
+                seeded++;
+            }
+
+            console.log(`Seeded ${seeded} JSKOS vocabulary concepts (instruments + genres)`);
+        }
+    } catch (e) {
+        // Table might not exist yet (first run before schema creation)
+        console.log('Vocabulary cache table not ready yet, will seed on next run');
     }
 
     console.log('Database initialization complete!');

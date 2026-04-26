@@ -1497,4 +1497,98 @@ CREATE TABLE IF NOT EXISTS payment_method_fees (
 
 CREATE INDEX IF NOT EXISTS idx_payment_settings_association ON payment_settings(association_id);
 CREATE INDEX IF NOT EXISTS idx_payment_method_fees_association ON payment_method_fees(association_id);
+
+-- =============================================
+-- WP5: Open Music Metadata (MusicXML / JSKOS)
+-- =============================================
+
+-- Extended metadata for music titles (MusicXML compatible)
+CREATE TABLE IF NOT EXISTS music_metadata (
+    id TEXT PRIMARY KEY,
+    music_title_id TEXT NOT NULL UNIQUE,
+
+    -- MusicXML work info
+    work_number TEXT,           -- Opus/catalog number: "Op. 67", "K. 545", "BWV 1068"
+    movement_number INTEGER,    -- Movement number within work
+    movement_title TEXT,        -- Title of movement/part
+
+    -- Additional creators (beyond composer/arranger in music_titles)
+    lyricist TEXT,              -- Lyricist or poet
+
+    -- Rights and source
+    rights TEXT,                -- Copyright information
+    source TEXT,                -- Publisher, edition, or source
+
+    -- Encoding info (from MusicXML)
+    encoding_software TEXT,     -- Software that created the MusicXML
+    encoding_date TEXT,         -- Date of MusicXML encoding (ISO 8601)
+
+    -- Structured data
+    parts TEXT,                 -- JSON: instrumentation from part-list
+
+    -- Original MusicXML for round-trip export
+    musicxml_raw TEXT,
+
+    -- Timestamps
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
+);
+
+-- JSKOS vocabulary cache for instruments, genres, composers
+CREATE TABLE IF NOT EXISTS vocabulary_cache (
+    uri TEXT PRIMARY KEY,
+    vocabulary_type TEXT NOT NULL,  -- 'instrument', 'genre', 'composer'
+
+    -- Labels (multilingual JSON)
+    pref_label TEXT NOT NULL,       -- JSON: {"en": "Flute", "nl": "Fluit", "de": "Flöte"}
+    alt_labels TEXT,                -- JSON: ["alternative name 1", "alternative name 2"]
+
+    -- Hierarchy
+    broader TEXT,                   -- JSON: parent concept URIs
+    narrower TEXT,                  -- JSON: child concept URIs
+
+    -- Extra metadata
+    notation TEXT,                  -- Short code (e.g., "sca" for flute)
+    definition TEXT,                -- JSON: scope notes in multiple languages
+
+    -- Cache management
+    source_url TEXT,                -- URL where we fetched this concept
+    fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME             -- When to refresh from source
+);
+
+-- Link music titles to instruments from vocabulary
+CREATE TABLE IF NOT EXISTS music_title_instruments (
+    music_title_id TEXT NOT NULL,
+    instrument_uri TEXT NOT NULL,
+    count INTEGER DEFAULT 1,        -- Number of this instrument needed
+    is_optional BOOLEAN DEFAULT 0,  -- Optional/cue part
+    notes TEXT,                     -- "1st chair only", "doubles piccolo"
+
+    PRIMARY KEY (music_title_id, instrument_uri),
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (instrument_uri) REFERENCES vocabulary_cache(uri) ON DELETE SET NULL
+);
+
+-- Link music titles to genres from vocabulary
+CREATE TABLE IF NOT EXISTS music_title_vocabulary (
+    music_title_id TEXT NOT NULL,
+    vocabulary_uri TEXT NOT NULL,
+    vocabulary_type TEXT NOT NULL,  -- 'genre', 'style', 'form'
+
+    PRIMARY KEY (music_title_id, vocabulary_uri),
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
+    FOREIGN KEY (vocabulary_uri) REFERENCES vocabulary_cache(uri) ON DELETE SET NULL
+);
+
+-- Indexes for music metadata
+CREATE INDEX IF NOT EXISTS idx_music_metadata_title ON music_metadata(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_cache_type ON vocabulary_cache(vocabulary_type);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_cache_notation ON vocabulary_cache(notation);
+CREATE INDEX IF NOT EXISTS idx_music_title_instruments_title ON music_title_instruments(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_music_title_instruments_uri ON music_title_instruments(instrument_uri);
+CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_title ON music_title_vocabulary(music_title_id);
+CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_type ON music_title_vocabulary(vocabulary_type);
 `;
