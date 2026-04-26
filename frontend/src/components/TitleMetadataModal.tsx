@@ -326,7 +326,7 @@ export function TitleMetadataModal({
         )}
 
         {/* WP5: Extended Music Metadata Section */}
-        <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+        <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', overflow: 'visible' }}>
           <div
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
             onClick={() => setShowExtendedMeta(!showExtendedMeta)}

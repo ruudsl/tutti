@@ -19,7 +19,9 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
   const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState('');
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const { data: genresData, isLoading } = useGenres();
   const genres = genresData?.genres || [];
@@ -28,13 +30,31 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+  }, [isOpen]);
 
   const filteredGenres = filter
     ? genres.filter(g => {
@@ -79,8 +99,9 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
       )}
 
       {/* Dropdown */}
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative">
         <button
+          ref={buttonRef}
           type="button"
           className="btn btn-outline w-full justify-between"
           onClick={() => setIsOpen(!isOpen)}
@@ -94,7 +115,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-lg shadow-lg">
+          <div ref={dropdownRef} className="bg-base-100 border border-base-300 rounded-lg shadow-lg" style={dropdownStyle}>
             {/* Filter input */}
             <div className="p-2 border-b border-base-300">
               <input
