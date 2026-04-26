@@ -577,11 +577,11 @@ export function usePushNotifications() {
 - [x] Styling voor PWA elementen
 
 ### Sprint 4: Push Notifications (Week 6 - Optioneel)
-- [ ] VAPID keys genereren
-- [ ] Backend push endpoints
-- [ ] Frontend push registration
-- [ ] Notification handling in service worker
-- [ ] Use cases: repetitie herinneringen, concert alerts
+- [x] VAPID keys configuratie (env vars gedocumenteerd)
+- [x] Backend push endpoints (web-push in notifications.ts)
+- [x] Frontend push registration (in NotificationCenter.tsx)
+- [ ] Notification handling in service worker (voor push als app dicht is)
+- [x] Use cases: repetitie herinneringen, concert alerts
 
 ---
 
@@ -590,32 +590,29 @@ export function usePushNotifications() {
 ```
 frontend/
 ├── public/
-│   ├── manifest.webmanifest
-│   ├── robots.txt
+│   ├── manifest.webmanifest        ✅
+│   ├── robots.txt                  ✅
+│   ├── offline.html                ✅
 │   ├── icons/
-│   │   ├── icon-72x72.png
-│   │   ├── icon-96x96.png
-│   │   ├── icon-128x128.png
-│   │   ├── icon-144x144.png
-│   │   ├── icon-152x152.png
-│   │   ├── icon-192x192.png
-│   │   ├── icon-384x384.png
-│   │   └── icon-512x512.png
+│   │   ├── icon.svg                ✅ (scalable)
+│   │   ├── icon-192x192.svg        ✅
+│   │   ├── icon-512x512.svg        ✅
+│   │   └── apple-touch-icon.png    ✅ (180x180 voor iOS)
 │   └── screenshots/
-│       ├── desktop.png
-│       └── mobile.png
+│       ├── desktop.png             ✅ (1280x720)
+│       └── mobile.png              ✅ (390x844)
 ├── src/
 │   ├── components/
-│   │   ├── OfflineIndicator.tsx
-│   │   ├── PWAUpdatePrompt.tsx
-│   │   └── InstallPrompt.tsx
+│   │   ├── OfflineIndicator.tsx    ✅
+│   │   ├── PWAUpdatePrompt.tsx     ✅
+│   │   ├── InstallPrompt.tsx       ✅
+│   │   └── NotificationCenter.tsx  ✅ (bevat push registration)
 │   ├── hooks/
-│   │   ├── usePWAInstall.ts
-│   │   ├── useOfflineMutation.ts
-│   │   └── usePushNotifications.ts
+│   │   ├── usePWAInstall.ts        ✅
+│   │   └── useOfflineMutation.ts   ✅
 │   └── lib/
-│       └── queryClient.ts (uitbreiden)
-└── vite.config.ts (uitbreiden)
+│       └── queryClient.ts          ✅ (met persistence)
+└── vite.config.ts                  ✅ (VitePWA + caching)
 ```
 
 ---
@@ -667,7 +664,7 @@ frontend/
 
 ---
 
-*Document versie: 1.1*
+*Document versie: 1.2*
 *Aangemaakt: 2026-02-10*
-*Laatst bijgewerkt: 2026-02-10*
-*Status: Fase 1-3 geimplementeerd - Klaar voor testen*
+*Laatst bijgewerkt: 2026-04-26*
+*Status: Fase 1-4 geïmplementeerd (push in NotificationCenter) - Klaar voor testen*
