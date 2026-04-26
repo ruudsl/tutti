@@ -640,6 +640,110 @@ frontend/
 
 ---
 
+## Fase 5: Toekomstige Uitbreidingen
+
+### Sprint 5: Notificaties & Offline (Week 7-8)
+
+| # | Feature | Prioriteit | Beschrijving |
+|---|---------|------------|--------------|
+| 1 | **Service Worker push handler** | Hoog | Push notificaties ontvangen ook als browser/app gesloten is. Vereist `push` en `notificationclick` event handlers in SW. |
+| 2 | **Rich notifications met actions** | Hoog | Notificaties met knoppen zoals "Accepteren" / "Afwijzen" voor repetitie-uitnodigingen. Gebruikt `actions` array in `showNotification()`. |
+| 3 | **Background Sync API** | Medium | Native browser API voor automatisch synchroniseren van mutations wanneer verbinding terugkeert. Robuuster dan handmatige queue. |
+| 4 | **Selective offline mode** | Hoog | Gebruiker kan specifieke muzieklijsten/concerten markeren voor offline gebruik. Download PDFs + metadata naar IndexedDB. |
+
+### Sprint 6: Device Integratie (Week 9-10)
+
+| # | Feature | Prioriteit | Beschrijving |
+|---|---------|------------|--------------|
+| 5 | **App Shortcuts** | Medium | Snelkoppelingen bij lang-drukken op app-icoon: "Nieuwe upload", "Mijn muziek", "Repetities". Configureren in manifest `shortcuts` array. |
+| 6 | **Web Share API** | Medium | Deel concerten/muziekstukken naar WhatsApp, e-mail, etc. via native OS share sheet. `navigator.share()` met title, text, url. |
+| 7 | **Share Target API** | Medium | App verschijnt in OS share menu. Gebruiker kan PDF vanuit Files/Verkenner direct naar Tutti delen voor import. Vereist manifest `share_target`. |
+| 8 | **Wake Lock API** | Laag | Scherm blijft aan tijdens oefenen of partituur bekijken. `navigator.wakeLock.request('screen')`. |
+| 9 | **Badging API** | Laag | Toon ongelezen notificaties als badge op app-icoon (Android/Windows/macOS). `navigator.setAppBadge(count)`. |
+
+### Sprint 7: UX & Conversie (Week 11-12)
+
+| # | Feature | Prioriteit | Beschrijving |
+|---|---------|------------|--------------|
+| 10 | **Custom install prompt** | Medium | Eigen UI met uitleg waarom installeren handig is (offline, snelheid, notificaties). Hogere conversie dan standaard browser prompt. |
+
+### Implementatie Details
+
+#### 1. Service Worker Push Handler
+```typescript
+// In custom service worker (sw.ts)
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() ?? {};
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192x192.svg',
+      badge: '/icons/badge-72x72.png',
+      data: { url: data.url },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data.url));
+});
+```
+
+#### 5. App Shortcuts (manifest.webmanifest)
+```json
+{
+  "shortcuts": [
+    {
+      "name": "Mijn Muziek",
+      "short_name": "Muziek",
+      "url": "/my-music",
+      "icons": [{ "src": "/icons/shortcut-music.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Nieuwe Upload",
+      "short_name": "Upload",
+      "url": "/upload",
+      "icons": [{ "src": "/icons/shortcut-upload.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Repetities",
+      "short_name": "Repetities",
+      "url": "/rehearsals",
+      "icons": [{ "src": "/icons/shortcut-calendar.svg", "sizes": "96x96" }]
+    }
+  ]
+}
+```
+
+#### 6. Web Share API
+```typescript
+async function shareContent(title: string, text: string, url: string) {
+  if (navigator.share) {
+    await navigator.share({ title, text, url });
+  } else {
+    // Fallback: copy to clipboard
+    await navigator.clipboard.writeText(url);
+  }
+}
+```
+
+#### 7. Share Target (manifest.webmanifest)
+```json
+{
+  "share_target": {
+    "action": "/upload",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "file", "accept": ["application/pdf", ".pdf"] }]
+    }
+  }
+}
+```
+
+---
+
 ## Geschatte Impact
 
 | Metric | Verwachte Verbetering |
@@ -664,7 +768,7 @@ frontend/
 
 ---
 
-*Document versie: 1.2*
+*Document versie: 1.3*
 *Aangemaakt: 2026-02-10*
 *Laatst bijgewerkt: 2026-04-26*
-*Status: Fase 1-4 geïmplementeerd (push in NotificationCenter) - Klaar voor testen*
+*Status: Fase 1-4 geïmplementeerd - Fase 5 gepland (10 features)*
