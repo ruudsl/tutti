@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useInstrumentSearch, VocabularyConcept } from '../hooks/useVocabulary';
 import { Icon } from './Icon';
 
-interface SelectedInstrument {
+export interface SelectedInstrument {
   uri: string;
   label: string;
   count: number;

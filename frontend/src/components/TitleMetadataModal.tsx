@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getYouTubeMeta, searchMusicaInfo, getMusicaInfoDetail } from '../api';
 import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
@@ -6,6 +6,10 @@ import { parseDuration } from '../utils/format';
 import { searchSheetMusicWebsites } from '../utils/sheetMusic';
 import { Modal } from './Modal';
 import { Icon } from './Icon';
+import { MusicXMLUpload } from './MusicXMLUpload';
+import { InstrumentPicker } from './InstrumentPicker';
+import { GenrePicker } from './GenrePicker';
+import { useTitleMetadata, useUpdateTitleMetadata, TitleInstrument } from '../hooks/useVocabulary';
 import type { MusicTitle, Genre } from '../types';
 
 interface TitleMetaForm {
@@ -16,6 +20,15 @@ interface TitleMetaForm {
   genreIds: string[];
   isShared: boolean;
   internalNotes: string;
+  // Extended metadata (WP5)
+  workNumber: string;
+  movementNumber: string;
+  movementTitle: string;
+  lyricist: string;
+  rights: string;
+  source: string;
+  instruments: TitleInstrument[];
+  genreUris: string[];
 }
 
 interface TitleMetadataModalProps {
@@ -51,7 +64,7 @@ export function TitleMetadataModal({
   extraFields,
   saving = false,
 }: TitleMetadataModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [form, setForm] = useState<TitleMetaForm>({
     youtubeUrl: title.youtubeUrl || '',
@@ -61,9 +74,66 @@ export function TitleMetadataModal({
     genreIds: title.genres?.map(g => g.id) || [],
     isShared: title.isShared || false,
     internalNotes: title.internalNotes || '',
+    // Extended metadata (WP5)
+    workNumber: '',
+    movementNumber: '',
+    movementTitle: '',
+    lyricist: '',
+    rights: '',
+    source: '',
+    instruments: [],
+    genreUris: [],
   });
   const [fetchingYouTube, setFetchingYouTube] = useState(false);
   const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
+  const [showExtendedMeta, setShowExtendedMeta] = useState(false);
+
+  // WP5: Extended metadata
+  const titleId = title.id || '';
+  const { data: extendedMeta, isLoading: loadingExtendedMeta } = useTitleMetadata(titleId);
+  const updateExtendedMeta = useUpdateTitleMetadata();
+
+  // Load extended metadata when it's fetched
+  useEffect(() => {
+    if (extendedMeta) {
+      const lang = i18n.language === 'nl' ? 'nl' : i18n.language === 'de' ? 'de' : 'en';
+      const meta = extendedMeta.metadata || {};
+
+      // Transform instruments with multilingual labels
+      const instruments = (extendedMeta.instruments || []).map((i: {
+        uri: string;
+        count: number;
+        isOptional: boolean;
+        notes?: string;
+        label?: Record<string, string>;
+      }) => ({
+        uri: i.uri,
+        count: i.count,
+        isOptional: i.isOptional,
+        notes: i.notes,
+        label: i.label?.[lang] || i.label?.en || i.uri,
+      }));
+
+      // Extract genre URIs
+      const genreUris = (extendedMeta.genres || []).map((g: { uri: string }) => g.uri);
+
+      setForm(f => ({
+        ...f,
+        workNumber: meta.workNumber || '',
+        movementNumber: meta.movementNumber?.toString() || '',
+        movementTitle: meta.movementTitle || '',
+        lyricist: meta.lyricist || '',
+        rights: meta.rights || '',
+        source: meta.source || '',
+        instruments,
+        genreUris,
+      }));
+
+      if (extendedMeta.instruments?.length > 0 || extendedMeta.genres?.length > 0 || meta.workNumber) {
+        setShowExtendedMeta(true);
+      }
+    }
+  }, [extendedMeta, i18n.language]);
 
   // MusicaInfo state
   const [musicaInfoSearching, setMusicaInfoSearching] = useState(false);
@@ -127,6 +197,24 @@ export function TitleMetadataModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Save extended metadata (WP5)
+    if (showExtendedMeta && titleId) {
+      await updateExtendedMeta.mutateAsync({
+        titleId,
+        metadata: {
+          workNumber: form.workNumber || undefined,
+          movementNumber: form.movementNumber ? parseInt(form.movementNumber, 10) : undefined,
+          movementTitle: form.movementTitle || undefined,
+          lyricist: form.lyricist || undefined,
+          rights: form.rights || undefined,
+          source: form.source || undefined,
+          instruments: form.instruments,
+          genres: form.genreUris,
+        },
+      });
+    }
+
     await onSave({
       youtubeUrl: form.youtubeUrl || null,
       description: form.description || null,
@@ -236,6 +324,130 @@ export function TitleMetadataModal({
             />
           </div>
         )}
+
+        {/* WP5: Extended Music Metadata Section */}
+        <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+            onClick={() => setShowExtendedMeta(!showExtendedMeta)}
+          >
+            <Icon name={showExtendedMeta ? 'chevronDown' : 'chevronRight'} size={16} />
+            <strong style={{ fontSize: '0.875rem', flex: 1 }}>{t('metadata.extendedMetadata')}</strong>
+            {loadingExtendedMeta && <span className="loading loading-spinner loading-sm" />}
+            {extendedMeta?.metadata?.parts?.length > 0 && (
+              <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>MusicXML</span>
+            )}
+          </div>
+
+          {showExtendedMeta && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* MusicXML Upload */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                  {t('metadata.musicXMLFile')}
+                </label>
+                <MusicXMLUpload
+                  titleId={titleId}
+                  hasExistingData={extendedMeta?.metadata?.parts?.length > 0}
+                  onSuccess={() => {}}
+                />
+              </div>
+
+              {/* Work/Movement Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.workNumber')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={form.workNumber}
+                    onChange={(e) => setForm(f => ({ ...f, workNumber: e.target.value }))}
+                    placeholder="Op. 21, BWV 1004"
+                    style={{ fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.movementNumber')}</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={form.movementNumber}
+                    onChange={(e) => setForm(f => ({ ...f, movementNumber: e.target.value }))}
+                    min="1"
+                    style={{ fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.movementTitle')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.movementTitle}
+                  onChange={(e) => setForm(f => ({ ...f, movementTitle: e.target.value }))}
+                  placeholder="Allegro con brio"
+                  style={{ fontSize: '0.875rem' }}
+                />
+              </div>
+
+              {/* Instruments */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.instruments')}</label>
+                <InstrumentPicker
+                  value={form.instruments}
+                  onChange={(instruments) => setForm(f => ({ ...f, instruments }))}
+                />
+              </div>
+
+              {/* JSKOS Genres */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.jskosGenres')}</label>
+                <GenrePicker
+                  value={form.genreUris}
+                  onChange={(genreUris) => setForm(f => ({ ...f, genreUris }))}
+                />
+              </div>
+
+              {/* Additional Credits */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.lyricist')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={form.lyricist}
+                  onChange={(e) => setForm(f => ({ ...f, lyricist: e.target.value }))}
+                  style={{ fontSize: '0.875rem' }}
+                />
+              </div>
+
+              {/* Rights & Source */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.rights')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={form.rights}
+                    onChange={(e) => setForm(f => ({ ...f, rights: e.target.value }))}
+                    placeholder="Public Domain, CC BY-SA"
+                    style={{ fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.source')}</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={form.source}
+                    onChange={(e) => setForm(f => ({ ...f, source: e.target.value }))}
+                    placeholder="IMSLP, Archive.org"
+                    style={{ fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* MusicaInfo.net lookup section */}
         <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>

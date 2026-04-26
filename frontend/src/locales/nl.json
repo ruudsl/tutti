@@ -73,7 +73,9 @@
     "instruments": "Instrumenten",
     "genres": "Genres",
     "extendedMetadata": "Uitgebreide metadata",
-    "saveMetadata": "Metadata opslaan"
+    "saveMetadata": "Metadata opslaan",
+    "musicXMLFile": "MusicXML bestand",
+    "jskosGenres": "Genres (JSKOS vocabulaire)"
   },
   "sidebar": {
     "agenda": "Agenda",

@@ -22,6 +22,7 @@ export interface VocabularyHierarchyNode extends VocabularyConcept {
 
 export interface TitleInstrument {
   uri: string;
+  label: string;
   count: number;
   isOptional: boolean;
   notes?: string;
