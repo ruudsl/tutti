@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useGenres } from '../hooks/useVocabulary';
 import { Icon } from './Icon';
@@ -114,7 +115,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
           <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} size={16} />
         </button>
 
-        {isOpen && (
+        {isOpen && createPortal(
           <div ref={dropdownRef} className="bg-base-100 border border-base-300 rounded-lg shadow-lg" style={dropdownStyle}>
             {/* Filter input */}
             <div className="p-2 border-b border-base-300">
@@ -173,7 +174,8 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                 {t('common.done')}
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
