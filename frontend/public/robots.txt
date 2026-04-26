@@ -1,0 +1,20 @@
+# Tutti Muziek App - robots.txt
+
+User-agent: *
+Allow: /
+
+# Disallow API and auth routes
+Disallow: /api/
+Disallow: /auth/
+
+# Disallow user-specific pages (require login anyway)
+Disallow: /profile
+Disallow: /sessions
+Disallow: /my-music
+Disallow: /my-tickets
+
+# Disallow admin sections
+Disallow: /users
+Disallow: /settings
+Disallow: /audit-logs
+Disallow: /entra-sync
