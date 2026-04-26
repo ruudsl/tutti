@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
+import { Icon } from '../components/Icon';
 import {
   usePracticeSchedules,
   usePracticeSchedule,
@@ -99,9 +100,7 @@ export default function PracticeSchedules() {
                   {schedule.orchestra.name}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <Icon name="calendar" size={16} />
                   <span className="text-sm">
                     {t('practiceSchedules.targetDate')}: {format(new Date(schedule.targetDate), 'PPP', { locale })}
                   </span>
@@ -382,9 +381,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
                           className="btn btn-ghost btn-xs text-error"
                           onClick={() => deleteMilestone.mutate(milestone.id)}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
+                          <Icon name="trash" size={16} />
                         </button>
                       )}
                     </div>

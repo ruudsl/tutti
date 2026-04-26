@@ -58,6 +58,8 @@ import {
   BarChart3,
   Laptop,
   Globe,
+  Bookmark,
+  Send,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -121,6 +123,8 @@ const iconMap = {
   chart: BarChart3,
   laptop: Laptop,
   globe: Globe,
+  bookmark: Bookmark,
+  send: Send,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

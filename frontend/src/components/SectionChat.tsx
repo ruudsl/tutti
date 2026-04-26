@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
+import { Icon } from './Icon';
 import {
   useChatChannels,
   useChatMessages,
@@ -137,9 +138,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
               className={`btn btn-sm ${showPinned ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setShowPinned(!showPinned)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
+              <Icon name="bookmark" size={16} />
               {pinnedMessages?.length || 0}
             </button>
           </div>
@@ -190,9 +189,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-sm">{msg.user.name}</span>
                     {msg.isPinned && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
+                      <Icon name="bookmark" size={12} />
                     )}
                     <span className="text-xs opacity-60">
                       {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true, locale })}
@@ -269,9 +266,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
               <span className="font-medium">{replyTo.userName}</span>
             </div>
             <button className="btn btn-ghost btn-xs" onClick={() => setReplyTo(null)}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <Icon name="close" size={16} />
             </button>
           </div>
         )}
@@ -295,9 +290,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
               {sendMessage.isPending ? (
                 <span className="loading loading-spinner loading-sm" />
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Icon name="send" size={20} />
               )}
             </button>
           </div>
