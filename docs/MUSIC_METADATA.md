@@ -313,5 +313,75 @@ CREATE TABLE music_title_instruments (
 
 ---
 
-*Document versie: 1.0*  
-*Aangemaakt: 2026-04-26*
+---
+
+## CLI Scripts
+
+### MusicXML Batch Import
+
+```bash
+# Preview import (dry run)
+npm run import:musicxml ./musicxml --association abc123 --dry-run
+
+# Import and create new titles for unmatched files
+npm run import:musicxml ./musicxml --association abc123 --create --verbose
+```
+
+### JSKOS Migration
+
+```bash
+# Preview migration (dry run)
+npm run migrate:jskos --dry-run
+
+# Run migration for specific association
+npm run migrate:jskos --association abc123 --verbose
+```
+
+---
+
+## Frontend Componenten
+
+### InstrumentPicker
+
+Autocomplete component voor het selecteren van instrumenten.
+
+```tsx
+import { InstrumentPicker } from '../components/InstrumentPicker';
+
+<InstrumentPicker
+  value={selectedInstruments}
+  onChange={setSelectedInstruments}
+/>
+```
+
+### GenrePicker
+
+Multi-select component voor genres.
+
+```tsx
+import { GenrePicker } from '../components/GenrePicker';
+
+<GenrePicker
+  value={selectedGenreUris}
+  onChange={setSelectedGenreUris}
+/>
+```
+
+### MusicXMLUpload
+
+Drag & drop component voor MusicXML uploads.
+
+```tsx
+import { MusicXMLUpload } from '../components/MusicXMLUpload';
+
+<MusicXMLUpload
+  titleId={titleId}
+  hasExistingData={hasMetadata}
+  onSuccess={() => refetch()}
+/>
+```
+
+---
+
+*Document versie: 1.1*  
+*Laatst bijgewerkt: 2026-04-26*

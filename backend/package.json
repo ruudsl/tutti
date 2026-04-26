@@ -17,7 +17,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:integration": "vitest run --include='src/__tests__/routes/**/*.test.ts'",
-    "import:musicxml": "tsx src/scripts/import-musicxml.ts"
+    "import:musicxml": "tsx src/scripts/import-musicxml.ts",
+    "migrate:jskos": "tsx src/scripts/migrate-to-jskos.ts"
   },
   "dependencies": {
     "@sentry/node": "^10.46.0",

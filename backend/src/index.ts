@@ -82,6 +82,8 @@ import { startScheduler as startEmailForwardingScheduler } from './scheduler/ema
 import healthRoutes from './routes/health';
 import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
+import vocabulariesRoutes from './routes/vocabularies';
+import interopRoutes from './routes/interop';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -269,6 +271,8 @@ app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /c
 app.use('/api/health', healthRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/vocabularies', vocabulariesRoutes);
+app.use('/api/interop', interopRoutes);
 
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);

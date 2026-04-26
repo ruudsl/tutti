@@ -1185,6 +1185,176 @@ router.get('/title-metadata/:titleId', authenticateToken, asyncHandler(async (re
 
 /**
  * @swagger
+ * /music-pieces/title-metadata/{titleId}:
+ *   patch:
+ *     summary: Update extended metadata (instruments, genres, work info)
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               workNumber:
+ *                 type: string
+ *               movementNumber:
+ *                 type: integer
+ *               movementTitle:
+ *                 type: string
+ *               lyricist:
+ *                 type: string
+ *               rights:
+ *                 type: string
+ *               source:
+ *                 type: string
+ *               instruments:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     uri:
+ *                       type: string
+ *                     count:
+ *                       type: integer
+ *                     isOptional:
+ *                       type: boolean
+ *                     notes:
+ *                       type: string
+ *               genres:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   description: Genre URIs
+ *     responses:
+ *       200:
+ *         description: Metadata updated
+ */
+router.patch('/title-metadata/:titleId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+    const { workNumber, movementNumber, movementTitle, lyricist, rights, source, instruments, genres } = req.body;
+
+    // Check if title exists and belongs to user's association
+    const title = db.prepare(`
+        SELECT id FROM music_titles WHERE id = ? AND association_id = ?
+    `).get(titleId, req.user!.associationId) as { id: string } | undefined;
+
+    if (!title) {
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    // Upsert music_metadata
+    const existingMeta = db.prepare('SELECT id FROM music_metadata WHERE music_title_id = ?').get(titleId) as { id: string } | undefined;
+
+    if (existingMeta) {
+        const updates: string[] = [];
+        const params: (string | number | null)[] = [];
+
+        if (workNumber !== undefined) { updates.push('work_number = ?'); params.push(workNumber || null); }
+        if (movementNumber !== undefined) { updates.push('movement_number = ?'); params.push(movementNumber || null); }
+        if (movementTitle !== undefined) { updates.push('movement_title = ?'); params.push(movementTitle || null); }
+        if (lyricist !== undefined) { updates.push('lyricist = ?'); params.push(lyricist || null); }
+        if (rights !== undefined) { updates.push('rights = ?'); params.push(rights || null); }
+        if (source !== undefined) { updates.push('source = ?'); params.push(source || null); }
+
+        if (updates.length > 0) {
+            updates.push('updated_at = datetime(\'now\')');
+            params.push(titleId);
+            db.prepare(`UPDATE music_metadata SET ${updates.join(', ')} WHERE music_title_id = ?`).run(...params);
+        }
+    } else {
+        // Create new metadata record
+        const metadataId = uuidv4();
+        db.prepare(`
+            INSERT INTO music_metadata (
+                id, music_title_id, work_number, movement_number, movement_title,
+                lyricist, rights, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `).run(
+            metadataId,
+            titleId,
+            workNumber || null,
+            movementNumber || null,
+            movementTitle || null,
+            lyricist || null,
+            rights || null,
+            source || null
+        );
+    }
+
+    // Update instruments if provided
+    if (instruments !== undefined) {
+        // Remove existing links
+        db.prepare('DELETE FROM music_title_instruments WHERE music_title_id = ?').run(titleId);
+
+        // Insert new links
+        if (Array.isArray(instruments) && instruments.length > 0) {
+            const insertInstr = db.prepare(`
+                INSERT INTO music_title_instruments (music_title_id, instrument_uri, count, is_optional, notes)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+
+            for (const instr of instruments) {
+                if (instr.uri) {
+                    insertInstr.run(
+                        titleId,
+                        instr.uri,
+                        instr.count || 1,
+                        instr.isOptional ? 1 : 0,
+                        instr.notes || null
+                    );
+                }
+            }
+        }
+    }
+
+    // Update genres if provided
+    if (genres !== undefined) {
+        // Remove existing genre links
+        db.prepare('DELETE FROM music_title_vocabulary WHERE music_title_id = ? AND vocabulary_type = ?').run(titleId, 'genre');
+
+        // Insert new links
+        if (Array.isArray(genres) && genres.length > 0) {
+            const insertGenre = db.prepare(`
+                INSERT INTO music_title_vocabulary (music_title_id, vocabulary_uri, vocabulary_type)
+                VALUES (?, ?, 'genre')
+            `);
+
+            for (const genreUri of genres) {
+                if (genreUri) {
+                    insertGenre.run(titleId, genreUri);
+                }
+            }
+        }
+    }
+
+    logger.info(`Extended metadata updated for title: ${titleId}`, { updatedBy: req.user!.id });
+
+    logAuditEvent(
+        req.user!.id,
+        'update',
+        'music_title',
+        titleId,
+        'Extended metadata',
+        { instruments: instruments?.length, genres: genres?.length },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({
+        message: 'Metadata bijgewerkt.',
+    });
+}));
+
+/**
+ * @swagger
  * /music-pieces/title-musicxml/{titleId}:
  *   get:
  *     summary: Export/download MusicXML for a title
