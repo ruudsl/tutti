@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormModal } from './Modal';
+import { Icon } from './Icon';
 import { useCreateRecording } from '../hooks/useAudioRecordings';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicTitles } from '../hooks/useMusicTitles';
@@ -163,7 +164,15 @@ export function AudioRecorder({
             </div>
             {isRecording && (
               <div className="flex items-center justify-center gap-2 mt-2">
-                <span className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
+                <span
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: isPaused ? '#eab308' : '#ef4444',
+                    animation: isPaused ? 'none' : 'pulse 1.5s infinite',
+                  }}
+                />
                 <span className="text-sm">
                   {isPaused ? t('audio.paused') : t('audio.recording')}
                 </span>
@@ -184,22 +193,11 @@ export function AudioRecorder({
             {isRecording && (
               <>
                 <button type="button" className="btn btn-warning" onClick={pauseRecording}>
-                  {isPaused ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="6" y="4" width="4" height="16" />
-                      <rect x="14" y="4" width="4" height="16" />
-                    </svg>
-                  )}
+                  <Icon name={isPaused ? 'play' : 'pause'} size={20} />
                   {isPaused ? t('audio.resume') : t('audio.pause')}
                 </button>
                 <button type="button" className="btn btn-error" onClick={stopRecording}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="6" width="12" height="12" />
-                  </svg>
+                  <Icon name="square" size={20} />
                   {t('audio.stop')}
                 </button>
               </>

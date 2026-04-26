@@ -60,6 +60,8 @@ import {
   Globe,
   Bookmark,
   Send,
+  Play,
+  Pause,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -125,6 +127,8 @@ const iconMap = {
   globe: Globe,
   bookmark: Bookmark,
   send: Send,
+  play: Play,
+  pause: Pause,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;
