@@ -11,6 +11,16 @@ import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
+import {
+    parseMusicXML,
+    validateMusicXML,
+    extractTitle,
+    extractComposer,
+    extractArranger,
+    extractLyricist,
+    partsToJson,
+    isCompressedMusicXML,
+} from '../services/musicxml';
 
 const router = Router();
 
@@ -75,6 +85,41 @@ const mp3Upload = multer({
             cb(null, true);
         } else {
             cb(new Error('Alleen MP3 bestanden zijn toegestaan.'));
+        }
+    },
+});
+
+// Setup MusicXML upload directory
+const MUSICXML_UPLOAD_DIR = process.env.MUSICXML_UPLOAD_DIR || path.join(__dirname, '../../uploads/musicxml');
+if (!fs.existsSync(MUSICXML_UPLOAD_DIR)) {
+    fs.mkdirSync(MUSICXML_UPLOAD_DIR, { recursive: true });
+}
+
+// Configure multer for MusicXML uploads
+const musicxmlStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, MUSICXML_UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `${uniqueSuffix}${ext}`);
+    },
+});
+
+const musicxmlUpload = multer({
+    storage: musicxmlStorage,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit for MusicXML
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['application/xml', 'text/xml', 'application/vnd.recordare.musicxml+xml'];
+        const allowedExts = ['.xml', '.musicxml', '.mxl'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen MusicXML bestanden (.xml, .musicxml) zijn toegestaan.'));
         }
     },
 });
@@ -826,6 +871,423 @@ router.get('/mp3/:filename', authenticateToken, asyncHandler(async (req: AuthReq
     // Stream the file
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
+}));
+
+// ============================================
+// MusicXML Metadata Endpoints (WP5)
+// ============================================
+
+/**
+ * @swagger
+ * /music-pieces/title-musicxml/{titleId}:
+ *   post:
+ *     summary: Upload MusicXML file and extract metadata for a title
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               musicxml:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: MusicXML uploaded and metadata extracted
+ */
+router.post('/title-musicxml/:titleId', authenticateToken, requireRole('admin', 'music_committee'), musicxmlUpload.single('musicxml'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    if (!req.file) {
+        throw new ApiError(400, 'MusicXML bestand is verplicht.');
+    }
+
+    // Check if title exists and belongs to user's association
+    const title = db.prepare(`
+        SELECT id, title, composer, arranger FROM music_titles WHERE id = ? AND association_id = ?
+    `).get(titleId, req.user!.associationId) as { id: string; title: string; composer: string | null; arranger: string | null } | undefined;
+
+    if (!title) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    // Read and parse MusicXML
+    const xmlContent = await fs.promises.readFile(req.file.path, 'utf-8');
+
+    // Check if it's compressed MusicXML
+    const fileBuffer = await fs.promises.readFile(req.file.path);
+    if (isCompressedMusicXML(fileBuffer)) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+        throw new ApiError(400, 'Gecomprimeerde MusicXML (.mxl) wordt nog niet ondersteund. Upload een ongecomprimeerd .xml of .musicxml bestand.');
+    }
+
+    // Validate before parsing
+    const validationErrors = validateMusicXML(xmlContent);
+    if (validationErrors.length > 0) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+        throw new ApiError(400, `Ongeldig MusicXML bestand: ${validationErrors.map(e => e.message).join(', ')}`);
+    }
+
+    // Parse MusicXML
+    const parseResult = parseMusicXML(xmlContent);
+    if (!parseResult.success || !parseResult.data) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+        throw new ApiError(400, `MusicXML parsing mislukt: ${parseResult.errors.map(e => e.message).join(', ')}`);
+    }
+
+    const parsed = parseResult.data;
+
+    // Check if music_metadata record exists
+    const existingMeta = db.prepare('SELECT id FROM music_metadata WHERE music_title_id = ?').get(titleId) as { id: string } | undefined;
+
+    const metadataId = existingMeta?.id || uuidv4();
+
+    // Upsert music_metadata
+    if (existingMeta) {
+        db.prepare(`
+            UPDATE music_metadata SET
+                work_number = ?,
+                movement_number = ?,
+                movement_title = ?,
+                lyricist = ?,
+                rights = ?,
+                source = ?,
+                encoding_software = ?,
+                encoding_date = ?,
+                parts = ?,
+                musicxml_raw = ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+        `).run(
+            parsed.workNumber || null,
+            parsed.movementNumber || null,
+            parsed.movementTitle || null,
+            extractLyricist(parsed),
+            parsed.rights || null,
+            parsed.source || null,
+            parsed.encoding?.software || null,
+            parsed.encoding?.encodingDate || null,
+            partsToJson(parsed.parts),
+            xmlContent,
+            metadataId
+        );
+    } else {
+        db.prepare(`
+            INSERT INTO music_metadata (
+                id, music_title_id, work_number, movement_number, movement_title,
+                lyricist, rights, source, encoding_software, encoding_date,
+                parts, musicxml_raw, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `).run(
+            metadataId,
+            titleId,
+            parsed.workNumber || null,
+            parsed.movementNumber || null,
+            parsed.movementTitle || null,
+            extractLyricist(parsed),
+            parsed.rights || null,
+            parsed.source || null,
+            parsed.encoding?.software || null,
+            parsed.encoding?.encodingDate || null,
+            partsToJson(parsed.parts),
+            xmlContent
+        );
+    }
+
+    // Optionally update music_titles if composer/arranger were found and are currently empty
+    const updates: string[] = [];
+    const params: (string | null)[] = [];
+
+    const parsedComposer = extractComposer(parsed);
+    const parsedArranger = extractArranger(parsed);
+
+    if (parsedComposer && !title.composer) {
+        updates.push('composer = ?');
+        params.push(parsedComposer);
+    }
+    if (parsedArranger && !title.arranger) {
+        updates.push('arranger = ?');
+        params.push(parsedArranger);
+    }
+
+    if (updates.length > 0) {
+        params.push(titleId);
+        db.prepare(`UPDATE music_titles SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    // Delete the uploaded file (we stored the content in the database)
+    await fs.promises.unlink(req.file.path).catch(() => {});
+
+    logger.info(`MusicXML uploaded for title: ${titleId}`, { filename: req.file.originalname, uploadedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'upload',
+        'music_title',
+        titleId,
+        req.file.originalname,
+        { filename: req.file.originalname, type: 'musicxml', parts: parsed.parts.length },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({
+        message: 'MusicXML metadata geëxtraheerd en opgeslagen.',
+        metadata: {
+            workNumber: parsed.workNumber,
+            movementNumber: parsed.movementNumber,
+            movementTitle: parsed.movementTitle,
+            composer: extractComposer(parsed),
+            arranger: extractArranger(parsed),
+            lyricist: extractLyricist(parsed),
+            rights: parsed.rights,
+            source: parsed.source,
+            encoding: parsed.encoding,
+            partsCount: parsed.parts.length,
+            parts: parsed.parts,
+        },
+        warnings: parseResult.warnings,
+        updatedFields: updates.map(u => u.split(' ')[0]),
+    });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/title-metadata/{titleId}:
+ *   get:
+ *     summary: Get extended metadata for a title (from MusicXML)
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Extended metadata
+ */
+router.get('/title-metadata/:titleId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    // Get title with metadata
+    const title = db.prepare(`
+        SELECT
+            t.id, t.title, t.composer, t.arranger, t.duration_seconds, t.grade,
+            t.youtube_url, t.description, t.streaming_links,
+            m.work_number, m.movement_number, m.movement_title,
+            m.lyricist, m.rights, m.source,
+            m.encoding_software, m.encoding_date, m.parts,
+            m.created_at as metadata_created_at,
+            m.updated_at as metadata_updated_at
+        FROM music_titles t
+        LEFT JOIN music_metadata m ON m.music_title_id = t.id
+        WHERE t.id = ? AND t.association_id = ?
+    `).get(titleId, req.user!.associationId) as Record<string, unknown> | undefined;
+
+    if (!title) {
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    // Get linked instruments from vocabulary
+    const instruments = db.prepare(`
+        SELECT
+            i.instrument_uri as uri,
+            i.count,
+            i.is_optional,
+            i.notes,
+            v.pref_label,
+            v.notation
+        FROM music_title_instruments i
+        LEFT JOIN vocabulary_cache v ON v.uri = i.instrument_uri
+        WHERE i.music_title_id = ?
+    `).all(titleId) as Array<{
+        uri: string;
+        count: number;
+        is_optional: number;
+        notes: string | null;
+        pref_label: string | null;
+        notation: string | null;
+    }>;
+
+    // Get linked genres from vocabulary
+    const genres = db.prepare(`
+        SELECT
+            g.vocabulary_uri as uri,
+            g.vocabulary_type,
+            v.pref_label,
+            v.notation
+        FROM music_title_vocabulary g
+        LEFT JOIN vocabulary_cache v ON v.uri = g.vocabulary_uri
+        WHERE g.music_title_id = ?
+    `).all(titleId) as Array<{
+        uri: string;
+        vocabulary_type: string;
+        pref_label: string | null;
+        notation: string | null;
+    }>;
+
+    res.json({
+        id: title.id,
+        title: title.title,
+        composer: title.composer,
+        arranger: title.arranger,
+        durationSeconds: title.duration_seconds,
+        grade: title.grade,
+        youtubeUrl: title.youtube_url,
+        description: title.description,
+        streamingLinks: title.streaming_links ? JSON.parse(title.streaming_links as string) : null,
+        metadata: title.work_number || title.movement_number || title.parts ? {
+            workNumber: title.work_number,
+            movementNumber: title.movement_number,
+            movementTitle: title.movement_title,
+            lyricist: title.lyricist,
+            rights: title.rights,
+            source: title.source,
+            encoding: title.encoding_software ? {
+                software: title.encoding_software,
+                date: title.encoding_date,
+            } : null,
+            parts: title.parts ? JSON.parse(title.parts as string) : [],
+            createdAt: title.metadata_created_at,
+            updatedAt: title.metadata_updated_at,
+        } : null,
+        instruments: instruments.map(i => ({
+            uri: i.uri,
+            count: i.count,
+            isOptional: Boolean(i.is_optional),
+            notes: i.notes,
+            label: i.pref_label ? JSON.parse(i.pref_label) : null,
+            notation: i.notation,
+        })),
+        genres: genres.map(g => ({
+            uri: g.uri,
+            type: g.vocabulary_type,
+            label: g.pref_label ? JSON.parse(g.pref_label) : null,
+            notation: g.notation,
+        })),
+    });
+}));
+
+/**
+ * @swagger
+ * /music-pieces/title-musicxml/{titleId}:
+ *   get:
+ *     summary: Export/download MusicXML for a title
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: MusicXML file
+ *         content:
+ *           application/xml:
+ *             schema:
+ *               type: string
+ */
+router.get('/title-musicxml/:titleId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    // Get metadata with raw MusicXML
+    const metadata = db.prepare(`
+        SELECT m.musicxml_raw, t.title
+        FROM music_metadata m
+        JOIN music_titles t ON t.id = m.music_title_id
+        WHERE m.music_title_id = ? AND t.association_id = ?
+    `).get(titleId, req.user!.associationId) as { musicxml_raw: string | null; title: string } | undefined;
+
+    if (!metadata) {
+        throw new ApiError(404, 'Geen MusicXML metadata gevonden voor deze titel.');
+    }
+
+    if (!metadata.musicxml_raw) {
+        throw new ApiError(404, 'Geen MusicXML bestand opgeslagen voor deze titel.');
+    }
+
+    // Sanitize filename
+    const safeTitle = metadata.title.replace(/[^a-zA-Z0-9-_\s]/g, '').substring(0, 50);
+    const filename = `${safeTitle}.musicxml`;
+
+    res.setHeader('Content-Type', 'application/vnd.recordare.musicxml+xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(metadata.musicxml_raw);
+}));
+
+/**
+ * @swagger
+ * /music-pieces/title-musicxml/{titleId}:
+ *   delete:
+ *     summary: Delete MusicXML metadata for a title
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: MusicXML metadata deleted
+ */
+router.delete('/title-musicxml/:titleId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
+
+    // Check if title exists and belongs to user's association
+    const title = db.prepare(`
+        SELECT t.id FROM music_titles t
+        WHERE t.id = ? AND t.association_id = ?
+    `).get(titleId, req.user!.associationId) as { id: string } | undefined;
+
+    if (!title) {
+        throw new ApiError(404, 'Titel niet gevonden.');
+    }
+
+    // Delete metadata
+    const result = db.prepare('DELETE FROM music_metadata WHERE music_title_id = ?').run(titleId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Geen MusicXML metadata gevonden voor deze titel.');
+    }
+
+    logger.info(`MusicXML metadata deleted for title: ${titleId}`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'delete',
+        'music_title',
+        titleId,
+        'MusicXML metadata',
+        { type: 'musicxml' },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    res.json({
+        message: 'MusicXML metadata verwijderd.',
+    });
 }));
 
 /**
