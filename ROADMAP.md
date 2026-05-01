@@ -10,7 +10,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 |----|-------|------|--------|
 | 1 | Onafhankelijke security audit | extern | ⬜ Gepland |
 | 2 | Security audit remediation | 65h | ⬜ Gepland |
-| 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ⬜ Gepland |
+| 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ✅ Voltooid |
 | 4 | Docker packaging + self-hosting guide | 50h | ✅ Voltooid |
 | 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
 | 6 | Privacy-by-design review + GDPR hardening | 45h | ⬜ Gepland |
@@ -73,10 +73,10 @@ Formele audit van WCAG 2.1 AA compliance:
 - ARIA labels en landmarks
 
 ### Deliverables
-- [ ] Accessibility audit rapport
-- [ ] Fixes voor alle gevonden issues
-- [ ] Automated accessibility tests (axe-core)
-- [ ] Accessibility statement
+- [x] Accessibility audit rapport
+- [x] Fixes voor alle gevonden issues
+- [x] Automated accessibility tests (axe-core)
+- [x] Accessibility statement
 
 ---
 
