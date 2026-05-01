@@ -1,6 +1,10 @@
-version: '3.8'
+# Tutti - Development Docker Compose
+# Usage: docker compose up --build
 
 services:
+  # ==========================================================================
+  # Backend API
+  # ==========================================================================
   backend:
     build:
       context: ./backend
@@ -8,6 +12,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
+      # Persistent data volumes
       - backend-data:/app/data
       - backend-uploads:/app/uploads
     environment:
@@ -15,24 +20,46 @@ services:
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
       - JWT_EXPIRES_IN=7d
-      - DB_PATH=/app/data/harmonie.db
+      - DB_PATH=/app/data/tutti.db
       - UPLOAD_DIR=/app/uploads
       - FRONTEND_URL=http://localhost:5173
       - ADMIN_INIT_PASSWORD=${ADMIN_INIT_PASSWORD:-}
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
+  # ==========================================================================
+  # Frontend (nginx)
+  # ==========================================================================
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3001/api}
+        - VITE_API_URL=/api
     ports:
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
     restart: unless-stopped
 
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
   backend-data:
+    name: tutti-data
   backend-uploads:
+    name: tutti-uploads
