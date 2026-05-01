@@ -74,6 +74,7 @@ import NeighborPreferences from './pages/NeighborPreferences';
 // Other pages
 import MemberDirectory from './pages/MemberDirectory';
 import UserGuide from './pages/UserGuide';
+import AccessibilityStatement from './pages/AccessibilityStatement';
 import PracticeSchedules from './pages/PracticeSchedules';
 import HealthDashboard from './pages/HealthDashboard';
 
@@ -371,6 +372,7 @@ function AppRoutes() {
         />
         <Route path="members" element={<MemberDirectory />} />
         <Route path="user-guide" element={<UserGuide />} />
+        <Route path="accessibility" element={<AccessibilityStatement />} />
         <Route path="practice-schedules" element={<PracticeSchedules />} />
         <Route
           path="audit-logs"

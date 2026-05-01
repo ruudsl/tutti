@@ -518,6 +518,10 @@ export default function Layout() {
       )}
 
       <footer className="app-footer">
+        <Link to="/accessibility" className="feedback-link">
+          {t('accessibility.statement', 'Toegankelijkheid')}
+        </Link>
+        <span aria-hidden="true" style={{ margin: '0 0.5rem', color: 'var(--text-muted)' }}>|</span>
         <a
           href="https://github.com/ruudsl/harmonie/issues"
           target="_blank"
