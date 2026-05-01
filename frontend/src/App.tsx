@@ -77,6 +77,7 @@ import UserGuide from './pages/UserGuide';
 import AccessibilityStatement from './pages/AccessibilityStatement';
 import PracticeSchedules from './pages/PracticeSchedules';
 import HealthDashboard from './pages/HealthDashboard';
+import GdprAdmin from './pages/GdprAdmin';
 
 // Ticketing
 import MyTickets from './pages/MyTickets';
@@ -387,6 +388,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <HealthDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="gdpr-admin"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <GdprAdmin />
             </PrivateRoute>
           }
         />
