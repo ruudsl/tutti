@@ -4607,3 +4607,207 @@ select:focus-visible,
 .hover-shadow:hover { box-shadow: var(--shadow-md); }
 .focus-ring:focus { box-shadow: var(--focus-ring); outline: none; }
 .focus-ring:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+
+/* ===================================
+   PWA / Mobile Touch UX Improvements
+   =================================== */
+
+/* Minimum touch target size (WCAG 2.5.5 Target Size) */
+@media (pointer: coarse) {
+  .btn,
+  .tab,
+  button,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Increase tap area for table rows */
+  .table tbody tr {
+    cursor: pointer;
+  }
+
+  /* Larger spacing for touch */
+  .nav-link {
+    padding: 0.875rem 1rem;
+  }
+
+  /* Card touch feedback */
+  .card.clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .card.clickable:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+/* Prevent text selection on interactive elements (better for touch) */
+.btn,
+.tab,
+.nav-link,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrolling for better mobile experience */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .scroll-item {
+    scroll-snap-align: start;
+  }
+}
+
+/* Pull-to-refresh indicator area */
+.pull-to-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: all 0.2s ease;
+}
+
+.pull-to-refresh-indicator.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Swipeable list items */
+.swipeable-item {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.swipeable-item-content {
+  transition: transform 0.2s ease;
+}
+
+.swipeable-item-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+/* Bottom navigation for mobile */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    padding: 0.5rem 0;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 1000;
+  }
+
+  .mobile-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.75rem;
+    min-width: 64px;
+  }
+
+  .mobile-bottom-nav-item.active {
+    color: var(--primary);
+  }
+
+  /* Add padding to main content when bottom nav is present */
+  .has-bottom-nav {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .page-container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .modal {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Floating action button for mobile */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  right: 1rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Gesture hint animations */
+@keyframes swipe-hint {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-10px); }
+}
+
+.swipe-hint::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 40%;
+  background: var(--primary);
+  border-radius: 2px;
+  opacity: 0.5;
+  animation: swipe-hint 2s ease-in-out infinite;
+}

@@ -47,6 +47,45 @@
       "form_factor": "narrow"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Mijn Muziek",
+      "short_name": "Muziek",
+      "description": "Bekijk je partituren",
+      "url": "/my-music",
+      "icons": [{ "src": "/icons/music.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Repetities",
+      "short_name": "Repetities",
+      "description": "Bekijk het repetitierooster",
+      "url": "/rehearsals",
+      "icons": [{ "src": "/icons/calendar.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mijn Tickets",
+      "short_name": "Tickets",
+      "description": "Bekijk je concerttickets",
+      "url": "/my-tickets",
+      "icons": [{ "src": "/icons/ticket.svg", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["application/pdf", ".pdf"]
+        }
+      ]
+    }
+  },
   "categories": ["music", "productivity", "utilities"],
   "lang": "nl",
   "dir": "ltr"

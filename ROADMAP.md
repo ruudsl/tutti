@@ -17,7 +17,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
 | 8 | CI/CD hardening + test coverage >80% | 50h | 🔄 Deels |
 | 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
-| 10 | PWA hardening + mobile UX | 55h | 🔄 Deels |
+| 10 | PWA hardening + mobile UX | 55h | ✅ Voltooid |
 | 11 | Pilot deployments (2-3 verenigingen) | 45h | ⬜ Gepland |
 | **Totaal** | | **500h + audit** |
 
@@ -235,11 +235,11 @@ Fase 1-4 zijn geïmplementeerd:
 - Selective offline mode
 
 ### Deliverables
-- [ ] Offline PDF viewing
+- [x] Offline PDF viewing
 - [ ] Background push notifications
-- [ ] App shortcuts (manifest)
-- [ ] Share Target API
-- [ ] Improved mobile touch UX
+- [x] App shortcuts (manifest)
+- [x] Share Target API
+- [x] Improved mobile touch UX
 - [ ] Lighthouse PWA score >90
 
 ---

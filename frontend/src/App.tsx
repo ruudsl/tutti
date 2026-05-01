@@ -78,6 +78,7 @@ import AccessibilityStatement from './pages/AccessibilityStatement';
 import PracticeSchedules from './pages/PracticeSchedules';
 import HealthDashboard from './pages/HealthDashboard';
 import GdprAdmin from './pages/GdprAdmin';
+import ShareTarget from './pages/ShareTarget';
 
 // Ticketing
 import MyTickets from './pages/MyTickets';
@@ -149,6 +150,8 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      {/* Share target for PWA - needs auth but handles redirect */}
+      <Route path="/share-target" element={<ShareTarget />} />
       {/* Public ticket sale page - accessible without login */}
       <Route path="/tickets/:concertId" element={<PublicTicketSale />} />
       {/* Mock payment page for development */}
