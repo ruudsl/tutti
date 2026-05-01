@@ -11,8 +11,8 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 1 | Onafhankelijke security audit | extern | ⬜ Gepland |
 | 2 | Security audit remediation | 65h | ⬜ Gepland |
 | 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ⬜ Gepland |
-| 4 | Docker packaging + self-hosting guide | 50h | ⬜ Gepland |
-| 5 | Open music metadata (MusicXML / JSKOS) | 75h | ⬜ Gepland |
+| 4 | Docker packaging + self-hosting guide | 50h | ✅ Voltooid |
+| 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
 | 6 | Privacy-by-design review + GDPR hardening | 45h | ⬜ Gepland |
 | 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
 | 8 | CI/CD hardening + test coverage >80% | 50h | ⬜ Gepland |
@@ -93,11 +93,11 @@ Formele audit van WCAG 2.1 AA compliance:
 
 ### Deliverables
 - [ ] `tutti/tutti:latest` Docker image op Docker Hub
-- [ ] `docker-compose.yml` met alle services
-- [ ] `docker-compose.prod.yml` voor productie
-- [ ] Self-hosting guide voor non-developers
-- [ ] Backup/restore scripts
-- [ ] Health check endpoints
+- [x] `docker-compose.yml` met alle services
+- [x] `docker-compose.prod.yml` voor productie
+- [x] Self-hosting guide voor non-developers
+- [x] Backup/restore scripts
+- [x] Health check endpoints
 
 ---
 
@@ -113,11 +113,11 @@ Integratie van open muziek metadata standaarden:
 - Interoperabiliteit tussen verenigingen
 
 ### Deliverables
-- [ ] MusicXML metadata import/export
-- [ ] JSKOS vocabulary integratie
-- [ ] API endpoints voor metadata uitwisseling
-- [ ] Migratie scripts voor bestaande data
-- [ ] Documentatie metadata standaarden
+- [x] MusicXML metadata import/export
+- [x] JSKOS vocabulary integratie
+- [x] API endpoints voor metadata uitwisseling
+- [x] Migratie scripts voor bestaande data
+- [x] Documentatie metadata standaarden
 
 ---
 
