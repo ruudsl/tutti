@@ -15,7 +15,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
 | 6 | Privacy-by-design review + GDPR hardening | 45h | ✅ Voltooid |
 | 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
-| 8 | CI/CD hardening + test coverage >80% | 50h | ⬜ Gepland |
+| 8 | CI/CD hardening + test coverage >80% | 50h | 🔄 Deels |
 | 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
 | 10 | PWA hardening + mobile UX | 55h | 🔄 Deels |
 | 11 | Pilot deployments (2-3 verenigingen) | 45h | ⬜ Gepland |
@@ -172,9 +172,9 @@ Gestructureerde GDPR / privacy-by-design review:
 **Afhankelijkheden:** Geen
 
 ### Huidige Status
-- Test coverage: ~40%
-- CI: GitHub Actions (build, lint)
-- CD: Handmatig
+- Test coverage: ~52% backend, ~92% frontend utilities
+- CI: GitHub Actions (build, lint, tests, coverage)
+- CD: Docker build in CI
 
 ### Scope
 - Test coverage verhogen naar >80%
@@ -184,12 +184,12 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 - [ ] Unit tests: >80% coverage
-- [ ] Integration tests voor tenant isolatie
+- [x] Integration tests voor tenant isolatie
 - [ ] E2E tests voor kritieke flows
-- [ ] Dependabot of Renovate configuratie
-- [ ] SAST scanning (CodeQL of Semgrep)
+- [x] Dependabot of Renovate configuratie
+- [x] SAST scanning (CodeQL of Semgrep)
 - [ ] Automated staging deployments
-- [ ] Coverage badges in README
+- [x] Coverage badges in README
 
 ---
 

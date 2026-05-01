@@ -12,24 +12,114 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci --workspace=backend
-      - run: npx tsc --noEmit --project backend/tsconfig.json
-      - run: npm test --workspace=backend
+
+      - name: Type check
+        run: npx tsc --noEmit --project backend/tsconfig.json
+
+      - name: Run tests with coverage
+        run: npm test --workspace=backend -- --coverage --reporter=json --outputFile=coverage/test-results.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./backend/coverage
+          flags: backend
+          fail_ci_if_error: false
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(cat backend/coverage/coverage-summary.json | jq '.total.statements.pct')
+          echo "Backend coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            echo "::warning::Coverage is below 50%"
+          fi
 
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci --workspace=frontend
-      - run: npx tsc --noEmit --project frontend/tsconfig.json
-      - run: npm test --workspace=frontend
-      - run: npm run build --workspace=frontend
+
+      - name: Type check
+        run: npx tsc --noEmit --project frontend/tsconfig.json
+
+      - name: Run tests with coverage
+        run: npm test --workspace=frontend -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./frontend/coverage
+          flags: frontend
+          fail_ci_if_error: false
+
+      - name: Build
+        run: npm run build --workspace=frontend
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint backend
+        run: npm run lint --workspace=backend --if-present
+
+      - name: Lint frontend
+        run: npm run lint --workspace=frontend --if-present
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: tutti-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
