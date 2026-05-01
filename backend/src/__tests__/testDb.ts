@@ -305,6 +305,49 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT,
+    data TEXT,
+    is_read BOOLEAN DEFAULT 0,
+    read_at DATETIME,
+    sent_push BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Notification preferences
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL UNIQUE,
+    new_music BOOLEAN DEFAULT 1,
+    rehearsal_changes BOOLEAN DEFAULT 1,
+    seating_updates BOOLEAN DEFAULT 1,
+    chat_messages BOOLEAN DEFAULT 1,
+    practice_reminders BOOLEAN DEFAULT 1,
+    concert_reminders BOOLEAN DEFAULT 1,
+    email_enabled BOOLEAN DEFAULT 1,
+    push_enabled BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Push subscriptions
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh_key TEXT NOT NULL,
+    auth_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 `;
 
 class PreparedStatement {
