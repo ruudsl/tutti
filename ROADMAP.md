@@ -14,7 +14,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 4 | Docker packaging + self-hosting guide | 50h | ✅ Voltooid |
 | 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
 | 6 | Privacy-by-design review + GDPR hardening | 45h | ✅ Voltooid |
-| 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
+| 7 | Community docs, onboarding, multilingual README | 45h | ✅ Voltooid |
 | 8 | CI/CD hardening + test coverage >80% | 50h | 🔄 Deels |
 | 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
 | 10 | PWA hardening + mobile UX | 55h | ✅ Voltooid |
@@ -156,13 +156,13 @@ Gestructureerde GDPR / privacy-by-design review:
 - Contributie beleid
 
 ### Deliverables
-- [ ] Architecture documentation
+- [x] Architecture documentation
 - [ ] API reference (OpenAPI/Swagger)
-- [ ] Deployment guide
-- [ ] Contributing guide (CONTRIBUTING.md)
-- [ ] Code of Conduct
-- [ ] Issue/PR templates
-- [ ] Public roadmap (dit document)
+- [x] Deployment guide (SELF_HOSTING.md)
+- [x] Contributing guide (CONTRIBUTING.md)
+- [x] Code of Conduct
+- [x] Issue/PR templates
+- [x] Public roadmap (dit document)
 
 ---
 
