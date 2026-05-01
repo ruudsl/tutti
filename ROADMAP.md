@@ -13,7 +13,7 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ✅ Voltooid |
 | 4 | Docker packaging + self-hosting guide | 50h | ✅ Voltooid |
 | 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
-| 6 | Privacy-by-design review + GDPR hardening | 45h | ⬜ Gepland |
+| 6 | Privacy-by-design review + GDPR hardening | 45h | ✅ Voltooid |
 | 7 | Community docs, onboarding, multilingual README | 45h | ⬜ Gepland |
 | 8 | CI/CD hardening + test coverage >80% | 50h | ⬜ Gepland |
 | 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
@@ -136,11 +136,11 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 - [ ] Privacy Impact Assessment (PIA)
-- [ ] Data Processing Agreement (DPA) template
-- [ ] Leden data export functie (GDPR Art. 20)
-- [ ] Account verwijdering met cascade (GDPR Art. 17)
-- [ ] Bewaartermijnen configuratie per data type
-- [ ] Privacy policy template
+- [x] Data Processing Agreement (DPA) template
+- [x] Leden data export functie (GDPR Art. 20)
+- [x] Account verwijdering met cascade (GDPR Art. 17)
+- [x] Bewaartermijnen configuratie per data type
+- [x] Privacy policy template
 
 ---
 
