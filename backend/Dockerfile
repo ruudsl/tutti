@@ -15,7 +15,8 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install all dependencies (including dev for build)
-RUN npm ci
+# Note: using npm install because package-lock.json is in workspace root
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -45,7 +46,7 @@ RUN addgroup -g 1001 -S tutti && \
 
 # Copy package files and install production dependencies only
 COPY package*.json ./
-RUN npm ci --omit=dev && \
+RUN npm install --omit=dev && \
     npm cache clean --force
 
 # Rebuild native modules for production
