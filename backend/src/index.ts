@@ -79,6 +79,7 @@ import discountCodesRoutes from './routes/discount-codes';
 import venueLayoutsRoutes from './routes/venue-layouts';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
+import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
 import healthRoutes from './routes/health';
 import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
@@ -369,6 +370,7 @@ async function startServer() {
             // Start schedulers
             startSeatingScheduler();
             startEmailForwardingScheduler();
+            startGdprCleanupScheduler();
         });
     } catch (error) {
         logger.error('Failed to start server:', error);
