@@ -37,7 +37,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^7.0.13",
-    "otplib": "^13.2.1",
+    "otplib": "^13.4.0",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "sql.js": "^1.10.3",
