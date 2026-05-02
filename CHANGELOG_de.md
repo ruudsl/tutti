@@ -2,6 +2,65 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.12.0] - 2026-05-02
+
+### Hinzugefügt
+
+#### WP3: Barrierefreiheit (WCAG 2.1 AA)
+- **Tastaturnavigation** — Vollständige Anwendung per Tastatur bedienbar mit sichtbaren Fokus-Indikatoren
+- **Skip-Links** — Direkte Navigation zum Hauptinhalt für Screenreader-Benutzer
+- **ARIA-Labels** — Korrekte ARIA-Attribute für alle interaktiven Elemente, Modals und Formulare
+- **Fokus-Management** — Fokus wird automatisch verschoben, wenn Modals geöffnet/geschlossen werden
+- **Barrierefreiheitstests** — Umfassende jest-axe Tests für alle Komponenten
+
+#### WP4: Docker & Self-Hosting
+- **Docker Compose** — Vollständiges Produktions-Setup mit Nginx Reverse Proxy, Let's Encrypt SSL und Health Checks
+- **Multi-Architektur** — Docker-Images für AMD64 und ARM64 (Apple Silicon, Raspberry Pi)
+- **Backup-Volumes** — Automatische Volume-Mounts für Datenbank und Uploads
+
+#### WP5: Musik-Metadaten & Interoperabilität
+- **MusicXML-Import** — Parsen von MusicXML-Dateien für automatische Metadaten-Extraktion
+- **JSKOS-Vokabulare** — Standardisierte Genre-Klassifikation über JSKOS/SKOS
+- **Dublin Core-Export** — Metadaten-Export gemäß Dublin Core-Standard
+- **IIIF-Manifest** — Noten verfügbar über IIIF-Protokoll
+
+#### WP6: DSGVO & Privacy-by-Design
+- **Datenexport** — Benutzer können alle ihre Daten herunterladen (JSON)
+- **Löschanträge** — Self-Service-Kontolöschung mit 30-tägiger Aufbewahrungsfrist
+- **Aufbewahrungseinstellungen** — Konfigurierbare Aufbewahrungsfristen pro Datentyp
+- **Automatische Bereinigung** — Täglicher Scheduler für abgelaufene Sitzungen, Logs und gelöschte Konten
+- **Audit-Logging** — Umfassender Audit-Trail für alle CRUD-Operationen
+- **Einwilligungs-Tracking** — Aufzeichnung von Benutzereinwilligungen
+
+#### WP7: Community & Governance
+- **Verhaltenskodex** — Contributor Covenant Verhaltenskodex
+- **Beitragsrichtlinien** — Richtlinien für Beiträge zum Projekt
+- **Sicherheitsrichtlinie** — Responsible Disclosure-Richtlinie
+
+#### WP8: CI/CD & Testabdeckung
+- **GitHub Actions** — Automatisierte CI/CD-Pipeline mit parallelem Testen
+- **CodeQL** — SAST-Sicherheitsscanning für Schwachstellen
+- **Dependabot** — Automatische Dependency-Updates
+- **Codecov** — Testabdeckungs-Berichterstattung (>80% Ziel)
+- **Multi-Tenant-Tests** — Datenisolationstests zwischen Organisationen
+
+#### WP10: PWA & Mobile UX
+- **App-Shortcuts** — Direkter Zugriff auf Meine Musik, Proben, Tickets vom Homescreen
+- **Share Target** — PDF-Dateien über nativen Share-Dialog empfangen
+- **Push-Benachrichtigungen** — Native Push-Meldungen mit Click-Handling und Navigation
+- **Offline-Sync** — Background-Sync für Aktionen ohne Internet
+- **Verbessertes Caching** — Intelligente Cache-Strategien pro Inhaltstyp
+
+### Verbessert
+- **156 fehlende englische Übersetzungen** — Vollständige Parität zwischen NL/EN/DE
+- **Barrierefreiheitstests** — Tests mit echten Komponenten statt Mock-HTML
+- **Service Worker** — Custom SW mit Workbox für Push und Offline-Funktionalität
+
+### Tests
+- Backend: 265+ Tests
+- Frontend: 85+ Tests (einschließlich Barrierefreiheit)
+- E2E-Abdeckung für kritische Benutzerflows
+
 ## [1.11.0] - 2026-04-25
 
 ### Hinzugefügt

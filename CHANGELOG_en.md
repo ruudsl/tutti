@@ -2,6 +2,65 @@
 
 All notable changes to this application are documented here.
 
+## [1.12.0] - 2026-05-02
+
+### Added
+
+#### WP3: Accessibility (WCAG 2.1 AA)
+- **Keyboard navigation** — Full application keyboard accessible with visible focus indicators
+- **Skip links** — Direct navigation to main content for screen reader users
+- **ARIA labels** — Correct ARIA attributes for all interactive elements, modals and forms
+- **Focus management** — Focus automatically moves when modals open/close
+- **Accessibility tests** — Comprehensive jest-axe tests for all components
+
+#### WP4: Docker & Self-hosting
+- **Docker Compose** — Complete production setup with Nginx reverse proxy, Let's Encrypt SSL, and health checks
+- **Multi-architecture** — Docker images for AMD64 and ARM64 (Apple Silicon, Raspberry Pi)
+- **Backup volumes** — Automatic volume mounts for database and uploads
+
+#### WP5: Music Metadata & Interoperability
+- **MusicXML import** — Parse MusicXML files for automatic metadata extraction
+- **JSKOS vocabularies** — Standardized genre classification via JSKOS/SKOS
+- **Dublin Core export** — Metadata export conforming to Dublin Core standard
+- **IIIF manifest** — Sheet music available via IIIF protocol
+
+#### WP6: GDPR & Privacy-by-Design
+- **Data export** — Users can download all their data (JSON)
+- **Deletion requests** — Self-service account deletion with 30-day retention period
+- **Retention settings** — Configurable retention periods per data type
+- **Automatic cleanup** — Daily scheduler for expired sessions, logs and deleted accounts
+- **Audit logging** — Comprehensive audit trail for all CRUD operations
+- **Consent tracking** — Recording of user consents
+
+#### WP7: Community & Governance
+- **Code of Conduct** — Contributor Covenant code of conduct
+- **Contributing Guide** — Guidelines for contributing to the project
+- **Security Policy** — Responsible disclosure policy
+
+#### WP8: CI/CD & Test Coverage
+- **GitHub Actions** — Automated CI/CD pipeline with parallel testing
+- **CodeQL** — SAST security scanning for vulnerabilities
+- **Dependabot** — Automatic dependency updates
+- **Codecov** — Test coverage reporting (>80% target)
+- **Multi-tenant tests** — Data isolation tests between organizations
+
+#### WP10: PWA & Mobile UX
+- **App shortcuts** — Direct access to My Music, Rehearsals, Tickets from homescreen
+- **Share Target** — Receive PDF files via native share dialog
+- **Push notifications** — Native push notifications with click handling and navigation
+- **Offline sync** — Background sync for actions performed without internet
+- **Enhanced caching** — Smart cache strategies per content type
+
+### Improved
+- **156 missing English translations** — Full parity between NL/EN/DE
+- **Accessibility tests** — Tests on real components instead of mock HTML
+- **Service worker** — Custom SW with workbox for push and offline functionality
+
+### Tests
+- Backend: 265+ tests
+- Frontend: 85+ tests (including accessibility)
+- E2E coverage for critical user flows
+
 ## [1.11.0] - 2026-04-25
 
 ### Added

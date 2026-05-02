@@ -432,6 +432,44 @@ npm test --workspace=frontend && npm test --workspace=backend
 
 ## Deployment
 
+### Docker (Self-hosting)
+
+De eenvoudigste manier om Tutti zelf te hosten is met Docker Compose:
+
+```bash
+# 1. Clone de repository
+git clone https://github.com/ruudsl/tutti.git
+cd tutti
+
+# 2. Kopieer het voorbeeld environment bestand
+cp .env.example .env
+
+# 3. Pas .env aan en stel je JWT_SECRET en domein in
+nano .env
+
+# 4. Start met Docker Compose
+docker-compose up -d
+```
+
+De applicatie is beschikbaar op `http://localhost:3000` (of je geconfigureerde domein).
+
+**Kenmerken:**
+- **Multi-architectuur** — Images beschikbaar voor AMD64 en ARM64 (Apple Silicon, Raspberry Pi)
+- **Nginx reverse proxy** — Met automatische SSL via Let's Encrypt
+- **Persistente volumes** — Database en uploads worden opgeslagen in Docker volumes
+- **Health checks** — Automatische container health monitoring
+
+Voor productie deployment met SSL:
+
+```bash
+# Stel je domein in .env in
+DOMAIN=tutti.example.com
+LETSENCRYPT_EMAIL=admin@example.com
+
+# Start met production profiel
+docker-compose --profile production up -d
+```
+
 ### Backend deployen op Render.com
 
 1. **Maak een account** op [render.com](https://render.com) en log in

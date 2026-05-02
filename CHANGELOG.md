@@ -2,6 +2,65 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.12.0] - 2026-05-02
+
+### Toegevoegd
+
+#### WP3: Toegankelijkheid (WCAG 2.1 AA)
+- **Toetsenbordnavigatie** — Volledige applicatie bedienbaar via toetsenbord met zichtbare focus-indicators
+- **Skip links** — Directe navigatie naar hoofdinhoud voor screenreader gebruikers
+- **ARIA labels** — Correcte ARIA attributen voor alle interactieve elementen, modals en formulieren
+- **Focus management** — Focus wordt automatisch verplaatst bij modal openen/sluiten
+- **Toegankelijkheidstests** — Uitgebreide jest-axe tests voor alle componenten
+
+#### WP4: Docker & Self-hosting
+- **Docker Compose** — Complete productie-setup met Nginx reverse proxy, Let's Encrypt SSL, en health checks
+- **Multi-architecture** — Docker images voor AMD64 en ARM64 (Apple Silicon, Raspberry Pi)
+- **Backup volumes** — Automatische volume mounts voor database en uploads
+
+#### WP5: Muziek Metadata & Interoperabiliteit
+- **MusicXML import** — Parse MusicXML bestanden voor automatische metadata extractie
+- **JSKOS vocabulaires** — Gestandaardiseerde genre-classificatie via JSKOS/SKOS
+- **Dublin Core export** — Metadata export conform Dublin Core standaard
+- **IIIF manifest** — Bladmuziek beschikbaar via IIIF protocol
+
+#### WP6: GDPR & Privacy-by-Design
+- **Data export** — Gebruikers kunnen al hun gegevens downloaden (JSON)
+- **Verwijderverzoeken** — Self-service account verwijdering met 30-dagen bewaarperiode
+- **Retentie-instellingen** — Configureerbare bewaartermijnen per datatype
+- **Automatische cleanup** — Dagelijkse scheduler voor verlopen sessies, logs en verwijderde accounts
+- **Audit logging** — Uitgebreide audit trail voor alle CRUD operaties
+- **Consent tracking** — Registratie van gebruikerstoestemmingen
+
+#### WP7: Community & Governance
+- **Code of Conduct** — Contributor Covenant gedragscode
+- **Contributing Guide** — Richtlijnen voor bijdragen aan het project
+- **Security Policy** — Responsible disclosure beleid
+
+#### WP8: CI/CD & Test Coverage
+- **GitHub Actions** — Geautomatiseerde CI/CD pipeline met parallel testen
+- **CodeQL** — SAST security scanning voor kwetsbaarheden
+- **Dependabot** — Automatische dependency updates
+- **Codecov** — Test coverage rapportage (>80% target)
+- **Multi-tenant tests** — Data-isolatie tests tussen organisaties
+
+#### WP10: PWA & Mobiele UX
+- **App shortcuts** — Directe toegang tot Mijn Muziek, Repetities, Tickets vanaf homescreen
+- **Share Target** — Ontvang PDF bestanden via native share dialoog
+- **Push notificaties** — Native push meldingen met click handling en navigatie
+- **Offline sync** — Background sync voor acties uitgevoerd zonder internet
+- **Verbeterde caching** — Slimme cache strategieën per contenttype
+
+### Verbeterd
+- **156 ontbrekende Engelse vertalingen** — Volledige pariteit tussen NL/EN/DE
+- **Accessibility tests** — Tests op echte componenten i.p.v. mock HTML
+- **Service worker** — Custom SW met workbox voor push en offline functionaliteit
+
+### Tests
+- Backend: 265+ tests
+- Frontend: 85+ tests (inclusief accessibility)
+- E2E coverage voor kritieke user flows
+
 ## [1.11.0] - 2026-04-25
 
 ### Toegevoegd

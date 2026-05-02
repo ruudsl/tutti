@@ -291,7 +291,13 @@
     "noMusicLists": "No music lists available.",
     "noFavorites": "No favorites yet.",
     "noAnnouncements": "No announcements.",
-    "minutesThisWeek": "minutes this week"
+    "minutesThisWeek": "minutes this week",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} day(s) ago"
   },
   "myMusic": {
     "title": "My Music",
@@ -1223,7 +1229,16 @@
     "pagination": "Pagination",
     "processing": "Processing...",
     "loadingContent": "Loading content",
-    "errorOccurred": "An error occurred"
+    "errorOccurred": "An error occurred",
+    "breadcrumbs": "Breadcrumb navigation",
+    "title": "Accessibility",
+    "wheelchairSpaces": "Wheelchair spaces",
+    "companionSpaces": "Companion spaces",
+    "hearingLoop": "Hearing loop",
+    "available": "available",
+    "accessibleParking": "Accessible parking",
+    "moreInfo": "More information",
+    "contactForAssistance": "Contact us for accessibility assistance"
   },
   "accessibilityInfo": {
     "title": "Accessibility Information",
@@ -1296,7 +1311,9 @@
     "voiceParts": "Voice Parts - Harmonie",
     "occupancy": "Occupancy - Harmonie",
     "neighborPreferences": "Neighbor Preferences - Harmonie",
-    "memberDirectory": "Member Directory - Harmonie"
+    "memberDirectory": "Member Directory - Harmonie",
+    "userGuide": "User Guide - Harmonie",
+    "auditLogs": "Audit Logs - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -1870,7 +1887,12 @@
       "low": "Low Demand",
       "medium": "Medium Demand",
       "high": "High Demand"
-    }
+    },
+    "current": "Current",
+    "progress": "Progress",
+    "dailyForecast": "Daily forecast",
+    "predicted": "Predicted",
+    "actual": "Actual"
   },
   "guestList": {
     "title": "Guest List",
@@ -1974,7 +1996,13 @@
     "revokeAllConfirmMessage": "Are you sure you want to log out {{count}} other session(s)?",
     "sessionRevoked": "Session logged out",
     "allSessionsRevoked": "{{count}} session(s) logged out",
-    "noSessions": "No active sessions found."
+    "noSessions": "No active sessions found.",
+    "current": "Current session",
+    "expiresAt": "Expires at",
+    "revokeConfirm": "Are you sure you want to end this session?",
+    "revokeAllConfirm": "Are you sure you want to end all other sessions?",
+    "revoked": "Session ended",
+    "allRevoked": "All other sessions ended"
   },
   "annotations": {
     "title": "Annotations",
@@ -2034,117 +2062,117 @@
     "notSupported": "Bluetooth not supported in this browser"
   },
   "onboarding": {
-    "menuItem": "Guided tour",
-    "welcomeTitle": "Welcome!",
-    "welcomeDescription": "Would you like a quick tour of the application? We'll show you step by step how everything works.",
-    "startTour": "Yes, start tour",
-    "skip": "Skip",
-    "next": "Next",
+    "menuItem": "Start Tour",
+    "welcomeTitle": "Welcome to the app!",
+    "welcomeDescription": "Let us give you a quick tour of the main features. It only takes a minute.",
+    "startTour": "Start tour",
+    "skip": "Skip for now",
     "previous": "Previous",
+    "next": "Next",
     "finish": "Finish",
     "goToPage": "Go to this page",
     "admin": {
       "welcome": {
-        "title": "Welcome, administrator!",
-        "description": "As an administrator, you set up the entire application. Let's walk through the most important steps together."
+        "title": "Welcome, Administrator!",
+        "description": "As an admin, you have full control over the application. Let's walk through the key areas."
       },
       "orchestras": {
-        "title": "Create orchestras",
-        "description": "Start by creating orchestras. Each orchestra has its own music lists and rehearsals. Members are linked to orchestras so they only see their own music."
+        "title": "Orchestras",
+        "description": "Start by setting up your orchestras. Each orchestra can have its own members, repertoire, and rehearsal schedule."
       },
       "members": {
-        "title": "Add members",
-        "description": "Add members and link them to orchestras and instruments. Assign the right role: member, music committee, conductor or administrator."
+        "title": "Member Management",
+        "description": "Add members to the system. You can create accounts manually, invite via email, or sync with Microsoft Entra ID."
       },
       "settings": {
         "title": "Settings",
-        "description": "Set your association's name and logo. These are shown on the login screen and in the navigation bar."
+        "description": "Configure your organization: branding, integrations (Spond, Microsoft SSO), email settings, and more."
       },
       "rehearsals": {
-        "title": "Plan rehearsals",
-        "description": "Set default rehearsal days (e.g. every Tuesday) and automatically generate a schedule for a period. Optionally connect Spond for attendance tracking."
+        "title": "Rehearsals",
+        "description": "Set up default rehearsal days for each orchestra. Individual rehearsals will be generated automatically."
       },
       "done": {
-        "title": "Ready to go!",
-        "description": "You can now get started. Tip: the music committee can upload music pieces and organize them into lists. You can always restart this tour via the button in the navigation bar."
+        "title": "You're all set!",
+        "description": "You now know the basics. Explore the other sections when you're ready. The User Guide has more detailed information."
       }
     },
     "mc": {
       "welcome": {
-        "title": "Welcome, music committee!",
-        "description": "As music committee, you manage the music library. We'll show you how to upload and organize music pieces."
+        "title": "Welcome, Music Committee!",
+        "description": "As part of the music committee, you manage the sheet music library. Let's see what you can do."
       },
       "upload": {
-        "title": "Upload music pieces",
-        "description": "Upload PDF files of music pieces. The filename is automatically parsed: Title_arranger_instrument_tuning_groupnumber.pdf. You can create a new list directly when uploading."
+        "title": "Upload Music",
+        "description": "Upload PDF sheet music here. Files are parsed automatically if you use the naming convention: Title_Arranger_Instrument_Key.pdf"
       },
       "lists": {
-        "title": "List management",
-        "description": "Organize music pieces into lists per orchestra. Add titles, set YouTube links, manage the order and activate/deactivate lists."
+        "title": "Music Lists",
+        "description": "Create concert programs and repertoire lists. Add pieces, reorder them, and calculate total duration."
       },
       "pieces": {
-        "title": "Manage music pieces",
-        "description": "View and edit all music pieces. You can search, filter by instrument, and bulk select and delete pieces."
+        "title": "Music Pieces",
+        "description": "Browse all uploaded sheet music. Filter by instrument, orchestra, or search by title."
       },
       "titles": {
-        "title": "Titles and metadata",
-        "description": "Manage titles with extra information: YouTube links, MP3 previews, duration, difficulty level and genres."
+        "title": "Titles",
+        "description": "Manage the title database with composer, arranger, genre, and duration information. Link to MusicaInfo.net for automatic metadata."
       },
       "instruments": {
-        "title": "Instruments and aliases",
-        "description": "Manage instruments and their aliases. Aliases ensure filenames are automatically linked to the right instrument (e.g. 'Altsax' → 'Alto Saxophone')."
+        "title": "Instruments",
+        "description": "Configure instruments and their aliases. This helps with automatic matching when uploading music."
       },
       "done": {
         "title": "Ready to go!",
-        "description": "You can now start managing music. Members will automatically only see pieces for their instrument. You can always restart this tour via the button in the navigation bar."
+        "description": "You're set up to manage the music library. Check the User Guide for detailed instructions."
       }
     },
     "conductor": {
       "welcome": {
-        "title": "Welcome, conductor!",
-        "description": "As conductor, you plan rehearsals and keep track of the music. We'll show you the most important features."
+        "title": "Welcome, Conductor!",
+        "description": "As a conductor, you can manage rehearsals and view the repertoire. Let's take a quick look."
       },
       "rehearsals": {
-        "title": "Plan rehearsals",
-        "description": "Create rehearsals, set default days and automatically generate a schedule. For each rehearsal you can specify which pieces to rehearse and for which orchestra."
+        "title": "Rehearsals",
+        "description": "View and manage the rehearsal schedule. You can add extra rehearsals, cancel sessions, and see attendance."
       },
       "pieces": {
-        "title": "Repertoire per rehearsal",
-        "description": "For each rehearsal you can add pieces to rehearse. Members see this in their overview so they can prepare."
+        "title": "Browse Music",
+        "description": "View all available sheet music for your orchestras. Preview PDFs and listen to recordings."
       },
       "mymusic": {
-        "title": "View music",
-        "description": "Via 'My Music' you can view the music lists of your orchestras and download pieces."
+        "title": "My Music",
+        "description": "Your personal music page shows pieces assigned to your instrument(s). Download them for practice."
       },
       "done": {
-        "title": "Ready to go!",
-        "description": "You can now start planning rehearsals. You can always restart this tour via the button in the navigation bar."
+        "title": "All done!",
+        "description": "You're ready to start. The User Guide has more information if you need it."
       }
     },
     "member": {
       "welcome": {
         "title": "Welcome!",
-        "description": "Here you'll find all your music and the rehearsal schedule. We'll quickly show you where everything is."
+        "description": "This app helps you access your sheet music and stay updated on rehearsals. Let's show you around."
       },
       "mymusic": {
         "title": "My Music",
-        "description": "Here you'll find your music pieces, sorted by orchestra and list. Download the pieces you need for your instrument."
+        "description": "Find all your sheet music here, filtered by your instrument. Download PDFs or preview them in the browser."
       },
       "rehearsals": {
         "title": "Rehearsals",
-        "description": "View when the next rehearsals are, which pieces will be rehearsed and who will be attending."
+        "description": "See the rehearsal schedule for your orchestra. Extra rehearsals and cancellations are clearly marked."
       },
       "issues": {
-        "title": "Report issues",
-        "description": "See an error in a music piece? Wrong notes, missing measures? Report it here so the music committee can fix it."
+        "title": "Report Issues",
+        "description": "Found a mistake in your sheet music? Report it here and the music committee will fix it."
       },
       "profile": {
-        "title": "Your profile",
-        "description": "Set your instruments so you automatically see the right pieces. You can also change your password and set up two-factor authentication here."
+        "title": "Your Profile",
+        "description": "Update your personal info, change your password, and adjust notification preferences."
       },
       "done": {
-        "title": "All set!",
-        "description": "You now know where everything is. Enjoy making music! You can always restart this tour via the button in the navigation bar."
+        "title": "That's it!",
+        "description": "You're all set. If you need help later, check the User Guide or contact the music committee."
       }
     }
   },
@@ -2970,119 +2998,162 @@
       }
     }
   },
-  "onboarding": {
-    "menuItem": "Start Tour",
-    "welcomeTitle": "Welcome to the app!",
-    "welcomeDescription": "Let us give you a quick tour of the main features. It only takes a minute.",
-    "startTour": "Start tour",
-    "skip": "Skip for now",
-    "previous": "Previous",
-    "next": "Next",
-    "finish": "Finish",
-    "goToPage": "Go to this page",
-    "admin": {
-      "welcome": {
-        "title": "Welcome, Administrator!",
-        "description": "As an admin, you have full control over the application. Let's walk through the key areas."
-      },
-      "orchestras": {
-        "title": "Orchestras",
-        "description": "Start by setting up your orchestras. Each orchestra can have its own members, repertoire, and rehearsal schedule."
-      },
-      "members": {
-        "title": "Member Management",
-        "description": "Add members to the system. You can create accounts manually, invite via email, or sync with Microsoft Entra ID."
-      },
-      "settings": {
-        "title": "Settings",
-        "description": "Configure your organization: branding, integrations (Spond, Microsoft SSO), email settings, and more."
-      },
-      "rehearsals": {
-        "title": "Rehearsals",
-        "description": "Set up default rehearsal days for each orchestra. Individual rehearsals will be generated automatically."
-      },
-      "done": {
-        "title": "You're all set!",
-        "description": "You now know the basics. Explore the other sections when you're ready. The User Guide has more detailed information."
-      }
+  "auditLogs": {
+    "title": "Audit Logs",
+    "description": "Overview of all changes and actions in the system.",
+    "errorLoading": "Error loading audit logs.",
+    "noLogs": "No audit logs found for the selected filters.",
+    "filterAction": "Action",
+    "filterEntity": "Entity",
+    "dateFrom": "From date",
+    "dateTo": "To date",
+    "clearFilters": "Clear filters",
+    "results": "Results",
+    "viewChanges": "View changes",
+    "table": {
+      "date": "Date/time",
+      "user": "User",
+      "action": "Action",
+      "entity": "Entity",
+      "details": "Details"
     },
-    "mc": {
-      "welcome": {
-        "title": "Welcome, Music Committee!",
-        "description": "As part of the music committee, you manage the sheet music library. Let's see what you can do."
-      },
-      "upload": {
-        "title": "Upload Music",
-        "description": "Upload PDF sheet music here. Files are parsed automatically if you use the naming convention: Title_Arranger_Instrument_Key.pdf"
-      },
-      "lists": {
-        "title": "Music Lists",
-        "description": "Create concert programs and repertoire lists. Add pieces, reorder them, and calculate total duration."
-      },
-      "pieces": {
-        "title": "Music Pieces",
-        "description": "Browse all uploaded sheet music. Filter by instrument, orchestra, or search by title."
-      },
-      "titles": {
-        "title": "Titles",
-        "description": "Manage the title database with composer, arranger, genre, and duration information. Link to MusicaInfo.net for automatic metadata."
-      },
-      "instruments": {
-        "title": "Instruments",
-        "description": "Configure instruments and their aliases. This helps with automatic matching when uploading music."
-      },
-      "done": {
-        "title": "Ready to go!",
-        "description": "You're set up to manage the music library. Check the User Guide for detailed instructions."
-      }
+    "actions": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "login": "Logged in",
+      "logout": "Logged out",
+      "upload": "Uploaded",
+      "download": "Downloaded",
+      "share": "Shared",
+      "restore": "Restored"
     },
-    "conductor": {
-      "welcome": {
-        "title": "Welcome, Conductor!",
-        "description": "As a conductor, you can manage rehearsals and view the repertoire. Let's take a quick look."
-      },
-      "rehearsals": {
-        "title": "Rehearsals",
-        "description": "View and manage the rehearsal schedule. You can add extra rehearsals, cancel sessions, and see attendance."
-      },
-      "pieces": {
-        "title": "Browse Music",
-        "description": "View all available sheet music for your orchestras. Preview PDFs and listen to recordings."
-      },
-      "mymusic": {
-        "title": "My Music",
-        "description": "Your personal music page shows pieces assigned to your instrument(s). Download them for practice."
-      },
-      "done": {
-        "title": "All done!",
-        "description": "You're ready to start. The User Guide has more information if you need it."
-      }
-    },
-    "member": {
-      "welcome": {
-        "title": "Welcome!",
-        "description": "This app helps you access your sheet music and stay updated on rehearsals. Let's show you around."
-      },
-      "mymusic": {
-        "title": "My Music",
-        "description": "Find all your sheet music here, filtered by your instrument. Download PDFs or preview them in the browser."
-      },
-      "rehearsals": {
-        "title": "Rehearsals",
-        "description": "See the rehearsal schedule for your orchestra. Extra rehearsals and cancellations are clearly marked."
-      },
-      "issues": {
-        "title": "Report Issues",
-        "description": "Found a mistake in your sheet music? Report it here and the music committee will fix it."
-      },
-      "profile": {
-        "title": "Your Profile",
-        "description": "Update your personal info, change your password, and adjust notification preferences."
-      },
-      "done": {
-        "title": "That's it!",
-        "description": "You're all set. If you need help later, check the User Guide or contact the music committee."
-      }
+    "entities": {
+      "user": "User",
+      "music_piece": "Music piece",
+      "music_title": "Music title",
+      "music_list": "Music list",
+      "orchestra": "Orchestra",
+      "instrument": "Instrument",
+      "rehearsal": "Rehearsal",
+      "concert": "Concert",
+      "settings": "Settings"
     }
+  },
+  "darkMode": {
+    "toggle": "Toggle between light and dark mode",
+    "light": "Light mode",
+    "dark": "Dark mode",
+    "system": "System preference"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "empty": "You have no favorites yet. Click the heart icon on a music piece to add it.",
+    "added": "Added to favorites",
+    "removed": "Removed from favorites"
+  },
+  "practice": {
+    "title": "Practice Log",
+    "log": "Log practice session",
+    "duration": "Duration (minutes)",
+    "notes": "Notes",
+    "logged": "Practice session saved",
+    "stats": {
+      "title": "Statistics",
+      "totalTime": "Total practice time",
+      "weekTime": "This week",
+      "monthTime": "This month",
+      "streak": "Current streak",
+      "mostPracticed": "Most practiced"
+    },
+    "empty": "You have not logged any practice sessions yet.",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days"
+  },
+  "recent": {
+    "title": "Recently viewed",
+    "empty": "You have not viewed any items yet.",
+    "clear": "Clear history"
+  },
+  "gdpr": {
+    "title": "Export data",
+    "description": "Download all your personal data in JSON format.",
+    "export": "Download my data",
+    "exporting": "Exporting..."
+  },
+  "keyboard": {
+    "title": "Keyboard shortcuts",
+    "navigation": "Navigation",
+    "actions": "Actions"
+  },
+  "seatSelection": {
+    "title": "Seat Selection",
+    "selectSeats": "Select your seats",
+    "selectedSeats": "Selected seats",
+    "section": "Section",
+    "row": "Row",
+    "seat": "Seat",
+    "price": "Price",
+    "wheelchair": "Wheelchair",
+    "companion": "Companion",
+    "vip": "VIP",
+    "regular": "Standard",
+    "unavailable": "Unavailable",
+    "maxSeatsReached": "Maximum number of seats reached",
+    "clearSelection": "Clear selection",
+    "legend": "Legend"
+  },
+  "ticketTransfer": {
+    "title": "Ticket Transfer",
+    "transferTicket": "Transfer Ticket",
+    "recipientEmail": "Recipient email address",
+    "recipientName": "Recipient name",
+    "confirmTransfer": "Confirm transfer",
+    "transferInitiated": "Transfer initiated",
+    "transferComplete": "Transfer complete",
+    "transferCancelled": "Transfer cancelled",
+    "pendingTransfers": "Pending transfers",
+    "acceptTransfer": "Accept Transfer",
+    "cancelTransfer": "Cancel",
+    "transferHistory": "Transfer history",
+    "noTransfers": "No transfers",
+    "transferCode": "Transfer code",
+    "expiresAt": "Expires at",
+    "transferSuccess": "Ticket transferred successfully",
+    "transferError": "Transfer failed",
+    "acceptSuccess": "Ticket accepted successfully",
+    "acceptError": "Accept failed"
+  },
+  "discountCodes": {
+    "title": "Discount Codes",
+    "addCode": "Add Code",
+    "editCode": "Edit Code",
+    "code": "Code",
+    "description": "Description",
+    "discountType": "Discount type",
+    "percentage": "Percentage",
+    "fixedAmount": "Fixed amount",
+    "discountValue": "Discount value",
+    "minOrderAmount": "Minimum order amount",
+    "maxUses": "Maximum uses",
+    "usesCount": "Times used",
+    "validFrom": "Valid from",
+    "validUntil": "Valid until",
+    "isActive": "Active",
+    "usage": "Usage",
+    "noUsage": "Not used yet",
+    "applyCode": "Apply code",
+    "codeApplied": "Discount code applied",
+    "invalidCode": "Invalid discount code",
+    "discount": "Discount"
+  },
+  "serviceFee": {
+    "serviceFee": "Service fee",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "info": "Service fees are calculated per ticket"
   }
 }
