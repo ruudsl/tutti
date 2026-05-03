@@ -77,6 +77,8 @@ import guestListRoutes from './routes/guest-list';
 import paymentSettingsRoutes from './routes/payment-settings';
 import discountCodesRoutes from './routes/discount-codes';
 import venueLayoutsRoutes from './routes/venue-layouts';
+import { createServer } from 'http';
+import { initWebSocket } from './websocket';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
@@ -362,9 +364,14 @@ async function startServer() {
         const { initializeDatabase } = await import('./database/init');
         await initializeDatabase();
 
-        app.listen(config.port, () => {
+        // Create HTTP server and initialize WebSocket
+        const httpServer = createServer(app);
+        initWebSocket(httpServer);
+
+        httpServer.listen(config.port, () => {
             logger.info(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
             logger.info(`   API beschikbaar op http://localhost:${config.port}/api`);
+            logger.info(`   WebSocket beschikbaar op ws://localhost:${config.port}`);
             if (config.isDevelopment) {
                 logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
             }
