@@ -5,7 +5,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { encrypt, decrypt, isEncrypted, migrateFromBase64 } from '../utils/encryption';
+import { encrypt, decrypt, isEncrypted } from '../utils/encryption';
 
 const router = Router();
 
