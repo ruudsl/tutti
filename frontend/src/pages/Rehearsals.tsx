@@ -15,7 +15,7 @@ import {
   getAttendanceSummary,
   getRehearsalSeating, generateRehearsalSeating,
   getMyAttendanceStatus, updateMyAttendance,
-  createRecurringRehearsals, deleteRehearsalSeries,
+  createRecurringRehearsals,
 } from '../api';
 import type { AttendanceMember } from '../api';
 import type { Rehearsal, RehearsalDetail, SpondGroup, RehearsalSeat } from '../types';

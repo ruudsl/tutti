@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLoans, createLoan, returnLoan, deleteLoan, getTitleLoanHistory, type Loan, type TitleLoanHistory } from '../api';
+import { getLoans, createLoan, returnLoan, deleteLoan, getTitleLoanHistory, type Loan, type TitleLoanHistory, type LoanHistoryEntry } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -561,7 +561,7 @@ export default function Loans() {
                       </tr>
                     </thead>
                     <tbody>
-                      {loanHistory.loans.map((entry) => (
+                      {loanHistory.loans.map((entry: LoanHistoryEntry) => (
                         <tr key={entry.id}>
                           <td>
                             <div>{entry.borrowerName}</div>

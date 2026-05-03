@@ -9,6 +9,14 @@ export interface AvailabilityEntry {
   updatedAt: string;
 }
 
+export interface TeamMember {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  status: 'available' | 'unavailable' | 'maybe' | 'unknown';
+  notes: string | null;
+}
+
 export interface TeamAvailability {
   date: string;
   summary: {
@@ -18,13 +26,7 @@ export interface TeamAvailability {
     unknown: number;
     total: number;
   };
-  members: {
-    userId: string;
-    firstName: string;
-    lastName: string;
-    status: 'available' | 'unavailable' | 'maybe' | 'unknown';
-    notes: string | null;
-  }[];
+  members: TeamMember[];
 }
 
 export const getMyAvailability = async (fromDate?: string, toDate?: string): Promise<AvailabilityEntry[]> => {

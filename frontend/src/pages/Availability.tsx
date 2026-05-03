@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
-import { Icon } from '../components/Icon';
 import {
   getMyAvailability,
   getTeamAvailability,
@@ -13,11 +12,12 @@ import {
   removeAvailability,
   getOrchestras,
 } from '../api';
-import type { AvailabilityEntry, TeamAvailability } from '../api/availability';
+import type { AvailabilityEntry, TeamMember } from '../api/availability';
+import type { Orchestra } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 
-const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.CONDUCTOR, ROLES.SECTION_LEADER];
+const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.CONDUCTOR];
 
 type AvailabilityStatus = 'available' | 'unavailable' | 'maybe';
 
@@ -63,10 +63,10 @@ export default function Availability() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: orchestras = [] } = useQuery({
+  const { data: orchestras = [] } = useQuery<Orchestra[]>({
     queryKey: ['orchestras'],
     queryFn: getOrchestras,
-    enabled: isManager,
+    enabled: !!isManager,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -80,7 +80,7 @@ export default function Availability() {
   // Build availability map for quick lookup
   const availabilityMap = useMemo(() => {
     const map = new Map<string, AvailabilityEntry>();
-    myAvailability.forEach(entry => {
+    myAvailability.forEach((entry: AvailabilityEntry) => {
       map.set(entry.date, entry);
     });
     return map;
@@ -211,7 +211,7 @@ export default function Availability() {
       <div className="card mb-3">
         <div className="card-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button className="btn btn-outline btn-sm" onClick={handlePrevMonth}>
-            <Icon name="chevron-left" size={16} /> {t('common.previous')}
+            &larr; {t('common.previous')}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <h2 style={{ margin: 0, textTransform: 'capitalize' }}>{formatMonthYear(currentMonth)}</h2>
@@ -220,7 +220,7 @@ export default function Availability() {
             </button>
           </div>
           <button className="btn btn-outline btn-sm" onClick={handleNextMonth}>
-            {t('common.next')} <Icon name="chevron-right" size={16} />
+            {t('common.next')} &rarr;
           </button>
         </div>
       </div>
@@ -491,7 +491,7 @@ export default function Availability() {
                   <SkeletonTable rows={8} columns={3} />
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
-                    {teamData.members.map(member => (
+                    {teamData.members.map((member: TeamMember) => (
                       <div
                         key={member.userId}
                         style={{

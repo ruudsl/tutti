@@ -1,10 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
-import { Icon } from '../components/Icon';
 import {
   getPracticeLogs,
   getPracticeStats,
@@ -15,8 +13,7 @@ import {
   deletePracticeGoal,
   getMusicTitles,
 } from '../api';
-import type { PracticeLog, PracticeStats, PracticeGoalsResponse } from '../api/practice';
-import type { MusicTitle } from '../types';
+import type { PracticeGoalsResponse } from '../api/practice';
 import { SkeletonTable } from '../components/Skeleton';
 
 export default function Practice() {
@@ -45,7 +42,7 @@ export default function Practice() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: goalsData, isLoading: goalsLoading } = useQuery({
+  const { data: goalsData, isLoading: goalsLoading } = useQuery<PracticeGoalsResponse>({
     queryKey: ['practiceGoals'],
     queryFn: getPracticeGoals,
     staleTime: 5 * 60 * 1000,
@@ -345,7 +342,7 @@ export default function Practice() {
                 </tr>
               </thead>
               <tbody>
-                {stats.mostPracticed.map((piece, i) => (
+                {stats.mostPracticed.map((piece) => (
                   <tr key={piece.id}>
                     <td>
                       <strong>{piece.title}</strong>
@@ -436,10 +433,10 @@ export default function Practice() {
                       {titleSearch ? t('practice.noResults') : t('practice.typeToSearch')}
                     </div>
                   ) : (
-                    titles.slice(0, 20).map(title => (
+                    titles.slice(0, 20).filter(title => title.id).map(title => (
                       <div
                         key={title.id}
-                        onClick={() => setSelectedTitleId(title.id)}
+                        onClick={() => setSelectedTitleId(title.id!)}
                         style={{
                           padding: '0.75rem',
                           cursor: 'pointer',

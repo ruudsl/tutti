@@ -3019,4 +3019,44 @@ export const getTransferHistory = async (): Promise<TicketTransferHistory[]> => 
   return data;
 };
 
+// Re-export from modular API files
+export {
+  getMyAvailability,
+  getTeamAvailability,
+  setAvailability,
+  setBulkAvailability,
+  removeAvailability,
+  type AvailabilityEntry,
+  type TeamMember,
+  type TeamAvailability,
+} from './api/availability';
+
+export {
+  getPracticeGoals,
+  setPracticeGoal,
+  deletePracticeGoal,
+  type PracticeGoal,
+  type PracticeGoalsResponse,
+} from './api/practice';
+
+export {
+  getTitleLoanHistory,
+  type TitleLoanHistory,
+  type LoanHistoryEntry,
+} from './api/loans';
+
+export {
+  getAttendancePrediction,
+  type AttendancePrediction,
+} from './api/concerts';
+
+export {
+  createRecurringRehearsals,
+  deleteRehearsalSeries,
+} from './api/rehearsals';
+
+export {
+  uploadMusicPiecesZip,
+} from './api/music';
+
 export default api;
