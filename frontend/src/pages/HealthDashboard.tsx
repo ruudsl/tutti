@@ -41,11 +41,11 @@ export default function HealthDashboard() {
     const { data: healthData, isLoading, error, refetch, isFetching } = useQuery<DetailedHealthResponse>({
         queryKey: ['health-detailed'],
         queryFn: async () => {
-            console.log('[HealthDashboard] Fetching health data...');
             const token = localStorage.getItem('token');
             const response = await axios.get(`${API_BASE}/api/health/detailed`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 withCredentials: true,
+                validateStatus: (status) => status === 200 || status === 503, // 503 = unhealthy but valid response
             });
             return response.data;
         },
