@@ -135,6 +135,20 @@ export const uploadMusicPieces = async (
   return data;
 };
 
+export const uploadMusicPiecesZip = async (
+  zipFile: File,
+  listId?: string
+): Promise<{ uploaded: any[]; errors?: any[]; skipped?: string[] }> => {
+  const formData = new FormData();
+  formData.append('zip', zipFile);
+  if (listId) formData.append('listId', listId);
+
+  const { data } = await api.post('/music-pieces/upload-zip', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
 export const refreshInstrumentLinks = async (): Promise<{
   updated: number;
   alreadyLinked: number;

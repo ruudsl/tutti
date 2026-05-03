@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicLists, useCreateMusicList } from '../hooks/useMusicLists';
-import { uploadMusicPieces } from '../api';
+import { uploadMusicPieces, uploadMusicPiecesZip } from '../api';
 import { FileDropzone } from '../components/FileDropzone';
 import { SkeletonCard } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
@@ -26,6 +26,7 @@ export default function Upload() {
   const [showNewList, setShowNewList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showImslpSearch, setShowImslpSearch] = useState(false);
+  const [zipFile, setZipFile] = useState<File | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -55,6 +56,34 @@ export default function Upload() {
       showError(getErrorMessage(error));
     },
   });
+
+  // ZIP upload mutation
+  const zipUploadMutation = useMutation({
+    mutationFn: (file: File) => uploadMusicPiecesZip(file, selectedList || undefined),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+
+      if (result.errors && result.errors.length > 0) {
+        showError(`${result.errors.length} ${t('upload.filesFailed')}`);
+      }
+      if (result.skipped && result.skipped.length > 0) {
+        showError(`${result.skipped.length} bestanden overgeslagen (geen PDF)`);
+      }
+      if (result.uploaded.length > 0) {
+        showSuccess(`${result.uploaded.length} ${t('upload.filesUploaded')} vanuit ZIP`);
+        setZipFile(null);
+      }
+    },
+    onError: (error) => {
+      showError(getErrorMessage(error));
+    },
+  });
+
+  const handleZipUpload = () => {
+    if (!zipFile) return;
+    zipUploadMutation.mutate(zipFile);
+  };
 
   const handleFilesAccepted = useCallback((acceptedFiles: File[]) => {
     const newFileItems = acceptedFiles.map((file) => ({ file }));
@@ -218,6 +247,44 @@ export default function Upload() {
               {t('upload.filenameFormat')}: Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf
             </p>
           </FileDropzone>
+
+          {/* ZIP Upload Section */}
+          <div className="mt-2 p-2" style={{ backgroundColor: 'var(--bg-alt)', border: '2px dashed var(--border)', borderRadius: '8px' }}>
+            <h4 className="mb-1"><Icon name="archive" size={20} /> ZIP Bulk Upload</h4>
+            <p className="text-light mb-1" style={{ fontSize: '0.875rem' }}>Upload een ZIP bestand met meerdere PDF's in één keer.</p>
+
+            <div className="flex gap-1 items-center" style={{ flexWrap: 'wrap' }}>
+              <input
+                type="file"
+                accept=".zip,application/zip"
+                onChange={(e) => setZipFile(e.target.files?.[0] || null)}
+                style={{ display: 'none' }}
+                id="zip-upload"
+              />
+              <label htmlFor="zip-upload" className="btn btn-outline" style={{ cursor: 'pointer' }}>
+                <Icon name="upload" size={16} /> Selecteer ZIP
+              </label>
+              {zipFile && (
+                <>
+                  <span className="text-light">{zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleZipUpload}
+                    disabled={zipUploadMutation.isPending}
+                  >
+                    {zipUploadMutation.isPending ? 'Uploaden...' : 'Upload ZIP'}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setZipFile(null)}
+                    disabled={zipUploadMutation.isPending}
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
 
           <div className="mt-2">
             <CloudFilePicker

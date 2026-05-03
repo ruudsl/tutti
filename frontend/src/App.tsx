@@ -60,6 +60,8 @@ import Onboarding from './pages/Onboarding';
 // Rehearsals and events
 import Rehearsals from './pages/Rehearsals';
 import Concerts from './pages/Concerts';
+import Availability from './pages/Availability';
+import Practice from './pages/Practice';
 
 // Equipment and uniforms
 import Equipment from './pages/Equipment';
@@ -302,6 +304,8 @@ function AppRoutes() {
           }
         />
         <Route path="rehearsals" element={<Rehearsals />} />
+        <Route path="availability" element={<Availability />} />
+        <Route path="practice" element={<Practice />} />
         <Route
           path="seating"
           element={

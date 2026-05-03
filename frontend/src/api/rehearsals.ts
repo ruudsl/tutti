@@ -110,3 +110,26 @@ export const getAttendanceSummary = async (from: string, to: string, orchestraId
   const { data } = await api.get('/rehearsals/attendance/summary', { params });
   return data;
 };
+
+// Recurring rehearsals (RRULE)
+export const createRecurringRehearsals = async (params: {
+  rrule: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  orchestraId?: string;
+  until?: string;
+}): Promise<{
+  count: number;
+  seriesId: string;
+  dates: string[];
+}> => {
+  const { data } = await api.post('/rehearsals/recurring', params);
+  return data;
+};
+
+export const deleteRehearsalSeries = async (seriesId: string, futureOnly?: boolean): Promise<{ count: number }> => {
+  const params = futureOnly ? { futureOnly: 'true' } : {};
+  const { data } = await api.delete(`/rehearsals/series/${seriesId}`, { params });
+  return data;
+};
