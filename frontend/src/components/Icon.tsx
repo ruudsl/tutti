@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   Home,
   Music,
@@ -141,7 +142,7 @@ interface IconProps {
   'aria-hidden'?: boolean;
 }
 
-export function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: IconProps) {
+export const Icon = memo(function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: IconProps) {
   const Component = iconMap[name];
   if (!Component) return null;
   return (
@@ -152,4 +153,4 @@ export function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: I
       aria-hidden={rest['aria-hidden'] ?? true}
     />
   );
-}
+});
