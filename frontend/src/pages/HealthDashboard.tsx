@@ -97,16 +97,19 @@ export default function HealthDashboard() {
     };
 
     if (error) {
+        const isPermissionError = axios.isAxiosError(error) && (error.response?.status === 403 || error.response?.status === 401);
         return (
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('health.title')}</h1>
                 </div>
                 <div className="alert alert-danger">
-                    <p>{t('health.errorLoading')}</p>
-                    <button className="btn btn-primary mt-2" onClick={() => refetch()}>
-                        {t('health.retry')}
-                    </button>
+                    <p>{isPermissionError ? t('health.adminRequired') : t('health.errorLoading')}</p>
+                    {!isPermissionError && (
+                        <button className="btn btn-primary mt-2" onClick={() => refetch()}>
+                            {t('health.retry')}
+                        </button>
+                    )}
                 </div>
             </div>
         );
