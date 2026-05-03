@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import db from '../database/connection';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -144,7 +145,7 @@ router.post('/info', authenticateToken, requireRole('music_committee', 'admin'),
       filename: req.file.originalname,
     });
   } catch (error) {
-    console.error('Error getting PDF info:', error);
+    logger.error('Error getting PDF info:', error);
     res.status(500).json({ error: 'Fout bij lezen van PDF' });
   }
 });
@@ -208,7 +209,7 @@ router.post('/split', authenticateToken, requireRole('music_committee', 'admin')
 
     res.json({ results });
   } catch (error) {
-    console.error('Error splitting PDF:', error);
+    logger.error('Error splitting PDF:', error);
     res.status(500).json({ error: 'Fout bij splitsen van PDF' });
   }
 });
@@ -296,7 +297,7 @@ router.post('/split-a3', authenticateToken, requireRole('music_committee', 'admi
       filename,
     });
   } catch (error) {
-    console.error('Error splitting A3 PDF:', error);
+    logger.error('Error splitting A3 PDF:', error);
     res.status(500).json({ error: 'Fout bij splitsen van A3 naar A4' });
   }
 });
@@ -374,7 +375,7 @@ router.post('/download-zip', authenticateToken, requireRole('music_committee', '
 
     await archive.finalize();
   } catch (error) {
-    console.error('Error creating zip:', error);
+    logger.error('Error creating zip:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Fout bij aanmaken van zip bestand' });
     }
@@ -411,7 +412,7 @@ router.post('/merge', authenticateToken, requireRole('music_committee', 'admin')
       filename,
     });
   } catch (error) {
-    console.error('Error merging PDFs:', error);
+    logger.error('Error merging PDFs:', error);
     res.status(500).json({ error: 'Fout bij samenvoegen van PDFs' });
   }
 });
@@ -452,7 +453,7 @@ router.post('/rotate', authenticateToken, requireRole('music_committee', 'admin'
       filename,
     });
   } catch (error) {
-    console.error('Error rotating PDF:', error);
+    logger.error('Error rotating PDF:', error);
     res.status(500).json({ error: 'Fout bij roteren van PDF' });
   }
 });
@@ -542,7 +543,7 @@ router.post('/save-as-music-piece', authenticateToken, requireRole('music_commit
       instrumentFound: !!pieceInstrumentId,
     });
   } catch (error) {
-    console.error('Error saving PDF as music piece:', error);
+    logger.error('Error saving PDF as music piece:', error);
     res.status(500).json({ error: 'Fout bij opslaan als muziekstuk' });
   }
 });
@@ -562,7 +563,7 @@ export function cleanupTempFiles() {
       }
     }
   } catch (error) {
-    console.error('Error cleaning up temp files:', error);
+    logger.error('Error cleaning up temp files:', error);
   }
 }
 
