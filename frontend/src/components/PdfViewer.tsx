@@ -709,7 +709,7 @@ export function PdfViewer({
                 aria-label={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
                 title={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
               >
-                &#9998;
+                <Icon name="MessageSquare" size={16} />
                 {annotations.length > 0 && (
                   <span style={{
                     position: 'absolute',
@@ -744,7 +744,7 @@ export function PdfViewer({
                 aria-label={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
                 title={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
               >
-                &#9998;&#65039;
+                <Icon name="PenTool" size={16} />
               </button>
             )}
           </div>

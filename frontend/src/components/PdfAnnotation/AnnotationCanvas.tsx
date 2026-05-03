@@ -8,9 +8,22 @@ import type {
   TextAnnotation,
   StampAnnotation,
   HighlightAnnotation,
+  ShapeType,
 } from './types';
 
-export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
+const CURSOR_STYLES: Record<string, string> = {
+  select: 'default',
+  freehand: 'crosshair',
+  highlight: 'text',
+  text: 'text',
+  stamp: 'copy',
+  shape: 'crosshair',
+  eraser: 'not-allowed',
+};
+
+export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
+  selectedShapeType?: ShapeType;
+}> = ({
   pageNumber,
   musicPieceId,
   width,
@@ -21,6 +34,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   strokeWidth,
   opacity,
   selectedStamp,
+  selectedShapeType = 'rectangle',
   annotations,
   onAnnotationAdd,
   onAnnotationUpdate: _onAnnotationUpdate,
@@ -30,14 +44,30 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [shapeStart, setShapeStart] = useState<Point | null>(null);
+  const [stampImages, setStampImages] = useState<Map<string, HTMLImageElement>>(new Map());
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInputPosition, setTextInputPosition] = useState<Point | null>(null);
+  const [textInputValue, setTextInputValue] = useState('');
+  const textInputRef = useRef<HTMLInputElement>(null);
 
-  const getCanvasPoint = useCallback((e: React.MouseEvent | React.TouchEvent): Point => {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
+  const getCanvasPoint = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent): Point => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    let clientX: number, clientY: number;
+
+    if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('clientX' in e) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return { x: 0, y: 0 };
+    }
 
     return {
       x: (clientX - rect.left) / scale,
@@ -45,9 +75,10 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
     };
   }, [scale]);
 
-  const drawAnnotation = useCallback((ctx: CanvasRenderingContext2D, annotation: Annotation) => {
+  const drawAnnotation = useCallback((ctx: CanvasRenderingContext2D, annotation: Annotation, dpr: number) => {
     ctx.save();
     ctx.globalAlpha = annotation.opacity;
+    const s = scale * dpr;
 
     switch (annotation.annotationType) {
       case 'freehand': {
@@ -55,22 +86,22 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         if (stroke.points.length < 2) break;
 
         ctx.strokeStyle = annotation.color;
-        ctx.lineWidth = annotation.strokeWidth * scale;
+        ctx.lineWidth = annotation.strokeWidth * s;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.moveTo(stroke.points[0].x * scale, stroke.points[0].y * scale);
+        ctx.moveTo(stroke.points[0].x * s, stroke.points[0].y * s);
 
         for (let i = 1; i < stroke.points.length; i++) {
           const p0 = stroke.points[i - 1];
           const p1 = stroke.points[i];
           const midX = (p0.x + p1.x) / 2;
           const midY = (p0.y + p1.y) / 2;
-          ctx.quadraticCurveTo(p0.x * scale, p0.y * scale, midX * scale, midY * scale);
+          ctx.quadraticCurveTo(p0.x * s, p0.y * s, midX * s, midY * s);
         }
 
         const lastPoint = stroke.points[stroke.points.length - 1];
-        ctx.lineTo(lastPoint.x * scale, lastPoint.y * scale);
+        ctx.lineTo(lastPoint.x * s, lastPoint.y * s);
         ctx.stroke();
         break;
       }
@@ -82,10 +113,10 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         ctx.fillStyle = annotation.color;
         ctx.globalAlpha = 0.3;
         ctx.beginPath();
-        ctx.moveTo(highlight.points[0].x * scale, highlight.points[0].y * scale);
+        ctx.moveTo(highlight.points[0].x * s, highlight.points[0].y * s);
 
         for (const point of highlight.points) {
-          ctx.lineTo(point.x * scale, point.y * scale);
+          ctx.lineTo(point.x * s, point.y * s);
         }
 
         ctx.closePath();
@@ -96,40 +127,42 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
       case 'text': {
         const text = annotation.data as TextAnnotation;
         ctx.fillStyle = annotation.color;
-        ctx.font = `${text.fontSize * scale}px sans-serif`;
-        ctx.fillText(text.content, text.position.x * scale, text.position.y * scale);
+        ctx.font = `${text.fontSize * s}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(text.content, text.position.x * s, text.position.y * s);
         break;
       }
 
       case 'stamp': {
         const stamp = annotation.data as StampAnnotation;
-        if (!selectedStamp) break;
+        const img = stampImages.get(stamp.stampId);
 
-        ctx.translate(stamp.position.x * scale, stamp.position.y * scale);
-        ctx.rotate((stamp.rotation * Math.PI) / 180);
-        ctx.scale(stamp.scale, stamp.scale);
-        ctx.fillStyle = annotation.color;
-
-        // Create an SVG image and draw it
-        const img = new Image();
-        const svgBlob = new Blob(
-          [`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">${selectedStamp.svgData}</svg>`],
-          { type: 'image/svg+xml' }
-        );
-        img.src = URL.createObjectURL(svgBlob);
-        ctx.drawImage(img, -15, -15, 30, 30);
+        if (img && img.complete) {
+          ctx.translate(stamp.position.x * s, stamp.position.y * s);
+          ctx.rotate((stamp.rotation * Math.PI) / 180);
+          const stampSize = 30 * stamp.scale * s / dpr;
+          ctx.drawImage(img, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
+        } else {
+          ctx.fillStyle = annotation.color;
+          ctx.font = `bold ${20 * s / dpr}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('?', stamp.position.x * s, stamp.position.y * s);
+        }
         break;
       }
 
       case 'shape': {
         const shape = annotation.data as ShapeAnnotation;
         ctx.strokeStyle = annotation.color;
-        ctx.lineWidth = annotation.strokeWidth * scale;
+        ctx.lineWidth = annotation.strokeWidth * s;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
-        const x1 = shape.start.x * scale;
-        const y1 = shape.start.y * scale;
-        const x2 = shape.end.x * scale;
-        const y2 = shape.end.y * scale;
+        const x1 = shape.start.x * s;
+        const y1 = shape.start.y * s;
+        const x2 = shape.end.x * s;
+        const y2 = shape.end.y * s;
 
         ctx.beginPath();
 
@@ -149,12 +182,11 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             break;
-          case 'arrow':
+          case 'arrow': {
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
-            // Draw arrowhead
             const angle = Math.atan2(y2 - y1, x2 - x1);
-            const headLength = 15 * scale;
+            const headLength = 15 * s / dpr;
             ctx.lineTo(
               x2 - headLength * Math.cos(angle - Math.PI / 6),
               y2 - headLength * Math.sin(angle - Math.PI / 6)
@@ -165,6 +197,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
               y2 - headLength * Math.sin(angle + Math.PI / 6)
             );
             break;
+          }
         }
 
         if (shape.filled) {
@@ -177,7 +210,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
     }
 
     ctx.restore();
-  }, [scale, selectedStamp]);
+  }, [scale, stampImages]);
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -186,66 +219,156 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw all saved annotations
     for (const annotation of annotations) {
-      drawAnnotation(ctx, annotation);
+      drawAnnotation(ctx, annotation, dpr);
     }
 
-    // Draw current stroke if drawing
     if (isDrawing && currentStroke.length > 0) {
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = strokeWidth * scale;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(currentStroke[0].x * scale, currentStroke[0].y * scale);
+      const s = scale * dpr;
 
-      for (let i = 1; i < currentStroke.length; i++) {
-        const p0 = currentStroke[i - 1];
-        const p1 = currentStroke[i];
-        const midX = (p0.x + p1.x) / 2;
-        const midY = (p0.y + p1.y) / 2;
-        ctx.quadraticCurveTo(p0.x * scale, p0.y * scale, midX * scale, midY * scale);
+      if (activeTool === 'freehand' || activeTool === 'highlight') {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (activeTool === 'highlight' ? strokeWidth * 5 : strokeWidth) * s;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (activeTool === 'highlight') {
+          ctx.globalAlpha = 0.3;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(currentStroke[0].x * s, currentStroke[0].y * s);
+
+        for (let i = 1; i < currentStroke.length; i++) {
+          const p0 = currentStroke[i - 1];
+          const p1 = currentStroke[i];
+          const midX = (p0.x + p1.x) / 2;
+          const midY = (p0.y + p1.y) / 2;
+          ctx.quadraticCurveTo(p0.x * s, p0.y * s, midX * s, midY * s);
+        }
+
+        const lastPoint = currentStroke[currentStroke.length - 1];
+        ctx.lineTo(lastPoint.x * s, lastPoint.y * s);
+        ctx.stroke();
       }
 
-      const lastPoint = currentStroke[currentStroke.length - 1];
-      ctx.lineTo(lastPoint.x * scale, lastPoint.y * scale);
-      ctx.stroke();
-      ctx.restore();
-    }
+      if (shapeStart && activeTool === 'shape') {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = strokeWidth * s;
+        ctx.setLineDash([5 * dpr, 5 * dpr]);
+        ctx.beginPath();
 
-    // Draw shape preview if shape tool is active
-    if (shapeStart && isDrawing && activeTool === 'shape') {
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = strokeWidth * scale;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      // Preview rectangle for now
-      const lastPoint = currentStroke[currentStroke.length - 1] || shapeStart;
-      ctx.rect(
-        shapeStart.x * scale,
-        shapeStart.y * scale,
-        (lastPoint.x - shapeStart.x) * scale,
-        (lastPoint.y - shapeStart.y) * scale
-      );
-      ctx.stroke();
+        const lastPoint = currentStroke[currentStroke.length - 1] || shapeStart;
+        const x1 = shapeStart.x * s;
+        const y1 = shapeStart.y * s;
+        const x2 = lastPoint.x * s;
+        const y2 = lastPoint.y * s;
+
+        switch (selectedShapeType) {
+          case 'rectangle':
+            ctx.rect(x1, y1, x2 - x1, y2 - y1);
+            break;
+          case 'circle': {
+            const radiusX = Math.abs(x2 - x1) / 2;
+            const radiusY = Math.abs(y2 - y1) / 2;
+            const centerX = (x1 + x2) / 2;
+            const centerY = (y1 + y2) / 2;
+            ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+            break;
+          }
+          case 'line':
+          case 'arrow':
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            if (selectedShapeType === 'arrow') {
+              const angle = Math.atan2(y2 - y1, x2 - x1);
+              const headLength = 15 * s / dpr;
+              ctx.lineTo(
+                x2 - headLength * Math.cos(angle - Math.PI / 6),
+                y2 - headLength * Math.sin(angle - Math.PI / 6)
+              );
+              ctx.moveTo(x2, y2);
+              ctx.lineTo(
+                x2 - headLength * Math.cos(angle + Math.PI / 6),
+                y2 - headLength * Math.sin(angle + Math.PI / 6)
+              );
+            }
+            break;
+        }
+        ctx.stroke();
+      }
+
       ctx.restore();
     }
-  }, [annotations, isDrawing, currentStroke, shapeStart, activeTool, color, strokeWidth, opacity, scale, drawAnnotation]);
+  }, [annotations, isDrawing, currentStroke, shapeStart, activeTool, selectedShapeType, color, strokeWidth, opacity, scale, dpr, drawAnnotation]);
 
   useEffect(() => {
     redraw();
   }, [redraw]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.width = width * scale * dpr;
+    canvas.height = height * scale * dpr;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(1, 1);
+    }
+
+    redraw();
+  }, [width, height, scale, dpr, redraw]);
+
+  useEffect(() => {
+    if (selectedStamp && !stampImages.has(selectedStamp.id)) {
+      const img = new Image();
+      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${selectedStamp.svgData}</svg>`;
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = () => {
+        setStampImages(prev => new Map(prev).set(selectedStamp.id, img));
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  }, [selectedStamp, stampImages]);
+
+  const handleTextSubmit = useCallback(() => {
+    if (textInputValue.trim() && textInputPosition) {
+      const textAnnotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'> = {
+        musicPieceId,
+        pageNumber,
+        annotationType: 'text',
+        data: {
+          position: textInputPosition,
+          content: textInputValue.trim(),
+          fontSize: 16,
+          color,
+        } as TextAnnotation,
+        color,
+        strokeWidth,
+        opacity,
+        isShared: false,
+      };
+      onAnnotationAdd(textAnnotation);
+    }
+    setShowTextInput(false);
+    setTextInputValue('');
+    setTextInputPosition(null);
+  }, [textInputValue, textInputPosition, musicPieceId, pageNumber, color, strokeWidth, opacity, onAnnotationAdd]);
+
   const handlePointerDown = (e: React.PointerEvent) => {
     if (activeTool === 'select') return;
 
     const point = getCanvasPoint(e);
-    setIsDrawing(true);
 
     if (activeTool === 'stamp' && selectedStamp) {
       const stampAnnotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -265,33 +388,17 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         isShared: false,
       };
       onAnnotationAdd(stampAnnotation);
-      setIsDrawing(false);
       return;
     }
 
     if (activeTool === 'text') {
-      const text = prompt('Voer tekst in:');
-      if (text) {
-        const textAnnotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'> = {
-          musicPieceId,
-          pageNumber,
-          annotationType: 'text',
-          data: {
-            position: point,
-            content: text,
-            fontSize: 16,
-            color,
-          } as TextAnnotation,
-          color,
-          strokeWidth,
-          opacity,
-          isShared: false,
-        };
-        onAnnotationAdd(textAnnotation);
-      }
-      setIsDrawing(false);
+      setTextInputPosition(point);
+      setShowTextInput(true);
+      setTimeout(() => textInputRef.current?.focus(), 50);
       return;
     }
+
+    setIsDrawing(true);
 
     if (activeTool === 'shape') {
       setShapeStart(point);
@@ -302,20 +409,18 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDrawing) return;
-
     const point = getCanvasPoint(e);
     setCurrentStroke(prev => [...prev, point]);
   };
 
   const handlePointerUp = () => {
     if (!isDrawing) return;
-
     setIsDrawing(false);
 
     if (activeTool === 'eraser') {
-      // Find annotations that intersect with the eraser stroke
-      // For simplicity, we'll check if any point is near the stroke
-      const eraserRadius = strokeWidth * 2;
+      const eraserRadius = strokeWidth * 3;
+      const toDelete: string[] = [];
+
       for (const annotation of annotations) {
         if (annotation.annotationType === 'freehand') {
           const stroke = annotation.data as Stroke;
@@ -326,13 +431,16 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
                 Math.pow(strokePoint.y - erasePoint.y, 2)
               );
               if (distance < eraserRadius) {
-                onAnnotationDelete(annotation.id);
+                toDelete.push(annotation.id);
                 break;
               }
             }
+            if (toDelete.includes(annotation.id)) break;
           }
         }
       }
+
+      toDelete.forEach(id => onAnnotationDelete(id));
     } else if (activeTool === 'freehand' && currentStroke.length > 1) {
       const freehandAnnotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'> = {
         musicPieceId,
@@ -373,7 +481,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
         pageNumber,
         annotationType: 'shape',
         data: {
-          shapeType: 'rectangle', // Default to rectangle, could be configurable
+          shapeType: selectedShapeType,
           start: shapeStart,
           end: lastPoint,
           color,
@@ -393,24 +501,65 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
   };
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width * scale}
-      height={height * scale}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: width,
-        height: height,
-        cursor: activeTool === 'eraser' ? 'crosshair' : activeTool === 'select' ? 'default' : 'crosshair',
-        touchAction: 'none',
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-    />
+    <div style={{ position: 'relative', width, height }}>
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: width,
+          height: height,
+          cursor: CURSOR_STYLES[activeTool] || 'crosshair',
+          touchAction: 'none',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      />
+
+      {showTextInput && textInputPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            left: textInputPosition.x * scale,
+            top: textInputPosition.y * scale,
+            zIndex: 100,
+          }}
+        >
+          <input
+            ref={textInputRef}
+            type="text"
+            value={textInputValue}
+            onChange={(e) => setTextInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleTextSubmit();
+              } else if (e.key === 'Escape') {
+                setShowTextInput(false);
+                setTextInputValue('');
+                setTextInputPosition(null);
+              }
+            }}
+            onBlur={handleTextSubmit}
+            placeholder="Typ hier..."
+            style={{
+              minWidth: '150px',
+              padding: '8px 12px',
+              fontSize: '16px',
+              border: '2px solid #3b82f6',
+              borderRadius: '6px',
+              outline: 'none',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              color: color,
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
