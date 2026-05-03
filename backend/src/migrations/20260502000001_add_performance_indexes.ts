@@ -1,6 +1,8 @@
-import type { Database } from 'better-sqlite3';
+import db from '../database/connection';
+import logger from '../utils/logger';
 
-export const up = (db: Database): void => {
+export const up = (): void => {
+  logger.info('Running migration: add_performance_indexes (up)');
   // Index for session cleanup queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at
@@ -60,9 +62,11 @@ export const up = (db: Database): void => {
     CREATE INDEX IF NOT EXISTS idx_concert_tickets_concert
     ON concert_tickets(concert_id)
   `);
+  logger.info('Migration completed: add_performance_indexes');
 };
 
-export const down = (db: Database): void => {
+export const down = (): void => {
+  logger.info('Running migration: add_performance_indexes (down)');
   db.exec(`DROP INDEX IF EXISTS idx_user_sessions_expires_at`);
   db.exec(`DROP INDEX IF EXISTS idx_rehearsal_attendance_compound`);
   db.exec(`DROP INDEX IF EXISTS idx_equipment_loans_current_user`);
@@ -73,4 +77,5 @@ export const down = (db: Database): void => {
   db.exec(`DROP INDEX IF EXISTS idx_practice_logs_user_date`);
   db.exec(`DROP INDEX IF EXISTS idx_music_pieces_assoc_title`);
   db.exec(`DROP INDEX IF EXISTS idx_concert_tickets_concert`);
+  logger.info('Rollback completed: add_performance_indexes');
 };

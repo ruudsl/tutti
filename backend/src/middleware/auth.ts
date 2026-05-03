@@ -61,6 +61,72 @@ export function generateToken(user: { id: string; email: string; role: string; a
 /**
  * Optional authentication - attaches user if token is present, but allows unauthenticated access
  */
+/**
+ * Check if user has at least the specified role level
+ * Hierarchy: admin > music_committee > conductor > section_leader > member
+ */
+export function requireMinRole(minRole: 'admin' | 'music_committee' | 'conductor' | 'section_leader' | 'member') {
+    const roleHierarchy: Record<string, number> = {
+        admin: 5,
+        music_committee: 4,
+        conductor: 3,
+        section_leader: 2,
+        member: 1,
+    };
+
+    return (req: AuthRequest, res: Response, next: NextFunction) => {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Niet geauthenticeerd.' });
+        }
+
+        const userLevel = roleHierarchy[req.user.role] || 0;
+        const requiredLevel = roleHierarchy[minRole] || 0;
+
+        if (userLevel < requiredLevel) {
+            return res.status(403).json({ error: 'Onvoldoende rechten voor deze actie.' });
+        }
+
+        next();
+    };
+}
+
+/**
+ * Check if user is section leader for a specific instrument section
+ */
+export function requireSectionLeader(getInstrumentId: (req: AuthRequest) => string | undefined) {
+    return async (req: AuthRequest, res: Response, next: NextFunction) => {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Niet geauthenticeerd.' });
+        }
+
+        // Admin, music_committee, and conductor can always access
+        if (['admin', 'music_committee', 'conductor'].includes(req.user.role)) {
+            return next();
+        }
+
+        // Section leaders can only manage their own section
+        if (req.user.role === 'section_leader') {
+            const instrumentId = getInstrumentId(req);
+            if (instrumentId) {
+                // Import db dynamically to avoid circular dependency
+                const db = (await import('../database/connection')).default;
+                const userInstrument = db.prepare(
+                    'SELECT 1 FROM user_instruments WHERE user_id = ? AND instrument_id = ?'
+                ).get(req.user.id, instrumentId);
+
+                if (userInstrument) {
+                    return next();
+                }
+            }
+        }
+
+        return res.status(403).json({ error: 'Je kunt alleen je eigen sectie beheren.' });
+    };
+}
+
+/**
+ * Optional authentication - attaches user if token is present, but allows unauthenticated access
+ */
 export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
     const authHeader = req.headers['authorization'];
     const token = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string);

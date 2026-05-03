@@ -85,6 +85,7 @@ import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
 import vocabulariesRoutes from './routes/vocabularies';
 import interopRoutes from './routes/interop';
+import availabilityRoutes from './routes/availability';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -249,6 +250,7 @@ app.use('/api/seating-notifications', seatingNotificationsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/practice', practiceRoutes);
+app.use('/api/availability', availabilityRoutes);
 app.use('/api/recent', recentRoutes);
 app.use('/api/annotations', annotationsRoutes);
 app.use('/api/sessions', sessionsRoutes);

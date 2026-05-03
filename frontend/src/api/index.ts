@@ -95,3 +95,4 @@ export * from './loans';
 export * from './activity';
 export * from './guest-list';
 export * from './audit';
+export * from './availability';

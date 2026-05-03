@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import AdmZip from 'adm-zip';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -52,6 +53,32 @@ const upload = multer({
             cb(null, true);
         } else {
             cb(new Error('Alleen PDF bestanden zijn toegestaan.'));
+        }
+    },
+});
+
+// Configure multer for ZIP uploads (bulk import)
+const zipStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+        cb(null, `zip-${uniqueSuffix}.zip`);
+    },
+});
+
+const zipUpload = multer({
+    storage: zipStorage,
+    limits: {
+        fileSize: 200 * 1024 * 1024, // 200MB limit for ZIP files
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['application/zip', 'application/x-zip-compressed', 'application/x-zip'];
+        if (allowedMimes.includes(file.mimetype) || file.originalname.toLowerCase().endsWith('.zip')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Alleen ZIP bestanden zijn toegestaan.'));
         }
     },
 });
@@ -1764,6 +1791,165 @@ router.post('/upload', authenticateToken, requireRole('admin', 'music_committee'
                 notifyOrchestra(orch.id, 'new_music', notifTitle, notifBody, notifData, req.user!.id)
                     .catch((err: Error) => logger.error('Failed to send new_music notification', { error: err.message }));
             }
+        }
+    }
+}));
+
+/**
+ * @swagger
+ * /music-pieces/upload-zip:
+ *   post:
+ *     summary: Upload a ZIP file containing multiple PDF music pieces
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               listId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: ZIP file processed and PDFs uploaded
+ */
+router.post('/upload-zip', authenticateToken, requireRole('admin', 'music_committee'), zipUpload.single('file'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const file = req.file;
+
+    if (!file) {
+        throw new ApiError(400, 'Geen ZIP bestand geüpload.');
+    }
+
+    const { listId } = req.body;
+    const results: any[] = [];
+    const errors: any[] = [];
+    const tempDir = path.join(UPLOAD_DIR, `temp-${uuidv4()}`);
+
+    try {
+        // Extract ZIP file
+        const zip = new AdmZip(file.path);
+        const zipEntries = zip.getEntries();
+
+        // Filter for PDF files only
+        const pdfEntries = zipEntries.filter(entry =>
+            !entry.isDirectory &&
+            entry.entryName.toLowerCase().endsWith('.pdf') &&
+            !entry.entryName.startsWith('__MACOSX') &&
+            !entry.entryName.includes('/.') // Skip hidden files
+        );
+
+        if (pdfEntries.length === 0) {
+            throw new ApiError(400, 'Geen PDF bestanden gevonden in de ZIP.');
+        }
+
+        if (pdfEntries.length > 200) {
+            throw new ApiError(400, 'Maximaal 200 PDF bestanden per ZIP toegestaan.');
+        }
+
+        // Create temp directory for extraction
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        withTransaction(() => {
+            for (const entry of pdfEntries) {
+                try {
+                    const originalFilename = path.basename(entry.entryName);
+                    const parsed = parseFilename(originalFilename);
+                    const instrumentId = parsed.instrument ? findInstrumentId(parsed.instrument) : null;
+
+                    // Generate unique filename and extract
+                    const uniqueSuffix = `${Date.now()}-${uuidv4()}`;
+                    const newFilename = `${uniqueSuffix}.pdf`;
+                    const destPath = path.join(UPLOAD_DIR, newFilename);
+
+                    // Extract entry to destination
+                    const content = entry.getData();
+                    fs.writeFileSync(destPath, content);
+
+                    const pieceId = uuidv4();
+
+                    db.prepare(`
+                        INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
+                                                 file_path, original_filename, association_id, uploaded_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `).run(
+                        pieceId,
+                        parsed.title,
+                        parsed.arranger,
+                        instrumentId,
+                        parsed.tuning,
+                        parsed.groupNumber,
+                        parsed.clef,
+                        newFilename,
+                        originalFilename,
+                        req.user!.associationId,
+                        req.user!.id
+                    );
+
+                    // Add to list if specified
+                    if (listId) {
+                        db.prepare(
+                            'INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
+                        ).run(listId, pieceId);
+                    }
+
+                    results.push({
+                        id: pieceId,
+                        filename: originalFilename,
+                        title: parsed.title,
+                        instrumentId,
+                        instrumentFound: !!instrumentId,
+                    });
+                } catch (err) {
+                    errors.push({
+                        filename: path.basename(entry.entryName),
+                        error: (err as Error).message,
+                    });
+                }
+            }
+        });
+
+        logger.info(`ZIP upload: ${results.length} success, ${errors.length} errors`, {
+            uploadedBy: req.user!.id,
+            zipFilename: file.originalname
+        });
+
+        // Log audit event
+        if (results.length > 0) {
+            logAuditEvent(
+                req.user!.id,
+                'upload',
+                'music_piece',
+                results[0].id,
+                `${results.length} muziekstukken uit ZIP`,
+                {
+                    count: results.length,
+                    zipFilename: file.originalname,
+                    titles: results.slice(0, 5).map(r => r.title),
+                    listId: listId || null,
+                },
+                req.ip,
+                req.get('user-agent')
+            );
+        }
+
+        res.status(201).json({
+            message: `${results.length} bestanden succesvol geüpload uit ZIP.`,
+            uploaded: results,
+            errors: errors.length > 0 ? errors : undefined,
+        });
+
+    } finally {
+        // Cleanup: delete the uploaded ZIP file
+        deleteFile(file.path);
+        // Cleanup: remove temp directory if it exists
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true, force: true });
         }
     }
 }));

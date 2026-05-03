@@ -252,4 +252,149 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, r
     res.json({ message: 'Oefensessie verwijderd.' });
 }));
 
+/**
+ * @swagger
+ * /practice/goals:
+ *   get:
+ *     summary: Get user's practice goals
+ *     tags: [Practice]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's practice goals
+ */
+router.get('/goals', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const goals = db.prepare(`
+        SELECT id, goal_type, target_minutes, is_active, created_at, updated_at
+        FROM practice_goals
+        WHERE user_id = ?
+    `).all(req.user!.id);
+
+    // Get current progress for each goal type
+    const today = new Date().toISOString().split('T')[0];
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+
+    const dailyProgress = db.prepare(`
+        SELECT COALESCE(SUM(duration_minutes), 0) as minutes
+        FROM practice_logs
+        WHERE user_id = ? AND DATE(practiced_at) = ?
+    `).get(req.user!.id, today) as { minutes: number };
+
+    const weeklyProgress = db.prepare(`
+        SELECT COALESCE(SUM(duration_minutes), 0) as minutes
+        FROM practice_logs
+        WHERE user_id = ? AND DATE(practiced_at) >= ?
+    `).get(req.user!.id, weekStartStr) as { minutes: number };
+
+    res.json({
+        goals: goals.map((g: any) => ({
+            id: g.id,
+            goalType: g.goal_type,
+            targetMinutes: g.target_minutes,
+            isActive: !!g.is_active,
+            createdAt: g.created_at,
+            updatedAt: g.updated_at,
+        })),
+        progress: {
+            daily: dailyProgress.minutes,
+            weekly: weeklyProgress.minutes,
+        },
+    });
+}));
+
+/**
+ * @swagger
+ * /practice/goals:
+ *   post:
+ *     summary: Create or update a practice goal
+ *     tags: [Practice]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - goalType
+ *               - targetMinutes
+ *             properties:
+ *               goalType:
+ *                 type: string
+ *                 enum: [daily, weekly]
+ *               targetMinutes:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Goal created or updated
+ */
+router.post('/goals', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { goalType, targetMinutes } = req.body;
+
+    if (!['daily', 'weekly'].includes(goalType)) {
+        throw new ApiError(400, 'Ongeldig doeltype. Gebruik "daily" of "weekly".');
+    }
+
+    if (typeof targetMinutes !== 'number' || targetMinutes < 1 || targetMinutes > 1440) {
+        throw new ApiError(400, 'Ongeldig aantal minuten (1-1440).');
+    }
+
+    // Upsert the goal
+    const existing = db.prepare(
+        'SELECT id FROM practice_goals WHERE user_id = ? AND goal_type = ?'
+    ).get(req.user!.id, goalType) as { id: string } | undefined;
+
+    if (existing) {
+        db.prepare(`
+            UPDATE practice_goals
+            SET target_minutes = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(targetMinutes, existing.id);
+
+        res.json({ id: existing.id, message: 'Doel bijgewerkt.' });
+    } else {
+        const id = uuidv4();
+        db.prepare(`
+            INSERT INTO practice_goals (id, user_id, goal_type, target_minutes)
+            VALUES (?, ?, ?, ?)
+        `).run(id, req.user!.id, goalType, targetMinutes);
+
+        res.status(201).json({ id, message: 'Doel aangemaakt.' });
+    }
+}));
+
+/**
+ * @swagger
+ * /practice/goals/{id}:
+ *   delete:
+ *     summary: Delete a practice goal
+ *     tags: [Practice]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Goal deleted
+ */
+router.delete('/goals/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db.prepare(
+        'DELETE FROM practice_goals WHERE id = ? AND user_id = ?'
+    ).run(req.params.id, req.user!.id);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Doel niet gevonden.');
+    }
+
+    res.json({ message: 'Doel verwijderd.' });
+}));
+
 export default router;

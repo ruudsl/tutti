@@ -53,3 +53,37 @@ export const returnLoan = async (id: string): Promise<Loan> => {
 export const deleteLoan = async (id: string): Promise<void> => {
   await api.delete(`/loans/${id}`);
 };
+
+// Loan history for a title
+export interface LoanHistoryEntry {
+  id: string;
+  borrowerName: string;
+  borrowerEmail: string | null;
+  borrowerOrganization: string | null;
+  notes: string | null;
+  dateOut: string;
+  expectedReturn: string | null;
+  dateReturned: string | null;
+  status: 'active' | 'returned' | 'overdue';
+  createdAt: string;
+  createdByName: string;
+}
+
+export interface TitleLoanHistory {
+  title: {
+    id: string;
+    title: string;
+    arranger: string | null;
+  };
+  statistics: {
+    totalLoans: number;
+    activeLoans: number;
+    avgLoanDurationDays: number;
+  };
+  loans: LoanHistoryEntry[];
+}
+
+export const getTitleLoanHistory = async (titleId: string): Promise<TitleLoanHistory> => {
+  const { data } = await api.get(`/loans/title/${titleId}/history`);
+  return data;
+};

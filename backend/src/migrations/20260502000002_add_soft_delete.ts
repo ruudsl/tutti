@@ -1,6 +1,9 @@
-import type { Database } from 'better-sqlite3';
+import db from '../database/connection';
+import logger from '../utils/logger';
 
-export const up = (db: Database): void => {
+export const up = (): void => {
+  logger.info('Running migration: add_soft_delete (up)');
+
   // Add deleted_at column to users table for soft delete
   db.exec(`
     ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL
@@ -54,9 +57,13 @@ export const up = (db: Database): void => {
     CREATE VIEW IF NOT EXISTS active_music_pieces AS
     SELECT * FROM music_pieces WHERE deleted_at IS NULL
   `);
+
+  logger.info('Migration completed: add_soft_delete');
 };
 
-export const down = (db: Database): void => {
+export const down = (): void => {
+  logger.info('Running migration: add_soft_delete (down)');
+
   // Drop views first
   db.exec(`DROP VIEW IF EXISTS active_users`);
   db.exec(`DROP VIEW IF EXISTS active_music_pieces`);
@@ -71,4 +78,6 @@ export const down = (db: Database): void => {
   // SQLite doesn't support DROP COLUMN directly in older versions
   // For production, you'd need to recreate tables without these columns
   // For now, we leave the columns as they don't cause issues
+
+  logger.info('Rollback completed: add_soft_delete');
 };

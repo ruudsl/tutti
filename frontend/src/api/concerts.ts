@@ -47,6 +47,44 @@ export const getPieceHistory = async (title: string): Promise<PieceHistory> => {
   return data;
 };
 
+export interface AttendancePrediction {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    concertType: string | null;
+    location: string | null;
+  };
+  prediction: {
+    expectedAttendance: number;
+    totalMembers: number;
+    confidenceBreakdown: {
+      highConfidenceYes: number;
+      highConfidenceNo: number;
+      uncertain: number;
+    };
+    byInstrument: {
+      instrument: string;
+      expected: number;
+      total: number;
+    }[];
+  };
+  members: {
+    memberId: string;
+    memberName: string;
+    instrument: string | null;
+    attendanceProbability: number;
+    totalConcerts: number;
+    attendedConcerts: number;
+    factors: { name: string; impact: number }[];
+  }[];
+}
+
+export const getAttendancePrediction = async (concertId: string): Promise<AttendancePrediction> => {
+  const { data } = await api.get(`/concerts/${concertId}/attendance-prediction`);
+  return data;
+};
+
 export const getConcerts = async (filters?: {
   search?: string;
   year?: string;
