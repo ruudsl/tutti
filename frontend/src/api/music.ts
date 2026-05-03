@@ -268,6 +268,24 @@ export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
   await api.delete(`/music-pieces/title-mp3/${titleId}`);
 };
 
+// PDF Thumbnails
+export const getPdfThumbnailUrl = (filename: string, options?: {
+  page?: number;
+  size?: 'small' | 'medium' | 'large';
+}): string => {
+  const baseUrl = api.defaults.baseURL || '/api';
+  const params = new URLSearchParams();
+  if (options?.page) params.set('page', String(options.page));
+  if (options?.size) params.set('size', options.size);
+  const queryString = params.toString();
+  return `${baseUrl}/thumbnails/${encodeURIComponent(filename)}${queryString ? `?${queryString}` : ''}`;
+};
+
+export const getPdfInfo = async (filename: string): Promise<{ filename: string; pageCount: number }> => {
+  const { data } = await api.get(`/thumbnails/${encodeURIComponent(filename)}/info`);
+  return data;
+};
+
 export const getMp3Url = (filename: string): string => {
   const baseUrl = api.defaults.baseURL || '';
   const token = localStorage.getItem('token');

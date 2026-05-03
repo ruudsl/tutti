@@ -31,7 +31,7 @@ if (!fs.existsSync(THUMBNAIL_DIR)) {
  */
 function getThumbnailCacheKey(filePath: string, page: number, size: ThumbnailSize): string {
   const hash = crypto.createHash('md5').update(`${filePath}:${page}:${size}`).digest('hex');
-  return `${hash}.jpg`;
+  return `${hash}.png`;
 }
 
 /**
@@ -61,53 +61,52 @@ function isThumbnailCacheValid(thumbnailPath: string, pdfPath: string): boolean 
 }
 
 /**
- * Generate a PDF thumbnail using pdf-lib and canvas
- * Note: This is a simplified implementation. For production,
- * consider using a dedicated PDF rendering library like pdf-poppler or pdf2pic
+ * Generate a PDF thumbnail using pdfjs-dist and canvas
  */
 async function generateThumbnail(
   pdfPath: string,
   page: number,
   width: number
 ): Promise<Buffer> {
-  // Dynamic import to avoid loading heavy libraries until needed
-  const { PDFDocument } = await import('pdf-lib');
+  // Dynamic imports
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const { createCanvas } = await import('canvas');
 
   // Read the PDF file
   const pdfBuffer = fs.readFileSync(pdfPath);
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const data = new Uint8Array(pdfBuffer);
 
-  const pageCount = pdfDoc.getPageCount();
+  // Load the PDF document
+  const loadingTask = pdfjs.getDocument({ data, useSystemFonts: true });
+  const pdfDoc = await loadingTask.promise;
+
+  const pageCount = pdfDoc.numPages;
   if (page < 1 || page > pageCount) {
     throw new ApiError(400, `Invalid page number. PDF has ${pageCount} pages.`);
   }
 
-  const pdfPage = pdfDoc.getPage(page - 1);
-  const { width: pageWidth, height: pageHeight } = pdfPage.getSize();
+  // Get the page
+  const pdfPage = await pdfDoc.getPage(page);
+  const viewport = pdfPage.getViewport({ scale: 1 });
 
-  // Calculate dimensions maintaining aspect ratio
-  const scale = width / pageWidth;
-  const height = Math.round(pageHeight * scale);
+  // Calculate scale to fit desired width
+  const scale = width / viewport.width;
+  const scaledViewport = pdfPage.getViewport({ scale });
 
-  // Create a new PDF with just this page
-  const singlePageDoc = await PDFDocument.create();
-  const [copiedPage] = await singlePageDoc.copyPages(pdfDoc, [page - 1]);
-  singlePageDoc.addPage(copiedPage);
+  // Create canvas
+  const canvas = createCanvas(scaledViewport.width, scaledViewport.height);
+  const context = canvas.getContext('2d');
 
-  // For server-side PDF rendering to image, we need a more robust solution
-  // Here we return the PDF page as-is, but in a production environment,
-  // you would use pdf-poppler, pdf2pic, or pdftocairo
+  // Render the page
+  const renderContext = {
+    canvasContext: context,
+    viewport: scaledViewport,
+  };
+  // @ts-ignore - canvas types don't perfectly match browser canvas
+  await pdfPage.render(renderContext).promise;
 
-  // Simple placeholder: return a gray image placeholder
-  // In production, replace this with actual PDF rendering using a library like:
-  // - pdf-poppler (requires poppler-utils installed)
-  // - pdf2pic (requires GraphicsMagick or ImageMagick)
-  // - canvas with pdfjs-dist
-
-  // For now, generate a simple placeholder image
-  const placeholderBuffer = generatePlaceholderImage(width, height, page, pageCount);
-
-  return placeholderBuffer;
+  // Convert to PNG buffer
+  return canvas.toBuffer('image/png');
 }
 
 /**
@@ -196,7 +195,7 @@ router.get('/:filename', authenticateToken, asyncHandler(async (req: AuthRequest
 
   if (isThumbnailCacheValid(thumbnailPath, pdfPath)) {
     // Return cached thumbnail
-    res.set('Content-Type', 'image/svg+xml'); // Using SVG for placeholder
+    res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
     res.set('X-Thumbnail-Cache', 'HIT');
     return res.sendFile(thumbnailPath);
@@ -211,7 +210,7 @@ router.get('/:filename', authenticateToken, asyncHandler(async (req: AuthRequest
     fs.writeFileSync(thumbnailPath, thumbnailBuffer);
 
     // Return thumbnail
-    res.set('Content-Type', 'image/svg+xml'); // Using SVG for placeholder
+    res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
     res.set('X-Thumbnail-Cache', 'MISS');
     res.send(thumbnailBuffer);
