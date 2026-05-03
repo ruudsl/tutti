@@ -184,6 +184,7 @@ flowchart LR
 ### Music Management
 
 - **Upload** — Drag and drop PDFs to the dropzone; metadata is automatically parsed from the filename (`Title_arranger_instrument_key_groupnumber_clef.pdf`)
+- **Bulk Upload** — Upload multiple music pieces at once via ZIP file
 - **Cloud Import** — Import sheet music directly from OneDrive/SharePoint or Google Drive without downloading first
 - **Music Pieces** — Sheet music per instrument with filters on title, instrument, and orchestra
 - **Music Titles** — Metadata per title: composer, arranger, genre, duration, difficulty level, YouTube link
@@ -197,6 +198,8 @@ flowchart LR
 
 - **Default Rehearsal Days** — Set recurring days/times per orchestra
 - **Rehearsal Instances** — Automatically generated or manually created (regular/extra/cancelled)
+- **Recurring Rehearsals** — Bulk create rehearsals for a date range with customizable frequency
+- **Series Management** — Delete entire rehearsal series at once
 - **Spond Integration** — Sync attendance data automatically from Spond
 - **Attendance Overview** — Per member: times present, absent, percentage (filterable by date and orchestra)
 
@@ -217,6 +220,7 @@ flowchart LR
 
 - **Loans** — Register loans of music material to external organizations
 - **Status Tracking** — Active, overdue, returned with automatic status updates
+- **Loan History** — View complete loan history per music title
 - **Availability** — Overview of which titles are available for loan
 
 ### Issues & Quality Management
@@ -227,6 +231,7 @@ flowchart LR
 ### Concerts & Ticketing
 
 - **Concert Management** — Create and manage concerts with date, location, and program
+- **Attendance Prediction** — AI-based prediction of expected attendance based on historical data
 - **Ticket Sales** — Sell tickets online with customizable pricing and seat categories
 - **Public Ticket Shop** — Customer-facing ticket purchase page
 - **Ticket Scanner** — QR code scanning for entrance validation
@@ -242,9 +247,18 @@ flowchart LR
 - **Voice Parts** — Organize musicians by section/voice part
 - **Occupancy Overview** — See which seats are filled per rehearsal/concert
 
-### Practice & Scheduling
+### Availability Management
 
-- **Practice Schedules** — Create and share individual or section practice schedules
+- **Personal Availability** — Members can set their availability status (available/unavailable/maybe) for specific dates
+- **Bulk Availability** — Set availability for multiple dates at once
+- **Team Overview** — View team availability for any date with summary statistics
+- **Notes** — Add notes to explain availability status
+
+### Practice Tracker
+
+- **Practice Goals** — Set personal practice goals for music pieces
+- **Progress Tracking** — Track practice sessions and progress over time
+- **Practice Statistics** — View practice statistics and trends
 - **IMSLP Browser** — Search and link to free sheet music on IMSLP.org
 
 ### Security & Authentication
@@ -260,9 +274,10 @@ flowchart LR
 
 - **Audit Logs** — Security event logging with user actions
 - **Session Management** — View and revoke active user sessions
-- **Health Dashboard** — System status and performance monitoring
+- **System Health Dashboard** — Real-time monitoring of database, disk space, and memory usage with auto-refresh (admin-only)
 - **Data Export** — GDPR-compliant personal data export
 - **Entra Sync** — Automatic user synchronization with Microsoft Entra ID
+- **Changelog** — In-app version history with language support (NL/EN/DE)
 
 ### Other Features
 
@@ -272,9 +287,10 @@ flowchart LR
 - **Backup & Restore** — Download/upload complete database with files as ZIP
 - **Activity Log** — Track who views and downloads what
 - **Statistics** — Dashboard with top-viewed and downloaded pieces
-- **Changelog** — In-app version history
 - **Onboarding Tour** — Guided tour for new users
 - **Music Tools** — Built-in metronome and tuner
+- **Favorites** — Mark music pieces as favorites for quick access
+- **Recent Views** — Quick access to recently viewed items
 - **WCAG 2.1 AA** — Accessible interface with keyboard navigation and contrast ratio
 
 ## Screenshots
@@ -556,13 +572,15 @@ Authorization: Bearer <token>
 | Users | `/api/users/*` | CRUD members, assign instruments/orchestras |
 | Instruments | `/api/instruments/*` | CRUD instruments and aliases |
 | Orchestras | `/api/orchestras/*` | CRUD orchestras, member management |
-| Music Pieces | `/api/music-pieces/*` | Upload, download, metadata, MP3, sharing |
+| Music Pieces | `/api/music-pieces/*` | Upload, download, metadata, MP3, sharing, ZIP upload |
 | Music Titles | `/api/music-titles/*` | Metadata library (via music-pieces routes) |
 | Music Lists | `/api/music-lists/*` | Setlists and concert programs |
 | Genres | `/api/genres/*` | Music genres/categories |
-| Rehearsals | `/api/rehearsals/*` | Scheduling, default days, attendance |
+| Rehearsals | `/api/rehearsals/*` | Scheduling, default days, attendance, recurring series |
+| Availability | `/api/availability/*` | Personal and team availability management |
+| Concerts | `/api/concerts/*` | Concert management, attendance prediction |
 | Spond | `/api/spond/*` | Spond configuration and synchronization |
-| Loans | `/api/loans/*` | Loan management |
+| Loans | `/api/loans/*` | Loan management, loan history |
 | Issues | `/api/issues/*` | Sheet music error reports |
 | Activity | `/api/activity/*` | Logging and statistics |
 | MusicaInfo | `/api/musicainfo/*` | Metadata lookup via MusicaInfo.net |
@@ -570,6 +588,8 @@ Authorization: Bearer <token>
 | Cloud Import | `/api/cloud-import/*` | OneDrive and Google Drive file import |
 | Settings | `/api/settings/*` | Organization settings, theme, SMTP |
 | Backup | `/api/backup/*` | Database backup and restore |
+| Health | `/api/health/*` | System health monitoring (basic and detailed) |
+| Analytics | `/api/analytics/*` | Usage analytics and statistics |
 | Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |
 
 ## Project Structure
