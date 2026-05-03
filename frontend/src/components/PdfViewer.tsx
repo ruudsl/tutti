@@ -5,6 +5,7 @@ import { useSwipeGesture, SwipeDirection } from '../hooks/useSwipeGesture';
 import { useTranslation } from 'react-i18next';
 import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
 import { Icon } from './Icon';
+import { PdfAnnotator } from './PdfAnnotation';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -105,6 +106,8 @@ export function PdfViewer({
   const [newAnnotationColor, setNewAnnotationColor] = useState('#fbbf24');
   const [annotationsLoading, setAnnotationsLoading] = useState(false);
   const [annotationFeedback, setAnnotationFeedback] = useState<string | null>(null);
+  const [drawingMode, setDrawingMode] = useState(false);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
 
   // Dark mode state - respects prop or system preference
   const [isDarkModeActive, setIsDarkModeActive] = useState(() => {
@@ -318,6 +321,9 @@ export function PdfViewer({
       // Set canvas dimensions
       canvas.width = scaledViewport.width;
       canvas.height = scaledViewport.height;
+
+      // Track dimensions for annotation overlay
+      setCanvasDimensions({ width: scaledViewport.width, height: scaledViewport.height });
 
       // Render page
       await page.render({
@@ -600,17 +606,31 @@ export function PdfViewer({
             userSelect: 'none',
           } : {}),
         }}>
-          <canvas
-            ref={canvasRef}
-            style={{
-              ...styles.canvas,
-              // When zoomed, remove size constraints so canvas can be larger than container
-              ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none', flexShrink: 0 } : {}),
-              ...getTransformStyle,
-              opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
-              filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
-            }}
-          />
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <canvas
+              ref={canvasRef}
+              style={{
+                ...styles.canvas,
+                // When zoomed, remove size constraints so canvas can be larger than container
+                ...(isZoomed ? { maxWidth: 'none', maxHeight: 'none', flexShrink: 0 } : {}),
+                ...getTransformStyle,
+                opacity: isSwipeActive ? 1 - Math.abs(swipeOffset) / 300 : 1,
+                filter: isDarkModeActive ? 'invert(0.9) hue-rotate(180deg) contrast(0.9)' : 'none',
+              }}
+            />
+            {/* Drawing annotation overlay */}
+            {drawingMode && musicPieceId && canvasDimensions.width > 0 && (
+              <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 10 }}>
+                <PdfAnnotator
+                  musicPieceId={musicPieceId}
+                  pageNumber={currentPage}
+                  pageWidth={canvasDimensions.width / zoom}
+                  pageHeight={canvasDimensions.height / zoom}
+                  scale={zoom}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Page Indicator */}
@@ -709,6 +729,22 @@ export function PdfViewer({
                     {annotations.length > 9 ? '9+' : annotations.length}
                   </span>
                 )}
+              </button>
+            )}
+            {/* Drawing mode toggle */}
+            {hasAnnotationsSupport && (
+              <button
+                onClick={() => setDrawingMode(prev => !prev)}
+                style={{
+                  ...styles.zoomButton,
+                  marginLeft: '0.25rem',
+                  backgroundColor: drawingMode ? '#3b82f6' : 'transparent',
+                  color: drawingMode ? 'white' : 'var(--text, #333)',
+                }}
+                aria-label={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
+                title={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
+              >
+                &#9998;&#65039;
               </button>
             )}
           </div>
