@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
@@ -17,7 +17,7 @@ interface ConfirmDialogProps {
  * Confirmation dialog component
  * Use instead of window.confirm() for better UX
  */
-export function ConfirmDialog({
+export const ConfirmDialog = memo(function ConfirmDialog({
   title,
   message,
   confirmLabel,
@@ -64,6 +64,6 @@ export function ConfirmDialog({
       {typeof message === 'string' ? <p>{message}</p> : message}
     </Modal>
   );
-}
+});
 
 export default ConfirmDialog;

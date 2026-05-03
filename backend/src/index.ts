@@ -77,6 +77,8 @@ import guestListRoutes from './routes/guest-list';
 import paymentSettingsRoutes from './routes/payment-settings';
 import discountCodesRoutes from './routes/discount-codes';
 import venueLayoutsRoutes from './routes/venue-layouts';
+import { createServer } from 'http';
+import { initWebSocket } from './websocket';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
@@ -85,6 +87,7 @@ import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
 import vocabulariesRoutes from './routes/vocabularies';
 import interopRoutes from './routes/interop';
+import availabilityRoutes from './routes/availability';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -249,6 +252,7 @@ app.use('/api/seating-notifications', seatingNotificationsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/practice', practiceRoutes);
+app.use('/api/availability', availabilityRoutes);
 app.use('/api/recent', recentRoutes);
 app.use('/api/annotations', annotationsRoutes);
 app.use('/api/sessions', sessionsRoutes);
@@ -262,13 +266,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
-app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
-app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
-app.use('/api/payment-settings', paymentSettingsRoutes);
-app.use('/api/discount-codes', discountCodesRoutes);
-app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 
-// Health check routes (basic and detailed)
+// Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
@@ -278,7 +277,7 @@ app.use('/api/interop', interopRoutes);
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);
 
-// Changelog endpoint (language-aware)
+// Changelog endpoint (language-aware, public)
 app.get('/api/changelog', (req, res) => {
     const lang = (req.query.lang as string) || 'nl';
     const suffix = lang === 'nl' ? '' : `_${lang}`;
@@ -303,6 +302,13 @@ app.get('/api/changelog', (req, res) => {
         res.json({ content: '# Changelog\n\nNo changelog available.' });
     }
 });
+
+// Routes with catch-all patterns (mount these AFTER specific routes)
+app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
+app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
+app.use('/api/payment-settings', paymentSettingsRoutes);
+app.use('/api/discount-codes', discountCodesRoutes);
+app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 
 // Swagger API documentation
 if (config.isDevelopment) {
@@ -360,9 +366,14 @@ async function startServer() {
         const { initializeDatabase } = await import('./database/init');
         await initializeDatabase();
 
-        app.listen(config.port, () => {
+        // Create HTTP server and initialize WebSocket
+        const httpServer = createServer(app);
+        initWebSocket(httpServer);
+
+        httpServer.listen(config.port, () => {
             logger.info(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
             logger.info(`   API beschikbaar op http://localhost:${config.port}/api`);
+            logger.info(`   WebSocket beschikbaar op ws://localhost:${config.port}`);
             if (config.isDevelopment) {
                 logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
             }

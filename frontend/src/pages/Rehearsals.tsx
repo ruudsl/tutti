@@ -15,6 +15,7 @@ import {
   getAttendanceSummary,
   getRehearsalSeating, generateRehearsalSeating,
   getMyAttendanceStatus, updateMyAttendance,
+  createRecurringRehearsals,
 } from '../api';
 import type { AttendanceMember } from '../api';
 import type { Rehearsal, RehearsalDetail, SpondGroup, RehearsalSeat } from '../types';
@@ -91,6 +92,20 @@ export default function Rehearsals() {
   // Pieces editing
   const [editingPieces, setEditingPieces] = useState(false);
   const [pieces, setPieces] = useState<{ title: string; notes: string }[]>([]);
+
+  // Recurring rehearsals form
+  const [showRecurring, setShowRecurring] = useState(false);
+  const [recurringForm, setRecurringForm] = useState({
+    dayOfWeek: 1,
+    interval: 1,
+    startTime: '19:30',
+    endTime: '21:30',
+    location: '',
+    orchestraId: '',
+    until: '',
+  });
+  const [recurringLoading, setRecurringLoading] = useState(false);
+  const [recurringPreview, setRecurringPreview] = useState<string[]>([]);
 
   // Spond
   const [showSpondSetup, setShowSpondSetup] = useState(false);
@@ -286,6 +301,66 @@ export default function Rehearsals() {
       handleOpenDetail(selectedRehearsal.id);
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    }
+  };
+
+  // Recurring rehearsals helpers
+  const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+  const buildRrule = () => {
+    const byDay = WEEKDAY_CODES[recurringForm.dayOfWeek];
+    let rrule = `FREQ=WEEKLY;BYDAY=${byDay}`;
+    if (recurringForm.interval > 1) {
+      rrule += `;INTERVAL=${recurringForm.interval}`;
+    }
+    return rrule;
+  };
+
+  const calculateRecurringPreview = () => {
+    if (!recurringForm.until) {
+      setRecurringPreview([]);
+      return;
+    }
+    const dates: string[] = [];
+    const endDate = new Date(recurringForm.until);
+    let current = new Date();
+    // Find first occurrence of selected day
+    while (current.getDay() !== recurringForm.dayOfWeek) {
+      current.setDate(current.getDate() + 1);
+    }
+    // Generate dates
+    while (current <= endDate && dates.length < 52) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + (7 * recurringForm.interval));
+    }
+    setRecurringPreview(dates);
+  };
+
+  useEffect(() => {
+    calculateRecurringPreview();
+  }, [recurringForm.dayOfWeek, recurringForm.interval, recurringForm.until]);
+
+  const handleCreateRecurring = async () => {
+    if (!recurringForm.until) return;
+    setRecurringLoading(true);
+    try {
+      const rrule = buildRrule();
+      const result = await createRecurringRehearsals({
+        rrule,
+        startTime: recurringForm.startTime,
+        endTime: recurringForm.endTime,
+        location: recurringForm.location || undefined,
+        orchestraId: recurringForm.orchestraId || undefined,
+        until: recurringForm.until,
+      });
+      showSuccess(t('rehearsals.recurring.created', { count: result.count }));
+      setShowRecurring(false);
+      setRecurringPreview([]);
+      refreshRehearsals();
+    } catch (e: any) {
+      showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    } finally {
+      setRecurringLoading(false);
     }
   };
 
@@ -668,6 +743,9 @@ export default function Rehearsals() {
             <button className="btn btn-outline" onClick={() => setShowGenerate(!showGenerate)}>
               {t('rehearsals.generate')}
             </button>
+            <button className="btn btn-outline" onClick={() => setShowRecurring(!showRecurring)}>
+              {t('rehearsals.recurring.title')}
+            </button>
             <button className="btn btn-primary" onClick={() => { setForm({ date: '', startTime: '19:30', endTime: '21:30', location: '', type: 'regular', notes: '', orchestraId: '' }); setEditingId(null); setShowForm(true); }}>
               + {t('rehearsals.addRehearsal')}
             </button>
@@ -828,6 +906,128 @@ export default function Rehearsals() {
               </div>
               <button className="btn btn-primary" onClick={handleGenerate} disabled={!genFrom || !genTo}>
                 {t('rehearsals.generateButton')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring rehearsals form */}
+      {showRecurring && isManager && (
+        <div className="card mb-3">
+          <div className="card-header">
+            <h2 className="card-title">{t('rehearsals.recurring.title')}</h2>
+          </div>
+          <div className="card-body">
+            <p className="piece-meta mb-2">{t('rehearsals.recurring.description')}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.recurring.dayOfWeek')}</label>
+                <select
+                  className="form-control form-select"
+                  value={recurringForm.dayOfWeek}
+                  onChange={e => setRecurringForm({ ...recurringForm, dayOfWeek: Number(e.target.value) })}
+                >
+                  {[1, 2, 3, 4, 5, 6, 0].map(d => (
+                    <option key={d} value={d}>{t(`rehearsals.days.${d}`)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.recurring.interval')}</label>
+                <select
+                  className="form-control form-select"
+                  value={recurringForm.interval}
+                  onChange={e => setRecurringForm({ ...recurringForm, interval: Number(e.target.value) })}
+                >
+                  <option value={1}>{t('rehearsals.recurring.weekly')}</option>
+                  <option value={2}>{t('rehearsals.recurring.biweekly')}</option>
+                  <option value={3}>{t('rehearsals.recurring.every3weeks')}</option>
+                  <option value={4}>{t('rehearsals.recurring.every4weeks')}</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.startTime')}</label>
+                <input
+                  type="time"
+                  className="form-control"
+                  value={recurringForm.startTime}
+                  onChange={e => setRecurringForm({ ...recurringForm, startTime: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.endTime')}</label>
+                <input
+                  type="time"
+                  className="form-control"
+                  value={recurringForm.endTime}
+                  onChange={e => setRecurringForm({ ...recurringForm, endTime: e.target.value })}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.location')}</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={recurringForm.location}
+                  onChange={e => setRecurringForm({ ...recurringForm, location: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.orchestra')}</label>
+                <select
+                  className="form-control form-select"
+                  value={recurringForm.orchestraId}
+                  onChange={e => setRecurringForm({ ...recurringForm, orchestraId: e.target.value })}
+                >
+                  <option value="">{t('rehearsals.allOrchestras')}</option>
+                  {orchestras.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('rehearsals.recurring.until')}</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={recurringForm.until}
+                  onChange={e => setRecurringForm({ ...recurringForm, until: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            {recurringPreview.length > 0 && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
+                <strong style={{ fontSize: '0.875rem' }}>{t('rehearsals.recurring.preview')} ({recurringPreview.length}):</strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {recurringPreview.slice(0, 12).map(date => (
+                    <span key={date} className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
+                      {formatDate(date, t)}
+                    </span>
+                  ))}
+                  {recurringPreview.length > 12 && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      +{recurringPreview.length - 12} {t('rehearsals.recurring.more')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleCreateRecurring}
+                disabled={recurringLoading || !recurringForm.until || recurringPreview.length === 0}
+              >
+                {recurringLoading ? t('common.loading') : t('rehearsals.recurring.create', { count: recurringPreview.length })}
+              </button>
+              <button className="btn btn-outline" onClick={() => { setShowRecurring(false); setRecurringPreview([]); }}>
+                {t('common.cancel')}
               </button>
             </div>
           </div>

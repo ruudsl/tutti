@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   Home,
   Music,
@@ -62,6 +63,9 @@ import {
   Send,
   Play,
   Pause,
+  Clock,
+  Info,
+  Archive,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -129,6 +133,9 @@ const iconMap = {
   send: Send,
   play: Play,
   pause: Pause,
+  clock: Clock,
+  info: Info,
+  archive: Archive,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;
@@ -138,10 +145,11 @@ interface IconProps {
   size?: number;
   strokeWidth?: number;
   className?: string;
+  style?: React.CSSProperties;
   'aria-hidden'?: boolean;
 }
 
-export function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: IconProps) {
+export const Icon = memo(function Icon({ name, size = 20, strokeWidth = 2, className, style, ...rest }: IconProps) {
   const Component = iconMap[name];
   if (!Component) return null;
   return (
@@ -149,7 +157,8 @@ export function Icon({ name, size = 20, strokeWidth = 2, className, ...rest }: I
       size={size}
       strokeWidth={strokeWidth}
       className={className}
+      style={style}
       aria-hidden={rest['aria-hidden'] ?? true}
     />
   );
-}
+});

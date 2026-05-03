@@ -1,15 +1,51 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
+/**
+ * Stale time configuration per data type
+ * Different data has different freshness requirements
+ */
+export const staleTimes = {
+  // Reference data (rarely changes) - 30 minutes
+  instruments: 1000 * 60 * 30,
+  genres: 1000 * 60 * 30,
+  orchestras: 1000 * 60 * 30,
+  concertTypes: 1000 * 60 * 30,
+  equipmentTypes: 1000 * 60 * 30,
+  uniformTypes: 1000 * 60 * 30,
+
+  // User profile - 10 minutes
+  user: 1000 * 60 * 10,
+  association: 1000 * 60 * 10,
+
+  // Content data - 5 minutes (default)
+  musicPieces: 1000 * 60 * 5,
+  musicLists: 1000 * 60 * 5,
+  concerts: 1000 * 60 * 5,
+  rehearsals: 1000 * 60 * 5,
+
+  // Frequently changing data - 1 minute
+  tickets: 1000 * 60 * 1,
+  seating: 1000 * 60 * 1,
+  notifications: 1000 * 60 * 1,
+
+  // Real-time data - 30 seconds
+  ticketStats: 1000 * 30,
+  attendees: 1000 * 30,
+
+  // User activity - 2 minutes
+  favorites: 1000 * 60 * 2,
+  recentViews: 1000 * 60 * 2,
+  practiceLogs: 1000 * 60 * 2,
+};
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5, // 5 minutes default
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - extended for offline support
       retry: 1,
       refetchOnWindowFocus: false,
-      // Use 'online' mode (default) - service worker handles offline caching
-      // 'offlineFirst' can cause queries to hang on initial page load
     },
     mutations: {
       retry: 0,
@@ -38,7 +74,7 @@ export const queryPersister = typeof window !== 'undefined'
 
 export const persistOptions = {
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
-  buster: 'v2', // Bumped to invalidate potentially corrupted cache
+  buster: 'v3', // Bumped to invalidate health-detailed cache issue
 };
 
 /**

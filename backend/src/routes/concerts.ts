@@ -337,6 +337,202 @@ router.get('/statistics', authenticateToken, asyncHandler(async (req: AuthReques
 
 /**
  * @swagger
+ * /concerts/{id}/attendance-prediction:
+ *   get:
+ *     summary: Get predicted attendance for a concert based on historical data
+ *     tags: [Concerts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Attendance prediction with member-level probabilities
+ */
+router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    // Get concert details
+    const concert = db.prepare(`
+        SELECT id, name, date, concert_type, location
+        FROM concerts WHERE id = ? AND association_id = ?
+    `).get(id, req.user!.associationId) as any;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert niet gevonden.');
+    }
+
+    const concertDate = new Date(concert.date);
+    const dayOfWeek = concertDate.getDay();
+    const month = concertDate.getMonth() + 1;
+
+    // Get all active members
+    const members = db.prepare(`
+        SELECT id, first_name, last_name, instrument
+        FROM users
+        WHERE association_id = ? AND role != 'inactive'
+    `).all(req.user!.associationId) as { id: string; first_name: string; last_name: string; instrument: string }[];
+
+    // Get historical attendance for each member
+    const memberPredictions: {
+        memberId: string;
+        memberName: string;
+        instrument: string | null;
+        attendanceProbability: number;
+        totalConcerts: number;
+        attendedConcerts: number;
+        factors: { name: string; impact: number }[];
+    }[] = [];
+
+    // Get overall stats by concert type
+    const typeStats = db.prepare(`
+        SELECT
+            COUNT(DISTINCT c.id) as total_concerts,
+            COUNT(DISTINCT ca.id) as total_attendances,
+            (SELECT COUNT(*) FROM users WHERE association_id = ? AND role != 'inactive') as member_count
+        FROM concerts c
+        LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
+        WHERE c.association_id = ? AND c.concert_type = ? AND c.date < date('now')
+    `).get(req.user!.associationId, req.user!.associationId, concert.concert_type) as any;
+
+    // Get stats by day of week
+    const dayStats = db.prepare(`
+        SELECT
+            COUNT(DISTINCT c.id) as total_concerts,
+            COUNT(DISTINCT ca.id) as total_attendances
+        FROM concerts c
+        LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
+        WHERE c.association_id = ? AND strftime('%w', c.date) = ? AND c.date < date('now')
+    `).get(req.user!.associationId, String(dayOfWeek)) as any;
+
+    // Get stats by season (Q1-Q4)
+    const quarter = Math.ceil(month / 3);
+    const seasonStats = db.prepare(`
+        SELECT
+            COUNT(DISTINCT c.id) as total_concerts,
+            COUNT(DISTINCT ca.id) as total_attendances
+        FROM concerts c
+        LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
+        WHERE c.association_id = ?
+          AND CAST((CAST(strftime('%m', c.date) AS INTEGER) + 2) / 3 AS INTEGER) = ?
+          AND c.date < date('now')
+    `).get(req.user!.associationId, quarter) as any;
+
+    for (const member of members) {
+        // Get member's historical attendance
+        const memberStats = db.prepare(`
+            SELECT
+                (SELECT COUNT(DISTINCT c.id) FROM concerts c WHERE c.association_id = ? AND c.date < date('now')) as total_concerts,
+                COUNT(DISTINCT ca.concert_id) as attended_concerts
+            FROM concert_attendance ca
+            JOIN concerts c ON ca.concert_id = c.id
+            WHERE c.association_id = ? AND (ca.user_id = ? OR ca.member_name = ?)
+        `).get(req.user!.associationId, req.user!.associationId, member.id, `${member.first_name} ${member.last_name}`) as any;
+
+        // Base probability from personal history
+        const personalRate = memberStats.total_concerts > 0
+            ? memberStats.attended_concerts / memberStats.total_concerts
+            : 0.7; // Default assumption for new members
+
+        // Adjust for concert type (if we have data)
+        let typeAdjustment = 0;
+        if (typeStats && typeStats.total_concerts > 0 && typeStats.member_count > 0) {
+            const expectedPerConcert = typeStats.total_attendances / typeStats.total_concerts / typeStats.member_count;
+            typeAdjustment = (expectedPerConcert - 0.7) * 0.2;
+        }
+
+        // Adjust for day of week
+        let dayAdjustment = 0;
+        if (dayStats && dayStats.total_concerts > 0) {
+            const dayRate = dayStats.total_attendances / dayStats.total_concerts / members.length;
+            dayAdjustment = (dayRate - 0.7) * 0.1;
+        }
+
+        // Adjust for season
+        let seasonAdjustment = 0;
+        if (seasonStats && seasonStats.total_concerts > 0) {
+            const seasonRate = seasonStats.total_attendances / seasonStats.total_concerts / members.length;
+            seasonAdjustment = (seasonRate - 0.7) * 0.1;
+        }
+
+        // Calculate final probability (clamped between 0.05 and 0.99)
+        const rawProbability = personalRate + typeAdjustment + dayAdjustment + seasonAdjustment;
+        const probability = Math.max(0.05, Math.min(0.99, rawProbability));
+
+        const factors: { name: string; impact: number }[] = [];
+        if (Math.abs(typeAdjustment) > 0.01) {
+            factors.push({ name: `Concert type: ${concert.concert_type || 'onbekend'}`, impact: Math.round(typeAdjustment * 100) });
+        }
+        if (Math.abs(dayAdjustment) > 0.01) {
+            const dayNames = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+            factors.push({ name: `Dag: ${dayNames[dayOfWeek]}`, impact: Math.round(dayAdjustment * 100) });
+        }
+        if (Math.abs(seasonAdjustment) > 0.01) {
+            const seasonNames = ['Q1 (jan-mrt)', 'Q2 (apr-jun)', 'Q3 (jul-sep)', 'Q4 (okt-dec)'];
+            factors.push({ name: `Seizoen: ${seasonNames[quarter - 1]}`, impact: Math.round(seasonAdjustment * 100) });
+        }
+
+        memberPredictions.push({
+            memberId: member.id,
+            memberName: `${member.first_name} ${member.last_name}`,
+            instrument: member.instrument,
+            attendanceProbability: Math.round(probability * 100) / 100,
+            totalConcerts: memberStats.total_concerts,
+            attendedConcerts: memberStats.attended_concerts,
+            factors,
+        });
+    }
+
+    // Sort by probability descending
+    memberPredictions.sort((a, b) => b.attendanceProbability - a.attendanceProbability);
+
+    // Calculate aggregate predictions
+    const expectedAttendance = memberPredictions.reduce((sum, m) => sum + m.attendanceProbability, 0);
+    const highConfidenceYes = memberPredictions.filter(m => m.attendanceProbability >= 0.8).length;
+    const highConfidenceNo = memberPredictions.filter(m => m.attendanceProbability <= 0.2).length;
+    const uncertain = memberPredictions.filter(m => m.attendanceProbability > 0.2 && m.attendanceProbability < 0.8).length;
+
+    // Group by instrument
+    const byInstrument: Record<string, { expected: number; total: number }> = {};
+    for (const m of memberPredictions) {
+        const inst = m.instrument || 'Onbekend';
+        if (!byInstrument[inst]) {
+            byInstrument[inst] = { expected: 0, total: 0 };
+        }
+        byInstrument[inst].expected += m.attendanceProbability;
+        byInstrument[inst].total += 1;
+    }
+
+    res.json({
+        concert: {
+            id: concert.id,
+            name: concert.name,
+            date: concert.date,
+            concertType: concert.concert_type,
+            location: concert.location,
+        },
+        prediction: {
+            expectedAttendance: Math.round(expectedAttendance),
+            totalMembers: members.length,
+            confidenceBreakdown: {
+                highConfidenceYes,
+                highConfidenceNo,
+                uncertain,
+            },
+            byInstrument: Object.entries(byInstrument).map(([instrument, stats]) => ({
+                instrument,
+                expected: Math.round(stats.expected * 10) / 10,
+                total: stats.total,
+            })).sort((a, b) => b.expected - a.expected),
+        },
+        members: memberPredictions,
+    });
+}));
+
+/**
+ * @swagger
  * /concerts/piece-history/{title}:
  *   get:
  *     summary: Get when a specific piece was last played

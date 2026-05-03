@@ -324,4 +324,92 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
   res.json({ success: true });
 }));
 
+/**
+ * @swagger
+ * /loans/title/{titleId}/history:
+ *   get:
+ *     summary: Get loan history for a specific title
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: titleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Loan history for the title
+ */
+router.get('/title/:titleId/history', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { titleId } = req.params;
+
+  // Verify title belongs to user's association
+  const title = db.prepare(`
+    SELECT id, title, arranger FROM music_titles WHERE id = ? AND association_id = ?
+  `).get(titleId, req.user!.associationId) as { id: string; title: string; arranger: string | null } | undefined;
+
+  if (!title) {
+    return res.status(404).json({ error: 'Titel niet gevonden' });
+  }
+
+  const loans = db.prepare(`
+    SELECT
+      l.id,
+      l.borrower_name,
+      l.borrower_email,
+      l.borrower_organization,
+      l.notes,
+      l.date_out,
+      l.expected_return,
+      l.date_returned,
+      l.status,
+      l.created_at,
+      u.first_name || ' ' || u.last_name as created_by_name
+    FROM loans l
+    JOIN users u ON l.created_by = u.id
+    WHERE l.music_title_id = ?
+    ORDER BY l.date_out DESC
+  `).all(titleId);
+
+  // Calculate statistics
+  const totalLoans = loans.length;
+  const activeLoans = loans.filter((l: any) => l.status === 'active' || l.status === 'overdue').length;
+  const avgLoanDurationDays = loans
+    .filter((l: any) => l.date_returned)
+    .map((l: any) => {
+      const start = new Date(l.date_out);
+      const end = new Date(l.date_returned);
+      return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    })
+    .reduce((sum, days, _, arr) => sum + days / arr.length, 0) || 0;
+
+  res.json({
+    title: {
+      id: title.id,
+      title: title.title,
+      arranger: title.arranger,
+    },
+    statistics: {
+      totalLoans,
+      activeLoans,
+      avgLoanDurationDays: Math.round(avgLoanDurationDays),
+    },
+    loans: loans.map((l: any) => ({
+      id: l.id,
+      borrowerName: l.borrower_name,
+      borrowerEmail: l.borrower_email,
+      borrowerOrganization: l.borrower_organization,
+      notes: l.notes,
+      dateOut: l.date_out,
+      expectedReturn: l.expected_return,
+      dateReturned: l.date_returned,
+      status: l.status,
+      createdAt: l.created_at,
+      createdByName: l.created_by_name,
+    })),
+  });
+}));
+
 export default router;

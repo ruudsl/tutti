@@ -1,4 +1,4 @@
-import { useState, useEffect, CSSProperties, ImgHTMLAttributes } from 'react';
+import { useState, useEffect, CSSProperties, ImgHTMLAttributes, memo } from 'react';
 import { useLazyLoad } from '../hooks/useLazyLoad';
 
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'onLoad' | 'onError'> {
@@ -84,7 +84,7 @@ type ImageLoadState = 'idle' | 'loading' | 'loaded' | 'error';
  *   placeholderColor="#f0f0f0"
  * />
  */
-export function LazyImage({
+export const LazyImage = memo(function LazyImage({
   src,
   alt,
   placeholder,
@@ -253,13 +253,13 @@ export function LazyImage({
       )}
     </div>
   );
-}
+});
 
 /**
  * Simple lazy loading wrapper for any image without placeholder features.
  * Use when you don't need placeholder/blur effects.
  */
-export function SimpleLazyImage({
+export const SimpleLazyImage = memo(function SimpleLazyImage({
   src,
   alt,
   rootMargin = '100px',
@@ -290,6 +290,6 @@ export function SimpleLazyImage({
       )}
     </span>
   );
-}
+});
 
 export default LazyImage;

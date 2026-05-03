@@ -30,7 +30,8 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { AddToCalendarButton } from '../components/CalendarSync';
 import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
-import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType } from '../api';
+import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType, getAttendancePrediction } from '../api';
+import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Concert, TicketType } from '../types';
@@ -90,6 +91,11 @@ export default function Concerts() {
   });
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  // Attendance prediction state
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
+  const [predictionData, setPredictionData] = useState<AttendancePrediction | null>(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
 
   // Ticket management state
   const [showAddTicketTypeModal, setShowAddTicketTypeModal] = useState(false);
@@ -396,6 +402,25 @@ export default function Concerts() {
   const getMediaTypeLabel = (value: string) => {
     const type = mediaTypes.find((t) => t.value === value);
     return type?.label || value;
+  };
+
+  const handleViewPrediction = async (concertId: string) => {
+    setShowPredictionModal(true);
+    setLoadingPrediction(true);
+    try {
+      const data = await getAttendancePrediction(concertId);
+      setPredictionData(data);
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('concerts.prediction.error'));
+      setShowPredictionModal(false);
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
+  const closePredictionModal = () => {
+    setShowPredictionModal(false);
+    setPredictionData(null);
   };
 
   if (isLoading) {
@@ -927,9 +952,14 @@ export default function Concerts() {
           {/* Attendance Section */}
           <div className="flex justify-between items-center mb-2">
             <h4 style={{ margin: 0 }}>{t('concerts.attendance')}</h4>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAddAttendanceModal(true)}>
-              + {t('concerts.bulkAddAttendance')}
-            </button>
+            <div className="flex gap-2">
+              <button className="btn btn-outline btn-sm" onClick={() => handleViewPrediction(viewingConcert)}>
+                <Icon name="chart" size={16} /> {t('concerts.prediction.viewPrediction')}
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAddAttendanceModal(true)}>
+                + {t('concerts.bulkAddAttendance')}
+              </button>
+            </div>
           </div>
           {concertDetail.attendance.length > 0 ? (
             <table className="table">
@@ -1292,6 +1322,115 @@ export default function Concerts() {
           isLoading={deleteTicketTypeMutation.isPending}
           variant="danger"
         />
+      )}
+
+      {/* Attendance Prediction Modal */}
+      {showPredictionModal && (
+        <Modal
+          title={t('concerts.prediction.title')}
+          onClose={closePredictionModal}
+          size="large"
+        >
+          {loadingPrediction ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+              <span className="loading loading-spinner loading-lg" />
+            </div>
+          ) : predictionData ? (
+            <div>
+              {/* Summary stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="card">
+                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                      {predictionData.prediction.expectedAttendance}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.expected')}</div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--success)' }}>
+                      {predictionData.prediction.confidenceBreakdown.highConfidenceYes}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.likelyYes')}</div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--warning, orange)' }}>
+                      {predictionData.prediction.confidenceBreakdown.uncertain}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.uncertain')}</div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--danger)' }}>
+                      {predictionData.prediction.confidenceBreakdown.highConfidenceNo}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.likelyNo')}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* By instrument */}
+              <h4 style={{ marginBottom: '0.75rem' }}>{t('concerts.prediction.byInstrument')}</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                {predictionData.prediction.byInstrument.map(inst => (
+                  <div key={inst.instrument} style={{ padding: '0.5rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>{inst.instrument}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {inst.expected.toFixed(1)} / {inst.total} {t('concerts.prediction.expected').toLowerCase()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Member predictions */}
+              <h4 style={{ marginBottom: '0.75rem' }}>{t('concerts.prediction.memberPredictions')}</h4>
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('common.name')}</th>
+                      <th>{t('concerts.instrument')}</th>
+                      <th style={{ textAlign: 'center' }}>{t('concerts.prediction.probability')}</th>
+                      <th style={{ textAlign: 'center' }}>{t('concerts.prediction.history')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {predictionData.members.map(member => {
+                      const probability = Math.round(member.attendanceProbability * 100);
+                      const probabilityColor = probability >= 80 ? 'var(--success)' : probability <= 20 ? 'var(--danger)' : 'var(--warning, orange)';
+                      return (
+                        <tr key={member.memberId}>
+                          <td>{member.memberName}</td>
+                          <td>{member.instrument || '-'}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '50px', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ width: `${probability}%`, height: '100%', background: probabilityColor }} />
+                              </div>
+                              <span style={{ fontSize: '0.875rem', fontWeight: '500', color: probabilityColor }}>{probability}%</span>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                            {member.attendedConcerts} / {member.totalConcerts}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                <Icon name="info" size={14} style={{ marginRight: '0.5rem' }} />
+                {t('concerts.prediction.disclaimer')}
+              </div>
+            </div>
+          ) : null}
+        </Modal>
       )}
     </div>
   );

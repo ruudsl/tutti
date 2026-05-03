@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { rrulestr } from 'rrule';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -157,6 +158,116 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
     logger.info(`Generated ${created.length} rehearsals`, { associationId: req.user!.associationId });
 
     res.json({ message: `${created.length} repetities aangemaakt.`, count: created.length });
+}));
+
+/**
+ * POST /rehearsals/recurring - Create recurring rehearsals from an RRULE
+ * Body: { rrule: string, startTime: string, endTime: string, location?: string, orchestraId?: string, until?: string }
+ *
+ * Example RRULE: "FREQ=WEEKLY;BYDAY=TU;COUNT=10" (every Tuesday for 10 weeks)
+ */
+router.post('/recurring', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { rrule, startTime, endTime, location, orchestraId, until } = req.body;
+
+    if (!rrule || !startTime || !endTime) {
+        throw new ApiError(400, 'RRULE, begintijd en eindtijd zijn verplicht.');
+    }
+
+    // Validate orchestraId if provided
+    if (orchestraId) {
+        const orch = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?').get(orchestraId, req.user!.associationId) as any;
+        if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
+    }
+
+    let parsed: ReturnType<typeof rrulestr>;
+    try {
+        parsed = rrulestr(rrule);
+    } catch {
+        throw new ApiError(400, 'Ongeldige RRULE string.');
+    }
+
+    // Limit to max 52 occurrences (1 year of weekly) for safety
+    const maxOccurrences = 52;
+    const untilDate = until ? new Date(until) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    const occurrences = parsed.between(new Date(), untilDate, true).slice(0, maxOccurrences);
+
+    if (occurrences.length === 0) {
+        throw new ApiError(400, 'Geen repetities gegenereerd. Controleer de RRULE en datumbereik.');
+    }
+
+    // Get existing rehearsals to avoid duplicates
+    const startDateStr = occurrences[0].toISOString().split('T')[0];
+    const endDateStr = occurrences[occurrences.length - 1].toISOString().split('T')[0];
+
+    const existingRehearsals = db.prepare(`
+        SELECT date, orchestra_id FROM rehearsals
+        WHERE association_id = ? AND date >= ? AND date <= ?
+    `).all(req.user!.associationId, startDateStr, endDateStr) as any[];
+
+    const existingSet = new Set(existingRehearsals.map(r => `${r.date}|${r.orchestra_id || ''}`));
+
+    // Create a series ID to link all recurring rehearsals
+    const seriesId = uuidv4();
+    const created: string[] = [];
+
+    for (const occurrence of occurrences) {
+        const dateStr = occurrence.toISOString().split('T')[0];
+        const key = `${dateStr}|${orchestraId || ''}`;
+
+        if (existingSet.has(key)) continue;
+
+        const id = uuidv4();
+        db.prepare(`
+            INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, series_id, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?, ?)
+        `).run(id, req.user!.associationId, orchestraId || null, dateStr, startTime, endTime, location || null, seriesId, req.user!.id);
+        created.push(dateStr);
+    }
+
+    logger.info(`Generated ${created.length} recurring rehearsals from RRULE`, {
+        seriesId,
+        rrule,
+        associationId: req.user!.associationId
+    });
+
+    res.status(201).json({
+        message: `${created.length} repetities aangemaakt.`,
+        count: created.length,
+        seriesId,
+        dates: created
+    });
+}));
+
+/**
+ * DELETE /rehearsals/series/:seriesId - Delete all rehearsals in a recurring series
+ */
+router.delete('/series/:seriesId', authenticateToken, requireRole(...REHEARSAL_MANAGERS), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { seriesId } = req.params;
+    const { futureOnly } = req.query;
+
+    let sql = 'DELETE FROM rehearsals WHERE series_id = ? AND association_id = ?';
+    const params: any[] = [seriesId, req.user!.associationId];
+
+    if (futureOnly === 'true') {
+        sql = "DELETE FROM rehearsals WHERE series_id = ? AND association_id = ? AND date >= date('now')";
+    }
+
+    // First clean up attendance and pieces for affected rehearsals
+    const toDelete = db.prepare(
+        futureOnly === 'true'
+            ? "SELECT id FROM rehearsals WHERE series_id = ? AND association_id = ? AND date >= date('now')"
+            : 'SELECT id FROM rehearsals WHERE series_id = ? AND association_id = ?'
+    ).all(seriesId, req.user!.associationId) as { id: string }[];
+
+    for (const r of toDelete) {
+        db.prepare('DELETE FROM rehearsal_attendance WHERE rehearsal_id = ?').run(r.id);
+        db.prepare('DELETE FROM rehearsal_pieces WHERE rehearsal_id = ?').run(r.id);
+    }
+
+    const result = db.prepare(sql).run(...params);
+
+    res.json({ message: `${result.changes} repetities verwijderd.`, count: result.changes });
 }));
 
 // ========================

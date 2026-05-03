@@ -49,9 +49,10 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: 'calendar',
-    basePaths: ['/rehearsals', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
+    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
+      { path: '/availability', labelKey: 'nav.availability' },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -61,11 +62,12 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.members',
     icon: 'users',
-    basePaths: ['/members', '/issues', '/practice-schedules'],
+    basePaths: ['/members', '/issues', '/practice-schedules', '/practice'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
       { path: '/issues', labelKey: 'nav.issues' },
       { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
+      { path: '/practice', labelKey: 'nav.practice' },
     ],
   },
   {

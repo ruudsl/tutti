@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 interface ServiceStatus {
     status: 'healthy' | 'degraded' | 'unhealthy';
@@ -45,11 +45,14 @@ export default function HealthDashboard() {
             const response = await axios.get(`${API_BASE}/api/health/detailed`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 withCredentials: true,
+                validateStatus: (status) => status === 200 || status === 503, // 503 = unhealthy but valid response
             });
             return response.data;
         },
+        refetchOnMount: 'always',
         refetchInterval: autoRefresh ? refreshInterval : false,
         staleTime: 10000,
+        gcTime: 0, // Don't cache this query (sensitive system data)
     });
 
     // Format uptime as human-readable string
@@ -97,16 +100,19 @@ export default function HealthDashboard() {
     };
 
     if (error) {
+        const isPermissionError = axios.isAxiosError(error) && (error.response?.status === 403 || error.response?.status === 401);
         return (
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('health.title')}</h1>
                 </div>
                 <div className="alert alert-danger">
-                    <p>{t('health.errorLoading')}</p>
-                    <button className="btn btn-primary mt-2" onClick={() => refetch()}>
-                        {t('health.retry')}
-                    </button>
+                    <p>{isPermissionError ? t('health.adminRequired') : t('health.errorLoading')}</p>
+                    {!isPermissionError && (
+                        <button className="btn btn-primary mt-2" onClick={() => refetch()}>
+                            {t('health.retry')}
+                        </button>
+                    )}
                 </div>
             </div>
         );

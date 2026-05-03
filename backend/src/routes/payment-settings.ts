@@ -5,6 +5,7 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import logger from '../utils/logger';
+import { encrypt, decrypt, isEncrypted } from '../utils/encryption';
 
 const router = Router();
 
@@ -265,9 +266,8 @@ router.post('/mollie/connect', authenticateToken, requireRole('admin'), asyncHan
             canReceivePayments = methodsData.count > 0;
         }
 
-        // TODO: Encrypt API key before storing
-        // For now, we store it as-is (in production, use proper encryption)
-        const encryptedKey = Buffer.from(apiKey).toString('base64');
+        // Encrypt API key using AES-256-GCM
+        const encryptedKey = encrypt(apiKey);
 
         // Save key to the appropriate column based on mode
         if (mode === 'test') {
@@ -521,8 +521,17 @@ router.get('/mollie/test', authenticateToken, requireRole('admin'), asyncHandler
         });
     }
 
-    // Decrypt API key (basic base64 for now)
-    const apiKey = Buffer.from(encryptedKey, 'base64').toString('utf-8');
+    // Decrypt API key (migrate from base64 if needed)
+    let apiKey: string;
+    if (isEncrypted(encryptedKey)) {
+      apiKey = decrypt(encryptedKey);
+    } else {
+      // Legacy base64 format - decrypt and re-encrypt properly
+      apiKey = Buffer.from(encryptedKey, 'base64').toString('utf-8');
+      const properlyEncrypted = encrypt(apiKey);
+      const column = mode === 'test' ? 'mollie_test_api_key_encrypted' : 'mollie_api_key_encrypted';
+      db.prepare(`UPDATE payment_settings SET ${column} = ? WHERE association_id = ?`).run(properlyEncrypted, associationId);
+    }
 
     try {
         // Check organization
