@@ -266,13 +266,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
-app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
-app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
-app.use('/api/payment-settings', paymentSettingsRoutes);
-app.use('/api/discount-codes', discountCodesRoutes);
-app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 
-// Health check routes (basic and detailed)
+// Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
@@ -282,7 +277,7 @@ app.use('/api/interop', interopRoutes);
 // CSRF token endpoint (for SPAs to get/refresh their token)
 app.get('/api/csrf-token', getCsrfToken);
 
-// Changelog endpoint (language-aware)
+// Changelog endpoint (language-aware, public)
 app.get('/api/changelog', (req, res) => {
     const lang = (req.query.lang as string) || 'nl';
     const suffix = lang === 'nl' ? '' : `_${lang}`;
@@ -307,6 +302,13 @@ app.get('/api/changelog', (req, res) => {
         res.json({ content: '# Changelog\n\nNo changelog available.' });
     }
 });
+
+// Routes with catch-all patterns (mount these AFTER specific routes)
+app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
+app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
+app.use('/api/payment-settings', paymentSettingsRoutes);
+app.use('/api/discount-codes', discountCodesRoutes);
+app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 
 // Swagger API documentation
 if (config.isDevelopment) {
