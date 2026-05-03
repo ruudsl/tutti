@@ -74,7 +74,7 @@ export const queryPersister = typeof window !== 'undefined'
 
 export const persistOptions = {
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
-  buster: 'v2', // Bumped to invalidate potentially corrupted cache
+  buster: 'v3', // Bumped to invalidate health-detailed cache issue
 };
 
 /**
