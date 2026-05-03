@@ -8,6 +8,9 @@ import logger from '../utils/logger';
 
 const router = Router();
 
+const sanitizeForLog = (value: unknown): string =>
+    String(value).replace(/[\r\n\t]/g, ' ').replace(/[\x00-\x1F\x7F]/g, '');
+
 /**
  * @swagger
  * /annotations/piece/{musicPieceId}:
@@ -379,7 +382,9 @@ router.post('/drawing', authenticateToken, asyncHandler(async (req: AuthRequest,
         isShared ? 1 : 0
     );
 
-    logger.info(`User ${req.user!.id} created ${annotationType} annotation on piece ${musicPieceId} page ${pageNumber}`);
+    logger.info(
+        `User ${sanitizeForLog(req.user!.id)} created ${sanitizeForLog(annotationType)} annotation on piece ${sanitizeForLog(musicPieceId)} page ${sanitizeForLog(pageNumber)}`
+    );
 
     res.status(201).json({
         id,
