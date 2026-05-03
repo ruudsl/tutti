@@ -41,6 +41,7 @@ export default function HealthDashboard() {
     const { data: healthData, isLoading, error, refetch, isFetching } = useQuery<DetailedHealthResponse>({
         queryKey: ['health-detailed'],
         queryFn: async () => {
+            console.log('[HealthDashboard] Fetching health data...');
             const token = localStorage.getItem('token');
             const response = await axios.get(`${API_BASE}/api/health/detailed`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -48,8 +49,10 @@ export default function HealthDashboard() {
             });
             return response.data;
         },
+        refetchOnMount: 'always',
         refetchInterval: autoRefresh ? refreshInterval : false,
         staleTime: 10000,
+        gcTime: 0, // Don't cache this query (sensitive system data)
     });
 
     // Format uptime as human-readable string
