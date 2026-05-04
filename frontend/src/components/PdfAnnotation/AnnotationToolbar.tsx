@@ -578,9 +578,9 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                   style={{
                     width: '40px',
                     height: '40px',
-                    border: selectedStamp === stamp.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    border: selectedStamp === stamp.id ? '2px solid #3b82f6' : `1px solid ${borderColor}`,
                     borderRadius: '8px',
-                    backgroundColor: selectedStamp === stamp.id ? '#eff6ff' : '#ffffff',
+                    backgroundColor: selectedStamp === stamp.id ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : bgColor,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -593,7 +593,6 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                     width="28"
                     height="28"
                     viewBox="0 0 30 30"
-                    style={{ color }}
                     dangerouslySetInnerHTML={{ __html: stamp.svgData }}
                   />
                 </button>

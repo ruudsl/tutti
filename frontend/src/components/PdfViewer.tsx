@@ -680,15 +680,13 @@ export function PdfViewer({
             />
             {/* Drawing annotation overlay */}
             {drawingMode && musicPieceId && canvasDimensions.width > 0 && (
-              <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 10 }}>
-                <PdfAnnotator
-                  musicPieceId={musicPieceId}
-                  pageNumber={currentPage}
-                  pageWidth={canvasDimensions.width / zoom}
-                  pageHeight={canvasDimensions.height / zoom}
-                  scale={zoom}
-                />
-              </div>
+              <PdfAnnotator
+                musicPieceId={musicPieceId}
+                pageNumber={currentPage}
+                pageWidth={canvasDimensions.width / zoom}
+                pageHeight={canvasDimensions.height / zoom}
+                scale={zoom}
+              />
             )}
           </div>
         </div>
