@@ -275,6 +275,7 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
           opacity={opacity}
           selectedStamp={selectedStamp}
           selectedShapeType={selectedShapeType}
+          stamps={stamps}
           annotations={annotations}
           onAnnotationAdd={handleAnnotationAdd}
           onAnnotationUpdate={handleAnnotationUpdate}

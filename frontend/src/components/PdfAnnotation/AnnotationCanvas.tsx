@@ -35,6 +35,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
   opacity,
   selectedStamp,
   selectedShapeType = 'rectangle',
+  stamps,
   annotations,
   onAnnotationAdd,
   onAnnotationUpdate: _onAnnotationUpdate,
@@ -324,22 +325,42 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
   }, [width, height, scale, dpr, redraw]);
 
   useEffect(() => {
-    if (selectedStamp && !stampImages.has(selectedStamp.id)) {
-      const img = new Image();
-      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${selectedStamp.svgData}</svg>`;
-      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
+    const loadStampImages = async () => {
+      const newImages = new Map(stampImages);
+      let hasChanges = false;
 
-      img.onload = () => {
-        setStampImages(prev => new Map(prev).set(selectedStamp.id, img));
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
+      for (const stamp of stamps) {
+        if (!newImages.has(stamp.id)) {
+          const img = new Image();
+          const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${stamp.svgData}</svg>`;
+          const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              newImages.set(stamp.id, img);
+              hasChanges = true;
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.src = url;
+          });
+        }
+      }
+
+      if (hasChanges) {
+        setStampImages(newImages);
+      }
+    };
+
+    if (stamps.length > 0) {
+      loadStampImages();
     }
-  }, [selectedStamp, stampImages]);
+  }, [stamps]);
 
   const handleTextSubmit = useCallback(() => {
     if (textInputValue.trim() && textInputPosition) {

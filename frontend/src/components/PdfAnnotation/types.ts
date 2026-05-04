@@ -99,6 +99,7 @@ export interface AnnotationCanvasProps {
   opacity: number;
   selectedStamp: Stamp | null;
   selectedShapeType?: ShapeType;
+  stamps: Stamp[];
   annotations: Annotation[];
   onAnnotationAdd: (annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onAnnotationUpdate: (id: string, data: Partial<Annotation>) => void;
