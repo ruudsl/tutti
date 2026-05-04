@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Metronome } from './Metronome';
 import { Tuner } from './Tuner';
+import { PitchPipe } from './PitchPipe';
 
 interface MusicToolsProps {
   sidebar?: boolean;
@@ -9,7 +10,7 @@ interface MusicToolsProps {
 
 export function MusicTools({ sidebar = false }: MusicToolsProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'metronome' | 'tuner'>('metronome');
+  const [activeTab, setActiveTab] = useState<'metronome' | 'tuner' | 'pitchpipe'>('metronome');
 
   if (sidebar) {
     return (
@@ -20,7 +21,7 @@ export function MusicTools({ sidebar = false }: MusicToolsProps) {
         height: '100%',
         overflowY: 'auto'
       }}>
-        <div className="flex gap-2" style={{ marginBottom: '1rem' }}>
+        <div className="flex gap-2" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${activeTab === 'metronome' ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setActiveTab('metronome')}
@@ -35,18 +36,28 @@ export function MusicTools({ sidebar = false }: MusicToolsProps) {
           >
             {t('tools.tunerTab')}
           </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'pitchpipe' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setActiveTab('pitchpipe')}
+            style={{ flex: 1 }}
+          >
+            Stemtoon
+          </button>
         </div>
 
-        {activeTab === 'metronome' ? <Metronome /> : <Tuner />}
+        {activeTab === 'metronome' && <Metronome />}
+        {activeTab === 'tuner' && <Tuner />}
+        {activeTab === 'pitchpipe' && <PitchPipe />}
       </div>
     );
   }
 
   return (
     <div className="music-tools">
-      <div className="grid grid-2" style={{ gap: '1.5rem' }}>
+      <div className="grid grid-3" style={{ gap: '1.5rem' }}>
         <Metronome />
         <Tuner />
+        <PitchPipe />
       </div>
     </div>
   );
