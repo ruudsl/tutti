@@ -24,7 +24,7 @@ import type { MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { EmptyState } from '../components/EmptyState';
-import { SortDropdown, useSortState, DEFAULT_MUSIC_SORT_OPTIONS, type SortState } from '../components/SortDropdown';
+import { SortDropdown, useSortState, DEFAULT_MUSIC_SORT_OPTIONS } from '../components/SortDropdown';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { FloatingActionButton } from '../components/FloatingActionButton';
 
@@ -98,16 +98,13 @@ export default function MusicPieces() {
         case 'name-desc':
           comparison = a.title.localeCompare(b.title, 'nl');
           break;
-        case 'date-newest':
-        case 'date-oldest':
-          comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
-          break;
         case 'composer':
           comparison = (a.arranger || '').localeCompare(b.arranger || '', 'nl');
           break;
+        // date-based and last-viewed sorting fall back to title (no date fields on MusicPiece)
+        case 'date-newest':
+        case 'date-oldest':
         case 'last-viewed':
-          comparison = new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime();
-          break;
         default:
           comparison = a.title.localeCompare(b.title, 'nl');
       }

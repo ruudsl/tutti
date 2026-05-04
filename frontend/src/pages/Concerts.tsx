@@ -37,6 +37,7 @@ import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Concert, TicketType } from '../types';
+import { FloatingActionButton } from '../components/FloatingActionButton';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -699,9 +700,8 @@ export default function Concerts() {
               availablePieces={musicTitles.map((title, index) => ({
                 id: title.id || `temp-${index}`,
                 title: title.title,
-                composer: title.composer || undefined,
                 arranger: title.arranger || undefined,
-                durationSeconds: title.duration ? title.duration * 60 : undefined,
+                durationSeconds: title.durationSeconds || undefined,
               } as SetlistPiece))}
               onSave={(setlist: Setlist) => {
                 showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
@@ -1477,6 +1477,14 @@ export default function Concerts() {
           ) : null}
         </Modal>
       )}
+
+      {/* Floating Action Button for mobile - quick add new concert */}
+      <FloatingActionButton
+        icon="plus"
+        label={t('concerts.newConcert')}
+        onClick={() => setShowAddModal(true)}
+        bottomOffset={60}
+      />
     </div>
   );
 }
