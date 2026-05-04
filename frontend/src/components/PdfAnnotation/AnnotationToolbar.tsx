@@ -65,27 +65,28 @@ interface ToolButtonProps {
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shortcut, isDarkMode }) => (
-  <button
-    onClick={onClick}
-    className={`annotation-tool-btn ${isActive ? 'active' : ''}`}
-    title={`${config.description}${shortcut ? ` (${shortcut})` : ''}`}
-    aria-label={config.label}
-    style={{
-      width: '40px',
-      height: '40px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: 'none',
-      borderRadius: '8px',
-      backgroundColor: isActive ? '#3b82f6' : 'transparent',
-      color: isActive ? '#ffffff' : (isDarkMode ? '#d1d5db' : '#374151'),
-      cursor: 'pointer',
-      transition: 'all 0.15s ease',
-    }}
-  >
-    <Icon name={config.icon} size={20} />
-  </button>
+  <Tooltip content={`${config.description}${shortcut ? ` (${shortcut})` : ''}`} position="right">
+    <button
+      onClick={onClick}
+      className={`annotation-tool-btn ${isActive ? 'active' : ''}`}
+      aria-label={config.label}
+      style={{
+        width: '40px',
+        height: '40px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: 'none',
+        borderRadius: '8px',
+        backgroundColor: isActive ? '#3b82f6' : 'transparent',
+        color: isActive ? '#ffffff' : (isDarkMode ? '#d1d5db' : '#374151'),
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <Icon name={config.icon} size={20} />
+    </button>
+  </Tooltip>
 );
 
 // Tool keyboard shortcuts mapping
