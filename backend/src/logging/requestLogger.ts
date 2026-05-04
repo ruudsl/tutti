@@ -20,6 +20,13 @@ function generateRequestId(): string {
 }
 
 /**
+ * Sanitize untrusted values before writing to logs to prevent log injection
+ */
+function sanitizeForLog(value: unknown): string {
+    return String(value ?? '').replace(/[\r\n]/g, '');
+}
+
+/**
  * Middleware to add request ID to each request
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -67,6 +74,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         const duration = Date.now() - startTime;
         const statusCode = res.statusCode;
         const userId = req.user?.id;
+        const safeMethod = sanitizeForLog(req.method);
+        const safePath = sanitizeForLog(req.path);
 
         // Determine log level based on status code
         const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
@@ -76,12 +85,12 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         const cacheStatus = res.get('x-cache') || 'N/A';
 
         // Log request completion
-        logger[level](`${req.method} ${req.path} ${statusCode} ${duration}ms`, {
+        logger[level](`${safeMethod} ${safePath} ${statusCode} ${duration}ms`, {
             type: 'request',
             phase: 'complete',
             requestId,
-            method: req.method,
-            path: req.path,
+            method: safeMethod,
+            path: safePath,
             statusCode,
             duration,
             userId,
@@ -96,7 +105,7 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
 
         // Log slow requests as performance issues (warning at 2s, critical at 5s)
         if (duration > 5000) {
-            logger.error(`Critical slow request: ${req.method} ${req.path}`, {
+            logger.error(`Critical slow request: ${safeMethod} ${safePath}`, {
                 type: 'performance',
                 metric: 'critical_slow_request',
                 requestId,
@@ -105,7 +114,7 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
                 responseSize,
             });
         } else if (duration > 2000) {
-            logger.warn(`Slow request detected: ${req.method} ${req.path}`, {
+            logger.warn(`Slow request detected: ${safeMethod} ${safePath}`, {
                 type: 'performance',
                 metric: 'slow_request',
                 requestId,
@@ -117,7 +126,7 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
 
         // Log large responses
         if (responseSize > 1024 * 1024) { // > 1MB
-            logger.warn(`Large response: ${req.method} ${req.path}`, {
+            logger.warn(`Large response: ${safeMethod} ${safePath}`, {
                 type: 'performance',
                 metric: 'large_response',
                 requestId,
@@ -130,8 +139,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         if (statusCode === 401 || statusCode === 403) {
             logSecurity('access_denied', {
                 requestId,
-                method: req.method,
-                path: req.path,
+                method: safeMethod,
+                path: safePath,
                 statusCode,
                 ip: req.ip || req.socket.remoteAddress,
                 userId,
@@ -142,8 +151,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         if (statusCode === 429) {
             logSecurity('rate_limit_exceeded', {
                 requestId,
-                method: req.method,
-                path: req.path,
+                method: safeMethod,
+                path: safePath,
                 ip: req.ip || req.socket.remoteAddress,
             });
         }
