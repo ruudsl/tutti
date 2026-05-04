@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode, CSSProperties } from 'react';
+import { useState, useRef, useEffect, ReactNode, CSSProperties, useId } from 'react';
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
@@ -29,6 +29,8 @@ interface TooltipProps {
   onDismiss?: () => void;
   /** For onboarding: force show (controlled mode) */
   forceShow?: boolean;
+  /** Auto-flip position when there's not enough space */
+  autoFlip?: boolean;
 }
 
 /**
@@ -68,52 +70,88 @@ export function Tooltip({
   totalSteps,
   onDismiss,
   forceShow = false,
+  autoFlip = true,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [actualPosition, setActualPosition] = useState<TooltipPosition>(position);
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tooltipId = useId();
 
   const showTooltip = forceShow || isVisible;
 
-  // Calculate tooltip position
+  // Calculate tooltip position with auto-flip support
   useEffect(() => {
     if (!showTooltip || !triggerRef.current || !tooltipRef.current) return;
 
     const trigger = triggerRef.current.getBoundingClientRect();
     const tooltip = tooltipRef.current.getBoundingClientRect();
     const spacing = 8;
+    const viewportPadding = 10;
 
-    let top = 0;
-    let left = 0;
+    // Helper to calculate position for a given placement
+    const calculatePosition = (placement: TooltipPosition): { top: number; left: number; fits: boolean } => {
+      let top = 0;
+      let left = 0;
+      let fits = true;
 
-    switch (position) {
-      case 'top':
-        top = trigger.top - tooltip.height - spacing;
-        left = trigger.left + (trigger.width - tooltip.width) / 2;
-        break;
-      case 'bottom':
-        top = trigger.bottom + spacing;
-        left = trigger.left + (trigger.width - tooltip.width) / 2;
-        break;
-      case 'left':
-        top = trigger.top + (trigger.height - tooltip.height) / 2;
-        left = trigger.left - tooltip.width - spacing;
-        break;
-      case 'right':
-        top = trigger.top + (trigger.height - tooltip.height) / 2;
-        left = trigger.right + spacing;
-        break;
+      switch (placement) {
+        case 'top':
+          top = trigger.top - tooltip.height - spacing;
+          left = trigger.left + (trigger.width - tooltip.width) / 2;
+          fits = top >= viewportPadding;
+          break;
+        case 'bottom':
+          top = trigger.bottom + spacing;
+          left = trigger.left + (trigger.width - tooltip.width) / 2;
+          fits = top + tooltip.height <= window.innerHeight - viewportPadding;
+          break;
+        case 'left':
+          top = trigger.top + (trigger.height - tooltip.height) / 2;
+          left = trigger.left - tooltip.width - spacing;
+          fits = left >= viewportPadding;
+          break;
+        case 'right':
+          top = trigger.top + (trigger.height - tooltip.height) / 2;
+          left = trigger.right + spacing;
+          fits = left + tooltip.width <= window.innerWidth - viewportPadding;
+          break;
+      }
+
+      return { top, left, fits };
+    };
+
+    // Opposite positions for flipping
+    const opposites: Record<TooltipPosition, TooltipPosition> = {
+      top: 'bottom',
+      bottom: 'top',
+      left: 'right',
+      right: 'left',
+    };
+
+    let finalPosition = position;
+    let { top, left, fits } = calculatePosition(position);
+
+    // Auto-flip to opposite side if it doesn't fit
+    if (autoFlip && !fits) {
+      const opposite = opposites[position];
+      const oppositeCalc = calculatePosition(opposite);
+      if (oppositeCalc.fits) {
+        finalPosition = opposite;
+        top = oppositeCalc.top;
+        left = oppositeCalc.left;
+      }
     }
 
-    // Keep tooltip within viewport
-    const viewportPadding = 10;
+    // Keep tooltip within viewport (final adjustment)
     left = Math.max(viewportPadding, Math.min(left, window.innerWidth - tooltip.width - viewportPadding));
     top = Math.max(viewportPadding, Math.min(top, window.innerHeight - tooltip.height - viewportPadding));
 
+    setActualPosition(finalPosition);
     setTooltipPosition({ top, left });
-  }, [showTooltip, position]);
+  }, [showTooltip, position, autoFlip]);
 
   const handleMouseEnter = () => {
     if (disabled || forceShow) return;
@@ -166,6 +204,8 @@ export function Tooltip({
     left: tooltipPosition?.left ?? 0,
   };
 
+  const bgColor = highlight ? 'var(--primary)' : 'rgba(0, 0, 0, 0.9)';
+
   const arrowStyles: Record<TooltipPosition, CSSProperties> = {
     top: {
       position: 'absolute',
@@ -176,7 +216,7 @@ export function Tooltip({
       height: 0,
       borderLeft: '6px solid transparent',
       borderRight: '6px solid transparent',
-      borderTop: `6px solid ${highlight ? 'var(--primary)' : 'rgba(0, 0, 0, 0.9)'}`,
+      borderTop: `6px solid ${bgColor}`,
     },
     bottom: {
       position: 'absolute',
@@ -187,7 +227,7 @@ export function Tooltip({
       height: 0,
       borderLeft: '6px solid transparent',
       borderRight: '6px solid transparent',
-      borderBottom: `6px solid ${highlight ? 'var(--primary)' : 'rgba(0, 0, 0, 0.9)'}`,
+      borderBottom: `6px solid ${bgColor}`,
     },
     left: {
       position: 'absolute',
@@ -198,7 +238,7 @@ export function Tooltip({
       height: 0,
       borderTop: '6px solid transparent',
       borderBottom: '6px solid transparent',
-      borderLeft: `6px solid ${highlight ? 'var(--primary)' : 'rgba(0, 0, 0, 0.9)'}`,
+      borderLeft: `6px solid ${bgColor}`,
     },
     right: {
       position: 'absolute',
@@ -209,7 +249,7 @@ export function Tooltip({
       height: 0,
       borderTop: '6px solid transparent',
       borderBottom: '6px solid transparent',
-      borderRight: `6px solid ${highlight ? 'var(--primary)' : 'rgba(0, 0, 0, 0.9)'}`,
+      borderRight: `6px solid ${bgColor}`,
     },
   };
 
@@ -232,6 +272,7 @@ export function Tooltip({
         onMouseLeave={handleMouseLeave}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        aria-describedby={showTooltip ? tooltipId : undefined}
       >
         {children}
       </div>
@@ -239,9 +280,11 @@ export function Tooltip({
       {showTooltip && (
         <div
           ref={tooltipRef}
+          id={tooltipId}
           className="tooltip"
           style={tooltipStyles}
           role="tooltip"
+          aria-live="polite"
         >
           {content}
 
@@ -272,6 +315,7 @@ export function Tooltip({
                     fontSize: '12px',
                     cursor: 'pointer',
                   }}
+                  type="button"
                 >
                   Begrepen
                 </button>
@@ -279,8 +323,8 @@ export function Tooltip({
             </div>
           )}
 
-          {/* Arrow */}
-          {showArrow && <div style={arrowStyles[position]} />}
+          {/* Arrow - uses actualPosition for auto-flipped tooltips */}
+          {showArrow && <div style={arrowStyles[actualPosition]} />}
         </div>
       )}
     </>
