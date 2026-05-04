@@ -570,33 +570,52 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                 Geen stempels in deze categorie
               </div>
             ) : (
-              filteredStamps.map(stamp => (
-                <button
-                  key={stamp.id}
-                  onClick={() => onStampSelect(stamp.id)}
-                  title={stamp.name}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    border: selectedStamp === stamp.id ? '2px solid #3b82f6' : `1px solid ${borderColor}`,
-                    borderRadius: '8px',
-                    backgroundColor: selectedStamp === stamp.id ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : bgColor,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '4px',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 30 30"
-                    dangerouslySetInnerHTML={{ __html: stamp.svgData }}
-                  />
-                </button>
-              ))
+              filteredStamps.map(stamp => {
+                const isTextStamp = stamp.svgData.includes('<text');
+                const textMatch = stamp.svgData.match(/>([^<]+)<\/text>/);
+                const stampText = textMatch ? textMatch[1] : stamp.name;
+
+                return (
+                  <button
+                    key={stamp.id}
+                    onClick={() => onStampSelect(stamp.id)}
+                    title={stamp.name}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      border: selectedStamp === stamp.id ? '2px solid #3b82f6' : `1px solid ${borderColor}`,
+                      borderRadius: '8px',
+                      backgroundColor: selectedStamp === stamp.id ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : bgColor,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {isTextStamp ? (
+                      <span style={{
+                        fontSize: stampText.length > 3 ? '10px' : stampText.length > 2 ? '12px' : '16px',
+                        fontWeight: 'bold',
+                        fontStyle: 'italic',
+                        color: isDarkMode ? '#fff' : '#000',
+                        fontFamily: '"Times New Roman", Times, serif',
+                        lineHeight: 1,
+                      }}>
+                        {stampText}
+                      </span>
+                    ) : (
+                      <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 30 30"
+                        dangerouslySetInnerHTML={{ __html: stamp.svgData }}
+                      />
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
