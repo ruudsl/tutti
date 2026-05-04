@@ -409,74 +409,80 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         paddingTop: '12px',
         borderTop: '1px solid #e5e7eb',
       }}>
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Ongedaan maken (Ctrl+Z)"
-          style={{
-            flex: 1,
-            padding: '10px',
-            border: 'none',
-            borderRadius: '8px',
-            backgroundColor: canUndo ? '#f3f4f6' : '#f9fafb',
-            color: canUndo ? '#374151' : '#9ca3af',
-            cursor: canUndo ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <Icon name="undo" size={16} />
-        </button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Opnieuw (Ctrl+Y)"
-          style={{
-            flex: 1,
-            padding: '10px',
-            border: 'none',
-            borderRadius: '8px',
-            backgroundColor: canRedo ? '#f3f4f6' : '#f9fafb',
-            color: canRedo ? '#374151' : '#9ca3af',
-            cursor: canRedo ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <Icon name="redo" size={16} />
-        </button>
-        <button
-          onClick={() => {
-            if (confirm('Alle annotaties op deze pagina wissen?')) {
-              onClear();
-            }
-          }}
-          title="Alles wissen"
-          style={{
-            padding: '10px 14px',
-            border: 'none',
-            borderRadius: '8px',
-            backgroundColor: '#fef2f2',
-            color: '#dc2626',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <Icon name="trash" size={16} />
-        </button>
+        <Tooltip content="Ongedaan maken (Ctrl+Z)" position="top" disabled={!canUndo}>
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            aria-label="Ongedaan maken"
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: canUndo ? '#f3f4f6' : '#f9fafb',
+              color: canUndo ? '#374151' : '#9ca3af',
+              cursor: canUndo ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Icon name="undo" size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Opnieuw (Ctrl+Y)" position="top" disabled={!canRedo}>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            aria-label="Opnieuw"
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: canRedo ? '#f3f4f6' : '#f9fafb',
+              color: canRedo ? '#374151' : '#9ca3af',
+              cursor: canRedo ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Icon name="redo" size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Alles wissen" position="top">
+          <button
+            onClick={() => {
+              if (confirm('Alle annotaties op deze pagina wissen?')) {
+                onClear();
+              }
+            }}
+            aria-label="Alles wissen"
+            style={{
+              padding: '10px 14px',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: '#fef2f2',
+              color: '#dc2626',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Stamp Picker */}
