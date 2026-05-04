@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Icon } from '../components/Icon';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import SocialLoginButtons from '../components/SocialLoginButtons';
+import { LazyImage } from '../components/LazyImage';
 import api, { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api';
 
 export default function Login() {
@@ -84,10 +86,13 @@ export default function Login() {
         </div>
         <div className="login-logo">
           {branding.logoUrl ? (
-            <img
+            <LazyImage
               src={branding.logoUrl}
               alt={branding.displayName}
-              style={{ maxHeight: '64px', maxWidth: '200px', objectFit: 'contain', marginBottom: '0.5rem' }}
+              height={64}
+              width={200}
+              objectFit="contain"
+              containerStyle={{ marginBottom: '0.5rem' }}
             />
           ) : null}
           <h1>
@@ -213,6 +218,21 @@ export default function Login() {
               {microsoftLoading ? t('auth.loggingIn') : t('auth.microsoft.loginButton')}
             </button>
           </>
+        )}
+
+        {/* Social Login (Google/Facebook) */}
+        {!showMfa && (
+          <SocialLoginButtons
+            onSuccess={(result) => {
+              // Store token and navigate
+              localStorage.setItem('token', result.token);
+              navigate('/');
+            }}
+            onError={(errorMsg) => {
+              setError(errorMsg);
+            }}
+            disabled={isLoading}
+          />
         )}
       </div>
     </div>

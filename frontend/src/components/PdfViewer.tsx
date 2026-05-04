@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
 import { Icon } from './Icon';
 import { PdfAnnotator } from './PdfAnnotation';
+import { BluetoothPedalIndicator } from './BluetoothPedalIndicator';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -29,6 +30,8 @@ export interface PdfViewerProps {
   onPageChange?: (page: number, totalPages: number) => void;
   /** Enable swipe navigation (default: true) */
   enableSwipe?: boolean;
+  /** Show Bluetooth pedal connection indicator (default: false) */
+  showPedalIndicator?: boolean;
   /** Show page indicator (default: true) */
   showPageIndicator?: boolean;
   /** Custom class name */
@@ -68,6 +71,7 @@ export function PdfViewer({
   onPageChange,
   enableSwipe = true,
   showPageIndicator = true,
+  showPedalIndicator = false,
   className = '',
   fitMode = 'contain',
   enableZoom = true,
@@ -710,6 +714,13 @@ export function PdfViewer({
 
         {/* Navigation Controls */}
         <div style={styles.controls}>
+          {showPedalIndicator && (
+            <BluetoothPedalIndicator
+              onPageNext={nextPage}
+              onPagePrevious={previousPage}
+              showBattery={true}
+            />
+          )}
           <button
             onClick={previousPage}
             disabled={currentPage <= 1}

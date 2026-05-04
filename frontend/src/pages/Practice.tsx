@@ -16,11 +16,16 @@ import {
 import type { PracticeGoalsResponse } from '../api/practice';
 import { SkeletonTable } from '../components/Skeleton';
 import PracticeTimer from '../components/PracticeTimer';
+import { PracticeLogModal } from '../components/PracticeLogModal';
+import { AudioRecorder } from '../components/AudioRecorder';
+import { BottomSheet } from '../components/BottomSheet';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function Practice() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.practice');
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Log practice form
   const [showLogForm, setShowLogForm] = useState(false);
@@ -35,6 +40,15 @@ export default function Practice() {
   const [goalType, setGoalType] = useState<'daily' | 'weekly'>('daily');
   const [goalMinutes, setGoalMinutes] = useState(30);
   const [savingGoal, setSavingGoal] = useState(false);
+
+  // PracticeLogModal state
+  const [practiceLogModalData, setPracticeLogModalData] = useState<{
+    musicTitleId: string;
+    musicTitle: string;
+  } | null>(null);
+
+  // AudioRecorder state
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
 
   // Queries
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -137,6 +151,20 @@ export default function Practice() {
     }
   };
 
+  // Handler for when PracticeLogModal closes (after successful log)
+  const handlePracticeLogModalClose = () => {
+    setPracticeLogModalData(null);
+    // Refresh practice data
+    queryClient.invalidateQueries({ queryKey: ['practiceLogs'] });
+    queryClient.invalidateQueries({ queryKey: ['practiceStats'] });
+    queryClient.invalidateQueries({ queryKey: ['practiceGoals'] });
+  };
+
+  // Handler for when AudioRecorder closes
+  const handleAudioRecorderClose = () => {
+    setShowAudioRecorder(false);
+  };
+
   if (statsLoading || goalsLoading) {
     return (
       <div>
@@ -150,9 +178,14 @@ export default function Practice() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>{t('practice.title')}</h1>
-        <button className="btn btn-primary" onClick={() => setShowLogForm(true)}>
-          + {t('practice.logSession')}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-outline" onClick={() => setShowAudioRecorder(true)}>
+            {t('audio.newRecording', 'Opname')}
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowLogForm(true)}>
+            + {t('practice.logSession')}
+          </button>
+        </div>
       </div>
 
       {/* Practice Timer */}
@@ -353,6 +386,7 @@ export default function Practice() {
                   <th>{t('practice.piece')}</th>
                   <th style={{ textAlign: 'right' }}>{t('practice.totalTime')}</th>
                   <th style={{ textAlign: 'right' }}>{t('practice.sessions')}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -364,6 +398,14 @@ export default function Practice() {
                     </td>
                     <td style={{ textAlign: 'right' }}>{formatDuration(piece.totalMinutes)}</td>
                     <td style={{ textAlign: 'right' }}>{piece.sessionCount}x</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setPracticeLogModalData({ musicTitleId: piece.id, musicTitle: piece.title })}
+                      >
+                        {t('practice.quickLog', 'Log')}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -420,8 +462,100 @@ export default function Practice() {
         </div>
       </div>
 
-      {/* Log practice modal */}
-      {showLogForm && (
+      {/* Log practice modal - uses BottomSheet on mobile for better UX */}
+      {showLogForm && isMobile ? (
+        <BottomSheet
+          isOpen={showLogForm}
+          onClose={() => setShowLogForm(false)}
+          title={t('practice.logSession')}
+          height="auto"
+          swipeToDismiss
+          footer={
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => setShowLogForm(false)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleLogPractice}
+                disabled={!selectedTitleId || logging}
+              >
+                {logging ? t('common.loading') : t('practice.log')}
+              </button>
+            </div>
+          }
+        >
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label className="form-label">{t('practice.selectPiece')}</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder={t('practice.searchPiece')}
+              value={titleSearch}
+              onChange={e => setTitleSearch(e.target.value)}
+              style={{ marginBottom: '0.5rem' }}
+            />
+            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+              {titles.length === 0 ? (
+                <div style={{ padding: '0.75rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                  {titleSearch ? t('practice.noResults') : t('practice.typeToSearch')}
+                </div>
+              ) : (
+                titles.slice(0, 20).filter(title => title.id).map(title => (
+                  <div
+                    key={title.id}
+                    onClick={() => setSelectedTitleId(title.id!)}
+                    style={{
+                      padding: '0.75rem',
+                      cursor: 'pointer',
+                      background: selectedTitleId === title.id ? 'var(--primary-light, rgba(var(--primary-rgb), 0.1))' : 'transparent',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <strong>{title.title}</strong>
+                    {title.arranger && <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {title.arranger}</span>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label className="form-label">{t('practice.duration')}</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="range"
+                min={5}
+                max={180}
+                step={5}
+                value={duration}
+                onChange={e => setDuration(parseInt(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                className="form-control"
+                value={duration}
+                onChange={e => setDuration(Math.max(1, parseInt(e.target.value) || 30))}
+                min={1}
+                style={{ width: '80px' }}
+              />
+              <span style={{ color: 'var(--text-light)' }}>min</span>
+            </div>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label className="form-label">{t('practice.notes')}</label>
+            <textarea
+              className="form-control"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={2}
+              placeholder={t('practice.notesPlaceholder')}
+            />
+          </div>
+        </BottomSheet>
+      ) : showLogForm && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', zIndex: 1000,
@@ -516,6 +650,22 @@ export default function Practice() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PracticeLogModal - Quick logging for a specific piece */}
+      {practiceLogModalData && (
+        <PracticeLogModal
+          musicTitleId={practiceLogModalData.musicTitleId}
+          musicTitle={practiceLogModalData.musicTitle}
+          onClose={handlePracticeLogModalClose}
+        />
+      )}
+
+      {/* AudioRecorder - Record practice sessions */}
+      {showAudioRecorder && (
+        <AudioRecorder
+          onClose={handleAudioRecorderClose}
+        />
       )}
     </div>
   );

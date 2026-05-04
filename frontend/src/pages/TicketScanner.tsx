@@ -6,6 +6,7 @@ import { getConcerts, validateTicket } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
+import { OfflineScanner } from '../components/OfflineScanner';
 import type { TicketValidationResult } from '../types';
 
 export default function TicketScanner() {
@@ -19,6 +20,7 @@ export default function TicketScanner() {
   const [scanCount, setScanCount] = useState({ valid: 0, invalid: 0 });
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [hasBarcodeDetector] = useState(() => 'BarcodeDetector' in window);
+  const [showOfflineMode, setShowOfflineMode] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -213,7 +215,29 @@ export default function TicketScanner() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>{t('tickets.scanner')}</h1>
+        <button
+          className={`btn ${showOfflineMode ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setShowOfflineMode(!showOfflineMode)}
+        >
+          {showOfflineMode ? t('tickets.onlineMode', 'Online Modus') : t('tickets.offlineMode', 'Offline Modus')}
+        </button>
       </div>
+
+      {/* Offline Scanner Mode */}
+      {showOfflineMode && selectedConcertId && (
+        <div className="mb-3">
+          <OfflineScanner
+            concertId={selectedConcertId}
+            onScanComplete={(result) => {
+              if (result.valid) {
+                setScanCount((prev) => ({ ...prev, valid: prev.valid + 1 }));
+              } else {
+                setScanCount((prev) => ({ ...prev, invalid: prev.invalid + 1 }));
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* Concert Selection */}
       <div className="card mb-3">

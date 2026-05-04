@@ -32,6 +32,7 @@ import { AddToCalendarButton } from '../components/CalendarSync';
 import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
 import SetlistBuilder, { SetlistPiece, Setlist } from '../components/SetlistBuilder';
 import ConcertPosterGenerator from '../components/ConcertPosterGenerator';
+import { SetlistMode } from '../components/SetlistMode';
 import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType, getAttendancePrediction } from '../api';
 import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
@@ -99,6 +100,13 @@ export default function Concerts() {
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [predictionData, setPredictionData] = useState<AttendancePrediction | null>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+
+  // SetlistMode (performance view) state
+  const [showSetlistMode, setShowSetlistMode] = useState(false);
+  const [setlistModeData, setSetlistModeData] = useState<{
+    pieces: { id: string; title: string; composer?: string; duration?: number; notes?: string }[];
+    title: string;
+  } | null>(null);
 
   // Ticket management state
   const [showAddTicketTypeModal, setShowAddTicketTypeModal] = useState(false);
@@ -426,6 +434,7 @@ export default function Concerts() {
     setPredictionData(null);
   };
 
+  
   if (isLoading) {
     return (
       <div>
@@ -816,7 +825,29 @@ export default function Concerts() {
                   <p><strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}</p>
                 )}
               </div>
-              <AddToCalendarButton type="concert" id={concertDetail.id} />
+              <div className="flex gap-2">
+                {concertDetail.program.length > 0 && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setSetlistModeData({
+                        pieces: concertDetail.program.map((item) => ({
+                          id: item.id,
+                          title: item.title,
+                          composer: item.arranger || undefined,
+                          notes: item.notes || undefined,
+                        })),
+                        title: concertDetail.name,
+                      });
+                      setShowSetlistMode(true);
+                    }}
+                    title={t('concerts.performanceMode', 'Uitvoeringsmodus')}
+                  >
+                    <Icon name="play" size={16} /> {t('concerts.performanceMode', 'Uitvoeringsmodus')}
+                  </button>
+                )}
+                <AddToCalendarButton type="concert" id={concertDetail.id} />
+              </div>
             </div>
           </div>
 
@@ -1485,6 +1516,22 @@ export default function Concerts() {
         onClick={() => setShowAddModal(true)}
         bottomOffset={60}
       />
+
+      {/* SetlistMode - Performance View (fullscreen) */}
+      {showSetlistMode && setlistModeData && (
+        <SetlistMode
+          pieces={setlistModeData.pieces}
+          title={setlistModeData.title}
+          onExit={() => {
+            setShowSetlistMode(false);
+            setSetlistModeData(null);
+          }}
+          onPieceSelect={(piece, index) => {
+            // Optional: Log piece selection for analytics
+            console.log('Piece selected:', piece.title, 'at index', index);
+          }}
+        />
+      )}
     </div>
   );
 }

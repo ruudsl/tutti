@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { AnnotationToolbarProps, ToolType, ShapeType } from './types';
 import { Icon, type IconName } from '../Icon';
 import { useDarkMode } from '../../hooks/useDarkMode';
+import { Tooltip } from '../Tooltip';
 
 interface ToolConfig {
   icon: IconName;

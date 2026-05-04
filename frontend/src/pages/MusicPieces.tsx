@@ -27,6 +27,8 @@ import { EmptyState } from '../components/EmptyState';
 import { SortDropdown, useSortState, DEFAULT_MUSIC_SORT_OPTIONS } from '../components/SortDropdown';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { FloatingActionButton } from '../components/FloatingActionButton';
+import { PdfThumbnail } from '../components/PdfThumbnail';
+import { Tooltip } from '../components/Tooltip';
 
 const PAGE_SIZE = 50;
 
@@ -458,6 +460,15 @@ export default function MusicPieces() {
                     )}
                     <td>
                       <div className="flex items-center gap-1">
+                        {piece.fileUrl && piece.fileUrl.endsWith('.pdf') && (
+                          <PdfThumbnail
+                            src={piece.fileUrl}
+                            width={40}
+                            showHoverOverlay={false}
+                            showSpinner={false}
+                            style={{ flexShrink: 0 }}
+                          />
+                        )}
                         <FavoriteButton musicTitleId={piece.id} size="sm" />
                         <div>
                           <strong>{piece.title}</strong>
@@ -473,42 +484,46 @@ export default function MusicPieces() {
                     <td>
                       <div className="flex gap-1">
                         {piece.youtubeUrl && (
-                          <a
-                            href={piece.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-sm"
-                            aria-label={`YouTube: ${piece.title}`}
-                            title="YouTube preview"
-                          >
-                            <span aria-hidden="true">▶</span>
-                          </a>
+                          <Tooltip content="YouTube voorvertoning" position="top">
+                            <a
+                              href={piece.youtubeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline btn-sm"
+                              aria-label={`YouTube: ${piece.title}`}
+                            >
+                              <span aria-hidden="true">▶</span>
+                            </a>
+                          </Tooltip>
                         )}
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => handleDownload(piece.id)}
-                          disabled={downloading === piece.id}
-                          aria-label={`${t('common.download')}: ${piece.title}`}
-                          title={t('common.download')}
-                        >
-                          <span aria-hidden="true">⬇</span>
-                        </button>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => setEditingPiece({ ...piece })}
-                          aria-label={`${t('common.edit')}: ${piece.title}`}
-                          title={t('common.edit')}
-                        >
-                          <Icon name="pencil" size={16} />
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => setDeletingPiece(piece)}
-                          aria-label={`${t('common.delete')}: ${piece.title}`}
-                          title={t('common.delete')}
-                        >
-                          <Icon name="trash" size={16} />
-                        </button>
+                        <Tooltip content={t('common.download')} position="top">
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => handleDownload(piece.id)}
+                            disabled={downloading === piece.id}
+                            aria-label={`${t('common.download')}: ${piece.title}`}
+                          >
+                            <span aria-hidden="true">⬇</span>
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={t('common.edit')} position="top">
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => setEditingPiece({ ...piece })}
+                            aria-label={`${t('common.edit')}: ${piece.title}`}
+                          >
+                            <Icon name="pencil" size={16} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={t('common.delete')} position="top">
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => setDeletingPiece(piece)}
+                            aria-label={`${t('common.delete')}: ${piece.title}`}
+                          >
+                            <Icon name="trash" size={16} />
+                          </button>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>

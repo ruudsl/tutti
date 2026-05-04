@@ -131,7 +131,33 @@
   color: var(--text-secondary, #6c757d);
 }
 
+/* Content layout with chat sidebar */
+.member-directory-content {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.member-directory-content.with-chat .member-directory-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-directory-chat {
+  width: 400px;
+  flex-shrink: 0;
+}
+
 /* Responsive */
+@media (max-width: 1200px) {
+  .member-directory-content.with-chat {
+    flex-direction: column;
+  }
+
+  .member-directory-chat {
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .directory-grid {
     grid-template-columns: 1fr;
