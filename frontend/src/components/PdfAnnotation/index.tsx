@@ -4,6 +4,7 @@ import AnnotationToolbar from './AnnotationToolbar';
 import type { Annotation, ToolType, Stamp, ShapeType } from './types';
 import { saveAnnotationOffline, getAnnotationsForPiece } from '../../lib/offlineDb';
 import api from '../../api/client';
+import { Icon } from '../Icon';
 
 const DEFAULT_STAMPS: Stamp[] = [
   // Dynamics
@@ -91,6 +92,7 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
   const [stamps, setStamps] = useState<Stamp[]>(DEFAULT_STAMPS);
   const [selectedStampId, setSelectedStampId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [toolbarExpanded, setToolbarExpanded] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -204,83 +206,123 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
   if (isLoading) {
     return (
       <div style={{
-        padding: '20px',
-        textAlign: 'center',
-        color: '#6b7280',
-        fontSize: '14px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        zIndex: 20,
       }}>
         <div style={{
-          width: '24px',
-          height: '24px',
-          border: '3px solid #e5e7eb',
-          borderTopColor: '#3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 12px',
-        }} />
-        Annotaties laden...
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+          padding: '20px',
+          textAlign: 'center',
+          color: '#6b7280',
+          fontSize: '14px',
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '3px solid #e5e7eb',
+            borderTopColor: '#3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 12px',
+          }} />
+          Annotaties laden...
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: '16px',
-      padding: '8px',
-    }}>
-      <AnnotationToolbar
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      {/* Canvas layer - full size */}
+      <AnnotationCanvas
+        pageNumber={pageNumber}
+        musicPieceId={musicPieceId}
+        width={pageWidth}
+        height={pageHeight}
+        scale={scale}
         activeTool={activeTool}
-        onToolChange={setActiveTool}
         color={color}
-        onColorChange={setColor}
         strokeWidth={strokeWidth}
-        onStrokeWidthChange={setStrokeWidth}
         opacity={opacity}
-        onOpacityChange={setOpacity}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onClear={handleClear}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        stamps={stamps}
-        selectedStamp={selectedStampId}
-        onStampSelect={setSelectedStampId}
+        selectedStamp={selectedStamp}
         selectedShapeType={selectedShapeType}
-        onShapeTypeChange={setSelectedShapeType}
+        stamps={stamps}
+        annotations={annotations}
+        onAnnotationAdd={handleAnnotationAdd}
+        onAnnotationUpdate={handleAnnotationUpdate}
+        onAnnotationDelete={handleAnnotationDelete}
       />
 
+      {/* Floating toolbar */}
       <div style={{
-        position: 'relative',
-        width: pageWidth,
-        height: pageHeight,
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        position: 'absolute',
+        top: '8px',
+        left: '8px',
+        zIndex: 30,
+        transition: 'all 0.2s ease',
       }}>
-        <AnnotationCanvas
-          pageNumber={pageNumber}
-          musicPieceId={musicPieceId}
-          width={pageWidth}
-          height={pageHeight}
-          scale={scale}
-          activeTool={activeTool}
-          color={color}
-          strokeWidth={strokeWidth}
-          opacity={opacity}
-          selectedStamp={selectedStamp}
-          selectedShapeType={selectedShapeType}
-          stamps={stamps}
-          annotations={annotations}
-          onAnnotationAdd={handleAnnotationAdd}
-          onAnnotationUpdate={handleAnnotationUpdate}
-          onAnnotationDelete={handleAnnotationDelete}
-        />
+        {/* Toggle button */}
+        <button
+          onClick={() => setToolbarExpanded(prev => !prev)}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            marginBottom: toolbarExpanded ? '8px' : '0',
+          }}
+          title={toolbarExpanded ? 'Verberg gereedschap' : 'Toon gereedschap'}
+        >
+          <Icon name={toolbarExpanded ? 'chevronLeft' : 'penTool'} size={20} />
+        </button>
+
+        {/* Toolbar panel */}
+        {toolbarExpanded && (
+          <div style={{
+            maxHeight: 'calc(100vh - 150px)',
+            overflowY: 'auto',
+          }}>
+            <AnnotationToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              color={color}
+              onColorChange={setColor}
+              strokeWidth={strokeWidth}
+              onStrokeWidthChange={setStrokeWidth}
+              opacity={opacity}
+              onOpacityChange={setOpacity}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onClear={handleClear}
+              canUndo={undoStack.length > 0}
+              canRedo={redoStack.length > 0}
+              stamps={stamps}
+              selectedStamp={selectedStampId}
+              onStampSelect={setSelectedStampId}
+              selectedShapeType={selectedShapeType}
+              onShapeTypeChange={setSelectedShapeType}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

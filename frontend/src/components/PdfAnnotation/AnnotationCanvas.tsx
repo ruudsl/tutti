@@ -45,7 +45,6 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [shapeStart, setShapeStart] = useState<Point | null>(null);
-  const [stampImages, setStampImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInputPosition, setTextInputPosition] = useState<Point | null>(null);
   const [textInputValue, setTextInputValue] = useState('');
@@ -75,6 +74,122 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
       y: (clientY - rect.top) / scale,
     };
   }, [scale]);
+
+  const drawStampOnCanvas = useCallback((
+    ctx: CanvasRenderingContext2D,
+    stampData: StampAnnotation,
+    stampColor: string,
+    s: number
+  ) => {
+    const stamp = stamps.find(st => st.id === stampData.stampId);
+    if (!stamp) return;
+
+    ctx.save();
+    ctx.translate(stampData.position.x * s, stampData.position.y * s);
+    ctx.rotate((stampData.rotation * Math.PI) / 180);
+    const stampScale = stampData.scale * s / dpr;
+
+    ctx.fillStyle = stampColor;
+    ctx.strokeStyle = stampColor;
+    ctx.font = `bold ${20 * stampScale}px "Times New Roman", serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const svgData = stamp.svgData;
+
+    // Parse and draw common stamp types
+    if (svgData.includes('<text')) {
+      const textMatch = svgData.match(/>([^<]+)</);
+      if (textMatch) {
+        const text = textMatch[1];
+        const fontSizeMatch = svgData.match(/font-size="(\d+)"/);
+        const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) * stampScale : 20 * stampScale;
+        const isItalic = svgData.includes('font-style="italic"');
+        const isBold = svgData.includes('font-weight="bold"');
+        ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px "Times New Roman", serif`;
+        ctx.fillText(text, 0, 0);
+      }
+    } else if (svgData.includes('<path') || svgData.includes('<line') || svgData.includes('<circle')) {
+      // Draw shape-based stamps
+      ctx.lineWidth = 2 * stampScale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Parse path commands
+      const pathMatch = svgData.match(/d="([^"]+)"/);
+      if (pathMatch) {
+        const pathData = pathMatch[1];
+        const path = new Path2D();
+
+        // Simple path parser
+        const commands = pathData.match(/[MLQCZHVA][^MLQCZHVA]*/gi) || [];
+        let currentX = 0, currentY = 0;
+
+        commands.forEach(cmd => {
+          const type = cmd[0].toUpperCase();
+          const nums = cmd.slice(1).trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+
+          switch (type) {
+            case 'M':
+              currentX = (nums[0] - 15) * stampScale;
+              currentY = (nums[1] - 15) * stampScale;
+              path.moveTo(currentX, currentY);
+              break;
+            case 'L':
+              currentX = (nums[0] - 15) * stampScale;
+              currentY = (nums[1] - 15) * stampScale;
+              path.lineTo(currentX, currentY);
+              break;
+            case 'C':
+              path.bezierCurveTo(
+                (nums[0] - 15) * stampScale, (nums[1] - 15) * stampScale,
+                (nums[2] - 15) * stampScale, (nums[3] - 15) * stampScale,
+                (nums[4] - 15) * stampScale, (nums[5] - 15) * stampScale
+              );
+              currentX = (nums[4] - 15) * stampScale;
+              currentY = (nums[5] - 15) * stampScale;
+              break;
+            case 'Z':
+              path.closePath();
+              break;
+          }
+        });
+
+        if (svgData.includes('fill="currentColor"') || svgData.includes('fill="none"') === false) {
+          ctx.fill(path);
+        }
+        if (svgData.includes('stroke="currentColor"') || svgData.includes('stroke=')) {
+          ctx.stroke(path);
+        }
+      }
+
+      // Draw circles
+      const circleMatches = svgData.matchAll(/cx="([\d.]+)"\s*cy="([\d.]+)"\s*r="([\d.]+)"/g);
+      for (const match of circleMatches) {
+        const cx = (parseFloat(match[1]) - 15) * stampScale;
+        const cy = (parseFloat(match[2]) - 15) * stampScale;
+        const r = parseFloat(match[3]) * stampScale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        if (svgData.includes('fill="none"')) {
+          ctx.stroke();
+        } else {
+          ctx.fill();
+        }
+      }
+
+      // Draw lines
+      const lineMatches = svgData.matchAll(/x1="([\d.]+)"\s*y1="([\d.]+)"\s*x2="([\d.]+)"\s*y2="([\d.]+)"/g);
+      for (const match of lineMatches) {
+        ctx.beginPath();
+        ctx.moveTo((parseFloat(match[1]) - 15) * stampScale, (parseFloat(match[2]) - 15) * stampScale);
+        ctx.lineTo((parseFloat(match[3]) - 15) * stampScale, (parseFloat(match[4]) - 15) * stampScale);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }, [stamps, dpr]);
 
   const drawAnnotation = useCallback((ctx: CanvasRenderingContext2D, annotation: Annotation, dpr: number) => {
     ctx.save();
@@ -135,21 +250,8 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
       }
 
       case 'stamp': {
-        const stamp = annotation.data as StampAnnotation;
-        const img = stampImages.get(stamp.stampId);
-
-        if (img && img.complete) {
-          ctx.translate(stamp.position.x * s, stamp.position.y * s);
-          ctx.rotate((stamp.rotation * Math.PI) / 180);
-          const stampSize = 30 * stamp.scale * s / dpr;
-          ctx.drawImage(img, -stampSize / 2, -stampSize / 2, stampSize, stampSize);
-        } else {
-          ctx.fillStyle = annotation.color;
-          ctx.font = `bold ${20 * s / dpr}px serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('?', stamp.position.x * s, stamp.position.y * s);
-        }
+        const stampData = annotation.data as StampAnnotation;
+        drawStampOnCanvas(ctx, stampData, annotation.color, s);
         break;
       }
 
@@ -211,7 +313,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
     }
 
     ctx.restore();
-  }, [scale, stampImages]);
+  }, [scale, drawStampOnCanvas]);
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -316,51 +418,8 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
     canvas.width = width * scale * dpr;
     canvas.height = height * scale * dpr;
 
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(1, 1);
-    }
-
     redraw();
   }, [width, height, scale, dpr, redraw]);
-
-  useEffect(() => {
-    const loadStampImages = async () => {
-      const newImages = new Map(stampImages);
-      let hasChanges = false;
-
-      for (const stamp of stamps) {
-        if (!newImages.has(stamp.id)) {
-          const img = new Image();
-          const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">${stamp.svgData}</svg>`;
-          const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-          const url = URL.createObjectURL(blob);
-
-          await new Promise<void>((resolve) => {
-            img.onload = () => {
-              newImages.set(stamp.id, img);
-              hasChanges = true;
-              URL.revokeObjectURL(url);
-              resolve();
-            };
-            img.onerror = () => {
-              URL.revokeObjectURL(url);
-              resolve();
-            };
-            img.src = url;
-          });
-        }
-      }
-
-      if (hasChanges) {
-        setStampImages(newImages);
-      }
-    };
-
-    if (stamps.length > 0) {
-      loadStampImages();
-    }
-  }, [stamps]);
 
   const handleTextSubmit = useCallback(() => {
     if (textInputValue.trim() && textInputPosition) {
