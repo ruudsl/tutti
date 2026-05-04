@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getMemberDirectory, getOrchestras, getInstruments } from '../api';
 import { STORAGE_KEYS } from '../utils/constants';
+import { Avatar } from '../components/Avatar';
 import './MemberDirectory.css';
 
 // Helper to get photo URL with auth token for img src
@@ -37,9 +38,6 @@ export default function MemberDirectory() {
     queryFn: getInstruments,
   });
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
 
   return (
     <div className="member-directory-page">
@@ -112,20 +110,11 @@ export default function MemberDirectory() {
           {members.map(member => (
             <div key={member.id} className="member-card">
               <div className="member-avatar">
-                {getPhotoUrl(member.photoUrl) ? (
-                  <img
-                    src={getPhotoUrl(member.photoUrl)!}
-                    alt={`${member.firstName} ${member.lastName}`}
-                    className="avatar-img"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                ) : null}
-                <span className={`avatar-initials ${getPhotoUrl(member.photoUrl) ? 'hidden' : ''}`}>
-                  {getInitials(member.firstName, member.lastName)}
-                </span>
+                <Avatar
+                  name={`${member.firstName} ${member.lastName}`}
+                  src={getPhotoUrl(member.photoUrl)}
+                  size="xl"
+                />
               </div>
               <div className="member-info">
                 <h3 className="member-name">{member.firstName} {member.lastName}</h3>

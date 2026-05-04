@@ -23,6 +23,7 @@ import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
 import { AddToCalendarButton } from '../components/CalendarSync';
+import AttendanceDashboard, { AttendanceMember as DashboardMember, RehearsalAttendance, AttendanceTrend, AttendanceFilters } from '../components/AttendanceDashboard';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -116,7 +117,7 @@ export default function Rehearsals() {
   const isAdmin = user?.role === ROLES.ADMIN;
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'rehearsals' | 'attendance'>('rehearsals');
+  const [activeTab, setActiveTab] = useState<'rehearsals' | 'attendance' | 'dashboard'>('rehearsals');
 
   // Attendance summary
   const [attendanceMembers, setAttendanceMembers] = useState<AttendanceMember[]>([]);
@@ -785,6 +786,21 @@ export default function Rehearsals() {
         >
           {t('rehearsals.attendance.title')}
         </button>
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          style={{
+            padding: '0.5rem 1.5rem',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'dashboard' ? 'bold' : 'normal',
+            borderBottom: activeTab === 'dashboard' ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom: '-2px',
+            color: activeTab === 'dashboard' ? 'var(--primary)' : 'inherit',
+          }}
+        >
+          {t('rehearsals.attendanceDashboard', 'Dashboard')}
+        </button>
       </div>
 
       {/* ===== ATTENDANCE TAB ===== */}
@@ -883,6 +899,50 @@ export default function Rehearsals() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ===== DASHBOARD TAB ===== */}
+      {activeTab === 'dashboard' && (
+        <AttendanceDashboard
+          members={sortedAttendance.map((m, i) => ({
+            id: m.spondMemberId || `member-${i}`,
+            name: m.name,
+            instrument: '',
+            presentCount: m.accepted,
+            absentCount: m.declined,
+            attendanceRate: m.total > 0 ? (m.accepted / m.total) * 100 : 0,
+          } as DashboardMember))}
+          rehearsals={rehearsals.map(r => ({
+            id: r.id,
+            date: r.date,
+            totalMembers: r.accepted_count + r.declined_count,
+            presentCount: r.accepted_count,
+            absentCount: r.declined_count,
+            attendanceRate: (r.accepted_count + r.declined_count) > 0
+              ? (r.accepted_count / (r.accepted_count + r.declined_count)) * 100
+              : 0,
+          } as RehearsalAttendance))}
+          trends={rehearsals.slice(0, 20).map(r => ({
+            date: r.date,
+            attendanceRate: (r.accepted_count + r.declined_count) > 0
+              ? (r.accepted_count / (r.accepted_count + r.declined_count)) * 100
+              : 0,
+            presentCount: r.accepted_count,
+            totalMembers: r.accepted_count + r.declined_count,
+          } as AttendanceTrend))}
+          sections={orchestras.map(o => o.name)}
+          onFilterChange={(filters: AttendanceFilters) => {
+            setAttendanceFrom(filters.dateFrom);
+            setAttendanceTo(filters.dateTo);
+            if (filters.section) {
+              const orchestra = orchestras.find(o => o.name === filters.section);
+              setAttendanceOrchestraId(orchestra?.id || '');
+            } else {
+              setAttendanceOrchestraId('');
+            }
+          }}
+          isLoading={attendanceLoading}
+        />
       )}
 
       {/* ===== REHEARSALS TAB ===== */}

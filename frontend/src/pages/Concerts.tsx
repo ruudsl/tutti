@@ -30,6 +30,8 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { AddToCalendarButton } from '../components/CalendarSync';
 import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
+import SetlistBuilder, { SetlistPiece, Setlist } from '../components/SetlistBuilder';
+import ConcertPosterGenerator from '../components/ConcertPosterGenerator';
 import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType, getAttendancePrediction } from '../api';
 import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
@@ -41,7 +43,7 @@ export default function Concerts() {
   useDocumentTitle('pageTitle.concerts');
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'list' | 'statistics' | 'history'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'statistics' | 'history' | 'setlist' | 'poster'>('list');
 
   // Filters
   const [search, setSearch] = useState('');
@@ -470,6 +472,18 @@ export default function Concerts() {
         >
           {t('concerts.pieceHistory')}
         </button>
+        <button
+          className={`btn ${activeTab === 'setlist' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('setlist')}
+        >
+          {t('concerts.setlistBuilder', 'Setlist Builder')}
+        </button>
+        <button
+          className={`btn ${activeTab === 'poster' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('poster')}
+        >
+          {t('concerts.posterGenerator', 'Poster Generator')}
+        </button>
       </div>
 
       {activeTab === 'list' && (
@@ -674,6 +688,37 @@ export default function Concerts() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'setlist' && (
+        <div className="card">
+          <div className="card-body" style={{ padding: 0 }}>
+            <SetlistBuilder
+              availablePieces={musicTitles.map((title, index) => ({
+                id: title.id || `temp-${index}`,
+                title: title.title,
+                composer: title.composer || undefined,
+                arranger: title.arranger || undefined,
+                durationSeconds: title.duration ? title.duration * 60 : undefined,
+              } as SetlistPiece))}
+              onSave={(setlist: Setlist) => {
+                showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'poster' && (
+        <div className="card">
+          <div className="card-body" style={{ padding: 0 }}>
+            <ConcertPosterGenerator
+              onDownload={(format, data) => {
+                showSuccess(t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`));
+              }}
+            />
           </div>
         </div>
       )}

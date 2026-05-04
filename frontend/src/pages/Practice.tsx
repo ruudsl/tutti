@@ -15,6 +15,7 @@ import {
 } from '../api';
 import type { PracticeGoalsResponse } from '../api/practice';
 import { SkeletonTable } from '../components/Skeleton';
+import PracticeTimer from '../components/PracticeTimer';
 
 export default function Practice() {
   const { t } = useTranslation();
@@ -152,6 +153,19 @@ export default function Practice() {
         <button className="btn btn-primary" onClick={() => setShowLogForm(true)}>
           + {t('practice.logSession')}
         </button>
+      </div>
+
+      {/* Practice Timer */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <PracticeTimer
+          onSessionEnd={(durationMinutes) => {
+            // When timer session ends, trigger refresh of practice data
+            queryClient.invalidateQueries({ queryKey: ['practiceLogs'] });
+            queryClient.invalidateQueries({ queryKey: ['practiceStats'] });
+            queryClient.invalidateQueries({ queryKey: ['practiceGoals'] });
+            showSuccess(t('practice.timerSessionEnded', `Oefensessie van ${durationMinutes} minuten beeindigd!`));
+          }}
+        />
       </div>
 
       {/* Stats overview */}
