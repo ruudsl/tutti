@@ -460,9 +460,9 @@ export default function MusicPieces() {
                     )}
                     <td>
                       <div className="flex items-center gap-1">
-                        {piece.fileUrl && piece.fileUrl.endsWith('.pdf') && (
+                        {piece.originalFilename?.toLowerCase().endsWith('.pdf') && (
                           <PdfThumbnail
-                            src={piece.fileUrl}
+                            src={`/api/music-pieces/${piece.id}/file`}
                             width={40}
                             showHoverOverlay={false}
                             showSpinner={false}
