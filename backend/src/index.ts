@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -180,6 +181,20 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
 app.use(helmet({
     contentSecurityPolicy: getContentSecurityPolicy(),
     crossOriginEmbedderPolicy: false, // Allow embedding YouTube videos
+}));
+
+// Compression middleware - compress all responses
+app.use(compression({
+    filter: (req, res) => {
+        // Don't compress responses if the request includes 'x-no-compression' header
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        // Use compression filter default
+        return compression.filter(req, res);
+    },
+    level: 6, // Compression level (0-9, default 6)
+    threshold: 1024, // Only compress responses larger than 1KB
 }));
 
 // CORS

@@ -22,6 +22,7 @@ import {
   PanelLeftOpen,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Hand,
   Upload,
   Download,
@@ -83,6 +84,9 @@ import {
   ZoomIn,
   ZoomOut,
   Move,
+  Maximize2,
+  Minimize2,
+  StopCircle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -168,9 +172,13 @@ const iconMap = {
   MessageSquare: MessageSquare,
   PenTool: PenTool,
   chevronLeft: ChevronLeft,
+  chevronUp: ChevronUp,
   zoomIn: ZoomIn,
   zoomOut: ZoomOut,
   move: Move,
+  maximize: Maximize2,
+  minimize: Minimize2,
+  stop: StopCircle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

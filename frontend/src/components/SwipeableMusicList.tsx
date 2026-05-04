@@ -1,4 +1,4 @@
-import { useState, useCallback, ReactNode, CSSProperties, useRef, useEffect } from 'react';
+import { useState, useCallback, ReactNode, CSSProperties, useRef, useEffect, memo } from 'react';
 import { useSwipeGesture, SwipeDirection } from '../hooks/useSwipeGesture';
 
 export interface MusicItem {
@@ -262,7 +262,7 @@ export function SwipeableMusicList<T extends MusicItem>({
   );
 }
 
-// Card-style music item component
+// Card-style music item component - memoized for performance
 export interface MusicCardProps {
   item: MusicItem;
   isActive?: boolean;
@@ -271,7 +271,7 @@ export interface MusicCardProps {
   children?: ReactNode;
 }
 
-export function MusicCard({
+export const MusicCard = memo(function MusicCard({
   item,
   isActive = true,
   onAction,
@@ -313,7 +313,7 @@ export function MusicCard({
       </div>
     </div>
   );
-}
+});
 
 const styles: Record<string, CSSProperties> = {
   container: {

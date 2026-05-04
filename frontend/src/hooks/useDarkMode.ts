@@ -120,8 +120,11 @@ export function useDarkMode() {
 
   return {
     isDark,
+    isDarkMode: isDark, // Alias for convenience
     mode,
     toggleDarkMode,
     setDarkMode,
   };
 }
+
+export default useDarkMode;

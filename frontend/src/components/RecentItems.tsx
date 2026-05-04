@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,7 +14,7 @@ interface RecentItemsProps {
   limit?: number;
 }
 
-export function RecentItems({ limit = 10 }: RecentItemsProps) {
+export const RecentItems = memo(function RecentItems({ limit = 10 }: RecentItemsProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
@@ -459,6 +459,6 @@ export function RecentItems({ limit = 10 }: RecentItemsProps) {
       `}</style>
     </div>
   );
-}
+});
 
 export default RecentItems;

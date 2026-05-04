@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { AnnotationToolbarProps, ToolType, ShapeType } from './types';
 import { Icon, type IconName } from '../Icon';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 interface ToolConfig {
   icon: IconName;
@@ -58,13 +59,15 @@ interface ToolButtonProps {
   config: ToolConfig;
   isActive: boolean;
   onClick: () => void;
+  shortcut?: string;
+  isDarkMode?: boolean;
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick }) => (
+const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shortcut, isDarkMode }) => (
   <button
     onClick={onClick}
     className={`annotation-tool-btn ${isActive ? 'active' : ''}`}
-    title={config.description}
+    title={`${config.description}${shortcut ? ` (${shortcut})` : ''}`}
     aria-label={config.label}
     style={{
       width: '40px',
@@ -75,7 +78,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick }) =>
       border: 'none',
       borderRadius: '8px',
       backgroundColor: isActive ? '#3b82f6' : 'transparent',
-      color: isActive ? '#ffffff' : '#374151',
+      color: isActive ? '#ffffff' : (isDarkMode ? '#d1d5db' : '#374151'),
       cursor: 'pointer',
       transition: 'all 0.15s ease',
     }}
@@ -83,6 +86,17 @@ const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick }) =>
     <Icon name={config.icon} size={20} />
   </button>
 );
+
+// Tool keyboard shortcuts mapping
+const TOOL_SHORTCUTS: Record<string, ToolType> = {
+  '1': 'select',
+  '2': 'freehand',
+  '3': 'highlight',
+  '4': 'text',
+  '5': 'stamp',
+  '6': 'shape',
+  '7': 'eraser',
+};
 
 export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   activeTool,
@@ -107,8 +121,69 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   const [showStampPicker, setShowStampPicker] = useState(false);
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [stampCategory, setStampCategory] = useState('dynamics');
+  const [stampSearch, setStampSearch] = useState('');
+  const { isDarkMode } = useDarkMode();
 
-  const filteredStamps = stamps.filter(s => s.category === stampCategory);
+  // Keyboard shortcuts for tools
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Tool shortcuts (1-7)
+      const tool = TOOL_SHORTCUTS[e.key];
+      if (tool) {
+        e.preventDefault();
+        onToolChange(tool);
+        if (tool === 'stamp') {
+          setShowStampPicker(true);
+          setShowShapePicker(false);
+        } else if (tool === 'shape') {
+          setShowShapePicker(true);
+          setShowStampPicker(false);
+        } else {
+          setShowStampPicker(false);
+          setShowShapePicker(false);
+        }
+      }
+
+      // Undo/Redo shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        onUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        onRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onToolChange, onUndo, onRedo]);
+
+  // Filter stamps by search and category
+  const filteredStamps = useMemo(() => {
+    let result = stamps.filter(s => s.category === stampCategory);
+    if (stampSearch.trim()) {
+      const search = stampSearch.toLowerCase();
+      result = stamps.filter(s =>
+        s.name.toLowerCase().includes(search) ||
+        s.category.toLowerCase().includes(search)
+      );
+    }
+    return result;
+  }, [stamps, stampCategory, stampSearch]);
+
+  // Dark mode styles
+  const bgColor = isDarkMode ? '#1f2937' : '#ffffff';
+  const borderColor = isDarkMode ? '#374151' : '#e5e7eb';
+  const textColor = isDarkMode ? '#f3f4f6' : '#111827';
+  const textLightColor = isDarkMode ? '#9ca3af' : '#6b7280';
+  const bgSecondary = isDarkMode ? '#374151' : '#f3f4f6';
+  const bgTertiary = isDarkMode ? '#4b5563' : '#f9fafb';
 
   const handleToolClick = (tool: ToolType) => {
     onToolChange(tool);
@@ -132,45 +207,48 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         flexDirection: 'column',
         gap: '12px',
         padding: '16px',
-        backgroundColor: '#ffffff',
+        backgroundColor: bgColor,
         borderRadius: '12px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #e5e7eb',
+        border: `1px solid ${borderColor}`,
         minWidth: '220px',
         maxWidth: '260px',
+        transition: 'background-color 0.2s, border-color 0.2s',
       }}
     >
       {/* Header */}
       <div style={{
         fontSize: '14px',
         fontWeight: 600,
-        color: '#111827',
+        color: textColor,
         paddingBottom: '8px',
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: `1px solid ${borderColor}`,
       }}>
         Annotatiegereedschap
       </div>
 
       {/* Tool Selection */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Gereedschap
+        <span style={{ fontSize: '11px', fontWeight: 500, color: textLightColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Gereedschap (1-7)
         </span>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '4px',
-          backgroundColor: '#f3f4f6',
+          backgroundColor: bgSecondary,
           padding: '4px',
           borderRadius: '8px',
         }}>
-          {(Object.entries(TOOLS) as [ToolType, ToolConfig][]).map(([tool, config]) => (
+          {(Object.entries(TOOLS) as [ToolType, ToolConfig][]).map(([tool, config], index) => (
             <ToolButton
               key={tool}
               tool={tool}
               config={config}
               isActive={activeTool === tool}
               onClick={() => handleToolClick(tool)}
+              shortcut={String(index + 1)}
+              isDarkMode={isDarkMode}
             />
           ))}
         </div>
@@ -403,12 +481,12 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {showStampPicker && activeTool === 'stamp' && (
         <div style={{
           paddingTop: '12px',
-          borderTop: '1px solid #e5e7eb',
+          borderTop: `1px solid ${borderColor}`,
         }}>
           <span style={{
             fontSize: '11px',
             fontWeight: 500,
-            color: '#6b7280',
+            color: textLightColor,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             display: 'block',
@@ -417,12 +495,33 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             Stempels
           </span>
 
+          {/* Stamp search */}
+          <div style={{ marginBottom: '8px' }}>
+            <input
+              type="text"
+              placeholder="Zoek stempels..."
+              value={stampSearch}
+              onChange={(e) => setStampSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                fontSize: '13px',
+                border: `1px solid ${borderColor}`,
+                borderRadius: '6px',
+                backgroundColor: bgTertiary,
+                color: textColor,
+                outline: 'none',
+              }}
+            />
+          </div>
+
           {/* Category tabs */}
+          {!stampSearch && (
           <div style={{
             display: 'flex',
             gap: '2px',
             marginBottom: '12px',
-            backgroundColor: '#f3f4f6',
+            backgroundColor: bgSecondary,
             padding: '3px',
             borderRadius: '8px',
             overflowX: 'auto',
@@ -437,8 +536,8 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                   fontWeight: 500,
                   border: 'none',
                   borderRadius: '6px',
-                  backgroundColor: stampCategory === cat.id ? '#ffffff' : 'transparent',
-                  color: stampCategory === cat.id ? '#111827' : '#6b7280',
+                  backgroundColor: stampCategory === cat.id ? (isDarkMode ? '#4b5563' : '#ffffff') : 'transparent',
+                  color: stampCategory === cat.id ? textColor : textLightColor,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   boxShadow: stampCategory === cat.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -449,6 +548,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
               </button>
             ))}
           </div>
+          )}
 
           {/* Stamps grid */}
           <div style={{

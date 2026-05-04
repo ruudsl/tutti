@@ -512,25 +512,85 @@ export function PdfViewer({
     dragStartRef.current = null;
   }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation - comprehensive shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        previousPage();
-      } else if (e.key === 'ArrowRight') {
-        nextPage();
-      } else if (e.key === '+' || e.key === '=') {
-        handleZoomIn();
-      } else if (e.key === '-') {
-        handleZoomOut();
-      } else if (e.key === '0') {
-        handleZoomReset();
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key) {
+        // Page navigation
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          previousPage();
+          break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
+          nextPage();
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          previousPage();
+          break;
+        case 'PageDown':
+        case ' ': // Spacebar
+          e.preventDefault();
+          nextPage();
+          break;
+        case 'Home':
+          e.preventDefault();
+          goToPage(1);
+          break;
+        case 'End':
+          e.preventDefault();
+          goToPage(totalPages);
+          break;
+
+        // Zoom controls
+        case '+':
+        case '=':
+          e.preventDefault();
+          handleZoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          handleZoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          handleZoomReset();
+          break;
+
+        // Drawing mode toggle
+        case 'Escape':
+          if (drawingMode) {
+            setDrawingMode(false);
+          }
+          break;
+        case 'd':
+        case 'D':
+          if (!e.ctrlKey && !e.metaKey && musicPieceId) {
+            setDrawingMode(prev => !prev);
+          }
+          break;
+
+        // Dark mode toggle
+        case 'i':
+        case 'I':
+          if (!e.ctrlKey && !e.metaKey) {
+            toggleDarkMode();
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previousPage, nextPage, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [previousPage, nextPage, handleZoomIn, handleZoomOut, handleZoomReset, goToPage, totalPages, drawingMode, toggleDarkMode, musicPieceId]);
 
   // Calculate transform for page transition animation
   const getTransformStyle = useMemo(() => {

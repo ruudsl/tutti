@@ -6,6 +6,10 @@ interface SkeletonProps {
   borderRadius?: string | number;
   className?: string;
   style?: CSSProperties;
+  /** Animation variant: 'pulse' | 'wave' | 'none' */
+  animation?: 'pulse' | 'wave' | 'none';
+  /** Circle variant for avatars */
+  circle?: boolean;
 }
 
 /**
@@ -17,14 +21,18 @@ export function Skeleton({
   borderRadius = '0.25rem',
   className = '',
   style,
+  animation = 'wave',
+  circle = false,
 }: SkeletonProps) {
+  const animationClass = animation === 'wave' ? 'skeleton-wave' : animation === 'pulse' ? 'skeleton-pulse' : '';
+
   return (
     <div
-      className={`skeleton ${className}`}
+      className={`skeleton ${animationClass} ${className}`}
       style={{
-        width,
+        width: circle ? height : width,
         height,
-        borderRadius,
+        borderRadius: circle ? '50%' : borderRadius,
         ...style,
       }}
     />
@@ -113,6 +121,84 @@ export function SkeletonListItem() {
         <Skeleton height="1rem" width="40%" style={{ marginBottom: '0.25rem' }} />
         <Skeleton height="0.75rem" width="60%" />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for music piece card
+ */
+export function SkeletonMusicPieceCard() {
+  return (
+    <div className="card" style={{ padding: '1rem' }}>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <Skeleton width={80} height={100} borderRadius="0.5rem" />
+        <div style={{ flex: 1 }}>
+          <Skeleton height="1.25rem" width="70%" style={{ marginBottom: '0.5rem' }} />
+          <Skeleton height="0.875rem" width="50%" style={{ marginBottom: '0.75rem' }} />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Skeleton height="1.5rem" width="4rem" borderRadius="1rem" />
+            <Skeleton height="1.5rem" width="5rem" borderRadius="1rem" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for avatar with text
+ */
+export function SkeletonAvatar({ size = 40 }: { size?: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <Skeleton circle height={size} />
+      <div>
+        <Skeleton height="1rem" width="120px" style={{ marginBottom: '0.25rem' }} />
+        <Skeleton height="0.75rem" width="80px" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for dashboard stat card
+ */
+export function SkeletonStatCard() {
+  return (
+    <div className="skeleton-stat-card">
+      <Skeleton height="0.75rem" width="60%" style={{ marginBottom: '0.5rem' }} />
+      <Skeleton height="2rem" width="40%" style={{ marginBottom: '0.25rem' }} />
+      <Skeleton height="0.75rem" width="80%" />
+    </div>
+  );
+}
+
+/**
+ * Skeleton for page header
+ */
+export function SkeletonPageHeader() {
+  return (
+    <div style={{ marginBottom: '1.5rem' }}>
+      <Skeleton height="2rem" width="200px" style={{ marginBottom: '0.5rem' }} />
+      <Skeleton height="1rem" width="300px" />
+    </div>
+  );
+}
+
+/**
+ * Skeleton grid for multiple cards
+ */
+export function SkeletonGrid({ count = 6, columns = 3 }: { count?: number; columns?: number }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap: '1rem',
+    }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} />
+      ))}
     </div>
   );
 }
