@@ -477,66 +477,80 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
 }));
 
 router.post('/', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createAssetSchema.parse(req.body);
-    const id = uuidv4();
+    try {
+        const data = createAssetSchema.parse(req.body);
+        const id = uuidv4();
 
-    let nextMaintenanceDue = null;
-    if (data.maintenanceIntervalMonths) {
-        const next = new Date();
-        next.setMonth(next.getMonth() + data.maintenanceIntervalMonths);
-        nextMaintenanceDue = next.toISOString().split('T')[0];
+        let nextMaintenanceDue: string | null = null;
+        if (data.maintenanceIntervalMonths) {
+            const next = new Date();
+            next.setMonth(next.getMonth() + data.maintenanceIntervalMonths);
+            nextMaintenanceDue = next.toISOString().split('T')[0];
+        }
+
+        const params = [
+            id,
+            req.user!.associationId,
+            data.name,
+            data.instrumentType,
+            data.category,
+            data.brand ?? null,
+            data.model ?? null,
+            data.serialNumber ?? null,
+            data.barcode ?? null,
+            data.yearManufactured ?? null,
+            data.countryOfOrigin ?? null,
+            data.color ?? null,
+            data.material ?? null,
+            data.weightKg ?? null,
+            data.dimensions ?? null,
+            data.purchaseDate ?? null,
+            data.purchasePrice ?? null,
+            data.purchaseVendor ?? null,
+            data.currentValue ?? null,
+            data.replacementValue ?? null,
+            data.depreciationRate ?? 5,
+            data.status,
+            data.condition,
+            data.location ?? null,
+            data.storageLocation ?? null,
+            data.maintenanceIntervalMonths ?? 12,
+            nextMaintenanceDue,
+            data.photoUrls ? JSON.stringify(data.photoUrls) : null,
+            data.tags ? JSON.stringify(data.tags) : null,
+            data.notes ?? null,
+            data.customFields ? JSON.stringify(data.customFields) : null,
+            req.user!.id,
+        ];
+
+        logger.info('Creating instrument asset with params count:', { count: params.length, id });
+
+        db.prepare(`
+            INSERT INTO instrument_assets (
+                id, association_id, name, instrument_type, category, brand, model,
+                serial_number, barcode, year_manufactured, country_of_origin, color, material,
+                weight_kg, dimensions, purchase_date, purchase_price, purchase_vendor,
+                current_value, replacement_value, depreciation_rate, status, condition,
+                location, storage_location, maintenance_interval_months, next_maintenance_due,
+                photo_urls, tags, notes, custom_fields, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(...params);
+
+        logger.info('Insert succeeded, logging history');
+
+        logAssetHistory(id, 'created', `Instrument "${data.name}" aangemaakt`, req.user!.id);
+        logger.info(`Instrument asset created: ${data.name}`, { id, createdBy: req.user!.id });
+
+        res.status(201).json({ id, message: 'Instrument succesvol aangemaakt' });
+    } catch (error: unknown) {
+        logger.error('Error creating instrument asset:', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            errorType: typeof error,
+            errorKeys: error && typeof error === 'object' ? Object.keys(error) : []
+        });
+        throw error;
     }
-
-    const params = [
-        id,
-        req.user!.associationId,
-        data.name,
-        data.instrumentType,
-        data.category,
-        data.brand ?? null,
-        data.model ?? null,
-        data.serialNumber ?? null,
-        data.barcode ?? null,
-        data.yearManufactured ?? null,
-        data.countryOfOrigin ?? null,
-        data.color ?? null,
-        data.material ?? null,
-        data.weightKg ?? null,
-        data.dimensions ?? null,
-        data.purchaseDate ?? null,
-        data.purchasePrice ?? null,
-        data.purchaseVendor ?? null,
-        data.currentValue ?? null,
-        data.replacementValue ?? null,
-        data.depreciationRate ?? 5,
-        data.status,
-        data.condition,
-        data.location ?? null,
-        data.storageLocation ?? null,
-        data.maintenanceIntervalMonths ?? 12,
-        nextMaintenanceDue,
-        data.photoUrls ? JSON.stringify(data.photoUrls) : null,
-        data.tags ? JSON.stringify(data.tags) : null,
-        data.notes ?? null,
-        data.customFields ? JSON.stringify(data.customFields) : null,
-        req.user!.id,
-    ];
-
-    db.prepare(`
-        INSERT INTO instrument_assets (
-            id, association_id, name, instrument_type, category, brand, model,
-            serial_number, barcode, year_manufactured, country_of_origin, color, material,
-            weight_kg, dimensions, purchase_date, purchase_price, purchase_vendor,
-            current_value, replacement_value, depreciation_rate, status, condition,
-            location, storage_location, maintenance_interval_months, next_maintenance_due,
-            photo_urls, tags, notes, custom_fields, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(...params);
-
-    logAssetHistory(id, 'created', `Instrument "${data.name}" aangemaakt`, req.user!.id);
-    logger.info(`Instrument asset created: ${data.name}`, { id, createdBy: req.user!.id });
-
-    res.status(201).json({ id, message: 'Instrument succesvol aangemaakt' });
 }));
 
 router.put('/:id', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
