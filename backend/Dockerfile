@@ -8,15 +8,9 @@ FROM node:25-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies for native modules (better-sqlite3, canvas)
-RUN apk add --no-cache python3 make g++ \
-    pkgconfig \
-    cairo-dev \
-    pango-dev \
-    libjpeg-turbo-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
+# Install build dependencies for native modules (better-sqlite3)
+# Note: canvas is optional - if not available, thumbnails use SVG placeholders
+RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package*.json ./
@@ -44,15 +38,8 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# Install runtime dependencies for better-sqlite3 and canvas
-RUN apk add --no-cache python3 make g++ \
-    pkgconfig \
-    cairo-dev \
-    pango-dev \
-    libjpeg-turbo-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
+# Install runtime dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S tutti && \
@@ -64,7 +51,7 @@ RUN npm install --omit=dev && \
     npm cache clean --force
 
 # Rebuild native modules for production
-RUN npm rebuild better-sqlite3 canvas
+RUN npm rebuild better-sqlite3
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist

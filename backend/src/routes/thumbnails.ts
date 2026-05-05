@@ -61,52 +61,27 @@ function isThumbnailCacheValid(thumbnailPath: string, pdfPath: string): boolean 
 }
 
 /**
- * Generate a PDF thumbnail using pdfjs-dist and canvas
+ * Generate a PDF thumbnail
+ * Uses SVG placeholder - canvas-based rendering removed for Docker compatibility
  */
 async function generateThumbnail(
   pdfPath: string,
   page: number,
   width: number
 ): Promise<Buffer> {
-  // Dynamic imports
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const { createCanvas } = await import('canvas');
-
-  // Read the PDF file
+  // Get page count for placeholder
+  const { PDFDocument } = await import('pdf-lib');
   const pdfBuffer = fs.readFileSync(pdfPath);
-  const data = new Uint8Array(pdfBuffer);
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const pageCount = pdfDoc.getPageCount();
 
-  // Load the PDF document
-  const loadingTask = pdfjs.getDocument({ data, useSystemFonts: true });
-  const pdfDoc = await loadingTask.promise;
-
-  const pageCount = pdfDoc.numPages;
   if (page < 1 || page > pageCount) {
     throw new ApiError(400, `Invalid page number. PDF has ${pageCount} pages.`);
   }
 
-  // Get the page
-  const pdfPage = await pdfDoc.getPage(page);
-  const viewport = pdfPage.getViewport({ scale: 1 });
-
-  // Calculate scale to fit desired width
-  const scale = width / viewport.width;
-  const scaledViewport = pdfPage.getViewport({ scale });
-
-  // Create canvas
-  const canvas = createCanvas(scaledViewport.width, scaledViewport.height);
-  const context = canvas.getContext('2d');
-
-  // Render the page
-  const renderContext = {
-    canvasContext: context,
-    viewport: scaledViewport,
-  };
-  // @ts-ignore - canvas types don't perfectly match browser canvas
-  await pdfPage.render(renderContext).promise;
-
-  // Convert to PNG buffer
-  return canvas.toBuffer('image/png');
+  // Return SVG placeholder
+  const height = Math.round(width * 1.414); // A4 aspect ratio
+  return generatePlaceholderImage(width, height, page, pageCount);
 }
 
 /**
