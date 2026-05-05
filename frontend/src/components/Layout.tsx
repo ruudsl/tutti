@@ -110,9 +110,10 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.inventory',
     icon: 'package',
-    basePaths: ['/equipment', '/uniforms'],
+    basePaths: ['/equipment', '/instrument-assets', '/uniforms'],
     items: [
       { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+      { path: '/instrument-assets', labelKey: 'nav.instrumentAssets', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
     ],
   },

@@ -75,6 +75,7 @@ export * from './member-directory';
 // Inventory
 export * from './equipment';
 export * from './uniforms';
+export * from './instrument-assets';
 
 // User features
 export * from './favorites';

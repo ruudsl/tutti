@@ -1119,3 +1119,325 @@ export interface SeatSalesData {
   timeToSell: number | null; // seconds from sale start to sold
   salesSpeedPercentile: number | null; // 0-100, where in the selling order this seat was
 }
+
+// ===========================================
+// INSTRUMENT ASSET MANAGEMENT TYPES
+// ===========================================
+
+export type AssetCategory = 'woodwind' | 'brass' | 'percussion' | 'strings' | 'keyboard' | 'accessories' | 'other';
+export type AssetStatus = 'available' | 'on_loan' | 'in_repair' | 'in_storage' | 'written_off' | 'sold' | 'lost';
+export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'damaged' | 'needs_repair';
+export type RepairPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type RepairStatus = 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+export type LoanStatus = 'active' | 'returned' | 'overdue' | 'cancelled';
+export type ValuationType = 'purchase' | 'insurance' | 'sale' | 'appraisal' | 'depreciation';
+export type RepairType = 'preventive' | 'corrective' | 'emergency' | 'overhaul' | 'cleaning';
+export type LoanType = 'standard' | 'trial' | 'long_term' | 'performance';
+export type DocumentType = 'manual' | 'warranty' | 'certificate' | 'invoice' | 'photo' | 'contract' | 'appraisal' | 'other';
+export type InsurancePolicyType = 'all_risk' | 'theft' | 'damage' | 'comprehensive';
+export type InsuranceCoverageType = 'individual' | 'collective' | 'blanket';
+export type IncidentType = 'theft' | 'damage' | 'loss' | 'fire' | 'water' | 'vandalism' | 'accident' | 'other';
+export type ClaimStatus = 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'closed';
+
+export interface InstrumentAsset {
+  id: string;
+  name: string;
+  instrumentType: string;
+  category: AssetCategory;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  barcode?: string;
+  yearManufactured?: number;
+  countryOfOrigin?: string;
+  color?: string;
+  material?: string;
+  weightKg?: number;
+  dimensions?: string;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  purchaseVendor?: string;
+  currentValue?: number;
+  replacementValue?: number;
+  depreciationRate?: number;
+  status: AssetStatus;
+  condition: AssetCondition;
+  location?: string;
+  storageLocation?: string;
+  assignedToUserId?: string;
+  assignedDate?: string;
+  expectedReturnDate?: string;
+  maintenanceIntervalMonths?: number;
+  lastMaintenanceDate?: string;
+  nextMaintenanceDue?: string;
+  maintenanceNotes?: string;
+  insurancePolicyId?: string;
+  photoUrls?: string[];
+  tags?: string[];
+  notes?: string;
+  customFields?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  assignedUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  isOverdue?: boolean;
+}
+
+export interface InstrumentAssetDetail extends InstrumentAsset {
+  valuations: InstrumentValuation[];
+  repairs: InstrumentRepairSummary[];
+  loans: InstrumentLoanSummary[];
+  documents: InstrumentDocumentSummary[];
+  insurance?: {
+    id: string;
+    policyNumber: string;
+    providerName: string;
+    coverageAmount: number;
+    endDate?: string;
+  };
+}
+
+export interface InstrumentAssetSummary {
+  total: number;
+  available: number;
+  onLoan: number;
+  inRepair: number;
+  inStorage: number;
+  totalValue: number;
+  totalReplacementValue: number;
+  byCategory: { category: string; count: number; value: number }[];
+  maintenanceDueCount: number;
+  overdueLoansCount: number;
+}
+
+export interface InstrumentValuation {
+  id: string;
+  valuationDate: string;
+  valuationType: ValuationType;
+  valuedAmount: number;
+  currency: string;
+  appraiserName?: string;
+  appraiserCompany?: string;
+  appraiserCredentials?: string;
+  valuationMethod?: string;
+  marketComparison?: string;
+  conditionAtValuation?: AssetCondition;
+  certificateUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface InstrumentRepair {
+  id: string;
+  repairType: RepairType;
+  priority: RepairPriority;
+  status: RepairStatus;
+  reportedDate: string;
+  issueDescription: string;
+  diagnosis?: string;
+  repairShopName?: string;
+  repairShopContact?: string;
+  repairShopAddress?: string;
+  technicianName?: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  partsReplaced?: string;
+  laborHours?: number;
+  estimatedCompletion?: string;
+  startedDate?: string;
+  completedDate?: string;
+  warrantyClaimRef?: boolean;
+  insuranceClaimId?: string;
+  invoiceNumber?: string;
+  invoiceUrl?: string;
+  qualityRating?: number;
+  qualityNotes?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface InstrumentRepairSummary {
+  id: string;
+  repairType: RepairType;
+  priority: RepairPriority;
+  status: RepairStatus;
+  issueDescription: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  reportedDate: string;
+  completedDate?: string;
+}
+
+export interface InstrumentLoan {
+  id: string;
+  borrower: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  };
+  loanType: LoanType;
+  purpose?: string;
+  loanDate: string;
+  expectedReturnDate?: string;
+  actualReturnDate?: string;
+  conditionAtLoan: AssetCondition;
+  conditionAtReturn?: AssetCondition;
+  accessoriesLoaned?: string[];
+  accessoriesReturned?: string[];
+  depositAmount?: number;
+  rentalFee?: number;
+  status: LoanStatus;
+  damageReported?: string;
+  damageCost?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface InstrumentLoanSummary {
+  id: string;
+  borrower: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  loanType: LoanType;
+  loanDate: string;
+  expectedReturnDate?: string;
+  actualReturnDate?: string;
+  status: LoanStatus;
+}
+
+export interface InstrumentDocument {
+  id: string;
+  documentType: DocumentType;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize?: number;
+  mimeType?: string;
+  version?: string;
+  validFrom?: string;
+  validUntil?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  createdAt: string;
+}
+
+export interface InstrumentDocumentSummary {
+  id: string;
+  documentType: DocumentType;
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  createdAt: string;
+}
+
+export interface InstrumentHistoryEvent {
+  id: string;
+  eventType: string;
+  eventDate: string;
+  description: string;
+  oldValue?: string;
+  newValue?: string;
+  fieldChanged?: string;
+  relatedId?: string;
+  relatedType?: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface InsurancePolicy {
+  id: string;
+  policyNumber: string;
+  providerName: string;
+  providerContact?: string;
+  providerPhone?: string;
+  providerEmail?: string;
+  policyType: InsurancePolicyType;
+  coverageType: InsuranceCoverageType;
+  coverageAmount: number;
+  deductible: number;
+  currency: string;
+  premiumAmount?: number;
+  premiumFrequency?: 'monthly' | 'quarterly' | 'yearly';
+  premiumDueDate?: string;
+  startDate: string;
+  endDate?: string;
+  autoRenew: boolean;
+  status: 'active' | 'expired' | 'cancelled';
+  coveredAssetsCount?: number;
+  totalCoveredValue?: number;
+  createdAt: string;
+}
+
+export interface InsurancePolicyDetail extends InsurancePolicy {
+  coverageDetails?: string;
+  exclusions?: string;
+  documentUrl?: string;
+  coveredAssets: {
+    id: string;
+    asset: {
+      id: string;
+      name: string;
+      instrumentType: string;
+      serialNumber?: string;
+    };
+    coveredAmount: number;
+    coverageStart: string;
+    coverageEnd?: string;
+    specialConditions?: string;
+  }[];
+  claims: {
+    id: string;
+    assetName: string;
+    claimNumber?: string;
+    claimDate: string;
+    incidentType: IncidentType;
+    claimedAmount?: number;
+    approvedAmount?: number;
+    paidAmount?: number;
+    status: ClaimStatus;
+  }[];
+}
+
+export interface InsuranceClaim {
+  id: string;
+  claimNumber?: string;
+  claimDate: string;
+  incidentDate: string;
+  incidentType: IncidentType;
+  incidentDescription: string;
+  incidentLocation?: string;
+  claimedAmount?: number;
+  approvedAmount?: number;
+  paidAmount?: number;
+  status: ClaimStatus;
+  resolutionDate?: string;
+  policy: {
+    id: string;
+    policyNumber: string;
+    providerName: string;
+  };
+  asset: {
+    id: string;
+    name: string;
+    instrumentType: string;
+  };
+  createdAt: string;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages?: number;
+}

@@ -67,6 +67,7 @@ import Practice from './pages/Practice';
 // Equipment and uniforms
 import Equipment from './pages/Equipment';
 import Uniforms from './pages/Uniforms';
+import InstrumentAssets from './pages/InstrumentAssets';
 
 // Seating management
 import Seating from './pages/Seating';
@@ -344,6 +345,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
               <Equipment />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="instrument-assets"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
+              <InstrumentAssets />
             </PrivateRoute>
           }
         />
