@@ -61,13 +61,43 @@ function isThumbnailCacheValid(thumbnailPath: string, pdfPath: string): boolean 
 }
 
 /**
+ * Check if canvas is available
+ */
+let canvasAvailable: boolean | null = null;
+
+async function isCanvasAvailable(): Promise<boolean> {
+  if (canvasAvailable !== null) return canvasAvailable;
+  try {
+    await import('canvas');
+    canvasAvailable = true;
+  } catch {
+    canvasAvailable = false;
+  }
+  return canvasAvailable;
+}
+
+/**
  * Generate a PDF thumbnail using pdfjs-dist and canvas
+ * Falls back to placeholder if canvas is not available
  */
 async function generateThumbnail(
   pdfPath: string,
   page: number,
   width: number
 ): Promise<Buffer> {
+  // Check if canvas is available
+  if (!(await isCanvasAvailable())) {
+    logger.info('Canvas not available, using placeholder thumbnail');
+    // Get page count for placeholder
+    const { PDFDocument } = await import('pdf-lib');
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
+    // Return SVG placeholder as PNG would require canvas
+    const height = Math.round(width * 1.414); // A4 aspect ratio
+    return generatePlaceholderImage(width, height, page, pageCount);
+  }
+
   // Dynamic imports
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const { createCanvas } = await import('canvas');

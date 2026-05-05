@@ -27,7 +27,6 @@
     "adm-zip": "^0.5.17",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
-    "canvas": "^3.2.3",
     "cheerio": "^1.2.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -77,5 +76,8 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^4.0.18"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.2.3"
   }
 }
