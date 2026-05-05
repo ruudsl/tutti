@@ -487,6 +487,41 @@ router.post('/', authenticateToken, requireRole('admin', 'equipment_committee'),
         nextMaintenanceDue = next.toISOString().split('T')[0];
     }
 
+    const params = [
+        id,
+        req.user!.associationId,
+        data.name,
+        data.instrumentType,
+        data.category,
+        data.brand ?? null,
+        data.model ?? null,
+        data.serialNumber ?? null,
+        data.barcode ?? null,
+        data.yearManufactured ?? null,
+        data.countryOfOrigin ?? null,
+        data.color ?? null,
+        data.material ?? null,
+        data.weightKg ?? null,
+        data.dimensions ?? null,
+        data.purchaseDate ?? null,
+        data.purchasePrice ?? null,
+        data.purchaseVendor ?? null,
+        data.currentValue ?? null,
+        data.replacementValue ?? null,
+        data.depreciationRate ?? 5,
+        data.status,
+        data.condition,
+        data.location ?? null,
+        data.storageLocation ?? null,
+        data.maintenanceIntervalMonths ?? 12,
+        nextMaintenanceDue,
+        data.photoUrls ? JSON.stringify(data.photoUrls) : null,
+        data.tags ? JSON.stringify(data.tags) : null,
+        data.notes ?? null,
+        data.customFields ? JSON.stringify(data.customFields) : null,
+        req.user!.id,
+    ];
+
     db.prepare(`
         INSERT INTO instrument_assets (
             id, association_id, name, instrument_type, category, brand, model,
@@ -496,21 +531,7 @@ router.post('/', authenticateToken, requireRole('admin', 'equipment_committee'),
             location, storage_location, maintenance_interval_months, next_maintenance_due,
             photo_urls, tags, notes, custom_fields, created_by
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-        id, req.user!.associationId, data.name, data.instrumentType, data.category,
-        data.brand || null, data.model || null, data.serialNumber || null, data.barcode || null,
-        data.yearManufactured || null, data.countryOfOrigin || null, data.color || null,
-        data.material || null, data.weightKg || null, data.dimensions || null,
-        data.purchaseDate || null, data.purchasePrice || null, data.purchaseVendor || null,
-        data.currentValue || null, data.replacementValue || null, data.depreciationRate ?? 5,
-        data.status, data.condition, data.location || null, data.storageLocation || null,
-        data.maintenanceIntervalMonths ?? 12, nextMaintenanceDue,
-        data.photoUrls ? JSON.stringify(data.photoUrls) : null,
-        data.tags ? JSON.stringify(data.tags) : null,
-        data.notes || null,
-        data.customFields ? JSON.stringify(data.customFields) : null,
-        req.user!.id
-    );
+    `).run(...params);
 
     logAssetHistory(id, 'created', `Instrument "${data.name}" aangemaakt`, req.user!.id);
     logger.info(`Instrument asset created: ${data.name}`, { id, createdBy: req.user!.id });
