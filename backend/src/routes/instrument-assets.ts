@@ -191,7 +191,18 @@ function logAssetHistory(
     db.prepare(`
         INSERT INTO instrument_history (id, asset_id, event_type, description, user_id, old_value, new_value, field_changed, related_id, related_type)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(uuidv4(), assetId, eventType, description, userId, oldValue, newValue, fieldChanged, relatedId, relatedType);
+    `).run(
+        uuidv4(),
+        assetId,
+        eventType,
+        description,
+        userId ?? null,
+        oldValue ?? null,
+        newValue ?? null,
+        fieldChanged ?? null,
+        relatedId ?? null,
+        relatedType ?? null
+    );
 }
 
 function mapAssetRow(row: any) {
