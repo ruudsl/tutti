@@ -100,8 +100,13 @@ export const PdfThumbnail = memo(function PdfThumbnail({
       let data: ArrayBuffer | string;
 
       if (typeof src === 'string') {
-        // URL - fetch with credentials for authentication
-        const response = await fetch(src, { credentials: 'include' });
+        // URL - fetch with Bearer token for authentication
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(src, { headers });
         if (!response.ok) {
           throw new Error(`Failed to fetch PDF: ${response.status}`);
         }
