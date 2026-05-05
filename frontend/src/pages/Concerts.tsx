@@ -30,18 +30,22 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { AddToCalendarButton } from '../components/CalendarSync';
 import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
+import SetlistBuilder, { SetlistPiece, Setlist } from '../components/SetlistBuilder';
+import ConcertPosterGenerator from '../components/ConcertPosterGenerator';
+import { SetlistMode } from '../components/SetlistMode';
 import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType, getAttendancePrediction } from '../api';
 import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Concert, TicketType } from '../types';
+import { FloatingActionButton } from '../components/FloatingActionButton';
 
 export default function Concerts() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.concerts');
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'list' | 'statistics' | 'history'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'statistics' | 'history' | 'setlist' | 'poster'>('list');
 
   // Filters
   const [search, setSearch] = useState('');
@@ -96,6 +100,13 @@ export default function Concerts() {
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [predictionData, setPredictionData] = useState<AttendancePrediction | null>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+
+  // SetlistMode (performance view) state
+  const [showSetlistMode, setShowSetlistMode] = useState(false);
+  const [setlistModeData, setSetlistModeData] = useState<{
+    pieces: { id: string; title: string; composer?: string; duration?: number; notes?: string }[];
+    title: string;
+  } | null>(null);
 
   // Ticket management state
   const [showAddTicketTypeModal, setShowAddTicketTypeModal] = useState(false);
@@ -423,6 +434,7 @@ export default function Concerts() {
     setPredictionData(null);
   };
 
+  
   if (isLoading) {
     return (
       <div>
@@ -469,6 +481,18 @@ export default function Concerts() {
           onClick={() => setActiveTab('history')}
         >
           {t('concerts.pieceHistory')}
+        </button>
+        <button
+          className={`btn ${activeTab === 'setlist' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('setlist')}
+        >
+          {t('concerts.setlistBuilder', 'Setlist Builder')}
+        </button>
+        <button
+          className={`btn ${activeTab === 'poster' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setActiveTab('poster')}
+        >
+          {t('concerts.posterGenerator', 'Poster Generator')}
         </button>
       </div>
 
@@ -678,6 +702,36 @@ export default function Concerts() {
         </div>
       )}
 
+      {activeTab === 'setlist' && (
+        <div className="card">
+          <div className="card-body" style={{ padding: 0 }}>
+            <SetlistBuilder
+              availablePieces={musicTitles.map((title, index) => ({
+                id: title.id || `temp-${index}`,
+                title: title.title,
+                arranger: title.arranger || undefined,
+                durationSeconds: title.durationSeconds || undefined,
+              } as SetlistPiece))}
+              onSave={(setlist: Setlist) => {
+                showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'poster' && (
+        <div className="card">
+          <div className="card-body" style={{ padding: 0 }}>
+            <ConcertPosterGenerator
+              onDownload={(format, data) => {
+                showSuccess(t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`));
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Add/Edit Concert Modal */}
       {(showAddModal || editingConcert) && (
         <FormModal
@@ -771,7 +825,29 @@ export default function Concerts() {
                   <p><strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}</p>
                 )}
               </div>
-              <AddToCalendarButton type="concert" id={concertDetail.id} />
+              <div className="flex gap-2">
+                {concertDetail.program.length > 0 && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setSetlistModeData({
+                        pieces: concertDetail.program.map((item) => ({
+                          id: item.id,
+                          title: item.title,
+                          composer: item.arranger || undefined,
+                          notes: item.notes || undefined,
+                        })),
+                        title: concertDetail.name,
+                      });
+                      setShowSetlistMode(true);
+                    }}
+                    title={t('concerts.performanceMode', 'Uitvoeringsmodus')}
+                  >
+                    <Icon name="play" size={16} /> {t('concerts.performanceMode', 'Uitvoeringsmodus')}
+                  </button>
+                )}
+                <AddToCalendarButton type="concert" id={concertDetail.id} />
+              </div>
             </div>
           </div>
 
@@ -1431,6 +1507,30 @@ export default function Concerts() {
             </div>
           ) : null}
         </Modal>
+      )}
+
+      {/* Floating Action Button for mobile - quick add new concert */}
+      <FloatingActionButton
+        icon="plus"
+        label={t('concerts.newConcert')}
+        onClick={() => setShowAddModal(true)}
+        bottomOffset={60}
+      />
+
+      {/* SetlistMode - Performance View (fullscreen) */}
+      {showSetlistMode && setlistModeData && (
+        <SetlistMode
+          pieces={setlistModeData.pieces}
+          title={setlistModeData.title}
+          onExit={() => {
+            setShowSetlistMode(false);
+            setSetlistModeData(null);
+          }}
+          onPieceSelect={(piece, index) => {
+            // Optional: Log piece selection for analytics
+            console.log('Piece selected:', piece.title, 'at index', index);
+          }}
+        />
       )}
     </div>
   );

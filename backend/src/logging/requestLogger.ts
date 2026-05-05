@@ -20,6 +20,13 @@ function generateRequestId(): string {
 }
 
 /**
+ * Sanitize untrusted values before writing to logs to prevent log injection
+ */
+function sanitizeForLog(value: unknown): string {
+    return String(value ?? '').replace(/[\r\n]/g, '');
+}
+
+/**
  * Middleware to add request ID to each request
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -37,11 +44,17 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
     const startTime = Date.now();
     const requestId = req.headers['x-request-id'] as string;
 
-    // Skip logging for health check endpoints to reduce noise
-    const skipPaths = ['/api/health', '/api/health/detailed', '/favicon.ico'];
-    if (skipPaths.some(path => req.path === path)) {
+    // Skip logging for health check endpoints and static assets to reduce noise
+    const skipPaths = ['/api/health', '/api/health/detailed', '/favicon.ico', '/manifest.json', '/sw.js'];
+    const skipExtensions = ['.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf'];
+
+    if (skipPaths.some(path => req.path === path) ||
+        skipExtensions.some(ext => req.path.endsWith(ext))) {
         return next();
     }
+
+    // Capture request body size
+    const requestBodySize = req.headers['content-length'] ? parseInt(req.headers['content-length'], 10) : 0;
 
     // Log request start in debug mode
     logger.debug(`Request started: ${req.method} ${req.path}`, {
@@ -53,6 +66,7 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         query: Object.keys(req.query).length > 0 ? req.query : undefined,
         ip: req.ip || req.socket.remoteAddress,
         userAgent: req.get('user-agent'),
+        bodySize: requestBodySize,
     });
 
     // Capture response finish
@@ -60,34 +74,64 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         const duration = Date.now() - startTime;
         const statusCode = res.statusCode;
         const userId = req.user?.id;
+        const safeMethod = sanitizeForLog(req.method);
+        const safePath = sanitizeForLog(req.path);
 
         // Determine log level based on status code
         const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
 
+        // Parse response size
+        const responseSize = res.get('content-length') ? parseInt(res.get('content-length') || '0', 10) : 0;
+        const cacheStatus = res.get('x-cache') || 'N/A';
+
         // Log request completion
-        logger[level](`${req.method} ${req.path} ${statusCode} ${duration}ms`, {
+        logger[level](`${safeMethod} ${safePath} ${statusCode} ${duration}ms`, {
             type: 'request',
             phase: 'complete',
             requestId,
-            method: req.method,
-            path: req.path,
+            method: safeMethod,
+            path: safePath,
             statusCode,
             duration,
             userId,
             ip: req.ip || req.socket.remoteAddress,
             userAgent: req.get('user-agent'),
-            contentLength: res.get('content-length'),
+            responseSize,
+            cacheStatus,
             referer: req.get('referer'),
+            // Add compression info if available
+            contentEncoding: res.get('content-encoding'),
         });
 
-        // Log slow requests as performance issues
-        if (duration > 3000) {
-            logger.warn(`Slow request detected: ${req.method} ${req.path}`, {
+        // Log slow requests as performance issues (warning at 2s, critical at 5s)
+        if (duration > 5000) {
+            logger.error(`Critical slow request: ${safeMethod} ${safePath}`, {
+                type: 'performance',
+                metric: 'critical_slow_request',
+                requestId,
+                duration,
+                threshold: 5000,
+                responseSize,
+            });
+        } else if (duration > 2000) {
+            logger.warn(`Slow request detected: ${safeMethod} ${safePath}`, {
                 type: 'performance',
                 metric: 'slow_request',
                 requestId,
                 duration,
-                threshold: 3000,
+                threshold: 2000,
+                responseSize,
+            });
+        }
+
+        // Log large responses
+        if (responseSize > 1024 * 1024) { // > 1MB
+            logger.warn(`Large response: ${safeMethod} ${safePath}`, {
+                type: 'performance',
+                metric: 'large_response',
+                requestId,
+                responseSize,
+                threshold: 1024 * 1024,
             });
         }
 
@@ -95,8 +139,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         if (statusCode === 401 || statusCode === 403) {
             logSecurity('access_denied', {
                 requestId,
-                method: req.method,
-                path: req.path,
+                method: safeMethod,
+                path: safePath,
                 statusCode,
                 ip: req.ip || req.socket.remoteAddress,
                 userId,
@@ -107,8 +151,8 @@ export function requestLoggerMiddleware(req: AuthenticatedRequest, res: Response
         if (statusCode === 429) {
             logSecurity('rate_limit_exceeded', {
                 requestId,
-                method: req.method,
-                path: req.path,
+                method: safeMethod,
+                path: safePath,
                 ip: req.ip || req.socket.remoteAddress,
             });
         }

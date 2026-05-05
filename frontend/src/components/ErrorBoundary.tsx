@@ -1,39 +1,110 @@
 import { Component, ReactNode, ErrorInfo } from 'react';
-import i18n from '../i18n';
 import { Icon } from './Icon';
 
 interface Props {
   children: ReactNode;
+  /** Custom fallback UI when error occurs */
   fallback?: ReactNode;
+  /** Callback when error is caught */
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** Callback when user clicks report button */
+  onReport?: (error: Error, errorInfo: ErrorInfo | null) => void;
+  /** Show report button */
+  showReportButton?: boolean;
+  /** Custom retry handler */
+  onRetry?: () => void;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
+  showDetails: boolean;
 }
 
 /**
- * Error Boundary component to catch and display errors gracefully
+ * Error Boundary component to catch and display errors gracefully.
+ * Provides retry functionality, error reporting, and detailed error info in development.
+ *
+ * @example
+ * ```tsx
+ * <ErrorBoundary
+ *   onError={(error) => logErrorToService(error)}
+ *   onReport={(error) => openReportDialog(error)}
+ *   showReportButton
+ * >
+ *   <App />
+ * </ErrorBoundary>
+ * ```
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      showDetails: false,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error to console in development
-    if (import.meta.env.DEV) {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
-    }
+    this.setState({ errorInfo });
+
+    // Always log error to console
+    console.error('ErrorBoundary heeft een fout opgevangen:', error);
+    console.error('Component stack:', errorInfo.componentStack);
+
+    // Call optional error handler
+    this.props.onError?.(error, errorInfo);
   }
 
   handleRetry = (): void => {
-    this.setState({ hasError: false, error: null });
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      showDetails: false,
+    });
+    this.props.onRetry?.();
+  };
+
+  handleReport = (): void => {
+    const { error, errorInfo } = this.state;
+    if (error) {
+      if (this.props.onReport) {
+        this.props.onReport(error, errorInfo);
+      } else {
+        // Default: copy error info to clipboard
+        const errorText = [
+          `Fout: ${error.message}`,
+          `Stack: ${error.stack}`,
+          errorInfo?.componentStack ? `Component stack: ${errorInfo.componentStack}` : '',
+          `Tijdstip: ${new Date().toISOString()}`,
+          `URL: ${window.location.href}`,
+          `User Agent: ${navigator.userAgent}`,
+        ].filter(Boolean).join('\n\n');
+
+        navigator.clipboard.writeText(errorText).then(() => {
+          alert('Foutinformatie is gekopieerd naar het klembord. Je kunt dit nu plakken in een e-mail naar ondersteuning.');
+        }).catch(() => {
+          // Fallback: show in prompt
+          prompt('Kopieer deze foutinformatie:', errorText);
+        });
+      }
+    }
+  };
+
+  toggleDetails = (): void => {
+    this.setState(prev => ({ showDetails: !prev.showDetails }));
+  };
+
+  handleGoHome = (): void => {
+    window.location.href = '/';
   };
 
   render(): ReactNode {
@@ -42,35 +113,80 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      const t = (key: string) => i18n.t(key);
+      const { error, errorInfo, showDetails } = this.state;
+      const { showReportButton = true } = this.props;
 
       return (
         <div className="error-boundary" role="alert">
           <div className="error-boundary-content">
-            <div className="error-boundary-icon" aria-hidden="true"><Icon name="warning" size={48} /></div>
-            <h1>{t('errorBoundary.title')}</h1>
-            <p>{t('errorBoundary.description')}</p>
-            {import.meta.env.DEV && this.state.error && (
+            <div className="error-boundary-icon" aria-hidden="true">
+              <Icon name="warning" size={48} />
+            </div>
+
+            <h1>Er is iets misgegaan</h1>
+            <p>
+              Er is een onverwachte fout opgetreden. Probeer de pagina opnieuw te laden
+              of ga terug naar de startpagina.
+            </p>
+
+            {/* Show error details in development or when toggled */}
+            {error && (import.meta.env.DEV || showDetails) && (
               <div className="error-boundary-details">
-                <pre>{this.state.error.message}</pre>
+                <pre>{error.message}</pre>
+                {import.meta.env.DEV && error.stack && (
+                  <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.8 }}>
+                    {error.stack}
+                  </pre>
+                )}
+                {import.meta.env.DEV && errorInfo?.componentStack && (
+                  <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.6 }}>
+                    {errorInfo.componentStack}
+                  </pre>
+                )}
               </div>
             )}
+
+            {/* Toggle details button (production only) */}
+            {!import.meta.env.DEV && error && (
+              <button
+                type="button"
+                className="error-boundary-report-btn"
+                onClick={this.toggleDetails}
+                style={{ marginBottom: '1rem' }}
+              >
+                {showDetails ? 'Verberg details' : 'Toon details'}
+              </button>
+            )}
+
             <div className="error-boundary-actions">
               <button
                 className="btn btn-primary"
                 onClick={this.handleRetry}
                 type="button"
               >
-                {t('errorBoundary.retry')}
+                Opnieuw proberen
               </button>
               <button
                 className="btn btn-outline"
-                onClick={() => window.location.href = '/'}
+                onClick={this.handleGoHome}
                 type="button"
               >
-                {t('errorBoundary.backToHome')}
+                Naar startpagina
               </button>
             </div>
+
+            {/* Report error section */}
+            {showReportButton && error && (
+              <div className="error-boundary-report">
+                <button
+                  type="button"
+                  className="error-boundary-report-btn"
+                  onClick={this.handleReport}
+                >
+                  Probleem melden
+                </button>
+              </div>
+            )}
           </div>
         </div>
       );

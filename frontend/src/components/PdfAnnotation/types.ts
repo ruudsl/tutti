@@ -83,6 +83,8 @@ export interface AnnotationToolbarProps {
   stamps: Stamp[];
   selectedStamp: string | null;
   onStampSelect: (stampId: string) => void;
+  selectedShapeType?: ShapeType;
+  onShapeTypeChange?: (shapeType: ShapeType) => void;
 }
 
 export interface AnnotationCanvasProps {
@@ -96,6 +98,8 @@ export interface AnnotationCanvasProps {
   strokeWidth: number;
   opacity: number;
   selectedStamp: Stamp | null;
+  selectedShapeType?: ShapeType;
+  stamps: Stamp[];
   annotations: Annotation[];
   onAnnotationAdd: (annotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onAnnotationUpdate: (id: string, data: Partial<Annotation>) => void;

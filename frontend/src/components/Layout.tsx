@@ -14,6 +14,7 @@ import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHel
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import { Icon, type IconName } from './Icon';
+import { SyncStatusIndicator } from './SyncStatusIndicator';
 import type { AssociationSettings } from '../types';
 
 interface SidebarNavItem {
@@ -267,6 +268,7 @@ export default function Layout() {
         </div>
 
         <div className="header-right">
+          <SyncStatusIndicator compact inHeader />
           <button
             className="header-search-btn"
             onClick={openSearch}

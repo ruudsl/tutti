@@ -1,9 +1,69 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import AnnotationCanvas from './AnnotationCanvas';
 import AnnotationToolbar from './AnnotationToolbar';
-import type { Annotation, ToolType, Stamp } from './types';
+import type { Annotation, ToolType, Stamp, ShapeType } from './types';
 import { saveAnnotationOffline, getAnnotationsForPiece } from '../../lib/offlineDb';
 import api from '../../api/client';
+import { Icon } from '../Icon';
+
+const DEFAULT_STAMPS: Stamp[] = [
+  // Dynamics
+  { id: 'stamp-fff', name: 'fff', category: 'dynamics', svgData: '<text x="15" y="20" font-size="16" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">fff</text>', isBuiltin: true },
+  { id: 'stamp-ff', name: 'ff', category: 'dynamics', svgData: '<text x="15" y="20" font-size="18" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">ff</text>', isBuiltin: true },
+  { id: 'stamp-f', name: 'f', category: 'dynamics', svgData: '<text x="15" y="20" font-size="20" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">f</text>', isBuiltin: true },
+  { id: 'stamp-mf', name: 'mf', category: 'dynamics', svgData: '<text x="15" y="20" font-size="18" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">mf</text>', isBuiltin: true },
+  { id: 'stamp-mp', name: 'mp', category: 'dynamics', svgData: '<text x="15" y="20" font-size="18" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">mp</text>', isBuiltin: true },
+  { id: 'stamp-p', name: 'p', category: 'dynamics', svgData: '<text x="15" y="20" font-size="20" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">p</text>', isBuiltin: true },
+  { id: 'stamp-pp', name: 'pp', category: 'dynamics', svgData: '<text x="15" y="20" font-size="18" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">pp</text>', isBuiltin: true },
+  { id: 'stamp-ppp', name: 'ppp', category: 'dynamics', svgData: '<text x="15" y="20" font-size="16" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">ppp</text>', isBuiltin: true },
+  { id: 'stamp-sfz', name: 'sfz', category: 'dynamics', svgData: '<text x="15" y="20" font-size="16" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">sfz</text>', isBuiltin: true },
+  { id: 'stamp-fp', name: 'fp', category: 'dynamics', svgData: '<text x="15" y="20" font-size="18" font-style="italic" font-weight="bold" text-anchor="middle" fill="#000">fp</text>', isBuiltin: true },
+  { id: 'stamp-cresc', name: 'cresc.', category: 'dynamics', svgData: '<text x="15" y="20" font-size="12" font-style="italic" text-anchor="middle" fill="#000">cresc.</text>', isBuiltin: true },
+  { id: 'stamp-decresc', name: 'decresc.', category: 'dynamics', svgData: '<text x="15" y="20" font-size="11" font-style="italic" text-anchor="middle" fill="#000">decresc.</text>', isBuiltin: true },
+  { id: 'stamp-crescendo', name: 'Crescendo', category: 'dynamics', svgData: '<path d="M5 15 L25 8 M5 15 L25 22" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-decrescendo', name: 'Decrescendo', category: 'dynamics', svgData: '<path d="M5 8 L25 15 M5 22 L25 15" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+
+  // Tempo
+  { id: 'stamp-rit', name: 'rit.', category: 'tempo', svgData: '<text x="15" y="20" font-size="14" font-style="italic" text-anchor="middle" fill="#000">rit.</text>', isBuiltin: true },
+  { id: 'stamp-ritard', name: 'ritard.', category: 'tempo', svgData: '<text x="15" y="20" font-size="12" font-style="italic" text-anchor="middle" fill="#000">ritard.</text>', isBuiltin: true },
+  { id: 'stamp-rall', name: 'rall.', category: 'tempo', svgData: '<text x="15" y="20" font-size="14" font-style="italic" text-anchor="middle" fill="#000">rall.</text>', isBuiltin: true },
+  { id: 'stamp-accel', name: 'accel.', category: 'tempo', svgData: '<text x="15" y="20" font-size="13" font-style="italic" text-anchor="middle" fill="#000">accel.</text>', isBuiltin: true },
+  { id: 'stamp-atempo', name: 'a tempo', category: 'tempo', svgData: '<text x="15" y="20" font-size="11" font-style="italic" text-anchor="middle" fill="#000">a tempo</text>', isBuiltin: true },
+  { id: 'stamp-rubato', name: 'rubato', category: 'tempo', svgData: '<text x="15" y="20" font-size="12" font-style="italic" text-anchor="middle" fill="#000">rubato</text>', isBuiltin: true },
+  { id: 'stamp-fermata', name: 'Fermata', category: 'tempo', svgData: '<circle cx="15" cy="20" r="3" fill="#000"/><path d="M6 20 C6 10, 24 10, 24 20" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-breath', name: 'Breath Mark', category: 'tempo', svgData: '<text x="15" y="22" font-size="24" text-anchor="middle" fill="#000">,</text>', isBuiltin: true },
+  { id: 'stamp-caesura', name: 'Caesura', category: 'tempo', svgData: '<path d="M10 8 L14 22 M16 8 L20 22" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+
+  // Articulation
+  { id: 'stamp-staccato', name: 'Staccato', category: 'articulation', svgData: '<circle cx="15" cy="15" r="4" fill="#000"/>', isBuiltin: true },
+  { id: 'stamp-accent', name: 'Accent', category: 'articulation', svgData: '<path d="M8 10 L15 15 L8 20" stroke="#000" stroke-width="2.5" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-marcato', name: 'Marcato', category: 'articulation', svgData: '<path d="M10 20 L15 8 L20 20" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-tenuto', name: 'Tenuto', category: 'articulation', svgData: '<line x1="8" y1="15" x2="22" y2="15" stroke="#000" stroke-width="3"/>', isBuiltin: true },
+  { id: 'stamp-trill', name: 'Trill', category: 'articulation', svgData: '<text x="15" y="20" font-size="16" font-style="italic" text-anchor="middle" fill="#000">tr</text>', isBuiltin: true },
+  { id: 'stamp-mordent', name: 'Mordent', category: 'articulation', svgData: '<path d="M5 15 L10 10 L15 15 L20 10 L25 15" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-turn', name: 'Turn', category: 'articulation', svgData: '<path d="M5 12 C8 8, 12 8, 15 12 C18 16, 22 16, 25 12" stroke="#000" stroke-width="2" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-portato', name: 'Portato', category: 'articulation', svgData: '<circle cx="15" cy="10" r="3" fill="#000"/><line x1="10" y1="18" x2="20" y2="18" stroke="#000" stroke-width="2.5"/>', isBuiltin: true },
+
+  // Navigation
+  { id: 'stamp-coda', name: 'Coda', category: 'navigation', svgData: '<circle cx="15" cy="15" r="6" stroke="#000" stroke-width="2" fill="none"/><line x1="15" y1="6" x2="15" y2="24" stroke="#000" stroke-width="2"/><line x1="6" y1="15" x2="24" y2="15" stroke="#000" stroke-width="2"/>', isBuiltin: true },
+  { id: 'stamp-segno', name: 'Segno', category: 'navigation', svgData: '<path d="M10 22 L20 8" stroke="#000" stroke-width="2"/><circle cx="8" cy="10" r="3" fill="#000"/><circle cx="22" cy="20" r="3" fill="#000"/>', isBuiltin: true },
+  { id: 'stamp-repeat', name: 'Repeat', category: 'navigation', svgData: '<text x="15" y="20" font-size="20" text-anchor="middle" fill="#000">%</text>', isBuiltin: true },
+  { id: 'stamp-dc', name: 'D.C.', category: 'navigation', svgData: '<text x="15" y="20" font-size="14" font-style="italic" text-anchor="middle" fill="#000">D.C.</text>', isBuiltin: true },
+  { id: 'stamp-ds', name: 'D.S.', category: 'navigation', svgData: '<text x="15" y="20" font-size="14" font-style="italic" text-anchor="middle" fill="#000">D.S.</text>', isBuiltin: true },
+  { id: 'stamp-fine', name: 'Fine', category: 'navigation', svgData: '<text x="15" y="20" font-size="14" font-style="italic" text-anchor="middle" fill="#000">Fine</text>', isBuiltin: true },
+
+  // General
+  { id: 'stamp-check', name: 'Vinkje', category: 'general', svgData: '<path d="M6 15 L12 21 L24 9" stroke="#16a34a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>', isBuiltin: true },
+  { id: 'stamp-cross', name: 'Kruis', category: 'general', svgData: '<path d="M8 8 L22 22 M22 8 L8 22" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>', isBuiltin: true },
+  { id: 'stamp-star', name: 'Ster', category: 'general', svgData: '<path d="M15 5 L17 12 L24 12 L19 17 L21 24 L15 20 L9 24 L11 17 L6 12 L13 12 Z" fill="#eab308"/>', isBuiltin: true },
+  { id: 'stamp-question', name: 'Vraag', category: 'general', svgData: '<text x="15" y="22" font-size="22" font-weight="bold" text-anchor="middle" fill="#3b82f6">?</text>', isBuiltin: true },
+  { id: 'stamp-exclaim', name: 'Uitroep', category: 'general', svgData: '<text x="15" y="22" font-size="22" font-weight="bold" text-anchor="middle" fill="#dc2626">!</text>', isBuiltin: true },
+  { id: 'stamp-circle', name: 'Cirkel', category: 'general', svgData: '<circle cx="15" cy="15" r="10" stroke="#000" stroke-width="2.5" fill="none"/>', isBuiltin: true },
+  { id: 'stamp-arrow-up', name: 'Pijl omhoog', category: 'general', svgData: '<path d="M15 24 L15 8 M9 14 L15 8 L21 14" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>', isBuiltin: true },
+  { id: 'stamp-arrow-down', name: 'Pijl omlaag', category: 'general', svgData: '<path d="M15 6 L15 22 M9 16 L15 22 L21 16" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>', isBuiltin: true },
+  { id: 'stamp-heart', name: 'Hart', category: 'general', svgData: '<path d="M15 24 C6 17 4 11 9 8 C12 6 15 9 15 9 C15 9 18 6 21 8 C26 11 24 17 15 24" fill="#ec4899"/>', isBuiltin: true },
+  { id: 'stamp-plus', name: 'Plus', category: 'general', svgData: '<path d="M15 6 L15 24 M6 15 L24 15" stroke="#16a34a" stroke-width="3" stroke-linecap="round"/>', isBuiltin: true },
+];
 
 interface PdfAnnotatorProps {
   musicPieceId: string;
@@ -22,34 +82,33 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
   scale,
 }) => {
   const [activeTool, setActiveTool] = useState<ToolType>('freehand');
-  const [color, setColor] = useState('#FF0000');
+  const [selectedShapeType, setSelectedShapeType] = useState<ShapeType>('rectangle');
+  const [color, setColor] = useState('#DC2626');
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [opacity, setOpacity] = useState(1);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [undoStack, setUndoStack] = useState<Annotation[][]>([]);
   const [redoStack, setRedoStack] = useState<Annotation[][]>([]);
-  const [stamps, setStamps] = useState<Stamp[]>([]);
+  const [stamps, setStamps] = useState<Stamp[]>(DEFAULT_STAMPS);
   const [selectedStampId, setSelectedStampId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [toolbarExpanded, setToolbarExpanded] = useState(true);
 
-  // Load annotations and stamps
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Try to load from server first
         const [annotationsRes, stampsRes] = await Promise.all([
           api.get(`/annotations/${musicPieceId}/${pageNumber}`).catch(() => null),
           api.get('/annotations/stamps').catch(() => null),
         ]);
 
         if (annotationsRes?.data) {
-          setAnnotations(annotationsRes.data.map((a: any) => ({
+          setAnnotations(annotationsRes.data.map((a: Annotation) => ({
             ...a,
-            data: typeof a.data === 'string' ? JSON.parse(a.data) : a.data,
+            data: typeof a.data === 'string' ? JSON.parse(a.data as unknown as string) : a.data,
           })));
         } else {
-          // Fall back to offline data
           const offlineAnnotations = await getAnnotationsForPiece(musicPieceId, pageNumber);
           setAnnotations(offlineAnnotations.map(a => ({
             ...a,
@@ -59,16 +118,8 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
           })));
         }
 
-        if (stampsRes?.data) {
+        if (stampsRes?.data && stampsRes.data.length > 0) {
           setStamps(stampsRes.data);
-        } else {
-          // Default stamps if server unavailable
-          setStamps([
-            { id: 'stamp-ff', name: 'ff', category: 'dynamics', svgData: '<text font-size="20" font-style="italic" font-weight="bold">ff</text>', isBuiltin: true },
-            { id: 'stamp-f', name: 'f', category: 'dynamics', svgData: '<text font-size="20" font-style="italic" font-weight="bold">f</text>', isBuiltin: true },
-            { id: 'stamp-p', name: 'p', category: 'dynamics', svgData: '<text font-size="20" font-style="italic" font-weight="bold">p</text>', isBuiltin: true },
-            { id: 'stamp-check', name: 'Checkmark', category: 'general', svgData: '<path d="M5,15 L12,22 L25,5" fill="none" stroke="currentColor" stroke-width="3"/>', isBuiltin: true },
-          ]);
         }
       } catch (error) {
         console.error('Failed to load annotations:', error);
@@ -95,7 +146,6 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
     setRedoStack([]);
     setAnnotations(prev => [...prev, annotation]);
 
-    // Save to offline storage and queue for sync
     try {
       await saveAnnotationOffline({
         id,
@@ -154,31 +204,48 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
   const selectedStamp = stamps.find(s => s.id === selectedStampId) || null;
 
   if (isLoading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Laden...</div>;
+    return (
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        padding: '20px 30px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+      }}>
+        <div style={{
+          width: '24px',
+          height: '24px',
+          border: '3px solid #e5e7eb',
+          borderTopColor: '#3b82f6',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto 12px',
+        }} />
+        <div style={{ color: '#6b7280', fontSize: '14px' }}>Annotaties laden...</div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', gap: '16px' }}>
-      <AnnotationToolbar
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        color={color}
-        onColorChange={setColor}
-        strokeWidth={strokeWidth}
-        onStrokeWidthChange={setStrokeWidth}
-        opacity={opacity}
-        onOpacityChange={setOpacity}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onClear={handleClear}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        stamps={stamps}
-        selectedStamp={selectedStampId}
-        onStampSelect={setSelectedStampId}
-      />
-
-      <div style={{ position: 'relative', width: pageWidth, height: pageHeight }}>
+    <>
+      {/* Canvas layer - positioned over the PDF */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: pageWidth * scale,
+        height: pageHeight * scale,
+        zIndex: 10,
+      }}>
         <AnnotationCanvas
           pageNumber={pageNumber}
           musicPieceId={musicPieceId}
@@ -190,13 +257,75 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
           strokeWidth={strokeWidth}
           opacity={opacity}
           selectedStamp={selectedStamp}
+          selectedShapeType={selectedShapeType}
+          stamps={stamps}
           annotations={annotations}
           onAnnotationAdd={handleAnnotationAdd}
           onAnnotationUpdate={handleAnnotationUpdate}
           onAnnotationDelete={handleAnnotationDelete}
         />
       </div>
-    </div>
+
+      {/* Floating toolbar - positioned outside the canvas */}
+      <div style={{
+        position: 'fixed',
+        top: '80px',
+        left: '20px',
+        zIndex: 1000,
+        transition: 'all 0.2s ease',
+      }}>
+        {/* Toggle button */}
+        <button
+          onClick={() => setToolbarExpanded(prev => !prev)}
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+            marginBottom: toolbarExpanded ? '8px' : '0',
+          }}
+          title={toolbarExpanded ? 'Verberg gereedschap' : 'Toon gereedschap'}
+        >
+          <Icon name={toolbarExpanded ? 'chevronLeft' : 'penTool'} size={22} />
+        </button>
+
+        {/* Toolbar panel */}
+        {toolbarExpanded && (
+          <div style={{
+            maxHeight: 'calc(100vh - 180px)',
+            overflowY: 'auto',
+          }}>
+            <AnnotationToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              color={color}
+              onColorChange={setColor}
+              strokeWidth={strokeWidth}
+              onStrokeWidthChange={setStrokeWidth}
+              opacity={opacity}
+              onOpacityChange={setOpacity}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onClear={handleClear}
+              canUndo={undoStack.length > 0}
+              canRedo={redoStack.length > 0}
+              stamps={stamps}
+              selectedStamp={selectedStampId}
+              onStampSelect={setSelectedStampId}
+              selectedShapeType={selectedShapeType}
+              onShapeTypeChange={setSelectedShapeType}
+            />
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

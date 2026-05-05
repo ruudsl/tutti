@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getMemberDirectory, getOrchestras, getInstruments } from '../api';
 import { STORAGE_KEYS } from '../utils/constants';
+import { Avatar } from '../components/Avatar';
+import { SectionChat } from '../components/SectionChat';
+import { VirtualizedList, VirtualizedListItem } from '../components/VirtualizedList';
 import './MemberDirectory.css';
 
 // Helper to get photo URL with auth token for img src
@@ -17,6 +20,8 @@ export default function MemberDirectory() {
   const [search, setSearch] = useState('');
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedInstrument, setSelectedInstrument] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['memberDirectory', selectedOrchestra, selectedInstrument, search],
@@ -37,9 +42,6 @@ export default function MemberDirectory() {
     queryFn: getInstruments,
   });
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
 
   return (
     <div className="member-directory-page">
@@ -96,56 +98,117 @@ export default function MemberDirectory() {
               {t('memberDirectory.clearFilters')}
             </button>
           )}
+
+          <div className="filter-group" style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+            <button
+              className={`btn btn-sm ${viewMode === 'grid' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setViewMode('grid')}
+              title={t('memberDirectory.gridView')}
+            >
+              {t('memberDirectory.grid', 'Grid')}
+            </button>
+            <button
+              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setViewMode('list')}
+              title={t('memberDirectory.listView')}
+            >
+              {t('memberDirectory.list', 'List')}
+            </button>
+            <button
+              className={`btn btn-sm ${showChat ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setShowChat(!showChat)}
+              title={t('memberDirectory.sectionChat', 'Section Chat')}
+            >
+              {t('memberDirectory.chat', 'Chat')}
+            </button>
+          </div>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="loading">
-          <div className="spinner"></div>
-        </div>
-      ) : members.length === 0 ? (
-        <div className="empty-state">
-          <p>{t('memberDirectory.noMembers')}</p>
-        </div>
-      ) : (
-        <div className="directory-grid">
-          {members.map(member => (
-            <div key={member.id} className="member-card">
-              <div className="member-avatar">
-                {getPhotoUrl(member.photoUrl) ? (
-                  <img
-                    src={getPhotoUrl(member.photoUrl)!}
-                    alt={`${member.firstName} ${member.lastName}`}
-                    className="avatar-img"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                ) : null}
-                <span className={`avatar-initials ${getPhotoUrl(member.photoUrl) ? 'hidden' : ''}`}>
-                  {getInitials(member.firstName, member.lastName)}
-                </span>
-              </div>
-              <div className="member-info">
-                <h3 className="member-name">{member.firstName} {member.lastName}</h3>
-                {member.instruments.length > 0 && (
-                  <p className="member-instrument">
-                    {member.instruments.map(i => i.name).join(', ')}
-                  </p>
-                )}
-                {member.orchestras.length > 0 && (
-                  <div className="member-orchestras">
-                    {member.orchestras.map(o => (
-                      <span key={o.id} className="orchestra-badge">{o.name}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
+      <div className={`member-directory-content ${showChat ? 'with-chat' : ''}`}>
+        <div className="member-directory-main">
+          {isLoading ? (
+            <div className="loading">
+              <div className="spinner"></div>
             </div>
-          ))}
+          ) : members.length === 0 ? (
+            <div className="empty-state">
+              <p>{t('memberDirectory.noMembers')}</p>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="directory-grid">
+              {members.map(member => (
+                <div key={member.id} className="member-card">
+                  <div className="member-avatar">
+                    <Avatar
+                      name={`${member.firstName} ${member.lastName}`}
+                      src={getPhotoUrl(member.photoUrl)}
+                      size="xl"
+                    />
+                  </div>
+                  <div className="member-info">
+                    <h3 className="member-name">{member.firstName} {member.lastName}</h3>
+                    {member.instruments.length > 0 && (
+                      <p className="member-instrument">
+                        {member.instruments.map(i => i.name).join(', ')}
+                      </p>
+                    )}
+                    {member.orchestras.length > 0 && (
+                      <div className="member-orchestras">
+                        {member.orchestras.map(o => (
+                          <span key={o.id} className="orchestra-badge">{o.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* VirtualizedList view for better performance with large member lists */
+            <VirtualizedList
+              items={members}
+              itemHeight={80}
+              height={600}
+              emptyMessage={t('memberDirectory.noMembers')}
+              loading={isLoading}
+              renderItem={(member, _index, style) => (
+                <VirtualizedListItem key={member.id} style={style}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                    <Avatar
+                      name={`${member.firstName} ${member.lastName}`}
+                      src={getPhotoUrl(member.photoUrl)}
+                      size="md"
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600 }}>{member.firstName} {member.lastName}</div>
+                      {member.instruments.length > 0 && (
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
+                          {member.instruments.map(i => i.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                    {member.orchestras.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                        {member.orchestras.map(o => (
+                          <span key={o.id} className="orchestra-badge" style={{ fontSize: '0.75rem' }}>{o.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </VirtualizedListItem>
+              )}
+            />
+          )}
         </div>
-      )}
+
+        {/* Section Chat sidebar */}
+        {showChat && (
+          <div className="member-directory-chat">
+            <SectionChat orchestraId={selectedOrchestra || undefined} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

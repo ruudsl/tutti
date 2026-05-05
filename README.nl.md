@@ -181,6 +181,7 @@ flowchart LR
 ### Muziekbeheer
 
 - **Upload** — Sleep PDF's naar de dropzone; metadata wordt automatisch geparseerd uit de bestandsnaam (`Titel_arrangeur_instrument_stemming_groepnummer_sleutel.pdf`)
+- **Bulk Upload** — Upload meerdere muziekstukken tegelijk via een ZIP-bestand
 - **Cloud Import** — Importeer bladmuziek rechtstreeks vanuit OneDrive/SharePoint of Google Drive zonder eerst te downloaden
 - **Muziekstukken** — Bladmuziek per instrument met filters op titel, instrument en orkest
 - **Muziektitels** — Metadata per titel: componist, arrangeur, genre, speelduur, moeilijkheidsgraad, YouTube-link
@@ -194,6 +195,8 @@ flowchart LR
 
 - **Standaard repetitiedagen** — Stel terugkerende dagen/tijden in per orkest
 - **Repetitie-instanties** — Automatisch gegenereerd of handmatig aangemaakt (regulier/extra/geannuleerd)
+- **Terugkerende repetities** — Maak repetities in bulk aan voor een datumbereik met aanpasbare frequentie
+- **Serie-beheer** — Verwijder volledige repetitieseries in één keer
 - **Spond koppeling** — Synchroniseer aanwezigheidsdata automatisch vanuit Spond
 - **Aanwezigheidsoverzicht** — Per lid: aantal keer aanwezig, afwezig, percentage (filterbaar op datum en orkest)
 
@@ -214,6 +217,7 @@ flowchart LR
 
 - **Leningen** — Registreer uitleningen van muziekmateriaal aan externe organisaties
 - **Status tracking** — Actief, te laat, geretourneerd met automatische statusupdates
+- **Uitleengeschiedenis** — Bekijk volledige uitleengeschiedenis per muziektitel
 - **Beschikbaarheid** — Overzicht welke titels beschikbaar zijn voor uitlening
 
 ### Issues & Kwaliteitsbeheer
@@ -224,6 +228,7 @@ flowchart LR
 ### Concerten & Ticketing
 
 - **Concertbeheer** — Aanmaken en beheren van concerten met datum, locatie en programma
+- **Opkomstvoorspelling** — AI-gebaseerde voorspelling van verwachte opkomst op basis van historische data
 - **Kaartverkoop** — Online tickets verkopen met aanpasbare prijzen en stoelcategorieën
 - **Publieke Ticketshop** — Klantgerichte pagina voor ticketaankoop
 - **Ticket Scanner** — QR-code scanning voor toegangscontrole
@@ -239,9 +244,18 @@ flowchart LR
 - **Stemgroepen** — Organiseer muzikanten per sectie/stemgroep
 - **Bezettingsoverzicht** — Zie welke plaatsen bezet zijn per repetitie/concert
 
-### Oefenen & Planning
+### Beschikbaarheidsbeheer
 
-- **Oefenschema's** — Maak en deel individuele of sectie-oefenschema's
+- **Persoonlijke beschikbaarheid** — Leden kunnen hun beschikbaarheid (beschikbaar/niet beschikbaar/misschien) instellen voor specifieke data
+- **Bulk beschikbaarheid** — Stel beschikbaarheid in voor meerdere data tegelijk
+- **Team overzicht** — Bekijk teambeschikbaarheid voor elke datum met samenvattende statistieken
+- **Notities** — Voeg notities toe om beschikbaarheidsstatus toe te lichten
+
+### Oefentracker
+
+- **Oefendoelen** — Stel persoonlijke oefendoelen in voor muziekstukken
+- **Voortgang bijhouden** — Volg oefensessies en voortgang door de tijd
+- **Oefenstatistieken** — Bekijk statistieken en trends van oefensessies
 - **IMSLP Browser** — Zoek en link naar gratis bladmuziek op IMSLP.org
 
 ### Beveiliging & Authenticatie
@@ -257,9 +271,10 @@ flowchart LR
 
 - **Audit Logs** — Beveiligingslogboek met gebruikersacties
 - **Sessiebeheer** — Bekijk en beëindig actieve gebruikerssessies
-- **Health Dashboard** — Systeemstatus en prestatiemonitoring
+- **Systeemgezondheid Dashboard** — Realtime monitoring van database, schijfruimte en geheugengebruik met auto-refresh (alleen admin)
 - **Data Export** — AVG-conforme export van persoonsgegevens
 - **Entra Sync** — Automatische gebruikerssynchronisatie met Microsoft Entra ID
+- **Changelog** — In-app versiegeschiedenis met taalondersteuning (NL/EN/DE)
 
 ### Overige features
 
@@ -269,9 +284,10 @@ flowchart LR
 - **Backup & Restore** — Download/upload volledige database met bestanden als ZIP
 - **Activiteitenlog** — Track wie wat bekijkt en downloadt
 - **Statistieken** — Dashboard met top-bekeken en -gedownloade stukken
-- **Changelog** — In-app versiegeschiedenis
 - **Onboarding tour** — Begeleide rondleiding voor nieuwe gebruikers
 - **Muziektools** — Ingebouwde metronoom en stemapparaat
+- **Favorieten** — Markeer muziekstukken als favoriet voor snelle toegang
+- **Recent bekeken** — Snelle toegang tot recent bekeken items
 - **WCAG 2.1 AA** — Toegankelijke interface met toetsenbordnavigatie en contrastverhouding
 
 ## Screenshots

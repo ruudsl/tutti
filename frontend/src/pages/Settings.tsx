@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getTelegramConfig, saveTelegramConfig, deleteTelegramConfig, getWhatsAppConfig, saveWhatsAppConfig, deleteWhatsAppConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
 import { showSuccess, showError } from '../utils/toast';
@@ -9,6 +10,9 @@ import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { GoogleDriveSettings } from '../components/GoogleDriveSettings';
+import { LazyImage } from '../components/LazyImage';
+import { OfflineManager } from '../components/OfflineManager';
+import { Icon } from '../components/Icon';
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -148,6 +152,9 @@ export default function Settings() {
 
   // M365 group mappings state
   const [showAddGroupMappingModal, setShowAddGroupMappingModal] = useState(false);
+
+  // Offline manager state
+  const [showOfflineManager, setShowOfflineManager] = useState(false);
   const [editingGroupMapping, setEditingGroupMapping] = useState<M365GroupMapping | null>(null);
   const [deletingGroupMapping, setDeletingGroupMapping] = useState<M365GroupMapping | null>(null);
   const [groupMappingFormData, setGroupMappingFormData] = useState({ orchestraId: '', groupName: '', groupType: 'orchestra' as 'orchestra' | 'percussion' | 'special' });
@@ -576,13 +583,13 @@ export default function Settings() {
 
           {settings?.logoUrl && (
             <div className="mb-3" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <img
+              <LazyImage
                 src={settings.logoUrl}
                 alt="Logo"
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  objectFit: 'contain',
+                width={64}
+                height={64}
+                objectFit="contain"
+                containerStyle={{
                   border: '1px solid var(--border)',
                   borderRadius: '0.5rem',
                   padding: '0.25rem',
@@ -1154,6 +1161,25 @@ export default function Settings() {
 
       <GoogleDriveSettings />
 
+      {/* Offline Storage Management */}
+      <div className="card mb-3">
+        <div className="card-header">
+          <h2 className="card-title">{t('offline.manager', 'Offline Opslag')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('offline.description', 'Beheer de partituren en audio die offline beschikbaar zijn.')}</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowOfflineManager(true)}
+          >
+            {t('offline.manage', 'Beheer Offline Opslag')}
+          </button>
+        </div>
+      </div>
+
+      <OfflineManager isOpen={showOfflineManager} onClose={() => setShowOfflineManager(false)} />
+
       <div className="card mb-3">
         <div className="card-header">
           <h2 className="card-title">{t('settings.concertTypes.title')}</h2>
@@ -1366,6 +1392,42 @@ export default function Settings() {
           variant="danger"
         />
       )}
+
+      {/* Support & Help Section */}
+      <div className="card mb-3">
+        <div className="card-header">
+          <h2 className="card-title">{t('settings.support.title', 'Support & Help')}</h2>
+        </div>
+        <div className="card-body">
+          <p className="piece-meta mb-3">{t('settings.support.description', 'Access help resources and report issues.')}</p>
+
+          <div className="grid grid-3" style={{ gap: '1rem' }}>
+            <Link to="/issues" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+              <div className="card-body" style={{ textAlign: 'center' }}>
+                <Icon name="pencil" size={32} />
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.reportIssue', 'Report Issue')}</h3>
+                <p className="piece-meta">{t('settings.support.reportIssueDesc', 'Report problems with sheet music')}</p>
+              </div>
+            </Link>
+
+            <Link to="/user-guide" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+              <div className="card-body" style={{ textAlign: 'center' }}>
+                <Icon name="info" size={32} />
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.userGuide', 'User Guide')}</h3>
+                <p className="piece-meta">{t('settings.support.userGuideDesc', 'Learn how to use the app')}</p>
+              </div>
+            </Link>
+
+            <Link to="/accessibility" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+              <div className="card-body" style={{ textAlign: 'center' }}>
+                <Icon name="eye" size={32} />
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.accessibility', 'Accessibility')}</h3>
+                <p className="piece-meta">{t('settings.support.accessibilityDesc', 'Accessibility information')}</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

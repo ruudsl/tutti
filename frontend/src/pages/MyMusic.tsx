@@ -2,12 +2,14 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity, createIssue } from '../api';
+import { getMyMusicLists, getMusicList, downloadMusicPiece, logActivity } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import type { MusicList, MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { SwipeContainer } from '../components/SwipeContainer';
+import { SwipeableMusicList, MusicCard, type MusicItem } from '../components/SwipeableMusicList';
+import { ReportIssueModal } from '../components/ReportIssueModal';
 import { PdfViewer } from '../components/PdfViewer';
 import { cacheListPdfs, isPdfCached, getCachedPdf } from '../lib/pdfCache';
 import { Icon } from '../components/Icon';
@@ -45,12 +47,8 @@ export default function MyMusic() {
   const [viewerLoading, setViewerLoading] = useState(false);
   const viewerBlobUrlRef = useRef<string | null>(null);
 
-  // Issue reporting state
+  // Issue reporting state - using ReportIssueModal component
   const [reportingPiece, setReportingPiece] = useState<MusicPiece | null>(null);
-  const [issueDescription, setIssueDescription] = useState('');
-  const [issuePageNumber, setIssuePageNumber] = useState('');
-  const [issueMeasureNumber, setIssueMeasureNumber] = useState('');
-  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
 
   // View mode: 'full' | 'compact' - compact hides arranger/groupNumber/clef/tuning columns
   const [compactView, setCompactView] = useState(() => {
@@ -63,6 +61,12 @@ export default function MyMusic() {
       return next;
     });
   };
+
+  // Mobile swipe view mode
+  const [swipeViewEnabled, setSwipeViewEnabled] = useState(() => {
+    // Default to enabled on mobile devices
+    return window.innerWidth < 768;
+  });
 
   const listId = searchParams.get('listId');
 
@@ -328,35 +332,9 @@ export default function MyMusic() {
     }
   }, [currentTitleIndex, titleGroups]);
 
-  const handleReportIssue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reportingPiece || !issueDescription.trim()) return;
-
-    setIsSubmittingIssue(true);
-    try {
-      await createIssue({
-        musicPieceId: reportingPiece.id,
-        pageNumber: issuePageNumber ? parseInt(issuePageNumber) : undefined,
-        measureNumber: issueMeasureNumber || undefined,
-        description: issueDescription.trim(),
-      });
-      showSuccess(t('myMusic.reportIssue.success'));
-      setReportingPiece(null);
-      setIssueDescription('');
-      setIssuePageNumber('');
-      setIssueMeasureNumber('');
-    } catch (error: any) {
-      showError(error.response?.data?.error || t('errors.generic'));
-    } finally {
-      setIsSubmittingIssue(false);
-    }
-  };
-
+  // Open issue report modal
   const openReportModal = (piece: MusicPiece) => {
     setReportingPiece(piece);
-    setIssueDescription('');
-    setIssuePageNumber('');
-    setIssueMeasureNumber('');
   };
 
   // Show single list view with titles grouped as accordion
@@ -627,88 +605,43 @@ export default function MyMusic() {
         </Modal>
       )}
 
-      {/* Issue Report Modal */}
+      {/* Issue Report Modal - using ReportIssueModal component */}
       {reportingPiece && (
-        <Modal
-          title={t('myMusic.reportIssue.title')}
+        <ReportIssueModal
+          pieceId={reportingPiece.id}
+          pieceTitle={`${reportingPiece.title}${reportingPiece.instrumentName ? ` - ${reportingPiece.instrumentName}` : ''}`}
           onClose={() => setReportingPiece(null)}
-          footer={
-            <>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => setReportingPiece(null)}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="submit"
-                form="report-issue-form"
-                className="btn btn-primary"
-                disabled={isSubmittingIssue || !issueDescription.trim()}
-              >
-                {isSubmittingIssue ? t('myMusic.reportIssue.submitting') : t('myMusic.reportIssue.submit')}
-              </button>
-            </>
-          }
-        >
-          <form id="report-issue-form" onSubmit={handleReportIssue}>
-            <div className="form-group">
-              <label className="form-label">{t('myMusic.reportIssue.piece')}</label>
-              <p>
-                <strong>{reportingPiece.title}</strong>
-                {reportingPiece.instrumentName && ` - ${reportingPiece.instrumentName}`}
-              </p>
-            </div>
-            <div className="grid grid-2">
-              <div className="form-group">
-                <label htmlFor="issue-page" className="form-label">{t('myMusic.reportIssue.pageNumber')} ({t('common.optional')})</label>
-                <input
-                  type="number"
-                  id="issue-page"
-                  className="form-control"
-                  value={issuePageNumber}
-                  onChange={(e) => setIssuePageNumber(e.target.value)}
-                  min="1"
-                  placeholder="2"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="issue-measure" className="form-label">{t('myMusic.reportIssue.measureNumber')} ({t('common.optional')})</label>
-                <input
-                  type="text"
-                  id="issue-measure"
-                  className="form-control"
-                  value={issueMeasureNumber}
-                  onChange={(e) => setIssueMeasureNumber(e.target.value)}
-                  placeholder="24-28"
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label htmlFor="issue-description" className="form-label">{t('myMusic.reportIssue.description')} *</label>
-              <textarea
-                id="issue-description"
-                className="form-control"
-                value={issueDescription}
-                onChange={(e) => setIssueDescription(e.target.value)}
-                rows={4}
-                placeholder={t('myMusic.reportIssue.descriptionPlaceholder')}
-                required
-                aria-required="true"
-              />
-            </div>
-          </form>
-        </Modal>
+        />
       )}
     </>
     );
   }
 
+  // Flatten lists for swipeable view
+  const allLists: MusicItem[] = useMemo(() => {
+    return lists.map(list => ({
+      id: list.id,
+      title: list.name,
+      subtitle: list.orchestraName,
+      metadata: `${list.titleCount || 0} ${t('myMusic.titlesForYou')}`,
+    }));
+  }, [lists, t]);
+
   // Show lists overview - grouped by orchestra
   return (
     <div>
-      <h1 className="mb-3">{t('myMusic.title')}</h1>
+      <div className="flex justify-between items-center mb-3">
+        <h1>{t('myMusic.title')}</h1>
+        {lists.length > 1 && (
+          <button
+            className={`btn btn-sm ${swipeViewEnabled ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setSwipeViewEnabled(!swipeViewEnabled)}
+            title={t('myMusic.swipeView', 'Swipe View')}
+          >
+            <Icon name="menu" size={16} /> {swipeViewEnabled ? t('myMusic.gridView', 'Grid') : t('myMusic.swipeView', 'Swipe')}
+          </button>
+        )}
+      </div>
 
       {listsLoading ? (
         <div className="card">
@@ -720,39 +653,65 @@ export default function MyMusic() {
           </div>
         </div>
       ) : orchestraGroups.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {orchestraGroups.map((group) => (
-            <div key={group.orchestraId} className="card">
-              <div className="card-header">
-                <h2 className="card-title">{group.orchestraName}</h2>
-              </div>
-              <div className="card-body">
-                <div className="grid grid-3">
-                  {group.lists.map((list) => (
-                    <div
-                      key={list.id}
-                      className="card"
-                      style={{ border: '1px solid var(--border-color)', boxShadow: 'none' }}
-                    >
-                      <div className="card-body">
-                        <h3 className="piece-title">{list.name}</h3>
-                        <p className="piece-meta mb-2">
-                          {list.titleCount || 0} {t('myMusic.titlesForYou')}
-                        </p>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => handleSelectList(list.id)}
-                        >
-                          {t('myMusic.viewMusic')}
-                        </button>
+        swipeViewEnabled && allLists.length > 1 ? (
+          /* SwipeableMusicList for mobile-friendly navigation */
+          <div className="card">
+            <div className="card-body">
+              <SwipeableMusicList
+                items={allLists}
+                enableSwipe={true}
+                showDots={true}
+                showArrows={true}
+                loop={false}
+                onItemChange={(_index, _item) => {
+                  // Optional: could auto-select on swipe
+                }}
+                renderItem={(item, _index, isActive) => (
+                  <MusicCard
+                    item={item}
+                    isActive={isActive}
+                    onAction={() => handleSelectList(item.id)}
+                    actionLabel={t('myMusic.viewMusic')}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {orchestraGroups.map((group) => (
+              <div key={group.orchestraId} className="card">
+                <div className="card-header">
+                  <h2 className="card-title">{group.orchestraName}</h2>
+                </div>
+                <div className="card-body">
+                  <div className="grid grid-3">
+                    {group.lists.map((list) => (
+                      <div
+                        key={list.id}
+                        className="card"
+                        style={{ border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                      >
+                        <div className="card-body">
+                          <h3 className="piece-title">{list.name}</h3>
+                          <p className="piece-meta mb-2">
+                            {list.titleCount || 0} {t('myMusic.titlesForYou')}
+                          </p>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleSelectList(list.id)}
+                          >
+                            {t('myMusic.viewMusic')}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       ) : (
         <div className="card">
           <div className="card-body">

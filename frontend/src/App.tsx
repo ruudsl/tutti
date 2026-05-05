@@ -11,6 +11,7 @@ import { NotFound } from './components/NotFound';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
+import { AriaLiveProvider } from './components/AriaLiveRegion';
 import { ROLES } from './utils/constants';
 
 // All pages - loaded immediately to avoid lazy loading issues
@@ -468,31 +469,33 @@ function AppContent() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppInit />
-        <AppRoutes />
-        <Toaster
-          toastOptions={{
-            style: {
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-            },
-            success: {
-              iconTheme: {
-                primary: 'var(--success)',
-                secondary: 'white',
+        <AriaLiveProvider>
+          <AppInit />
+          <AppRoutes />
+          <Toaster
+            toastOptions={{
+              style: {
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
               },
-            },
-            error: {
-              iconTheme: {
-                primary: 'var(--danger)',
-                secondary: 'white',
+              success: {
+                iconTheme: {
+                  primary: 'var(--success)',
+                  secondary: 'white',
+                },
               },
-            },
-          }}
-        />
-        <OfflineIndicator />
-        <PWAUpdatePrompt />
-        <InstallPrompt />
+              error: {
+                iconTheme: {
+                  primary: 'var(--danger)',
+                  secondary: 'white',
+                },
+              },
+            }}
+          />
+          <OfflineIndicator />
+          <PWAUpdatePrompt />
+          <InstallPrompt />
+        </AriaLiveProvider>
       </AuthProvider>
     </BrowserRouter>
   );

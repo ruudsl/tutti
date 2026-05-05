@@ -181,6 +181,7 @@ flowchart LR
 ### Notenverwaltung
 
 - **Hochladen** — PDFs per Drag-and-Drop in die Dropzone ziehen; Metadaten werden automatisch aus dem Dateinamen geparst (`Titel_Arrangeur_Instrument_Tonart_Gruppennummer_Schlüssel.pdf`)
+- **Massenupload** — Mehrere Notenblätter gleichzeitig über eine ZIP-Datei hochladen
 - **Cloud-Import** — Noten direkt aus OneDrive/SharePoint oder Google Drive importieren, ohne sie vorher herunterzuladen
 - **Notenblätter** — Noten pro Instrument mit Filtern nach Titel, Instrument und Orchester
 - **Notentitel** — Metadaten pro Titel: Komponist, Arrangeur, Genre, Spieldauer, Schwierigkeitsgrad, YouTube-Link
@@ -194,6 +195,8 @@ flowchart LR
 
 - **Standard-Probentage** — Wiederkehrende Tage/Uhrzeiten pro Orchester festlegen
 - **Probeninstanzen** — Automatisch generiert oder manuell erstellt (regulär/extra/abgesagt)
+- **Wiederkehrende Proben** — Proben in Masse für einen Datumsbereich mit anpassbarer Häufigkeit erstellen
+- **Serienverwaltung** — Komplette Probenserien auf einmal löschen
 - **Spond-Integration** — Anwesenheitsdaten automatisch aus Spond synchronisieren
 - **Anwesenheitsübersicht** — Pro Mitglied: Anzahl anwesend, abwesend, Prozentsatz (filterbar nach Datum und Orchester)
 
@@ -214,6 +217,7 @@ flowchart LR
 
 - **Ausleihen** — Verleih von Notenmaterial an externe Organisationen erfassen
 - **Statusverfolgung** — Aktiv, überfällig, zurückgegeben mit automatischen Statusaktualisierungen
+- **Verleihhistorie** — Vollständige Verleihhistorie pro Notentitel einsehen
 - **Verfügbarkeit** — Überblick, welche Titel für den Verleih verfügbar sind
 
 ### Issues & Qualitätsmanagement
@@ -224,6 +228,7 @@ flowchart LR
 ### Konzerte & Ticketing
 
 - **Konzertmanagement** — Konzerte mit Datum, Ort und Programm erstellen und verwalten
+- **Anwesenheitsprognose** — KI-basierte Vorhersage der erwarteten Teilnahme auf Basis historischer Daten
 - **Ticketverkauf** — Tickets online verkaufen mit anpassbaren Preisen und Sitzkategorien
 - **Öffentlicher Ticketshop** — Kundenorientierte Seite für den Ticketkauf
 - **Ticket-Scanner** — QR-Code-Scanning zur Eingangskontrolle
@@ -239,9 +244,18 @@ flowchart LR
 - **Stimmgruppen** — Musiker nach Sektion/Stimmgruppe organisieren
 - **Belegungsübersicht** — Einsicht, welche Plätze pro Probe/Konzert belegt sind
 
-### Üben & Planung
+### Verfügbarkeitsverwaltung
 
-- **Übepläne** — Individuelle oder Sektions-Übepläne erstellen und teilen
+- **Persönliche Verfügbarkeit** — Mitglieder können ihren Verfügbarkeitsstatus (verfügbar/nicht verfügbar/vielleicht) für bestimmte Termine festlegen
+- **Massenverfügbarkeit** — Verfügbarkeit für mehrere Termine auf einmal festlegen
+- **Teamübersicht** — Teamverfügbarkeit für jeden Termin mit zusammenfassenden Statistiken einsehen
+- **Notizen** — Notizen hinzufügen, um den Verfügbarkeitsstatus zu erläutern
+
+### Übetracker
+
+- **Übeziele** — Persönliche Übeziele für Musikstücke festlegen
+- **Fortschrittsverfolgung** — Übesitzungen und Fortschritt im Zeitverlauf verfolgen
+- **Übestatistiken** — Statistiken und Trends der Übesitzungen einsehen
 - **IMSLP-Browser** — Kostenlose Noten auf IMSLP.org suchen und verlinken
 
 ### Sicherheit & Authentifizierung
@@ -257,9 +271,10 @@ flowchart LR
 
 - **Audit-Logs** — Sicherheitsprotokoll mit Benutzeraktionen
 - **Sitzungsverwaltung** — Aktive Benutzersitzungen einsehen und beenden
-- **Health-Dashboard** — Systemstatus und Leistungsüberwachung
+- **Systemzustand-Dashboard** — Echtzeit-Überwachung von Datenbank, Speicherplatz und Arbeitsspeicher mit automatischer Aktualisierung (nur Admin)
 - **Datenexport** — DSGVO-konformer Export personenbezogener Daten
 - **Entra-Sync** — Automatische Benutzersynchronisierung mit Microsoft Entra ID
+- **Changelog** — In-App-Versionshistorie mit Sprachunterstützung (NL/EN/DE)
 
 ### Weitere Funktionen
 
@@ -269,9 +284,10 @@ flowchart LR
 - **Backup & Restore** — Vollständige Datenbank mit Dateien als ZIP herunterladen/hochladen
 - **Aktivitätslog** — Nachverfolgen, wer was ansieht und herunterlädt
 - **Statistiken** — Dashboard mit meistgesehenen und meistgeladenen Stücken
-- **Changelog** — In-App-Versionshistorie
 - **Onboarding-Tour** — Geführte Tour für neue Benutzer
 - **Musiktools** — Eingebautes Metronom und Stimmgerät
+- **Favoriten** — Musikstücke als Favoriten markieren für schnellen Zugriff
+- **Zuletzt angesehen** — Schneller Zugriff auf kürzlich angesehene Elemente
 - **WCAG 2.1 AA** — Barrierefreie Oberfläche mit Tastaturnavigation und korrektem Kontrastverhältnis
 
 ## Screenshots

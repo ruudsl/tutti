@@ -23,6 +23,12 @@ import { useDebounce } from '../hooks/useDebounce';
 import type { MusicPiece } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
+import { EmptyState } from '../components/EmptyState';
+import { SortDropdown, useSortState, DEFAULT_MUSIC_SORT_OPTIONS } from '../components/SortDropdown';
+import { FavoriteButton } from '../components/FavoriteButton';
+import { FloatingActionButton } from '../components/FloatingActionButton';
+import { PdfThumbnail } from '../components/PdfThumbnail';
+import { Tooltip } from '../components/Tooltip';
 
 const PAGE_SIZE = 50;
 
@@ -44,6 +50,9 @@ export default function MusicPieces() {
   const [bulkListId, setBulkListId] = useState<string>('');
   const [showBulkActionsMenu, setShowBulkActionsMenu] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Sort state
+  const [sortState, setSortState] = useSortState<string>('name-asc', 'asc', 'music-pieces-sort');
 
   const canManage = user && ([ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] as string[]).includes(user.role);
 
@@ -74,9 +83,37 @@ export default function MusicPieces() {
   const { data: instruments = [], isLoading: instrumentsLoading } = useInstruments();
   const { data: musicLists = [] } = useMyMusicLists();
 
-  const pieces = paginatedData?.data ?? [];
+  const piecesRaw = paginatedData?.data ?? [];
   const totalPieces = paginatedData?.total ?? 0;
   const totalPages = paginatedData?.totalPages ?? 0;
+
+  // Sort pieces based on current sort state
+  const pieces = useMemo(() => {
+    const sorted = [...piecesRaw];
+    const { sortBy, direction } = sortState;
+    const isAsc = direction === 'asc';
+
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'name-asc':
+        case 'name-desc':
+          comparison = a.title.localeCompare(b.title, 'nl');
+          break;
+        case 'composer':
+          comparison = (a.arranger || '').localeCompare(b.arranger || '', 'nl');
+          break;
+        // date-based and last-viewed sorting fall back to title (no date fields on MusicPiece)
+        case 'date-newest':
+        case 'date-oldest':
+        case 'last-viewed':
+        default:
+          comparison = a.title.localeCompare(b.title, 'nl');
+      }
+      return isAsc ? comparison : -comparison;
+    });
+    return sorted;
+  }, [piecesRaw, sortState]);
 
   const updateMutation = useUpdateMusicPiece();
   const deleteMutation = useDeleteMusicPiece();
@@ -260,6 +297,14 @@ export default function MusicPieces() {
                 ))}
               </select>
             </div>
+            <div className="form-group">
+              <SortDropdown
+                options={DEFAULT_MUSIC_SORT_OPTIONS}
+                value={sortState}
+                onChange={setSortState}
+                compact
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -414,9 +459,23 @@ export default function MusicPieces() {
                       </td>
                     )}
                     <td>
-                      <strong>{piece.title}</strong>
-                      <br />
-                      <small className="text-light">{piece.originalFilename}</small>
+                      <div className="flex items-center gap-1">
+                        {piece.originalFilename?.toLowerCase().endsWith('.pdf') && (
+                          <PdfThumbnail
+                            src={`/api/music-pieces/${piece.id}/file`}
+                            width={40}
+                            showHoverOverlay={false}
+                            showSpinner={false}
+                            style={{ flexShrink: 0 }}
+                          />
+                        )}
+                        <FavoriteButton musicTitleId={piece.id} size="sm" />
+                        <div>
+                          <strong>{piece.title}</strong>
+                          <br />
+                          <small className="text-light">{piece.originalFilename}</small>
+                        </div>
+                      </div>
                     </td>
                     <td>{piece.arranger || '-'}</td>
                     <td>{piece.instrumentName || '-'}</td>
@@ -425,42 +484,46 @@ export default function MusicPieces() {
                     <td>
                       <div className="flex gap-1">
                         {piece.youtubeUrl && (
-                          <a
-                            href={piece.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-sm"
-                            aria-label={`YouTube: ${piece.title}`}
-                            title="YouTube preview"
-                          >
-                            <span aria-hidden="true">▶</span>
-                          </a>
+                          <Tooltip content="YouTube voorvertoning" position="top">
+                            <a
+                              href={piece.youtubeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline btn-sm"
+                              aria-label={`YouTube: ${piece.title}`}
+                            >
+                              <span aria-hidden="true">▶</span>
+                            </a>
+                          </Tooltip>
                         )}
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => handleDownload(piece.id)}
-                          disabled={downloading === piece.id}
-                          aria-label={`${t('common.download')}: ${piece.title}`}
-                          title={t('common.download')}
-                        >
-                          <span aria-hidden="true">⬇</span>
-                        </button>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => setEditingPiece({ ...piece })}
-                          aria-label={`${t('common.edit')}: ${piece.title}`}
-                          title={t('common.edit')}
-                        >
-                          <Icon name="pencil" size={16} />
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => setDeletingPiece(piece)}
-                          aria-label={`${t('common.delete')}: ${piece.title}`}
-                          title={t('common.delete')}
-                        >
-                          <Icon name="trash" size={16} />
-                        </button>
+                        <Tooltip content={t('common.download')} position="top">
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => handleDownload(piece.id)}
+                            disabled={downloading === piece.id}
+                            aria-label={`${t('common.download')}: ${piece.title}`}
+                          >
+                            <span aria-hidden="true">⬇</span>
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={t('common.edit')} position="top">
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => setEditingPiece({ ...piece })}
+                            aria-label={`${t('common.edit')}: ${piece.title}`}
+                          >
+                            <Icon name="pencil" size={16} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={t('common.delete')} position="top">
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => setDeletingPiece(piece)}
+                            aria-label={`${t('common.delete')}: ${piece.title}`}
+                          >
+                            <Icon name="trash" size={16} />
+                          </button>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>
@@ -468,10 +531,12 @@ export default function MusicPieces() {
               </tbody>
             </table>
           ) : (
-            <div className="empty-state">
-              <div className="empty-icon"><Icon name="music" size={48} /></div>
-              <p>{t('musicPieces.noPieces')}</p>
-            </div>
+            <EmptyState
+              variant={search || filterInstrument ? 'no-results' : 'no-items'}
+              icon="music"
+              title={search || filterInstrument ? t('musicPieces.noResultsTitle') : t('musicPieces.noPiecesTitle')}
+              description={search || filterInstrument ? t('musicPieces.noResultsDescription') : t('musicPieces.noPieces')}
+            />
           )}
         </div>
         {totalPages > 1 && (
@@ -732,6 +797,14 @@ export default function MusicPieces() {
           </div>
         </Modal>
       )}
+
+      {/* Floating Action Button for mobile */}
+      <FloatingActionButton
+        icon="refresh"
+        label={t('musicPieces.refreshLinks')}
+        onClick={() => refreshMutation.mutate()}
+        bottomOffset={60}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
 import { Icon } from './Icon';
 import { PdfAnnotator } from './PdfAnnotation';
+import { BluetoothPedalIndicator } from './BluetoothPedalIndicator';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -29,6 +30,8 @@ export interface PdfViewerProps {
   onPageChange?: (page: number, totalPages: number) => void;
   /** Enable swipe navigation (default: true) */
   enableSwipe?: boolean;
+  /** Show Bluetooth pedal connection indicator (default: false) */
+  showPedalIndicator?: boolean;
   /** Show page indicator (default: true) */
   showPageIndicator?: boolean;
   /** Custom class name */
@@ -68,6 +71,7 @@ export function PdfViewer({
   onPageChange,
   enableSwipe = true,
   showPageIndicator = true,
+  showPedalIndicator = false,
   className = '',
   fitMode = 'contain',
   enableZoom = true,
@@ -512,25 +516,85 @@ export function PdfViewer({
     dragStartRef.current = null;
   }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation - comprehensive shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        previousPage();
-      } else if (e.key === 'ArrowRight') {
-        nextPage();
-      } else if (e.key === '+' || e.key === '=') {
-        handleZoomIn();
-      } else if (e.key === '-') {
-        handleZoomOut();
-      } else if (e.key === '0') {
-        handleZoomReset();
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key) {
+        // Page navigation
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          previousPage();
+          break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
+          nextPage();
+          break;
+        case 'PageUp':
+          e.preventDefault();
+          previousPage();
+          break;
+        case 'PageDown':
+        case ' ': // Spacebar
+          e.preventDefault();
+          nextPage();
+          break;
+        case 'Home':
+          e.preventDefault();
+          goToPage(1);
+          break;
+        case 'End':
+          e.preventDefault();
+          goToPage(totalPages);
+          break;
+
+        // Zoom controls
+        case '+':
+        case '=':
+          e.preventDefault();
+          handleZoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          handleZoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          handleZoomReset();
+          break;
+
+        // Drawing mode toggle
+        case 'Escape':
+          if (drawingMode) {
+            setDrawingMode(false);
+          }
+          break;
+        case 'd':
+        case 'D':
+          if (!e.ctrlKey && !e.metaKey && musicPieceId) {
+            setDrawingMode(prev => !prev);
+          }
+          break;
+
+        // Dark mode toggle
+        case 'i':
+        case 'I':
+          if (!e.ctrlKey && !e.metaKey) {
+            toggleDarkMode();
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previousPage, nextPage, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [previousPage, nextPage, handleZoomIn, handleZoomOut, handleZoomReset, goToPage, totalPages, drawingMode, toggleDarkMode, musicPieceId]);
 
   // Calculate transform for page transition animation
   const getTransformStyle = useMemo(() => {
@@ -620,15 +684,13 @@ export function PdfViewer({
             />
             {/* Drawing annotation overlay */}
             {drawingMode && musicPieceId && canvasDimensions.width > 0 && (
-              <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 10 }}>
-                <PdfAnnotator
-                  musicPieceId={musicPieceId}
-                  pageNumber={currentPage}
-                  pageWidth={canvasDimensions.width / zoom}
-                  pageHeight={canvasDimensions.height / zoom}
-                  scale={zoom}
-                />
-              </div>
+              <PdfAnnotator
+                musicPieceId={musicPieceId}
+                pageNumber={currentPage}
+                pageWidth={canvasDimensions.width / zoom}
+                pageHeight={canvasDimensions.height / zoom}
+                scale={zoom}
+              />
             )}
           </div>
         </div>
@@ -652,6 +714,13 @@ export function PdfViewer({
 
         {/* Navigation Controls */}
         <div style={styles.controls}>
+          {showPedalIndicator && (
+            <BluetoothPedalIndicator
+              onPageNext={nextPage}
+              onPagePrevious={previousPage}
+              showBattery={true}
+            />
+          )}
           <button
             onClick={previousPage}
             disabled={currentPage <= 1}
@@ -709,7 +778,7 @@ export function PdfViewer({
                 aria-label={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
                 title={showAnnotationsPanel ? t('annotations.hideAnnotations') : t('annotations.showAnnotations')}
               >
-                &#9998;
+                <Icon name="MessageSquare" size={16} />
                 {annotations.length > 0 && (
                   <span style={{
                     position: 'absolute',
@@ -744,7 +813,7 @@ export function PdfViewer({
                 aria-label={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
                 title={drawingMode ? 'Stop tekenen' : 'Teken op bladmuziek'}
               >
-                &#9998;&#65039;
+                <Icon name="PenTool" size={16} />
               </button>
             )}
           </div>

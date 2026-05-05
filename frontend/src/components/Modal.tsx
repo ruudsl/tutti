@@ -1,5 +1,6 @@
-import { useEffect, useRef, useId, ReactNode } from 'react';
+import { useEffect, useRef, useId, ReactNode, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { Icon } from './Icon';
 
 interface ModalProps {
@@ -9,6 +10,8 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'small' | 'medium' | 'large';
   className?: string;
+  /** Enable swipe down to dismiss on mobile */
+  swipeToDismiss?: boolean;
 }
 
 /**
@@ -18,15 +21,52 @@ interface ModalProps {
  * - Focus trap
  * - Unique ARIA IDs per instance
  */
-export function Modal({ title, children, onClose, footer, size = 'medium', className = '' }: ModalProps) {
+export function Modal({ title, children, onClose, footer, size = 'medium', className = '', swipeToDismiss = false }: ModalProps) {
   const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+  const [swipeOffset, setSwipeOffset] = useState(0);
 
   // Keep onClose ref updated
   onCloseRef.current = onClose;
+
+  // Swipe to dismiss handling
+  const handleSwipeDown = useCallback(() => {
+    if (swipeToDismiss) {
+      onClose();
+    }
+  }, [swipeToDismiss, onClose]);
+
+  const handleSwipeMove = useCallback((_deltaX: number, deltaY: number) => {
+    if (!swipeToDismiss) return;
+    // Only track downward swipes
+    if (deltaY > 0) {
+      setSwipeOffset(Math.min(deltaY * 0.5, 150));
+    }
+  }, [swipeToDismiss]);
+
+  const handleSwipeEnd = useCallback((completed: boolean) => {
+    if (swipeOffset > 80 || completed) {
+      onClose();
+    } else {
+      setSwipeOffset(0);
+    }
+  }, [swipeOffset, onClose]);
+
+  const { ref: swipeRef } = useSwipeGesture<HTMLDivElement>(
+    {
+      onSwipeDown: handleSwipeDown,
+      onSwipeMove: handleSwipeMove,
+      onSwipeEnd: handleSwipeEnd,
+    },
+    {
+      threshold: 50,
+      preventScrollOnVerticalSwipe: false,
+      disabled: !swipeToDismiss,
+    }
+  );
 
   // Focus trap and cleanup - run only once on mount
   useEffect(() => {
@@ -77,13 +117,21 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
-        ref={modalRef}
+        ref={(el) => {
+          (modalRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+          (swipeRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        }}
         className={`modal ${sizeClass} ${className}`.trim()}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
+        style={{
+          transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined,
+          opacity: swipeOffset > 0 ? 1 - swipeOffset / 200 : 1,
+          transition: swipeOffset === 0 ? 'transform 0.2s ease, opacity 0.2s ease' : 'none',
+        }}
       >
         <div className="modal-header">
           <h3 className="modal-title" id={titleId}>{title}</h3>

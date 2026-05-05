@@ -1,10 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import { Icon } from '../components/Icon';
+import { ResponsiveTable, ColumnDefinition } from '../components/ResponsiveTable';
+import { Tooltip } from '../components/Tooltip';
 import {
   getRehearsals, createRehearsal, updateRehearsal, deleteRehearsal,
   getRehearsal, updateRehearsalPieces,
@@ -23,6 +25,7 @@ import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
 import { AddToCalendarButton } from '../components/CalendarSync';
+import AttendanceDashboard, { AttendanceMember as DashboardMember, RehearsalAttendance, AttendanceTrend, AttendanceFilters } from '../components/AttendanceDashboard';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -116,7 +119,7 @@ export default function Rehearsals() {
   const isAdmin = user?.role === ROLES.ADMIN;
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'rehearsals' | 'attendance'>('rehearsals');
+  const [activeTab, setActiveTab] = useState<'rehearsals' | 'attendance' | 'dashboard'>('rehearsals');
 
   // Attendance summary
   const [attendanceMembers, setAttendanceMembers] = useState<AttendanceMember[]>([]);
@@ -785,6 +788,21 @@ export default function Rehearsals() {
         >
           {t('rehearsals.attendance.title')}
         </button>
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          style={{
+            padding: '0.5rem 1.5rem',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'dashboard' ? 'bold' : 'normal',
+            borderBottom: activeTab === 'dashboard' ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom: '-2px',
+            color: activeTab === 'dashboard' ? 'var(--primary)' : 'inherit',
+          }}
+        >
+          {t('rehearsals.attendanceDashboard', 'Dashboard')}
+        </button>
       </div>
 
       {/* ===== ATTENDANCE TAB ===== */}
@@ -883,6 +901,50 @@ export default function Rehearsals() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ===== DASHBOARD TAB ===== */}
+      {activeTab === 'dashboard' && (
+        <AttendanceDashboard
+          members={sortedAttendance.map((m, i) => ({
+            id: m.spondMemberId || `member-${i}`,
+            name: m.name,
+            instrument: '',
+            presentCount: m.accepted,
+            absentCount: m.declined,
+            attendanceRate: m.total > 0 ? (m.accepted / m.total) * 100 : 0,
+          } as DashboardMember))}
+          rehearsals={rehearsals.map(r => ({
+            id: r.id,
+            date: r.date,
+            totalMembers: r.accepted_count + r.declined_count,
+            presentCount: r.accepted_count,
+            absentCount: r.declined_count,
+            attendanceRate: (r.accepted_count + r.declined_count) > 0
+              ? (r.accepted_count / (r.accepted_count + r.declined_count)) * 100
+              : 0,
+          } as RehearsalAttendance))}
+          trends={rehearsals.slice(0, 20).map(r => ({
+            date: r.date,
+            attendanceRate: (r.accepted_count + r.declined_count) > 0
+              ? (r.accepted_count / (r.accepted_count + r.declined_count)) * 100
+              : 0,
+            presentCount: r.accepted_count,
+            totalMembers: r.accepted_count + r.declined_count,
+          } as AttendanceTrend))}
+          sections={orchestras.map(o => o.name)}
+          onFilterChange={(filters: AttendanceFilters) => {
+            setAttendanceFrom(filters.dateFrom);
+            setAttendanceTo(filters.dateTo);
+            if (filters.section) {
+              const orchestra = orchestras.find(o => o.name === filters.section);
+              setAttendanceOrchestraId(orchestra?.id || '');
+            } else {
+              setAttendanceOrchestraId('');
+            }
+          }}
+          isLoading={attendanceLoading}
+        />
       )}
 
       {/* ===== REHEARSALS TAB ===== */}
@@ -1283,68 +1345,126 @@ export default function Rehearsals() {
           <h2 className="card-title">{t('rehearsals.upcoming')} ({upcoming.length})</h2>
         </div>
         <div className="card-body flush">
-          {upcoming.length > 0 ? (
-            <div>
-              {upcoming.map(r => (
-                <div
-                  key={r.id}
-                  style={{
-                    ...getTypeStyle(r.type),
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => handleOpenDetail(r.id)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div>
-                      <strong>{formatDate(r.date, t)}</strong>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                        {r.start_time} - {r.end_time}
-                        {r.location && ` · ${r.location}`}
-                        {r.orchestra_name && ` · ${r.orchestra_name}`}
-                      </div>
+          <ResponsiveTable<Rehearsal>
+            data={upcoming}
+            keyExtractor={(r) => r.id}
+            emptyMessage={t('rehearsals.noRehearsals')}
+            emptyIcon="calendar"
+            hoverable
+            onRowClick={(r) => handleOpenDetail(r.id)}
+            columns={[
+              {
+                id: 'date',
+                header: t('rehearsals.date'),
+                accessor: (r) => (
+                  <div style={getTypeStyle(r.type)}>
+                    <strong>{formatDate(r.date, t)}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                      {r.start_time} - {r.end_time}
                     </div>
-                    {r.type !== 'regular' && (
-                      <span className={`badge badge-${r.type === 'extra' ? 'warning' : 'danger'}`} style={{ fontSize: '0.7rem' }}>
-                        {t(`rehearsals.types.${r.type}`)}
-                      </span>
-                    )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {r.piece_count > 0 && (
-                      <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                        {r.piece_count} {t('rehearsals.pieces').toLowerCase()}
+                ),
+                priority: 1,
+                showInCard: true,
+              },
+              {
+                id: 'location',
+                header: t('rehearsals.location'),
+                accessor: (r) => r.location || '-',
+                priority: 2,
+                hideOnMobile: true,
+              },
+              {
+                id: 'orchestra',
+                header: t('rehearsals.orchestra'),
+                accessor: (r) => r.orchestra_name || t('rehearsals.allOrchestras'),
+                priority: 3,
+                hideOnMobile: true,
+              },
+              {
+                id: 'type',
+                header: t('rehearsals.type'),
+                accessor: (r) => (
+                  r.type !== 'regular' ? (
+                    <span className={`badge badge-${r.type === 'extra' ? 'warning' : 'danger'}`} style={{ fontSize: '0.7rem' }}>
+                      {t(`rehearsals.types.${r.type}`)}
+                    </span>
+                  ) : (
+                    <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
+                      {t('rehearsals.types.regular')}
+                    </span>
+                  )
+                ),
+                priority: 4,
+                hideOnMobile: true,
+              },
+              {
+                id: 'pieces',
+                header: t('rehearsals.pieces'),
+                accessor: (r) => (
+                  r.piece_count > 0 ? (
+                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                      {r.piece_count}
+                    </span>
+                  ) : '-'
+                ),
+                priority: 5,
+                hideOnMobile: true,
+                align: 'center',
+              },
+              {
+                id: 'attendance',
+                header: t('rehearsals.attendance.title'),
+                accessor: (r) => (
+                  (r.accepted_count > 0 || r.declined_count > 0) ? (
+                    <span style={{ fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                        <Icon name="check" size={12} />{r.accepted_count}
                       </span>
-                    )}
-                    {(r.accepted_count > 0 || r.declined_count > 0) && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                        <span style={{ color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
-                          <Icon name="check" size={12} />{r.accepted_count}
-                        </span>
-                        {' '}
-                        <span style={{ color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
-                          <Icon name="close" size={12} />{r.declined_count}
-                        </span>
+                      {' '}
+                      <span style={{ color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                        <Icon name="close" size={12} />{r.declined_count}
                       </span>
-                    )}
-                    {isManager && (
-                      <div style={{ display: 'flex', gap: '0.25rem' }} onClick={e => e.stopPropagation()}>
-                        <button className="btn btn-outline btn-sm" onClick={() => handleEdit(r)} style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}>
-                          {t('common.edit')}
-                        </button>
-                        <button className="btn btn-outline btn-sm" onClick={() => handleDelete(r.id)} style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--danger)' }}>
-                          {t('common.delete')}
-                        </button>
-                      </div>
-                    )}
+                    </span>
+                  ) : '-'
+                ),
+                priority: 3,
+                hideOnMobile: true,
+                align: 'center',
+              },
+              ...(isManager ? [{
+                id: 'actions',
+                header: t('common.actions'),
+                accessor: (r: Rehearsal): ReactNode => (
+                  <div style={{ display: 'flex', gap: '0.25rem' }} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                    <Tooltip content={t('common.edit')} position="top">
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => handleEdit(r)}
+                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
+                        aria-label={t('common.edit')}
+                      >
+                        <Icon name="pencil" size={14} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content={t('common.delete')} position="top">
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => handleDelete(r.id)}
+                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--danger)' }}
+                        aria-label={t('common.delete')}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </Tooltip>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="piece-meta" style={{ padding: '1rem' }}>{t('rehearsals.noRehearsals')}</p>
-          )}
+                ),
+                priority: 1,
+                showInCard: false,
+                sortable: false,
+              }] as ColumnDefinition<Rehearsal>[] : []),
+            ]}
+          />
         </div>
       </div>
       </>}
