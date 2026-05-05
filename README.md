@@ -295,13 +295,13 @@ flowchart LR
 
 ## Screenshots
 
-| Dashboard | Music Pieces |
+| Dashboard | Tools |
 |---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Music Pieces](docs/screenshots/music-pieces.png) |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Music Pieces](docs/screenshots/tools.png) |
 
-| Upload | Music Lists |
+| Upload | Instrument |
 |---|---|
-| ![Upload](docs/screenshots/upload.png) | ![Music Lists](docs/screenshots/music-lists.png) |
+| ![Upload](docs/screenshots/upload.png) | ![Music Lists](docs/screenshots/instrumentbeheer.png) |
 
 ## Installation
 
