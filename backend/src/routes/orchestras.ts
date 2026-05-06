@@ -26,6 +26,8 @@ const CACHE_PATH = '/api/orchestras';
  *         description: List of orchestras
  */
 router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 300, varyByAssociation: true }), asyncHandler(async (req: AuthRequest, res: Response) => {
+    logger.info(`Fetching orchestras for user ${req.user!.id}, associationId: ${req.user!.associationId}`);
+
     const orchestras = db.prepare(`
         SELECT o.id, o.name, o.created_at,
                (SELECT COUNT(*) FROM user_orchestras WHERE orchestra_id = o.id) as member_count,
@@ -34,6 +36,8 @@ router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 300, varyByAsso
         WHERE o.association_id = ?
         ORDER BY o.name
     `).all(req.user!.associationId);
+
+    logger.info(`Found ${orchestras.length} orchestras for association ${req.user!.associationId}`);
 
     res.json(orchestras.map((o: any) => ({
         id: o.id,
