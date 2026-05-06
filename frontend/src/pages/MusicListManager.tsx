@@ -102,6 +102,9 @@ export default function MusicListManager() {
       if (!selectedOrchestra || !currentExists) {
         setSelectedOrchestra(orchestras[0].id);
       }
+    } else if (selectedOrchestra) {
+      // No orchestras available, clear selection
+      setSelectedOrchestra('');
     }
   }, [orchestras, selectedOrchestra]);
 
