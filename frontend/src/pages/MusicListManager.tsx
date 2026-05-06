@@ -46,6 +46,7 @@ export default function MusicListManager() {
     queryKey: ['orchestras', user?.associationId],
     queryFn: getOrchestras,
     staleTime: 5 * 60 * 1000,
+    enabled: !!user?.associationId,
   });
 
   // React Query for genres
