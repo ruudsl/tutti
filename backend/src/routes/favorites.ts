@@ -24,12 +24,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     const favorites = db.prepare(`
         SELECT mt.id, mt.title, mt.arranger, mt.youtube_url, mt.duration_seconds, mt.grade,
                uf.created_at as favorited_at,
-               (SELECT COUNT(*) FROM music_pieces mp WHERE mp.title = mt.title AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')) as piece_count
+               (SELECT COUNT(*) FROM music_pieces mp WHERE mp.title = mt.title AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '') AND mp.association_id = ?) as piece_count
         FROM user_favorites uf
         JOIN music_titles mt ON uf.music_title_id = mt.id
-        WHERE uf.user_id = ?
+        WHERE uf.user_id = ? AND mt.association_id = ?
         ORDER BY uf.created_at DESC
-    `).all(req.user!.id);
+    `).all(req.user!.associationId, req.user!.id, req.user!.associationId);
 
     res.json(favorites.map((f: any) => ({
         id: f.id,
@@ -69,8 +69,9 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
 router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = addFavoriteSchema.parse(req.body);
 
-    // Check if title exists
-    const title = db.prepare('SELECT id FROM music_titles WHERE id = ?').get(data.musicTitleId);
+    // Check if title exists and belongs to user's association
+    const title = db.prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
+        .get(data.musicTitleId, req.user!.associationId);
     if (!title) {
         throw new ApiError(404, 'Titel niet gevonden.');
     }
@@ -144,9 +145,12 @@ router.delete('/:musicTitleId', authenticateToken, asyncHandler(async (req: Auth
  *         description: Favorite status
  */
 router.get('/check/:musicTitleId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const favorite = db.prepare(
-        'SELECT * FROM user_favorites WHERE user_id = ? AND music_title_id = ?'
-    ).get(req.user!.id, req.params.musicTitleId);
+    // Only return true if the title belongs to user's association
+    const favorite = db.prepare(`
+        SELECT uf.* FROM user_favorites uf
+        JOIN music_titles mt ON uf.music_title_id = mt.id
+        WHERE uf.user_id = ? AND uf.music_title_id = ? AND mt.association_id = ?
+    `).get(req.user!.id, req.params.musicTitleId, req.user!.associationId);
 
     res.json({ isFavorite: !!favorite });
 }));
