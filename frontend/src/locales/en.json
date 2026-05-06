@@ -3387,7 +3387,8 @@
     "roles": {
       "member": "Member",
       "board": "Board",
-      "admin": "Administrator"
+      "admin": "Administrator",
+      "super_admin": "Super Admin"
     },
     "tabs": {
       "associations": "Associations",

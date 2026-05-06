@@ -3488,7 +3488,8 @@
     "roles": {
       "member": "Mitglied",
       "board": "Vorstand",
-      "admin": "Administrator"
+      "admin": "Administrator",
+      "super_admin": "Super Admin"
     },
     "tabs": {
       "associations": "Vereine",

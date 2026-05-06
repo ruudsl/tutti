@@ -3543,7 +3543,8 @@
     "roles": {
       "member": "Lid",
       "board": "Bestuur",
-      "admin": "Beheerder"
+      "admin": "Beheerder",
+      "super_admin": "Super Admin"
     },
     "tabs": {
       "associations": "Verenigingen",

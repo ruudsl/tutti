@@ -327,24 +327,46 @@ router.delete('/super-admin/super-admins/:id', authenticateToken, asyncHandler(a
 // USER MULTI-ASSOCIATION ROUTES
 // ===========================================
 
+router.get('/am-i-super-admin', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
+    res.json({ isSuperAdmin: !!superAdmin });
+}));
+
 router.get('/my-associations', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associations = db.prepare(`
-        SELECT a.*, ua.role as my_role, ua.is_primary, ua.joined_at
-        FROM associations a
-        JOIN user_associations ua ON a.id = ua.association_id
-        WHERE ua.user_id = ? AND ua.status = 'active'
-        ORDER BY ua.is_primary DESC, a.name
-    `).all(req.user!.id);
+    // Check if user is a super admin
+    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
 
-    const currentAssoc = db.prepare(`
-        SELECT a.*, 'admin' as my_role, 1 as is_primary
-        FROM associations a
-        WHERE a.id = ?
-    `).get(req.user!.associationId) as any;
+    let associations: any[];
 
-    const assocIds = new Set((associations as any[]).map(a => a.id));
-    if (currentAssoc && !assocIds.has(currentAssoc.id)) {
-        associations.unshift(currentAssoc);
+    if (superAdmin) {
+        // Super admins see all associations
+        associations = db.prepare(`
+            SELECT a.*, 'super_admin' as my_role,
+                   CASE WHEN a.id = ? THEN 1 ELSE 0 END as is_primary
+            FROM associations a
+            ORDER BY a.name
+        `).all(req.user!.associationId);
+    } else {
+        // Regular users see only their memberships
+        associations = db.prepare(`
+            SELECT a.*, ua.role as my_role, ua.is_primary, ua.joined_at
+            FROM associations a
+            JOIN user_associations ua ON a.id = ua.association_id
+            WHERE ua.user_id = ? AND ua.status = 'active'
+            ORDER BY ua.is_primary DESC, a.name
+        `).all(req.user!.id);
+
+        // Include current association if not already in the list
+        const currentAssoc = db.prepare(`
+            SELECT a.*, 'admin' as my_role, 1 as is_primary
+            FROM associations a
+            WHERE a.id = ?
+        `).get(req.user!.associationId) as any;
+
+        const assocIds = new Set((associations as any[]).map(a => a.id));
+        if (currentAssoc && !assocIds.has(currentAssoc.id)) {
+            associations.unshift(currentAssoc);
+        }
     }
 
     res.json((associations as any[]).map(a => ({
@@ -365,21 +387,35 @@ router.post('/switch-association', authenticateToken, asyncHandler(async (req: A
         throw new ApiError(400, 'Association ID is verplicht.');
     }
 
-    const membership = db.prepare(`
-        SELECT * FROM user_associations
-        WHERE user_id = ? AND association_id = ? AND status = 'active'
-    `).get(req.user!.id, associationId);
-
-    const isCurrentAssoc = req.user!.associationId === associationId;
-
-    if (!membership && !isCurrentAssoc) {
-        throw new ApiError(403, 'Je bent geen lid van deze vereniging.');
+    // Check if association exists
+    const association = db.prepare('SELECT id FROM associations WHERE id = ?').get(associationId);
+    if (!association) {
+        throw new ApiError(404, 'Vereniging niet gevonden.');
     }
+
+    // Check if user is a super admin (can switch to any association)
+    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
+
+    if (!superAdmin) {
+        // Regular user: check membership or current association
+        const membership = db.prepare(`
+            SELECT * FROM user_associations
+            WHERE user_id = ? AND association_id = ? AND status = 'active'
+        `).get(req.user!.id, associationId);
+
+        const isCurrentAssoc = req.user!.associationId === associationId;
+
+        if (!membership && !isCurrentAssoc) {
+            throw new ApiError(403, 'Je bent geen lid van deze vereniging.');
+        }
+    }
+
+    // Update user's current association
+    db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(associationId, req.user!.id);
 
     res.json({
         message: 'Vereniging gewisseld.',
         associationId,
-        note: 'Client moet opnieuw authenticeren met de nieuwe vereniging context.'
     });
 }));
 
