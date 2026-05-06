@@ -45,6 +45,9 @@ export function AssociationSwitcher() {
                 localStorage.setItem('user', JSON.stringify(userData));
             }
 
+            // Clear React Query persisted cache to prevent stale association data
+            localStorage.removeItem('harmonie-query-cache');
+
             showSuccess(t('multiAssociation.switchedSuccess'));
             setIsOpen(false);
 
