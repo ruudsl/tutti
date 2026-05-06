@@ -68,6 +68,8 @@ import Practice from './pages/Practice';
 import Equipment from './pages/Equipment';
 import Uniforms from './pages/Uniforms';
 import InstrumentAssets from './pages/InstrumentAssets';
+import Events from './pages/Events';
+import MultiAssociation from './pages/MultiAssociation';
 
 // Seating management
 import Seating from './pages/Seating';
@@ -369,6 +371,22 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Concerts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="events"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+              <Events />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="multi-association"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <MultiAssociation />
             </PrivateRoute>
           }
         />
