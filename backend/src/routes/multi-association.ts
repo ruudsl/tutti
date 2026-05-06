@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest, generateToken } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
@@ -413,9 +413,24 @@ router.post('/switch-association', authenticateToken, asyncHandler(async (req: A
     // Update user's current association
     db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(associationId, req.user!.id);
 
+    // Get updated user data for new token
+    const updatedUser = db.prepare(`
+        SELECT id, email, role, association_id
+        FROM users WHERE id = ?
+    `).get(req.user!.id) as { id: string; email: string; role: string; association_id: string | null };
+
+    // Generate new token with updated association
+    const token = generateToken(updatedUser);
+
+    // Get association name for the response
+    const assocInfo = db.prepare('SELECT name, display_name FROM associations WHERE id = ?')
+        .get(associationId) as { name: string; display_name: string | null } | undefined;
+
     res.json({
         message: 'Vereniging gewisseld.',
         associationId,
+        associationName: assocInfo?.display_name || assocInfo?.name,
+        token,
     });
 }));
 

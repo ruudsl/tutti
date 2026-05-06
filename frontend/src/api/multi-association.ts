@@ -164,7 +164,12 @@ export async function getMyAssociations(): Promise<MyAssociation[]> {
     return response.data;
 }
 
-export async function switchAssociation(associationId: string): Promise<{ message: string; associationId: string }> {
+export async function switchAssociation(associationId: string): Promise<{
+    message: string;
+    associationId: string;
+    associationName?: string;
+    token: string;
+}> {
     const response = await api.post('/multi-association/switch-association', { associationId });
     return response.data;
 }

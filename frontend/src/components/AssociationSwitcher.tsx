@@ -7,7 +7,7 @@ import { showSuccess, showError } from '../utils/toast';
 
 export function AssociationSwitcher() {
     const { t } = useTranslation();
-    const { user, refreshProfile } = useAuth();
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -31,10 +31,24 @@ export function AssociationSwitcher() {
         }
 
         try {
-            await switchAssociation.mutateAsync(associationId);
-            await refreshProfile();
+            const result = await switchAssociation.mutateAsync(associationId);
+
+            // Store the new token
+            localStorage.setItem('token', result.token);
+
+            // Update cached user association
+            const cachedUser = localStorage.getItem('user');
+            if (cachedUser) {
+                const userData = JSON.parse(cachedUser);
+                userData.associationId = result.associationId;
+                userData.associationName = result.associationName;
+                localStorage.setItem('user', JSON.stringify(userData));
+            }
+
             showSuccess(t('multiAssociation.switchedSuccess'));
             setIsOpen(false);
+
+            // Full reload to refresh all data with new association context
             window.location.reload();
         } catch {
             showError(t('multiAssociation.switchError'));
