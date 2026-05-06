@@ -2,6 +2,32 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.13.0] - 2026-05-06
+
+### Toegevoegd
+
+#### Evenementen & Optredens Planner
+- **Complete event management** — Beheer evenementen met gedetailleerde locatie-info, tijdschema's en programma's
+- **Vervoerscoördinatie** — Auto's/bussen registreren met chauffeurs, passagiers en verzamelpunten
+- **Paklijsten** — Maak paklijsten met templates, track voortgang per item, wijs verantwoordelijken toe
+- **Weer-integratie** — Weersvoorspellingen voor buitenoptredens met waarschuwingen
+- **Aanwezigheidsbeheer** — Leden kunnen aanwezigheid aangeven met vervoersbehoefte en dieetwensen
+- **Locatiebeheer** — Beheer favoriete locaties met faciliteiten (stroom, kleedkamers, parkeren)
+
+#### Meerdere Verenigingen
+- **Multi-tenant ondersteuning** — Eén installatie voor meerdere orkesten/verenigingen
+- **Super admin panel** — Beheer alle verenigingen, abonnementen en limieten
+- **Lidmaatschap** — Gebruikers kunnen lid zijn van meerdere verenigingen
+- **Partnerschappen** — Verenigingen kunnen muziek, evenementen en leden delen
+- **Uitnodigingssysteem** — Nodig nieuwe leden uit met automatische rol-toewijzing
+- **Activiteitenlog** — Audit trail van alle belangrijke acties per vereniging
+
+### Technisch
+- 20+ nieuwe database tabellen voor events, locaties, vervoer, paklijsten en multi-tenant
+- Volledige API met ~50 nieuwe endpoints
+- React Query hooks voor alle nieuwe functionaliteit
+- Vertalingen in NL, EN en DE
+
 ## [1.12.0] - 2026-05-02
 
 ### Toegevoegd

@@ -3261,5 +3261,255 @@
     "subtotal": "Subtotal",
     "total": "Total",
     "info": "Service fees are calculated per ticket"
+  },
+  "events": {
+    "title": "Events",
+    "newEvent": "New Event",
+    "editEvent": "Edit Event",
+    "deleteEvent": "Delete event",
+    "deleteConfirm": "Are you sure you want to delete this event? This cannot be undone.",
+    "backToOverview": "Back to overview",
+    "upcoming": "Upcoming",
+    "noEvents": "No events found",
+    "status": {
+      "planned": "Planned",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    },
+    "type": {
+      "performance": "Performance",
+      "rehearsal": "Rehearsal",
+      "meeting": "Meeting",
+      "social": "Social",
+      "workshop": "Workshop",
+      "other": "Other"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "attending": "Attending",
+      "notAttending": "Not attending",
+      "maybe": "Maybe",
+      "pending": "Not filled in yet",
+      "needsTransport": "Needs transport",
+      "availableSeats": "Available seats"
+    },
+    "tabs": {
+      "details": "Details",
+      "schedule": "Schedule",
+      "transport": "Transport",
+      "packing": "Packing list",
+      "weather": "Weather"
+    },
+    "details": {
+      "general": "General Information",
+      "dressCode": "Dress code",
+      "orchestras": "Orchestras",
+      "meetingPoints": "Meeting points",
+      "members": "Members"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "addItem": "Add",
+      "noItems": "No schedule items yet",
+      "types": {
+        "general": "General",
+        "setup": "Setup",
+        "soundcheck": "Soundcheck",
+        "performance": "Performance",
+        "break": "Break",
+        "packdown": "Pack down"
+      }
+    },
+    "transport": {
+      "title": "Transport",
+      "addTransport": "Add transport",
+      "noTransport": "No transport arranged yet",
+      "driver": "Driver",
+      "departure": "Departure",
+      "capacity": "Capacity",
+      "passengers": "Passengers",
+      "types": {
+        "car": "Car",
+        "van": "Van",
+        "bus": "Bus",
+        "train": "Train",
+        "bike": "Bicycle",
+        "other": "Other"
+      }
+    },
+    "meetingPoints": {
+      "title": "Meeting points",
+      "addPoint": "Add meeting point",
+      "noPoints": "No meeting points yet"
+    },
+    "packing": {
+      "title": "Packing lists",
+      "addList": "Add packing list",
+      "noLists": "No packing lists yet",
+      "packed": "packed",
+      "progress": "Progress",
+      "categories": {
+        "general": "General",
+        "instruments": "Instruments",
+        "equipment": "Equipment",
+        "documents": "Documents",
+        "uniforms": "Uniforms",
+        "other": "Other"
+      }
+    },
+    "weather": {
+      "title": "Weather forecast",
+      "notSensitive": "This event is not marked as weather-sensitive.",
+      "enableHint": "Edit the event to enable weather forecasts.",
+      "noForecast": "No weather forecast available.",
+      "coordinatesHint": "Make sure the event has coordinates set.",
+      "temperature": "Temperature",
+      "wind": "Wind",
+      "precipitation": "Precipitation"
+    },
+    "locations": {
+      "title": "Locations",
+      "addLocation": "Add location",
+      "selectLocation": "Select location",
+      "noLocation": "No location",
+      "indoor": "Indoor",
+      "outdoor": "Outdoor",
+      "both": "Both",
+      "facilities": {
+        "electricity": "Electricity",
+        "changingRooms": "Changing rooms",
+        "storage": "Storage",
+        "catering": "Catering",
+        "parking": "Parking"
+      }
+    },
+    "form": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "start": "Start",
+      "end": "End",
+      "location": "Location",
+      "locationName": "Location name",
+      "city": "City",
+      "description": "Description",
+      "weatherSensitive": "Weather-sensitive (outdoor event)"
+    }
+  },
+  "multiAssociation": {
+    "title": "Association Management",
+    "subtitle": "Manage multiple associations and their settings",
+    "tabs": {
+      "associations": "Associations",
+      "invitations": "Invitations",
+      "partnerships": "Partnerships",
+      "members": "Members",
+      "superadmins": "Super Admins",
+      "activity": "Activity"
+    },
+    "associations": {
+      "title": "All Associations",
+      "newAssociation": "New Association",
+      "editAssociation": "Edit Association",
+      "deleteAssociation": "Delete association",
+      "deleteConfirm": "Are you sure you want to delete this association? All members must be removed first.",
+      "noAssociations": "No associations found",
+      "memberCount": "Members",
+      "orchestraCount": "Orchestras",
+      "subscription": "Subscription",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      }
+    },
+    "subscription": {
+      "title": "Subscription",
+      "tier": "Tier",
+      "expires": "Expires on",
+      "maxMembers": "Max Members",
+      "maxOrchestras": "Max Orchestras",
+      "maxStorage": "Max Storage (MB)",
+      "tiers": {
+        "free": "Free",
+        "basic": "Basic",
+        "pro": "Pro",
+        "enterprise": "Enterprise"
+      }
+    },
+    "invitations": {
+      "title": "Invitations",
+      "invite": "Invite",
+      "noInvitations": "No invitations",
+      "invitedBy": "Invited by",
+      "status": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "expired": "Expired"
+      }
+    },
+    "partnerships": {
+      "title": "Partnerships",
+      "noPartnerships": "No partnerships",
+      "outgoing": "Outgoing request",
+      "incoming": "Incoming request",
+      "shareMusic": "Share music",
+      "shareEvents": "Share events",
+      "shareMembers": "Share members",
+      "approve": "Approve",
+      "reject": "Reject",
+      "end": "End",
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "rejected": "Rejected"
+      }
+    },
+    "members": {
+      "title": "Members",
+      "noMembers": "No members found",
+      "removeConfirm": "Are you sure you want to remove this member from the association?",
+      "roles": {
+        "member": "Member",
+        "board": "Board",
+        "admin": "Admin"
+      }
+    },
+    "superAdmins": {
+      "title": "Super Administrators",
+      "warning": "Super admins have full access to all associations and their data. Be careful who you grant these permissions to.",
+      "noAdmins": "No super admins found",
+      "removeConfirm": "Are you sure you want to remove this super admin?"
+    },
+    "activity": {
+      "title": "Activity log",
+      "noActivity": "No activities found",
+      "actions": {
+        "association_created": "Association created",
+        "subscription_updated": "Subscription updated",
+        "invitation_sent": "Invitation sent",
+        "invitation_accepted": "Invitation accepted",
+        "partnership_requested": "Partnership requested",
+        "partnership_approved": "Partnership approved",
+        "partnership_rejected": "Partnership rejected",
+        "member_role_changed": "Role changed",
+        "member_removed": "Member removed"
+      }
+    },
+    "form": {
+      "name": "Name",
+      "displayName": "Display name",
+      "slug": "Slug",
+      "website": "Website",
+      "phone": "Phone",
+      "email": "Email",
+      "billingEmail": "Billing email",
+      "address": "Address",
+      "postalCode": "Postal code",
+      "city": "City",
+      "country": "Country",
+      "kvkNumber": "Chamber of Commerce number",
+      "iban": "IBAN"
+    }
   }
 }

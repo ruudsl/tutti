@@ -2,6 +2,32 @@
 
 All notable changes to this application are documented here.
 
+## [1.13.0] - 2026-05-06
+
+### Added
+
+#### Events & Performance Planner
+- **Complete event management** — Manage events with detailed location info, schedules and programs
+- **Transport coordination** — Register cars/buses with drivers, passengers and meeting points
+- **Packing lists** — Create packing lists with templates, track progress per item, assign responsible persons
+- **Weather integration** — Weather forecasts for outdoor performances with alerts
+- **Attendance management** — Members can indicate attendance with transport needs and dietary requirements
+- **Location management** — Manage favorite locations with facilities (power, changing rooms, parking)
+
+#### Multiple Associations
+- **Multi-tenant support** — One installation for multiple orchestras/associations
+- **Super admin panel** — Manage all associations, subscriptions and limits
+- **Membership** — Users can be members of multiple associations
+- **Partnerships** — Associations can share music, events and members
+- **Invitation system** — Invite new members with automatic role assignment
+- **Activity log** — Audit trail of all important actions per association
+
+### Technical
+- 20+ new database tables for events, locations, transport, packing lists and multi-tenant
+- Full API with ~50 new endpoints
+- React Query hooks for all new functionality
+- Translations in NL, EN and DE
+
 ## [1.12.0] - 2026-05-02
 
 ### Added
