@@ -47,15 +47,15 @@ export function AssociationSwitcher() {
                 localStorage.setItem('user', JSON.stringify(userData));
             }
 
-            // Clear all React Query caches (memory and persisted)
-            queryClient.clear();
+            // Set flag to clear cache on next page load, then clear persisted cache
+            localStorage.setItem('harmonie-clear-cache', 'true');
             localStorage.removeItem('harmonie-query-cache');
 
             showSuccess(t('multiAssociation.switchedSuccess'));
             setIsOpen(false);
 
-            // Full reload to refresh all data with new association context
-            window.location.reload();
+            // Navigate to home to ensure clean state
+            window.location.href = '/';
         } catch {
             showError(t('multiAssociation.switchError'));
         }
