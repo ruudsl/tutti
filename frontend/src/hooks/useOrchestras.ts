@@ -11,6 +11,7 @@ export function useOrchestras() {
   return useQuery({
     queryKey: queryKeys.orchestras,
     queryFn: getOrchestras,
+    staleTime: 0, // Always refetch
   });
 }
 
