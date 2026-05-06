@@ -429,6 +429,9 @@
     "refreshing": "Loading...",
     "count": "music pieces",
     "noPieces": "No music pieces found.",
+    "noPiecesTitle": "No music pieces",
+    "noResultsTitle": "No results",
+    "noResultsDescription": "No music pieces found for your search.",
     "edit": {
       "title": "Edit music piece",
       "pieceTitle": "Title",

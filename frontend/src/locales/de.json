@@ -445,6 +445,9 @@
     "refreshing": "Laden...",
     "count": "Musikstücke",
     "noPieces": "Keine Musikstücke gefunden.",
+    "noPiecesTitle": "Keine Musikstücke",
+    "noResultsTitle": "Keine Ergebnisse",
+    "noResultsDescription": "Keine Musikstücke für Ihre Suche gefunden.",
     "edit": {
       "title": "Musikstück bearbeiten",
       "pieceTitle": "Titel",

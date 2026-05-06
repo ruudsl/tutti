@@ -405,6 +405,9 @@
     "refreshing": "Bezig...",
     "count": "muziekstukken",
     "noPieces": "Geen muziekstukken gevonden.",
+    "noPiecesTitle": "Geen muziekstukken",
+    "noResultsTitle": "Geen resultaten",
+    "noResultsDescription": "Geen muziekstukken gevonden voor je zoekopdracht.",
     "edit": {
       "title": "Muziekstuk bewerken",
       "pieceTitle": "Titel",
