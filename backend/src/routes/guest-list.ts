@@ -59,10 +59,10 @@ router.get('/concerts/:id/guest-list', authenticateToken, requireRole('admin', '
     const search = req.query.search as string || '';
     const ticketsSent = req.query.ticketsSent as string;
 
-    // Check if concert exists
+    // Check if concert exists and belongs to user's association
     const concert = db.prepare(`
-        SELECT id, name, date FROM concerts WHERE id = ?
-    `).get(concertId) as { id: string; name: string; date: string } | undefined;
+        SELECT id, name, date FROM concerts WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as { id: string; name: string; date: string } | undefined;
 
     if (!concert) {
         throw new ApiError(404, 'Concert not found');
@@ -214,10 +214,10 @@ router.post('/concerts/:id/guest-list', authenticateToken, requireRole('admin', 
 
     const { organisation, name, email, ticketCount, ticketTypeId, notes } = validation.data;
 
-    // Check if concert exists
+    // Check if concert exists and belongs to user's association
     const concert = db.prepare(`
-        SELECT id, name, date, location FROM concerts WHERE id = ?
-    `).get(concertId) as { id: string; name: string; date: string; location: string | null } | undefined;
+        SELECT id, name, date, location FROM concerts WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as { id: string; name: string; date: string; location: string | null } | undefined;
 
     if (!concert) {
         throw new ApiError(404, 'Concert not found');

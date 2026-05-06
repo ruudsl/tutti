@@ -168,7 +168,8 @@ router.get('/search', authenticateToken, asyncHandler(async (req: AuthRequest, r
 router.get('/music-titles/:id/links', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const title = db.prepare('SELECT streaming_links FROM music_titles WHERE id = ?').get(id) as { streaming_links: string | null } | undefined;
+    const title = db.prepare('SELECT streaming_links FROM music_titles WHERE id = ? AND association_id = ?')
+        .get(id, req.user!.associationId) as { streaming_links: string | null } | undefined;
 
     if (!title) {
         throw new ApiError(404, 'Music title not found.');
