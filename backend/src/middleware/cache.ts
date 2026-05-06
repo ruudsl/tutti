@@ -90,11 +90,6 @@ export function cacheMiddleware(options: CacheOptions = {}) {
 
     const cacheKey = generateCacheKey(req, { ttlSeconds, varyByAssociation, keySuffix });
 
-    // Debug logging for cache
-    if (varyByAssociation) {
-      console.log(`[CACHE] Key: ${cacheKey}, User assocId: ${(req as any).user?.associationId}`);
-    }
-
     // Register this path for invalidation tracking
     cachedPaths.add(req.baseUrl + req.path);
 

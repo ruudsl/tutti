@@ -31,19 +31,14 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
             const user = db.prepare('SELECT association_id, role FROM users WHERE id = ?')
                 .get(decoded.id) as { association_id: string | null; role: string } | undefined;
 
-            const jwtAssocId = decoded.associationId;
             if (user) {
                 decoded.associationId = user.association_id;
                 decoded.role = user.role;
-                if (jwtAssocId !== user.association_id) {
-                    console.log(`[AUTH] Association mismatch for user ${decoded.id}: JWT=${jwtAssocId}, DB=${user.association_id}`);
-                }
             }
 
             req.user = decoded;
             next();
-        }).catch((err) => {
-            console.error('[AUTH] DB lookup failed:', err);
+        }).catch(() => {
             req.user = decoded;
             next();
         });
