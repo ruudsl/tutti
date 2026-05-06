@@ -41,12 +41,11 @@ export default function MusicListManager() {
   const [search, setSearch] = useState('');
   const [genreFilter, setGenreFilter] = useState<string>('');
 
-  // React Query for orchestras - include associationId in key to refetch on switch
+  // React Query for orchestras
   const { data: orchestras = [], isLoading } = useQuery({
-    queryKey: ['orchestras', user?.associationId],
+    queryKey: ['orchestras'],
     queryFn: getOrchestras,
     staleTime: 5 * 60 * 1000,
-    enabled: !!user?.associationId,
   });
 
   // React Query for genres
