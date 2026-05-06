@@ -44,6 +44,10 @@ const logoUpload = multer({
  * GET /settings - Get association settings (any authenticated user)
  */
 router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user!.associationId) {
+        throw new ApiError(404, 'Gebruiker heeft geen vereniging.');
+    }
+
     const association = db.prepare(`
         SELECT id, name, display_name, logo_path, theme_json
         FROM associations

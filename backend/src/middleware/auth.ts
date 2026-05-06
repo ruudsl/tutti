@@ -24,8 +24,24 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 
     try {
         const decoded = jwt.verify(token, config.jwtSecret) as UserPayload;
-        req.user = decoded;
-        next();
+
+        // Fetch current association_id from database to handle association switches
+        // Import db dynamically to avoid circular dependency
+        import('../database/connection').then(({ default: db }) => {
+            const user = db.prepare('SELECT association_id, role FROM users WHERE id = ?')
+                .get(decoded.id) as { association_id: string | null; role: string } | undefined;
+
+            if (user) {
+                decoded.associationId = user.association_id;
+                decoded.role = user.role;
+            }
+
+            req.user = decoded;
+            next();
+        }).catch(() => {
+            req.user = decoded;
+            next();
+        });
     } catch (error) {
         return res.status(401).json({ error: 'Token verlopen of ongeldig.' });
     }
