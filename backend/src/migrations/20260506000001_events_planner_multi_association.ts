@@ -446,6 +446,13 @@ export function up(): void {
         )
     `);
 
+    // Seed existing admins as super admins
+    const adminUsers = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all() as { id: string }[];
+    for (const user of adminUsers) {
+        db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`)
+            .run(`super-${user.id}`, user.id);
+    }
+
     // User membership in multiple associations
     db.exec(`
         CREATE TABLE IF NOT EXISTS user_associations (

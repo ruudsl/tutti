@@ -2633,25 +2633,6 @@
     "added": "Toegevoegd aan favorieten",
     "removed": "Verwijderd uit favorieten"
   },
-  "practice": {
-    "title": "Oefenlogboek",
-    "log": "Oefensessie loggen",
-    "duration": "Duur (minuten)",
-    "notes": "Notities",
-    "logged": "Oefensessie opgeslagen",
-    "stats": {
-      "title": "Statistieken",
-      "totalTime": "Totale oefentijd",
-      "weekTime": "Deze week",
-      "monthTime": "Deze maand",
-      "streak": "Huidige streak",
-      "mostPracticed": "Meest geoefend"
-    },
-    "empty": "Je hebt nog geen oefensessies gelogd.",
-    "minutes": "minuten",
-    "hours": "uren",
-    "days": "dagen"
-  },
   "recent": {
     "title": "Recent bekeken",
     "empty": "Je hebt nog geen items bekeken.",

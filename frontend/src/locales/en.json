@@ -3159,25 +3159,6 @@
     "added": "Added to favorites",
     "removed": "Removed from favorites"
   },
-  "practice": {
-    "title": "Practice Log",
-    "log": "Log practice session",
-    "duration": "Duration (minutes)",
-    "notes": "Notes",
-    "logged": "Practice session saved",
-    "stats": {
-      "title": "Statistics",
-      "totalTime": "Total practice time",
-      "weekTime": "This week",
-      "monthTime": "This month",
-      "streak": "Current streak",
-      "mostPracticed": "Most practiced"
-    },
-    "empty": "You have not logged any practice sessions yet.",
-    "minutes": "minutes",
-    "hours": "hours",
-    "days": "days"
-  },
   "recent": {
     "title": "Recently viewed",
     "empty": "You have not viewed any items yet.",
