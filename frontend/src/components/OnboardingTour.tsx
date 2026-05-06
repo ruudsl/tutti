@@ -26,7 +26,6 @@ const TOUR_STEPS: Record<string, TourStep[]> = {
     { titleKey: 'onboarding.mc.lists.title', descriptionKey: 'onboarding.mc.lists.description', icon: 'listMusic', navigateTo: '/lists' },
     { titleKey: 'onboarding.mc.pieces.title', descriptionKey: 'onboarding.mc.pieces.description', icon: 'music', navigateTo: '/music-pieces' },
     { titleKey: 'onboarding.mc.titles.title', descriptionKey: 'onboarding.mc.titles.description', icon: 'fileText', navigateTo: '/titles' },
-    { titleKey: 'onboarding.mc.instruments.title', descriptionKey: 'onboarding.mc.instruments.description', icon: 'music2', navigateTo: '/instruments' },
     { titleKey: 'onboarding.mc.done.title', descriptionKey: 'onboarding.mc.done.description', icon: 'partyPopper' },
   ],
   conductor: [

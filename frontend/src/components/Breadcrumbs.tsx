@@ -28,7 +28,6 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/titles': { labelKey: 'nav.titles', parent: '/' },
   '/upload': { labelKey: 'nav.upload', parent: '/' },
   '/concerts': { labelKey: 'nav.concerts', parent: '/' },
-  '/instruments': { labelKey: 'nav.instruments', parent: '/' },
   '/genres': { labelKey: 'nav.genres', parent: '/' },
   '/pdf-tools': { labelKey: 'nav.pdfTools', parent: '/' },
   '/loans': { labelKey: 'nav.loans', parent: '/' },
@@ -38,7 +37,6 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/settings': { labelKey: 'nav.settings', parent: '/' },
   '/theme': { labelKey: 'nav.theme', parent: '/' },
   '/changelog': { labelKey: 'nav.changelog', parent: '/' },
-  '/equipment': { labelKey: 'nav.equipment', parent: '/' },
   '/uniforms': { labelKey: 'nav.uniforms', parent: '/' },
   '/entra-sync': { labelKey: 'nav.entraSync', parent: '/' },
   '/onboarding': { labelKey: 'nav.onboarding', parent: '/' },
@@ -60,7 +58,6 @@ const nestedRouteConfig: Record<string, { labelKey: string; parent: string }> = 
   '/concerts/:id': { labelKey: 'breadcrumbs.concertDetail', parent: '/concerts' },
   '/music-pieces/:id': { labelKey: 'breadcrumbs.pieceDetail', parent: '/music-pieces' },
   '/titles/:id': { labelKey: 'breadcrumbs.titleDetail', parent: '/titles' },
-  '/equipment/:id': { labelKey: 'breadcrumbs.equipmentDetail', parent: '/equipment' },
   '/uniforms/:id': { labelKey: 'breadcrumbs.uniformDetail', parent: '/uniforms' },
   '/users/:id': { labelKey: 'breadcrumbs.userDetail', parent: '/users' },
 };
