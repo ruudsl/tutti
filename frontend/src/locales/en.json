@@ -3380,6 +3380,15 @@
   "multiAssociation": {
     "title": "Association Management",
     "subtitle": "Manage multiple associations and their settings",
+    "switchAssociation": "Switch association",
+    "yourAssociations": "Your associations",
+    "switchedSuccess": "Switched to association",
+    "switchError": "Could not switch association",
+    "roles": {
+      "member": "Member",
+      "board": "Board",
+      "admin": "Administrator"
+    },
     "tabs": {
       "associations": "Associations",
       "invitations": "Invitations",

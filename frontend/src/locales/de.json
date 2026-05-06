@@ -3481,6 +3481,15 @@
   "multiAssociation": {
     "title": "Vereinsverwaltung",
     "subtitle": "Verwalten Sie mehrere Vereine und ihre Einstellungen",
+    "switchAssociation": "Verein wechseln",
+    "yourAssociations": "Ihre Vereine",
+    "switchedSuccess": "Zu Verein gewechselt",
+    "switchError": "Konnte nicht zum Verein wechseln",
+    "roles": {
+      "member": "Mitglied",
+      "board": "Vorstand",
+      "admin": "Administrator"
+    },
     "tabs": {
       "associations": "Vereine",
       "invitations": "Einladungen",

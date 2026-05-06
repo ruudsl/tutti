@@ -15,6 +15,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import { Icon, type IconName } from './Icon';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
+import { AssociationSwitcher } from './AssociationSwitcher';
 import type { AssociationSettings } from '../types';
 
 interface SidebarNavItem {
@@ -278,6 +279,7 @@ export default function Layout() {
           </button>
           <NotificationBell />
           <RecentItems />
+          <AssociationSwitcher />
           <DarkModeToggle />
           <Link to="/profile" className="user-info header-user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="user-name">{user?.firstName} {user?.lastName}</div>

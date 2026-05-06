@@ -3536,6 +3536,15 @@
   "multiAssociation": {
     "title": "Verenigingen Beheer",
     "subtitle": "Beheer meerdere verenigingen en hun instellingen",
+    "switchAssociation": "Wissel van vereniging",
+    "yourAssociations": "Jouw verenigingen",
+    "switchedSuccess": "Gewisseld naar vereniging",
+    "switchError": "Kon niet wisselen van vereniging",
+    "roles": {
+      "member": "Lid",
+      "board": "Bestuur",
+      "admin": "Beheerder"
+    },
     "tabs": {
       "associations": "Verenigingen",
       "invitations": "Uitnodigingen",
