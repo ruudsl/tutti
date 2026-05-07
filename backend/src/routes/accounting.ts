@@ -1831,4 +1831,245 @@ router.post('/bank-statements/:statementId/lines/:lineId/book', authenticateToke
     });
 }));
 
+// =====================================================
+// BUDGET ROUTES
+// =====================================================
+
+// Get all budgets
+router.get('/budgets', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId } = req.query;
+
+    let query = `
+        SELECT b.*,
+               a.code AS account_code, a.name AS account_name,
+               cc.name AS cost_center_name,
+               fy.name AS fiscal_year_name,
+               u.first_name || ' ' || u.last_name AS created_by_name
+        FROM budgets b
+        LEFT JOIN accounts a ON b.account_id = a.id
+        LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id
+        LEFT JOIN fiscal_years fy ON b.fiscal_year_id = fy.id
+        LEFT JOIN users u ON b.created_by = u.id
+        WHERE b.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (fiscalYearId) {
+        query += ' AND b.fiscal_year_id = ?';
+        params.push(fiscalYearId);
+    }
+
+    query += ' ORDER BY a.code, b.name';
+
+    const budgets = db.prepare(query).all(...params);
+
+    // Calculate actual amounts per budget
+    const result = budgets.map((b: any) => {
+        const actualQuery = `
+            SELECT COALESCE(SUM(tl.debit_amount - tl.credit_amount), 0) AS actual
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ?
+              AND tl.account_id = ?
+              AND t.is_posted = 1
+              ${b.fiscal_year_id ? 'AND t.fiscal_year_id = ?' : ''}
+              ${b.cost_center_id ? 'AND tl.cost_center_id = ?' : ''}
+        `;
+        const actualParams: any[] = [associationId, b.account_id];
+        if (b.fiscal_year_id) actualParams.push(b.fiscal_year_id);
+        if (b.cost_center_id) actualParams.push(b.cost_center_id);
+
+        const actual = db.prepare(actualQuery).get(...actualParams) as any;
+
+        return {
+            id: b.id,
+            name: b.name,
+            amount: b.amount,
+            actual: Math.abs(actual?.actual || 0),
+            remaining: b.amount - Math.abs(actual?.actual || 0),
+            accountId: b.account_id,
+            accountCode: b.account_code,
+            accountName: b.account_name,
+            costCenterId: b.cost_center_id,
+            costCenterName: b.cost_center_name,
+            fiscalYearId: b.fiscal_year_id,
+            fiscalYearName: b.fiscal_year_name,
+            notes: b.notes,
+            createdBy: b.created_by,
+            createdByName: b.created_by_name,
+            createdAt: b.created_at,
+        };
+    });
+
+    res.json(result);
+}));
+
+// Get single budget
+router.get('/budgets/:id', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const budget = db.prepare(`
+        SELECT b.*,
+               a.code AS account_code, a.name AS account_name,
+               cc.name AS cost_center_name,
+               fy.name AS fiscal_year_name
+        FROM budgets b
+        LEFT JOIN accounts a ON b.account_id = a.id
+        LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id
+        LEFT JOIN fiscal_years fy ON b.fiscal_year_id = fy.id
+        WHERE b.id = ? AND b.association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!budget) {
+        throw new ApiError(404, 'Budget niet gevonden.');
+    }
+
+    res.json({
+        id: budget.id,
+        name: budget.name,
+        amount: budget.amount,
+        accountId: budget.account_id,
+        accountCode: budget.account_code,
+        accountName: budget.account_name,
+        costCenterId: budget.cost_center_id,
+        costCenterName: budget.cost_center_name,
+        fiscalYearId: budget.fiscal_year_id,
+        fiscalYearName: budget.fiscal_year_name,
+        notes: budget.notes,
+    });
+}));
+
+// Create budget
+router.post('/budgets', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { name, amount, accountId, costCenterId, fiscalYearId, notes } = req.body;
+
+    if (!name || !accountId) {
+        throw new ApiError(400, 'Naam en rekening zijn verplicht.');
+    }
+
+    const account = db.prepare('SELECT id FROM accounts WHERE id = ? AND association_id = ?').get(accountId, associationId);
+    if (!account) {
+        throw new ApiError(400, 'Ongeldige rekening.');
+    }
+
+    const budgetId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO budgets (id, association_id, fiscal_year_id, account_id, cost_center_id, name, amount, notes, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(budgetId, associationId, fiscalYearId || null, accountId, costCenterId || null, name, amount || 0, notes || null, req.user!.id, now, now);
+
+    res.status(201).json({
+        id: budgetId,
+        message: 'Budget aangemaakt.',
+    });
+}));
+
+// Update budget
+router.put('/budgets/:id', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { name, amount, accountId, costCenterId, fiscalYearId, notes } = req.body;
+
+    const budget = db.prepare('SELECT id FROM budgets WHERE id = ? AND association_id = ?').get(req.params.id, associationId);
+    if (!budget) {
+        throw new ApiError(404, 'Budget niet gevonden.');
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+    if (amount !== undefined) { updates.push('amount = ?'); params.push(amount); }
+    if (accountId !== undefined) { updates.push('account_id = ?'); params.push(accountId); }
+    if (costCenterId !== undefined) { updates.push('cost_center_id = ?'); params.push(costCenterId || null); }
+    if (fiscalYearId !== undefined) { updates.push('fiscal_year_id = ?'); params.push(fiscalYearId || null); }
+    if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+
+    if (updates.length > 0) {
+        updates.push('updated_at = ?');
+        params.push(new Date().toISOString());
+        params.push(req.params.id);
+
+        db.prepare(`UPDATE budgets SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    res.json({ message: 'Budget bijgewerkt.' });
+}));
+
+// Delete budget
+router.delete('/budgets/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const result = db.prepare('DELETE FROM budgets WHERE id = ? AND association_id = ?').run(req.params.id, associationId);
+
+    if (result.changes === 0) {
+        throw new ApiError(404, 'Budget niet gevonden.');
+    }
+
+    res.json({ message: 'Budget verwijderd.' });
+}));
+
+// Budget comparison report
+router.get('/reports/budget-comparison', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId } = req.query;
+
+    if (!fiscalYearId) {
+        throw new ApiError(400, 'Boekjaar is verplicht.');
+    }
+
+    const budgets = db.prepare(`
+        SELECT b.*, a.code AS account_code, a.name AS account_name, cc.name AS cost_center_name
+        FROM budgets b
+        LEFT JOIN accounts a ON b.account_id = a.id
+        LEFT JOIN cost_centers cc ON b.cost_center_id = cc.id
+        WHERE b.association_id = ? AND b.fiscal_year_id = ?
+        ORDER BY a.code
+    `).all(associationId, fiscalYearId);
+
+    const report = budgets.map((b: any) => {
+        const actualQuery = `
+            SELECT COALESCE(SUM(tl.debit_amount - tl.credit_amount), 0) AS actual
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ?
+              AND tl.account_id = ?
+              AND t.fiscal_year_id = ?
+              AND t.is_posted = 1
+              ${b.cost_center_id ? 'AND tl.cost_center_id = ?' : ''}
+        `;
+        const actualParams: any[] = [associationId, b.account_id, fiscalYearId];
+        if (b.cost_center_id) actualParams.push(b.cost_center_id);
+
+        const actual = db.prepare(actualQuery).get(...actualParams) as any;
+        const actualAmount = Math.abs(actual?.actual || 0);
+        const variance = b.amount - actualAmount;
+        const percentUsed = b.amount > 0 ? (actualAmount / b.amount) * 100 : 0;
+
+        return {
+            budgetId: b.id,
+            name: b.name,
+            accountCode: b.account_code,
+            accountName: b.account_name,
+            costCenterName: b.cost_center_name,
+            budgetAmount: b.amount,
+            actualAmount,
+            variance,
+            percentUsed: Math.round(percentUsed * 10) / 10,
+            status: percentUsed > 100 ? 'over' : percentUsed > 80 ? 'warning' : 'ok',
+        };
+    });
+
+    const totals = {
+        totalBudget: report.reduce((sum, r) => sum + r.budgetAmount, 0),
+        totalActual: report.reduce((sum, r) => sum + r.actualAmount, 0),
+        totalVariance: report.reduce((sum, r) => sum + r.variance, 0),
+    };
+
+    res.json({ budgets: report, totals });
+}));
+
 export default router;

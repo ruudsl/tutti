@@ -1,5 +1,8 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -8,6 +11,24 @@ import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { sendEmail } from '../utils/email';
 import { z } from 'zod';
+
+const uploadsDir = path.join(process.cwd(), 'uploads', 'email-attachments');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+});
 
 const router = Router();
 
@@ -616,12 +637,16 @@ router.post('/:id/test', authenticateToken, requireRole('admin'), asyncHandler(a
         email: email,
     });
 
+    // Get attachments for test email
+    const attachments = getCampaignAttachments(req.params.id);
+
     const success = await sendEmail({
         to: email,
         subject: `[TEST] ${campaign.subject}`,
         text,
         html,
         associationId,
+        attachments,
     });
 
     if (success) {
@@ -680,6 +705,19 @@ function getCampaignRecipients(campaign: any, associationId: string): { id: stri
     return db.prepare(query).all(...params) as any[];
 }
 
+// Helper: Get attachments for sending
+function getCampaignAttachments(campaignId: string): { filename: string; path: string; contentType: string }[] {
+    const attachments = db.prepare(
+        'SELECT filename, original_filename, mime_type FROM email_campaign_attachments WHERE campaign_id = ?'
+    ).all(campaignId) as any[];
+
+    return attachments.map((a: any) => ({
+        filename: a.original_filename,
+        path: path.join(uploadsDir, a.filename),
+        contentType: a.mime_type,
+    }));
+}
+
 // Helper: Send campaign emails
 async function sendCampaign(campaignId: string, associationId: string): Promise<void> {
     const campaign = db.prepare('SELECT * FROM email_campaigns WHERE id = ?').get(campaignId) as any;
@@ -698,6 +736,9 @@ async function sendCampaign(campaignId: string, associationId: string): Promise<
 
     const recipients = getCampaignRecipients(campaign, associationId);
     const totalRecipients = recipients.length;
+
+    // Get attachments for this campaign
+    const attachments = getCampaignAttachments(campaignId);
 
     // Update total count
     db.prepare('UPDATE email_campaigns SET total_recipients = ? WHERE id = ?').run(totalRecipients, campaignId);
@@ -725,6 +766,7 @@ async function sendCampaign(campaignId: string, associationId: string): Promise<
                 text,
                 html,
                 associationId,
+                attachments,
             });
 
             if (success) {
@@ -779,6 +821,123 @@ async function sendCampaign(campaignId: string, associationId: string): Promise<
         campaign.name
     );
 }
+
+// =====================================================
+// ATTACHMENT ROUTES
+// =====================================================
+
+// Get attachments for a campaign
+router.get('/:id/attachments', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const campaign = db.prepare(
+        'SELECT * FROM email_campaigns WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId);
+
+    if (!campaign) {
+        throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    const attachments = db.prepare(`
+        SELECT a.*, u.first_name || ' ' || u.last_name AS uploaded_by_name
+        FROM email_campaign_attachments a
+        LEFT JOIN users u ON a.uploaded_by = u.id
+        WHERE a.campaign_id = ?
+        ORDER BY a.uploaded_at DESC
+    `).all(req.params.id);
+
+    res.json(attachments.map((a: any) => ({
+        id: a.id,
+        filename: a.filename,
+        originalFilename: a.original_filename,
+        mimeType: a.mime_type,
+        fileSize: a.file_size,
+        uploadedBy: a.uploaded_by,
+        uploadedByName: a.uploaded_by_name,
+        uploadedAt: a.uploaded_at,
+    })));
+}));
+
+// Upload attachment
+router.post('/:id/attachments', authenticateToken, requireRole('admin', 'music_committee'), upload.single('file'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const campaign = db.prepare(
+        'SELECT * FROM email_campaigns WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!campaign) {
+        throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    if (campaign.status !== 'draft') {
+        throw new ApiError(400, 'Bijlagen kunnen alleen worden toegevoegd aan conceptcampagnes.');
+    }
+
+    if (!req.file) {
+        throw new ApiError(400, 'Geen bestand geüpload.');
+    }
+
+    const attachmentId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO email_campaign_attachments (id, campaign_id, filename, original_filename, mime_type, file_size, uploaded_by, uploaded_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        attachmentId,
+        req.params.id,
+        req.file.filename,
+        req.file.originalname,
+        req.file.mimetype,
+        req.file.size,
+        req.user!.id,
+        now
+    );
+
+    res.status(201).json({
+        id: attachmentId,
+        filename: req.file.filename,
+        originalFilename: req.file.originalname,
+        message: 'Bijlage geüpload.',
+    });
+}));
+
+// Delete attachment
+router.delete('/:id/attachments/:attachmentId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const campaign = db.prepare(
+        'SELECT * FROM email_campaigns WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!campaign) {
+        throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    if (campaign.status !== 'draft') {
+        throw new ApiError(400, 'Bijlagen kunnen alleen worden verwijderd van conceptcampagnes.');
+    }
+
+    const attachment = db.prepare(
+        'SELECT * FROM email_campaign_attachments WHERE id = ? AND campaign_id = ?'
+    ).get(req.params.attachmentId, req.params.id) as any;
+
+    if (!attachment) {
+        throw new ApiError(404, 'Bijlage niet gevonden.');
+    }
+
+    // Delete file from disk
+    const filePath = path.join(uploadsDir, attachment.filename);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+
+    // Delete from database
+    db.prepare('DELETE FROM email_campaign_attachments WHERE id = ?').run(req.params.attachmentId);
+
+    res.json({ message: 'Bijlage verwijderd.' });
+}));
 
 // Process scheduled campaigns (call this from a cron job or background worker)
 export async function processScheduledCampaigns(): Promise<void> {

@@ -67,6 +67,85 @@ export const migrations: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_wiki_attachments_page ON wiki_attachments(page_id)`,
     ],
   },
+  {
+    version: 5,
+    name: 'add_email_campaign_attachments',
+    up: [
+      `CREATE TABLE IF NOT EXISTS email_campaign_attachments (
+        id TEXT PRIMARY KEY,
+        campaign_id TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        mime_type TEXT,
+        file_size INTEGER,
+        uploaded_by TEXT NOT NULL,
+        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_email_campaign_attachments_campaign ON email_campaign_attachments(campaign_id)`,
+    ],
+  },
+  {
+    version: 6,
+    name: 'add_budgets_table',
+    up: [
+      `CREATE TABLE IF NOT EXISTS budgets (
+        id TEXT PRIMARY KEY,
+        association_id TEXT NOT NULL,
+        fiscal_year_id TEXT,
+        account_id TEXT NOT NULL,
+        cost_center_id TEXT,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        notes TEXT,
+        created_by TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+        FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_budgets_assoc ON budgets(association_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_budgets_fiscal_year ON budgets(fiscal_year_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_budgets_account ON budgets(account_id)`,
+    ],
+  },
+  {
+    version: 7,
+    name: 'add_equipment_damage_reports',
+    up: [
+      `CREATE TABLE IF NOT EXISTS equipment_damage_reports (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        reported_by TEXT NOT NULL,
+        description TEXT NOT NULL,
+        severity TEXT DEFAULT 'minor' CHECK (severity IN ('minor', 'moderate', 'severe', 'unusable')),
+        photos TEXT,
+        repair_cost REAL,
+        repaired_at DATETIME,
+        repaired_by TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (item_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+        FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (repaired_by) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_equipment_damage_item ON equipment_damage_reports(item_id)`,
+    ],
+  },
+  {
+    version: 8,
+    name: 'add_polls_auto_rehearsal',
+    up: [
+      `ALTER TABLE polls ADD COLUMN is_date_poll INTEGER DEFAULT 0`,
+      `ALTER TABLE polls ADD COLUMN auto_create_rehearsal INTEGER DEFAULT 0`,
+      `ALTER TABLE polls ADD COLUMN target_orchestra_id TEXT`,
+      `ALTER TABLE poll_options ADD COLUMN option_value TEXT`,
+    ],
+  },
 ];
 
 /**

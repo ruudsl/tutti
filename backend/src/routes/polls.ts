@@ -26,9 +26,13 @@ const createPollSchema = z.object({
     endsAt: z.string().datetime().optional(),
     targetOrchestras: z.array(z.string().uuid()).optional(),
     targetRoles: z.array(z.string()).optional(),
+    isDatePoll: z.boolean().default(false),
+    autoCreateRehearsal: z.boolean().default(false),
+    targetOrchestraId: z.string().uuid().optional(),
     options: z.array(z.object({
         text: z.string().min(1),
         description: z.string().optional(),
+        value: z.string().optional(),
     })).min(2, 'Minimaal 2 opties vereist.'),
 });
 
@@ -44,6 +48,9 @@ const updatePollSchema = z.object({
     endsAt: z.string().datetime().optional().nullable(),
     targetOrchestras: z.array(z.string().uuid()).optional(),
     targetRoles: z.array(z.string()).optional(),
+    isDatePoll: z.boolean().optional(),
+    autoCreateRehearsal: z.boolean().optional(),
+    targetOrchestraId: z.string().uuid().optional().nullable(),
 });
 
 const addOptionSchema = z.object({
@@ -358,8 +365,10 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cac
         INSERT INTO polls (
             id, association_id, title, description, poll_type, status,
             is_anonymous, show_results_before_close, allow_comments, max_selections,
-            starts_at, ends_at, target_orchestras, target_roles, created_by, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            starts_at, ends_at, target_orchestras, target_roles,
+            is_date_poll, auto_create_rehearsal, target_orchestra_id,
+            created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         pollId,
         associationId,
@@ -374,6 +383,9 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cac
         data.endsAt || null,
         data.targetOrchestras ? JSON.stringify(data.targetOrchestras) : null,
         data.targetRoles ? JSON.stringify(data.targetRoles) : null,
+        data.isDatePoll ? 1 : 0,
+        data.autoCreateRehearsal ? 1 : 0,
+        data.targetOrchestraId || null,
         req.user!.id,
         now,
         now
@@ -381,12 +393,12 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cac
 
     // Add options
     const insertOption = db.prepare(`
-        INSERT INTO poll_options (id, poll_id, option_text, option_description, sort_order)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO poll_options (id, poll_id, option_text, option_description, option_value, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     data.options.forEach((opt, index) => {
-        insertOption.run(uuidv4(), pollId, opt.text, opt.description || null, index);
+        insertOption.run(uuidv4(), pollId, opt.text, opt.description || null, opt.value || null, index);
     });
 
     logAuditEvent(
@@ -513,6 +525,83 @@ router.post('/:id/status', authenticateToken, requireRole('admin', 'music_commit
         WHERE id = ? AND association_id = ?
     `).run(status, closedAt, now, req.params.id, associationId);
 
+    let createdRehearsalId: string | null = null;
+
+    // Auto-create rehearsal if it's a date poll with auto_create_rehearsal enabled
+    if (status === 'closed' && poll.is_date_poll && poll.auto_create_rehearsal) {
+        // Find the winning option (most 'yes' votes)
+        const winningOption = db.prepare(`
+            SELECT o.*, COUNT(v.id) as vote_count
+            FROM poll_options o
+            LEFT JOIN poll_votes v ON o.id = v.option_id AND v.vote_value = 'yes'
+            WHERE o.poll_id = ?
+            GROUP BY o.id
+            ORDER BY vote_count DESC
+            LIMIT 1
+        `).get(req.params.id) as any;
+
+        if (winningOption && winningOption.option_value) {
+            // Parse the date from option_value (expected format: YYYY-MM-DD or ISO datetime)
+            const rehearsalDate = winningOption.option_value;
+
+            // Get the target orchestra (from poll or use first orchestra)
+            let orchestraId = poll.target_orchestra_id;
+            if (!orchestraId) {
+                const targetOrchestras = poll.target_orchestras ? JSON.parse(poll.target_orchestras) : [];
+                orchestraId = targetOrchestras[0];
+            }
+
+            if (orchestraId) {
+                // Check if rehearsal instance already exists for this date
+                const existingRehearsal = db.prepare(`
+                    SELECT id FROM rehearsal_instances
+                    WHERE orchestra_id = ? AND date = ?
+                `).get(orchestraId, rehearsalDate.split('T')[0]);
+
+                if (!existingRehearsal) {
+                    // Get orchestra default rehearsal settings
+                    const orchestra = db.prepare(`
+                        SELECT default_rehearsal_day, default_start_time, default_end_time, default_location
+                        FROM orchestras WHERE id = ?
+                    `).get(orchestraId) as any;
+
+                    const rehearsalId = uuidv4();
+                    const startTime = orchestra?.default_start_time || '19:30';
+                    const endTime = orchestra?.default_end_time || '22:00';
+                    const location = orchestra?.default_location || '';
+
+                    db.prepare(`
+                        INSERT INTO rehearsal_instances (
+                            id, orchestra_id, date, start_time, end_time, location,
+                            status, notes, created_by, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?)
+                    `).run(
+                        rehearsalId,
+                        orchestraId,
+                        rehearsalDate.split('T')[0],
+                        startTime,
+                        endTime,
+                        location,
+                        `Automatisch aangemaakt vanuit poll: ${poll.title}`,
+                        req.user!.id,
+                        now
+                    );
+
+                    createdRehearsalId = rehearsalId;
+
+                    logAuditEvent(
+                        req.user!.id,
+                        'rehearsal_auto_created',
+                        'rehearsal_instance',
+                        rehearsalId,
+                        `Auto-created from poll: ${poll.title}`,
+                        { pollId: poll.id, date: rehearsalDate }
+                    );
+                }
+            }
+        }
+    }
+
     logAuditEvent(
         req.user!.id,
         'poll_status_changed',
@@ -522,7 +611,10 @@ router.post('/:id/status', authenticateToken, requireRole('admin', 'music_commit
         { oldStatus: poll.status, newStatus: status }
     );
 
-    res.json({ message: `Poll status gewijzigd naar ${status}.` });
+    res.json({
+        message: `Poll status gewijzigd naar ${status}.`,
+        createdRehearsalId,
+    });
 }));
 
 // Delete poll

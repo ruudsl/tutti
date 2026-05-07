@@ -597,4 +597,200 @@ router.get(
   })
 );
 
+// =====================================================
+// DAMAGE REPORTS
+// =====================================================
+
+const createDamageReportSchema = z.object({
+  description: z.string().min(1, 'Beschrijving is verplicht'),
+  severity: z.enum(['minor', 'moderate', 'severe', 'unusable']),
+  photos: z.array(z.string()).optional(),
+  repairCost: z.number().optional(),
+  notes: z.string().optional(),
+});
+
+// GET /equipment/:id/damage - List damage reports for an item
+router.get(
+  '/:id/damage',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const item = db.prepare(`
+      SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).get(req.params.id, associationId);
+
+    if (!item) {
+      throw new ApiError(404, 'Item niet gevonden.');
+    }
+
+    const reports = db.prepare(`
+      SELECT d.*,
+             u1.first_name || ' ' || u1.last_name AS reported_by_name,
+             u2.first_name || ' ' || u2.last_name AS repaired_by_name
+      FROM equipment_damage_reports d
+      LEFT JOIN users u1 ON d.reported_by = u1.id
+      LEFT JOIN users u2 ON d.repaired_by = u2.id
+      WHERE d.item_id = ?
+      ORDER BY d.created_at DESC
+    `).all(req.params.id);
+
+    res.json(reports.map((r: any) => ({
+      id: r.id,
+      description: r.description,
+      severity: r.severity,
+      photos: r.photos ? JSON.parse(r.photos) : [],
+      repairCost: r.repair_cost,
+      repairedAt: r.repaired_at,
+      repairedBy: r.repaired_by,
+      repairedByName: r.repaired_by_name,
+      notes: r.notes,
+      reportedBy: r.reported_by,
+      reportedByName: r.reported_by_name,
+      createdAt: r.created_at,
+    })));
+  })
+);
+
+// POST /equipment/:id/damage - Report damage
+router.post(
+  '/:id/damage',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const data = createDamageReportSchema.parse(req.body);
+
+    const item = db.prepare(`
+      SELECT id, condition FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).get(req.params.id, associationId) as any;
+
+    if (!item) {
+      throw new ApiError(404, 'Item niet gevonden.');
+    }
+
+    const reportId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO equipment_damage_reports (id, item_id, reported_by, description, severity, photos, repair_cost, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      reportId,
+      req.params.id,
+      req.user!.id,
+      data.description,
+      data.severity,
+      data.photos ? JSON.stringify(data.photos) : null,
+      data.repairCost || null,
+      data.notes || null,
+      now
+    );
+
+    // Update item condition based on severity
+    const conditionMap: Record<string, string> = {
+      minor: 'fair',
+      moderate: 'poor',
+      severe: 'poor',
+      unusable: 'broken',
+    };
+
+    const newCondition = conditionMap[data.severity];
+    if (newCondition) {
+      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?')
+        .run(newCondition, data.severity === 'unusable' ? 'repair' : item.status, req.params.id);
+    }
+
+    res.status(201).json({
+      id: reportId,
+      message: 'Schade gerapporteerd.',
+    });
+  })
+);
+
+// PATCH /equipment/:id/damage/:reportId - Update damage report (mark as repaired)
+router.patch(
+  '/:id/damage/:reportId',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { repairedAt, repairCost, notes } = req.body;
+
+    const item = db.prepare(`
+      SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).get(req.params.id, associationId);
+
+    if (!item) {
+      throw new ApiError(404, 'Item niet gevonden.');
+    }
+
+    const report = db.prepare(`
+      SELECT id FROM equipment_damage_reports WHERE id = ? AND item_id = ?
+    `).get(req.params.reportId, req.params.id);
+
+    if (!report) {
+      throw new ApiError(404, 'Schaderapport niet gevonden.');
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (repairedAt !== undefined) {
+      updates.push('repaired_at = ?');
+      params.push(repairedAt);
+      updates.push('repaired_by = ?');
+      params.push(req.user!.id);
+    }
+    if (repairCost !== undefined) {
+      updates.push('repair_cost = ?');
+      params.push(repairCost);
+    }
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      params.push(notes);
+    }
+
+    if (updates.length > 0) {
+      params.push(req.params.reportId);
+      db.prepare(`UPDATE equipment_damage_reports SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    // If marked as repaired, update item condition
+    if (repairedAt) {
+      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?')
+        .run('good', 'available', req.params.id);
+    }
+
+    res.json({ message: 'Schaderapport bijgewerkt.' });
+  })
+);
+
+// DELETE /equipment/:id/damage/:reportId - Delete damage report
+router.delete(
+  '/:id/damage/:reportId',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const item = db.prepare(`
+      SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).get(req.params.id, associationId);
+
+    if (!item) {
+      throw new ApiError(404, 'Item niet gevonden.');
+    }
+
+    const result = db.prepare(`
+      DELETE FROM equipment_damage_reports WHERE id = ? AND item_id = ?
+    `).run(req.params.reportId, req.params.id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Schaderapport niet gevonden.');
+    }
+
+    res.json({ message: 'Schaderapport verwijderd.' });
+  })
+);
+
 export default router;

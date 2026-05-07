@@ -94,19 +94,27 @@ const getFromAddress = (associationId?: string | null): string => {
   return process.env.SMTP_FROM || '"Harmonie App" <noreply@harmonie.app>';
 };
 
+interface EmailAttachment {
+  filename: string;
+  path?: string;
+  content?: Buffer | string;
+  contentType?: string;
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
   text: string;
   html?: string;
   associationId?: string | null;
+  attachments?: EmailAttachment[];
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  const { to, subject, text, html, associationId } = options;
+  const { to, subject, text, html, associationId, attachments } = options;
 
   // Log email for development/debugging
-  logger.info(`Sending email to ${to}: ${subject}`);
+  logger.info(`Sending email to ${to}: ${subject}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
 
   const transporter = getSmtpTransporter(associationId);
 
@@ -117,6 +125,9 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     logger.info(`To: ${to}`);
     logger.info(`Subject: ${subject}`);
     logger.info(`Body: ${text}`);
+    if (attachments?.length) {
+      logger.info(`Attachments: ${attachments.map(a => a.filename).join(', ')}`);
+    }
     return true; // Pretend it was sent successfully
   }
 
@@ -128,6 +139,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       subject,
       text,
       html: html || text,
+      attachments: attachments?.map(a => ({
+        filename: a.filename,
+        path: a.path,
+        content: a.content,
+        contentType: a.contentType,
+      })),
     });
 
     logger.info(`Email sent successfully: ${info.messageId}`);
