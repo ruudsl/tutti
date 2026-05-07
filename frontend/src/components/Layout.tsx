@@ -140,6 +140,17 @@ const navGroups: SidebarNavGroup[] = [
     ],
   },
   {
+    titleKey: 'sidebar.content',
+    icon: 'fileText',
+    basePaths: ['/wiki', '/outfits', '/performances', '/workflows'],
+    items: [
+      { path: '/wiki', labelKey: 'nav.wiki' },
+      { path: '/outfits', labelKey: 'nav.outfits' },
+      { path: '/performances', labelKey: 'nav.performances' },
+      { path: '/workflows', labelKey: 'nav.workflows', roles: [ROLES.ADMIN] },
+    ],
+  },
+  {
     titleKey: 'sidebar.admin',
     icon: 'settings',
     basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields', '/accounting'],

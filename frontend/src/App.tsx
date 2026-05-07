@@ -46,6 +46,12 @@ import Tours from './pages/Tours';
 import Resources from './pages/Resources';
 import Equipment from './pages/Equipment';
 
+// Phase E: Automation + Content
+import Outfits from './pages/Outfits';
+import Wiki from './pages/Wiki';
+import Workflows from './pages/Workflows';
+import Performances from './pages/Performances';
+
 // Music management
 import MusicPieces from './pages/MusicPieces';
 import MusicTitles from './pages/MusicTitles';
@@ -252,6 +258,18 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
+        {/* Phase E: Automation + Content */}
+        <Route path="outfits" element={<Outfits />} />
+        <Route path="wiki" element={<Wiki />} />
+        <Route
+          path="workflows"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Workflows />
+            </PrivateRoute>
+          }
+        />
+        <Route path="performances" element={<Performances />} />
         <Route
           path="music-pieces"
           element={

@@ -105,6 +105,12 @@ import projectsRoutes from './routes/projects';
 import toursRoutes from './routes/tours';
 import resourcesRoutes from './routes/resources';
 
+// Phase E routes
+import outfitsRoutes from './routes/outfits';
+import wikiRoutes from './routes/wiki';
+import workflowsRoutes from './routes/workflows';
+import performancesRoutes from './routes/performances';
+
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
 
@@ -288,6 +294,12 @@ app.use('/api/accounting', accountingRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/resources', resourcesRoutes);
+
+// Phase E routes
+app.use('/api/outfits', outfitsRoutes);
+app.use('/api/wiki', wikiRoutes);
+app.use('/api/workflows', workflowsRoutes);
+app.use('/api/performances', performancesRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);

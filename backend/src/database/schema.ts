@@ -3182,4 +3182,228 @@ CREATE TABLE IF NOT EXISTS equipment_reservations (
 CREATE INDEX IF NOT EXISTS idx_equipment_reservations_equipment ON equipment_reservations(equipment_id);
 CREATE INDEX IF NOT EXISTS idx_equipment_reservations_user ON equipment_reservations(user_id);
 CREATE INDEX IF NOT EXISTS idx_equipment_reservations_dates ON equipment_reservations(start_date, end_date);
+
+-- ===========================================
+-- PHASE E: OUTFITS MODULE
+-- ===========================================
+
+-- Outfit definitions (concert attire)
+CREATE TABLE IF NOT EXISTS outfits (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color_code TEXT,
+    image_path TEXT,
+    items TEXT, -- JSON array of required items
+    is_default INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_outfits_association ON outfits(association_id);
+
+-- Link concerts to outfits
+CREATE TABLE IF NOT EXISTS concert_outfits (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    outfit_id TEXT NOT NULL,
+    notes TEXT,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (outfit_id) REFERENCES outfits(id) ON DELETE CASCADE,
+    UNIQUE(concert_id, outfit_id)
+);
+
+-- ===========================================
+-- PHASE E: PUBLIC CALENDAR EMBEDDING
+-- ===========================================
+
+-- Public calendar settings (for website embed)
+CREATE TABLE IF NOT EXISTS public_calendar_settings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL UNIQUE,
+    is_enabled INTEGER DEFAULT 0,
+    embed_token TEXT UNIQUE,
+    show_concert_details INTEGER DEFAULT 1,
+    show_rehearsals INTEGER DEFAULT 0,
+    show_locations INTEGER DEFAULT 1,
+    custom_css TEXT,
+    allowed_origins TEXT, -- JSON array of allowed embed origins
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- ===========================================
+-- PHASE E: WIKI MODULE
+-- ===========================================
+
+-- Wiki pages
+CREATE TABLE IF NOT EXISTS wiki_pages (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    content_format TEXT DEFAULT 'markdown' CHECK (content_format IN ('markdown', 'html')),
+    parent_id TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_published INTEGER DEFAULT 1,
+    visibility TEXT DEFAULT 'members' CHECK (visibility IN ('public', 'members', 'committee', 'admin')),
+    allow_comments INTEGER DEFAULT 0,
+    is_pinned INTEGER DEFAULT 0,
+    view_count INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    updated_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES wiki_pages(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(association_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_association ON wiki_pages(association_id);
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_slug ON wiki_pages(slug);
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_parent ON wiki_pages(parent_id);
+
+-- Wiki page versions (history)
+CREATE TABLE IF NOT EXISTS wiki_page_versions (
+    id TEXT PRIMARY KEY,
+    page_id TEXT NOT NULL,
+    version_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    change_summary TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(page_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_versions_page ON wiki_page_versions(page_id);
+
+-- Wiki attachments
+CREATE TABLE IF NOT EXISTS wiki_attachments (
+    id TEXT PRIMARY KEY,
+    page_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER,
+    mime_type TEXT,
+    uploaded_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- ===========================================
+-- PHASE E: WORKFLOW AUTOMATION
+-- ===========================================
+
+-- Workflow definitions
+CREATE TABLE IF NOT EXISTS workflows (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    run_once_per_entity INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflows_association ON workflows(association_id);
+CREATE INDEX IF NOT EXISTS idx_workflows_active ON workflows(is_active);
+
+-- Workflow triggers
+CREATE TABLE IF NOT EXISTS workflow_triggers (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    trigger_type TEXT NOT NULL CHECK (trigger_type IN (
+        'schedule', 'event', 'date_field', 'manual'
+    )),
+    event_name TEXT, -- e.g., 'user.created', 'concert.upcoming', 'rehearsal.reminder'
+    schedule_cron TEXT, -- For schedule triggers
+    date_field_entity TEXT, -- e.g., 'concert', 'rehearsal'
+    date_field_name TEXT, -- e.g., 'date', 'registration_deadline'
+    days_before INTEGER DEFAULT 0,
+    days_after INTEGER DEFAULT 0,
+    time_of_day TEXT, -- HH:MM format
+    conditions TEXT, -- JSON conditions
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_triggers_workflow ON workflow_triggers(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_triggers_type ON workflow_triggers(trigger_type);
+
+-- Workflow actions
+CREATE TABLE IF NOT EXISTS workflow_actions (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    action_type TEXT NOT NULL CHECK (action_type IN (
+        'send_email', 'send_notification', 'create_task', 'update_field',
+        'add_to_group', 'remove_from_group', 'webhook', 'delay'
+    )),
+    action_order INTEGER NOT NULL DEFAULT 0,
+    config TEXT NOT NULL, -- JSON configuration for the action
+    conditions TEXT, -- JSON conditions for this specific action
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_actions_workflow ON workflow_actions(workflow_id);
+
+-- Workflow execution log
+CREATE TABLE IF NOT EXISTS workflow_executions (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    trigger_id TEXT,
+    triggered_by TEXT, -- 'system', 'manual', 'schedule'
+    triggered_by_user_id TEXT,
+    entity_type TEXT, -- e.g., 'user', 'concert', 'rehearsal'
+    entity_id TEXT,
+    status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    started_at DATETIME,
+    completed_at DATETIME,
+    error_message TEXT,
+    execution_log TEXT, -- JSON log of actions executed
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+    FOREIGN KEY (trigger_id) REFERENCES workflow_triggers(id) ON DELETE SET NULL,
+    FOREIGN KEY (triggered_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_workflow ON workflow_executions(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_status ON workflow_executions(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_entity ON workflow_executions(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_date ON workflow_executions(created_at);
+
+-- Workflow entity tracking (to prevent duplicate runs)
+CREATE TABLE IF NOT EXISTS workflow_entity_runs (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    trigger_id TEXT NOT NULL,
+    last_run_at DATETIME NOT NULL,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+    FOREIGN KEY (trigger_id) REFERENCES workflow_triggers(id) ON DELETE CASCADE,
+    UNIQUE(workflow_id, entity_type, entity_id, trigger_id)
+);
 `;
