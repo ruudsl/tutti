@@ -9,6 +9,8 @@ import { z } from 'zod';
 
 const router = Router();
 
+const sanitizeForLog = (value: unknown): string => String(value).replace(/[\r\n]/g, '');
+
 // ===========================================
 // VALIDATION SCHEMAS
 // ===========================================
@@ -286,7 +288,7 @@ router.put('/locations/:id', authenticateToken, requireRole('board', 'admin'), a
         db.prepare(`UPDATE event_locations SET ${updates.join(', ')} WHERE id = ?`).run(...values);
     }
 
-    logger.info(`Event location updated: ${req.params.id}`, { updatedBy: req.user!.id });
+    logger.info(`Event location updated: ${sanitizeForLog(req.params.id)}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Locatie bijgewerkt.' });
 }));
@@ -300,7 +302,7 @@ router.delete('/locations/:id', authenticateToken, requireRole('admin'), asyncHa
         throw new ApiError(404, 'Locatie niet gevonden.');
     }
 
-    logger.info(`Event location deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    logger.info(`Event location deleted: ${sanitizeForLog(req.params.id)}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Locatie verwijderd.' });
 }));
