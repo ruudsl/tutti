@@ -34,6 +34,10 @@ import Issues from './pages/Issues';
 import Contacts from './pages/Contacts';
 import CustomFieldsAdmin from './pages/CustomFieldsAdmin';
 import PrivacySettings from './pages/PrivacySettings';
+import Polls from './pages/Polls';
+import Tasks from './pages/Tasks';
+import Posts from './pages/Posts';
+import EmailCampaigns from './pages/EmailCampaigns';
 
 // Music management
 import MusicPieces from './pages/MusicPieces';
@@ -190,6 +194,17 @@ function AppRoutes() {
           }
         />
         <Route path="privacy-settings" element={<PrivacySettings />} />
+        <Route path="polls" element={<Polls />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="posts" element={<Posts />} />
+        <Route
+          path="email-campaigns"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <EmailCampaigns />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="music-pieces"
           element={

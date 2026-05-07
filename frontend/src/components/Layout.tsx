@@ -74,6 +74,17 @@ const navGroups: SidebarNavGroup[] = [
     ],
   },
   {
+    titleKey: 'sidebar.communication',
+    icon: 'message',
+    basePaths: ['/polls', '/tasks', '/posts', '/email-campaigns'],
+    items: [
+      { path: '/posts', labelKey: 'nav.posts' },
+      { path: '/polls', labelKey: 'nav.polls' },
+      { path: '/tasks', labelKey: 'nav.tasks' },
+      { path: '/email-campaigns', labelKey: 'nav.emailCampaigns', roles: [ROLES.ADMIN] },
+    ],
+  },
+  {
     titleKey: 'sidebar.orchestra',
     icon: 'music2',
     basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences'],

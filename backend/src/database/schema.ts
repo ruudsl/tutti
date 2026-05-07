@@ -1779,4 +1779,365 @@ CREATE TABLE IF NOT EXISTS privacy_consents (
 );
 
 CREATE INDEX IF NOT EXISTS idx_privacy_consents_user ON privacy_consents(user_id);
+
+-- =====================================================
+-- POLLS MODULE
+-- =====================================================
+
+-- Polls (voting/surveys)
+CREATE TABLE IF NOT EXISTS polls (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    poll_type TEXT NOT NULL DEFAULT 'single' CHECK (poll_type IN ('single', 'multiple', 'ranked')),
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'closed', 'archived')),
+    is_anonymous INTEGER DEFAULT 0,
+    show_results_before_close INTEGER DEFAULT 0,
+    allow_comments INTEGER DEFAULT 1,
+    max_selections INTEGER,
+    starts_at DATETIME,
+    ends_at DATETIME,
+    target_orchestras TEXT,
+    target_roles TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_polls_assoc ON polls(association_id);
+CREATE INDEX IF NOT EXISTS idx_polls_status ON polls(status);
+CREATE INDEX IF NOT EXISTS idx_polls_created_by ON polls(created_by);
+
+-- Poll options/choices
+CREATE TABLE IF NOT EXISTS poll_options (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    option_text TEXT NOT NULL,
+    option_description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_options_poll ON poll_options(poll_id);
+
+-- Poll votes
+CREATE TABLE IF NOT EXISTS poll_votes (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    option_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    rank_position INTEGER,
+    voted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+    FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_votes_poll ON poll_votes(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_option ON poll_votes(option_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_user ON poll_votes(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_poll_votes_single ON poll_votes(poll_id, option_id, user_id);
+
+-- Poll comments
+CREATE TABLE IF NOT EXISTS poll_comments (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES poll_comments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_comments_poll ON poll_comments(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_comments_user ON poll_comments(user_id);
+
+-- =====================================================
+-- TASKS MODULE
+-- =====================================================
+
+-- Task lists (projects/categories for tasks)
+CREATE TABLE IF NOT EXISTS task_lists (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_archived INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_lists_assoc ON task_lists(association_id);
+
+-- Tasks
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    task_list_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'review', 'done', 'cancelled')),
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    due_date DATETIME,
+    reminder_at DATETIME,
+    estimated_hours REAL,
+    actual_hours REAL,
+    sort_order INTEGER DEFAULT 0,
+    related_entity_type TEXT,
+    related_entity_id TEXT,
+    created_by TEXT NOT NULL,
+    assigned_to TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assoc ON tasks(association_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_list ON tasks(task_list_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
+
+-- Task assignments (for multiple assignees)
+CREATE TABLE IF NOT EXISTS task_assignments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    assigned_by TEXT NOT NULL,
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignments_task ON task_assignments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignments_user ON task_assignments(user_id);
+
+-- Task comments
+CREATE TABLE IF NOT EXISTS task_comments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
+
+-- Task checklists (subtasks)
+CREATE TABLE IF NOT EXISTS task_checklist_items (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_completed INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    completed_by TEXT,
+    completed_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_checklist_task ON task_checklist_items(task_id);
+
+-- =====================================================
+-- POSTS/NEWS MODULE
+-- =====================================================
+
+-- Post categories
+CREATE TABLE IF NOT EXISTS post_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_categories_assoc ON post_categories(association_id);
+
+-- Posts/News articles
+CREATE TABLE IF NOT EXISTS posts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    excerpt TEXT,
+    content TEXT NOT NULL,
+    content_format TEXT DEFAULT 'markdown' CHECK (content_format IN ('markdown', 'html')),
+    featured_image TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+    is_pinned INTEGER DEFAULT 0,
+    is_featured INTEGER DEFAULT 0,
+    allow_comments INTEGER DEFAULT 1,
+    view_count INTEGER DEFAULT 0,
+    target_orchestras TEXT,
+    target_roles TEXT,
+    published_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_assoc ON posts(association_id);
+CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
+CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published_at);
+CREATE INDEX IF NOT EXISTS idx_posts_pinned ON posts(is_pinned);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_slug ON posts(association_id, slug);
+
+-- Post to category mapping
+CREATE TABLE IF NOT EXISTS post_category_mapping (
+    post_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    PRIMARY KEY (post_id, category_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES post_categories(id) ON DELETE CASCADE
+);
+
+-- Post comments
+CREATE TABLE IF NOT EXISTS post_comments (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_id TEXT,
+    is_approved INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES post_comments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_comments_post ON post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_user ON post_comments(user_id);
+
+-- Post attachments
+CREATE TABLE IF NOT EXISTS post_attachments (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_type TEXT,
+    file_size INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_attachments_post ON post_attachments(post_id);
+
+-- Post read tracking
+CREATE TABLE IF NOT EXISTS post_reads (
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- EMAIL BULK MAILING MODULE
+-- =====================================================
+
+-- Email templates
+CREATE TABLE IF NOT EXISTS email_templates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT,
+    is_system INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_templates_assoc ON email_templates(association_id);
+
+-- Email campaigns/mailings
+CREATE TABLE IF NOT EXISTS email_campaigns (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT,
+    template_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'cancelled')),
+    target_type TEXT NOT NULL CHECK (target_type IN ('all', 'orchestras', 'roles', 'custom')),
+    target_orchestras TEXT,
+    target_roles TEXT,
+    target_user_ids TEXT,
+    scheduled_at DATETIME,
+    sent_at DATETIME,
+    total_recipients INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    opened_count INTEGER DEFAULT 0,
+    clicked_count INTEGER DEFAULT 0,
+    bounced_count INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES email_templates(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_assoc ON email_campaigns(association_id);
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_status ON email_campaigns(status);
+
+-- Email campaign recipients (tracking per recipient)
+CREATE TABLE IF NOT EXISTS email_campaign_recipients (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed')),
+    sent_at DATETIME,
+    opened_at DATETIME,
+    clicked_at DATETIME,
+    bounce_reason TEXT,
+    FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_recipients_campaign ON email_campaign_recipients(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_email_recipients_user ON email_campaign_recipients(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_recipients_status ON email_campaign_recipients(status);
 `;

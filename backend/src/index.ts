@@ -96,6 +96,10 @@ import multiAssociationRoutes from './routes/multi-association';
 import contactsRoutes from './routes/contacts';
 import customFieldsRoutes from './routes/custom-fields';
 import privacySettingsRoutes from './routes/privacy-settings';
+import pollsRoutes from './routes/polls';
+import tasksRoutes from './routes/tasks';
+import postsRoutes from './routes/posts';
+import emailCampaignsRoutes from './routes/email-campaigns';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -272,6 +276,10 @@ app.use('/api/multi-association', multiAssociationRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/custom-fields', customFieldsRoutes);
 app.use('/api/privacy-settings', privacySettingsRoutes);
+app.use('/api/polls', pollsRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/posts', postsRoutes);
+app.use('/api/email-campaigns', emailCampaignsRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
