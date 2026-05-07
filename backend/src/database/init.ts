@@ -145,13 +145,34 @@ async function initializeDatabase() {
             'INSERT INTO users (id, email, password_hash, first_name, last_name, role, association_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).run(adminId, 'admin@harmonie.nl', passwordHash, 'Admin', 'Beheerder', 'admin', associationId);
 
-        console.log('Created default association, orchestra, and admin user');
+        // Add admin as super-admin for platform management
+        const superAdminId = uuidv4();
+        db.prepare(
+            'INSERT INTO super_admins (id, user_id, permissions) VALUES (?, ?, ?)'
+        ).run(superAdminId, adminId, JSON.stringify(['all']));
+
+        console.log('Created default association, orchestra, admin user, and super-admin');
         console.log('Admin login: admin@harmonie.nl');
         if (process.env.ADMIN_INIT_PASSWORD) {
             console.log('Password: (set via ADMIN_INIT_PASSWORD env var)');
         } else {
             console.log(`Generated password: ${adminPassword}`);
             console.log('⚠️  Save this password! Set ADMIN_INIT_PASSWORD env var to use a custom password.');
+        }
+    }
+
+    // Migration: Ensure admin@harmonie.nl is a super-admin (for existing databases)
+    const adminUser = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@harmonie.nl') as { id: string } | undefined;
+    if (adminUser) {
+        const existingSuperAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(adminUser.id);
+        if (!existingSuperAdmin) {
+            console.log('Adding admin@harmonie.nl as super-admin...');
+            db.prepare('INSERT INTO super_admins (id, user_id, permissions) VALUES (?, ?, ?)').run(
+                uuidv4(),
+                adminUser.id,
+                JSON.stringify(['all'])
+            );
+            console.log('Admin user is now a super-admin');
         }
     }
 
