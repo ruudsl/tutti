@@ -869,4 +869,966 @@ router.get('/reports/profit-loss', authenticateToken, requireRole('admin'), asyn
     });
 }));
 
+// Account ledger report
+router.get('/reports/account-ledger/:accountId', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const { startDate, endDate } = req.query;
+
+    const account = db.prepare(`
+        SELECT * FROM accounts WHERE id = ? AND association_id = ?
+    `).get(req.params.accountId, associationId) as any;
+
+    if (!account) throw new ApiError(404, 'Rekening niet gevonden.');
+
+    let query = `
+        SELECT t.transaction_number, t.transaction_date, t.description AS tx_description,
+            tl.description AS line_description, tl.debit_amount, tl.credit_amount,
+            cc.code AS cost_center_code, cc.name AS cost_center_name
+        FROM transaction_lines tl
+        JOIN transactions t ON tl.transaction_id = t.id
+        LEFT JOIN cost_centers cc ON tl.cost_center_id = cc.id
+        WHERE tl.account_id = ? AND t.association_id = ?
+    `;
+    const params: any[] = [req.params.accountId, associationId];
+
+    if (startDate) { query += ' AND t.transaction_date >= ?'; params.push(startDate); }
+    if (endDate) { query += ' AND t.transaction_date <= ?'; params.push(endDate); }
+
+    query += ' ORDER BY t.transaction_date, t.transaction_number';
+
+    const entries = db.prepare(query).all(...params);
+
+    let runningBalance = account.opening_balance || 0;
+    const ledgerEntries = (entries as any[]).map((e) => {
+        if (account.account_type === 'asset' || account.account_type === 'expense') {
+            runningBalance += (e.debit_amount - e.credit_amount);
+        } else {
+            runningBalance += (e.credit_amount - e.debit_amount);
+        }
+        return {
+            transactionNumber: e.transaction_number,
+            date: e.transaction_date,
+            description: e.line_description || e.tx_description,
+            debit: e.debit_amount,
+            credit: e.credit_amount,
+            balance: runningBalance,
+            costCenter: e.cost_center_name,
+        };
+    });
+
+    res.json({
+        account: {
+            id: account.id,
+            code: account.code,
+            name: account.name,
+            type: account.account_type,
+            openingBalance: account.opening_balance,
+        },
+        entries: ledgerEntries,
+        closingBalance: runningBalance,
+    });
+}));
+
+// Aging report (outstanding invoices)
+router.get('/reports/aging', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const invoices = db.prepare(`
+        SELECT i.*, r.name AS relation_name, r.email AS relation_email
+        FROM invoices i
+        JOIN accounting_relations r ON i.relation_id = r.id
+        WHERE i.association_id = ? AND i.status NOT IN ('paid', 'cancelled', 'written_off')
+        ORDER BY i.due_date ASC
+    `).all(associationId) as any[];
+
+    const agingBuckets = {
+        current: { invoices: [] as any[], total: 0 },
+        days1to30: { invoices: [] as any[], total: 0 },
+        days31to60: { invoices: [] as any[], total: 0 },
+        days61to90: { invoices: [] as any[], total: 0 },
+        over90: { invoices: [] as any[], total: 0 },
+    };
+
+    for (const inv of invoices) {
+        const amountDue = inv.total - inv.amount_paid;
+        const dueDate = new Date(inv.due_date);
+        const todayDate = new Date(today);
+        const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const entry = {
+            id: inv.id,
+            invoiceNumber: inv.invoice_number,
+            relationName: inv.relation_name,
+            invoiceDate: inv.invoice_date,
+            dueDate: inv.due_date,
+            total: inv.total,
+            amountPaid: inv.amount_paid,
+            amountDue,
+            daysOverdue: Math.max(0, daysOverdue),
+        };
+
+        if (daysOverdue <= 0) {
+            agingBuckets.current.invoices.push(entry);
+            agingBuckets.current.total += amountDue;
+        } else if (daysOverdue <= 30) {
+            agingBuckets.days1to30.invoices.push(entry);
+            agingBuckets.days1to30.total += amountDue;
+        } else if (daysOverdue <= 60) {
+            agingBuckets.days31to60.invoices.push(entry);
+            agingBuckets.days31to60.total += amountDue;
+        } else if (daysOverdue <= 90) {
+            agingBuckets.days61to90.invoices.push(entry);
+            agingBuckets.days61to90.total += amountDue;
+        } else {
+            agingBuckets.over90.invoices.push(entry);
+            agingBuckets.over90.total += amountDue;
+        }
+    }
+
+    const grandTotal = Object.values(agingBuckets).reduce((sum, b) => sum + b.total, 0);
+
+    res.json({
+        asOfDate: today,
+        buckets: agingBuckets,
+        grandTotal,
+    });
+}));
+
+// =====================================================
+// SEPA PAYMENT FILES
+// =====================================================
+
+const sepaPaymentSchema = z.object({
+    paymentType: z.enum(['credit_transfer', 'direct_debit']),
+    executionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ongeldige datum.'),
+    bankAccountId: z.string().uuid(),
+    invoiceIds: z.array(z.string().uuid()).min(1, 'Minimaal één factuur selecteren.'),
+});
+
+router.post('/sepa/generate', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const data = sepaPaymentSchema.parse(req.body);
+
+    // Get association info
+    const association = db.prepare('SELECT * FROM associations WHERE id = ?').get(associationId) as any;
+    if (!association) throw new ApiError(404, 'Vereniging niet gevonden.');
+
+    // Get bank account
+    const bankAccount = db.prepare(`
+        SELECT a.*, ba.iban, ba.bic, ba.account_holder_name
+        FROM accounts a
+        LEFT JOIN bank_accounts ba ON ba.account_id = a.id
+        WHERE a.id = ? AND a.association_id = ? AND a.account_subtype = 'bank'
+    `).get(data.bankAccountId, associationId) as any;
+
+    if (!bankAccount || !bankAccount.iban) {
+        throw new ApiError(400, 'Bankrekening heeft geen IBAN geconfigureerd.');
+    }
+
+    // Get invoices with relations
+    const placeholders = data.invoiceIds.map(() => '?').join(',');
+    const invoices = db.prepare(`
+        SELECT i.*, r.name AS relation_name, r.email AS relation_email,
+            r.iban AS relation_iban, r.bic AS relation_bic
+        FROM invoices i
+        JOIN accounting_relations r ON i.relation_id = r.id
+        WHERE i.id IN (${placeholders}) AND i.association_id = ?
+    `).all(...data.invoiceIds, associationId) as any[];
+
+    if (invoices.length !== data.invoiceIds.length) {
+        throw new ApiError(404, 'Eén of meer facturen niet gevonden.');
+    }
+
+    // Check all relations have IBAN
+    const missingIban = invoices.filter(i => !i.relation_iban);
+    if (missingIban.length > 0) {
+        throw new ApiError(400, `Relaties zonder IBAN: ${missingIban.map(i => i.relation_name).join(', ')}`);
+    }
+
+    // Generate SEPA XML
+    const messageId = `MSG-${Date.now()}`;
+    const paymentId = `PMT-${Date.now()}`;
+    const totalAmount = invoices.reduce((sum, i) => sum + (i.total - i.amount_paid), 0);
+
+    const sepaXml = generateSepaXml({
+        messageId,
+        paymentId,
+        creationDateTime: new Date().toISOString(),
+        numberOfTransactions: invoices.length,
+        controlSum: totalAmount,
+        initiatorName: association.display_name || association.name,
+        paymentType: data.paymentType,
+        executionDate: data.executionDate,
+        debtorName: bankAccount.account_holder_name || association.name,
+        debtorIban: bankAccount.iban,
+        debtorBic: bankAccount.bic,
+        transactions: invoices.map(inv => ({
+            endToEndId: inv.invoice_number,
+            amount: inv.total - inv.amount_paid,
+            creditorName: inv.relation_name,
+            creditorIban: inv.relation_iban,
+            creditorBic: inv.relation_bic,
+            remittanceInfo: `Factuur ${inv.invoice_number}`,
+        })),
+    });
+
+    // Store payment batch
+    const batchId = uuidv4();
+    const now = new Date().toISOString();
+    const batchType = data.paymentType === 'direct_debit' ? 'DD' : 'CT';
+    const batchReference = `SEPA-${batchType}-${Date.now()}`;
+
+    db.prepare(`
+        INSERT INTO sepa_batches (
+            id, association_id, bank_account_id, batch_reference, batch_type,
+            collection_date, status, total_amount, transaction_count, xml_file_path,
+            generated_at, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'generated', ?, ?, ?, ?, ?, ?)
+    `).run(
+        batchId, associationId, data.bankAccountId, batchReference, batchType,
+        data.executionDate, totalAmount, invoices.length, sepaXml, now, req.user!.id, now
+    );
+
+    // Link invoices to batch (simplified - using relation directly since mandates may not exist)
+    const linkInvoice = db.prepare(`
+        INSERT INTO sepa_batch_items (id, batch_id, invoice_id, mandate_id, relation_id, amount, reference)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const inv of invoices) {
+        const mandateId = inv.relation_id; // Use relation as placeholder for mandate
+        linkInvoice.run(uuidv4(), batchId, inv.id, mandateId, inv.relation_id, inv.total - inv.amount_paid, inv.invoice_number);
+    }
+
+    await logAuditEvent(req.user!.id, 'sepa_generate', 'sepa_batch', batchId, `${invoices.length} betalingen`);
+
+    res.status(201).json({
+        id: batchId,
+        messageId,
+        transactionCount: invoices.length,
+        totalAmount,
+        message: 'SEPA-bestand gegenereerd.',
+    });
+}));
+
+router.get('/sepa/batches', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const batches = db.prepare(`
+        SELECT sb.*, a.code AS account_code, a.name AS account_name,
+            u.first_name || ' ' || u.last_name AS created_by_name
+        FROM sepa_batches sb
+        LEFT JOIN accounts a ON sb.bank_account_id = a.id
+        LEFT JOIN users u ON sb.created_by = u.id
+        WHERE sb.association_id = ?
+        ORDER BY sb.created_at DESC
+    `).all(associationId);
+
+    res.json(batches.map((b: any) => ({
+        id: b.id,
+        batchReference: b.batch_reference,
+        batchType: b.batch_type,
+        collectionDate: b.collection_date,
+        bankAccountId: b.bank_account_id,
+        accountCode: b.account_code,
+        accountName: b.account_name,
+        totalAmount: b.total_amount,
+        transactionCount: b.transaction_count,
+        status: b.status,
+        createdBy: b.created_by,
+        createdByName: b.created_by_name,
+        createdAt: b.created_at,
+        generatedAt: b.generated_at,
+        processedAt: b.processed_at,
+    })));
+}));
+
+router.get('/sepa/batches/:id/download', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const batch = db.prepare(`
+        SELECT * FROM sepa_batches WHERE id = ? AND association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!batch) throw new ApiError(404, 'SEPA-batch niet gevonden.');
+    if (!batch.xml_file_path) throw new ApiError(400, 'SEPA-bestand niet beschikbaar.');
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="sepa-${batch.batch_reference}.xml"`);
+    res.send(batch.xml_file_path);
+}));
+
+// Helper function to generate SEPA XML
+function generateSepaXml(data: {
+    messageId: string;
+    paymentId: string;
+    creationDateTime: string;
+    numberOfTransactions: number;
+    controlSum: number;
+    initiatorName: string;
+    paymentType: 'credit_transfer' | 'direct_debit';
+    executionDate: string;
+    debtorName: string;
+    debtorIban: string;
+    debtorBic?: string;
+    transactions: Array<{
+        endToEndId: string;
+        amount: number;
+        creditorName: string;
+        creditorIban: string;
+        creditorBic?: string;
+        remittanceInfo: string;
+    }>;
+}): string {
+    const txns = data.transactions.map(tx => `
+                <CdtTrfTxInf>
+                    <PmtId>
+                        <EndToEndId>${escapeXml(tx.endToEndId)}</EndToEndId>
+                    </PmtId>
+                    <Amt>
+                        <InstdAmt Ccy="EUR">${tx.amount.toFixed(2)}</InstdAmt>
+                    </Amt>
+                    <Cdtr>
+                        <Nm>${escapeXml(tx.creditorName)}</Nm>
+                    </Cdtr>
+                    <CdtrAcct>
+                        <Id>
+                            <IBAN>${tx.creditorIban}</IBAN>
+                        </Id>
+                    </CdtrAcct>${tx.creditorBic ? `
+                    <CdtrAgt>
+                        <FinInstnId>
+                            <BIC>${tx.creditorBic}</BIC>
+                        </FinInstnId>
+                    </CdtrAgt>` : ''}
+                    <RmtInf>
+                        <Ustrd>${escapeXml(tx.remittanceInfo)}</Ustrd>
+                    </RmtInf>
+                </CdtTrfTxInf>`).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+    <CstmrCdtTrfInitn>
+        <GrpHdr>
+            <MsgId>${data.messageId}</MsgId>
+            <CreDtTm>${data.creationDateTime}</CreDtTm>
+            <NbOfTxs>${data.numberOfTransactions}</NbOfTxs>
+            <CtrlSum>${data.controlSum.toFixed(2)}</CtrlSum>
+            <InitgPty>
+                <Nm>${escapeXml(data.initiatorName)}</Nm>
+            </InitgPty>
+        </GrpHdr>
+        <PmtInf>
+            <PmtInfId>${data.paymentId}</PmtInfId>
+            <PmtMtd>TRF</PmtMtd>
+            <NbOfTxs>${data.numberOfTransactions}</NbOfTxs>
+            <CtrlSum>${data.controlSum.toFixed(2)}</CtrlSum>
+            <ReqdExctnDt>${data.executionDate}</ReqdExctnDt>
+            <Dbtr>
+                <Nm>${escapeXml(data.debtorName)}</Nm>
+            </Dbtr>
+            <DbtrAcct>
+                <Id>
+                    <IBAN>${data.debtorIban}</IBAN>
+                </Id>
+            </DbtrAcct>${data.debtorBic ? `
+            <DbtrAgt>
+                <FinInstnId>
+                    <BIC>${data.debtorBic}</BIC>
+                </FinInstnId>
+            </DbtrAgt>` : ''}${txns}
+        </PmtInf>
+    </CstmrCdtTrfInitn>
+</Document>`;
+}
+
+function escapeXml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+// =====================================================
+// TRANSACTIONS
+// =====================================================
+
+router.get('/transactions', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const { fiscalYearId, accountId, startDate, endDate, transactionType, search } = req.query;
+
+    let query = `
+        SELECT t.*, u.first_name || ' ' || u.last_name AS created_by_name
+        FROM transactions t
+        LEFT JOIN users u ON t.created_by = u.id
+        WHERE t.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (fiscalYearId) { query += ' AND t.fiscal_year_id = ?'; params.push(fiscalYearId); }
+    if (transactionType) { query += ' AND t.transaction_type = ?'; params.push(transactionType); }
+    if (startDate) { query += ' AND t.transaction_date >= ?'; params.push(startDate); }
+    if (endDate) { query += ' AND t.transaction_date <= ?'; params.push(endDate); }
+    if (search) {
+        query += ' AND (t.description LIKE ? OR t.reference LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`);
+    }
+    if (accountId) {
+        query += ' AND EXISTS (SELECT 1 FROM transaction_lines tl WHERE tl.transaction_id = t.id AND tl.account_id = ?)';
+        params.push(accountId);
+    }
+
+    query += ' ORDER BY t.transaction_date DESC, t.created_at DESC';
+
+    const transactions = db.prepare(query).all(...params);
+
+    res.json(transactions.map((t: any) => ({
+        id: t.id,
+        transactionNumber: t.transaction_number,
+        transactionDate: t.transaction_date,
+        transactionType: t.transaction_type,
+        reference: t.reference,
+        description: t.description,
+        totalAmount: t.total_amount,
+        isPosted: !!t.is_posted,
+        isReconciled: !!t.is_reconciled,
+        invoiceId: t.invoice_id,
+        bankStatementId: t.bank_statement_id,
+        createdBy: t.created_by,
+        createdByName: t.created_by_name,
+        createdAt: t.created_at,
+    })));
+}));
+
+router.get('/transactions/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const transaction = db.prepare(`
+        SELECT t.*, u.first_name || ' ' || u.last_name AS created_by_name
+        FROM transactions t
+        LEFT JOIN users u ON t.created_by = u.id
+        WHERE t.id = ? AND t.association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!transaction) throw new ApiError(404, 'Transactie niet gevonden.');
+
+    const lines = db.prepare(`
+        SELECT tl.*, a.code AS account_code, a.name AS account_name, a.account_type,
+            cc.code AS cost_center_code, cc.name AS cost_center_name
+        FROM transaction_lines tl
+        LEFT JOIN accounts a ON tl.account_id = a.id
+        LEFT JOIN cost_centers cc ON tl.cost_center_id = cc.id
+        WHERE tl.transaction_id = ?
+        ORDER BY tl.line_number
+    `).all(req.params.id);
+
+    res.json({
+        id: transaction.id,
+        transactionNumber: transaction.transaction_number,
+        fiscalYearId: transaction.fiscal_year_id,
+        transactionDate: transaction.transaction_date,
+        transactionType: transaction.transaction_type,
+        reference: transaction.reference,
+        description: transaction.description,
+        totalAmount: transaction.total_amount,
+        isPosted: !!transaction.is_posted,
+        isReconciled: !!transaction.is_reconciled,
+        invoiceId: transaction.invoice_id,
+        bankStatementId: transaction.bank_statement_id,
+        createdBy: transaction.created_by,
+        createdByName: transaction.created_by_name,
+        createdAt: transaction.created_at,
+        lines: lines.map((l: any) => ({
+            id: l.id,
+            lineNumber: l.line_number,
+            accountId: l.account_id,
+            accountCode: l.account_code,
+            accountName: l.account_name,
+            accountType: l.account_type,
+            costCenterId: l.cost_center_id,
+            costCenterCode: l.cost_center_code,
+            costCenterName: l.cost_center_name,
+            description: l.description,
+            debitAmount: l.debit_amount,
+            creditAmount: l.credit_amount,
+        })),
+    });
+}));
+
+router.post('/transactions', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const data = transactionSchema.parse(req.body);
+
+    // Validate debit/credit balance
+    let totalDebit = 0;
+    let totalCredit = 0;
+    for (const line of data.lines) {
+        totalDebit += line.debitAmount || 0;
+        totalCredit += line.creditAmount || 0;
+    }
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        throw new ApiError(400, `Debet en credit moeten in balans zijn. Verschil: ${Math.abs(totalDebit - totalCredit).toFixed(2)}`);
+    }
+
+    // Get current fiscal year
+    const fiscalYear = db.prepare(`
+        SELECT id FROM fiscal_years
+        WHERE association_id = ? AND is_current = 1 AND status = 'open'
+    `).get(associationId) as any;
+
+    if (!fiscalYear) {
+        throw new ApiError(400, 'Geen actief boekjaar gevonden.');
+    }
+
+    // Generate transaction number
+    const lastTx = db.prepare(`
+        SELECT transaction_number FROM transactions
+        WHERE association_id = ? AND fiscal_year_id = ?
+        ORDER BY transaction_number DESC LIMIT 1
+    `).get(associationId, fiscalYear.id) as any;
+
+    const nextNumber = lastTx ? parseInt(lastTx.transaction_number.split('-')[1]) + 1 : 1;
+    const transactionNumber = `TX-${nextNumber.toString().padStart(6, '0')}`;
+
+    const transactionId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO transactions (
+            id, association_id, fiscal_year_id, transaction_number, transaction_date,
+            transaction_type, reference, description, total_amount, invoice_id,
+            created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        transactionId, associationId, fiscalYear.id, transactionNumber, data.transactionDate,
+        data.transactionType, data.reference || null, data.description, totalDebit,
+        data.invoiceId || null, req.user!.id, now
+    );
+
+    // Insert lines
+    const insertLine = db.prepare(`
+        INSERT INTO transaction_lines (
+            id, transaction_id, line_number, account_id, cost_center_id,
+            description, debit_amount, credit_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    data.lines.forEach((line, index) => {
+        insertLine.run(
+            uuidv4(), transactionId, index + 1, line.accountId, line.costCenterId || null,
+            line.description || null, line.debitAmount || 0, line.creditAmount || 0
+        );
+    });
+
+    await logAuditEvent(req.user!.id, 'create', 'transaction', transactionId, transactionNumber);
+
+    res.status(201).json({
+        id: transactionId,
+        transactionNumber,
+        message: 'Transactie aangemaakt.',
+    });
+}));
+
+router.put('/transactions/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const existing = db.prepare(`
+        SELECT * FROM transactions WHERE id = ? AND association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!existing) throw new ApiError(404, 'Transactie niet gevonden.');
+    if (existing.is_posted) throw new ApiError(400, 'Geboekte transacties kunnen niet worden bewerkt.');
+
+    const data = transactionSchema.parse(req.body);
+
+    // Validate balance
+    let totalDebit = 0;
+    let totalCredit = 0;
+    for (const line of data.lines) {
+        totalDebit += line.debitAmount || 0;
+        totalCredit += line.creditAmount || 0;
+    }
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        throw new ApiError(400, `Debet en credit moeten in balans zijn.`);
+    }
+
+    // Update transaction
+    db.prepare(`
+        UPDATE transactions SET
+            transaction_date = ?, transaction_type = ?, reference = ?, description = ?,
+            total_amount = ?, invoice_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(
+        data.transactionDate, data.transactionType, data.reference || null, data.description,
+        totalDebit, data.invoiceId || null, req.params.id
+    );
+
+    // Replace lines
+    db.prepare('DELETE FROM transaction_lines WHERE transaction_id = ?').run(req.params.id);
+
+    const insertLine = db.prepare(`
+        INSERT INTO transaction_lines (
+            id, transaction_id, line_number, account_id, cost_center_id,
+            description, debit_amount, credit_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    data.lines.forEach((line, index) => {
+        insertLine.run(
+            uuidv4(), req.params.id, index + 1, line.accountId, line.costCenterId || null,
+            line.description || null, line.debitAmount || 0, line.creditAmount || 0
+        );
+    });
+
+    await logAuditEvent(req.user!.id, 'update', 'transaction', req.params.id, existing.transaction_number);
+    res.json({ message: 'Transactie bijgewerkt.' });
+}));
+
+router.delete('/transactions/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const existing = db.prepare(`
+        SELECT * FROM transactions WHERE id = ? AND association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!existing) throw new ApiError(404, 'Transactie niet gevonden.');
+    if (existing.is_posted) throw new ApiError(400, 'Geboekte transacties kunnen niet worden verwijderd.');
+
+    db.prepare('DELETE FROM transactions WHERE id = ?').run(req.params.id);
+    await logAuditEvent(req.user!.id, 'delete', 'transaction', req.params.id, existing.transaction_number);
+    res.json({ message: 'Transactie verwijderd.' });
+}));
+
+router.post('/transactions/:id/post', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const existing = db.prepare(`
+        SELECT * FROM transactions WHERE id = ? AND association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!existing) throw new ApiError(404, 'Transactie niet gevonden.');
+    if (existing.is_posted) throw new ApiError(400, 'Transactie is al geboekt.');
+
+    db.prepare(`
+        UPDATE transactions SET is_posted = 1, posted_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(req.params.id);
+
+    await logAuditEvent(req.user!.id, 'post', 'transaction', req.params.id, existing.transaction_number);
+    res.json({ message: 'Transactie geboekt.' });
+}));
+
+// =====================================================
+// BANK IMPORT (MT940/CAMT053)
+// =====================================================
+
+const bankImportSchema = z.object({
+    accountId: z.string().uuid(),
+    format: z.enum(['mt940', 'camt053', 'csv']),
+    content: z.string().min(1, 'Bestandsinhoud is verplicht.'),
+});
+
+router.post('/bank-import', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const data = bankImportSchema.parse(req.body);
+
+    // Verify account exists and is a bank account
+    const account = db.prepare(`
+        SELECT * FROM accounts WHERE id = ? AND association_id = ? AND account_subtype = 'bank'
+    `).get(data.accountId, associationId) as any;
+
+    if (!account) throw new ApiError(404, 'Bankrekening niet gevonden.');
+
+    // Get current fiscal year
+    const fiscalYear = db.prepare(`
+        SELECT id FROM fiscal_years WHERE association_id = ? AND is_current = 1 AND status = 'open'
+    `).get(associationId) as any;
+
+    if (!fiscalYear) throw new ApiError(400, 'Geen actief boekjaar gevonden.');
+
+    // Create bank statement record
+    const statementId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO bank_statements (
+            id, bank_account_id, statement_date, opening_balance, closing_balance,
+            status, import_file_name
+        ) VALUES (?, ?, ?, 0, 0, 'imported', ?)
+    `).run(statementId, data.accountId, now.split('T')[0], data.format);
+
+    // Parse bank statement based on format
+    const entries: Array<{
+        date: string;
+        description: string;
+        amount: number;
+        reference?: string;
+        counterpartyName?: string;
+        counterpartyIban?: string;
+    }> = [];
+
+    if (data.format === 'csv') {
+        // Simple CSV format: date;description;amount;reference
+        const lines = data.content.split('\n').filter(l => l.trim());
+        for (let i = 1; i < lines.length; i++) { // Skip header
+            const parts = lines[i].split(';');
+            if (parts.length >= 3) {
+                entries.push({
+                    date: parts[0].trim(),
+                    description: parts[1].trim(),
+                    amount: parseFloat(parts[2].replace(',', '.').trim()),
+                    reference: parts[3]?.trim(),
+                    counterpartyName: parts[4]?.trim(),
+                    counterpartyIban: parts[5]?.trim(),
+                });
+            }
+        }
+    } else if (data.format === 'mt940') {
+        // Simplified MT940 parsing - in production use a proper library
+        const statementRegex = /:61:(\d{6})(\d{4})?(C|D)(\d+,\d{2})/g;
+        const descriptionRegex = /:86:(.*?)(?=:6[01]|$)/gs;
+
+        let match;
+        const amounts: Array<{ date: string; type: string; amount: number }> = [];
+        while ((match = statementRegex.exec(data.content)) !== null) {
+            const dateStr = match[1];
+            const type = match[3]; // C = credit, D = debit
+            const amountStr = match[4].replace(',', '.');
+            amounts.push({
+                date: `20${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`,
+                type,
+                amount: type === 'D' ? -parseFloat(amountStr) : parseFloat(amountStr),
+            });
+        }
+
+        const descriptions: string[] = [];
+        while ((match = descriptionRegex.exec(data.content)) !== null) {
+            descriptions.push(match[1].replace(/\n/g, ' ').trim());
+        }
+
+        for (let i = 0; i < amounts.length; i++) {
+            entries.push({
+                date: amounts[i].date,
+                description: descriptions[i] || 'Bankafschrijving',
+                amount: amounts[i].amount,
+            });
+        }
+    }
+    // CAMT053 would need XML parsing - simplified for now
+
+    // Insert entries
+    const insertEntry = db.prepare(`
+        INSERT INTO bank_statement_lines (
+            id, statement_id, line_number, booking_date, amount, description,
+            reference, counterparty_name, counterparty_iban, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `);
+
+    let lineNum = 0;
+    for (const entry of entries) {
+        lineNum++;
+        insertEntry.run(
+            uuidv4(), statementId, lineNum, entry.date, entry.amount, entry.description,
+            entry.reference || null, entry.counterpartyName || null, entry.counterpartyIban || null
+        );
+    }
+
+    // Update statement totals
+    const totals = entries.reduce((acc, e) => ({
+        debit: acc.debit + (e.amount < 0 ? Math.abs(e.amount) : 0),
+        credit: acc.credit + (e.amount > 0 ? e.amount : 0),
+    }), { debit: 0, credit: 0 });
+
+    db.prepare(`
+        UPDATE bank_statements SET
+            total_debit = ?, total_credit = ?, line_count = ?
+        WHERE id = ?
+    `).run(totals.debit, totals.credit, entries.length, statementId);
+
+    await logAuditEvent(req.user!.id, 'import', 'bank_statement', statementId, `${entries.length} transacties`);
+
+    res.status(201).json({
+        id: statementId,
+        entryCount: entries.length,
+        totalDebit: totals.debit,
+        totalCredit: totals.credit,
+        message: `${entries.length} banktransacties geïmporteerd.`,
+    });
+}));
+
+router.get('/bank-statements', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const statements = db.prepare(`
+        SELECT bs.*, a.code AS account_code, a.name AS account_name
+        FROM bank_statements bs
+        LEFT JOIN accounts a ON bs.bank_account_id = a.id
+        WHERE a.association_id = ?
+        ORDER BY bs.statement_date DESC, bs.imported_at DESC
+    `).all(associationId);
+
+    res.json(statements.map((s: any) => ({
+        id: s.id,
+        accountId: s.bank_account_id,
+        accountCode: s.account_code,
+        accountName: s.account_name,
+        statementDate: s.statement_date,
+        importFileName: s.import_file_name,
+        status: s.status,
+        totalDebit: s.total_debit,
+        totalCredit: s.total_credit,
+        lineCount: s.line_count,
+        importedAt: s.imported_at,
+    })));
+}));
+
+router.get('/bank-statements/:id/entries', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const statement = db.prepare(`
+        SELECT bs.*, a.association_id
+        FROM bank_statements bs
+        LEFT JOIN accounts a ON bs.bank_account_id = a.id
+        WHERE bs.id = ? AND a.association_id = ?
+    `).get(req.params.id, associationId) as any;
+
+    if (!statement) throw new ApiError(404, 'Bankafschrift niet gevonden.');
+
+    const lines = db.prepare(`
+        SELECT bsl.*, t.transaction_number
+        FROM bank_statement_lines bsl
+        LEFT JOIN transactions t ON bsl.transaction_id = t.id
+        WHERE bsl.statement_id = ?
+        ORDER BY bsl.booking_date, bsl.line_number
+    `).all(req.params.id);
+
+    res.json({
+        statement: {
+            id: statement.id,
+            statementDate: statement.statement_date,
+            status: statement.status,
+            totalDebit: statement.total_debit,
+            totalCredit: statement.total_credit,
+        },
+        entries: lines.map((l: any) => ({
+            id: l.id,
+            lineNumber: l.line_number,
+            bookingDate: l.booking_date,
+            valueDate: l.value_date,
+            description: l.description,
+            amount: l.amount,
+            reference: l.reference,
+            counterpartyName: l.counterparty_name,
+            counterpartyIban: l.counterparty_iban,
+            status: l.status,
+            transactionId: l.transaction_id,
+            transactionNumber: l.transaction_number,
+            matchedInvoiceId: l.matched_invoice_id,
+        })),
+    });
+}));
+
+router.post('/bank-statements/:statementId/lines/:lineId/book', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+
+    const { counterAccountId, costCenterId } = req.body;
+    if (!counterAccountId) throw new ApiError(400, 'Tegenrekening is verplicht.');
+
+    const line = db.prepare(`
+        SELECT bsl.*, bs.bank_account_id, a.association_id
+        FROM bank_statement_lines bsl
+        JOIN bank_statements bs ON bsl.statement_id = bs.id
+        JOIN accounts a ON bs.bank_account_id = a.id
+        WHERE bsl.id = ? AND bs.id = ? AND a.association_id = ?
+    `).get(req.params.lineId, req.params.statementId, associationId) as any;
+
+    if (!line) throw new ApiError(404, 'Bankregel niet gevonden.');
+    if (line.status !== 'pending') throw new ApiError(400, 'Bankregel is al verwerkt.');
+
+    // Get fiscal year
+    const fiscalYear = db.prepare(`
+        SELECT id FROM fiscal_years WHERE association_id = ? AND is_current = 1 AND status = 'open'
+    `).get(associationId) as any;
+
+    if (!fiscalYear) throw new ApiError(400, 'Geen actief boekjaar.');
+
+    // Generate transaction number
+    const lastTx = db.prepare(`
+        SELECT transaction_number FROM transactions
+        WHERE association_id = ? AND fiscal_year_id = ?
+        ORDER BY transaction_number DESC LIMIT 1
+    `).get(associationId, fiscalYear.id) as any;
+
+    const nextNumber = lastTx ? parseInt(lastTx.transaction_number.split('-')[1]) + 1 : 1;
+    const transactionNumber = `TX-${nextNumber.toString().padStart(6, '0')}`;
+
+    const transactionId = uuidv4();
+    const now = new Date().toISOString();
+    const amount = Math.abs(line.amount);
+
+    // Create transaction
+    db.prepare(`
+        INSERT INTO transactions (
+            id, association_id, fiscal_year_id, transaction_number, transaction_date,
+            transaction_type, description, total_amount, bank_statement_line_id, is_posted,
+            created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, 'bank', ?, ?, ?, 1, ?, ?)
+    `).run(
+        transactionId, associationId, fiscalYear.id, transactionNumber, line.booking_date,
+        line.description, amount, req.params.lineId, req.user!.id, now
+    );
+
+    // Create lines (bank account and counter account)
+    const insertLine = db.prepare(`
+        INSERT INTO transaction_lines (
+            id, transaction_id, line_number, account_id, cost_center_id, debit_amount, credit_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    if (line.amount > 0) {
+        // Money received: debit bank, credit counter
+        insertLine.run(uuidv4(), transactionId, 1, line.bank_account_id, null, amount, 0);
+        insertLine.run(uuidv4(), transactionId, 2, counterAccountId, costCenterId || null, 0, amount);
+    } else {
+        // Money paid: credit bank, debit counter
+        insertLine.run(uuidv4(), transactionId, 1, line.bank_account_id, null, 0, amount);
+        insertLine.run(uuidv4(), transactionId, 2, counterAccountId, costCenterId || null, amount, 0);
+    }
+
+    // Update line status
+    db.prepare(`
+        UPDATE bank_statement_lines SET status = 'manual', transaction_id = ?, reconciled_at = ? WHERE id = ?
+    `).run(transactionId, now, req.params.lineId);
+
+    res.json({
+        transactionId,
+        transactionNumber,
+        message: 'Bankregel geboekt.',
+    });
+}));
+
 export default router;

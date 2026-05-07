@@ -334,3 +334,300 @@ export async function getProfitLossReport(fiscalYearId?: string, startDate?: str
   const response = await api.get(`/accounting/reports/profit-loss?${params.toString()}`);
   return response.data;
 }
+
+// =====================================================
+// TRANSACTIONS
+// =====================================================
+
+export type TransactionType = 'journal' | 'payment' | 'receipt' | 'bank' | 'transfer';
+
+export interface TransactionLine {
+  id?: string;
+  lineNumber?: number;
+  accountId: string;
+  accountCode?: string;
+  accountName?: string;
+  accountType?: AccountType;
+  costCenterId?: string;
+  costCenterCode?: string;
+  costCenterName?: string;
+  description?: string;
+  debitAmount: number;
+  creditAmount: number;
+}
+
+export interface Transaction {
+  id: string;
+  transactionNumber: string;
+  fiscalYearId?: string;
+  transactionDate: string;
+  transactionType: TransactionType;
+  reference?: string;
+  description: string;
+  totalAmount: number;
+  isPosted: boolean;
+  isReconciled: boolean;
+  invoiceId?: string;
+  bankStatementId?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  lines?: TransactionLine[];
+}
+
+export interface CreateTransactionData {
+  transactionDate: string;
+  transactionType: TransactionType;
+  reference?: string;
+  description: string;
+  invoiceId?: string;
+  lines: Omit<TransactionLine, 'id' | 'lineNumber' | 'accountCode' | 'accountName' | 'accountType' | 'costCenterCode' | 'costCenterName'>[];
+}
+
+export interface TransactionFilters {
+  fiscalYearId?: string;
+  accountId?: string;
+  startDate?: string;
+  endDate?: string;
+  transactionType?: TransactionType;
+  search?: string;
+}
+
+export async function getTransactions(filters?: TransactionFilters): Promise<Transaction[]> {
+  const params = new URLSearchParams();
+  if (filters?.fiscalYearId) params.append('fiscalYearId', filters.fiscalYearId);
+  if (filters?.accountId) params.append('accountId', filters.accountId);
+  if (filters?.startDate) params.append('startDate', filters.startDate);
+  if (filters?.endDate) params.append('endDate', filters.endDate);
+  if (filters?.transactionType) params.append('transactionType', filters.transactionType);
+  if (filters?.search) params.append('search', filters.search);
+
+  const response = await api.get(`/accounting/transactions?${params.toString()}`);
+  return response.data;
+}
+
+export async function getTransaction(id: string): Promise<Transaction> {
+  const response = await api.get(`/accounting/transactions/${id}`);
+  return response.data;
+}
+
+export async function createTransaction(data: CreateTransactionData): Promise<{ id: string; transactionNumber: string; message: string }> {
+  const response = await api.post('/accounting/transactions', data);
+  return response.data;
+}
+
+export async function updateTransaction(id: string, data: CreateTransactionData): Promise<{ message: string }> {
+  const response = await api.put(`/accounting/transactions/${id}`, data);
+  return response.data;
+}
+
+export async function deleteTransaction(id: string): Promise<{ message: string }> {
+  const response = await api.delete(`/accounting/transactions/${id}`);
+  return response.data;
+}
+
+export async function postTransaction(id: string): Promise<{ message: string }> {
+  const response = await api.post(`/accounting/transactions/${id}/post`);
+  return response.data;
+}
+
+// =====================================================
+// BANK STATEMENTS
+// =====================================================
+
+export type BankStatementStatus = 'imported' | 'processing' | 'reconciled' | 'closed';
+export type BankImportFormat = 'mt940' | 'camt053' | 'csv';
+
+export interface BankStatement {
+  id: string;
+  accountId: string;
+  accountCode?: string;
+  accountName?: string;
+  statementDate: string;
+  importFileName?: string;
+  status: BankStatementStatus;
+  totalDebit: number;
+  totalCredit: number;
+  lineCount: number;
+  importedAt: string;
+}
+
+export interface BankStatementLine {
+  id: string;
+  lineNumber: number;
+  bookingDate: string;
+  valueDate?: string;
+  description: string;
+  amount: number;
+  reference?: string;
+  counterpartyName?: string;
+  counterpartyIban?: string;
+  status: 'pending' | 'matched' | 'manual' | 'ignored';
+  transactionId?: string;
+  transactionNumber?: string;
+  matchedInvoiceId?: string;
+}
+
+export interface BankStatementDetail {
+  statement: {
+    id: string;
+    statementDate: string;
+    status: BankStatementStatus;
+    totalDebit: number;
+    totalCredit: number;
+  };
+  entries: BankStatementLine[];
+}
+
+export async function importBankStatement(
+  accountId: string,
+  format: BankImportFormat,
+  content: string
+): Promise<{ id: string; entryCount: number; totalDebit: number; totalCredit: number; message: string }> {
+  const response = await api.post('/accounting/bank-import', { accountId, format, content });
+  return response.data;
+}
+
+export async function getBankStatements(): Promise<BankStatement[]> {
+  const response = await api.get('/accounting/bank-statements');
+  return response.data;
+}
+
+export async function getBankStatementEntries(statementId: string): Promise<BankStatementDetail> {
+  const response = await api.get(`/accounting/bank-statements/${statementId}/entries`);
+  return response.data;
+}
+
+export async function bookBankLine(
+  statementId: string,
+  lineId: string,
+  counterAccountId: string,
+  costCenterId?: string
+): Promise<{ transactionId: string; transactionNumber: string; message: string }> {
+  const response = await api.post(`/accounting/bank-statements/${statementId}/lines/${lineId}/book`, {
+    counterAccountId,
+    costCenterId,
+  });
+  return response.data;
+}
+
+// =====================================================
+// ADDITIONAL REPORTS
+// =====================================================
+
+export interface LedgerEntry {
+  transactionNumber: string;
+  date: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  costCenter?: string;
+}
+
+export interface AccountLedgerReport {
+  account: {
+    id: string;
+    code: string;
+    name: string;
+    type: AccountType;
+    openingBalance: number;
+  };
+  entries: LedgerEntry[];
+  closingBalance: number;
+}
+
+export interface AgingInvoice {
+  id: string;
+  invoiceNumber: string;
+  relationName: string;
+  invoiceDate: string;
+  dueDate: string;
+  total: number;
+  amountPaid: number;
+  amountDue: number;
+  daysOverdue: number;
+}
+
+export interface AgingBucket {
+  invoices: AgingInvoice[];
+  total: number;
+}
+
+export interface AgingReport {
+  asOfDate: string;
+  buckets: {
+    current: AgingBucket;
+    days1to30: AgingBucket;
+    days31to60: AgingBucket;
+    days61to90: AgingBucket;
+    over90: AgingBucket;
+  };
+  grandTotal: number;
+}
+
+export async function getAccountLedger(accountId: string, startDate?: string, endDate?: string): Promise<AccountLedgerReport> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const response = await api.get(`/accounting/reports/account-ledger/${accountId}?${params.toString()}`);
+  return response.data;
+}
+
+export async function getAgingReport(): Promise<AgingReport> {
+  const response = await api.get('/accounting/reports/aging');
+  return response.data;
+}
+
+// =====================================================
+// SEPA PAYMENTS
+// =====================================================
+
+export type SepaBatchType = 'DD' | 'CT';
+export type SepaBatchStatus = 'draft' | 'generated' | 'submitted' | 'processed' | 'failed';
+
+export interface SepaBatch {
+  id: string;
+  batchReference: string;
+  batchType: SepaBatchType;
+  collectionDate: string;
+  bankAccountId: string;
+  accountCode?: string;
+  accountName?: string;
+  totalAmount: number;
+  transactionCount: number;
+  status: SepaBatchStatus;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  generatedAt?: string;
+  processedAt?: string;
+}
+
+export async function generateSepaBatch(
+  paymentType: 'credit_transfer' | 'direct_debit',
+  executionDate: string,
+  bankAccountId: string,
+  invoiceIds: string[]
+): Promise<{ id: string; transactionCount: number; totalAmount: number; message: string }> {
+  const response = await api.post('/accounting/sepa/generate', {
+    paymentType,
+    executionDate,
+    bankAccountId,
+    invoiceIds,
+  });
+  return response.data;
+}
+
+export async function getSepaBatches(): Promise<SepaBatch[]> {
+  const response = await api.get('/accounting/sepa/batches');
+  return response.data;
+}
+
+export async function downloadSepaBatch(batchId: string): Promise<Blob> {
+  const response = await api.get(`/accounting/sepa/batches/${batchId}/download`, {
+    responseType: 'blob',
+  });
+  return response.data;
+}

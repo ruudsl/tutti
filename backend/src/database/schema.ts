@@ -1963,6 +1963,28 @@ CREATE TABLE IF NOT EXISTS task_checklist_items (
 
 CREATE INDEX IF NOT EXISTS idx_task_checklist_task ON task_checklist_items(task_id);
 
+-- Task templates (predefined tasks with checklists)
+CREATE TABLE IF NOT EXISTS task_templates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    task_list_id TEXT,
+    priority TEXT DEFAULT 'medium',
+    estimated_hours REAL,
+    checklist_items TEXT, -- JSON array of checklist item strings
+    is_active BOOLEAN DEFAULT 1,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_templates_assoc ON task_templates(association_id);
+CREATE INDEX IF NOT EXISTS idx_task_templates_active ON task_templates(is_active);
+
 -- =====================================================
 -- POSTS/NEWS MODULE
 -- =====================================================
@@ -1994,7 +2016,7 @@ CREATE TABLE IF NOT EXISTS posts (
     content TEXT NOT NULL,
     content_format TEXT DEFAULT 'markdown' CHECK (content_format IN ('markdown', 'html')),
     featured_image TEXT,
-    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'published', 'archived')),
     is_pinned INTEGER DEFAULT 0,
     is_featured INTEGER DEFAULT 0,
     allow_comments INTEGER DEFAULT 1,
