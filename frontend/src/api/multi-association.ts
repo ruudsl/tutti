@@ -112,6 +112,11 @@ export interface ActivityLogEntry {
 // SUPER ADMIN ROUTES
 // ===========================================
 
+export async function checkIsSuperAdmin(): Promise<{ isSuperAdmin: boolean }> {
+    const response = await api.get('/multi-association/am-i-super-admin');
+    return response.data;
+}
+
 export async function getSuperAdminAssociations(): Promise<Association[]> {
     const response = await api.get('/multi-association/super-admin/associations');
     return response.data;

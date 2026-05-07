@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+    checkIsSuperAdmin,
     getSuperAdminAssociations,
     createAssociationAsSuperAdmin,
     updateAssociationAsSuperAdmin,
@@ -32,6 +33,13 @@ import {
 // ===========================================
 // SUPER ADMIN
 // ===========================================
+
+export function useIsSuperAdmin() {
+    return useQuery({
+        queryKey: ['isSuperAdmin'],
+        queryFn: checkIsSuperAdmin,
+    });
+}
 
 export function useSuperAdminAssociations() {
     return useQuery({
