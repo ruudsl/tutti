@@ -75,6 +75,66 @@ export * from './member-directory';
 // Inventory
 export * from './equipment';
 export * from './uniforms';
+export * from './instrument-assets';
+
+// Events & Planning
+export {
+    getEvents,
+    getEvent,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    getEventLocations,
+    getEventLocation,
+    createEventLocation,
+    updateEventLocation,
+    deleteEventLocation,
+    getEventSchedule,
+    createScheduleItem,
+    updateScheduleItem,
+    deleteScheduleItem,
+    getEventTransport,
+    createTransport,
+    updateTransport,
+    deleteTransport,
+    addPassenger,
+    removePassenger,
+    getEventMeetingPoints,
+    createMeetingPoint,
+    deleteMeetingPoint,
+    getEventPackingLists,
+    getEventPackingList,
+    createPackingList,
+    addPackingItem,
+    updatePackingItem,
+    deletePackingItem,
+    getPackingTemplates,
+    getPackingTemplate,
+    createPackingTemplate,
+    deletePackingTemplate,
+    updateMyAttendance as updateEventAttendance,
+    getAttendanceSummary as getEventAttendanceSummary,
+    getEventWeather,
+    fetchEventWeather,
+} from './events';
+export type {
+    Event,
+    EventLocation,
+    EventScheduleItem,
+    EventTransport,
+    TransportPassenger,
+    EventMeetingPoint,
+    EventPackingList,
+    PackingItem,
+    PackingListTemplate,
+    PackingTemplateItem,
+    EventAttendance,
+    EventWeather,
+    AttendanceSummary,
+} from './events';
+
+// Multi-Association
+export * from './multi-association';
 
 // User features
 export * from './favorites';

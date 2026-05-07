@@ -41,7 +41,6 @@ import MusicListManager from './pages/MusicListManager';
 import ImslpBrowser from './pages/ImslpBrowser';
 
 // Reference data management
-import Instruments from './pages/Instruments';
 import Genres from './pages/Genres';
 import Loans from './pages/Loans';
 
@@ -65,8 +64,10 @@ import Availability from './pages/Availability';
 import Practice from './pages/Practice';
 
 // Equipment and uniforms
-import Equipment from './pages/Equipment';
 import Uniforms from './pages/Uniforms';
+import InstrumentAssets from './pages/InstrumentAssets';
+import Events from './pages/Events';
+import MultiAssociation from './pages/MultiAssociation';
 
 // Seating management
 import Seating from './pages/Seating';
@@ -217,14 +218,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="instruments"
-          element={
-            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
-              <Instruments />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="genres"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
@@ -340,10 +333,10 @@ function AppRoutes() {
           }
         />
         <Route
-          path="equipment"
+          path="instrument-assets"
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
-              <Equipment />
+              <InstrumentAssets />
             </PrivateRoute>
           }
         />
@@ -360,6 +353,22 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Concerts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="events"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+              <Events />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="multi-association"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <MultiAssociation />
             </PrivateRoute>
           }
         />

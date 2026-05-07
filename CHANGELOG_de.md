@@ -2,6 +2,32 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.13.0] - 2026-05-06
+
+### Hinzugefügt
+
+#### Veranstaltungs- & Auftrittsplaner
+- **Komplettes Veranstaltungsmanagement** — Verwalten Sie Veranstaltungen mit detaillierten Ortsinformationen, Zeitplänen und Programmen
+- **Transportkoordination** — Registrieren Sie Autos/Busse mit Fahrern, Passagieren und Treffpunkten
+- **Packlisten** — Erstellen Sie Packlisten mit Vorlagen, verfolgen Sie den Fortschritt pro Artikel, weisen Sie Verantwortliche zu
+- **Wetter-Integration** — Wettervorhersagen für Außenauftritte mit Warnungen
+- **Anwesenheitsverwaltung** — Mitglieder können Anwesenheit mit Transportbedarf und Ernährungswünschen angeben
+- **Standortverwaltung** — Verwalten Sie Lieblingsorte mit Einrichtungen (Strom, Umkleideräume, Parkplätze)
+
+#### Mehrere Vereine
+- **Multi-Tenant-Unterstützung** — Eine Installation für mehrere Orchester/Vereine
+- **Super-Admin-Panel** — Verwalten Sie alle Vereine, Abonnements und Limits
+- **Mitgliedschaft** — Benutzer können Mitglied in mehreren Vereinen sein
+- **Partnerschaften** — Vereine können Musik, Veranstaltungen und Mitglieder teilen
+- **Einladungssystem** — Laden Sie neue Mitglieder mit automatischer Rollenzuweisung ein
+- **Aktivitätsprotokoll** — Audit-Trail aller wichtigen Aktionen pro Verein
+
+### Technisch
+- 20+ neue Datenbanktabellen für Veranstaltungen, Orte, Transport, Packlisten und Multi-Tenant
+- Vollständige API mit ~50 neuen Endpunkten
+- React Query Hooks für alle neuen Funktionen
+- Übersetzungen in NL, EN und DE
+
 ## [1.12.0] - 2026-05-02
 
 ### Hinzugefügt

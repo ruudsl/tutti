@@ -120,7 +120,7 @@
     "more": "Meer",
     "mobileNavigation": "Navigatie",
     "inventory": "Inventaris",
-    "equipment": "Instrumentenbeheer",
+    "instrumentAssets": "Instrumentenbeheer",
     "uniforms": "Uniformen",
     "concerts": "Concerten",
     "entraSync": "Entra ID Sync",
@@ -405,6 +405,9 @@
     "refreshing": "Bezig...",
     "count": "muziekstukken",
     "noPieces": "Geen muziekstukken gevonden.",
+    "noPiecesTitle": "Geen muziekstukken",
+    "noResultsTitle": "Geen resultaten",
+    "noResultsDescription": "Geen muziekstukken gevonden voor je zoekopdracht.",
     "edit": {
       "title": "Muziekstuk bewerken",
       "pieceTitle": "Titel",
@@ -2633,25 +2636,6 @@
     "added": "Toegevoegd aan favorieten",
     "removed": "Verwijderd uit favorieten"
   },
-  "practice": {
-    "title": "Oefenlogboek",
-    "log": "Oefensessie loggen",
-    "duration": "Duur (minuten)",
-    "notes": "Notities",
-    "logged": "Oefensessie opgeslagen",
-    "stats": {
-      "title": "Statistieken",
-      "totalTime": "Totale oefentijd",
-      "weekTime": "Deze week",
-      "monthTime": "Deze maand",
-      "streak": "Huidige streak",
-      "mostPracticed": "Meest geoefend"
-    },
-    "empty": "Je hebt nog geen oefensessies gelogd.",
-    "minutes": "minuten",
-    "hours": "uren",
-    "days": "dagen"
-  },
   "recent": {
     "title": "Recent bekeken",
     "empty": "Je hebt nog geen items bekeken.",
@@ -3415,6 +3399,266 @@
         "title": "Dat was het!",
         "description": "Je bent helemaal klaar. Als je later hulp nodig hebt, bekijk de Handleiding of neem contact op met de muziekcommissie."
       }
+    }
+  },
+  "events": {
+    "title": "Evenementen",
+    "newEvent": "Nieuw Evenement",
+    "editEvent": "Evenement Bewerken",
+    "deleteEvent": "Evenement verwijderen",
+    "deleteConfirm": "Weet je zeker dat je dit evenement wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "backToOverview": "Terug naar overzicht",
+    "upcoming": "Aankomend",
+    "noEvents": "Geen evenementen gevonden",
+    "status": {
+      "planned": "Gepland",
+      "confirmed": "Bevestigd",
+      "cancelled": "Geannuleerd",
+      "completed": "Afgerond"
+    },
+    "type": {
+      "performance": "Optreden",
+      "rehearsal": "Repetitie",
+      "meeting": "Vergadering",
+      "social": "Sociaal",
+      "workshop": "Workshop",
+      "other": "Overig"
+    },
+    "attendance": {
+      "title": "Aanwezigheid",
+      "attending": "Aanwezig",
+      "notAttending": "Afwezig",
+      "maybe": "Misschien",
+      "pending": "Nog niet ingevuld",
+      "needsTransport": "Zoekt vervoer",
+      "availableSeats": "Beschikbare plekken"
+    },
+    "tabs": {
+      "details": "Details",
+      "schedule": "Programma",
+      "transport": "Vervoer",
+      "packing": "Paklijst",
+      "weather": "Weer"
+    },
+    "details": {
+      "general": "Algemene Informatie",
+      "dressCode": "Dresscode",
+      "orchestras": "Orkesten",
+      "meetingPoints": "Verzamelpunten",
+      "members": "Leden"
+    },
+    "schedule": {
+      "title": "Tijdschema",
+      "addItem": "Toevoegen",
+      "noItems": "Nog geen programma-items",
+      "types": {
+        "general": "Algemeen",
+        "setup": "Opbouw",
+        "soundcheck": "Soundcheck",
+        "performance": "Optreden",
+        "break": "Pauze",
+        "packdown": "Afbouw"
+      }
+    },
+    "transport": {
+      "title": "Vervoer",
+      "addTransport": "Vervoer toevoegen",
+      "noTransport": "Nog geen vervoer geregeld",
+      "driver": "Chauffeur",
+      "departure": "Vertrek",
+      "capacity": "Capaciteit",
+      "passengers": "Passagiers",
+      "types": {
+        "car": "Auto",
+        "van": "Busje",
+        "bus": "Bus",
+        "train": "Trein",
+        "bike": "Fiets",
+        "other": "Anders"
+      }
+    },
+    "meetingPoints": {
+      "title": "Verzamelpunten",
+      "addPoint": "Verzamelpunt toevoegen",
+      "noPoints": "Nog geen verzamelpunten"
+    },
+    "packing": {
+      "title": "Paklijsten",
+      "addList": "Paklijst toevoegen",
+      "noLists": "Nog geen paklijsten",
+      "packed": "ingepakt",
+      "progress": "Voortgang",
+      "categories": {
+        "general": "Algemeen",
+        "instruments": "Instrumenten",
+        "equipment": "Apparatuur",
+        "documents": "Documenten",
+        "uniforms": "Kleding",
+        "other": "Overig"
+      }
+    },
+    "weather": {
+      "title": "Weersvoorspelling",
+      "notSensitive": "Dit evenement is niet als weergevoelig gemarkeerd.",
+      "enableHint": "Bewerk het evenement om weersvoorspellingen in te schakelen.",
+      "noForecast": "Geen weersvoorspelling beschikbaar.",
+      "coordinatesHint": "Zorg dat het evenement coördinaten heeft ingesteld.",
+      "temperature": "Temperatuur",
+      "wind": "Wind",
+      "precipitation": "Neerslag"
+    },
+    "locations": {
+      "title": "Locaties",
+      "addLocation": "Locatie toevoegen",
+      "selectLocation": "Selecteer locatie",
+      "noLocation": "Geen locatie",
+      "indoor": "Binnen",
+      "outdoor": "Buiten",
+      "both": "Beide",
+      "facilities": {
+        "electricity": "Elektriciteit",
+        "changingRooms": "Kleedruimtes",
+        "storage": "Opslag",
+        "catering": "Catering",
+        "parking": "Parkeren"
+      }
+    },
+    "form": {
+      "name": "Naam",
+      "type": "Type",
+      "status": "Status",
+      "start": "Start",
+      "end": "Einde",
+      "location": "Locatie",
+      "locationName": "Locatienaam",
+      "city": "Stad",
+      "description": "Beschrijving",
+      "weatherSensitive": "Weergevoelig (buitenoptreden)"
+    }
+  },
+  "multiAssociation": {
+    "title": "Verenigingen Beheer",
+    "subtitle": "Beheer meerdere verenigingen en hun instellingen",
+    "switchAssociation": "Wissel van vereniging",
+    "yourAssociations": "Jouw verenigingen",
+    "switchedSuccess": "Gewisseld naar vereniging",
+    "switchError": "Kon niet wisselen van vereniging",
+    "roles": {
+      "member": "Lid",
+      "board": "Bestuur",
+      "admin": "Beheerder",
+      "super_admin": "Super Admin"
+    },
+    "tabs": {
+      "associations": "Verenigingen",
+      "invitations": "Uitnodigingen",
+      "partnerships": "Partnerschappen",
+      "members": "Leden",
+      "superadmins": "Super Admins",
+      "activity": "Activiteit"
+    },
+    "associations": {
+      "title": "Alle Verenigingen",
+      "newAssociation": "Nieuwe Vereniging",
+      "editAssociation": "Vereniging Bewerken",
+      "deleteAssociation": "Vereniging verwijderen",
+      "deleteConfirm": "Weet je zeker dat je deze vereniging wilt verwijderen? Alle leden moeten eerst verwijderd zijn.",
+      "noAssociations": "Geen verenigingen gevonden",
+      "memberCount": "Leden",
+      "orchestraCount": "Orkesten",
+      "subscription": "Abonnement",
+      "status": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      }
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "tier": "Tier",
+      "expires": "Verloopt op",
+      "maxMembers": "Max Leden",
+      "maxOrchestras": "Max Orkesten",
+      "maxStorage": "Max Opslag (MB)",
+      "tiers": {
+        "free": "Gratis",
+        "basic": "Basis",
+        "pro": "Pro",
+        "enterprise": "Enterprise"
+      }
+    },
+    "invitations": {
+      "title": "Uitnodigingen",
+      "invite": "Uitnodigen",
+      "noInvitations": "Geen uitnodigingen",
+      "invitedBy": "Uitgenodigd door",
+      "status": {
+        "pending": "Openstaand",
+        "accepted": "Geaccepteerd",
+        "expired": "Verlopen"
+      }
+    },
+    "partnerships": {
+      "title": "Partnerschappen",
+      "noPartnerships": "Geen partnerschappen",
+      "outgoing": "Uitgaand verzoek",
+      "incoming": "Binnenkomend verzoek",
+      "shareMusic": "Muziek delen",
+      "shareEvents": "Events delen",
+      "shareMembers": "Leden delen",
+      "approve": "Goedkeuren",
+      "reject": "Afwijzen",
+      "end": "Beëindigen",
+      "status": {
+        "pending": "In afwachting",
+        "active": "Actief",
+        "rejected": "Afgewezen"
+      }
+    },
+    "members": {
+      "title": "Leden",
+      "noMembers": "Geen leden gevonden",
+      "removeConfirm": "Weet je zeker dat je dit lid wilt verwijderen uit de vereniging?",
+      "roles": {
+        "member": "Lid",
+        "board": "Bestuur",
+        "admin": "Admin"
+      }
+    },
+    "superAdmins": {
+      "title": "Super Administrators",
+      "warning": "Super admins hebben volledige toegang tot alle verenigingen en hun data. Wees voorzichtig met wie je deze rechten geeft.",
+      "noAdmins": "Geen super admins gevonden",
+      "removeConfirm": "Weet je zeker dat je deze super admin wilt verwijderen?"
+    },
+    "activity": {
+      "title": "Activiteitenlog",
+      "noActivity": "Geen activiteiten gevonden",
+      "actions": {
+        "association_created": "Vereniging aangemaakt",
+        "subscription_updated": "Abonnement bijgewerkt",
+        "invitation_sent": "Uitnodiging verstuurd",
+        "invitation_accepted": "Uitnodiging geaccepteerd",
+        "partnership_requested": "Partnerschap aangevraagd",
+        "partnership_approved": "Partnerschap goedgekeurd",
+        "partnership_rejected": "Partnerschap afgewezen",
+        "member_role_changed": "Rol gewijzigd",
+        "member_removed": "Lid verwijderd"
+      }
+    },
+    "form": {
+      "name": "Naam",
+      "displayName": "Weergavenaam",
+      "slug": "Slug",
+      "website": "Website",
+      "phone": "Telefoon",
+      "email": "E-mail",
+      "billingEmail": "Factuur E-mail",
+      "address": "Adres",
+      "postalCode": "Postcode",
+      "city": "Stad",
+      "country": "Land",
+      "kvkNumber": "KvK Nummer",
+      "iban": "IBAN"
     }
   }
 }

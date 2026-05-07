@@ -100,8 +100,17 @@ export const PdfThumbnail = memo(function PdfThumbnail({
       let data: ArrayBuffer | string;
 
       if (typeof src === 'string') {
-        // URL - let pdfjs fetch it
-        data = src;
+        // URL - fetch with Bearer token for authentication
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(src, { headers });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status}`);
+        }
+        data = await response.arrayBuffer();
       } else {
         // File object - read as ArrayBuffer
         data = await src.arrayBuffer();

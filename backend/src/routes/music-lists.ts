@@ -116,9 +116,9 @@ router.get('/my-lists', authenticateToken, asyncHandler(async (req: AuthRequest,
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
         JOIN user_orchestras uo ON o.id = uo.orchestra_id
-        WHERE uo.user_id = ? ${activeFilter}
+        WHERE uo.user_id = ? AND o.association_id = ? ${activeFilter}
         ORDER BY o.name, ml.position, ml.name
-    `).all(req.user!.id);
+    `).all(req.user!.id, req.user!.associationId);
 
     res.json(lists.map((l: any) => ({
         id: l.id,

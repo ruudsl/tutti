@@ -87,6 +87,16 @@ import {
   Maximize2,
   Minimize2,
   StopCircle,
+  ArrowLeft,
+  MapPin,
+  Truck,
+  Building2,
+  CreditCard,
+  Mail,
+  Shield,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -179,6 +189,16 @@ const iconMap = {
   maximize: Maximize2,
   minimize: Minimize2,
   stop: StopCircle,
+  arrowLeft: ArrowLeft,
+  mapPin: MapPin,
+  truck: Truck,
+  building: Building2,
+  creditCard: CreditCard,
+  envelope: Mail,
+  shield: Shield,
+  checkCircle: CheckCircle,
+  xCircle: XCircle,
+  helpCircle: HelpCircle,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

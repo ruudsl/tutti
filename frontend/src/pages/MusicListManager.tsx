@@ -93,9 +93,16 @@ export default function MusicListManager() {
   const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
 
   // Set initial orchestra from URL or first available
+  // Also reset if current selection doesn't exist in the list (e.g., after association switch)
   useEffect(() => {
-    if (!selectedOrchestra && orchestras.length > 0) {
-      setSelectedOrchestra(orchestras[0].id);
+    if (orchestras.length > 0) {
+      const currentExists = orchestras.some(o => o.id === selectedOrchestra);
+      if (!selectedOrchestra || !currentExists) {
+        setSelectedOrchestra(orchestras[0].id);
+      }
+    } else if (selectedOrchestra) {
+      // No orchestras available, clear selection
+      setSelectedOrchestra('');
     }
   }, [orchestras, selectedOrchestra]);
 

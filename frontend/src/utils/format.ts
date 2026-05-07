@@ -76,3 +76,16 @@ export function formatFileSize(bytes: number): string {
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
+
+/**
+ * Format currency to Euro format
+ */
+export function formatCurrency(amount: number | null | undefined, currency = 'EUR'): string {
+  if (amount == null) return '-';
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}

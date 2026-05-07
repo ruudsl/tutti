@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import db from '../database/connection';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import logger from '../utils/logger';
 import twilio from 'twilio';
 
@@ -38,6 +38,14 @@ interface NotificationLog {
 router.get('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
     try {
         const { orchestraId } = req.params;
+        const authReq = req as AuthRequest;
+
+        // Verify orchestra belongs to user's association
+        const orchestra = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+            .get(orchestraId, authReq.user!.associationId);
+        if (!orchestra) {
+            return res.status(404).json({ error: 'Orchestra not found' });
+        }
 
         const settings = db.prepare(`
             SELECT * FROM seating_notification_settings WHERE orchestra_id = ?
@@ -64,6 +72,15 @@ router.get('/settings/:orchestraId', authenticateToken, (req: Request, res: Resp
 router.put('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
     try {
         const { orchestraId } = req.params;
+        const authReq = req as AuthRequest;
+
+        // Verify orchestra belongs to user's association
+        const orchestra = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+            .get(orchestraId, authReq.user!.associationId);
+        if (!orchestra) {
+            return res.status(404).json({ error: 'Orchestra not found' });
+        }
+
         const {
             notification_type,
             webhook_url,
@@ -168,6 +185,14 @@ router.put('/settings/:orchestraId', authenticateToken, (req: Request, res: Resp
 router.delete('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
     try {
         const { orchestraId } = req.params;
+        const authReq = req as AuthRequest;
+
+        // Verify orchestra belongs to user's association
+        const orchestra = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+            .get(orchestraId, authReq.user!.associationId);
+        if (!orchestra) {
+            return res.status(404).json({ error: 'Orchestra not found' });
+        }
 
         db.prepare(`DELETE FROM seating_notification_settings WHERE orchestra_id = ?`).run(orchestraId);
 
@@ -182,6 +207,17 @@ router.delete('/settings/:orchestraId', authenticateToken, (req: Request, res: R
 router.get('/logs/:rehearsalId', authenticateToken, (req: Request, res: Response) => {
     try {
         const { rehearsalId } = req.params;
+        const authReq = req as AuthRequest;
+
+        // Verify rehearsal belongs to user's association
+        const rehearsal = db.prepare(`
+            SELECT r.id FROM rehearsals r
+            JOIN orchestras o ON r.orchestra_id = o.id
+            WHERE r.id = ? AND o.association_id = ?
+        `).get(rehearsalId, authReq.user!.associationId);
+        if (!rehearsal) {
+            return res.status(404).json({ error: 'Rehearsal not found' });
+        }
 
         const logs = db.prepare(`
             SELECT * FROM seating_notification_logs
@@ -274,14 +310,15 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
 router.post('/send/:rehearsalId', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { rehearsalId } = req.params;
+        const authReq = req as AuthRequest;
 
-        // Get rehearsal details
+        // Get rehearsal details and verify association
         const rehearsal = db.prepare(`
             SELECT r.*, o.name as orchestra_name
             FROM rehearsals r
             LEFT JOIN orchestras o ON r.orchestra_id = o.id
-            WHERE r.id = ?
-        `).get(rehearsalId) as {
+            WHERE r.id = ? AND o.association_id = ?
+        `).get(rehearsalId, authReq.user!.associationId) as {
             id: string;
             date: string;
             start_time: string;

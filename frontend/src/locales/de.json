@@ -118,7 +118,7 @@
     "mobileNavigation": "Navigation",
     "imslp": "IMSLP",
     "inventory": "Inventar",
-    "equipment": "Instrumente",
+    "instrumentAssets": "Instrumentenverwaltung",
     "uniforms": "Uniformen",
     "concerts": "Konzerte",
     "entraSync": "Entra ID Sync",
@@ -445,6 +445,9 @@
     "refreshing": "Laden...",
     "count": "Musikstücke",
     "noPieces": "Keine Musikstücke gefunden.",
+    "noPiecesTitle": "Keine Musikstücke",
+    "noResultsTitle": "Keine Ergebnisse",
+    "noResultsDescription": "Keine Musikstücke für Ihre Suche gefunden.",
     "edit": {
       "title": "Musikstück bearbeiten",
       "pieceTitle": "Titel",
@@ -2747,51 +2750,71 @@
     "removed": "Verwijderd uit favorieten"
   },
   "practice": {
-    "title": "Oefenlogboek",
-    "log": "Oefensessie loggen",
-    "duration": "Duur (minuten)",
-    "notes": "Notities",
-    "logged": "Oefensessie opgeslagen",
-    "stats": {
-      "title": "Statistieken",
-      "totalTime": "Totale oefentijd",
-      "weekTime": "Deze week",
-      "monthTime": "Deze maand",
-      "streak": "Huidige streak",
-      "mostPracticed": "Meest geoefend"
-    },
-    "empty": "Je hebt nog geen oefensessies gelogd.",
-    "minutes": "minuten",
-    "hours": "uren",
-    "days": "dagen"
+    "title": "Üben",
+    "logSession": "Übungssitzung protokollieren",
+    "logged": "Übungssitzung protokolliert",
+    "deleted": "Übungssitzung gelöscht",
+    "deleteConfirm": "Möchtest du diese Übungssitzung wirklich löschen?",
+    "streak": "Tage in Folge",
+    "thisWeek": "Diese Woche",
+    "thisMonth": "Diesen Monat",
+    "allTime": "Gesamt",
+    "goals": "Ziele",
+    "setGoal": "Ziel setzen",
+    "goalType": "Zieltyp",
+    "daily": "Täglich",
+    "weekly": "Wöchentlich",
+    "targetMinutes": "Ziel (Minuten)",
+    "dailyGoal": "Tagesziel",
+    "weeklyGoal": "Wochenziel",
+    "goalSaved": "Ziel gespeichert",
+    "goalDeleted": "Ziel gelöscht",
+    "deleteGoalConfirm": "Möchtest du dieses Ziel wirklich löschen?",
+    "goalReached": "Ziel erreicht!",
+    "noGoalSet": "Kein Ziel gesetzt",
+    "mostPracticed": "Am meisten geübt",
+    "piece": "Stück",
+    "totalTime": "Gesamtzeit",
+    "sessions": "Sitzungen",
+    "recentSessions": "Letzte Sitzungen",
+    "noSessions": "Noch keine Übungssitzungen protokolliert.",
+    "date": "Datum",
+    "duration": "Dauer",
+    "notes": "Notizen",
+    "notesPlaceholder": "Optional: Was hast du geübt?",
+    "selectPiece": "Stück auswählen",
+    "searchPiece": "Titel suchen...",
+    "noResults": "Keine Titel gefunden",
+    "typeToSearch": "Zum Suchen tippen",
+    "log": "Protokollieren"
   },
   "recent": {
-    "title": "Recent bekeken",
-    "empty": "Je hebt nog geen items bekeken.",
-    "clear": "Geschiedenis wissen"
+    "title": "Zuletzt angesehen",
+    "empty": "Du hast noch keine Elemente angesehen.",
+    "clear": "Verlauf löschen"
   },
   "sessions": {
-    "title": "Active Sessions",
-    "description": "Here you can see all devices where you are logged in. You can revoke access to individual sessions.",
-    "current": "Huidige sessie",
-    "currentSession": "Current",
-    "lastActive": "Last active",
-    "ipAddress": "IP address",
-    "createdAt": "Logged in",
-    "expiresAt": "Verloopt op",
-    "revoke": "Log out",
-    "revokeAll": "Log out everywhere",
-    "revokeConfirmTitle": "Log out session?",
-    "revokeConfirmMessage": "Are you sure you want to log out this device? The user will need to log in again.",
-    "revokeAllConfirmTitle": "Log out all other sessions?",
-    "revokeAllConfirmMessage": "Are you sure you want to log out {{count}} other session(s)?",
-    "revokeConfirm": "Weet je zeker dat je deze sessie wilt beëindigen?",
-    "revokeAllConfirm": "Weet je zeker dat je alle andere sessies wilt beëindigen?",
-    "sessionRevoked": "Session logged out",
-    "allSessionsRevoked": "{{count}} session(s) logged out",
-    "revoked": "Sessie beëindigd",
-    "allRevoked": "Alle andere sessies beëindigd",
-    "noSessions": "No active sessions found."
+    "title": "Aktive Sitzungen",
+    "description": "Hier siehst du alle Geräte, auf denen du angemeldet bist. Du kannst den Zugriff auf einzelne Sitzungen widerrufen.",
+    "current": "Aktuelle Sitzung",
+    "currentSession": "Aktuell",
+    "lastActive": "Zuletzt aktiv",
+    "ipAddress": "IP-Adresse",
+    "createdAt": "Angemeldet",
+    "expiresAt": "Läuft ab",
+    "revoke": "Abmelden",
+    "revokeAll": "Überall abmelden",
+    "revokeConfirmTitle": "Sitzung beenden?",
+    "revokeConfirmMessage": "Möchtest du dieses Gerät wirklich abmelden? Der Benutzer muss sich erneut anmelden.",
+    "revokeAllConfirmTitle": "Alle anderen Sitzungen beenden?",
+    "revokeAllConfirmMessage": "Möchtest du wirklich {{count}} andere Sitzung(en) beenden?",
+    "revokeConfirm": "Möchtest du diese Sitzung wirklich beenden?",
+    "revokeAllConfirm": "Möchtest du wirklich alle anderen Sitzungen beenden?",
+    "sessionRevoked": "Sitzung beendet",
+    "allSessionsRevoked": "{{count}} Sitzung(en) beendet",
+    "revoked": "Sitzung beendet",
+    "allRevoked": "Alle anderen Sitzungen beendet",
+    "noSessions": "Keine aktiven Sitzungen gefunden."
   },
   "gdpr": {
     "title": "Gegevens exporteren",
@@ -3321,6 +3344,266 @@
         "title": "Das war's!",
         "description": "Sie sind fertig eingerichtet. Wenn Sie später Hilfe benötigen, schauen Sie ins Benutzerhandbuch oder kontaktieren Sie die Musikkommission."
       }
+    }
+  },
+  "events": {
+    "title": "Veranstaltungen",
+    "newEvent": "Neue Veranstaltung",
+    "editEvent": "Veranstaltung bearbeiten",
+    "deleteEvent": "Veranstaltung löschen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie diese Veranstaltung löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+    "backToOverview": "Zurück zur Übersicht",
+    "upcoming": "Kommend",
+    "noEvents": "Keine Veranstaltungen gefunden",
+    "status": {
+      "planned": "Geplant",
+      "confirmed": "Bestätigt",
+      "cancelled": "Abgesagt",
+      "completed": "Abgeschlossen"
+    },
+    "type": {
+      "performance": "Auftritt",
+      "rehearsal": "Probe",
+      "meeting": "Besprechung",
+      "social": "Gesellschaftlich",
+      "workshop": "Workshop",
+      "other": "Sonstiges"
+    },
+    "attendance": {
+      "title": "Anwesenheit",
+      "attending": "Anwesend",
+      "notAttending": "Abwesend",
+      "maybe": "Vielleicht",
+      "pending": "Noch nicht ausgefüllt",
+      "needsTransport": "Braucht Transport",
+      "availableSeats": "Verfügbare Plätze"
+    },
+    "tabs": {
+      "details": "Details",
+      "schedule": "Zeitplan",
+      "transport": "Transport",
+      "packing": "Packliste",
+      "weather": "Wetter"
+    },
+    "details": {
+      "general": "Allgemeine Informationen",
+      "dressCode": "Kleiderordnung",
+      "orchestras": "Orchester",
+      "meetingPoints": "Treffpunkte",
+      "members": "Mitglieder"
+    },
+    "schedule": {
+      "title": "Zeitplan",
+      "addItem": "Hinzufügen",
+      "noItems": "Noch keine Programmpunkte",
+      "types": {
+        "general": "Allgemein",
+        "setup": "Aufbau",
+        "soundcheck": "Soundcheck",
+        "performance": "Auftritt",
+        "break": "Pause",
+        "packdown": "Abbau"
+      }
+    },
+    "transport": {
+      "title": "Transport",
+      "addTransport": "Transport hinzufügen",
+      "noTransport": "Noch kein Transport organisiert",
+      "driver": "Fahrer",
+      "departure": "Abfahrt",
+      "capacity": "Kapazität",
+      "passengers": "Passagiere",
+      "types": {
+        "car": "Auto",
+        "van": "Transporter",
+        "bus": "Bus",
+        "train": "Zug",
+        "bike": "Fahrrad",
+        "other": "Sonstiges"
+      }
+    },
+    "meetingPoints": {
+      "title": "Treffpunkte",
+      "addPoint": "Treffpunkt hinzufügen",
+      "noPoints": "Noch keine Treffpunkte"
+    },
+    "packing": {
+      "title": "Packlisten",
+      "addList": "Packliste hinzufügen",
+      "noLists": "Noch keine Packlisten",
+      "packed": "gepackt",
+      "progress": "Fortschritt",
+      "categories": {
+        "general": "Allgemein",
+        "instruments": "Instrumente",
+        "equipment": "Ausrüstung",
+        "documents": "Dokumente",
+        "uniforms": "Kleidung",
+        "other": "Sonstiges"
+      }
+    },
+    "weather": {
+      "title": "Wettervorhersage",
+      "notSensitive": "Diese Veranstaltung ist nicht als wetterempfindlich markiert.",
+      "enableHint": "Bearbeiten Sie die Veranstaltung, um Wettervorhersagen zu aktivieren.",
+      "noForecast": "Keine Wettervorhersage verfügbar.",
+      "coordinatesHint": "Stellen Sie sicher, dass die Veranstaltung Koordinaten hat.",
+      "temperature": "Temperatur",
+      "wind": "Wind",
+      "precipitation": "Niederschlag"
+    },
+    "locations": {
+      "title": "Orte",
+      "addLocation": "Ort hinzufügen",
+      "selectLocation": "Ort auswählen",
+      "noLocation": "Kein Ort",
+      "indoor": "Innen",
+      "outdoor": "Außen",
+      "both": "Beides",
+      "facilities": {
+        "electricity": "Strom",
+        "changingRooms": "Umkleideräume",
+        "storage": "Lagerung",
+        "catering": "Catering",
+        "parking": "Parkplatz"
+      }
+    },
+    "form": {
+      "name": "Name",
+      "type": "Typ",
+      "status": "Status",
+      "start": "Beginn",
+      "end": "Ende",
+      "location": "Ort",
+      "locationName": "Ortsname",
+      "city": "Stadt",
+      "description": "Beschreibung",
+      "weatherSensitive": "Wetterempfindlich (Außenveranstaltung)"
+    }
+  },
+  "multiAssociation": {
+    "title": "Vereinsverwaltung",
+    "subtitle": "Verwalten Sie mehrere Vereine und ihre Einstellungen",
+    "switchAssociation": "Verein wechseln",
+    "yourAssociations": "Ihre Vereine",
+    "switchedSuccess": "Zu Verein gewechselt",
+    "switchError": "Konnte nicht zum Verein wechseln",
+    "roles": {
+      "member": "Mitglied",
+      "board": "Vorstand",
+      "admin": "Administrator",
+      "super_admin": "Super Admin"
+    },
+    "tabs": {
+      "associations": "Vereine",
+      "invitations": "Einladungen",
+      "partnerships": "Partnerschaften",
+      "members": "Mitglieder",
+      "superadmins": "Super-Admins",
+      "activity": "Aktivität"
+    },
+    "associations": {
+      "title": "Alle Vereine",
+      "newAssociation": "Neuer Verein",
+      "editAssociation": "Verein bearbeiten",
+      "deleteAssociation": "Verein löschen",
+      "deleteConfirm": "Sind Sie sicher, dass Sie diesen Verein löschen möchten? Alle Mitglieder müssen zuerst entfernt werden.",
+      "noAssociations": "Keine Vereine gefunden",
+      "memberCount": "Mitglieder",
+      "orchestraCount": "Orchester",
+      "subscription": "Abonnement",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      }
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "tier": "Stufe",
+      "expires": "Läuft ab am",
+      "maxMembers": "Max. Mitglieder",
+      "maxOrchestras": "Max. Orchester",
+      "maxStorage": "Max. Speicher (MB)",
+      "tiers": {
+        "free": "Kostenlos",
+        "basic": "Basis",
+        "pro": "Pro",
+        "enterprise": "Enterprise"
+      }
+    },
+    "invitations": {
+      "title": "Einladungen",
+      "invite": "Einladen",
+      "noInvitations": "Keine Einladungen",
+      "invitedBy": "Eingeladen von",
+      "status": {
+        "pending": "Ausstehend",
+        "accepted": "Akzeptiert",
+        "expired": "Abgelaufen"
+      }
+    },
+    "partnerships": {
+      "title": "Partnerschaften",
+      "noPartnerships": "Keine Partnerschaften",
+      "outgoing": "Ausgehende Anfrage",
+      "incoming": "Eingehende Anfrage",
+      "shareMusic": "Musik teilen",
+      "shareEvents": "Veranstaltungen teilen",
+      "shareMembers": "Mitglieder teilen",
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "end": "Beenden",
+      "status": {
+        "pending": "Ausstehend",
+        "active": "Aktiv",
+        "rejected": "Abgelehnt"
+      }
+    },
+    "members": {
+      "title": "Mitglieder",
+      "noMembers": "Keine Mitglieder gefunden",
+      "removeConfirm": "Sind Sie sicher, dass Sie dieses Mitglied aus dem Verein entfernen möchten?",
+      "roles": {
+        "member": "Mitglied",
+        "board": "Vorstand",
+        "admin": "Admin"
+      }
+    },
+    "superAdmins": {
+      "title": "Super-Administratoren",
+      "warning": "Super-Admins haben vollen Zugriff auf alle Vereine und deren Daten. Seien Sie vorsichtig, wem Sie diese Rechte geben.",
+      "noAdmins": "Keine Super-Admins gefunden",
+      "removeConfirm": "Sind Sie sicher, dass Sie diesen Super-Admin entfernen möchten?"
+    },
+    "activity": {
+      "title": "Aktivitätsprotokoll",
+      "noActivity": "Keine Aktivitäten gefunden",
+      "actions": {
+        "association_created": "Verein erstellt",
+        "subscription_updated": "Abonnement aktualisiert",
+        "invitation_sent": "Einladung gesendet",
+        "invitation_accepted": "Einladung akzeptiert",
+        "partnership_requested": "Partnerschaft angefragt",
+        "partnership_approved": "Partnerschaft genehmigt",
+        "partnership_rejected": "Partnerschaft abgelehnt",
+        "member_role_changed": "Rolle geändert",
+        "member_removed": "Mitglied entfernt"
+      }
+    },
+    "form": {
+      "name": "Name",
+      "displayName": "Anzeigename",
+      "slug": "Slug",
+      "website": "Website",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "billingEmail": "Rechnungs-E-Mail",
+      "address": "Adresse",
+      "postalCode": "Postleitzahl",
+      "city": "Stadt",
+      "country": "Land",
+      "kvkNumber": "Handelsregisternummer",
+      "iban": "IBAN"
     }
   }
 }

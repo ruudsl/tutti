@@ -53,6 +53,12 @@ export const queryClient = new QueryClient({
   },
 });
 
+// Check if we need to clear cache (e.g., after association switch)
+if (typeof window !== 'undefined' && window.localStorage.getItem('harmonie-clear-cache')) {
+  window.localStorage.removeItem('harmonie-clear-cache');
+  window.localStorage.removeItem('harmonie-query-cache');
+}
+
 // Create persister for offline support (used by PersistQueryClientProvider in App.tsx)
 // Wrapped in try-catch to handle corrupted localStorage data
 export const queryPersister = typeof window !== 'undefined'
@@ -74,7 +80,7 @@ export const queryPersister = typeof window !== 'undefined'
 
 export const persistOptions = {
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
-  buster: 'v3', // Bumped to invalidate health-detailed cache issue
+  buster: 'v4', // Bumped to invalidate stale association cache
 };
 
 /**

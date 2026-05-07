@@ -203,8 +203,9 @@ router.get('/stats', authenticateToken, asyncHandler(async (req: AuthRequest, re
 router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createPracticeLogSchema.parse(req.body);
 
-    // Check if title exists
-    const title = db.prepare('SELECT id FROM music_titles WHERE id = ?').get(data.musicTitleId);
+    // Check if title exists and belongs to user's association
+    const title = db.prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
+        .get(data.musicTitleId, req.user!.associationId);
     if (!title) {
         throw new ApiError(404, 'Titel niet gevonden.');
     }

@@ -89,6 +89,10 @@ import maintenanceRoutes from './routes/maintenance';
 import vocabulariesRoutes from './routes/vocabularies';
 import interopRoutes from './routes/interop';
 import availabilityRoutes from './routes/availability';
+import instrumentAssetsRoutes from './routes/instrument-assets';
+import instrumentInsuranceRoutes from './routes/instrument-insurance';
+import eventsRoutes from './routes/events';
+import multiAssociationRoutes from './routes/multi-association';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -258,6 +262,10 @@ app.use('/api/musicainfo', musicaInfoRoutes);
 app.use('/api/imslp', imslpRoutes);
 app.use('/api/cloud-import', cloudImportRoutes);
 app.use('/api/equipment', equipmentRoutes);
+app.use('/api/instrument-assets', instrumentAssetsRoutes);
+app.use('/api/instrument-insurance', instrumentInsuranceRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/multi-association', multiAssociationRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
