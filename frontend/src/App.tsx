@@ -12,6 +12,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { AriaLiveProvider } from './components/AriaLiveRegion';
+import { PrivacyConsentGate } from './components/PrivacyConsentGate';
 import { ROLES } from './utils/constants';
 
 // All pages - loaded immediately to avoid lazy loading issues
@@ -186,7 +187,9 @@ function AppRoutes() {
         path="/"
         element={
           <PrivateRoute>
-            <Layout />
+            <PrivacyConsentGate>
+              <Layout />
+            </PrivacyConsentGate>
           </PrivateRoute>
         }
       >

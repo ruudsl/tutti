@@ -39,6 +39,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Concert, TicketType } from '../types';
 import { FloatingActionButton } from '../components/FloatingActionButton';
+import { CustomFieldRenderer } from '../components/CustomFields';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -865,6 +866,14 @@ export default function Concerts() {
               contactPhone={concertDetail.accessibilityContactPhone || undefined}
             />
           )}
+
+          {/* Custom Fields */}
+          <CustomFieldRenderer
+            entityType="concert"
+            entityId={concertDetail.id}
+            layout="horizontal"
+            className="mb-3 p-3 bg-base-200 rounded-lg"
+          />
 
           {/* Program Section */}
           <div className="flex justify-between items-center mb-2">
