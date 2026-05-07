@@ -70,28 +70,6 @@ const createValuationSchema = z.object({
     notes: z.string().optional(),
 });
 
-const createInsurancePolicySchema = z.object({
-    policyNumber: z.string().min(1, 'Polisnummer is verplicht'),
-    providerName: z.string().min(1, 'Verzekering naam is verplicht'),
-    providerContact: z.string().optional(),
-    providerPhone: z.string().optional(),
-    providerEmail: z.string().email().optional(),
-    policyType: z.enum(['all_risk', 'theft', 'damage', 'comprehensive']),
-    coverageType: z.enum(['individual', 'collective', 'blanket']),
-    coverageAmount: z.number().positive(),
-    deductible: z.number().min(0).default(0),
-    currency: z.string().default('EUR'),
-    premiumAmount: z.number().min(0).optional(),
-    premiumFrequency: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
-    premiumDueDate: z.string().optional(),
-    startDate: z.string().min(1, 'Startdatum is verplicht'),
-    endDate: z.string().optional(),
-    autoRenew: z.boolean().default(false),
-    coverageDetails: z.string().optional(),
-    exclusions: z.string().optional(),
-    documentUrl: z.string().optional(),
-});
-
 const createInsuranceClaimSchema = z.object({
     assetId: z.string().uuid(),
     claimNumber: z.string().optional(),
