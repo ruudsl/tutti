@@ -70,19 +70,6 @@ const createValuationSchema = z.object({
     notes: z.string().optional(),
 });
 
-const createInsuranceClaimSchema = z.object({
-    assetId: z.string().uuid(),
-    claimNumber: z.string().optional(),
-    claimDate: z.string().min(1),
-    incidentDate: z.string().min(1),
-    incidentType: z.enum(['theft', 'damage', 'loss', 'fire', 'water', 'vandalism', 'other']),
-    incidentDescription: z.string().min(1),
-    incidentLocation: z.string().optional(),
-    claimedAmount: z.number().min(0).optional(),
-    policeReportNumber: z.string().optional(),
-    witnessInfo: z.string().optional(),
-});
-
 const createRepairSchema = z.object({
     repairType: z.enum(['preventive', 'corrective', 'emergency', 'overhaul', 'cleaning']),
     priority: z.enum(repairPriorities).default('normal'),
