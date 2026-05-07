@@ -84,6 +84,7 @@
     "communication": "Communicatie",
     "library": "Bibliotheek",
     "inventory": "Inventaris",
+    "operations": "Operaties",
     "admin": "Beheer"
   },
   "nav": {
@@ -146,7 +147,11 @@
     "practiceSchedules": "Oefenschema's",
     "health": "Systeemstatus",
     "paymentSettings": "Betalingen",
-    "accounting": "Boekhouding"
+    "accounting": "Boekhouding",
+    "projects": "Projecten",
+    "tours": "Tournees",
+    "resources": "Middelen",
+    "equipment": "Apparatuur"
   },
   "roles": {
     "admin": "Beheerder",
@@ -4038,6 +4043,142 @@
       "overdue": "Achterstallig",
       "cancelled": "Geannuleerd",
       "written_off": "Afgeboekt"
+    }
+  },
+  "projects": {
+    "title": "Projecten",
+    "new": "Nieuw project",
+    "total": "Totaal",
+    "active": "Actief",
+    "planning": "In planning",
+    "completed": "Afgerond",
+    "members": "leden",
+    "concerts": "concerten",
+    "noProjects": "Geen projecten gevonden.",
+    "allStatuses": "Alle statussen",
+    "startDate": "Startdatum",
+    "endDate": "Einddatum",
+    "type": "Type",
+    "created": "Project aangemaakt",
+    "deleted": "Project verwijderd",
+    "statusUpdated": "Status bijgewerkt",
+    "errorCreate": "Fout bij aanmaken project",
+    "errorDelete": "Fout bij verwijderen project",
+    "errorUpdate": "Fout bij bijwerken project",
+    "confirmDelete": "Weet je zeker dat je dit project wilt verwijderen?",
+    "markActive": "Markeer als actief",
+    "markCompleted": "Markeer als afgerond",
+    "archive": "Archiveren",
+    "statuses": {
+      "planning": "In planning",
+      "active": "Actief",
+      "completed": "Afgerond",
+      "cancelled": "Geannuleerd",
+      "archived": "Gearchiveerd"
+    },
+    "types": {
+      "concert": "Concert",
+      "competition": "Concours",
+      "festival": "Festival",
+      "tour": "Tournee",
+      "recording": "Opname",
+      "other": "Overig"
+    }
+  },
+  "tours": {
+    "title": "Tournees",
+    "new": "Nieuwe tournee",
+    "total": "Totaal",
+    "upcoming": "Aankomend",
+    "participants": "deelnemers",
+    "noTours": "Geen tournees gevonden.",
+    "destination": "Bestemming",
+    "country": "Land",
+    "startDate": "Startdatum",
+    "endDate": "Einddatum",
+    "costPerPerson": "Kosten per persoon",
+    "registrationDeadline": "Inschrijvingsdeadline",
+    "register": "Inschrijven",
+    "created": "Tournee aangemaakt",
+    "errorCreate": "Fout bij aanmaken tournee",
+    "errorRegister": "Fout bij inschrijven",
+    "errorCancel": "Fout bij annuleren inschrijving",
+    "registrationCancelled": "Inschrijving geannuleerd",
+    "statuses": {
+      "planning": "In planning",
+      "confirmed": "Bevestigd",
+      "active": "Actief",
+      "completed": "Afgerond",
+      "cancelled": "Geannuleerd"
+    }
+  },
+  "resources": {
+    "title": "Middelen",
+    "new": "Nieuw middel",
+    "total": "Totaal",
+    "available": "Beschikbaar",
+    "booked": "Geboekt",
+    "noResources": "Geen middelen gevonden.",
+    "allTypes": "Alle types",
+    "allCategories": "Alle categorieën",
+    "location": "Locatie",
+    "capacity": "Capaciteit",
+    "costPerHour": "Kosten per uur",
+    "costPerDay": "Kosten per dag",
+    "requiresApproval": "Goedkeuring vereist",
+    "book": "Reserveren",
+    "created": "Middel aangemaakt",
+    "deleted": "Middel verwijderd",
+    "errorCreate": "Fout bij aanmaken middel",
+    "errorDelete": "Fout bij verwijderen middel",
+    "confirmDelete": "Weet je zeker dat je dit middel wilt verwijderen?",
+    "types": {
+      "room": "Ruimte",
+      "vehicle": "Voertuig",
+      "equipment": "Apparatuur",
+      "instrument": "Instrument",
+      "service": "Dienst",
+      "other": "Overig"
+    },
+    "booking": {
+      "title": "Reservering",
+      "startTime": "Starttijd",
+      "endTime": "Eindtijd",
+      "created": "Reservering aangemaakt",
+      "errorCreate": "Fout bij aanmaken reservering"
+    }
+  },
+  "equipment": {
+    "title": "Apparatuur",
+    "new": "Nieuw apparaat",
+    "total": "Totaal",
+    "available": "Beschikbaar",
+    "onLoan": "Uitgeleend",
+    "inRepair": "In reparatie",
+    "noEquipment": "Geen apparatuur gevonden.",
+    "allStatuses": "Alle statussen",
+    "allTypes": "Alle types",
+    "instrumentType": "Type instrument",
+    "brandModel": "Merk/Model",
+    "serialNumber": "Serienummer",
+    "yearOfManufacture": "Bouwjaar",
+    "purchasePrice": "Aanschafprijs",
+    "currentValue": "Huidige waarde",
+    "value": "Waarde",
+    "assignLoan": "Uitlenen",
+    "returnLoan": "Innemen",
+    "recordMaintenance": "Onderhoud registreren",
+    "created": "Apparaat aangemaakt",
+    "deleted": "Apparaat verwijderd",
+    "errorCreate": "Fout bij aanmaken apparaat",
+    "errorDelete": "Fout bij verwijderen apparaat",
+    "confirmDelete": "Weet je zeker dat je dit apparaat wilt verwijderen?",
+    "statuses": {
+      "available": "Beschikbaar",
+      "on_loan": "Uitgeleend",
+      "in_repair": "In reparatie",
+      "written_off": "Afgeschreven",
+      "personal": "Persoonlijk"
     }
   }
 }

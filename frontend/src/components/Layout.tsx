@@ -122,10 +122,21 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.inventory',
     icon: 'package',
-    basePaths: ['/instrument-assets', '/uniforms'],
+    basePaths: ['/instrument-assets', '/uniforms', '/equipment'],
     items: [
       { path: '/instrument-assets', labelKey: 'nav.instrumentAssets', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
+      { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.operations',
+    icon: 'clipboard',
+    basePaths: ['/projects', '/tours', '/resources'],
+    items: [
+      { path: '/projects', labelKey: 'nav.projects', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/tours', labelKey: 'nav.tours', roles: [ROLES.ADMIN, ROLES.BOARD] },
+      { path: '/resources', labelKey: 'nav.resources', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
     ],
   },
   {

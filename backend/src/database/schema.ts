@@ -2666,4 +2666,520 @@ CREATE TABLE IF NOT EXISTS music_performance_report_lines (
 );
 
 CREATE INDEX IF NOT EXISTS idx_perf_report_lines_report ON music_performance_report_lines(report_id);
+
+-- ===========================================
+-- PHASE D: OPERATIONS MODULES
+-- ===========================================
+
+-- ===========================================
+-- PROJECTS MODULE
+-- ===========================================
+
+-- Projects (group of rehearsals + concerts)
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'cancelled', 'archived')),
+    project_type TEXT DEFAULT 'concert' CHECK (project_type IN ('concert', 'competition', 'festival', 'tour', 'recording', 'other')),
+    orchestra_id TEXT,
+    budget REAL,
+    notes TEXT,
+    cover_image_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_assoc ON projects(association_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_dates ON projects(start_date, end_date);
+
+-- Project members (specific participants for a project)
+CREATE TABLE IF NOT EXISTS project_members (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    role TEXT DEFAULT 'participant' CHECK (role IN ('participant', 'leader', 'coordinator', 'soloist', 'substitute')),
+    status TEXT DEFAULT 'confirmed' CHECK (status IN ('invited', 'confirmed', 'declined', 'tentative')),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(project_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
+
+-- Link projects to concerts
+CREATE TABLE IF NOT EXISTS project_concerts (
+    project_id TEXT NOT NULL,
+    concert_id TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    PRIMARY KEY (project_id, concert_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
+);
+
+-- Link projects to rehearsals
+CREATE TABLE IF NOT EXISTS project_rehearsals (
+    project_id TEXT NOT NULL,
+    rehearsal_instance_id TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    PRIMARY KEY (project_id, rehearsal_instance_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (rehearsal_instance_id) REFERENCES rehearsal_instances(id) ON DELETE CASCADE
+);
+
+-- Project setlist (music pieces for the project)
+CREATE TABLE IF NOT EXISTS project_setlist (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    music_title_id TEXT,
+    custom_title TEXT,
+    sort_order INTEGER DEFAULT 0,
+    duration_minutes INTEGER,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_setlist_project ON project_setlist(project_id);
+
+-- ===========================================
+-- TOURS MODULE
+-- ===========================================
+
+-- Tours (multi-day concert trips)
+CREATE TABLE IF NOT EXISTS tours (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    project_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    destination TEXT,
+    country TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'confirmed', 'active', 'completed', 'cancelled')),
+    budget REAL,
+    cost_per_person REAL,
+    max_participants INTEGER,
+    registration_deadline DATE,
+    notes TEXT,
+    cover_image_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_tours_assoc ON tours(association_id);
+CREATE INDEX IF NOT EXISTS idx_tours_dates ON tours(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_tours_status ON tours(status);
+
+-- Tour participants
+CREATE TABLE IF NOT EXISTS tour_participants (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    status TEXT DEFAULT 'registered' CHECK (status IN ('invited', 'registered', 'confirmed', 'declined', 'cancelled', 'waitlist')),
+    registration_date DATETIME,
+    room_preference TEXT,
+    dietary_requirements TEXT,
+    emergency_contact TEXT,
+    emergency_phone TEXT,
+    paid_amount REAL DEFAULT 0,
+    payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'partial', 'paid', 'refunded')),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(tour_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_participants_tour ON tour_participants(tour_id);
+CREATE INDEX IF NOT EXISTS idx_tour_participants_user ON tour_participants(user_id);
+
+-- Tour days/schedule
+CREATE TABLE IF NOT EXISTS tour_days (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    day_date DATE NOT NULL,
+    day_number INTEGER NOT NULL,
+    title TEXT,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE,
+    UNIQUE(tour_id, day_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_days_tour ON tour_days(tour_id);
+
+-- Tour activities (events within a tour day)
+CREATE TABLE IF NOT EXISTS tour_activities (
+    id TEXT PRIMARY KEY,
+    tour_day_id TEXT NOT NULL,
+    activity_type TEXT NOT NULL CHECK (activity_type IN ('travel', 'rehearsal', 'concert', 'meal', 'accommodation', 'sightseeing', 'free_time', 'meeting', 'other')),
+    title TEXT NOT NULL,
+    description TEXT,
+    location TEXT,
+    address TEXT,
+    start_time TIME,
+    end_time TIME,
+    is_mandatory BOOLEAN DEFAULT 1,
+    cost REAL,
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_day_id) REFERENCES tour_days(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_activities_day ON tour_activities(tour_day_id);
+
+-- Tour accommodations
+CREATE TABLE IF NOT EXISTS tour_accommodations (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    address TEXT,
+    city TEXT,
+    country TEXT,
+    phone TEXT,
+    email TEXT,
+    website TEXT,
+    check_in_date DATE,
+    check_out_date DATE,
+    room_count INTEGER,
+    cost_per_night REAL,
+    total_cost REAL,
+    confirmation_number TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_accommodations_tour ON tour_accommodations(tour_id);
+
+-- Tour room assignments
+CREATE TABLE IF NOT EXISTS tour_room_assignments (
+    id TEXT PRIMARY KEY,
+    accommodation_id TEXT NOT NULL,
+    room_number TEXT,
+    room_type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (accommodation_id) REFERENCES tour_accommodations(id) ON DELETE CASCADE
+);
+
+-- Tour room occupants
+CREATE TABLE IF NOT EXISTS tour_room_occupants (
+    room_assignment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    PRIMARY KEY (room_assignment_id, user_id),
+    FOREIGN KEY (room_assignment_id) REFERENCES tour_room_assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Tour transport
+CREATE TABLE IF NOT EXISTS tour_transport (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    transport_type TEXT NOT NULL CHECK (transport_type IN ('bus', 'train', 'plane', 'ferry', 'car', 'other')),
+    provider TEXT,
+    departure_location TEXT,
+    departure_time DATETIME,
+    arrival_location TEXT,
+    arrival_time DATETIME,
+    vehicle_info TEXT,
+    booking_reference TEXT,
+    cost REAL,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_transport_tour ON tour_transport(tour_id);
+
+-- ===========================================
+-- RESOURCES/BOOKING MODULE
+-- ===========================================
+
+-- Resource categories
+CREATE TABLE IF NOT EXISTS resource_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, name)
+);
+
+-- Resources (bookable items: rooms, equipment, vehicles)
+CREATE TABLE IF NOT EXISTS resources (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    resource_type TEXT NOT NULL CHECK (resource_type IN ('room', 'vehicle', 'equipment', 'instrument', 'service', 'other')),
+    location TEXT,
+    capacity INTEGER,
+    is_active BOOLEAN DEFAULT 1,
+    requires_approval BOOLEAN DEFAULT 0,
+    approved_by_roles TEXT,
+    min_booking_hours REAL,
+    max_booking_hours REAL,
+    advance_booking_days INTEGER,
+    cost_per_hour REAL,
+    cost_per_day REAL,
+    deposit_amount REAL,
+    image_path TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES resource_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_resources_assoc ON resources(association_id);
+CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category_id);
+CREATE INDEX IF NOT EXISTS idx_resources_type ON resources(resource_type);
+
+-- Resource availability (blocked times, regular availability)
+CREATE TABLE IF NOT EXISTS resource_availability (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    availability_type TEXT NOT NULL CHECK (availability_type IN ('available', 'blocked', 'maintenance')),
+    day_of_week INTEGER,
+    start_time TIME,
+    end_time TIME,
+    start_date DATE,
+    end_date DATE,
+    reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_resource_availability_resource ON resource_availability(resource_id);
+
+-- Resource bookings
+CREATE TABLE IF NOT EXISTS resource_bookings (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_datetime DATETIME NOT NULL,
+    end_datetime DATETIME NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled', 'completed')),
+    related_rehearsal_id TEXT,
+    related_concert_id TEXT,
+    related_project_id TEXT,
+    approved_by TEXT,
+    approved_at DATETIME,
+    rejection_reason TEXT,
+    actual_start DATETIME,
+    actual_end DATETIME,
+    notes TEXT,
+    internal_notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_rehearsal_id) REFERENCES rehearsal_instances(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_resource ON resource_bookings(resource_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user ON resource_bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_dates ON resource_bookings(start_datetime, end_datetime);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON resource_bookings(status);
+
+-- Recurring booking patterns
+CREATE TABLE IF NOT EXISTS booking_recurrence (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    recurrence_type TEXT NOT NULL CHECK (recurrence_type IN ('daily', 'weekly', 'biweekly', 'monthly')),
+    day_of_week INTEGER,
+    day_of_month INTEGER,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ===========================================
+-- EQUIPMENT INVENTORY MODULE
+-- ===========================================
+
+-- Equipment categories
+CREATE TABLE IF NOT EXISTS equipment_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    parent_id TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES equipment_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_categories_assoc ON equipment_categories(association_id);
+
+-- Equipment items
+CREATE TABLE IF NOT EXISTS equipment_items (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    inventory_number TEXT,
+    serial_number TEXT,
+    brand TEXT,
+    model TEXT,
+    equipment_type TEXT NOT NULL CHECK (equipment_type IN ('instrument', 'accessory', 'audio', 'lighting', 'furniture', 'transport', 'misc')),
+    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'in_use', 'maintenance', 'repair', 'retired', 'lost', 'sold')),
+    condition TEXT DEFAULT 'good' CHECK (condition IN ('new', 'excellent', 'good', 'fair', 'poor', 'broken')),
+    location TEXT,
+    storage_location TEXT,
+    purchase_date DATE,
+    purchase_price REAL,
+    current_value REAL,
+    depreciation_years INTEGER,
+    warranty_expiry DATE,
+    last_maintenance DATE,
+    next_maintenance DATE,
+    maintenance_interval_months INTEGER,
+    insurance_value REAL,
+    insurance_policy TEXT,
+    is_loanable BOOLEAN DEFAULT 1,
+    requires_training BOOLEAN DEFAULT 0,
+    image_path TEXT,
+    manual_path TEXT,
+    notes TEXT,
+    qr_code TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES equipment_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_assoc ON equipment_items(association_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment_items(category_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment_items(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_inventory ON equipment_items(inventory_number);
+
+-- Equipment loans/checkouts
+CREATE TABLE IF NOT EXISTS equipment_loans (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    checkout_date DATETIME NOT NULL,
+    expected_return_date DATETIME,
+    actual_return_date DATETIME,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'returned', 'overdue', 'lost')),
+    condition_at_checkout TEXT,
+    condition_at_return TEXT,
+    checkout_notes TEXT,
+    return_notes TEXT,
+    related_concert_id TEXT,
+    related_rehearsal_id TEXT,
+    related_project_id TEXT,
+    created_by TEXT NOT NULL,
+    returned_to TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_rehearsal_id) REFERENCES rehearsal_instances(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_equipment ON equipment_loans(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_user ON equipment_loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_status ON equipment_loans(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_dates ON equipment_loans(checkout_date, expected_return_date);
+
+-- Equipment maintenance records
+CREATE TABLE IF NOT EXISTS equipment_maintenance (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    maintenance_type TEXT NOT NULL CHECK (maintenance_type IN ('inspection', 'cleaning', 'repair', 'service', 'calibration', 'replacement')),
+    description TEXT NOT NULL,
+    performed_date DATE NOT NULL,
+    performed_by TEXT,
+    external_provider TEXT,
+    cost REAL,
+    parts_replaced TEXT,
+    next_maintenance_date DATE,
+    notes TEXT,
+    receipt_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_date ON equipment_maintenance(performed_date);
+
+-- Equipment reservations (for future use)
+CREATE TABLE IF NOT EXISTS equipment_reservations (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    purpose TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled', 'completed')),
+    related_concert_id TEXT,
+    related_project_id TEXT,
+    approved_by TEXT,
+    approved_at DATETIME,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_equipment ON equipment_reservations(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_user ON equipment_reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_dates ON equipment_reservations(start_date, end_date);
 `;

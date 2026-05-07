@@ -84,6 +84,7 @@
     "communication": "Kommunikation",
     "library": "Bibliothek",
     "inventory": "Inventar",
+    "operations": "Betrieb",
     "admin": "Verwaltung"
   },
   "nav": {
@@ -144,7 +145,11 @@
     "practiceSchedules": "Übungspläne",
     "health": "Systemstatus",
     "paymentSettings": "Zahlungen",
-    "accounting": "Buchhaltung"
+    "accounting": "Buchhaltung",
+    "projects": "Projekte",
+    "tours": "Tourneen",
+    "resources": "Ressourcen",
+    "equipment": "Ausrüstung"
   },
   "roles": {
     "admin": "Administrator",
@@ -3983,6 +3988,142 @@
       "overdue": "Überfällig",
       "cancelled": "Storniert",
       "written_off": "Abgeschrieben"
+    }
+  },
+  "projects": {
+    "title": "Projekte",
+    "new": "Neues Projekt",
+    "total": "Gesamt",
+    "active": "Aktiv",
+    "planning": "Planung",
+    "completed": "Abgeschlossen",
+    "members": "Mitglieder",
+    "concerts": "Konzerte",
+    "noProjects": "Keine Projekte gefunden.",
+    "allStatuses": "Alle Status",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "type": "Typ",
+    "created": "Projekt erstellt",
+    "deleted": "Projekt gelöscht",
+    "statusUpdated": "Status aktualisiert",
+    "errorCreate": "Fehler beim Erstellen des Projekts",
+    "errorDelete": "Fehler beim Löschen des Projekts",
+    "errorUpdate": "Fehler beim Aktualisieren des Projekts",
+    "confirmDelete": "Möchten Sie dieses Projekt wirklich löschen?",
+    "markActive": "Als aktiv markieren",
+    "markCompleted": "Als abgeschlossen markieren",
+    "archive": "Archivieren",
+    "statuses": {
+      "planning": "Planung",
+      "active": "Aktiv",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgesagt",
+      "archived": "Archiviert"
+    },
+    "types": {
+      "concert": "Konzert",
+      "competition": "Wettbewerb",
+      "festival": "Festival",
+      "tour": "Tournee",
+      "recording": "Aufnahme",
+      "other": "Sonstiges"
+    }
+  },
+  "tours": {
+    "title": "Tourneen",
+    "new": "Neue Tournee",
+    "total": "Gesamt",
+    "upcoming": "Bevorstehend",
+    "participants": "Teilnehmer",
+    "noTours": "Keine Tourneen gefunden.",
+    "destination": "Reiseziel",
+    "country": "Land",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "costPerPerson": "Kosten pro Person",
+    "registrationDeadline": "Anmeldefrist",
+    "register": "Anmelden",
+    "created": "Tournee erstellt",
+    "errorCreate": "Fehler beim Erstellen der Tournee",
+    "errorRegister": "Fehler bei der Anmeldung",
+    "errorCancel": "Fehler beim Stornieren der Anmeldung",
+    "registrationCancelled": "Anmeldung storniert",
+    "statuses": {
+      "planning": "Planung",
+      "confirmed": "Bestätigt",
+      "active": "Aktiv",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgesagt"
+    }
+  },
+  "resources": {
+    "title": "Ressourcen",
+    "new": "Neue Ressource",
+    "total": "Gesamt",
+    "available": "Verfügbar",
+    "booked": "Gebucht",
+    "noResources": "Keine Ressourcen gefunden.",
+    "allTypes": "Alle Typen",
+    "allCategories": "Alle Kategorien",
+    "location": "Standort",
+    "capacity": "Kapazität",
+    "costPerHour": "Kosten pro Stunde",
+    "costPerDay": "Kosten pro Tag",
+    "requiresApproval": "Genehmigung erforderlich",
+    "book": "Buchen",
+    "created": "Ressource erstellt",
+    "deleted": "Ressource gelöscht",
+    "errorCreate": "Fehler beim Erstellen der Ressource",
+    "errorDelete": "Fehler beim Löschen der Ressource",
+    "confirmDelete": "Möchten Sie diese Ressource wirklich löschen?",
+    "types": {
+      "room": "Raum",
+      "vehicle": "Fahrzeug",
+      "equipment": "Ausrüstung",
+      "instrument": "Instrument",
+      "service": "Dienstleistung",
+      "other": "Sonstiges"
+    },
+    "booking": {
+      "title": "Buchung",
+      "startTime": "Startzeit",
+      "endTime": "Endzeit",
+      "created": "Buchung erstellt",
+      "errorCreate": "Fehler beim Erstellen der Buchung"
+    }
+  },
+  "equipment": {
+    "title": "Ausrüstung",
+    "new": "Neue Ausrüstung",
+    "total": "Gesamt",
+    "available": "Verfügbar",
+    "onLoan": "Ausgeliehen",
+    "inRepair": "In Reparatur",
+    "noEquipment": "Keine Ausrüstung gefunden.",
+    "allStatuses": "Alle Status",
+    "allTypes": "Alle Typen",
+    "instrumentType": "Instrumententyp",
+    "brandModel": "Marke/Modell",
+    "serialNumber": "Seriennummer",
+    "yearOfManufacture": "Baujahr",
+    "purchasePrice": "Kaufpreis",
+    "currentValue": "Aktueller Wert",
+    "value": "Wert",
+    "assignLoan": "Ausleihen",
+    "returnLoan": "Zurückgeben",
+    "recordMaintenance": "Wartung erfassen",
+    "created": "Ausrüstung erstellt",
+    "deleted": "Ausrüstung gelöscht",
+    "errorCreate": "Fehler beim Erstellen der Ausrüstung",
+    "errorDelete": "Fehler beim Löschen der Ausrüstung",
+    "confirmDelete": "Möchten Sie diese Ausrüstung wirklich löschen?",
+    "statuses": {
+      "available": "Verfügbar",
+      "on_loan": "Ausgeliehen",
+      "in_repair": "In Reparatur",
+      "written_off": "Ausgemustert",
+      "personal": "Persönlich"
     }
   }
 }

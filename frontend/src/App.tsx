@@ -40,6 +40,12 @@ import Posts from './pages/Posts';
 import EmailCampaigns from './pages/EmailCampaigns';
 import Accounting from './pages/Accounting';
 
+// Phase D: Operations
+import Projects from './pages/Projects';
+import Tours from './pages/Tours';
+import Resources from './pages/Resources';
+import Equipment from './pages/Equipment';
+
 // Music management
 import MusicPieces from './pages/MusicPieces';
 import MusicTitles from './pages/MusicTitles';
@@ -211,6 +217,38 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <Accounting />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="projects"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <Projects />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="tours"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+              <Tours />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="resources"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
+              <Resources />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="equipment"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
+              <Equipment />
             </PrivateRoute>
           }
         />

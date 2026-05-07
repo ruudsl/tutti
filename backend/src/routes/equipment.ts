@@ -3,615 +3,598 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
-import logger from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
 
 // Validation schemas
+const createCategorySchema = z.object({
+  name: z.string().min(1, 'Naam is verplicht'),
+  description: z.string().optional(),
+  parentId: z.string().uuid().optional(),
+  color: z.string().optional(),
+  icon: z.string().optional(),
+});
+
 const createEquipmentSchema = z.object({
-    instrumentType: z.string().min(1, 'Instrument type is verplicht'),
-    brandModel: z.string().optional(),
-    serialNumber: z.string().optional(),
-    yearOfManufacture: z.number().int().min(1800).max(new Date().getFullYear()).optional(),
-    status: z.enum(['available', 'on_loan', 'in_repair', 'written_off', 'personal']).default('available'),
-    currentUserId: z.string().uuid().optional().nullable(),
-    notes: z.string().optional(),
-    maintenanceIntervalMonths: z.number().int().min(1).max(60).default(12),
-    lastMaintenanceDate: z.string().optional(),
-    purchasePrice: z.number().min(0).optional(),
-    currentValue: z.number().min(0).optional(),
+  name: z.string().min(1, 'Naam is verplicht'),
+  description: z.string().optional(),
+  categoryId: z.string().uuid().optional(),
+  inventoryNumber: z.string().optional(),
+  serialNumber: z.string().optional(),
+  brand: z.string().optional(),
+  model: z.string().optional(),
+  equipmentType: z.enum(['instrument', 'accessory', 'audio', 'lighting', 'furniture', 'transport', 'misc']),
+  status: z.enum(['available', 'in_use', 'maintenance', 'repair', 'retired', 'lost', 'sold']).default('available'),
+  condition: z.enum(['new', 'excellent', 'good', 'fair', 'poor', 'broken']).default('good'),
+  location: z.string().optional(),
+  storageLocation: z.string().optional(),
+  purchaseDate: z.string().optional(),
+  purchasePrice: z.number().optional(),
+  currentValue: z.number().optional(),
+  depreciationYears: z.number().optional(),
+  warrantyExpiry: z.string().optional(),
+  maintenanceIntervalMonths: z.number().optional(),
+  insuranceValue: z.number().optional(),
+  insurancePolicy: z.string().optional(),
+  isLoanable: z.boolean().default(true),
+  requiresTraining: z.boolean().default(false),
+  notes: z.string().optional(),
 });
 
 const updateEquipmentSchema = createEquipmentSchema.partial();
 
-const createDamageLogSchema = z.object({
-    date: z.string().min(1, 'Datum is verplicht'),
-    description: z.string().min(1, 'Beschrijving is verplicht'),
-    repairCost: z.number().min(0).optional(),
-    repairedBy: z.string().optional(),
-    status: z.enum(['reported', 'in_repair', 'repaired', 'written_off']).default('reported'),
+const loanSchema = z.object({
+  equipmentId: z.string().uuid(),
+  userId: z.string().uuid(),
+  expectedReturnDate: z.string().optional(),
+  conditionAtCheckout: z.string().optional(),
+  checkoutNotes: z.string().optional(),
+  relatedConcertId: z.string().uuid().optional(),
+  relatedRehearsalId: z.string().uuid().optional(),
+  relatedProjectId: z.string().uuid().optional(),
 });
 
-const createEquipmentLoanSchema = z.object({
-    userId: z.string().uuid('Gebruiker is verplicht'),
-    loanDate: z.string().min(1, 'Uitleen datum is verplicht'),
-    conditionAtLoan: z.string().optional(),
-    notes: z.string().optional(),
+const returnLoanSchema = z.object({
+  conditionAtReturn: z.string().optional(),
+  returnNotes: z.string().optional(),
 });
 
-const returnEquipmentLoanSchema = z.object({
-    returnDate: z.string().min(1, 'Retour datum is verplicht'),
-    conditionAtReturn: z.string().optional(),
+const maintenanceSchema = z.object({
+  maintenanceType: z.enum(['inspection', 'cleaning', 'repair', 'service', 'calibration', 'replacement']),
+  description: z.string().min(1),
+  performedDate: z.string(),
+  performedBy: z.string().uuid().optional(),
+  externalProvider: z.string().optional(),
+  cost: z.number().optional(),
+  partsReplaced: z.string().optional(),
+  nextMaintenanceDate: z.string().optional(),
+  notes: z.string().optional(),
 });
 
-// Equipment types for dropdown
-const EQUIPMENT_TYPES = [
-    'Altsaxofoon', 'Tenorsaxofoon', 'Baritonsaxofoon', 'Sopraansaxofoon',
-    'Bes-Klarinet', 'Es-Klarinet', 'Basklarinet', 'Altklarinet',
-    'Dwarsfluit', 'Piccolo', 'Hobo', 'Fagot',
-    'Bes-Trompet', 'C-Trompet', 'Es-Kornet', 'Bugel',
-    'Althoorn', 'Bariton', 'Euphonium', 'Trombone',
-    'Bes-Tuba', 'Es-Tuba', 'F-Tuba',
-    'Slagwerk-set', 'Pauken', 'Grote trom', 'Kleine trom', 'Bekkens', 'Xylofoon', 'Klokkenspel',
-    'Overig',
-];
+// GET /equipment/categories
+router.get(
+  '/categories',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-/**
- * @swagger
- * /equipment/types:
- *   get:
- *     summary: Get available equipment types
- *     tags: [Equipment]
- *     responses:
- *       200:
- *         description: List of equipment types
- */
-router.get('/types', authenticateToken, (req: AuthRequest, res: Response) => {
-    res.json(EQUIPMENT_TYPES);
-});
+    const categories = db.prepare(`
+      SELECT ec.*, p.name as parent_name,
+        (SELECT COUNT(*) FROM equipment_items WHERE category_id = ec.id AND deleted_at IS NULL) as item_count
+      FROM equipment_categories ec
+      LEFT JOIN equipment_categories p ON ec.parent_id = p.id
+      WHERE ec.association_id = ?
+      ORDER BY ec.sort_order, ec.name
+    `).all(associationId);
 
-/**
- * @swagger
- * /equipment/maintenance-alerts:
- *   get:
- *     summary: Get equipment needing maintenance
- *     tags: [Equipment]
- *     security:
- *       - bearerAuth: []
- */
-router.get('/maintenance-alerts', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const today = new Date().toISOString().split('T')[0];
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const items = db.prepare(`
-        SELECT e.*, u.first_name, u.last_name, u.email
-        FROM equipment e
-        LEFT JOIN users u ON e.current_user_id = u.id
-        WHERE e.association_id = ?
-        AND e.status NOT IN ('written_off')
-        AND e.next_maintenance_date IS NOT NULL
-        AND e.next_maintenance_date <= ?
-        ORDER BY e.next_maintenance_date ASC
-    `).all(req.user!.associationId, thirtyDaysFromNow);
-
-    res.json(items.map((item: any) => ({
-        id: item.id,
-        instrumentType: item.instrument_type,
-        brandModel: item.brand_model,
-        serialNumber: item.serial_number,
-        nextMaintenanceDate: item.next_maintenance_date,
-        isOverdue: item.next_maintenance_date < today,
-        currentUser: item.current_user_id ? {
-            id: item.current_user_id,
-            firstName: item.first_name,
-            lastName: item.last_name,
-            email: item.email,
-        } : null,
+    res.json(categories.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      parentId: c.parent_id,
+      parentName: c.parent_name,
+      color: c.color,
+      icon: c.icon,
+      sortOrder: c.sort_order,
+      itemCount: c.item_count,
     })));
-}));
+  })
+);
 
-/**
- * @swagger
- * /equipment:
- *   get:
- *     summary: Get all equipment
- *     tags: [Equipment]
- *     security:
- *       - bearerAuth: []
- */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { page, limit, offset } = getPaginationParams(req.query);
-    const search = req.query.search as string | undefined;
-    const status = req.query.status as string | undefined;
-    const type = req.query.type as string | undefined;
+// POST /equipment/categories
+router.post(
+  '/categories',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = createCategorySchema.parse(req.body);
+    const associationId = req.user!.associationId;
+    const id = uuidv4();
 
-    let whereClause = 'WHERE e.association_id = ?';
-    const params: any[] = [req.user!.associationId];
+    db.prepare(`
+      INSERT INTO equipment_categories (id, association_id, name, description, parent_id, color, icon)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, associationId, data.name, data.description || null, data.parentId || null, data.color || null, data.icon || null);
 
-    if (search) {
-        whereClause += ` AND (LOWER(e.instrument_type) LIKE ? OR LOWER(e.brand_model) LIKE ? OR LOWER(e.serial_number) LIKE ?)`;
-        const searchTerm = `%${search.toLowerCase()}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
+    res.status(201).json({ id, message: 'Categorie aangemaakt' });
+  })
+);
+
+// DELETE /equipment/categories/:id
+router.delete(
+  '/categories/:id',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const associationId = req.user!.associationId;
+
+    const result = db.prepare(
+      'DELETE FROM equipment_categories WHERE id = ? AND association_id = ?'
+    ).run(id, associationId);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Categorie niet gevonden');
     }
 
-    if (status) {
-        whereClause += ' AND e.status = ?';
-        params.push(status);
-    }
+    res.json({ message: 'Categorie verwijderd' });
+  })
+);
+
+// GET /equipment
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { type, categoryId, status, loanable } = req.query;
+
+    let query = `
+      SELECT e.*, ec.name as category_name, ec.color as category_color,
+        (SELECT COUNT(*) FROM equipment_loans WHERE equipment_id = e.id AND status = 'active') as active_loans
+      FROM equipment_items e
+      LEFT JOIN equipment_categories ec ON e.category_id = ec.id
+      WHERE e.association_id = ? AND e.deleted_at IS NULL
+    `;
+    const params: any[] = [associationId];
 
     if (type) {
-        whereClause += ' AND e.instrument_type = ?';
-        params.push(type);
+      query += ' AND e.equipment_type = ?';
+      params.push(type);
+    }
+    if (categoryId) {
+      query += ' AND e.category_id = ?';
+      params.push(categoryId);
+    }
+    if (status) {
+      query += ' AND e.status = ?';
+      params.push(status);
+    }
+    if (loanable !== undefined) {
+      query += ' AND e.is_loanable = ?';
+      params.push(loanable === 'true' ? 1 : 0);
     }
 
-    const countResult = db.prepare(`
-        SELECT COUNT(*) as total FROM equipment e ${whereClause}
-    `).get(...params) as { total: number };
+    query += ' ORDER BY e.name';
 
-    const items = db.prepare(`
-        SELECT e.*, u.first_name, u.last_name, u.email
-        FROM equipment e
-        LEFT JOIN users u ON e.current_user_id = u.id
-        ${whereClause}
-        ORDER BY e.instrument_type, e.brand_model
-        LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    const equipment = db.prepare(query).all(...params);
 
-    const result = items.map((item: any) => ({
-        id: item.id,
-        instrumentType: item.instrument_type,
-        brandModel: item.brand_model,
-        serialNumber: item.serial_number,
-        yearOfManufacture: item.year_of_manufacture,
-        status: item.status,
-        notes: item.notes,
-        maintenanceIntervalMonths: item.maintenance_interval_months,
-        lastMaintenanceDate: item.last_maintenance_date,
-        nextMaintenanceDate: item.next_maintenance_date,
-        purchasePrice: item.purchase_price,
-        currentValue: item.current_value,
-        currentUser: item.current_user_id ? {
-            id: item.current_user_id,
-            firstName: item.first_name,
-            lastName: item.last_name,
-            email: item.email,
-        } : null,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-    }));
+    res.json(equipment.map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description,
+      categoryId: e.category_id,
+      categoryName: e.category_name,
+      categoryColor: e.category_color,
+      inventoryNumber: e.inventory_number,
+      serialNumber: e.serial_number,
+      brand: e.brand,
+      model: e.model,
+      equipmentType: e.equipment_type,
+      status: e.status,
+      condition: e.condition,
+      location: e.location,
+      isLoanable: e.is_loanable === 1,
+      currentValue: e.current_value,
+      activeLoans: e.active_loans,
+      imagePath: e.image_path,
+    })));
+  })
+);
 
-    res.json(createPaginatedResult(result, countResult.total, page, limit));
-}));
+// GET /equipment/:id
+router.get(
+  '/:id',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const associationId = req.user!.associationId;
 
-/**
- * @swagger
- * /equipment/{id}:
- *   get:
- *     summary: Get single equipment item with history
- *     tags: [Equipment]
- */
-router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const item = db.prepare(`
-        SELECT e.*, u.first_name, u.last_name, u.email
-        FROM equipment e
-        LEFT JOIN users u ON e.current_user_id = u.id
-        WHERE e.id = ? AND e.association_id = ?
-    `).get(req.params.id, req.user!.associationId) as any;
+    const equipment = db.prepare(`
+      SELECT e.*, ec.name as category_name
+      FROM equipment_items e
+      LEFT JOIN equipment_categories ec ON e.category_id = ec.id
+      WHERE e.id = ? AND e.association_id = ? AND e.deleted_at IS NULL
+    `).get(id, associationId) as any;
 
-    if (!item) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
+    if (!equipment) {
+      throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
-    // Get damage logs
-    const damageLogs = db.prepare(`
-        SELECT * FROM equipment_damage_logs
-        WHERE equipment_id = ?
-        ORDER BY date DESC
-    `).all(req.params.id);
+    const loans = db.prepare(`
+      SELECT el.*, u.first_name || ' ' || u.last_name as user_name
+      FROM equipment_loans el
+      JOIN users u ON el.user_id = u.id
+      WHERE el.equipment_id = ?
+      ORDER BY el.checkout_date DESC
+      LIMIT 20
+    `).all(id);
 
-    // Get loan history
-    const loanHistory = db.prepare(`
-        SELECT el.*, u.first_name, u.last_name, u.email
-        FROM equipment_loans el
-        JOIN users u ON el.user_id = u.id
-        WHERE el.equipment_id = ?
-        ORDER BY el.loan_date DESC
-    `).all(req.params.id);
+    const maintenance = db.prepare(`
+      SELECT em.*, u.first_name || ' ' || u.last_name as performed_by_name
+      FROM equipment_maintenance em
+      LEFT JOIN users u ON em.performed_by = u.id
+      WHERE em.equipment_id = ?
+      ORDER BY em.performed_date DESC
+      LIMIT 20
+    `).all(id);
 
     res.json({
-        id: item.id,
-        instrumentType: item.instrument_type,
-        brandModel: item.brand_model,
-        serialNumber: item.serial_number,
-        yearOfManufacture: item.year_of_manufacture,
-        status: item.status,
-        notes: item.notes,
-        maintenanceIntervalMonths: item.maintenance_interval_months,
-        lastMaintenanceDate: item.last_maintenance_date,
-        nextMaintenanceDate: item.next_maintenance_date,
-        purchasePrice: item.purchase_price,
-        currentValue: item.current_value,
-        currentUser: item.current_user_id ? {
-            id: item.current_user_id,
-            firstName: item.first_name,
-            lastName: item.last_name,
-            email: item.email,
-        } : null,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        damageLogs: damageLogs.map((log: any) => ({
-            id: log.id,
-            date: log.date,
-            description: log.description,
-            repairCost: log.repair_cost,
-            repairedBy: log.repaired_by,
-            status: log.status,
-            createdAt: log.created_at,
-        })),
-        loanHistory: loanHistory.map((loan: any) => ({
-            id: loan.id,
-            user: {
-                id: loan.user_id,
-                firstName: loan.first_name,
-                lastName: loan.last_name,
-                email: loan.email,
-            },
-            loanDate: loan.loan_date,
-            returnDate: loan.return_date,
-            conditionAtLoan: loan.condition_at_loan,
-            conditionAtReturn: loan.condition_at_return,
-            notes: loan.notes,
-            agreementPdfPath: loan.agreement_pdf_path,
-        })),
+      id: equipment.id,
+      name: equipment.name,
+      description: equipment.description,
+      categoryId: equipment.category_id,
+      categoryName: equipment.category_name,
+      inventoryNumber: equipment.inventory_number,
+      serialNumber: equipment.serial_number,
+      brand: equipment.brand,
+      model: equipment.model,
+      equipmentType: equipment.equipment_type,
+      status: equipment.status,
+      condition: equipment.condition,
+      location: equipment.location,
+      storageLocation: equipment.storage_location,
+      purchaseDate: equipment.purchase_date,
+      purchasePrice: equipment.purchase_price,
+      currentValue: equipment.current_value,
+      warrantyExpiry: equipment.warranty_expiry,
+      lastMaintenance: equipment.last_maintenance,
+      nextMaintenance: equipment.next_maintenance,
+      isLoanable: equipment.is_loanable === 1,
+      requiresTraining: equipment.requires_training === 1,
+      imagePath: equipment.image_path,
+      notes: equipment.notes,
+      createdAt: equipment.created_at,
+      loans: loans.map((l: any) => ({
+        id: l.id,
+        userId: l.user_id,
+        userName: l.user_name,
+        checkoutDate: l.checkout_date,
+        expectedReturnDate: l.expected_return_date,
+        actualReturnDate: l.actual_return_date,
+        status: l.status,
+      })),
+      maintenance: maintenance.map((m: any) => ({
+        id: m.id,
+        maintenanceType: m.maintenance_type,
+        description: m.description,
+        performedDate: m.performed_date,
+        performedByName: m.performed_by_name,
+        cost: m.cost,
+      })),
     });
-}));
+  })
+);
 
-/**
- * @swagger
- * /equipment:
- *   post:
- *     summary: Create new equipment
- *     tags: [Equipment]
- */
-router.post('/', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+// POST /equipment
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createEquipmentSchema.parse(req.body);
-
+    const associationId = req.user!.associationId;
     const id = uuidv4();
-    let nextMaintenanceDate = null;
 
-    if (data.lastMaintenanceDate && data.maintenanceIntervalMonths) {
-        const lastDate = new Date(data.lastMaintenanceDate);
-        lastDate.setMonth(lastDate.getMonth() + data.maintenanceIntervalMonths);
-        nextMaintenanceDate = lastDate.toISOString().split('T')[0];
+    let inventoryNumber = data.inventoryNumber;
+    if (!inventoryNumber) {
+      const count = db.prepare(
+        'SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ?'
+      ).get(associationId) as any;
+      inventoryNumber = `EQ-${String(count.count + 1).padStart(5, '0')}`;
     }
 
     db.prepare(`
-        INSERT INTO equipment (
-            id, association_id, instrument_type, brand_model, serial_number,
-            year_of_manufacture, status, current_user_id, notes,
-            maintenance_interval_months, last_maintenance_date, next_maintenance_date,
-            purchase_price, current_value
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO equipment_items (id, association_id, category_id, name, description,
+        inventory_number, serial_number, brand, model, equipment_type, status, condition,
+        location, storage_location, purchase_date, purchase_price, current_value,
+        depreciation_years, warranty_expiry, maintenance_interval_months, insurance_value,
+        insurance_policy, is_loanable, requires_training, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-        id, req.user!.associationId, data.instrumentType, data.brandModel || null,
-        data.serialNumber || null, data.yearOfManufacture || null, data.status,
-        data.currentUserId || null, data.notes || null, data.maintenanceIntervalMonths,
-        data.lastMaintenanceDate || null, nextMaintenanceDate,
-        data.purchasePrice || null, data.currentValue || null
+      id, associationId, data.categoryId || null, data.name, data.description || null,
+      inventoryNumber, data.serialNumber || null, data.brand || null, data.model || null,
+      data.equipmentType, data.status, data.condition, data.location || null,
+      data.storageLocation || null, data.purchaseDate || null, data.purchasePrice || null,
+      data.currentValue || null, data.depreciationYears || null, data.warrantyExpiry || null,
+      data.maintenanceIntervalMonths || null, data.insuranceValue || null,
+      data.insurancePolicy || null, data.isLoanable ? 1 : 0, data.requiresTraining ? 1 : 0,
+      data.notes || null
     );
 
-    logger.info(`Equipment created: ${data.instrumentType}`, { id, createdBy: req.user!.id });
+    res.status(201).json({ id, inventoryNumber, message: 'Apparatuur aangemaakt' });
+  })
+);
 
-    res.status(201).json({
-        id,
-        message: 'Instrument succesvol toegevoegd.',
-    });
-}));
-
-/**
- * @swagger
- * /equipment/{id}:
- *   put:
- *     summary: Update equipment
- *     tags: [Equipment]
- */
-router.put('/:id', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+// PATCH /equipment/:id
+router.patch(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
     const data = updateEquipmentSchema.parse(req.body);
+    const associationId = req.user!.associationId;
 
-    const existing = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const equipment = db.prepare(
+      'SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
 
-    if (!existing) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
+    if (!equipment) {
+      throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
-    let nextMaintenanceDate = (existing as any).next_maintenance_date;
-    if (data.lastMaintenanceDate !== undefined || data.maintenanceIntervalMonths !== undefined) {
-        const lastDate = new Date(data.lastMaintenanceDate || (existing as any).last_maintenance_date);
-        const interval = data.maintenanceIntervalMonths || (existing as any).maintenance_interval_months;
-        if (lastDate && !isNaN(lastDate.getTime()) && interval) {
-            lastDate.setMonth(lastDate.getMonth() + interval);
-            nextMaintenanceDate = lastDate.toISOString().split('T')[0];
-        }
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (data.name !== undefined) { updates.push('name = ?'); params.push(data.name); }
+    if (data.description !== undefined) { updates.push('description = ?'); params.push(data.description); }
+    if (data.status !== undefined) { updates.push('status = ?'); params.push(data.status); }
+    if (data.condition !== undefined) { updates.push('condition = ?'); params.push(data.condition); }
+    if (data.location !== undefined) { updates.push('location = ?'); params.push(data.location); }
+
+    if (updates.length > 0) {
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      db.prepare(`UPDATE equipment_items SET ${updates.join(', ')} WHERE id = ?`).run(...params, id);
     }
 
+    res.json({ message: 'Apparatuur bijgewerkt' });
+  })
+);
+
+// DELETE /equipment/:id
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const associationId = req.user!.associationId;
+
+    const result = db.prepare(`
+      UPDATE equipment_items SET deleted_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).run(id, associationId);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Apparatuur niet gevonden');
+    }
+
+    res.json({ message: 'Apparatuur verwijderd' });
+  })
+);
+
+// GET /equipment/loans
+router.get(
+  '/loans',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { status, userId, equipmentId } = req.query;
+
+    let query = `
+      SELECT el.*, e.name as equipment_name, e.inventory_number,
+        u.first_name || ' ' || u.last_name as user_name
+      FROM equipment_loans el
+      JOIN equipment_items e ON el.equipment_id = e.id
+      JOIN users u ON el.user_id = u.id
+      WHERE e.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (status) {
+      query += ' AND el.status = ?';
+      params.push(status);
+    }
+    if (userId) {
+      query += ' AND el.user_id = ?';
+      params.push(userId);
+    }
+    if (equipmentId) {
+      query += ' AND el.equipment_id = ?';
+      params.push(equipmentId);
+    }
+
+    query += ' ORDER BY el.checkout_date DESC';
+
+    const loans = db.prepare(query).all(...params);
+
+    res.json(loans.map((l: any) => ({
+      id: l.id,
+      equipmentId: l.equipment_id,
+      equipmentName: l.equipment_name,
+      inventoryNumber: l.inventory_number,
+      userId: l.user_id,
+      userName: l.user_name,
+      checkoutDate: l.checkout_date,
+      expectedReturnDate: l.expected_return_date,
+      actualReturnDate: l.actual_return_date,
+      status: l.status,
+    })));
+  })
+);
+
+// POST /equipment/loans
+router.post(
+  '/loans',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = loanSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+    const createdBy = req.user!.id;
+
+    const equipment = db.prepare(`
+      SELECT * FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+    `).get(data.equipmentId, associationId) as any;
+
+    if (!equipment) {
+      throw new ApiError(404, 'Apparatuur niet gevonden');
+    }
+
+    if (!equipment.is_loanable) {
+      throw new ApiError(400, 'Dit item kan niet worden uitgeleend');
+    }
+
+    const activeLoan = db.prepare(`
+      SELECT id FROM equipment_loans WHERE equipment_id = ? AND status = 'active'
+    `).get(data.equipmentId);
+
+    if (activeLoan) {
+      throw new ApiError(400, 'Dit item is al uitgeleend');
+    }
+
+    const id = uuidv4();
     db.prepare(`
-        UPDATE equipment SET
-            instrument_type = COALESCE(?, instrument_type),
-            brand_model = COALESCE(?, brand_model),
-            serial_number = COALESCE(?, serial_number),
-            year_of_manufacture = COALESCE(?, year_of_manufacture),
-            status = COALESCE(?, status),
-            current_user_id = ?,
-            notes = COALESCE(?, notes),
-            maintenance_interval_months = COALESCE(?, maintenance_interval_months),
-            last_maintenance_date = COALESCE(?, last_maintenance_date),
-            next_maintenance_date = ?,
-            purchase_price = COALESCE(?, purchase_price),
-            current_value = COALESCE(?, current_value),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+      INSERT INTO equipment_loans (id, equipment_id, user_id, checkout_date, expected_return_date,
+        condition_at_checkout, checkout_notes, related_concert_id, related_rehearsal_id,
+        related_project_id, created_by)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-        data.instrumentType, data.brandModel, data.serialNumber,
-        data.yearOfManufacture, data.status,
-        data.currentUserId !== undefined ? data.currentUserId : (existing as any).current_user_id,
-        data.notes, data.maintenanceIntervalMonths, data.lastMaintenanceDate,
-        nextMaintenanceDate, data.purchasePrice, data.currentValue,
-        req.params.id
+      id, data.equipmentId, data.userId, data.expectedReturnDate || null,
+      data.conditionAtCheckout || null, data.checkoutNotes || null,
+      data.relatedConcertId || null, data.relatedRehearsalId || null,
+      data.relatedProjectId || null, createdBy
     );
 
-    logger.info(`Equipment updated: ${req.params.id}`, { updatedBy: req.user!.id });
+    db.prepare('UPDATE equipment_items SET status = "in_use" WHERE id = ?').run(data.equipmentId);
 
-    res.json({ message: 'Instrument succesvol bijgewerkt.' });
-}));
+    res.status(201).json({ id, message: 'Uitlening geregistreerd' });
+  })
+);
 
-/**
- * @swagger
- * /equipment/{id}:
- *   delete:
- *     summary: Delete equipment
- *     tags: [Equipment]
- */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare('DELETE FROM equipment WHERE id = ? AND association_id = ?')
-        .run(req.params.id, req.user!.associationId);
-
-    if (result.changes === 0) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
-    }
-
-    logger.info(`Equipment deleted: ${req.params.id}`, { deletedBy: req.user!.id });
-
-    res.json({ message: 'Instrument succesvol verwijderd.' });
-}));
-
-// ==================== DAMAGE LOGS ====================
-
-/**
- * @swagger
- * /equipment/{id}/damage-logs:
- *   post:
- *     summary: Add damage log entry
- *     tags: [Equipment]
- */
-router.post('/:id/damage-logs', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createDamageLogSchema.parse(req.body);
-
-    const equipment = db.prepare('SELECT id FROM equipment WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
-
-    if (!equipment) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
-    }
-
-    const id = uuidv4();
-
-    db.prepare(`
-        INSERT INTO equipment_damage_logs (id, equipment_id, date, description, repair_cost, repaired_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, data.date, data.description, data.repairCost || null, data.repairedBy || null, data.status);
-
-    // If status is in_repair, update equipment status
-    if (data.status === 'in_repair') {
-        db.prepare('UPDATE equipment SET status = ? WHERE id = ?').run('in_repair', req.params.id);
-    }
-
-    logger.info(`Damage log added to equipment: ${req.params.id}`, { logId: id, createdBy: req.user!.id });
-
-    res.status(201).json({ id, message: 'Schademelding toegevoegd.' });
-}));
-
-/**
- * @swagger
- * /equipment/{id}/damage-logs/{logId}:
- *   put:
- *     summary: Update damage log entry
- *     tags: [Equipment]
- */
-router.put('/:id/damage-logs/:logId', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createDamageLogSchema.partial().parse(req.body);
-
-    const log = db.prepare(`
-        SELECT dl.* FROM equipment_damage_logs dl
-        JOIN equipment e ON dl.equipment_id = e.id
-        WHERE dl.id = ? AND e.association_id = ?
-    `).get(req.params.logId, req.user!.associationId);
-
-    if (!log) {
-        throw new ApiError(404, 'Schademelding niet gevonden.');
-    }
-
-    db.prepare(`
-        UPDATE equipment_damage_logs SET
-            date = COALESCE(?, date),
-            description = COALESCE(?, description),
-            repair_cost = COALESCE(?, repair_cost),
-            repaired_by = COALESCE(?, repaired_by),
-            status = COALESCE(?, status)
-        WHERE id = ?
-    `).run(data.date, data.description, data.repairCost, data.repairedBy, data.status, req.params.logId);
-
-    // Update equipment status based on damage log status
-    if (data.status === 'repaired') {
-        db.prepare('UPDATE equipment SET status = ? WHERE id = ?').run('available', req.params.id);
-    } else if (data.status === 'in_repair') {
-        db.prepare('UPDATE equipment SET status = ? WHERE id = ?').run('in_repair', req.params.id);
-    } else if (data.status === 'written_off') {
-        db.prepare('UPDATE equipment SET status = ? WHERE id = ?').run('written_off', req.params.id);
-    }
-
-    res.json({ message: 'Schademelding bijgewerkt.' });
-}));
-
-/**
- * @swagger
- * /equipment/{id}/damage-logs/{logId}:
- *   delete:
- *     summary: Delete damage log entry
- *     tags: [Equipment]
- */
-router.delete('/:id/damage-logs/:logId', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(`
-        DELETE FROM equipment_damage_logs
-        WHERE id = ? AND equipment_id IN (
-            SELECT id FROM equipment WHERE association_id = ?
-        )
-    `).run(req.params.logId, req.user!.associationId);
-
-    if (result.changes === 0) {
-        throw new ApiError(404, 'Schademelding niet gevonden.');
-    }
-
-    res.json({ message: 'Schademelding verwijderd.' });
-}));
-
-// ==================== EQUIPMENT LOANS ====================
-
-/**
- * @swagger
- * /equipment/{id}/loans:
- *   post:
- *     summary: Create equipment loan (lend out instrument)
- *     tags: [Equipment]
- */
-router.post('/:id/loans', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createEquipmentLoanSchema.parse(req.body);
-
-    const equipment = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId) as any;
-
-    if (!equipment) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
-    }
-
-    if (equipment.status === 'on_loan') {
-        throw new ApiError(400, 'Dit instrument is al uitgeleend.');
-    }
-
-    if (equipment.status === 'in_repair' || equipment.status === 'written_off') {
-        throw new ApiError(400, 'Dit instrument kan niet worden uitgeleend vanwege de huidige status.');
-    }
-
-    const id = uuidv4();
-
-    withTransaction(() => {
-        db.prepare(`
-            INSERT INTO equipment_loans (id, equipment_id, user_id, loan_date, condition_at_loan, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(id, req.params.id, data.userId, data.loanDate, data.conditionAtLoan || null, data.notes || null);
-
-        db.prepare('UPDATE equipment SET status = ?, current_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-            .run('on_loan', data.userId, req.params.id);
-    });
-
-    logger.info(`Equipment loaned out: ${req.params.id}`, { loanId: id, userId: data.userId, createdBy: req.user!.id });
-
-    res.status(201).json({ id, message: 'Instrument uitgeleend.' });
-}));
-
-/**
- * @swagger
- * /equipment/{id}/loans/{loanId}/return:
- *   post:
- *     summary: Return equipment loan
- *     tags: [Equipment]
- */
-router.post('/:id/loans/:loanId/return', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = returnEquipmentLoanSchema.parse(req.body);
+// PATCH /equipment/loans/:id/return
+router.patch(
+  '/loans/:id/return',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const data = returnLoanSchema.parse(req.body);
+    const returnedTo = req.user!.id;
+    const associationId = req.user!.associationId;
 
     const loan = db.prepare(`
-        SELECT el.* FROM equipment_loans el
-        JOIN equipment e ON el.equipment_id = e.id
-        WHERE el.id = ? AND e.association_id = ? AND el.return_date IS NULL
-    `).get(req.params.loanId, req.user!.associationId);
+      SELECT el.*, e.id as equipment_id FROM equipment_loans el
+      JOIN equipment_items e ON el.equipment_id = e.id
+      WHERE el.id = ? AND e.association_id = ?
+    `).get(id, associationId) as any;
 
     if (!loan) {
-        throw new ApiError(404, 'Uitleen niet gevonden of al teruggebracht.');
+      throw new ApiError(404, 'Uitlening niet gevonden');
     }
 
-    withTransaction(() => {
-        db.prepare(`
-            UPDATE equipment_loans SET return_date = ?, condition_at_return = ?
-            WHERE id = ?
-        `).run(data.returnDate, data.conditionAtReturn || null, req.params.loanId);
-
-        db.prepare('UPDATE equipment SET status = ?, current_user_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-            .run('available', req.params.id);
-    });
-
-    logger.info(`Equipment returned: ${req.params.id}`, { loanId: req.params.loanId, returnedBy: req.user!.id });
-
-    res.json({ message: 'Instrument teruggebracht.' });
-}));
-
-/**
- * @swagger
- * /equipment/{id}/record-maintenance:
- *   post:
- *     summary: Record maintenance performed
- *     tags: [Equipment]
- */
-router.post('/:id/record-maintenance', authenticateToken, requireRole('admin', 'equipment_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { date, notes } = req.body;
-
-    const equipment = db.prepare('SELECT * FROM equipment WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId) as any;
-
-    if (!equipment) {
-        throw new ApiError(404, 'Instrument niet gevonden.');
+    if (loan.status !== 'active') {
+      throw new ApiError(400, 'Uitlening is niet actief');
     }
-
-    const maintenanceDate = date || new Date().toISOString().split('T')[0];
-    const interval = equipment.maintenance_interval_months || 12;
-    const nextDate = new Date(maintenanceDate);
-    nextDate.setMonth(nextDate.getMonth() + interval);
-    const nextMaintenanceDate = nextDate.toISOString().split('T')[0];
 
     db.prepare(`
-        UPDATE equipment SET
-            last_maintenance_date = ?,
-            next_maintenance_date = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    `).run(maintenanceDate, nextMaintenanceDate, req.params.id);
+      UPDATE equipment_loans SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP,
+        condition_at_return = ?, return_notes = ?, returned_to = ?
+      WHERE id = ?
+    `).run(data.conditionAtReturn || null, data.returnNotes || null, returnedTo, id);
 
-    // Optionally add a damage log entry for the maintenance
-    if (notes) {
-        const logId = uuidv4();
-        db.prepare(`
-            INSERT INTO equipment_damage_logs (id, equipment_id, date, description, status)
-            VALUES (?, ?, ?, ?, 'repaired')
-        `).run(logId, req.params.id, maintenanceDate, `Onderhoud uitgevoerd: ${notes}`);
+    db.prepare('UPDATE equipment_items SET status = "available" WHERE id = ?').run(loan.equipment_id);
+
+    res.json({ message: 'Inlevering geregistreerd' });
+  })
+);
+
+// POST /equipment/:id/maintenance
+router.post(
+  '/:id/maintenance',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const data = maintenanceSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+    const createdBy = req.user!.id;
+
+    const equipment = db.prepare(
+      'SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
+
+    if (!equipment) {
+      throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
-    logger.info(`Maintenance recorded for equipment: ${req.params.id}`, { date: maintenanceDate, recordedBy: req.user!.id });
+    const maintenanceId = uuidv4();
+    db.prepare(`
+      INSERT INTO equipment_maintenance (id, equipment_id, maintenance_type, description,
+        performed_date, performed_by, external_provider, cost, parts_replaced,
+        next_maintenance_date, notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      maintenanceId, id, data.maintenanceType, data.description, data.performedDate,
+      data.performedBy || null, data.externalProvider || null, data.cost || null,
+      data.partsReplaced || null, data.nextMaintenanceDate || null, data.notes || null, createdBy
+    );
+
+    db.prepare('UPDATE equipment_items SET last_maintenance = ?, next_maintenance = ? WHERE id = ?')
+      .run(data.performedDate, data.nextMaintenanceDate || null, id);
+
+    res.status(201).json({ id: maintenanceId, message: 'Onderhoud geregistreerd' });
+  })
+);
+
+// GET /equipment/stats
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const totalItems = db.prepare(`
+      SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ? AND deleted_at IS NULL
+    `).get(associationId) as any;
+
+    const byStatus = db.prepare(`
+      SELECT status, COUNT(*) as count FROM equipment_items
+      WHERE association_id = ? AND deleted_at IS NULL
+      GROUP BY status
+    `).all(associationId);
+
+    const activeLoans = db.prepare(`
+      SELECT COUNT(*) as count FROM equipment_loans el
+      JOIN equipment_items e ON el.equipment_id = e.id
+      WHERE e.association_id = ? AND el.status = 'active'
+    `).get(associationId) as any;
+
+    const totalValue = db.prepare(`
+      SELECT SUM(current_value) as total FROM equipment_items
+      WHERE association_id = ? AND deleted_at IS NULL AND status NOT IN ('retired', 'lost', 'sold')
+    `).get(associationId) as any;
 
     res.json({
-        message: 'Onderhoud geregistreerd.',
-        nextMaintenanceDate,
+      totalItems: totalItems.count,
+      byStatus: Object.fromEntries(byStatus.map((s: any) => [s.status, s.count])),
+      activeLoans: activeLoans.count,
+      totalValue: totalValue.total || 0,
     });
-}));
+  })
+);
 
 export default router;

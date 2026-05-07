@@ -101,6 +101,9 @@ import tasksRoutes from './routes/tasks';
 import postsRoutes from './routes/posts';
 import emailCampaignsRoutes from './routes/email-campaigns';
 import accountingRoutes from './routes/accounting';
+import projectsRoutes from './routes/projects';
+import toursRoutes from './routes/tours';
+import resourcesRoutes from './routes/resources';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -282,6 +285,9 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/email-campaigns', emailCampaignsRoutes);
 app.use('/api/accounting', accountingRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/tours', toursRoutes);
+app.use('/api/resources', resourcesRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);

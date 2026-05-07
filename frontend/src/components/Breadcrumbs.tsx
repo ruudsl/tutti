@@ -55,6 +55,10 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/voice-parts': { labelKey: 'nav.voiceParts', parent: '/' },
   '/occupancy': { labelKey: 'nav.occupancy', parent: '/' },
   '/neighbor-preferences': { labelKey: 'nav.neighborPreferences', parent: '/' },
+  '/projects': { labelKey: 'nav.projects', parent: '/' },
+  '/tours': { labelKey: 'nav.tours', parent: '/' },
+  '/resources': { labelKey: 'nav.resources', parent: '/' },
+  '/equipment': { labelKey: 'nav.equipment', parent: '/' },
 };
 
 // Extended route config with nested paths
