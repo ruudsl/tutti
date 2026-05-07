@@ -300,7 +300,8 @@ router.delete('/super-admin/super-admins/:id', authenticateToken, asyncHandler(a
 
     if (count.count <= 1) {
         throw new ApiError(400, 'Er moet minimaal één super admin blijven.');
-    }
+    const safeUserIdForLog = String(userId).replace(/[\r\n]/g, '');
+    logger.info(`Super admin added: ${safeUserIdForLog}`, { addedBy: req.user!.id });
 
     db.prepare('DELETE FROM super_admins WHERE id = ?').run(req.params.id);
 
