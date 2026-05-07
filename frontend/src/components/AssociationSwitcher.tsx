@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useMyAssociations, useSwitchAssociation } from '../hooks/useMultiAssociation';
 import { Icon } from './Icon';
@@ -9,7 +8,6 @@ import { showSuccess, showError } from '../utils/toast';
 export function AssociationSwitcher() {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const queryClient = useQueryClient();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 

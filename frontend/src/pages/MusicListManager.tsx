@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { useAuth } from '../context/AuthContext';
 import {
   getMusicLists,
   getMusicList,
@@ -35,7 +34,6 @@ export default function MusicListManager() {
   const { orchestraId, listId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   const [selectedOrchestra, setSelectedOrchestra] = useState<string>(orchestraId || '');
   const [search, setSearch] = useState('');
