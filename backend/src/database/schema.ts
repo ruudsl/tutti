@@ -1591,4 +1591,192 @@ CREATE INDEX IF NOT EXISTS idx_music_title_instruments_title ON music_title_inst
 CREATE INDEX IF NOT EXISTS idx_music_title_instruments_uri ON music_title_instruments(instrument_uri);
 CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_title ON music_title_vocabulary(music_title_id);
 CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_type ON music_title_vocabulary(vocabulary_type);
+
+-- =====================================================
+-- EXTERNAL CONTACTS MODULE
+-- =====================================================
+
+-- Contact categories (configurable per association)
+CREATE TABLE IF NOT EXISTS contact_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_categories_assoc ON contact_categories(association_id);
+
+-- External contacts (organizations, persons, venues, vendors)
+CREATE TABLE IF NOT EXISTS contacts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    contact_type TEXT NOT NULL CHECK (contact_type IN ('organization', 'person', 'venue', 'vendor')),
+    name TEXT NOT NULL,
+    contact_person TEXT,
+    email TEXT,
+    phone TEXT,
+    mobile TEXT,
+    address_line TEXT,
+    postal_code TEXT,
+    city TEXT,
+    country TEXT DEFAULT 'NL',
+    iban TEXT,
+    iban_holder_name TEXT,
+    bic TEXT,
+    vat_number TEXT,
+    chamber_of_commerce TEXT,
+    website TEXT,
+    notes TEXT,
+    is_active INTEGER DEFAULT 1,
+    promoted_to_user_id TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (promoted_to_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_assoc ON contacts(association_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_type ON contacts(contact_type);
+CREATE INDEX IF NOT EXISTS idx_contacts_name ON contacts(name);
+CREATE INDEX IF NOT EXISTS idx_contacts_active ON contacts(is_active);
+
+-- Link contacts to categories (many-to-many)
+CREATE TABLE IF NOT EXISTS contact_category_links (
+    contact_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    PRIMARY KEY (contact_id, category_id),
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES contact_categories(id) ON DELETE CASCADE
+);
+
+-- Contact persons for organization-type contacts
+CREATE TABLE IF NOT EXISTS contact_persons (
+    id TEXT PRIMARY KEY,
+    contact_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT,
+    email TEXT,
+    phone TEXT,
+    is_primary INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_persons_contact ON contact_persons(contact_id);
+
+-- =====================================================
+-- CUSTOM FIELDS MODULE
+-- =====================================================
+
+-- Custom field definitions (configurable per association)
+CREATE TABLE IF NOT EXISTS custom_field_definitions (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL CHECK (entity_type IN (
+        'user', 'orchestra', 'rehearsal', 'concert', 'music_piece', 'loan', 'instrument', 'contact'
+    )),
+    field_key TEXT NOT NULL,
+    field_label TEXT NOT NULL,
+    field_type TEXT NOT NULL CHECK (field_type IN (
+        'text', 'textarea', 'number', 'date', 'datetime',
+        'boolean', 'select', 'multiselect', 'email', 'phone', 'url', 'file'
+    )),
+    field_options TEXT,
+    is_required INTEGER NOT NULL DEFAULT 0,
+    is_unique INTEGER NOT NULL DEFAULT 0,
+    visibility TEXT NOT NULL DEFAULT 'all' CHECK (visibility IN (
+        'all', 'admin_only', 'committee_plus', 'self_only'
+    )),
+    self_editable INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    placeholder TEXT,
+    default_value TEXT,
+    validation_regex TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, entity_type, field_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_field_defs_assoc ON custom_field_definitions(association_id);
+CREATE INDEX IF NOT EXISTS idx_custom_field_defs_entity ON custom_field_definitions(entity_type);
+
+-- Custom field values
+CREATE TABLE IF NOT EXISTS custom_field_values (
+    id TEXT PRIMARY KEY,
+    field_definition_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    value_text TEXT,
+    value_number REAL,
+    value_date DATETIME,
+    value_boolean INTEGER,
+    value_json TEXT,
+    updated_by TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (field_definition_id) REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(field_definition_id, entity_type, entity_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_field_values_def ON custom_field_values(field_definition_id);
+CREATE INDEX IF NOT EXISTS idx_custom_field_values_entity ON custom_field_values(entity_type, entity_id);
+
+-- =====================================================
+-- PRIVACY SETTINGS MODULE
+-- =====================================================
+
+-- Per-user privacy settings for each field
+CREATE TABLE IF NOT EXISTS user_privacy_settings (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    visibility TEXT NOT NULL CHECK (visibility IN (
+        'admin_only', 'committee', 'orchestra', 'section', 'all_members', 'public'
+    )),
+    custom_field_id TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (custom_field_id) REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    UNIQUE(user_id, field_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_privacy_user ON user_privacy_settings(user_id);
+
+-- Association-wide privacy defaults
+CREATE TABLE IF NOT EXISTS association_privacy_defaults (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    default_visibility TEXT NOT NULL,
+    purpose_statement TEXT,
+    is_required INTEGER DEFAULT 0,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, field_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assoc_privacy_assoc ON association_privacy_defaults(association_id);
+
+-- Privacy consent tracking
+CREATE TABLE IF NOT EXISTS privacy_consents (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    consent_version TEXT NOT NULL,
+    consented_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_privacy_consents_user ON privacy_consents(user_id);
 `;

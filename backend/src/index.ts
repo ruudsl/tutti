@@ -93,6 +93,9 @@ import instrumentAssetsRoutes from './routes/instrument-assets';
 import instrumentInsuranceRoutes from './routes/instrument-insurance';
 import eventsRoutes from './routes/events';
 import multiAssociationRoutes from './routes/multi-association';
+import contactsRoutes from './routes/contacts';
+import customFieldsRoutes from './routes/custom-fields';
+import privacySettingsRoutes from './routes/privacy-settings';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -266,6 +269,9 @@ app.use('/api/instrument-assets', instrumentAssetsRoutes);
 app.use('/api/instrument-insurance', instrumentInsuranceRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/multi-association', multiAssociationRoutes);
+app.use('/api/contacts', contactsRoutes);
+app.use('/api/custom-fields', customFieldsRoutes);
+app.use('/api/privacy-settings', privacySettingsRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);

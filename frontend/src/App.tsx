@@ -31,6 +31,9 @@ import DataExport from './pages/DataExport';
 import MyMusic from './pages/MyMusic';
 import Tools from './pages/Tools';
 import Issues from './pages/Issues';
+import Contacts from './pages/Contacts';
+import CustomFieldsAdmin from './pages/CustomFieldsAdmin';
+import PrivacySettings from './pages/PrivacySettings';
 
 // Music management
 import MusicPieces from './pages/MusicPieces';
@@ -177,6 +180,16 @@ function AppRoutes() {
         <Route path="my-music" element={<MyMusic />} />
         <Route path="tools" element={<Tools />} />
         <Route path="issues" element={<Issues />} />
+        <Route path="contacts" element={<Contacts />} />
+        <Route
+          path="custom-fields"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <CustomFieldsAdmin />
+            </PrivateRoute>
+          }
+        />
+        <Route path="privacy-settings" element={<PrivacySettings />} />
         <Route
           path="music-pieces"
           element={

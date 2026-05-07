@@ -156,3 +156,8 @@ export * from './activity';
 export * from './guest-list';
 export * from './audit';
 export * from './availability';
+
+// Phase A features
+export * from './contacts';
+export * from './custom-fields';
+export * from './privacy-settings';
