@@ -7,6 +7,9 @@ import { withTransaction, getPaginationParams, createPaginatedResult } from '../
 import logger from '../utils/logger';
 import { z } from 'zod';
 
+const sanitizeForLog = (value: unknown): string =>
+    String(value).replace(/[\r\n]+/g, '').replace(/[\x00-\x1F\x7F]+/g, '');
+
 const router = Router();
 
 // ===========================================
@@ -630,7 +633,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'equipment_committee'
     );
 
     logAssetHistory(req.params.id, 'updated', 'Instrument bijgewerkt', req.user!.id);
-    logger.info(`Instrument asset updated: ${req.params.id}`, { updatedBy: req.user!.id });
+    logger.info(`Instrument asset updated: ${sanitizeForLog(req.params.id)}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Instrument succesvol bijgewerkt' });
 }));
