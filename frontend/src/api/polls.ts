@@ -187,3 +187,30 @@ export async function deletePollComment(pollId: string, commentId: string): Prom
   const response = await api.delete(`/polls/${pollId}/comments/${commentId}`);
   return response.data;
 }
+
+// Send reminder to non-voters
+export async function sendPollReminder(pollId: string): Promise<{ message: string; sent: number }> {
+  const response = await api.post(`/polls/${pollId}/remind`);
+  return response.data;
+}
+
+// Create rehearsal from winning poll option
+export interface CreateRehearsalFromPollData {
+  orchestraId?: string;
+  location?: string;
+  notes?: string;
+}
+
+export async function createRehearsalFromPoll(
+  pollId: string,
+  data?: CreateRehearsalFromPollData
+): Promise<{
+  message: string;
+  rehearsalId: string;
+  date: string;
+  winningOption: string;
+  voteCount: number;
+}> {
+  const response = await api.post(`/polls/${pollId}/create-rehearsal`, data || {});
+  return response.data;
+}

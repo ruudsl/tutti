@@ -13,6 +13,8 @@ import {
   retractVote,
   addPollComment,
   deletePollComment,
+  sendPollReminder,
+  createRehearsalFromPoll,
   Poll,
   PollDetail,
   PollStatus,
@@ -330,6 +332,27 @@ function PollDetailModal({
     },
   });
 
+  const reminderMutation = useMutation({
+    mutationFn: () => sendPollReminder(poll.id),
+    onSuccess: (data) => {
+      showSuccess(t('polls.reminderSent', { count: data.sent }));
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('polls.errorReminder'));
+    },
+  });
+
+  const createRehearsalMutation = useMutation({
+    mutationFn: () => createRehearsalFromPoll(poll.id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['rehearsals'] });
+      showSuccess(t('polls.rehearsalCreated', { date: new Date(data.date).toLocaleDateString() }));
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('polls.errorCreateRehearsal'));
+    },
+  });
+
   const canVote = poll.status === 'active' && !poll.hasVoted;
   const canRetract = poll.status === 'active' && poll.hasVoted;
 
@@ -497,22 +520,54 @@ function PollDetailModal({
               </button>
             )}
             {poll.status === 'active' && (
-              <button
-                className="btn btn-warning btn-sm"
-                onClick={() => onStatusChange('closed')}
-              >
-                <Icon name="lock" size={14} className="mr-1" />
-                {t('polls.close')}
-              </button>
+              <>
+                <button
+                  className="btn btn-warning btn-sm"
+                  onClick={() => onStatusChange('closed')}
+                >
+                  <Icon name="lock" size={14} className="mr-1" />
+                  {t('polls.close')}
+                </button>
+                <button
+                  className="btn btn-info btn-sm"
+                  onClick={() => reminderMutation.mutate()}
+                  disabled={reminderMutation.isPending}
+                >
+                  {reminderMutation.isPending ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <Icon name="bell" size={14} className="mr-1" />
+                  )}
+                  {t('polls.sendReminder')}
+                </button>
+              </>
             )}
             {poll.status === 'closed' && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => onStatusChange('archived')}
-              >
-                <Icon name="archive" size={14} className="mr-1" />
-                {t('polls.archive')}
-              </button>
+              <>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => onStatusChange('archived')}
+                >
+                  <Icon name="archive" size={14} className="mr-1" />
+                  {t('polls.archive')}
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    if (confirm(t('polls.confirmCreateRehearsal'))) {
+                      createRehearsalMutation.mutate();
+                    }
+                  }}
+                  disabled={createRehearsalMutation.isPending}
+                >
+                  {createRehearsalMutation.isPending ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <Icon name="calendar" size={14} className="mr-1" />
+                  )}
+                  {t('polls.createRehearsal')}
+                </button>
+              </>
             )}
             {poll.status === 'draft' && (
               <button className="btn btn-error btn-sm" onClick={onDelete}>

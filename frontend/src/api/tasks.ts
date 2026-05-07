@@ -196,3 +196,96 @@ export async function deleteTaskComment(taskId: string, commentId: string): Prom
   const response = await api.delete(`/tasks/${taskId}/comments/${commentId}`);
   return response.data;
 }
+
+// Templates
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  taskListId?: string;
+  listName?: string;
+  listColor?: string;
+  priority: TaskPriority;
+  estimatedHours?: number;
+  checklistItems: string[];
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface CreateTaskTemplateData {
+  name: string;
+  description?: string;
+  taskListId?: string;
+  priority?: TaskPriority;
+  estimatedHours?: number;
+  checklistItems?: string[];
+}
+
+export async function getTaskTemplates(): Promise<TaskTemplate[]> {
+  const response = await api.get('/tasks/templates');
+  return response.data;
+}
+
+export async function createTaskTemplate(data: CreateTaskTemplateData): Promise<{ id: string; message: string }> {
+  const response = await api.post('/tasks/templates', data);
+  return response.data;
+}
+
+export async function updateTaskTemplate(id: string, data: Partial<CreateTaskTemplateData>): Promise<{ message: string }> {
+  const response = await api.put(`/tasks/templates/${id}`, data);
+  return response.data;
+}
+
+export async function deleteTaskTemplate(id: string): Promise<{ message: string }> {
+  const response = await api.delete(`/tasks/templates/${id}`);
+  return response.data;
+}
+
+export async function createTaskFromTemplate(
+  templateId: string,
+  data?: { title?: string; assignedTo?: string; dueDate?: string }
+): Promise<{ id: string; title: string; message: string }> {
+  const response = await api.post(`/tasks/templates/${templateId}/create-task`, data || {});
+  return response.data;
+}
+
+// Summary (for dashboard)
+export interface TaskSummary {
+  statusSummary: Record<TaskStatus, number>;
+  totalOpen: number;
+  myTasks: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate?: string;
+    listName?: string;
+    listColor?: string;
+  }[];
+  overdueTasks: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate?: string;
+    listName?: string;
+    listColor?: string;
+    assignedToName?: string;
+  }[];
+  recentCompleted: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate?: string;
+    listName?: string;
+    listColor?: string;
+    assignedToName?: string;
+  }[];
+}
+
+export async function getTaskSummary(): Promise<TaskSummary> {
+  const response = await api.get('/tasks/summary');
+  return response.data;
+}

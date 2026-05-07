@@ -18,17 +18,19 @@ export type WidgetType =
   | 'practice-progress'
   | 'favorites'
   | 'quick-actions'
-  | 'announcements';
+  | 'announcements'
+  | 'tasks';
 
 const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: 'stats', type: 'stats', title: 'Statistics', enabled: true, order: 0, size: 'full' },
-  { id: 'music-lists', type: 'music-lists', title: 'My Music Lists', enabled: true, order: 1, size: 'medium' },
-  { id: 'upcoming-rehearsals', type: 'upcoming-rehearsals', title: 'Upcoming Rehearsals', enabled: true, order: 2, size: 'medium' },
-  { id: 'recent-activity', type: 'recent-activity', title: 'Recent Activity', enabled: true, order: 3, size: 'medium' },
-  { id: 'practice-progress', type: 'practice-progress', title: 'Practice Progress', enabled: true, order: 4, size: 'medium' },
-  { id: 'favorites', type: 'favorites', title: 'Favorites', enabled: true, order: 5, size: 'small' },
-  { id: 'quick-actions', type: 'quick-actions', title: 'Quick Actions', enabled: true, order: 6, size: 'small' },
-  { id: 'announcements', type: 'announcements', title: 'Announcements', enabled: false, order: 7, size: 'full' },
+  { id: 'tasks', type: 'tasks', title: 'My Tasks', enabled: true, order: 1, size: 'medium' },
+  { id: 'music-lists', type: 'music-lists', title: 'My Music Lists', enabled: true, order: 2, size: 'medium' },
+  { id: 'upcoming-rehearsals', type: 'upcoming-rehearsals', title: 'Upcoming Rehearsals', enabled: true, order: 3, size: 'medium' },
+  { id: 'recent-activity', type: 'recent-activity', title: 'Recent Activity', enabled: true, order: 4, size: 'medium' },
+  { id: 'practice-progress', type: 'practice-progress', title: 'Practice Progress', enabled: true, order: 5, size: 'medium' },
+  { id: 'favorites', type: 'favorites', title: 'Favorites', enabled: true, order: 6, size: 'small' },
+  { id: 'quick-actions', type: 'quick-actions', title: 'Quick Actions', enabled: true, order: 7, size: 'small' },
+  { id: 'announcements', type: 'announcements', title: 'Announcements', enabled: false, order: 8, size: 'full' },
 ];
 
 const STORAGE_KEY = 'dashboard-widgets';

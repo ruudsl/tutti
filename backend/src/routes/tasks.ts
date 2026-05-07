@@ -688,4 +688,308 @@ router.delete('/:taskId/comments/:commentId', authenticateToken, asyncHandler(as
     res.json({ message: 'Reactie verwijderd.' });
 }));
 
+// =====================================================
+// TEMPLATE ROUTES
+// =====================================================
+
+const createTemplateSchema = z.object({
+    name: z.string().min(1, 'Naam is verplicht.'),
+    description: z.string().optional(),
+    taskListId: z.string().uuid().optional(),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+    estimatedHours: z.number().positive().optional(),
+    checklistItems: z.array(z.string()).optional(),
+});
+
+const updateTemplateSchema = createTemplateSchema.partial();
+
+router.get('/templates', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const templates = db.prepare(`
+        SELECT tt.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS created_by_name
+        FROM task_templates tt
+        LEFT JOIN task_lists tl ON tt.task_list_id = tl.id
+        LEFT JOIN users u ON tt.created_by = u.id
+        WHERE tt.association_id = ? AND tt.is_active = 1
+        ORDER BY tt.name
+    `).all(associationId);
+
+    res.json(templates.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        taskListId: t.task_list_id,
+        listName: t.list_name,
+        listColor: t.list_color,
+        priority: t.priority,
+        estimatedHours: t.estimated_hours,
+        checklistItems: t.checklist_items ? JSON.parse(t.checklist_items) : [],
+        createdBy: t.created_by,
+        createdByName: t.created_by_name,
+        createdAt: t.created_at,
+    })));
+}));
+
+router.post('/templates', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = createTemplateSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const templateId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO task_templates (
+            id, association_id, name, description, task_list_id, priority,
+            estimated_hours, checklist_items, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        templateId,
+        associationId,
+        data.name,
+        data.description || null,
+        data.taskListId || null,
+        data.priority,
+        data.estimatedHours || null,
+        data.checklistItems ? JSON.stringify(data.checklistItems) : null,
+        req.user!.id,
+        now,
+        now
+    );
+
+    res.status(201).json({
+        id: templateId,
+        name: data.name,
+        message: 'Template aangemaakt.',
+    });
+}));
+
+router.put('/templates/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = updateTemplateSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+
+    const template = db.prepare(
+        'SELECT id FROM task_templates WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId);
+
+    if (!template) {
+        throw new ApiError(404, 'Template niet gevonden.');
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (data.name !== undefined) {
+        updates.push('name = ?');
+        params.push(data.name);
+    }
+    if (data.description !== undefined) {
+        updates.push('description = ?');
+        params.push(data.description);
+    }
+    if (data.taskListId !== undefined) {
+        updates.push('task_list_id = ?');
+        params.push(data.taskListId);
+    }
+    if (data.priority !== undefined) {
+        updates.push('priority = ?');
+        params.push(data.priority);
+    }
+    if (data.estimatedHours !== undefined) {
+        updates.push('estimated_hours = ?');
+        params.push(data.estimatedHours);
+    }
+    if (data.checklistItems !== undefined) {
+        updates.push('checklist_items = ?');
+        params.push(JSON.stringify(data.checklistItems));
+    }
+
+    if (updates.length > 0) {
+        updates.push('updated_at = ?');
+        params.push(new Date().toISOString());
+        params.push(req.params.id);
+
+        db.prepare(`UPDATE task_templates SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    res.json({ message: 'Template bijgewerkt.' });
+}));
+
+router.delete('/templates/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const template = db.prepare(
+        'SELECT id FROM task_templates WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId);
+
+    if (!template) {
+        throw new ApiError(404, 'Template niet gevonden.');
+    }
+
+    db.prepare('UPDATE task_templates SET is_active = 0 WHERE id = ?').run(req.params.id);
+
+    res.json({ message: 'Template verwijderd.' });
+}));
+
+// Create task from template
+router.post('/templates/:id/create-task', authenticateToken, cacheInvalidator(CACHE_PATH), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const { title, assignedTo, dueDate } = req.body;
+
+    const template = db.prepare(
+        'SELECT * FROM task_templates WHERE id = ? AND association_id = ? AND is_active = 1'
+    ).get(req.params.id, associationId) as any;
+
+    if (!template) {
+        throw new ApiError(404, 'Template niet gevonden.');
+    }
+
+    const taskId = uuidv4();
+    const now = new Date().toISOString();
+    const taskTitle = title || template.name;
+
+    db.prepare(`
+        INSERT INTO tasks (
+            id, association_id, task_list_id, title, description, status, priority,
+            due_date, estimated_hours, created_by, assigned_to, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'todo', ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        taskId,
+        associationId,
+        template.task_list_id,
+        taskTitle,
+        template.description,
+        template.priority,
+        dueDate || null,
+        template.estimated_hours,
+        req.user!.id,
+        assignedTo || null,
+        now,
+        now
+    );
+
+    // Create checklist items from template
+    if (template.checklist_items) {
+        const items = JSON.parse(template.checklist_items);
+        const insertItem = db.prepare(`
+            INSERT INTO task_checklist_items (id, task_id, content, sort_order, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+
+        items.forEach((content: string, index: number) => {
+            insertItem.run(uuidv4(), taskId, content, index, now);
+        });
+    }
+
+    logAuditEvent(
+        req.user!.id,
+        'task_created_from_template',
+        'task',
+        taskId,
+        `${taskTitle} (van template: ${template.name})`
+    );
+
+    res.status(201).json({
+        id: taskId,
+        title: taskTitle,
+        message: 'Taak aangemaakt van template.',
+    });
+}));
+
+// Dashboard summary endpoint
+router.get('/summary', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const userId = req.user!.id;
+
+    // Get counts by status
+    const statusCounts = db.prepare(`
+        SELECT status, COUNT(*) as count
+        FROM tasks
+        WHERE association_id = ?
+        GROUP BY status
+    `).all(associationId) as any[];
+
+    // Get my tasks (assigned to me, not done)
+    const myTasks = db.prepare(`
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        WHERE t.association_id = ? AND t.assigned_to = ? AND t.status NOT IN ('done', 'cancelled')
+        ORDER BY t.priority DESC, t.due_date ASC NULLS LAST
+        LIMIT 5
+    `).all(associationId, userId);
+
+    // Get overdue tasks
+    const now = new Date().toISOString();
+    const overdueTasks = db.prepare(`
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS assigned_to_name
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.association_id = ? AND t.due_date < ? AND t.status NOT IN ('done', 'cancelled')
+        ORDER BY t.due_date ASC
+        LIMIT 5
+    `).all(associationId, now);
+
+    // Get recent completed tasks
+    const recentCompleted = db.prepare(`
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS assigned_to_name
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.association_id = ? AND t.status = 'done'
+        ORDER BY t.completed_at DESC
+        LIMIT 5
+    `).all(associationId);
+
+    // Build status summary
+    const statusSummary: Record<string, number> = {
+        todo: 0,
+        in_progress: 0,
+        review: 0,
+        done: 0,
+        cancelled: 0,
+    };
+
+    statusCounts.forEach((s: any) => {
+        statusSummary[s.status] = s.count;
+    });
+
+    const mapTask = (t: any) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.due_date,
+        listName: t.list_name,
+        listColor: t.list_color,
+        assignedToName: t.assigned_to_name,
+    });
+
+    res.json({
+        statusSummary,
+        totalOpen: statusSummary.todo + statusSummary.in_progress + statusSummary.review,
+        myTasks: myTasks.map(mapTask),
+        overdueTasks: overdueTasks.map(mapTask),
+        recentCompleted: recentCompleted.map(mapTask),
+    });
+}));
+
 export default router;

@@ -31,7 +31,8 @@ const createPostSchema = z.object({
     content: z.string().min(1, 'Inhoud is verplicht.'),
     contentFormat: z.enum(['markdown', 'html']).default('markdown'),
     featuredImage: z.string().optional(),
-    status: z.enum(['draft', 'published', 'archived']).default('draft'),
+    status: z.enum(['draft', 'scheduled', 'published', 'archived']).default('draft'),
+    scheduledAt: z.string().datetime().optional(),
     isPinned: z.boolean().default(false),
     isFeatured: z.boolean().default(false),
     allowComments: z.boolean().default(true),
@@ -242,7 +243,7 @@ router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 60 }), asyncHan
     const params: any[] = [associationId];
 
     if (!isAdmin) {
-        query += " AND p.status = 'published'";
+        query += " AND p.status = 'published' AND (p.published_at IS NULL OR p.published_at <= datetime('now'))";
     } else if (status) {
         query += ' AND p.status = ?';
         params.push(status);
@@ -415,7 +416,17 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), cac
 
     const postId = uuidv4();
     const now = new Date().toISOString();
-    const publishedAt = data.status === 'published' ? (data.publishedAt || now) : null;
+
+    // Handle scheduled and published posts
+    let publishedAt: string | null = null;
+    if (data.status === 'published') {
+        publishedAt = data.publishedAt || now;
+    } else if (data.status === 'scheduled') {
+        if (!data.scheduledAt) {
+            throw new ApiError(400, 'Publicatiedatum is verplicht voor geplande berichten.');
+        }
+        publishedAt = data.scheduledAt;
+    }
 
     db.prepare(`
         INSERT INTO posts (
@@ -524,7 +535,19 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), c
         if (data.status === 'published' && post.status !== 'published') {
             updates.push('published_at = ?');
             params.push(new Date().toISOString());
+        } else if (data.status === 'scheduled') {
+            if (!data.scheduledAt && !post.published_at) {
+                throw new ApiError(400, 'Publicatiedatum is verplicht voor geplande berichten.');
+            }
+            if (data.scheduledAt) {
+                updates.push('published_at = ?');
+                params.push(data.scheduledAt);
+            }
         }
+    }
+    if (data.scheduledAt !== undefined && data.status === 'scheduled') {
+        updates.push('published_at = ?');
+        params.push(data.scheduledAt);
     }
     if (data.isPinned !== undefined) {
         updates.push('is_pinned = ?');
@@ -673,5 +696,43 @@ router.delete('/:postId/comments/:commentId', authenticateToken, asyncHandler(as
 
     res.json({ message: 'Reactie verwijderd.' });
 }));
+
+// =====================================================
+// SCHEDULED PUBLISHING (for cron jobs)
+// =====================================================
+
+export async function processScheduledPosts(): Promise<number> {
+    const now = new Date().toISOString();
+
+    const scheduledPosts = db.prepare(`
+        SELECT id, title, association_id, created_by
+        FROM posts
+        WHERE status = 'scheduled' AND published_at <= ?
+    `).all(now) as any[];
+
+    if (scheduledPosts.length === 0) {
+        return 0;
+    }
+
+    const updateStmt = db.prepare(`
+        UPDATE posts SET status = 'published', updated_at = ? WHERE id = ?
+    `);
+
+    for (const post of scheduledPosts) {
+        updateStmt.run(now, post.id);
+
+        logAuditEvent(
+            post.created_by,
+            'post_auto_published',
+            'post',
+            post.id,
+            `Automatisch gepubliceerd: ${post.title}`
+        );
+
+        logger.info(`Scheduled post published: ${post.title}`, { postId: post.id });
+    }
+
+    return scheduledPosts.length;
+}
 
 export default router;

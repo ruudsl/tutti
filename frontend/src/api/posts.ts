@@ -1,6 +1,6 @@
 import api from './client';
 
-export type PostStatus = 'draft' | 'published' | 'archived';
+export type PostStatus = 'draft' | 'scheduled' | 'published' | 'archived';
 export type ContentFormat = 'markdown' | 'html';
 
 export interface PostCategory {
@@ -70,6 +70,7 @@ export interface CreatePostData {
   targetOrchestras?: string[];
   targetRoles?: string[];
   publishedAt?: string;
+  scheduledAt?: string;
 }
 
 export interface UpdatePostData extends Partial<CreatePostData> {}

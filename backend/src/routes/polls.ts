@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import { sendEmail } from '../utils/email';
 import { z } from 'zod';
 
 const router = Router();
@@ -936,6 +937,199 @@ router.delete('/:pollId/comments/:commentId', authenticateToken, asyncHandler(as
     `).run(new Date().toISOString(), req.params.commentId);
 
     res.json({ message: 'Reactie verwijderd.' });
+}));
+
+// Send reminder to non-voters
+router.post('/:id/remind', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const poll = db.prepare(
+        'SELECT * FROM polls WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!poll) {
+        throw new ApiError(404, 'Peiling niet gevonden.');
+    }
+
+    if (poll.status !== 'active') {
+        throw new ApiError(400, 'Je kunt alleen actieve peilingen herinneringen sturen.');
+    }
+
+    // Get users who have NOT voted
+    const targetOrchestras = poll.target_orchestras ? JSON.parse(poll.target_orchestras) : null;
+    const targetRoles = poll.target_roles ? JSON.parse(poll.target_roles) : null;
+
+    let nonVotersQuery = `
+        SELECT DISTINCT u.id, u.email, u.first_name, u.last_name
+        FROM users u
+        WHERE u.association_id = ?
+        AND u.is_active = 1
+        AND u.email IS NOT NULL
+        AND u.id NOT IN (
+            SELECT DISTINCT pv.user_id FROM poll_votes pv WHERE pv.poll_id = ?
+        )
+    `;
+    const params: any[] = [associationId, req.params.id];
+
+    if (targetOrchestras && targetOrchestras.length > 0) {
+        const placeholders = targetOrchestras.map(() => '?').join(', ');
+        nonVotersQuery += ` AND EXISTS (
+            SELECT 1 FROM user_orchestras uo WHERE uo.user_id = u.id AND uo.orchestra_id IN (${placeholders})
+        )`;
+        params.push(...targetOrchestras);
+    }
+
+    if (targetRoles && targetRoles.length > 0) {
+        const placeholders = targetRoles.map(() => '?').join(', ');
+        nonVotersQuery += ` AND u.role IN (${placeholders})`;
+        params.push(...targetRoles);
+    }
+
+    const nonVoters = db.prepare(nonVotersQuery).all(...params) as any[];
+
+    if (nonVoters.length === 0) {
+        res.json({ message: 'Iedereen heeft al gestemd!', sent: 0 });
+        return;
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const pollUrl = `${frontendUrl}/polls?view=${poll.id}`;
+
+    let sentCount = 0;
+    for (const user of nonVoters) {
+        const emailHtml = `
+            <p>Hallo ${user.first_name},</p>
+            <p>Je hebt nog niet gestemd op de peiling "<strong>${poll.title}</strong>".</p>
+            ${poll.ends_at ? `<p>De peiling sluit op ${new Date(poll.ends_at).toLocaleDateString('nl-NL')}.</p>` : ''}
+            <p><a href="${pollUrl}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Stem nu</a></p>
+            <p>Of ga naar: ${pollUrl}</p>
+        `;
+
+        const emailText = `Hallo ${user.first_name},\n\nJe hebt nog niet gestemd op de peiling "${poll.title}".\n\nStem nu: ${pollUrl}`;
+
+        const success = await sendEmail({
+            to: user.email,
+            subject: `Herinnering: stem op "${poll.title}"`,
+            text: emailText,
+            html: emailHtml,
+            associationId,
+        });
+
+        if (success) sentCount++;
+    }
+
+    logAuditEvent(
+        req.user!.id,
+        'poll_reminder_sent',
+        'poll',
+        req.params.id,
+        `${sentCount} herinneringen verstuurd`
+    );
+
+    res.json({ message: `${sentCount} herinneringen verstuurd.`, sent: sentCount });
+}));
+
+// Auto-create rehearsal from winning date option
+router.post('/:id/create-rehearsal', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const { orchestraId, location, notes } = req.body;
+
+    const poll = db.prepare(
+        'SELECT * FROM polls WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!poll) {
+        throw new ApiError(404, 'Peiling niet gevonden.');
+    }
+
+    if (poll.status !== 'closed') {
+        throw new ApiError(400, 'De peiling moet eerst worden gesloten.');
+    }
+
+    // Get winning option (most votes)
+    const winningOption = db.prepare(`
+        SELECT po.*, COUNT(pv.id) AS vote_count
+        FROM poll_options po
+        LEFT JOIN poll_votes pv ON pv.option_id = po.id
+        WHERE po.poll_id = ?
+        GROUP BY po.id
+        ORDER BY vote_count DESC
+        LIMIT 1
+    `).get(req.params.id) as any;
+
+    if (!winningOption) {
+        throw new ApiError(400, 'Geen opties gevonden.');
+    }
+
+    // Try to parse the option text as a date
+    const dateText = winningOption.option_text;
+    let parsedDate: Date | null = null;
+
+    // Try various date formats
+    const datePatterns = [
+        /(\d{4})-(\d{2})-(\d{2})/,  // YYYY-MM-DD
+        /(\d{2})-(\d{2})-(\d{4})/,  // DD-MM-YYYY
+        /(\d{2})\/(\d{2})\/(\d{4})/, // DD/MM/YYYY
+    ];
+
+    for (const pattern of datePatterns) {
+        const match = dateText.match(pattern);
+        if (match) {
+            if (match[1].length === 4) {
+                parsedDate = new Date(`${match[1]}-${match[2]}-${match[3]}T19:30:00`);
+            } else {
+                parsedDate = new Date(`${match[3]}-${match[2]}-${match[1]}T19:30:00`);
+            }
+            break;
+        }
+    }
+
+    if (!parsedDate || isNaN(parsedDate.getTime())) {
+        throw new ApiError(400, `Kan geen datum herkennen in "${dateText}". Maak handmatig een repetitie aan.`);
+    }
+
+    // Create rehearsal
+    const rehearsalId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO rehearsal_instances (
+            id, association_id, orchestra_id, date, location, notes, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        rehearsalId,
+        associationId,
+        orchestraId || null,
+        parsedDate.toISOString(),
+        location || null,
+        notes || `Aangemaakt vanuit peiling: ${poll.title}`,
+        req.user!.id,
+        now,
+        now
+    );
+
+    logAuditEvent(
+        req.user!.id,
+        'rehearsal_created_from_poll',
+        'rehearsal',
+        rehearsalId,
+        `${parsedDate.toISOString().split('T')[0]} (van peiling ${poll.title})`
+    );
+
+    res.json({
+        message: 'Repetitie aangemaakt.',
+        rehearsalId,
+        date: parsedDate.toISOString(),
+        winningOption: winningOption.option_text,
+        voteCount: winningOption.vote_count,
+    });
 }));
 
 export default router;

@@ -27,6 +27,7 @@ import { formatDateTime } from '../utils/dateFormat';
 
 const STATUS_COLORS: Record<PostStatus, string> = {
   draft: 'badge-secondary',
+  scheduled: 'badge-info',
   published: 'badge-success',
   archived: 'badge-warning',
 };
@@ -114,6 +115,7 @@ export default function Posts() {
               >
                 <option value="">{t('common.all')}</option>
                 <option value="draft">{t('posts.status.draft')}</option>
+                <option value="scheduled">{t('posts.status.scheduled')}</option>
                 <option value="published">{t('posts.status.published')}</option>
                 <option value="archived">{t('posts.status.archived')}</option>
               </select>
@@ -583,9 +585,27 @@ function CreatePostModal({
               onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as PostStatus }))}
             >
               <option value="draft">{t('posts.status.draft')}</option>
+              <option value="scheduled">{t('posts.status.scheduled')}</option>
               <option value="published">{t('posts.status.published')}</option>
             </select>
           </div>
+          {formData.status === 'scheduled' && (
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">{t('posts.scheduledAt')} *</span>
+              </label>
+              <input
+                type="datetime-local"
+                className="input input-bordered"
+                value={formData.scheduledAt ? formData.scheduledAt.slice(0, 16) : ''}
+                onChange={(e) => setFormData((prev) => ({
+                  ...prev,
+                  scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : undefined
+                }))}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-4">
