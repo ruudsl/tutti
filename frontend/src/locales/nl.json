@@ -741,7 +741,15 @@
     "totalSent": "Totaal verzonden",
     "delivered": "Afgeleverd",
     "opened": "Geopend",
-    "bounced": "Geweigerd"
+    "bounced": "Geweigerd",
+    "sendingStarted": "E-mails worden verzonden",
+    "errorSend": "Fout bij verzenden campagne",
+    "testEmail": "Test-e-mail",
+    "testEmailPlaceholder": "E-mailadres voor test",
+    "sendTest": "Versturen",
+    "sendTestEmail": "Test-e-mail versturen",
+    "testSent": "Test-e-mail verzonden",
+    "errorTest": "Fout bij versturen test-e-mail"
   },
   "customFields": {
     "title": "Aangepaste velden",

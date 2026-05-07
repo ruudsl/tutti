@@ -10,6 +10,8 @@ import {
   previewRecipients,
   scheduleCampaign,
   cancelCampaign,
+  sendCampaign,
+  sendTestEmail,
   getEmailTemplates,
   EmailCampaign,
   EmailCampaignDetail,
@@ -278,6 +280,32 @@ function CampaignDetailModal({
     },
   });
 
+  const sendMutation = useMutation({
+    mutationFn: () => sendCampaign(campaign.id),
+    onSuccess: () => {
+      showSuccess(t('emailCampaigns.sendingStarted'));
+      onSchedule();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('emailCampaigns.errorSend'));
+    },
+  });
+
+  const [testEmail, setTestEmail] = useState('');
+  const [showTestInput, setShowTestInput] = useState(false);
+
+  const testMutation = useMutation({
+    mutationFn: (email: string) => sendTestEmail(campaign.id, email),
+    onSuccess: () => {
+      showSuccess(t('emailCampaigns.testSent'));
+      setShowTestInput(false);
+      setTestEmail('');
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('emailCampaigns.errorTest'));
+    },
+  });
+
   return (
     <Modal onClose={onClose} size="large" title={campaign.name}>
       <div className="space-y-6">
@@ -354,21 +382,70 @@ function CampaignDetailModal({
           </div>
         )}
 
+        {/* Test Email Section */}
+        {campaign.status === 'draft' && (
+          <div className="border-t border-base-300 pt-4">
+            <h4 className="text-sm font-semibold text-base-content/70 mb-2">{t('emailCampaigns.testEmail')}</h4>
+            {showTestInput ? (
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  className="input input-bordered flex-1"
+                  placeholder={t('emailCampaigns.testEmailPlaceholder')}
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                />
+                <button
+                  className="btn btn-outline"
+                  onClick={() => testMutation.mutate(testEmail)}
+                  disabled={!testEmail || testMutation.isPending}
+                >
+                  {testMutation.isPending ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    t('emailCampaigns.sendTest')
+                  )}
+                </button>
+                <button className="btn btn-ghost" onClick={() => setShowTestInput(false)}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            ) : (
+              <button className="btn btn-outline btn-sm gap-2" onClick={() => setShowTestInput(true)}>
+                <Icon name="envelope" size={14} />
+                {t('emailCampaigns.sendTestEmail')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="border-t border-base-300 pt-4 flex flex-wrap gap-2">
           {campaign.status === 'draft' && (
             <>
               <button
                 className="btn btn-primary gap-2"
-                onClick={() => scheduleMutation.mutate()}
-                disabled={scheduleMutation.isPending}
+                onClick={() => sendMutation.mutate()}
+                disabled={sendMutation.isPending || scheduleMutation.isPending}
               >
-                {scheduleMutation.isPending ? (
+                {sendMutation.isPending ? (
                   <span className="loading loading-spinner loading-sm" />
                 ) : (
                   <Icon name="send" size={16} />
                 )}
                 {t('emailCampaigns.sendNow')}
+              </button>
+              <button
+                className="btn btn-outline gap-2"
+                onClick={() => scheduleMutation.mutate()}
+                disabled={scheduleMutation.isPending || sendMutation.isPending}
+              >
+                {scheduleMutation.isPending ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <Icon name="clock" size={16} />
+                )}
+                {t('emailCampaigns.schedule')}
               </button>
               <button className="btn btn-error btn-outline gap-2" onClick={onDelete}>
                 <Icon name="trash" size={16} />
@@ -377,18 +454,32 @@ function CampaignDetailModal({
             </>
           )}
           {campaign.status === 'scheduled' && (
-            <button
-              className="btn btn-warning gap-2"
-              onClick={() => cancelMutation.mutate()}
-              disabled={cancelMutation.isPending}
-            >
-              {cancelMutation.isPending ? (
-                <span className="loading loading-spinner loading-sm" />
-              ) : (
-                <Icon name="close" size={16} />
-              )}
-              {t('emailCampaigns.cancel')}
-            </button>
+            <>
+              <button
+                className="btn btn-primary gap-2"
+                onClick={() => sendMutation.mutate()}
+                disabled={sendMutation.isPending}
+              >
+                {sendMutation.isPending ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <Icon name="send" size={16} />
+                )}
+                {t('emailCampaigns.sendNow')}
+              </button>
+              <button
+                className="btn btn-warning gap-2"
+                onClick={() => cancelMutation.mutate()}
+                disabled={cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? (
+                  <span className="loading loading-spinner loading-sm" />
+                ) : (
+                  <Icon name="close" size={16} />
+                )}
+                {t('emailCampaigns.cancel')}
+              </button>
+            </>
           )}
           <button className="btn btn-ghost ml-auto" onClick={onClose}>
             {t('common.close')}

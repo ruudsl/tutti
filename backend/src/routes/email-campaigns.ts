@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import { sendEmail } from '../utils/email';
 import { z } from 'zod';
 
 const router = Router();
@@ -556,5 +557,245 @@ router.post('/:id/cancel', authenticateToken, requireRole('admin'), asyncHandler
 
     res.json({ message: 'Campagne geannuleerd.' });
 }));
+
+// Send campaign immediately
+router.post('/:id/send', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const campaign = db.prepare(
+        'SELECT * FROM email_campaigns WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!campaign) {
+        throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    if (!['draft', 'scheduled'].includes(campaign.status)) {
+        throw new ApiError(400, 'Deze campagne kan niet worden verzonden.');
+    }
+
+    // Start sending process
+    await sendCampaign(campaign.id, associationId);
+
+    res.json({ message: 'Campagne wordt verzonden.' });
+}));
+
+// Send test email
+router.post('/:id/test', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { email } = req.body;
+    const associationId = req.user!.associationId;
+
+    if (!associationId) {
+        throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    if (!email) {
+        throw new ApiError(400, 'E-mailadres is verplicht.');
+    }
+
+    const campaign = db.prepare(
+        'SELECT * FROM email_campaigns WHERE id = ? AND association_id = ?'
+    ).get(req.params.id, associationId) as any;
+
+    if (!campaign) {
+        throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    const html = personalizeEmail(campaign.body_html, {
+        firstName: 'Test',
+        lastName: 'Gebruiker',
+        email: email,
+    });
+
+    const text = personalizeEmail(campaign.body_text || campaign.body_html.replace(/<[^>]*>/g, ''), {
+        firstName: 'Test',
+        lastName: 'Gebruiker',
+        email: email,
+    });
+
+    const success = await sendEmail({
+        to: email,
+        subject: `[TEST] ${campaign.subject}`,
+        text,
+        html,
+        associationId,
+    });
+
+    if (success) {
+        res.json({ message: 'Test-e-mail verzonden.' });
+    } else {
+        throw new ApiError(500, 'Test-e-mail kon niet worden verzonden.');
+    }
+}));
+
+// Helper: Personalize email content
+function personalizeEmail(content: string, recipient: { firstName: string; lastName: string; email: string }): string {
+    return content
+        .replace(/\{\{firstName\}\}/g, recipient.firstName)
+        .replace(/\{\{lastName\}\}/g, recipient.lastName)
+        .replace(/\{\{email\}\}/g, recipient.email)
+        .replace(/\{\{fullName\}\}/g, `${recipient.firstName} ${recipient.lastName}`);
+}
+
+// Helper: Get recipients for a campaign
+function getCampaignRecipients(campaign: any, associationId: string): { id: string; email: string; firstName: string; lastName: string }[] {
+    let query = `
+        SELECT DISTINCT u.id, u.email, u.first_name AS firstName, u.last_name AS lastName
+        FROM users u
+        WHERE u.association_id = ?
+        AND u.is_active = 1
+        AND u.email IS NOT NULL
+        AND u.email != ''
+    `;
+    const params: any[] = [associationId];
+
+    if (campaign.target_type === 'orchestras' && campaign.target_orchestras) {
+        const orchestraIds = JSON.parse(campaign.target_orchestras);
+        if (orchestraIds.length > 0) {
+            const placeholders = orchestraIds.map(() => '?').join(', ');
+            query += ` AND EXISTS (
+                SELECT 1 FROM user_orchestras uo WHERE uo.user_id = u.id AND uo.orchestra_id IN (${placeholders})
+            )`;
+            params.push(...orchestraIds);
+        }
+    } else if (campaign.target_type === 'roles' && campaign.target_roles) {
+        const roles = JSON.parse(campaign.target_roles);
+        if (roles.length > 0) {
+            const placeholders = roles.map(() => '?').join(', ');
+            query += ` AND u.role IN (${placeholders})`;
+            params.push(...roles);
+        }
+    } else if (campaign.target_type === 'custom' && campaign.target_user_ids) {
+        const userIds = JSON.parse(campaign.target_user_ids);
+        if (userIds.length > 0) {
+            const placeholders = userIds.map(() => '?').join(', ');
+            query += ` AND u.id IN (${placeholders})`;
+            params.push(...userIds);
+        }
+    }
+
+    return db.prepare(query).all(...params) as any[];
+}
+
+// Helper: Send campaign emails
+async function sendCampaign(campaignId: string, associationId: string): Promise<void> {
+    const campaign = db.prepare('SELECT * FROM email_campaigns WHERE id = ?').get(campaignId) as any;
+
+    if (!campaign) {
+        logger.error(`Campaign ${campaignId} not found`);
+        return;
+    }
+
+    // Mark as sending
+    db.prepare(`
+        UPDATE email_campaigns
+        SET status = 'sending', sent_at = ?, updated_at = ?
+        WHERE id = ?
+    `).run(new Date().toISOString(), new Date().toISOString(), campaignId);
+
+    const recipients = getCampaignRecipients(campaign, associationId);
+    const totalRecipients = recipients.length;
+
+    // Update total count
+    db.prepare('UPDATE email_campaigns SET total_recipients = ? WHERE id = ?').run(totalRecipients, campaignId);
+
+    let deliveredCount = 0;
+    let bouncedCount = 0;
+
+    // Create recipient records and send emails
+    for (const recipient of recipients) {
+        const recipientId = uuidv4();
+
+        // Create recipient record
+        db.prepare(`
+            INSERT INTO email_campaign_recipients (id, campaign_id, user_id, email, status, created_at)
+            VALUES (?, ?, ?, ?, 'pending', ?)
+        `).run(recipientId, campaignId, recipient.id, recipient.email, new Date().toISOString());
+
+        try {
+            const html = personalizeEmail(campaign.body_html, recipient);
+            const text = personalizeEmail(campaign.body_text || campaign.body_html.replace(/<[^>]*>/g, ''), recipient);
+
+            const success = await sendEmail({
+                to: recipient.email,
+                subject: campaign.subject,
+                text,
+                html,
+                associationId,
+            });
+
+            if (success) {
+                deliveredCount++;
+                db.prepare(`
+                    UPDATE email_campaign_recipients
+                    SET status = 'sent', sent_at = ?
+                    WHERE id = ?
+                `).run(new Date().toISOString(), recipientId);
+            } else {
+                bouncedCount++;
+                db.prepare(`
+                    UPDATE email_campaign_recipients
+                    SET status = 'failed'
+                    WHERE id = ?
+                `).run(recipientId);
+            }
+        } catch (error) {
+            bouncedCount++;
+            db.prepare(`
+                UPDATE email_campaign_recipients
+                SET status = 'failed'
+                WHERE id = ?
+            `).run(recipientId);
+            logger.error(`Failed to send email to ${recipient.email}:`, error);
+        }
+
+        // Update counts periodically
+        if ((deliveredCount + bouncedCount) % 10 === 0) {
+            db.prepare(`
+                UPDATE email_campaigns
+                SET delivered_count = ?, bounced_count = ?, updated_at = ?
+                WHERE id = ?
+            `).run(deliveredCount, bouncedCount, new Date().toISOString(), campaignId);
+        }
+    }
+
+    // Mark as completed
+    db.prepare(`
+        UPDATE email_campaigns
+        SET status = 'sent', delivered_count = ?, bounced_count = ?, updated_at = ?
+        WHERE id = ?
+    `).run(deliveredCount, bouncedCount, new Date().toISOString(), campaignId);
+
+    logger.info(`Campaign ${campaignId} sent: ${deliveredCount} delivered, ${bouncedCount} bounced`);
+
+    logAuditEvent(
+        campaign.created_by,
+        'email_campaign_sent',
+        'email_campaign',
+        campaignId,
+        campaign.name
+    );
+}
+
+// Process scheduled campaigns (call this from a cron job or background worker)
+export async function processScheduledCampaigns(): Promise<void> {
+    const now = new Date().toISOString();
+
+    const campaigns = db.prepare(`
+        SELECT ec.*, a.id AS association_id
+        FROM email_campaigns ec
+        JOIN associations a ON ec.association_id = a.id
+        WHERE ec.status = 'scheduled'
+        AND ec.scheduled_at <= ?
+    `).all(now) as any[];
+
+    for (const campaign of campaigns) {
+        logger.info(`Processing scheduled campaign: ${campaign.name}`);
+        await sendCampaign(campaign.id, campaign.association_id);
+    }
+}
 
 export default router;

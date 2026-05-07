@@ -765,7 +765,15 @@
     "totalSent": "Total sent",
     "delivered": "Delivered",
     "opened": "Opened",
-    "bounced": "Bounced"
+    "bounced": "Bounced",
+    "sendingStarted": "Emails are being sent",
+    "errorSend": "Error sending campaign",
+    "testEmail": "Test email",
+    "testEmailPlaceholder": "Email address for test",
+    "sendTest": "Send",
+    "sendTestEmail": "Send test email",
+    "testSent": "Test email sent",
+    "errorTest": "Error sending test email"
   },
   "customFields": {
     "title": "Custom Fields",

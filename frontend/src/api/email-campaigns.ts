@@ -137,3 +137,13 @@ export async function cancelCampaign(campaignId: string): Promise<{ message: str
   const response = await api.post(`/email-campaigns/${campaignId}/cancel`);
   return response.data;
 }
+
+export async function sendCampaign(campaignId: string): Promise<{ message: string }> {
+  const response = await api.post(`/email-campaigns/${campaignId}/send`);
+  return response.data;
+}
+
+export async function sendTestEmail(campaignId: string, email: string): Promise<{ message: string }> {
+  const response = await api.post(`/email-campaigns/${campaignId}/test`, { email });
+  return response.data;
+}
