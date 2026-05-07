@@ -28,6 +28,7 @@ const routeConfig: Record<string, { labelKey: string; parent?: string }> = {
   '/tasks': { labelKey: 'nav.tasks', parent: '/' },
   '/posts': { labelKey: 'nav.posts', parent: '/' },
   '/email-campaigns': { labelKey: 'nav.emailCampaigns', parent: '/' },
+  '/accounting': { labelKey: 'nav.accounting', parent: '/' },
   '/rehearsals': { labelKey: 'nav.rehearsals', parent: '/' },
   '/profile': { labelKey: 'profile.title', parent: '/' },
   '/lists': { labelKey: 'nav.lists', parent: '/' },

@@ -93,7 +93,39 @@ function canUserSeePoll(poll: any, user: any): boolean {
 // POLL ROUTES
 // =====================================================
 
-// Get all polls (with filters)
+/**
+ * @swagger
+ * /polls:
+ *   get:
+ *     summary: Haal alle peilingen op
+ *     description: Geeft een lijst van peilingen terug, gefilterd op status en/of zoekterm
+ *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, active, closed, archived]
+ *         description: Filter op status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Zoekterm voor titel
+ *     responses:
+ *       200:
+ *         description: Lijst van peilingen
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Poll'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
 router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 60 }), asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {

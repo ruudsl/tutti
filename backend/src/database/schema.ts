@@ -2140,4 +2140,530 @@ CREATE TABLE IF NOT EXISTS email_campaign_recipients (
 CREATE INDEX IF NOT EXISTS idx_email_recipients_campaign ON email_campaign_recipients(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_email_recipients_user ON email_campaign_recipients(user_id);
 CREATE INDEX IF NOT EXISTS idx_email_recipients_status ON email_campaign_recipients(status);
+
+-- =====================================================
+-- ACCOUNTING / BOEKHOUDING MODULE
+-- =====================================================
+
+-- Boekjaren
+CREATE TABLE IF NOT EXISTS fiscal_years (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'locked')),
+    is_current INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_years_assoc ON fiscal_years(association_id);
+CREATE INDEX IF NOT EXISTS idx_fiscal_years_current ON fiscal_years(association_id, is_current);
+
+-- Grootboekrekeningen (Chart of Accounts)
+CREATE TABLE IF NOT EXISTS accounts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    account_type TEXT NOT NULL CHECK (account_type IN (
+        'asset', 'liability', 'equity', 'income', 'expense'
+    )),
+    account_subtype TEXT CHECK (account_subtype IN (
+        'bank', 'cash', 'receivable', 'payable', 'inventory',
+        'fixed_asset', 'current_liability', 'long_term_liability',
+        'retained_earnings', 'membership_fees', 'donations', 'grants',
+        'ticket_sales', 'sponsoring', 'personnel', 'materials', 'rent',
+        'utilities', 'insurance', 'depreciation', 'other'
+    )),
+    parent_id TEXT,
+    description TEXT,
+    is_system INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0,
+    opening_balance REAL DEFAULT 0,
+    current_balance REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    UNIQUE(association_id, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_accounts_assoc ON accounts(association_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
+CREATE INDEX IF NOT EXISTS idx_accounts_parent ON accounts(parent_id);
+
+-- Kostenplaatsen (Cost Centers)
+CREATE TABLE IF NOT EXISTS cost_centers (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    orchestra_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    budget_amount REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    UNIQUE(association_id, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cost_centers_assoc ON cost_centers(association_id);
+
+-- Contributie-categorieën
+CREATE TABLE IF NOT EXISTS membership_fee_types (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    amount REAL NOT NULL,
+    frequency TEXT NOT NULL DEFAULT 'yearly' CHECK (frequency IN ('monthly', 'quarterly', 'half_yearly', 'yearly', 'one_time')),
+    age_min INTEGER,
+    age_max INTEGER,
+    is_default INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    income_account_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (income_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fee_types_assoc ON membership_fee_types(association_id);
+
+-- Lidmaatschappen (koppeling user -> contributie)
+CREATE TABLE IF NOT EXISTS memberships (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    fee_type_id TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled', 'expired')),
+    discount_percentage REAL DEFAULT 0,
+    discount_reason TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (fee_type_id) REFERENCES membership_fee_types(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_fee_type ON memberships(fee_type_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_status ON memberships(status);
+
+-- Bankrekeningen
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    iban TEXT NOT NULL,
+    bic TEXT,
+    bank_name TEXT,
+    is_primary INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    balance REAL DEFAULT 0,
+    last_sync_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, iban)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_assoc ON bank_accounts(association_id);
+
+-- Relaties (debiteur/crediteur)
+CREATE TABLE IF NOT EXISTS accounting_relations (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    relation_type TEXT NOT NULL CHECK (relation_type IN ('customer', 'supplier', 'both')),
+    user_id TEXT,
+    contact_id TEXT,
+    relation_number TEXT,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    address_line TEXT,
+    postal_code TEXT,
+    city TEXT,
+    country TEXT DEFAULT 'NL',
+    iban TEXT,
+    vat_number TEXT,
+    payment_term_days INTEGER DEFAULT 30,
+    receivable_account_id TEXT,
+    payable_account_id TEXT,
+    credit_limit REAL,
+    balance REAL DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
+    FOREIGN KEY (receivable_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (payable_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_acc_relations_assoc ON accounting_relations(association_id);
+CREATE INDEX IF NOT EXISTS idx_acc_relations_user ON accounting_relations(user_id);
+CREATE INDEX IF NOT EXISTS idx_acc_relations_contact ON accounting_relations(contact_id);
+
+-- Facturen
+CREATE TABLE IF NOT EXISTS invoices (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    invoice_number TEXT NOT NULL,
+    invoice_type TEXT NOT NULL CHECK (invoice_type IN ('sales', 'purchase', 'credit_note')),
+    relation_id TEXT NOT NULL,
+    user_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled', 'written_off')),
+    invoice_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    reference TEXT,
+    description TEXT,
+    subtotal REAL NOT NULL DEFAULT 0,
+    vat_amount REAL NOT NULL DEFAULT 0,
+    total REAL NOT NULL DEFAULT 0,
+    amount_paid REAL DEFAULT 0,
+    amount_due REAL GENERATED ALWAYS AS (total - amount_paid) VIRTUAL,
+    currency TEXT DEFAULT 'EUR',
+    payment_reference TEXT,
+    sepa_mandate_id TEXT,
+    notes TEXT,
+    sent_at DATETIME,
+    paid_at DATETIME,
+    reminder_count INTEGER DEFAULT 0,
+    last_reminder_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, invoice_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_assoc ON invoices(association_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_relation ON invoices(relation_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_fiscal ON invoices(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date);
+
+-- Factuurregels
+CREATE TABLE IF NOT EXISTS invoice_lines (
+    id TEXT PRIMARY KEY,
+    invoice_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    quantity REAL NOT NULL DEFAULT 1,
+    unit_price REAL NOT NULL,
+    vat_rate REAL DEFAULT 0,
+    vat_amount REAL DEFAULT 0,
+    line_total REAL NOT NULL,
+    account_id TEXT,
+    cost_center_id TEXT,
+    membership_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL,
+    FOREIGN KEY (membership_id) REFERENCES memberships(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice ON invoice_lines(invoice_id);
+
+-- Transacties (journaalboekingen)
+CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    transaction_number TEXT NOT NULL,
+    transaction_date DATE NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN (
+        'journal', 'payment', 'receipt', 'bank', 'opening', 'closing', 'transfer'
+    )),
+    reference TEXT,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    invoice_id TEXT,
+    bank_statement_line_id TEXT,
+    is_reconciled INTEGER DEFAULT 0,
+    reconciled_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, transaction_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_assoc ON transactions(association_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_fiscal ON transactions(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_transactions_invoice ON transactions(invoice_id);
+
+-- Transactieregels (debet/credit boekingen)
+CREATE TABLE IF NOT EXISTS transaction_lines (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    account_id TEXT NOT NULL,
+    cost_center_id TEXT,
+    description TEXT,
+    debit_amount REAL DEFAULT 0,
+    credit_amount REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transaction_lines_trans ON transaction_lines(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_lines_account ON transaction_lines(account_id);
+
+-- Bankafschriften
+CREATE TABLE IF NOT EXISTS bank_statements (
+    id TEXT PRIMARY KEY,
+    bank_account_id TEXT NOT NULL,
+    statement_number TEXT,
+    statement_date DATE NOT NULL,
+    opening_balance REAL NOT NULL,
+    closing_balance REAL NOT NULL,
+    total_debit REAL DEFAULT 0,
+    total_credit REAL DEFAULT 0,
+    line_count INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'imported' CHECK (status IN ('imported', 'processing', 'reconciled', 'closed')),
+    import_file_name TEXT,
+    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reconciled_at DATETIME,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_statements_account ON bank_statements(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_bank_statements_date ON bank_statements(statement_date);
+
+-- Bankafschriftregels
+CREATE TABLE IF NOT EXISTS bank_statement_lines (
+    id TEXT PRIMARY KEY,
+    statement_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    booking_date DATE NOT NULL,
+    value_date DATE,
+    amount REAL NOT NULL,
+    counterparty_name TEXT,
+    counterparty_iban TEXT,
+    description TEXT,
+    reference TEXT,
+    transaction_type TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'matched', 'manual', 'ignored')),
+    matched_invoice_id TEXT,
+    matched_relation_id TEXT,
+    transaction_id TEXT,
+    match_confidence REAL,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reconciled_at DATETIME,
+    FOREIGN KEY (statement_id) REFERENCES bank_statements(id) ON DELETE CASCADE,
+    FOREIGN KEY (matched_invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (matched_relation_id) REFERENCES accounting_relations(id) ON DELETE SET NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_lines_statement ON bank_statement_lines(statement_id);
+CREATE INDEX IF NOT EXISTS idx_bank_lines_status ON bank_statement_lines(status);
+CREATE INDEX IF NOT EXISTS idx_bank_lines_invoice ON bank_statement_lines(matched_invoice_id);
+
+-- Budgetten
+CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    account_id TEXT,
+    cost_center_id TEXT,
+    budget_type TEXT NOT NULL CHECK (budget_type IN ('income', 'expense')),
+    amount REAL NOT NULL,
+    jan_amount REAL, feb_amount REAL, mar_amount REAL,
+    apr_amount REAL, may_amount REAL, jun_amount REAL,
+    jul_amount REAL, aug_amount REAL, sep_amount REAL,
+    oct_amount REAL, nov_amount REAL, dec_amount REAL,
+    notes TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_budgets_assoc ON budgets(association_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_fiscal ON budgets(fiscal_year_id);
+
+-- Donaties
+CREATE TABLE IF NOT EXISTS donations (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    relation_id TEXT,
+    donor_name TEXT NOT NULL,
+    donor_email TEXT,
+    donor_address TEXT,
+    amount REAL NOT NULL,
+    donation_date DATE NOT NULL,
+    donation_type TEXT NOT NULL CHECK (donation_type IN ('one_time', 'recurring', 'in_kind', 'legacy')),
+    payment_method TEXT,
+    campaign TEXT,
+    is_anonymous INTEGER DEFAULT 0,
+    is_tax_deductible INTEGER DEFAULT 1,
+    receipt_number TEXT,
+    receipt_sent_at DATETIME,
+    notes TEXT,
+    account_id TEXT,
+    transaction_id TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE SET NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_donations_assoc ON donations(association_id);
+CREATE INDEX IF NOT EXISTS idx_donations_fiscal ON donations(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_donations_date ON donations(donation_date);
+
+-- SEPA Mandaten
+CREATE TABLE IF NOT EXISTS sepa_mandates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    relation_id TEXT NOT NULL,
+    mandate_reference TEXT NOT NULL,
+    mandate_type TEXT NOT NULL CHECK (mandate_type IN ('RCUR', 'OOFF')),
+    iban TEXT NOT NULL,
+    bic TEXT,
+    signature_date DATE NOT NULL,
+    signature_location TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired')),
+    first_collection_date DATE,
+    last_collection_date DATE,
+    sequence_type TEXT DEFAULT 'RCUR' CHECK (sequence_type IN ('FRST', 'RCUR', 'FNAL', 'OOFF')),
+    cancelled_at DATETIME,
+    cancellation_reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, mandate_reference)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_mandates_assoc ON sepa_mandates(association_id);
+CREATE INDEX IF NOT EXISTS idx_sepa_mandates_relation ON sepa_mandates(relation_id);
+
+-- SEPA Batches (incasso-batches)
+CREATE TABLE IF NOT EXISTS sepa_batches (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    bank_account_id TEXT NOT NULL,
+    batch_reference TEXT NOT NULL,
+    batch_type TEXT NOT NULL CHECK (batch_type IN ('DD', 'CT')),
+    collection_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'generated', 'submitted', 'processed', 'failed')),
+    total_amount REAL NOT NULL DEFAULT 0,
+    transaction_count INTEGER DEFAULT 0,
+    xml_file_path TEXT,
+    generated_at DATETIME,
+    submitted_at DATETIME,
+    processed_at DATETIME,
+    error_message TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, batch_reference)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_batches_assoc ON sepa_batches(association_id);
+
+-- SEPA Batch Items
+CREATE TABLE IF NOT EXISTS sepa_batch_items (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL,
+    invoice_id TEXT,
+    mandate_id TEXT NOT NULL,
+    relation_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    reference TEXT,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'rejected', 'returned')),
+    rejection_reason TEXT,
+    return_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES sepa_batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (mandate_id) REFERENCES sepa_mandates(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_items_batch ON sepa_batch_items(batch_id);
+CREATE INDEX IF NOT EXISTS idx_sepa_items_invoice ON sepa_batch_items(invoice_id);
+
+-- Buma/Stemra rapportage
+CREATE TABLE IF NOT EXISTS music_performance_reports (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    concert_id TEXT NOT NULL,
+    report_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'accepted')),
+    total_works INTEGER DEFAULT 0,
+    total_duration_minutes INTEGER DEFAULT 0,
+    audience_count INTEGER,
+    venue_capacity INTEGER,
+    submitted_at DATETIME,
+    accepted_at DATETIME,
+    reference_number TEXT,
+    notes TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_perf_reports_assoc ON music_performance_reports(association_id);
+CREATE INDEX IF NOT EXISTS idx_perf_reports_concert ON music_performance_reports(concert_id);
+
+-- Buma/Stemra rapportage regels
+CREATE TABLE IF NOT EXISTS music_performance_report_lines (
+    id TEXT PRIMARY KEY,
+    report_id TEXT NOT NULL,
+    music_title_id TEXT,
+    title TEXT NOT NULL,
+    composer TEXT,
+    arranger TEXT,
+    publisher TEXT,
+    duration_minutes INTEGER,
+    is_original INTEGER DEFAULT 1,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (report_id) REFERENCES music_performance_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_perf_report_lines_report ON music_performance_report_lines(report_id);
 `;

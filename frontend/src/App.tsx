@@ -38,6 +38,7 @@ import Polls from './pages/Polls';
 import Tasks from './pages/Tasks';
 import Posts from './pages/Posts';
 import EmailCampaigns from './pages/EmailCampaigns';
+import Accounting from './pages/Accounting';
 
 // Music management
 import MusicPieces from './pages/MusicPieces';
@@ -202,6 +203,14 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
               <EmailCampaigns />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="accounting"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Accounting />
             </PrivateRoute>
           }
         />

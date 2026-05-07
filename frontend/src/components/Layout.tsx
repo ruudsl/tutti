@@ -131,12 +131,13 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: 'settings',
-    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields'],
+    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields', '/accounting'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
       { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
       { path: '/custom-fields', labelKey: 'nav.customFields', roles: [ROLES.ADMIN] },
+      { path: '/accounting', labelKey: 'nav.accounting', roles: [ROLES.ADMIN] },
       { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
