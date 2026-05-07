@@ -21,7 +21,6 @@ const assetStatuses = ['available', 'on_loan', 'in_repair', 'in_storage', 'writt
 const conditions = ['excellent', 'good', 'fair', 'poor', 'damaged', 'needs_repair'] as const;
 const repairPriorities = ['low', 'normal', 'high', 'urgent'] as const;
 const repairStatuses = ['pending', 'approved', 'in_progress', 'completed', 'cancelled'] as const;
-const loanStatuses = ['active', 'returned', 'overdue', 'cancelled'] as const;
 
 const createAssetSchema = z.object({
     name: z.string().min(1, 'Naam is verplicht'),
