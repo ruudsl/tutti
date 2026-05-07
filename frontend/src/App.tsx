@@ -112,6 +112,7 @@ import TicketSales from './pages/TicketSales';
 import GuestList from './pages/GuestList';
 import PaymentSettings from './pages/PaymentSettings';
 import PublicTicketSale from './pages/PublicTicketSale';
+import PublicCalendar from './pages/PublicCalendar';
 import MockPayment from './pages/MockPayment';
 import TicketTransfer from './pages/TicketTransfer';
 import AcceptTransfer from './pages/AcceptTransfer';
@@ -183,6 +184,8 @@ function AppRoutes() {
       <Route path="/tickets/orders/:orderId/mock-payment" element={<MockPayment />} />
       {/* Accept ticket transfer - accessible without login (handles redirect) */}
       <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
+      {/* Public calendar embed and info screen */}
+      <Route path="/calendar/:slug" element={<PublicCalendar />} />
       <Route
         path="/"
         element={

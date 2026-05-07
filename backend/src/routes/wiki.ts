@@ -1,9 +1,30 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+
+const uploadsDir = path.join(process.cwd(), 'uploads', 'wiki');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${uuidv4()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 const router = Router();
 
@@ -400,6 +421,99 @@ router.post('/:slug/versions/:versionId/restore', requireRole('admin', 'music_co
   `).run(version.title, version.content, req.user!.id, now, page.id);
 
   res.json({ message: 'Version restored' });
+}));
+
+// GET /api/wiki/:slug/attachments - List attachments for a page
+router.get('/:slug/attachments', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const associationId = req.user!.associationId;
+
+  const page = db.prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`).get(associationId, req.params.slug) as any;
+  if (!page) {
+    throw new ApiError(404, 'Page not found');
+  }
+
+  const attachments = db.prepare(`
+    SELECT a.*, u.first_name || ' ' || u.last_name as uploaded_by_name
+    FROM wiki_attachments a
+    LEFT JOIN users u ON a.uploaded_by = u.id
+    WHERE a.page_id = ?
+    ORDER BY a.uploaded_at DESC
+  `).all(page.id);
+
+  res.json(attachments.map((a: any) => ({
+    id: a.id,
+    filename: a.filename,
+    originalFilename: a.original_filename,
+    mimeType: a.mime_type,
+    fileSize: a.file_size,
+    url: `/uploads/wiki/${a.filename}`,
+    uploadedBy: a.uploaded_by,
+    uploadedByName: a.uploaded_by_name,
+    uploadedAt: a.uploaded_at,
+  })));
+}));
+
+// POST /api/wiki/:slug/attachments - Upload attachment
+router.post('/:slug/attachments', requireRole('admin', 'music_committee', 'board'), upload.single('file'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const associationId = req.user!.associationId;
+
+  const page = db.prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`).get(associationId, req.params.slug) as any;
+  if (!page) {
+    throw new ApiError(404, 'Page not found');
+  }
+
+  if (!req.file) {
+    throw new ApiError(400, 'No file uploaded');
+  }
+
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO wiki_attachments (id, page_id, filename, original_filename, mime_type, file_size, uploaded_by, uploaded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    page.id,
+    req.file.filename,
+    req.file.originalname,
+    req.file.mimetype,
+    req.file.size,
+    req.user!.id,
+    now
+  );
+
+  res.status(201).json({
+    id,
+    url: `/uploads/wiki/${req.file.filename}`,
+    message: 'Attachment uploaded',
+  });
+}));
+
+// DELETE /api/wiki/:slug/attachments/:attachmentId - Delete attachment
+router.delete('/:slug/attachments/:attachmentId', requireRole('admin', 'music_committee', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const associationId = req.user!.associationId;
+
+  const page = db.prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`).get(associationId, req.params.slug) as any;
+  if (!page) {
+    throw new ApiError(404, 'Page not found');
+  }
+
+  const attachment = db.prepare(`SELECT filename FROM wiki_attachments WHERE id = ? AND page_id = ?`).get(req.params.attachmentId, page.id) as any;
+  if (!attachment) {
+    throw new ApiError(404, 'Attachment not found');
+  }
+
+  // Delete file from disk
+  const filePath = path.join(uploadsDir, attachment.filename);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+
+  // Delete from database
+  db.prepare(`DELETE FROM wiki_attachments WHERE id = ?`).run(req.params.attachmentId);
+
+  res.json({ message: 'Attachment deleted' });
 }));
 
 export default router;

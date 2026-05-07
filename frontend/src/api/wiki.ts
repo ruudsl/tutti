@@ -107,3 +107,35 @@ export const restoreWikiPageVersion = async (slug: string, versionId: string): P
   const { data } = await api.post(`/wiki/${slug}/versions/${versionId}/restore`);
   return data;
 };
+
+// Attachments
+export interface WikiAttachment {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  url: string;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+}
+
+export const getWikiAttachments = async (slug: string): Promise<WikiAttachment[]> => {
+  const { data } = await api.get(`/wiki/${slug}/attachments`);
+  return data;
+};
+
+export const uploadWikiAttachment = async (slug: string, file: File): Promise<{ id: string; url: string; message: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post(`/wiki/${slug}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const deleteWikiAttachment = async (slug: string, attachmentId: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/wiki/${slug}/attachments/${attachmentId}`);
+  return data;
+};

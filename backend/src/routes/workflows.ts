@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { executeWorkflow, processScheduledWorkflows, processDateFieldWorkflows } from '../services/workflowEngine';
 
 const router = Router();
 
@@ -329,6 +330,10 @@ router.delete('/:id/actions/:actionId', asyncHandler(async (req: AuthRequest, re
 router.post('/:id/run', asyncHandler(async (req: AuthRequest, res: Response) => {
   const associationId = req.user!.associationId;
 
+  if (!associationId) {
+    throw new ApiError(400, 'Association ID required');
+  }
+
   const workflow = db.prepare(`
     SELECT * FROM workflows WHERE id = ? AND association_id = ? AND deleted_at IS NULL
   `).get(req.params.id, associationId) as any;
@@ -337,23 +342,30 @@ router.post('/:id/run', asyncHandler(async (req: AuthRequest, res: Response) => 
     throw new ApiError(404, 'Workflow not found');
   }
 
-  // Create execution record
-  const executionId = uuidv4();
-  const now = new Date().toISOString();
+  const result = await executeWorkflow(
+    req.params.id,
+    associationId,
+    'manual',
+    req.user!.id
+  );
 
-  db.prepare(`
-    INSERT INTO workflow_executions (id, workflow_id, triggered_by, triggered_by_user_id, status, started_at, created_at)
-    VALUES (?, ?, 'manual', ?, 'running', ?, ?)
-  `).run(executionId, req.params.id, req.user!.id, now, now);
+  if (result.success) {
+    res.json({ executionId: result.executionId, message: 'Workflow executed successfully' });
+  } else {
+    res.status(500).json({ executionId: result.executionId, message: 'Workflow failed', error: result.error });
+  }
+}));
 
-  // TODO: Actually execute the workflow actions
-  // For now, just mark as completed
-  db.prepare(`
-    UPDATE workflow_executions SET status = 'completed', completed_at = ?, execution_log = ?
-    WHERE id = ?
-  `).run(now, JSON.stringify({ message: 'Manual execution completed' }), executionId);
+// POST /api/workflows/process-scheduled - Process scheduled workflows (called by cron)
+router.post('/process/scheduled', asyncHandler(async (_req: AuthRequest, res: Response) => {
+  processScheduledWorkflows();
+  res.json({ message: 'Scheduled workflows processing initiated' });
+}));
 
-  res.json({ executionId, message: 'Workflow executed' });
+// POST /api/workflows/process-date-fields - Process date field workflows (called by cron)
+router.post('/process/date-fields', asyncHandler(async (_req: AuthRequest, res: Response) => {
+  processDateFieldWorkflows();
+  res.json({ message: 'Date field workflows processing initiated' });
 }));
 
 // GET /api/workflows/:id/executions - Get workflow execution history

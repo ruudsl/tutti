@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -13,9 +13,13 @@ import {
   searchWikiPages,
   getWikiPageVersions,
   restoreWikiPageVersion,
+  uploadWikiAttachment,
+  getWikiAttachments,
+  deleteWikiAttachment,
   WikiPage,
   CreateWikiPageData,
   UpdateWikiPageData,
+  WikiAttachment,
 } from '../api/wiki';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
@@ -23,6 +27,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
+import { MarkdownPreview } from '../components/MarkdownPreview';
 
 const VISIBILITY_LABELS: Record<string, string> = {
   public: 'wiki.visibilityPublic',
@@ -287,11 +292,10 @@ export default function Wiki() {
                     )}
                   </div>
 
-                  <div className="prose max-w-none">
-                    {currentPage.content.split('\n').map((line, i) => (
-                      <p key={i}>{line || <br />}</p>
-                    ))}
-                  </div>
+                  <MarkdownPreview content={currentPage.content} className="mb-6" />
+
+                  {/* Attachments */}
+                  <WikiAttachmentsSection slug={currentSlug} canEdit={canEdit} />
 
                   {/* Children */}
                   {currentPage.children && currentPage.children.length > 0 && (
@@ -328,143 +332,25 @@ export default function Wiki() {
       </div>
 
       {/* Create Modal */}
-      {showCreateModal && <Modal onClose={() => { setShowCreateModal(false); resetForm(); }} title={t('wiki.addPage')} size="large">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4">
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.pageTitle')} *</span></label>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value, slug: generateSlug(e.target.value) }))}
-              required
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.slug')} *</span></label>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={formData.slug}
-              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-              pattern="^[a-z0-9-]+$"
-              required
-            />
-            <label className="label"><span className="label-text-alt">{t('wiki.slugHelp')}</span></label>
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.content')} *</span></label>
-            <textarea
-              className="textarea textarea-bordered h-48"
-              value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="form-control">
-              <label className="label"><span className="label-text">{t('wiki.visibility')}</span></label>
-              <select
-                className="select select-bordered"
-                value={formData.visibility}
-                onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as any }))}
-              >
-                <option value="public">{t('wiki.visibilityPublic')}</option>
-                <option value="members">{t('wiki.visibilityMembers')}</option>
-                <option value="committee">{t('wiki.visibilityCommittee')}</option>
-                <option value="admin">{t('wiki.visibilityAdmin')}</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label cursor-pointer justify-start gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={formData.isPinned}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
-                />
-                <span className="label-text">{t('wiki.pinPage')}</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" className="btn btn-ghost" onClick={() => { setShowCreateModal(false); resetForm(); }}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-              {createMutation.isPending ? t('common.saving') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </Modal>}
+      {showCreateModal && <CreateEditWikiModal
+        mode="create"
+        formData={formData}
+        setFormData={setFormData}
+        onClose={() => { setShowCreateModal(false); resetForm(); }}
+        onSubmit={() => createMutation.mutate(formData)}
+        isPending={createMutation.isPending}
+        generateSlug={generateSlug}
+      />}
 
       {/* Edit Modal */}
-      {showEditModal && <Modal onClose={() => setShowEditModal(false)} title={t('wiki.editPage')} size="large">
-        <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ slug: currentSlug, data: { title: formData.title, content: formData.content, visibility: formData.visibility, isPinned: formData.isPinned } }); }} className="space-y-4">
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.pageTitle')} *</span></label>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.content')} *</span></label>
-            <textarea
-              className="textarea textarea-bordered h-48"
-              value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="form-control">
-              <label className="label"><span className="label-text">{t('wiki.visibility')}</span></label>
-              <select
-                className="select select-bordered"
-                value={formData.visibility}
-                onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as any }))}
-              >
-                <option value="public">{t('wiki.visibilityPublic')}</option>
-                <option value="members">{t('wiki.visibilityMembers')}</option>
-                <option value="committee">{t('wiki.visibilityCommittee')}</option>
-                <option value="admin">{t('wiki.visibilityAdmin')}</option>
-              </select>
-            </div>
-
-            <div className="form-control">
-              <label className="label cursor-pointer justify-start gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={formData.isPinned}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
-                />
-                <span className="label-text">{t('wiki.pinPage')}</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" className="btn btn-ghost" onClick={() => setShowEditModal(false)}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? t('common.saving') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </Modal>}
+      {showEditModal && <CreateEditWikiModal
+        mode="edit"
+        formData={formData}
+        setFormData={setFormData}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={() => updateMutation.mutate({ slug: currentSlug, data: { title: formData.title, content: formData.content, visibility: formData.visibility, isPinned: formData.isPinned } })}
+        isPending={updateMutation.isPending}
+      />}
 
       {/* Versions Modal */}
       {showVersionsModal && <Modal onClose={() => setShowVersionsModal(false)} title={t('wiki.history')} size="large">
@@ -493,6 +379,271 @@ export default function Wiki() {
           )}
         </div>
       </Modal>}
+    </div>
+  );
+}
+
+interface CreateEditWikiModalProps {
+  mode: 'create' | 'edit';
+  formData: CreateWikiPageData;
+  setFormData: React.Dispatch<React.SetStateAction<CreateWikiPageData>>;
+  onClose: () => void;
+  onSubmit: () => void;
+  isPending: boolean;
+  generateSlug?: (title: string) => string;
+}
+
+function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, isPending, generateSlug }: CreateEditWikiModalProps) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit();
+  };
+
+  return (
+    <Modal onClose={onClose} title={mode === 'create' ? t('wiki.addPage') : t('wiki.editPage')} size="large">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="form-control">
+          <label className="label"><span className="label-text">{t('wiki.pageTitle')} *</span></label>
+          <input
+            type="text"
+            className="input input-bordered"
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              title: e.target.value,
+              ...(mode === 'create' && generateSlug ? { slug: generateSlug(e.target.value) } : {})
+            }))}
+            required
+          />
+        </div>
+
+        {mode === 'create' && (
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('wiki.slug')} *</span></label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.slug}
+              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              pattern="^[a-z0-9-]+$"
+              required
+            />
+            <label className="label"><span className="label-text-alt">{t('wiki.slugHelp')}</span></label>
+          </div>
+        )}
+
+        <div className="form-control">
+          <div className="flex justify-between items-center mb-2">
+            <label className="label py-0"><span className="label-text">{t('wiki.content')} *</span></label>
+            <div className="tabs tabs-boxed tabs-sm">
+              <button
+                type="button"
+                className={`tab ${activeTab === 'edit' ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab('edit')}
+              >
+                <Icon name="pencil" className="w-3 h-3 mr-1" />
+                {t('wiki.editTab')}
+              </button>
+              <button
+                type="button"
+                className={`tab ${activeTab === 'preview' ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab('preview')}
+              >
+                <Icon name="eye" className="w-3 h-3 mr-1" />
+                {t('wiki.previewTab')}
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'edit' ? (
+            <textarea
+              className="textarea textarea-bordered h-64 font-mono text-sm"
+              value={formData.content}
+              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              required
+              placeholder={t('wiki.contentPlaceholder')}
+            />
+          ) : (
+            <div className="border rounded-lg p-4 min-h-[16rem] bg-base-200 overflow-auto">
+              {formData.content ? (
+                <MarkdownPreview content={formData.content} />
+              ) : (
+                <p className="text-base-content/50 italic">{t('wiki.noPreview')}</p>
+              )}
+            </div>
+          )}
+          <label className="label">
+            <span className="label-text-alt">{t('wiki.markdownSupport')}</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('wiki.visibility')}</span></label>
+            <select
+              className="select select-bordered"
+              value={formData.visibility}
+              onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as any }))}
+            >
+              <option value="public">{t('wiki.visibilityPublic')}</option>
+              <option value="members">{t('wiki.visibilityMembers')}</option>
+              <option value="committee">{t('wiki.visibilityCommittee')}</option>
+              <option value="admin">{t('wiki.visibilityAdmin')}</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label className="label cursor-pointer justify-start gap-2">
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={formData.isPinned}
+                onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
+              />
+              <span className="label-text">{t('wiki.pinPage')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={isPending}>
+            {isPending ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: boolean }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: attachments = [] } = useQuery({
+    queryKey: ['wiki-attachments', slug],
+    queryFn: () => getWikiAttachments(slug),
+    enabled: !!slug,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (attachmentId: string) => deleteWikiAttachment(slug, attachmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wiki-attachments', slug] });
+      showSuccess(t('wiki.attachmentDeleted'));
+    },
+    onError: () => showError(t('wiki.errorDeleteAttachment')),
+  });
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        await uploadWikiAttachment(slug, file);
+      }
+      queryClient.invalidateQueries({ queryKey: ['wiki-attachments', slug] });
+      showSuccess(t('wiki.attachmentUploaded'));
+    } catch {
+      showError(t('wiki.errorUploadAttachment'));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
+
+  if (attachments.length === 0 && !canEdit) return null;
+
+  return (
+    <div className="border-t pt-4 mt-4">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-semibold">{t('wiki.attachments')}</h3>
+        {canEdit && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleUpload}
+            />
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Icon name="upload" className="w-4 h-4" />
+              )}
+              {t('wiki.uploadAttachment')}
+            </button>
+          </>
+        )}
+      </div>
+
+      {attachments.length === 0 ? (
+        <p className="text-sm text-base-content/60">{t('wiki.noAttachments')}</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {attachments.map((att: WikiAttachment) => (
+            <div key={att.id} className="card bg-base-200 overflow-hidden">
+              {isImage(att.filename) ? (
+                <a href={att.url} target="_blank" rel="noopener noreferrer">
+                  <img src={att.url} alt={att.filename} className="h-24 w-full object-cover" />
+                </a>
+              ) : (
+                <div className="h-24 flex items-center justify-center bg-base-300">
+                  <Icon name="fileText" className="w-10 h-10 opacity-50" />
+                </div>
+              )}
+              <div className="p-2">
+                <a
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium truncate block link link-hover"
+                >
+                  {att.filename}
+                </a>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-xs text-base-content/60">
+                    {(att.fileSize / 1024).toFixed(1)} KB
+                  </span>
+                  {canEdit && (
+                    <button
+                      className="btn btn-ghost btn-xs text-error"
+                      onClick={() => {
+                        if (confirm(t('wiki.confirmDeleteAttachment'))) {
+                          deleteMutation.mutate(att.id);
+                        }
+                      }}
+                    >
+                      <Icon name="trash" className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 text-xs text-base-content/60">
+        <p>{t('wiki.attachmentHint')}</p>
+      </div>
     </div>
   );
 }
