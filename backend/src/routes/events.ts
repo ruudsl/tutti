@@ -584,7 +584,8 @@ router.put('/:id', authenticateToken, requireRole('board', 'admin'), asyncHandle
         }
     });
 
-    logger.info(`Event updated: ${req.params.id}`, { updatedBy: req.user!.id });
+    const sanitizedEventIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
+    logger.info(`Event updated: ${sanitizedEventIdForLog}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Evenement bijgewerkt.' });
 }));
@@ -598,7 +599,8 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
         throw new ApiError(404, 'Evenement niet gevonden.');
     }
 
-    logger.info(`Event deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    const sanitizedEventIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
+    logger.info(`Event deleted: ${sanitizedEventIdForLog}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Evenement verwijderd.' });
 }));
