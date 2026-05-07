@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+    useIsSuperAdmin,
     useSuperAdminAssociations,
     useCreateAssociationAsSuperAdmin,
     useUpdateAssociationAsSuperAdmin,
@@ -34,6 +35,30 @@ const SUBSCRIPTION_TIERS = [
 
 export default function MultiAssociation() {
     const [activeTab, setActiveTab] = useState<'associations' | 'invitations' | 'partnerships' | 'members' | 'superadmins' | 'activity'>('associations');
+    const { data: superAdminStatus, isLoading: checkingAccess } = useIsSuperAdmin();
+
+    if (checkingAccess) {
+        return (
+            <div className="p-6">
+                <div className="text-center py-12 text-gray-500">Toegang controleren...</div>
+            </div>
+        );
+    }
+
+    if (!superAdminStatus?.isSuperAdmin) {
+        return (
+            <div className="p-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                    <Icon name="shield" className="w-12 h-12 mx-auto mb-4 text-yellow-600" />
+                    <h2 className="text-xl font-semibold mb-2">Super Admin Rechten Vereist</h2>
+                    <p className="text-gray-600">
+                        Je hebt super admin rechten nodig om verenigingen te beheren.
+                        Neem contact op met een bestaande super admin om toegang te krijgen.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6">
