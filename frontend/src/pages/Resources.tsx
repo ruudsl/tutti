@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getResources, getResourceCategories, createResource, createResourceBooking, Resource, ResourceType, CreateResourceData } from '../api/resources';
+import { getResources, getResourceCategories, getResourceBookings, createResource, createResourceBooking, Resource, ResourceType, CreateResourceData, ResourceBooking } from '../api/resources';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { formatDate } from '../utils/dateFormat';
 
 const TYPE_ICONS: Record<ResourceType, string> = {
   room: 'building',
@@ -25,6 +26,16 @@ export default function Resources() {
   const [typeFilter, setTypeFilter] = useState<ResourceType | ''>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState<Resource | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
+  const [calendarWeekStart, setCalendarWeekStart] = useState(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ['resources', typeFilter],
@@ -34,6 +45,21 @@ export default function Resources() {
   const { data: categories = [] } = useQuery({
     queryKey: ['resource-categories'],
     queryFn: getResourceCategories,
+  });
+
+  const calendarWeekEnd = useMemo(() => {
+    const end = new Date(calendarWeekStart);
+    end.setDate(end.getDate() + 6);
+    return end;
+  }, [calendarWeekStart]);
+
+  const { data: bookings = [] } = useQuery({
+    queryKey: ['resource-bookings', calendarWeekStart.toISOString(), calendarWeekEnd.toISOString()],
+    queryFn: () => getResourceBookings({
+      startDate: calendarWeekStart.toISOString().split('T')[0],
+      endDate: calendarWeekEnd.toISOString().split('T')[0],
+    }),
+    enabled: viewMode === 'calendar',
   });
 
   const availableResources = resources.filter(r => r.isActive);
@@ -77,93 +103,139 @@ export default function Resources() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <select
-          className="select select-bordered select-sm"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ResourceType | '')}
-        >
-          <option value="">{t('resources.allTypes')}</option>
-          <option value="room">{t('resources.types.room')}</option>
-          <option value="vehicle">{t('resources.types.vehicle')}</option>
-          <option value="equipment">{t('resources.types.equipment')}</option>
-          <option value="instrument">{t('resources.types.instrument')}</option>
-          <option value="service">{t('resources.types.service')}</option>
-          <option value="other">{t('resources.types.other')}</option>
-        </select>
+      <div className="flex gap-2 flex-wrap items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          <select
+            className="select select-bordered select-sm"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ResourceType | '')}
+          >
+            <option value="">{t('resources.allTypes')}</option>
+            <option value="room">{t('resources.types.room')}</option>
+            <option value="vehicle">{t('resources.types.vehicle')}</option>
+            <option value="equipment">{t('resources.types.equipment')}</option>
+            <option value="instrument">{t('resources.types.instrument')}</option>
+            <option value="service">{t('resources.types.service')}</option>
+            <option value="other">{t('resources.types.other')}</option>
+          </select>
+        </div>
+        <div className="btn-group">
+          <button
+            className={`btn btn-sm ${viewMode === 'grid' ? 'btn-active' : ''}`}
+            onClick={() => setViewMode('grid')}
+          >
+            <Icon name="package" size={16} />
+          </button>
+          <button
+            className={`btn btn-sm ${viewMode === 'calendar' ? 'btn-active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+          >
+            <Icon name="calendar" size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* Resources Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
-        </div>
-      ) : resources.length === 0 ? (
-        <div className="card bg-base-200 p-8 text-center">
-          <Icon name="package" size={48} className="mx-auto opacity-50 mb-4" />
-          <p className="text-base-content/70">{t('resources.noResources')}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resources.map(resource => (
-            <div key={resource.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
-              <div className="card-body">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 rounded-lg p-2">
-                      <Icon name={TYPE_ICONS[resource.resourceType] as any} size={20} className="text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{resource.name}</h3>
-                      <span className="text-xs text-base-content/60">{t(`resources.types.${resource.resourceType}`)}</span>
-                    </div>
-                  </div>
-                  <span className={`badge ${resource.isActive ? 'badge-success' : 'badge-ghost'}`}>
-                    {resource.isActive ? t('resources.active') : t('resources.inactive')}
-                  </span>
-                </div>
-
-                {resource.description && (
-                  <p className="text-sm text-base-content/70 line-clamp-2">{resource.description}</p>
-                )}
-
-                <div className="flex flex-wrap gap-2 text-sm text-base-content/60">
-                  {resource.location && (
-                    <span className="flex items-center gap-1">
-                      <Icon name="mapPin" size={14} />
-                      {resource.location}
-                    </span>
-                  )}
-                  {resource.capacity && (
-                    <span className="flex items-center gap-1">
-                      <Icon name="users" size={14} />
-                      {resource.capacity} {t('resources.capacity')}
-                    </span>
-                  )}
-                </div>
-
-                {(resource.costPerHour || resource.costPerDay) && (
-                  <div className="text-sm">
-                    {resource.costPerHour && <span>€{resource.costPerHour}/uur</span>}
-                    {resource.costPerHour && resource.costPerDay && ' | '}
-                    {resource.costPerDay && <span>€{resource.costPerDay}/dag</span>}
-                  </div>
-                )}
-
-                <div className="card-actions justify-end mt-2">
-                  {resource.isActive && (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => setShowBookingModal(resource)}
-                    >
-                      {t('resources.book')}
-                    </button>
-                  )}
-                </div>
-              </div>
+      {/* Content */}
+      {viewMode === 'grid' ? (
+        <>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
             </div>
-          ))}
-        </div>
+          ) : resources.length === 0 ? (
+            <div className="card bg-base-200 p-8 text-center">
+              <Icon name="package" size={48} className="mx-auto opacity-50 mb-4" />
+              <p className="text-base-content/70">{t('resources.noResources')}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resources.map(resource => (
+                <div key={resource.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+                  <div className="card-body">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 rounded-lg p-2">
+                          <Icon name={TYPE_ICONS[resource.resourceType] as any} size={20} className="text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{resource.name}</h3>
+                          <span className="text-xs text-base-content/60">{t(`resources.types.${resource.resourceType}`)}</span>
+                        </div>
+                      </div>
+                      <span className={`badge ${resource.isActive ? 'badge-success' : 'badge-ghost'}`}>
+                        {resource.isActive ? t('resources.active') : t('resources.inactive')}
+                      </span>
+                    </div>
+
+                    {resource.description && (
+                      <p className="text-sm text-base-content/70 line-clamp-2">{resource.description}</p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 text-sm text-base-content/60">
+                      {resource.location && (
+                        <span className="flex items-center gap-1">
+                          <Icon name="mapPin" size={14} />
+                          {resource.location}
+                        </span>
+                      )}
+                      {resource.capacity && (
+                        <span className="flex items-center gap-1">
+                          <Icon name="users" size={14} />
+                          {resource.capacity} {t('resources.capacity')}
+                        </span>
+                      )}
+                    </div>
+
+                    {(resource.costPerHour || resource.costPerDay) && (
+                      <div className="text-sm">
+                        {resource.costPerHour && <span>€{resource.costPerHour}/uur</span>}
+                        {resource.costPerHour && resource.costPerDay && ' | '}
+                        {resource.costPerDay && <span>€{resource.costPerDay}/dag</span>}
+                      </div>
+                    )}
+
+                    <div className="card-actions justify-end mt-2">
+                      {resource.isActive && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setShowBookingModal(resource)}
+                        >
+                          {t('resources.book')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <ResourceCalendar
+          resources={resources}
+          bookings={bookings}
+          weekStart={calendarWeekStart}
+          onPrevWeek={() => {
+            const prev = new Date(calendarWeekStart);
+            prev.setDate(prev.getDate() - 7);
+            setCalendarWeekStart(prev);
+          }}
+          onNextWeek={() => {
+            const next = new Date(calendarWeekStart);
+            next.setDate(next.getDate() + 7);
+            setCalendarWeekStart(next);
+          }}
+          onToday={() => {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diff);
+            monday.setHours(0, 0, 0, 0);
+            setCalendarWeekStart(monday);
+          }}
+          onBookResource={(resource) => setShowBookingModal(resource)}
+        />
       )}
 
       {showCreateModal && (
@@ -377,5 +449,161 @@ function BookingModal({ resource, onClose, onSuccess }: { resource: Resource; on
         </div>
       </div>
     </Modal>
+  );
+}
+
+const BOOKING_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-warning/80',
+  approved: 'bg-success/80',
+  rejected: 'bg-error/80',
+  cancelled: 'bg-base-300',
+  completed: 'bg-primary/80',
+};
+
+function ResourceCalendar({
+  resources,
+  bookings,
+  weekStart,
+  onPrevWeek,
+  onNextWeek,
+  onToday,
+  onBookResource,
+}: {
+  resources: Resource[];
+  bookings: ResourceBooking[];
+  weekStart: Date;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+  onToday: () => void;
+  onBookResource: (resource: Resource) => void;
+}) {
+  const { t } = useTranslation();
+
+  const weekDays = useMemo(() => {
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  }, [weekStart]);
+
+  const dayNames = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  const getBookingsForResourceOnDay = (resourceId: string, day: Date) => {
+    const dayStr = day.toISOString().split('T')[0];
+    return bookings.filter(b => {
+      if (b.resourceId !== resourceId) return false;
+      const startDate = b.startDatetime.split('T')[0];
+      const endDate = b.endDatetime.split('T')[0];
+      return dayStr >= startDate && dayStr <= endDate;
+    });
+  };
+
+  const activeResources = resources.filter(r => r.isActive);
+
+  return (
+    <div className="space-y-4">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button className="btn btn-sm btn-ghost" onClick={onPrevWeek}>
+            <Icon name="chevronLeft" size={16} />
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={onToday}>
+            {t('resources.today')}
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={onNextWeek}>
+            <Icon name="chevronRight" size={16} />
+          </button>
+        </div>
+        <h3 className="font-medium">
+          {formatDate(weekStart.toISOString())} - {formatDate(weekDays[6].toISOString())}
+        </h3>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="overflow-x-auto">
+        <table className="table table-sm w-full">
+          <thead>
+            <tr>
+              <th className="w-40">{t('resources.resource')}</th>
+              {weekDays.map((day, idx) => {
+                const isToday = day.toDateString() === new Date().toDateString();
+                return (
+                  <th key={idx} className={`text-center ${isToday ? 'bg-primary/10' : ''}`}>
+                    <div className="text-xs text-base-content/60">{t(`resources.days.${dayNames[idx]}`)}</div>
+                    <div className={`${isToday ? 'text-primary font-bold' : ''}`}>
+                      {day.getDate()}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {activeResources.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center py-8 text-base-content/60">
+                  {t('resources.noResources')}
+                </td>
+              </tr>
+            ) : (
+              activeResources.map(resource => (
+                <tr key={resource.id} className="hover">
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Icon name={TYPE_ICONS[resource.resourceType] as any} size={16} className="text-primary" />
+                      <div>
+                        <div className="font-medium text-sm">{resource.name}</div>
+                        <div className="text-xs text-base-content/60">{resource.location}</div>
+                      </div>
+                    </div>
+                  </td>
+                  {weekDays.map((day, idx) => {
+                    const dayBookings = getBookingsForResourceOnDay(resource.id, day);
+                    const isToday = day.toDateString() === new Date().toDateString();
+                    return (
+                      <td
+                        key={idx}
+                        className={`relative p-1 min-h-[60px] align-top cursor-pointer hover:bg-base-200 ${isToday ? 'bg-primary/5' : ''}`}
+                        onClick={() => onBookResource(resource)}
+                      >
+                        {dayBookings.map(booking => (
+                          <div
+                            key={booking.id}
+                            className={`text-xs p-1 rounded mb-1 text-white truncate ${BOOKING_STATUS_COLORS[booking.status]}`}
+                            title={`${booking.title} - ${booking.bookedByName}`}
+                          >
+                            {booking.title}
+                          </div>
+                        ))}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-warning/80" />
+          <span>{t('resources.bookingStatuses.pending')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-success/80" />
+          <span>{t('resources.bookingStatuses.approved')}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-primary/80" />
+          <span>{t('resources.bookingStatuses.completed')}</span>
+        </div>
+      </div>
+    </div>
   );
 }

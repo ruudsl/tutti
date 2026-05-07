@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getTours, createTour, registerForTour, TourStatus, CreateTourData } from '../api/tours';
+import { getTours, getTour, createTour, registerForTour, cancelTourRegistration, TourStatus, CreateTourData, TourDetail } from '../api/tours';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -23,6 +23,7 @@ export default function Tours() {
   const queryClient = useQueryClient();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
   const { data: tours = [], isLoading } = useQuery({
     queryKey: ['tours'],
@@ -85,7 +86,11 @@ export default function Tours() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {tours.map(tour => (
-            <div key={tour.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+            <div
+              key={tour.id}
+              className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => setSelectedTourId(tour.id)}
+            >
               <div className="card-body">
                 <div className="flex justify-between items-start">
                   <h3 className="card-title text-lg">{tour.name}</h3>
@@ -150,6 +155,14 @@ export default function Tours() {
             queryClient.invalidateQueries({ queryKey: ['tours'] });
             setShowCreateModal(false);
           }}
+        />
+      )}
+
+      {selectedTourId && (
+        <TourDetailModal
+          tourId={selectedTourId}
+          onClose={() => setSelectedTourId(null)}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['tours'] })}
         />
       )}
     </div>
@@ -268,5 +281,419 @@ function TourModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         </div>
       </div>
     </Modal>
+  );
+}
+
+const PARTICIPANT_STATUS_COLORS: Record<string, string> = {
+  invited: 'badge-info',
+  registered: 'badge-warning',
+  confirmed: 'badge-success',
+  declined: 'badge-error',
+  cancelled: 'badge-error',
+  waitlist: 'badge-warning',
+};
+
+function TourDetailModal({
+  tourId,
+  onClose,
+  onRefresh
+}: {
+  tourId: string;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<'days' | 'accommodations' | 'transport' | 'participants'>('days');
+
+  const { data: tour, isLoading, refetch } = useQuery({
+    queryKey: ['tour', tourId],
+    queryFn: () => getTour(tourId),
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: () => registerForTour(tourId),
+    onSuccess: (data) => {
+      showSuccess(data.message);
+      refetch();
+      onRefresh();
+    },
+    onError: () => showError(t('tours.errorRegister')),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelTourRegistration(tourId),
+    onSuccess: () => {
+      showSuccess(t('tours.registrationCancelled'));
+      refetch();
+      onRefresh();
+    },
+    onError: () => showError(t('tours.errorCancel')),
+  });
+
+  if (isLoading) {
+    return (
+      <Modal onClose={onClose} title={t('common.loading')}>
+        <div className="flex justify-center p-8">
+          <span className="loading loading-spinner loading-lg" />
+        </div>
+      </Modal>
+    );
+  }
+
+  if (!tour) {
+    return (
+      <Modal onClose={onClose} title={t('common.error')}>
+        <p>{t('tours.notFound')}</p>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal onClose={onClose} title={tour.name} className="max-w-4xl">
+      <div className="space-y-6">
+        {/* Header Info */}
+        <div className="flex flex-wrap items-center gap-4">
+          <span className={`badge ${STATUS_COLORS[tour.status]} badge-lg`}>
+            {t(`tours.statuses.${tour.status}`)}
+          </span>
+          {tour.destination && (
+            <span className="flex items-center gap-1 text-base-content/70">
+              <Icon name="mapPin" size={16} />
+              {tour.destination}{tour.country ? `, ${tour.country}` : ''}
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-base-content/70">
+            <Icon name="calendar" size={16} />
+            {formatDate(tour.startDate)} - {formatDate(tour.endDate)}
+          </span>
+        </div>
+
+        {tour.description && (
+          <p className="text-base-content/80">{tour.description}</p>
+        )}
+
+        {/* Registration Section */}
+        <div className="card bg-base-200 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-6 text-sm">
+              <div>
+                <span className="text-base-content/60">{t('tours.participants')}:</span>{' '}
+                <span className="font-medium">{tour.participantCount}{tour.maxParticipants ? ` / ${tour.maxParticipants}` : ''}</span>
+              </div>
+              {tour.costPerPerson && (
+                <div>
+                  <span className="text-base-content/60">{t('tours.costPerPerson')}:</span>{' '}
+                  <span className="font-medium">€{tour.costPerPerson.toFixed(2)}</span>
+                </div>
+              )}
+              {tour.registrationDeadline && (
+                <div>
+                  <span className="text-base-content/60">{t('tours.registrationDeadline')}:</span>{' '}
+                  <span className="font-medium">{formatDate(tour.registrationDeadline)}</span>
+                </div>
+              )}
+            </div>
+            <div>
+              {tour.myRegistration ? (
+                <div className="flex items-center gap-2">
+                  <span className={`badge ${PARTICIPANT_STATUS_COLORS[tour.myRegistration.status]}`}>
+                    {t(`tours.participantStatuses.${tour.myRegistration.status}`)}
+                  </span>
+                  {(tour.myRegistration.status === 'registered' || tour.myRegistration.status === 'confirmed') && (
+                    <button
+                      className="btn btn-error btn-sm"
+                      onClick={() => cancelMutation.mutate()}
+                      disabled={cancelMutation.isPending}
+                    >
+                      {t('tours.cancelRegistration')}
+                    </button>
+                  )}
+                </div>
+              ) : (tour.status === 'planning' || tour.status === 'confirmed') ? (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => registerMutation.mutate()}
+                  disabled={registerMutation.isPending}
+                >
+                  {registerMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : null}
+                  {t('tours.register')}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="tabs tabs-boxed">
+          <button
+            className={`tab ${activeTab === 'days' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('days')}
+          >
+            <Icon name="calendar" size={16} className="mr-1" />
+            {t('tours.days')} ({tour.days.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'accommodations' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('accommodations')}
+          >
+            <Icon name="home" size={16} className="mr-1" />
+            {t('tours.accommodations')} ({tour.accommodations.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'transport' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('transport')}
+          >
+            <Icon name="truck" size={16} className="mr-1" />
+            {t('tours.transport')} ({tour.transport.length})
+          </button>
+          <button
+            className={`tab ${activeTab === 'participants' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('participants')}
+          >
+            <Icon name="users" size={16} className="mr-1" />
+            {t('tours.participants')} ({tour.participants.length})
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="min-h-[300px]">
+          {activeTab === 'days' && <TourDaysTab days={tour.days} />}
+          {activeTab === 'accommodations' && <TourAccommodationsTab accommodations={tour.accommodations} />}
+          {activeTab === 'transport' && <TourTransportTab transport={tour.transport} />}
+          {activeTab === 'participants' && <TourParticipantsTab participants={tour.participants} />}
+        </div>
+
+        {/* Notes */}
+        {tour.notes && (
+          <div className="card bg-base-200 p-4">
+            <h4 className="font-medium mb-2">{t('common.notes')}</h4>
+            <p className="text-sm whitespace-pre-wrap">{tour.notes}</p>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function TourDaysTab({ days }: { days: TourDetail['days'] }) {
+  const { t } = useTranslation();
+
+  if (days.length === 0) {
+    return (
+      <div className="text-center py-8 text-base-content/60">
+        <Icon name="calendar" size={32} className="mx-auto mb-2 opacity-50" />
+        <p>{t('tours.noDays')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {days.map(day => (
+        <div key={day.id} className="card bg-base-200">
+          <div className="card-body p-4">
+            <h4 className="font-medium flex items-center gap-2">
+              <span className="badge badge-primary">
+                {t('tours.day')} {day.dayNumber}
+              </span>
+              <span>{formatDate(day.dayDate)}</span>
+              {day.title && <span className="text-base-content/70">- {day.title}</span>}
+            </h4>
+            {day.description && (
+              <p className="text-sm text-base-content/70">{day.description}</p>
+            )}
+            {day.activities.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {day.activities.map(activity => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-2 bg-base-100 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{activity.title}</span>
+                        <span className="badge badge-sm badge-ghost">{activity.activityType}</span>
+                        {activity.isMandatory && (
+                          <span className="badge badge-sm badge-warning">{t('tours.mandatory')}</span>
+                        )}
+                      </div>
+                      {activity.location && (
+                        <div className="text-sm text-base-content/60 flex items-center gap-1">
+                          <Icon name="mapPin" size={12} />
+                          {activity.location}
+                        </div>
+                      )}
+                      {(activity.startTime || activity.endTime) && (
+                        <div className="text-sm text-base-content/60 flex items-center gap-1">
+                          <Icon name="clock" size={12} />
+                          {activity.startTime || '?'} - {activity.endTime || '?'}
+                        </div>
+                      )}
+                    </div>
+                    {activity.cost && (
+                      <span className="text-sm font-medium">€{activity.cost.toFixed(2)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail['accommodations'] }) {
+  const { t } = useTranslation();
+
+  if (accommodations.length === 0) {
+    return (
+      <div className="text-center py-8 text-base-content/60">
+        <Icon name="home" size={32} className="mx-auto mb-2 opacity-50" />
+        <p>{t('tours.noAccommodations')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {accommodations.map(acc => (
+        <div key={acc.id} className="card bg-base-200">
+          <div className="card-body p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-medium">{acc.name}</h4>
+                {acc.address && (
+                  <p className="text-sm text-base-content/60">
+                    {acc.address}{acc.city ? `, ${acc.city}` : ''}{acc.country ? `, ${acc.country}` : ''}
+                  </p>
+                )}
+              </div>
+              {acc.totalCost && (
+                <span className="font-medium">€{acc.totalCost.toFixed(2)}</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {(acc.checkInDate || acc.checkOutDate) && (
+                <span className="flex items-center gap-1">
+                  <Icon name="calendar" size={14} />
+                  {acc.checkInDate && formatDate(acc.checkInDate)}
+                  {acc.checkInDate && acc.checkOutDate && ' - '}
+                  {acc.checkOutDate && formatDate(acc.checkOutDate)}
+                </span>
+              )}
+              {acc.roomCount && (
+                <span>{acc.roomCount} {t('tours.rooms')}</span>
+              )}
+              {acc.phone && (
+                <span className="flex items-center gap-1">
+                  <Icon name="smartphone" size={14} />
+                  {acc.phone}
+                </span>
+              )}
+            </div>
+            {acc.confirmationNumber && (
+              <div className="text-sm">
+                <span className="text-base-content/60">{t('tours.confirmationNumber')}:</span>{' '}
+                <span className="font-mono">{acc.confirmationNumber}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TourTransportTab({ transport }: { transport: TourDetail['transport'] }) {
+  const { t } = useTranslation();
+
+  if (transport.length === 0) {
+    return (
+      <div className="text-center py-8 text-base-content/60">
+        <Icon name="truck" size={32} className="mx-auto mb-2 opacity-50" />
+        <p>{t('tours.noTransport')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {transport.map(tr => (
+        <div key={tr.id} className="card bg-base-200">
+          <div className="card-body p-4">
+            <div className="flex items-center gap-2">
+              <span className="badge badge-primary">{tr.transportType}</span>
+              {tr.provider && <span className="text-base-content/70">{tr.provider}</span>}
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm">
+              {tr.departureLocation && (
+                <div>
+                  <div className="text-base-content/60">{t('tours.departure')}</div>
+                  <div className="font-medium">{tr.departureLocation}</div>
+                  {tr.departureTime && <div className="text-base-content/70">{tr.departureTime}</div>}
+                </div>
+              )}
+              {tr.arrivalLocation && (
+                <div>
+                  <div className="text-base-content/60">{t('tours.arrival')}</div>
+                  <div className="font-medium">{tr.arrivalLocation}</div>
+                  {tr.arrivalTime && <div className="text-base-content/70">{tr.arrivalTime}</div>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TourParticipantsTab({ participants }: { participants: TourDetail['participants'] }) {
+  const { t } = useTranslation();
+
+  if (participants.length === 0) {
+    return (
+      <div className="text-center py-8 text-base-content/60">
+        <Icon name="users" size={32} className="mx-auto mb-2 opacity-50" />
+        <p>{t('tours.noParticipants')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="table table-sm">
+        <thead>
+          <tr>
+            <th>{t('common.name')}</th>
+            <th>{t('common.email')}</th>
+            <th>{t('common.status')}</th>
+            <th>{t('tours.payment')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {participants.map(p => (
+            <tr key={p.id}>
+              <td>{p.firstName} {p.lastName}</td>
+              <td className="text-base-content/70">{p.email}</td>
+              <td>
+                <span className={`badge badge-sm ${PARTICIPANT_STATUS_COLORS[p.status]}`}>
+                  {t(`tours.participantStatuses.${p.status}`)}
+                </span>
+              </td>
+              <td>
+                {p.paidAmount > 0 ? (
+                  <span>€{p.paidAmount.toFixed(2)}</span>
+                ) : (
+                  <span className="text-base-content/50">-</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
