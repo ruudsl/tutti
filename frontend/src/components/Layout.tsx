@@ -64,9 +64,10 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.members',
     icon: 'users',
-    basePaths: ['/members', '/issues', '/practice-schedules', '/practice'],
+    basePaths: ['/members', '/issues', '/practice-schedules', '/practice', '/contacts'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
+      { path: '/contacts', labelKey: 'nav.contacts' },
       { path: '/issues', labelKey: 'nav.issues' },
       { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
       { path: '/practice', labelKey: 'nav.practice' },
@@ -119,11 +120,12 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: 'settings',
-    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
+    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
       { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
+      { path: '/custom-fields', labelKey: 'nav.customFields', roles: [ROLES.ADMIN] },
       { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
@@ -381,6 +383,16 @@ export default function Layout() {
                 <Icon name="user" size={18} />
               </span>
               <span className="sidebar-item-label">{t('nav.profile')}</span>
+            </NavLink>
+            <NavLink
+              to="/privacy-settings"
+              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+              title={sidebarCollapsed ? t('nav.privacySettings') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="shield" size={18} />
+              </span>
+              <span className="sidebar-item-label">{t('nav.privacySettings')}</span>
             </NavLink>
             <button
               className="sidebar-direct-link sidebar-footer-link"
