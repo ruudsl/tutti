@@ -45,22 +45,6 @@ const partnershipRequestSchema = z.object({
 });
 
 // ===========================================
-// SUPER ADMIN CHECK MIDDLEWARE
-// ===========================================
-
-async function requireSuperAdmin(req: AuthRequest, res: Response, next: Function) {
-    const superAdmin = db.prepare(
-        'SELECT id FROM super_admins WHERE user_id = ?'
-    ).get(req.user!.id);
-
-    if (!superAdmin) {
-        throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
-    next();
-}
-
-// ===========================================
 // SUPER ADMIN ROUTES
 // ===========================================
 
