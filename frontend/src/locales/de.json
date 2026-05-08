@@ -45,7 +45,13 @@
     "hide": "Ausblenden",
     "dragToReorder": "Elemente ziehen um neu zu ordnen",
     "details": "Details",
-    "preview": "Vorschau"
+    "preview": "Vorschau",
+    "total": "Gesamt",
+    "phone": "Telefon",
+    "address": "Adresse",
+    "postalCode": "Postleitzahl",
+    "city": "Stadt",
+    "country": "Land"
   },
   "music": {
     "title": "Musikstück",

@@ -45,7 +45,13 @@
     "hide": "Verbergen",
     "dragToReorder": "Sleep items om te herschikken",
     "details": "Details",
-    "preview": "Voorbeeld"
+    "preview": "Voorbeeld",
+    "total": "Totaal",
+    "phone": "Telefoon",
+    "address": "Adres",
+    "postalCode": "Postcode",
+    "city": "Plaats",
+    "country": "Land"
   },
   "music": {
     "title": "Muziekstuk",
