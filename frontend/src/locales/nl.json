@@ -4514,7 +4514,11 @@
     "errorCreate": "Fout bij aanmaken kledingvoorschrift",
     "errorUpdate": "Fout bij bijwerken kledingvoorschrift",
     "errorDelete": "Fout bij verwijderen kledingvoorschrift",
-    "confirmDelete": "Weet je zeker dat je dit kledingvoorschrift wilt verwijderen?"
+    "confirmDelete": "Weet je zeker dat je dit kledingvoorschrift wilt verwijderen?",
+    "reorder": "Volgorde wijzigen",
+    "reordered": "Volgorde bijgewerkt",
+    "errorReorder": "Fout bij wijzigen volgorde",
+    "reorderHint": "Sleep items om de volgorde te wijzigen. Wijzigingen worden automatisch opgeslagen."
   },
   "wiki": {
     "title": "Wiki",

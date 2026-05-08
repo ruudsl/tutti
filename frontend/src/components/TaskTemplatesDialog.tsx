@@ -38,22 +38,6 @@ export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: Task
     queryFn: getTaskTemplates,
   });
 
-  const applyMutation = useMutation({
-    mutationFn: (templateId: string) => applyTaskTemplate(templateId, {
-      listId: selectedListId || undefined,
-    }),
-    onSuccess: (data) => {
-      showSuccess(t('tasks.taskCreatedFromTemplate'));
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-lists'] });
-      onTasksCreated?.();
-      onClose();
-    },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('tasks.errorCreateTemplate'));
-    },
-  });
-
   const createFromTemplateMutation = useMutation({
     mutationFn: (templateId: string) => createTaskFromTemplate(templateId, {
       title: customTitle || undefined,
@@ -62,6 +46,7 @@ export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: Task
       showSuccess(t('tasks.taskCreatedFromTemplate'));
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['task-summary'] });
       onTasksCreated?.();
       onClose();
     },
@@ -70,12 +55,7 @@ export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: Task
     },
   });
 
-  const handleApplyTemplate = () => {
-    if (!selectedTemplate) return;
-    applyMutation.mutate(selectedTemplate.id);
-  };
-
-  const handleCreateSingleTask = () => {
+  const handleCreateTask = () => {
     if (!selectedTemplate) return;
     createFromTemplateMutation.mutate(selectedTemplate.id);
   };
