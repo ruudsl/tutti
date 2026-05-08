@@ -1883,7 +1883,15 @@
     "selectUser": "Selecteer lid",
     "loanAgreement": "Bruikleenovereenkomst",
     "generateAgreement": "Overeenkomst genereren",
-    "deleteConfirm": "Weet je zeker dat je dit instrument wilt verwijderen?"
+    "deleteConfirm": "Weet je zeker dat je dit instrument wilt verwijderen?",
+    "stats": {
+      "total": "Totaal items",
+      "available": "Beschikbaar",
+      "inUse": "In gebruik",
+      "activeLoans": "Actieve uitleningen",
+      "inMaintenance": "In onderhoud",
+      "totalValue": "Totale waarde"
+    }
   },
   "uniforms": {
     "title": "Uniformen",

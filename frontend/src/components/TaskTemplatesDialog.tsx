@@ -5,7 +5,6 @@ import { Modal } from './Modal';
 import { Icon } from './Icon';
 import {
   getTaskTemplates,
-  applyTaskTemplate,
   createTaskFromTemplate,
   TaskTemplate,
   TaskList,
@@ -191,8 +190,8 @@ export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: Task
               </button>
               <button
                 className="btn btn-primary"
-                onClick={handleCreateSingleTask}
-                disabled={applyMutation.isPending || createFromTemplateMutation.isPending}
+                onClick={handleCreateTask}
+                disabled={createFromTemplateMutation.isPending}
               >
                 {createFromTemplateMutation.isPending ? (
                   <span className="loading loading-spinner loading-sm" />
