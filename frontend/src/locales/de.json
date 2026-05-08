@@ -42,7 +42,8 @@
     "create": "Erstellen",
     "more": "weitere",
     "show": "Zeigen",
-    "hide": "Ausblenden"
+    "hide": "Ausblenden",
+    "dragToReorder": "Elemente ziehen um neu zu ordnen"
   },
   "music": {
     "title": "Musikstück",

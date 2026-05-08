@@ -2005,7 +2005,15 @@
     "selectUser": "Select member",
     "loanAgreement": "Loan agreement",
     "generateAgreement": "Generate agreement",
-    "deleteConfirm": "Are you sure you want to delete this instrument?"
+    "deleteConfirm": "Are you sure you want to delete this instrument?",
+    "stats": {
+      "total": "Total items",
+      "available": "Available",
+      "inUse": "In use",
+      "activeLoans": "Active loans",
+      "inMaintenance": "In maintenance",
+      "totalValue": "Total value"
+    }
   },
   "uniforms": {
     "title": "Uniforms",
@@ -4479,7 +4487,11 @@
     "errorCreate": "Error creating attire",
     "errorUpdate": "Error updating attire",
     "errorDelete": "Error deleting attire",
-    "confirmDelete": "Are you sure you want to delete this attire?"
+    "confirmDelete": "Are you sure you want to delete this attire?",
+    "reorder": "Reorder",
+    "reordered": "Attire order updated",
+    "errorReorder": "Error reordering attire",
+    "reorderHint": "Drag items to reorder. Changes are saved automatically."
   },
   "wiki": {
     "title": "Wiki",

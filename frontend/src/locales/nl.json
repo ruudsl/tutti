@@ -42,7 +42,8 @@
     "create": "Aanmaken",
     "more": "meer",
     "show": "Tonen",
-    "hide": "Verbergen"
+    "hide": "Verbergen",
+    "dragToReorder": "Sleep items om te herschikken"
   },
   "music": {
     "title": "Muziekstuk",
