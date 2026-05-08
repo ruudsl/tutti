@@ -2281,7 +2281,6 @@ router.get('/export/transactions', authenticateToken, requireRole('admin', 'boar
             t.transaction_type,
             t.reference,
             t.description AS transaction_description,
-            t.is_posted,
             tl.description AS line_description,
             a.code AS account_code,
             a.name AS account_name,
@@ -2318,7 +2317,6 @@ router.get('/export/transactions', authenticateToken, requireRole('admin', 'boar
             { key: 'debit_amount', header: 'Debet' },
             { key: 'credit_amount', header: 'Credit' },
             { key: 'cost_center', header: 'Kostenplaats' },
-            { key: 'is_posted', header: 'Geboekt' },
         ]);
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -2345,7 +2343,7 @@ router.get('/export/accounts', authenticateToken, requireRole('admin', 'board'),
                        SUM(tl.credit_amount) AS total_credit
                 FROM transaction_lines tl
                 JOIN transactions t ON tl.transaction_id = t.id
-                WHERE t.association_id = ? AND t.fiscal_year_id = ? AND t.is_posted = 1
+                WHERE t.association_id = ? AND t.fiscal_year_id = ?
                 GROUP BY tl.account_id
             ) bal ON a.id = bal.account_id
         `;
@@ -2414,7 +2412,7 @@ router.get('/export/invoices', authenticateToken, requireRole('admin', 'board'),
             i.total_amount,
             i.paid_amount
         FROM invoices i
-        JOIN relations r ON i.relation_id = r.id
+        LEFT JOIN accounting_relations r ON i.relation_id = r.id
         WHERE i.association_id = ?
     `;
     const params: any[] = [associationId];
@@ -2475,7 +2473,6 @@ router.get('/export/balance-sheet', authenticateToken, requireRole('admin', 'boa
         LEFT JOIN transaction_lines tl ON a.id = tl.account_id
         LEFT JOIN transactions t ON tl.transaction_id = t.id
             AND t.fiscal_year_id = ?
-            AND t.is_posted = 1
         WHERE a.association_id = ?
           AND a.account_type IN ('asset', 'liability', 'equity')
         GROUP BY a.id
@@ -2537,7 +2534,6 @@ router.get('/export/profit-loss', authenticateToken, requireRole('admin', 'board
         LEFT JOIN transaction_lines tl ON a.id = tl.account_id
         LEFT JOIN transactions t ON tl.transaction_id = t.id
             AND t.fiscal_year_id = ?
-            AND t.is_posted = 1
         WHERE a.association_id = ?
           AND a.account_type IN ('income', 'expense')
         GROUP BY a.id
@@ -2607,7 +2603,7 @@ router.get('/export/relations', authenticateToken, requireRole('admin', 'board')
             relation_type,
             email,
             phone,
-            address,
+            address_line AS address,
             postal_code,
             city,
             country,
@@ -2615,8 +2611,8 @@ router.get('/export/relations', authenticateToken, requireRole('admin', 'board')
             iban,
             payment_term_days,
             credit_limit,
-            notes
-        FROM relations
+            balance
+        FROM accounting_relations
         WHERE association_id = ?
         ORDER BY relation_type, name
     `).all(associationId);
@@ -2636,7 +2632,7 @@ router.get('/export/relations', authenticateToken, requireRole('admin', 'board')
             { key: 'iban', header: 'IBAN' },
             { key: 'payment_term_days', header: 'Betalingstermijn' },
             { key: 'credit_limit', header: 'Kredietlimiet' },
-            { key: 'notes', header: 'Notities' },
+            { key: 'balance', header: 'Saldo' },
         ]);
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
