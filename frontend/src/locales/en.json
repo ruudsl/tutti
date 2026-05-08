@@ -4245,7 +4245,11 @@
     "existingFiscalYears": "Existing fiscal years",
     "startDate": "Start date",
     "endDate": "End date",
-    "fiscalYearNamePlaceholder": "e.g. 2024"
+    "fiscalYearNamePlaceholder": "e.g. 2024",
+    "export": "Export",
+    "exportData": "Export data",
+    "exportSuccess": "Export downloaded successfully",
+    "exportError": "Error exporting data"
   },
   "projects": {
     "title": "Projects",

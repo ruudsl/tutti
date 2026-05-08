@@ -4245,7 +4245,11 @@
     "existingFiscalYears": "Bestaande boekjaren",
     "startDate": "Startdatum",
     "endDate": "Einddatum",
-    "fiscalYearNamePlaceholder": "bijv. 2024"
+    "fiscalYearNamePlaceholder": "bijv. 2024",
+    "export": "Exporteren",
+    "exportData": "Gegevens exporteren",
+    "exportSuccess": "Export succesvol gedownload",
+    "exportError": "Fout bij exporteren"
   },
   "projects": {
     "title": "Projecten",

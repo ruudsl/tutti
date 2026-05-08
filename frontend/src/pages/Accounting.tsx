@@ -23,6 +23,12 @@ import {
   createRelation,
   createCostCenter,
   createBudget,
+  exportTransactions,
+  exportAccounts,
+  exportInvoices,
+  exportBalanceSheet,
+  exportProfitLoss,
+  exportRelations,
   Account,
   AccountType,
   AccountSubtype,
@@ -75,6 +81,7 @@ export default function Accounting() {
   const [showCostCenterModal, setShowCostCenterModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showFiscalYearModal, setShowFiscalYearModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: fiscalYears = [] } = useQuery({
     queryKey: ['fiscal-years'],
@@ -172,6 +179,46 @@ export default function Accounting() {
     return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
+  const handleExport = async (type: string) => {
+    setIsExporting(true);
+    try {
+      const fiscalYearId = selectedFiscalYear || currentFiscalYear?.id;
+      switch (type) {
+        case 'transactions':
+          await exportTransactions(fiscalYearId);
+          break;
+        case 'accounts':
+          await exportAccounts(fiscalYearId);
+          break;
+        case 'invoices':
+          await exportInvoices(fiscalYearId);
+          break;
+        case 'balance-sheet':
+          if (!fiscalYearId) {
+            showError(t('accounting.selectFiscalYearFirst'));
+            return;
+          }
+          await exportBalanceSheet(fiscalYearId);
+          break;
+        case 'profit-loss':
+          if (!fiscalYearId) {
+            showError(t('accounting.selectFiscalYearFirst'));
+            return;
+          }
+          await exportProfitLoss(fiscalYearId);
+          break;
+        case 'relations':
+          await exportRelations();
+          break;
+      }
+      showSuccess(t('accounting.exportSuccess'));
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('accounting.exportError'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const tabs: { id: TabType; label: string; icon: IconName }[] = [
     { id: 'overview', label: t('accounting.overview'), icon: 'home' },
     { id: 'chart', label: t('accounting.chartOfAccounts'), icon: 'book' },
@@ -228,6 +275,30 @@ export default function Accounting() {
               {t('accounting.newFiscalYear')}
             </button>
           )}
+          <div className="dropdown dropdown-end">
+            <button
+              tabIndex={0}
+              className="btn btn-outline btn-sm"
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Icon name="download" size={16} />
+              )}
+              {t('accounting.export')}
+            </button>
+            <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-56 z-50">
+              <li className="menu-title">{t('accounting.exportData')}</li>
+              <li><button onClick={() => handleExport('transactions')}>{t('accounting.journalEntries')}</button></li>
+              <li><button onClick={() => handleExport('accounts')}>{t('accounting.chartOfAccounts')}</button></li>
+              <li><button onClick={() => handleExport('invoices')}>{t('accounting.invoices')}</button></li>
+              <li><button onClick={() => handleExport('relations')}>{t('accounting.relations')}</button></li>
+              <li className="menu-title">{t('accounting.reports')}</li>
+              <li><button onClick={() => handleExport('balance-sheet')}>{t('accounting.balanceSheet')}</button></li>
+              <li><button onClick={() => handleExport('profit-loss')}>{t('accounting.profitLoss')}</button></li>
+            </ul>
+          </div>
         </div>
       </div>
 

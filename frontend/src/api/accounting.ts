@@ -777,3 +777,48 @@ export async function deleteBudget(id: string): Promise<{ message: string }> {
   const response = await api.delete(`/accounting/budgets/${id}`);
   return response.data;
 }
+
+// =====================================================
+// EXPORTS
+// =====================================================
+
+export type ExportType = 'transactions' | 'accounts' | 'invoices' | 'balance-sheet' | 'profit-loss' | 'relations';
+
+async function downloadExport(endpoint: string, filename: string): Promise<void> {
+  const response = await api.get(endpoint, { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function exportTransactions(fiscalYearId?: string): Promise<void> {
+  const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
+  await downloadExport(`/accounting/export/transactions${params}`, `grootboek_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+export async function exportAccounts(fiscalYearId?: string): Promise<void> {
+  const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
+  await downloadExport(`/accounting/export/accounts${params}`, `rekeningschema_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+export async function exportInvoices(fiscalYearId?: string): Promise<void> {
+  const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
+  await downloadExport(`/accounting/export/invoices${params}`, `facturen_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+export async function exportBalanceSheet(fiscalYearId: string): Promise<void> {
+  await downloadExport(`/accounting/export/balance-sheet?fiscalYearId=${fiscalYearId}&format=csv`, `balans_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+export async function exportProfitLoss(fiscalYearId: string): Promise<void> {
+  await downloadExport(`/accounting/export/profit-loss?fiscalYearId=${fiscalYearId}&format=csv`, `winst_verlies_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+export async function exportRelations(): Promise<void> {
+  await downloadExport('/accounting/export/relations?format=csv', `relaties_${new Date().toISOString().split('T')[0]}.csv`);
+}

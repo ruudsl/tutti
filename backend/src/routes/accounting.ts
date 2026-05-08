@@ -2251,4 +2251,400 @@ router.get('/reports/budget-comparison', authenticateToken, requireRole('admin',
     res.json({ budgets: report, totals });
 }));
 
+// =====================================================
+// EXPORT ENDPOINTS
+// =====================================================
+
+// Helper function to convert data to CSV
+function toCSV(data: any[], columns: { key: string; header: string }[]): string {
+    const headers = columns.map(c => `"${c.header}"`).join(';');
+    const rows = data.map(row =>
+        columns.map(c => {
+            const value = row[c.key];
+            if (value === null || value === undefined) return '';
+            if (typeof value === 'number') return value.toString().replace('.', ',');
+            return `"${String(value).replace(/"/g, '""')}"`;
+        }).join(';')
+    );
+    return [headers, ...rows].join('\n');
+}
+
+// Export transactions (grootboek)
+router.get('/export/transactions', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId, format = 'csv' } = req.query;
+
+    let query = `
+        SELECT
+            t.transaction_number,
+            t.transaction_date,
+            t.transaction_type,
+            t.reference,
+            t.description AS transaction_description,
+            t.is_posted,
+            tl.description AS line_description,
+            a.code AS account_code,
+            a.name AS account_name,
+            tl.debit_amount,
+            tl.credit_amount,
+            cc.name AS cost_center
+        FROM transactions t
+        JOIN transaction_lines tl ON t.id = tl.transaction_id
+        JOIN accounts a ON tl.account_id = a.id
+        LEFT JOIN cost_centers cc ON tl.cost_center_id = cc.id
+        WHERE t.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (fiscalYearId) {
+        query += ' AND t.fiscal_year_id = ?';
+        params.push(fiscalYearId);
+    }
+
+    query += ' ORDER BY t.transaction_date, t.transaction_number, a.code';
+
+    const transactions = db.prepare(query).all(...params);
+
+    if (format === 'csv') {
+        const csv = toCSV(transactions, [
+            { key: 'transaction_number', header: 'Boekstuknummer' },
+            { key: 'transaction_date', header: 'Datum' },
+            { key: 'transaction_type', header: 'Type' },
+            { key: 'reference', header: 'Referentie' },
+            { key: 'transaction_description', header: 'Omschrijving' },
+            { key: 'account_code', header: 'Rekeningcode' },
+            { key: 'account_name', header: 'Rekeningnaam' },
+            { key: 'line_description', header: 'Regelomschrijving' },
+            { key: 'debit_amount', header: 'Debet' },
+            { key: 'credit_amount', header: 'Credit' },
+            { key: 'cost_center', header: 'Kostenplaats' },
+            { key: 'is_posted', header: 'Geboekt' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="grootboek_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv); // BOM for Excel
+    } else {
+        res.json(transactions);
+    }
+}));
+
+// Export chart of accounts (rekeningschema)
+router.get('/export/accounts', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId, format = 'csv' } = req.query;
+
+    let balanceQuery = '';
+    const params: any[] = [associationId];
+
+    if (fiscalYearId) {
+        balanceQuery = `
+            LEFT JOIN (
+                SELECT tl.account_id,
+                       SUM(tl.debit_amount) AS total_debit,
+                       SUM(tl.credit_amount) AS total_credit
+                FROM transaction_lines tl
+                JOIN transactions t ON tl.transaction_id = t.id
+                WHERE t.association_id = ? AND t.fiscal_year_id = ? AND t.is_posted = 1
+                GROUP BY tl.account_id
+            ) bal ON a.id = bal.account_id
+        `;
+        params.push(associationId, fiscalYearId);
+    }
+
+    const accounts = db.prepare(`
+        SELECT
+            a.code,
+            a.name,
+            a.account_type,
+            a.account_subtype,
+            a.description,
+            a.opening_balance,
+            ${fiscalYearId ? 'COALESCE(bal.total_debit, 0) AS total_debit, COALESCE(bal.total_credit, 0) AS total_credit' : '0 AS total_debit, 0 AS total_credit'}
+        FROM accounts a
+        ${balanceQuery}
+        WHERE a.association_id = ?
+        ORDER BY a.code
+    `).all(...params, associationId);
+
+    const accountsWithBalance = accounts.map((a: any) => ({
+        ...a,
+        current_balance: (a.opening_balance || 0) + (a.total_debit || 0) - (a.total_credit || 0),
+    }));
+
+    if (format === 'csv') {
+        const csv = toCSV(accountsWithBalance, [
+            { key: 'code', header: 'Code' },
+            { key: 'name', header: 'Naam' },
+            { key: 'account_type', header: 'Type' },
+            { key: 'account_subtype', header: 'Subtype' },
+            { key: 'description', header: 'Omschrijving' },
+            { key: 'opening_balance', header: 'Beginsaldo' },
+            { key: 'total_debit', header: 'Totaal Debet' },
+            { key: 'total_credit', header: 'Totaal Credit' },
+            { key: 'current_balance', header: 'Huidig Saldo' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="rekeningschema_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv);
+    } else {
+        res.json(accountsWithBalance);
+    }
+}));
+
+// Export invoices (facturen)
+router.get('/export/invoices', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId, format = 'csv' } = req.query;
+
+    let query = `
+        SELECT
+            i.invoice_number,
+            i.invoice_type,
+            i.invoice_date,
+            i.due_date,
+            i.status,
+            r.name AS relation_name,
+            r.relation_number,
+            i.reference,
+            i.description,
+            i.subtotal,
+            i.vat_amount,
+            i.total_amount,
+            i.paid_amount
+        FROM invoices i
+        JOIN relations r ON i.relation_id = r.id
+        WHERE i.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (fiscalYearId) {
+        query += ' AND i.fiscal_year_id = ?';
+        params.push(fiscalYearId);
+    }
+
+    query += ' ORDER BY i.invoice_date DESC, i.invoice_number';
+
+    const invoices = db.prepare(query).all(...params);
+
+    if (format === 'csv') {
+        const csv = toCSV(invoices, [
+            { key: 'invoice_number', header: 'Factuurnummer' },
+            { key: 'invoice_type', header: 'Type' },
+            { key: 'invoice_date', header: 'Factuurdatum' },
+            { key: 'due_date', header: 'Vervaldatum' },
+            { key: 'status', header: 'Status' },
+            { key: 'relation_name', header: 'Relatie' },
+            { key: 'relation_number', header: 'Relatienummer' },
+            { key: 'reference', header: 'Referentie' },
+            { key: 'description', header: 'Omschrijving' },
+            { key: 'subtotal', header: 'Subtotaal' },
+            { key: 'vat_amount', header: 'BTW' },
+            { key: 'total_amount', header: 'Totaal' },
+            { key: 'paid_amount', header: 'Betaald' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="facturen_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv);
+    } else {
+        res.json(invoices);
+    }
+}));
+
+// Export balance sheet (balans)
+router.get('/export/balance-sheet', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId, format = 'csv' } = req.query;
+
+    if (!fiscalYearId) {
+        throw new ApiError(400, 'Boekjaar is verplicht.');
+    }
+
+    const accounts = db.prepare(`
+        SELECT
+            a.code,
+            a.name,
+            a.account_type,
+            a.account_subtype,
+            a.opening_balance,
+            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
+            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+        FROM accounts a
+        LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+        LEFT JOIN transactions t ON tl.transaction_id = t.id
+            AND t.fiscal_year_id = ?
+            AND t.is_posted = 1
+        WHERE a.association_id = ?
+          AND a.account_type IN ('asset', 'liability', 'equity')
+        GROUP BY a.id
+        ORDER BY a.code
+    `).all(fiscalYearId, associationId);
+
+    const balanceSheet = accounts.map((a: any) => {
+        const balance = (a.opening_balance || 0) + a.total_debit - a.total_credit;
+        return {
+            code: a.code,
+            name: a.name,
+            account_type: a.account_type,
+            account_subtype: a.account_subtype,
+            opening_balance: a.opening_balance || 0,
+            total_debit: a.total_debit,
+            total_credit: a.total_credit,
+            current_balance: balance,
+        };
+    });
+
+    if (format === 'csv') {
+        const csv = toCSV(balanceSheet, [
+            { key: 'code', header: 'Code' },
+            { key: 'name', header: 'Naam' },
+            { key: 'account_type', header: 'Type' },
+            { key: 'account_subtype', header: 'Subtype' },
+            { key: 'opening_balance', header: 'Beginsaldo' },
+            { key: 'total_debit', header: 'Totaal Debet' },
+            { key: 'total_credit', header: 'Totaal Credit' },
+            { key: 'current_balance', header: 'Eindsaldo' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="balans_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv);
+    } else {
+        res.json(balanceSheet);
+    }
+}));
+
+// Export profit & loss (winst & verlies)
+router.get('/export/profit-loss', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { fiscalYearId, format = 'csv' } = req.query;
+
+    if (!fiscalYearId) {
+        throw new ApiError(400, 'Boekjaar is verplicht.');
+    }
+
+    const accounts = db.prepare(`
+        SELECT
+            a.code,
+            a.name,
+            a.account_type,
+            a.account_subtype,
+            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
+            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+        FROM accounts a
+        LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+        LEFT JOIN transactions t ON tl.transaction_id = t.id
+            AND t.fiscal_year_id = ?
+            AND t.is_posted = 1
+        WHERE a.association_id = ?
+          AND a.account_type IN ('income', 'expense')
+        GROUP BY a.id
+        ORDER BY a.account_type DESC, a.code
+    `).all(fiscalYearId, associationId);
+
+    const profitLoss = accounts.map((a: any) => {
+        const amount = a.account_type === 'income'
+            ? a.total_credit - a.total_debit
+            : a.total_debit - a.total_credit;
+        return {
+            code: a.code,
+            name: a.name,
+            account_type: a.account_type,
+            account_subtype: a.account_subtype,
+            total_debit: a.total_debit,
+            total_credit: a.total_credit,
+            amount: amount,
+        };
+    });
+
+    // Calculate totals
+    const totalIncome = profitLoss
+        .filter(a => a.account_type === 'income')
+        .reduce((sum, a) => sum + a.amount, 0);
+    const totalExpenses = profitLoss
+        .filter(a => a.account_type === 'expense')
+        .reduce((sum, a) => sum + a.amount, 0);
+    const netResult = totalIncome - totalExpenses;
+
+    if (format === 'csv') {
+        const dataWithTotals = [
+            ...profitLoss,
+            { code: '', name: '--- TOTALEN ---', account_type: '', account_subtype: '', total_debit: 0, total_credit: 0, amount: 0 },
+            { code: '', name: 'Totaal inkomsten', account_type: 'income', account_subtype: '', total_debit: 0, total_credit: 0, amount: totalIncome },
+            { code: '', name: 'Totaal uitgaven', account_type: 'expense', account_subtype: '', total_debit: 0, total_credit: 0, amount: totalExpenses },
+            { code: '', name: 'Netto resultaat', account_type: 'result', account_subtype: '', total_debit: 0, total_credit: 0, amount: netResult },
+        ];
+
+        const csv = toCSV(dataWithTotals, [
+            { key: 'code', header: 'Code' },
+            { key: 'name', header: 'Naam' },
+            { key: 'account_type', header: 'Type' },
+            { key: 'account_subtype', header: 'Subtype' },
+            { key: 'total_debit', header: 'Totaal Debet' },
+            { key: 'total_credit', header: 'Totaal Credit' },
+            { key: 'amount', header: 'Bedrag' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="winst_verlies_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv);
+    } else {
+        res.json({ accounts: profitLoss, totals: { totalIncome, totalExpenses, netResult } });
+    }
+}));
+
+// Export relations (debiteuren/crediteuren)
+router.get('/export/relations', authenticateToken, requireRole('admin', 'board'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { format = 'csv' } = req.query;
+
+    const relations = db.prepare(`
+        SELECT
+            relation_number,
+            name,
+            relation_type,
+            email,
+            phone,
+            address,
+            postal_code,
+            city,
+            country,
+            vat_number,
+            iban,
+            payment_term_days,
+            credit_limit,
+            notes
+        FROM relations
+        WHERE association_id = ?
+        ORDER BY relation_type, name
+    `).all(associationId);
+
+    if (format === 'csv') {
+        const csv = toCSV(relations, [
+            { key: 'relation_number', header: 'Relatienummer' },
+            { key: 'name', header: 'Naam' },
+            { key: 'relation_type', header: 'Type' },
+            { key: 'email', header: 'E-mail' },
+            { key: 'phone', header: 'Telefoon' },
+            { key: 'address', header: 'Adres' },
+            { key: 'postal_code', header: 'Postcode' },
+            { key: 'city', header: 'Plaats' },
+            { key: 'country', header: 'Land' },
+            { key: 'vat_number', header: 'BTW-nummer' },
+            { key: 'iban', header: 'IBAN' },
+            { key: 'payment_term_days', header: 'Betalingstermijn' },
+            { key: 'credit_limit', header: 'Kredietlimiet' },
+            { key: 'notes', header: 'Notities' },
+        ]);
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="relaties_${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send('﻿' + csv);
+    } else {
+        res.json(relations);
+    }
+}));
+
 export default router;
