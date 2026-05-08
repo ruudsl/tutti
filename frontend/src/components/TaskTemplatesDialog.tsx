@@ -7,9 +7,9 @@ import {
   getTaskTemplates,
   createTaskFromTemplate,
   TaskTemplate,
-  TaskList,
   TaskPriority,
 } from '../api/tasks';
+import type { TaskList } from '../api/tasks';
 import { showSuccess, showError } from '../utils/toast';
 
 interface TaskTemplatesDialogProps {
