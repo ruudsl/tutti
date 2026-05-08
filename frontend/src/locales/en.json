@@ -4236,7 +4236,16 @@
     "noFiscalYearForReports": "Select a fiscal year to view reports",
     "selectFiscalYearFirst": "Select a fiscal year first",
     "noAccountsForReport": "No accounts found for this report. Initialize the chart of accounts first.",
-    "noTransactionsForReport": "No transactions found for this period"
+    "noTransactionsForReport": "No transactions found for this period",
+    "newFiscalYear": "New fiscal year",
+    "fiscalYearCreated": "Fiscal year created",
+    "manageFiscalYears": "Manage fiscal years",
+    "current": "Current",
+    "setAsCurrent": "Set as current",
+    "existingFiscalYears": "Existing fiscal years",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "fiscalYearNamePlaceholder": "e.g. 2024"
   },
   "projects": {
     "title": "Projects",

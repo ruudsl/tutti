@@ -4236,7 +4236,16 @@
     "noFiscalYearForReports": "Selecteer een boekjaar om rapporten te bekijken",
     "selectFiscalYearFirst": "Selecteer eerst een boekjaar",
     "noAccountsForReport": "Geen rekeningen gevonden voor dit rapport. Initialiseer eerst het rekeningschema.",
-    "noTransactionsForReport": "Geen boekingen gevonden voor deze periode"
+    "noTransactionsForReport": "Geen boekingen gevonden voor deze periode",
+    "newFiscalYear": "Nieuw boekjaar",
+    "fiscalYearCreated": "Boekjaar aangemaakt",
+    "manageFiscalYears": "Boekjaren beheren",
+    "current": "Huidig",
+    "setAsCurrent": "Als huidig instellen",
+    "existingFiscalYears": "Bestaande boekjaren",
+    "startDate": "Startdatum",
+    "endDate": "Einddatum",
+    "fiscalYearNamePlaceholder": "bijv. 2024"
   },
   "projects": {
     "title": "Projecten",

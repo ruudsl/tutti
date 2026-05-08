@@ -4236,7 +4236,16 @@
     "noFiscalYearForReports": "Wählen Sie ein Geschäftsjahr, um Berichte anzuzeigen",
     "selectFiscalYearFirst": "Wählen Sie zuerst ein Geschäftsjahr",
     "noAccountsForReport": "Keine Konten für diesen Bericht gefunden. Erstellen Sie zuerst den Kontenplan.",
-    "noTransactionsForReport": "Keine Buchungen für diesen Zeitraum gefunden"
+    "noTransactionsForReport": "Keine Buchungen für diesen Zeitraum gefunden",
+    "newFiscalYear": "Neues Geschäftsjahr",
+    "fiscalYearCreated": "Geschäftsjahr erstellt",
+    "manageFiscalYears": "Geschäftsjahre verwalten",
+    "current": "Aktuell",
+    "setAsCurrent": "Als aktuell festlegen",
+    "existingFiscalYears": "Bestehende Geschäftsjahre",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "fiscalYearNamePlaceholder": "z.B. 2024"
   },
   "projects": {
     "title": "Projekte",
