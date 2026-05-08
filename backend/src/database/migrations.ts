@@ -45,7 +45,7 @@ export const migrations: Migration[] = [
     version: 3,
     name: 'add_workflow_executions_status',
     up: [
-      `ALTER TABLE workflow_executions ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'`,
+      `ALTER TABLE workflow_executions ADD COLUMN status TEXT DEFAULT 'pending'`,
     ],
   },
   {
@@ -146,6 +146,14 @@ export const migrations: Migration[] = [
       `ALTER TABLE poll_options ADD COLUMN option_value TEXT`,
     ],
   },
+  {
+    version: 9,
+    name: 'ensure_workflow_executions_status',
+    up: [
+      // Re-ensure status column exists (in case migration 3 was skipped)
+      `ALTER TABLE workflow_executions ADD COLUMN status TEXT DEFAULT 'pending'`,
+    ],
+  },
 ];
 
 /**
@@ -200,6 +208,15 @@ export function runMigrations(db: any): void {
 
     for (const sql of migration.up) {
       try {
+        // Skip ALTER TABLE if table doesn't exist (will be created by schema)
+        if (sql.includes('ALTER TABLE')) {
+          const tableMatch = sql.match(/ALTER TABLE (\w+)/);
+          if (tableMatch && !tableExists(db, tableMatch[1])) {
+            console.log(`  Skipping: table ${tableMatch[1]} does not exist yet (will be created by schema)`);
+            continue;
+          }
+        }
+
         // Skip ALTER TABLE if column already exists
         if (sql.includes('ALTER TABLE') && sql.includes('ADD COLUMN')) {
           const match = sql.match(/ALTER TABLE (\w+) ADD COLUMN (\w+)/);

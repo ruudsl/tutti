@@ -55,14 +55,30 @@ class DatabaseWrapper {
             }
 
             // Initialize schema (CREATE TABLE IF NOT EXISTS statements)
-            try {
-                this.db.run(schema);
-            } catch (err: any) {
-                // If schema fails on existing DB, it might be a column issue
-                // Log but don't crash - migrations should have fixed it
-                if (isExistingDb && err.message?.includes('no such column')) {
-                    console.error('Schema error (may need manual migration):', err.message);
-                } else {
+            // Run each statement separately to handle partial failures gracefully
+            const schemaStatements = schema.split(';').filter(s => s.trim());
+            for (const statement of schemaStatements) {
+                const trimmed = statement.trim();
+                if (!trimmed) continue;
+
+                try {
+                    this.db.run(trimmed);
+                } catch (err: any) {
+                    // If index creation fails due to missing column, skip it
+                    // The column will be added by migrations and index created on next restart
+                    if (err.message?.includes('no such column') && trimmed.includes('CREATE INDEX')) {
+                        console.warn(`Skipping index creation (column not yet added): ${err.message}`);
+                        continue;
+                    }
+                    // If schema fails on existing DB for other column issues, log but continue
+                    if (isExistingDb && err.message?.includes('no such column')) {
+                        console.error('Schema error (may need manual migration):', err.message);
+                        continue;
+                    }
+                    // For duplicate table/index errors, skip silently
+                    if (err.message?.includes('already exists')) {
+                        continue;
+                    }
                     throw err;
                 }
             }
