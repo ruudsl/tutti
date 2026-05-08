@@ -16,15 +16,9 @@ const VISIBILITY_LEVELS = ['admin_only', 'committee', 'orchestra', 'section', 'a
 
 const STANDARD_FIELDS = [
     'email',
-    'phone',
-    'mobile',
-    'address',
-    'birthday',
     'profile_photo',
     'instruments',
     'orchestras',
-    'join_date',
-    'emergency_contact',
 ] as const;
 
 const updateUserPrivacySchema = z.object({

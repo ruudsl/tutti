@@ -25,22 +25,17 @@ const FIELD_GROUPS: { key: string; labelKey: string; fields: string[] }[] = [
   {
     key: 'contact',
     labelKey: 'privacy.groups.contact',
-    fields: ['email', 'phone', 'mobile', 'address'],
+    fields: ['email'],
   },
   {
     key: 'personal',
     labelKey: 'privacy.groups.personal',
-    fields: ['birthday', 'profile_photo'],
+    fields: ['profile_photo'],
   },
   {
     key: 'musical',
     labelKey: 'privacy.groups.musical',
-    fields: ['instruments', 'orchestras', 'join_date'],
-  },
-  {
-    key: 'emergency',
-    labelKey: 'privacy.groups.emergency',
-    fields: ['emergency_contact'],
+    fields: ['instruments', 'orchestras'],
   },
 ];
 

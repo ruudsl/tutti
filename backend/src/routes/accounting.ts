@@ -1832,6 +1832,185 @@ router.post('/bank-statements/:statementId/lines/:lineId/book', authenticateToke
 }));
 
 // =====================================================
+// RELATIONS (DEBTORS/CREDITORS)
+// =====================================================
+
+router.get('/relations', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const relations = db.prepare(`
+        SELECT ar.*, u.first_name || ' ' || u.last_name AS user_name
+        FROM accounting_relations ar
+        LEFT JOIN users u ON ar.user_id = u.id
+        WHERE ar.association_id = ?
+        ORDER BY ar.name
+    `).all(associationId);
+
+    res.json(relations.map((r: any) => ({
+        id: r.id,
+        relationType: r.relation_type,
+        userId: r.user_id,
+        userName: r.user_name,
+        contactId: r.contact_id,
+        relationNumber: r.relation_number,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        addressLine: r.address_line,
+        postalCode: r.postal_code,
+        city: r.city,
+        country: r.country,
+        iban: r.iban,
+        vatNumber: r.vat_number,
+        paymentTermDays: r.payment_term_days,
+        receivableAccountId: r.receivable_account_id,
+        payableAccountId: r.payable_account_id,
+        creditLimit: r.credit_limit,
+        balance: r.balance,
+        isActive: !!r.is_active,
+        createdAt: r.created_at,
+    })));
+}));
+
+router.post('/relations', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { relationType, name, email, phone, addressLine, postalCode, city, country, iban, vatNumber, paymentTermDays, userId, contactId } = req.body;
+
+    if (!relationType || !name) {
+        throw new ApiError(400, 'Type en naam zijn verplicht.');
+    }
+
+    const relationId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO accounting_relations (id, association_id, relation_type, name, email, phone, address_line, postal_code, city, country, iban, vat_number, payment_term_days, user_id, contact_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(relationId, associationId, relationType, name, email || null, phone || null, addressLine || null, postalCode || null, city || null, country || 'NL', iban || null, vatNumber || null, paymentTermDays || 30, userId || null, contactId || null, now, now);
+
+    res.status(201).json({ id: relationId, message: 'Relatie aangemaakt.' });
+}));
+
+router.put('/relations/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const relation = db.prepare('SELECT id FROM accounting_relations WHERE id = ? AND association_id = ?').get(req.params.id, associationId);
+    if (!relation) throw new ApiError(404, 'Relatie niet gevonden.');
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    const fields = ['relation_type', 'name', 'email', 'phone', 'address_line', 'postal_code', 'city', 'country', 'iban', 'vat_number', 'payment_term_days', 'credit_limit', 'is_active'];
+    const bodyFields = ['relationType', 'name', 'email', 'phone', 'addressLine', 'postalCode', 'city', 'country', 'iban', 'vatNumber', 'paymentTermDays', 'creditLimit', 'isActive'];
+
+    fields.forEach((f, i) => {
+        if (req.body[bodyFields[i]] !== undefined) {
+            updates.push(`${f} = ?`);
+            params.push(req.body[bodyFields[i]]);
+        }
+    });
+
+    if (updates.length > 0) {
+        updates.push('updated_at = ?');
+        params.push(new Date().toISOString());
+        params.push(req.params.id);
+        db.prepare(`UPDATE accounting_relations SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    res.json({ message: 'Relatie bijgewerkt.' });
+}));
+
+router.delete('/relations/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const result = db.prepare('DELETE FROM accounting_relations WHERE id = ? AND association_id = ?').run(req.params.id, associationId);
+    if (result.changes === 0) throw new ApiError(404, 'Relatie niet gevonden.');
+
+    res.json({ message: 'Relatie verwijderd.' });
+}));
+
+// =====================================================
+// COST CENTERS
+// =====================================================
+
+router.get('/cost-centers', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const costCenters = db.prepare(`
+        SELECT cc.*, o.name AS orchestra_name
+        FROM cost_centers cc
+        LEFT JOIN orchestras o ON cc.orchestra_id = o.id
+        WHERE cc.association_id = ?
+        ORDER BY cc.code
+    `).all(associationId);
+
+    res.json(costCenters.map((cc: any) => ({
+        id: cc.id,
+        code: cc.code,
+        name: cc.name,
+        description: cc.description,
+        orchestraId: cc.orchestra_id,
+        orchestraName: cc.orchestra_name,
+        isActive: !!cc.is_active,
+        budgetAmount: cc.budget_amount,
+        createdAt: cc.created_at,
+    })));
+}));
+
+router.post('/cost-centers', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { code, name, description, orchestraId, budgetAmount } = req.body;
+
+    if (!code || !name) {
+        throw new ApiError(400, 'Code en naam zijn verplicht.');
+    }
+
+    const costCenterId = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+        INSERT INTO cost_centers (id, association_id, code, name, description, orchestra_id, budget_amount, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(costCenterId, associationId, code, name, description || null, orchestraId || null, budgetAmount || null, now);
+
+    res.status(201).json({ id: costCenterId, message: 'Kostenplaats aangemaakt.' });
+}));
+
+router.put('/cost-centers/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const cc = db.prepare('SELECT id FROM cost_centers WHERE id = ? AND association_id = ?').get(req.params.id, associationId);
+    if (!cc) throw new ApiError(404, 'Kostenplaats niet gevonden.');
+
+    const { code, name, description, orchestraId, budgetAmount, isActive } = req.body;
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (code !== undefined) { updates.push('code = ?'); params.push(code); }
+    if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+    if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (orchestraId !== undefined) { updates.push('orchestra_id = ?'); params.push(orchestraId || null); }
+    if (budgetAmount !== undefined) { updates.push('budget_amount = ?'); params.push(budgetAmount); }
+    if (isActive !== undefined) { updates.push('is_active = ?'); params.push(isActive ? 1 : 0); }
+
+    if (updates.length > 0) {
+        params.push(req.params.id);
+        db.prepare(`UPDATE cost_centers SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    res.json({ message: 'Kostenplaats bijgewerkt.' });
+}));
+
+router.delete('/cost-centers/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const result = db.prepare('DELETE FROM cost_centers WHERE id = ? AND association_id = ?').run(req.params.id, associationId);
+    if (result.changes === 0) throw new ApiError(404, 'Kostenplaats niet gevonden.');
+
+    res.json({ message: 'Kostenplaats verwijderd.' });
+}));
+
+// =====================================================
 // BUDGET ROUTES
 // =====================================================
 

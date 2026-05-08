@@ -631,3 +631,149 @@ export async function downloadSepaBatch(batchId: string): Promise<Blob> {
   });
   return response.data;
 }
+
+// =====================================================
+// RELATIONS (DEBTORS/CREDITORS)
+// =====================================================
+
+export type RelationType = 'customer' | 'supplier' | 'both';
+
+export interface AccountingRelation {
+  id: string;
+  relationType: RelationType;
+  userId?: string;
+  contactId?: string;
+  relationNumber?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  addressLine?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
+  iban?: string;
+  vatNumber?: string;
+  paymentTermDays: number;
+  receivableAccountId?: string;
+  payableAccountId?: string;
+  creditLimit?: number;
+  balance: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export async function getRelations(): Promise<AccountingRelation[]> {
+  const response = await api.get('/accounting/relations');
+  return response.data;
+}
+
+export async function getRelation(id: string): Promise<AccountingRelation> {
+  const response = await api.get(`/accounting/relations/${id}`);
+  return response.data;
+}
+
+export async function createRelation(data: Partial<AccountingRelation>): Promise<{ id: string; message: string }> {
+  const response = await api.post('/accounting/relations', data);
+  return response.data;
+}
+
+export async function updateRelation(id: string, data: Partial<AccountingRelation>): Promise<{ message: string }> {
+  const response = await api.put(`/accounting/relations/${id}`, data);
+  return response.data;
+}
+
+export async function deleteRelation(id: string): Promise<{ message: string }> {
+  const response = await api.delete(`/accounting/relations/${id}`);
+  return response.data;
+}
+
+// =====================================================
+// COST CENTERS
+// =====================================================
+
+export interface CostCenter {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  orchestraId?: string;
+  orchestraName?: string;
+  isActive: boolean;
+  budgetAmount?: number;
+  createdAt: string;
+}
+
+export async function getCostCenters(): Promise<CostCenter[]> {
+  const response = await api.get('/accounting/cost-centers');
+  return response.data;
+}
+
+export async function getCostCenter(id: string): Promise<CostCenter> {
+  const response = await api.get(`/accounting/cost-centers/${id}`);
+  return response.data;
+}
+
+export async function createCostCenter(data: Partial<CostCenter>): Promise<{ id: string; message: string }> {
+  const response = await api.post('/accounting/cost-centers', data);
+  return response.data;
+}
+
+export async function updateCostCenter(id: string, data: Partial<CostCenter>): Promise<{ message: string }> {
+  const response = await api.put(`/accounting/cost-centers/${id}`, data);
+  return response.data;
+}
+
+export async function deleteCostCenter(id: string): Promise<{ message: string }> {
+  const response = await api.delete(`/accounting/cost-centers/${id}`);
+  return response.data;
+}
+
+// =====================================================
+// BUDGETS
+// =====================================================
+
+export interface Budget {
+  id: string;
+  name: string;
+  amount: number;
+  actual: number;
+  remaining: number;
+  accountId: string;
+  accountCode?: string;
+  accountName?: string;
+  costCenterId?: string;
+  costCenterName?: string;
+  fiscalYearId?: string;
+  fiscalYearName?: string;
+  notes?: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export async function getBudgets(filters?: { fiscalYearId?: string }): Promise<Budget[]> {
+  const params = new URLSearchParams();
+  if (filters?.fiscalYearId) params.append('fiscalYearId', filters.fiscalYearId);
+  const response = await api.get(`/accounting/budgets?${params.toString()}`);
+  return response.data;
+}
+
+export async function getBudget(id: string): Promise<Budget> {
+  const response = await api.get(`/accounting/budgets/${id}`);
+  return response.data;
+}
+
+export async function createBudget(data: Partial<Budget>): Promise<{ id: string; message: string }> {
+  const response = await api.post('/accounting/budgets', data);
+  return response.data;
+}
+
+export async function updateBudget(id: string, data: Partial<Budget>): Promise<{ message: string }> {
+  const response = await api.put(`/accounting/budgets/${id}`, data);
+  return response.data;
+}
+
+export async function deleteBudget(id: string): Promise<{ message: string }> {
+  const response = await api.delete(`/accounting/budgets/${id}`);
+  return response.data;
+}
