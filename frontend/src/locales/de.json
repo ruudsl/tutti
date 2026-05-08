@@ -160,7 +160,9 @@
     "wiki": "Wiki",
     "outfits": "Kleiderordnung",
     "performances": "Aufführungen",
-    "workflows": "Workflows"
+    "workflows": "Workflows",
+    "availability": "Verfügbarkeit",
+    "practice": "Üben"
   },
   "roles": {
     "admin": "Administrator",
@@ -1257,7 +1259,17 @@
     "confirmReturn": "Sind Sie sicher, dass \"{{title}}\" von {{borrower}} zurückgegeben wurde?",
     "confirmDelete": "Sind Sie sicher, dass Sie diese Ausleihe löschen möchten?",
     "createLoan": "Ausleihe erstellen",
-    "creating": "Wird erstellt..."
+    "creating": "Wird erstellt...",
+    "loanHistory": "Ausleihhistorie",
+    "viewHistory": "Historie anzeigen",
+    "errorLoadingHistory": "Fehler beim Laden der Historie",
+    "history": {
+      "totalLoans": "Gesamtausleihen",
+      "activeLoans": "Aktive Ausleihen",
+      "avgDuration": "Durchschnittliche Dauer",
+      "days": "Tage",
+      "noHistory": "Keine Historie vorhanden"
+    }
   },
   "statistics": {
     "title": "Statistiken",
@@ -1744,6 +1756,43 @@
       "never": "Nie",
       "enabled": "Verknüpfung aktiv",
       "disabled": "Verknüpfung inaktiv"
+    },
+    "recurring": {
+      "title": "Wiederkehrende Probe erstellen",
+      "description": "Erstelle mehrere Proben auf einmal mit einem wiederkehrenden Muster.",
+      "interval": "Intervall",
+      "weekly": "Wöchentlich",
+      "biweekly": "Alle 2 Wochen",
+      "every3weeks": "Alle 3 Wochen",
+      "every4weeks": "Alle 4 Wochen",
+      "dayOfWeek": "Wochentag",
+      "until": "Bis",
+      "preview": "Vorschau",
+      "create": "Proben erstellen",
+      "created": "{{count}} Proben erstellt",
+      "more": "+{{count}} weitere"
+    }
+  },
+  "availability": {
+    "title": "Verfügbarkeit",
+    "myAvailability": "Meine Verfügbarkeit",
+    "teamAvailability": "Teamverfügbarkeit",
+    "saved": "Verfügbarkeit gespeichert",
+    "removed": "Verfügbarkeit entfernt",
+    "bulkSaved": "Verfügbarkeit für {{count}} Termine eingestellt",
+    "noFutureDates": "Keine zukünftigen Termine gefunden",
+    "bulkSet": "Schnell einstellen für alle Wochentage",
+    "weekdaysOnly": "nur zukünftige Wochentage",
+    "today": "Heute",
+    "selectDate": "Datum auswählen",
+    "selectDatePrompt": "Wählen Sie ein Datum, um die Teamkapazität anzuzeigen.",
+    "teamFor": "Teamkapazität für",
+    "clear": "Löschen",
+    "statuses": {
+      "available": "Verfügbar",
+      "unavailable": "Nicht verfügbar",
+      "maybe": "Vielleicht",
+      "unknown": "Unbekannt"
     }
   },
   "accessibility": {
@@ -1850,11 +1899,13 @@
     "ticketDashboard": "Ticket-Dashboard - Harmonie",
     "userGuide": "Benutzerhandbuch - Harmonie",
     "auditLogs": "Audit-Protokolle - Harmonie",
-    "accounting": "Buchhaltung",
+    "accounting": "Buchhaltung - Harmonie",
     "wiki": "Wiki - Harmonie",
     "outfits": "Kleiderordnung - Harmonie",
     "performances": "Aufführungen - Harmonie",
-    "workflows": "Workflows - Harmonie"
+    "workflows": "Workflows - Harmonie",
+    "availability": "Verfügbarkeit - Harmonie",
+    "practice": "Üben - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -2121,6 +2172,20 @@
       "additionalInfoPlaceholder": "Weitere Informationen zur Barrierefreiheit für Besucher...",
       "contactEmail": "E-Mail für Barrierefreiheitsfragen",
       "contactPhone": "Telefon für Barrierefreiheitsfragen"
+    },
+    "prediction": {
+      "title": "Anwesenheitsprognose",
+      "viewPrediction": "Prognose anzeigen",
+      "memberPredictions": "Mitglieder-Prognosen",
+      "byInstrument": "Nach Instrument",
+      "probability": "Wahrscheinlichkeit",
+      "expected": "Erwartete Anwesenheit",
+      "likelyYes": "Wahrscheinlich ja",
+      "likelyNo": "Wahrscheinlich nein",
+      "uncertain": "Unsicher",
+      "history": "Basierend auf Historie",
+      "disclaimer": "Diese Prognose basiert auf historischen Anwesenheitsdaten.",
+      "error": "Prognose konnte nicht geladen werden"
     }
   },
   "onboarding": {
@@ -4077,7 +4142,95 @@
       "overdue": "Überfällig",
       "cancelled": "Storniert",
       "written_off": "Abgeschrieben"
-    }
+    },
+    "transactionTypes": {
+      "journal": "Buchungssatz",
+      "payment": "Zahlung",
+      "receipt": "Eingang",
+      "bank": "Bankbuchung",
+      "transfer": "Überweisung"
+    },
+    "relationTypes": {
+      "customer": "Kunde",
+      "supplier": "Lieferant",
+      "both": "Kunde & Lieferant"
+    },
+    "invoiceTypes": {
+      "sales": "Ausgangsrechnung",
+      "purchase": "Eingangsrechnung",
+      "credit_note": "Gutschrift"
+    },
+    "chartOfAccounts": "Kontenplan",
+    "journalEntries": "Buchungen",
+    "relations": "Geschäftspartner",
+    "costCenters": "Kostenstellen",
+    "budgets": "Budgets",
+    "bankAccounts": "Bankkonten",
+    "debtors": "Debitoren",
+    "creditors": "Kreditoren",
+    "totalOutstanding": "Gesamt ausstehend",
+    "totalPayable": "Gesamt zu zahlen",
+    "recentTransactions": "Aktuelle Buchungen",
+    "noTransactions": "Keine Buchungen gefunden",
+    "transactionNumber": "Buchungsnummer",
+    "description": "Beschreibung",
+    "posted": "Gebucht",
+    "newEntry": "Neue Buchung",
+    "newInvoice": "Neue Rechnung",
+    "newRelation": "Neuer Geschäftspartner",
+    "newCostCenter": "Neue Kostenstelle",
+    "newBudget": "Neues Budget",
+    "noRelations": "Keine Geschäftspartner gefunden",
+    "noCostCenters": "Keine Kostenstellen gefunden",
+    "noBudgets": "Keine Budgets gefunden",
+    "relationNumber": "Partnernummer",
+    "budget": "Budget",
+    "budgetAmount": "Budgetbetrag",
+    "actual": "Ist",
+    "remaining": "Verbleibend",
+    "account": "Konto",
+    "parentAccount": "Übergeordnetes Konto",
+    "noParent": "Kein übergeordnetes Konto",
+    "noSubtype": "Kein Untertyp",
+    "system": "System",
+    "draft": "Entwurf",
+    "transactionCreated": "Buchung erstellt",
+    "invoiceCreated": "Rechnung erstellt",
+    "relationCreated": "Geschäftspartner erstellt",
+    "costCenterCreated": "Kostenstelle erstellt",
+    "budgetCreated": "Budget erstellt",
+    "minTwoLines": "Mindestens zwei Buchungszeilen erforderlich",
+    "minOneLine": "Mindestens eine Rechnungszeile erforderlich",
+    "debitCreditMustMatch": "Soll und Haben müssen gleich sein",
+    "lines": "Buchungszeilen",
+    "debit": "Soll",
+    "credit": "Haben",
+    "selectAccount": "Konto auswählen",
+    "addLine": "Zeile hinzufügen",
+    "reference": "Referenz",
+    "invoiceType": "Rechnungstyp",
+    "selectRelation": "Partner auswählen",
+    "invoiceDate": "Rechnungsdatum",
+    "dueDate": "Fälligkeitsdatum",
+    "invoiceLines": "Rechnungszeilen",
+    "quantity": "Menge",
+    "unitPrice": "Stückpreis",
+    "lineTotal": "Zeilensumme",
+    "lineDescription": "Zeilenbeschreibung",
+    "subtotal": "Zwischensumme",
+    "notes": "Notizen",
+    "relationType": "Partnertyp",
+    "iban": "IBAN",
+    "vatNumber": "USt-IdNr.",
+    "paymentTermDays": "Zahlungsziel (Tage)",
+    "creditLimit": "Kreditlimit",
+    "fiscalYear": "Geschäftsjahr",
+    "allYears": "Alle Geschäftsjahre",
+    "costCenter": "Kostenstelle",
+    "noFiscalYearForReports": "Wählen Sie ein Geschäftsjahr, um Berichte anzuzeigen",
+    "selectFiscalYearFirst": "Wählen Sie zuerst ein Geschäftsjahr",
+    "noAccountsForReport": "Keine Konten für diesen Bericht gefunden. Erstellen Sie zuerst den Kontenplan.",
+    "noTransactionsForReport": "Keine Buchungen für diesen Zeitraum gefunden"
   },
   "projects": {
     "title": "Projekte",
