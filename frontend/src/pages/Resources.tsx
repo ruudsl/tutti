@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getResources, getResourceCategories, getResourceBookings, getResource, createResource, createResourceBooking, deleteResource, Resource, ResourceType, ResourceDetail, CreateResourceData, ResourceBooking } from '../api/resources';
+import { getResources, getResourceCategories, getResourceBookings, getResource, createResource, createResourceBooking, deleteResource, Resource, ResourceType, CreateResourceData, ResourceBooking } from '../api/resources';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';

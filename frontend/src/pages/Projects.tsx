@@ -561,53 +561,6 @@ function ProjectMembersTab({ members }: { members: ProjectDetail['members'] }) {
   );
 }
 
-function ProjectSetlistTab({ setlist }: { setlist: ProjectDetail['setlist'] }) {
-  const { t } = useTranslation();
-
-  if (setlist.length === 0) {
-    return (
-      <div className="text-center py-8 text-base-content/60">
-        <Icon name="listMusic" size={32} className="mx-auto mb-2 opacity-50" />
-        <p>{t('projects.noSetlist')}</p>
-      </div>
-    );
-  }
-
-  const totalDuration = setlist.reduce((sum, item) => sum + (item.durationMinutes || 0), 0);
-
-  return (
-    <div className="space-y-4">
-      {totalDuration > 0 && (
-        <div className="text-sm text-base-content/70">
-          {t('projects.totalDuration')}: {Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')}
-        </div>
-      )}
-      <div className="space-y-2">
-        {setlist.map((item, index) => (
-          <div key={item.id} className="flex items-center gap-4 p-3 bg-base-200 rounded-lg">
-            <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-medium">
-              {index + 1}
-            </span>
-            <div className="flex-1">
-              <div className="font-medium">
-                {item.musicTitleName || item.customTitle}
-              </div>
-              {item.notes && (
-                <div className="text-sm text-base-content/60">{item.notes}</div>
-              )}
-            </div>
-            {item.durationMinutes && (
-              <span className="text-sm text-base-content/70">
-                {item.durationMinutes} min
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ProjectScheduleTab({
   concerts,
   rehearsals

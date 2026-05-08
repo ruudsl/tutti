@@ -25,11 +25,10 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
   urgent: 'text-error',
 };
 
-export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: TaskTemplatesDialogProps) {
+export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCreated }: TaskTemplatesDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<TaskTemplate | null>(null);
-  const [selectedListId, setSelectedListId] = useState<string>('');
   const [customTitle, setCustomTitle] = useState('');
 
   const { data: templates = [], isLoading } = useQuery({
@@ -153,22 +152,6 @@ export function TaskTemplatesDialog({ taskLists, onClose, onTasksCreated }: Task
 
             {/* Options */}
             <div className="divider" />
-
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">{t('tasks.list')}</span>
-              </label>
-              <select
-                className="select select-bordered"
-                value={selectedListId}
-                onChange={(e) => setSelectedListId(e.target.value)}
-              >
-                <option value="">{selectedTemplate.listName || t('tasks.noList')}</option>
-                {taskLists.map((list) => (
-                  <option key={list.id} value={list.id}>{list.name}</option>
-                ))}
-              </select>
-            </div>
 
             <div className="form-control">
               <label className="label">
