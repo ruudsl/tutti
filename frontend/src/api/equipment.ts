@@ -111,3 +111,15 @@ export const recordEquipmentMaintenance = async (equipmentId: string, maintenanc
   const { data } = await api.post(`/equipment/${equipmentId}/record-maintenance`, maintenance);
   return data;
 };
+
+export interface EquipmentStats {
+  totalItems: number;
+  byStatus: Record<string, number>;
+  activeLoans: number;
+  totalValue: number;
+}
+
+export const getEquipmentStats = async (): Promise<EquipmentStats> => {
+  const { data } = await api.get('/equipment/stats');
+  return data;
+};

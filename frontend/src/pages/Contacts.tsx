@@ -17,10 +17,12 @@ import {
   updateContactCategory,
   deleteContactCategory,
   addContactPerson,
+  updateContactPerson,
   deleteContactPerson,
   Contact,
   ContactType,
   ContactCategory,
+  ContactPerson,
   CreateContactData,
 } from '../api/contacts';
 import { showSuccess, showError } from '../utils/toast';
@@ -28,6 +30,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
+import { CustomFieldFormSection, CustomFieldRenderer } from '../components/CustomFields';
 
 const CONTACT_TYPE_ICONS: Record<ContactType, IconName> = {
   organization: 'building',
@@ -744,6 +747,8 @@ function ContactDetailModal({
   const [isEditing, setIsEditing] = useState(false);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [newPerson, setNewPerson] = useState({ name: '', role: '', email: '', phone: '', isPrimary: false });
+  const [editingPerson, setEditingPerson] = useState<ContactPerson | null>(null);
+  const [editPersonData, setEditPersonData] = useState({ name: '', role: '', email: '', phone: '', isPrimary: false });
 
   const addPersonMutation = useMutation({
     mutationFn: (data: typeof newPerson) => addContactPerson(contact.id, data),
@@ -755,6 +760,19 @@ function ContactDetailModal({
     },
     onError: (error: any) => {
       showError(error.response?.data?.error || t('contacts.errorAddPerson'));
+    },
+  });
+
+  const updatePersonMutation = useMutation({
+    mutationFn: (data: { personId: string; updates: typeof editPersonData }) =>
+      updateContactPerson(contact.id, data.personId, data.updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact', contact.id] });
+      showSuccess(t('contacts.personUpdated'));
+      setEditingPerson(null);
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('contacts.errorUpdatePerson'));
     },
   });
 
@@ -942,29 +960,124 @@ function ContactDetailModal({
             <div className="list-group">
               {contact.contactPersons.map((person) => (
                 <div key={person.id} className="list-group-item">
-                  <div className="flex justify-between items-center">
+                  {editingPerson?.id === person.id ? (
                     <div>
-                      <strong>{person.name}</strong>
-                      {person.isPrimary && <span className="badge badge-info ml-1">{t('contacts.primary')}</span>}
-                      {person.role && <span className="text-muted ml-2">({person.role})</span>}
-                      <div className="small">
-                        {person.email && <a href={`mailto:${person.email}`} className="mr-2">{person.email}</a>}
-                        {person.phone && <a href={`tel:${person.phone}`}>{person.phone}</a>}
+                      <div className="row">
+                        <div className="col-md-6">
+                          <div className="form-group">
+                            <label>{t('contacts.name')} *</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={editPersonData.name}
+                              onChange={(e) => setEditPersonData({ ...editPersonData, name: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-6">
+                          <div className="form-group">
+                            <label>{t('contacts.role')}</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={editPersonData.role}
+                              onChange={(e) => setEditPersonData({ ...editPersonData, role: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="row">
+                        <div className="col-md-6">
+                          <div className="form-group">
+                            <label>{t('contacts.email')}</label>
+                            <input
+                              type="email"
+                              className="form-control"
+                              value={editPersonData.email}
+                              onChange={(e) => setEditPersonData({ ...editPersonData, email: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-6">
+                          <div className="form-group">
+                            <label>{t('contacts.phone')}</label>
+                            <input
+                              type="tel"
+                              className="form-control"
+                              value={editPersonData.phone}
+                              onChange={(e) => setEditPersonData({ ...editPersonData, phone: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={editPersonData.isPrimary}
+                            onChange={(e) => setEditPersonData({ ...editPersonData, isPrimary: e.target.checked })}
+                          />
+                          {t('contacts.isPrimary')}
+                        </label>
+                      </div>
+                      <div className="button-group">
+                        <button className="btn btn-outline" onClick={() => setEditingPerson(null)}>
+                          {t('common.cancel')}
+                        </button>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => updatePersonMutation.mutate({ personId: person.id, updates: editPersonData })}
+                          disabled={!editPersonData.name || updatePersonMutation.isPending}
+                        >
+                          {updatePersonMutation.isPending ? t('common.saving') : t('common.save')}
+                        </button>
                       </div>
                     </div>
-                    {canEdit && (
-                      <button
-                        className="btn btn-sm btn-danger-outline"
-                        onClick={() => {
-                          if (confirm(t('contacts.confirmDeletePerson'))) {
-                            deletePersonMutation.mutate(person.id);
-                          }
-                        }}
-                      >
-                        <Icon name="trash" />
-                      </button>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <strong>{person.name}</strong>
+                        {person.isPrimary && <span className="badge badge-info ml-1">{t('contacts.primary')}</span>}
+                        {person.role && <span className="text-muted ml-2">({person.role})</span>}
+                        <div className="small">
+                          {person.email && <a href={`mailto:${person.email}`} className="mr-2">{person.email}</a>}
+                          {person.phone && <a href={`tel:${person.phone}`}>{person.phone}</a>}
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div className="button-group">
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => {
+                              setEditingPerson(person);
+                              setEditPersonData({
+                                name: person.name,
+                                role: person.role || '',
+                                email: person.email || '',
+                                phone: person.phone || '',
+                                isPrimary: person.isPrimary,
+                              });
+                            }}
+                            title={t('common.edit')}
+                          >
+                            <Icon name="pencil" />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-danger-outline"
+                            onClick={() => {
+                              if (confirm(t('contacts.confirmDeletePerson'))) {
+                                deletePersonMutation.mutate(person.id);
+                              }
+                            }}
+                            title={t('common.delete')}
+                          >
+                            <Icon name="trash" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -973,6 +1086,23 @@ function ContactDetailModal({
           )}
         </div>
       )}
+
+      {/* Custom Fields Section */}
+      <div className="mt-3">
+        {canEdit ? (
+          <CustomFieldFormSection
+            entityType="contact"
+            entityId={contact.id}
+            autoSave={true}
+          />
+        ) : (
+          <CustomFieldRenderer
+            entityType="contact"
+            entityId={contact.id}
+            layout="horizontal"
+          />
+        )}
+      </div>
 
       <div className="modal-footer">
         {canEdit && (

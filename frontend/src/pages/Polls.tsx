@@ -7,6 +7,7 @@ import {
   getPolls,
   getPoll,
   createPoll,
+  updatePoll,
   changePollStatus,
   deletePoll,
   submitVote,
@@ -20,6 +21,7 @@ import {
   PollStatus,
   PollType,
   CreatePollData,
+  UpdatePollData,
 } from '../api/polls';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
@@ -59,6 +61,7 @@ export default function Polls() {
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showVoteModal, setShowVoteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const canCreate = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
@@ -238,6 +241,7 @@ export default function Polls() {
           poll={pollDetail}
           canEdit={canCreate}
           onClose={() => setSelectedPoll(null)}
+          onEdit={() => setShowEditModal(true)}
           onDelete={() => {
             if (confirm(t('polls.confirmDelete'))) {
               deleteMutation.mutate(selectedPoll.id);
@@ -273,6 +277,19 @@ export default function Polls() {
           }}
         />
       )}
+
+      {/* Edit Poll Modal */}
+      {showEditModal && pollDetail && (
+        <EditPollModal
+          poll={pollDetail}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['polls'] });
+            queryClient.invalidateQueries({ queryKey: ['poll', selectedPoll?.id] });
+            setShowEditModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -282,6 +299,7 @@ function PollDetailModal({
   poll,
   canEdit,
   onClose,
+  onEdit,
   onDelete,
   onStatusChange,
   onVote,
@@ -289,6 +307,7 @@ function PollDetailModal({
   poll: PollDetail;
   canEdit: boolean;
   onClose: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: PollStatus) => void;
   onVote: () => void;
@@ -510,6 +529,15 @@ function PollDetailModal({
         {/* Admin actions */}
         {canEdit && (
           <div className="border-t pt-4 flex flex-wrap gap-2">
+            {(poll.status === 'draft' || poll.status === 'active') && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={onEdit}
+              >
+                <Icon name="pencil" size={14} className="mr-1" />
+                {t('common.edit')}
+              </button>
+            )}
             {poll.status === 'draft' && (
               <button
                 className="btn btn-success btn-sm"
@@ -900,6 +928,227 @@ function CreatePollModal({
               <>
                 <Icon name="plus" size={16} className="mr-1" />
                 {t('polls.createPoll')}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Edit Poll Modal Component
+function EditPollModal({
+  poll,
+  onClose,
+  onSuccess,
+}: {
+  poll: PollDetail;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<UpdatePollData>({
+    title: poll.title,
+    description: poll.description || '',
+    pollType: poll.pollType,
+    isAnonymous: poll.isAnonymous,
+    showResultsBeforeClose: poll.showResultsBeforeClose,
+    allowComments: poll.allowComments,
+    maxSelections: poll.maxSelections,
+    startsAt: poll.startsAt,
+    endsAt: poll.endsAt,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdatePollData) => updatePoll(poll.id, data),
+    onSuccess: () => {
+      showSuccess(t('polls.updated'));
+      onSuccess();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('polls.errorUpdate'));
+    },
+  });
+
+  const canSubmit = formData.title?.trim();
+
+  const handleSubmit = () => {
+    updateMutation.mutate(formData);
+  };
+
+  // Check if poll has votes - restrict certain edits
+  const hasVotes = poll.totalVoters > 0;
+
+  return (
+    <Modal onClose={onClose} size="large" title={t('polls.editPoll')}>
+      <div className="space-y-4">
+        {hasVotes && (
+          <div className="alert alert-warning">
+            <Icon name="info" size={16} />
+            <span>{t('polls.editWarningHasVotes')}</span>
+          </div>
+        )}
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('polls.pollTitle')} *</span>
+          </label>
+          <input
+            type="text"
+            className="input input-bordered"
+            value={formData.title}
+            onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+            placeholder={t('polls.titlePlaceholder')}
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('polls.description')}</span>
+          </label>
+          <textarea
+            className="textarea textarea-bordered"
+            value={formData.description}
+            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder={t('polls.descriptionPlaceholder')}
+            rows={3}
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('polls.pollType')}</span>
+          </label>
+          <select
+            className="select select-bordered"
+            value={formData.pollType}
+            onChange={(e) => setFormData((prev) => ({ ...prev, pollType: e.target.value as PollType }))}
+            disabled={hasVotes}
+          >
+            <option value="single">{t('polls.typeSingle')}</option>
+            <option value="multiple">{t('polls.typeMultiple')}</option>
+            <option value="ranked">{t('polls.typeRanked')}</option>
+          </select>
+          {hasVotes && (
+            <label className="label">
+              <span className="label-text-alt text-warning">
+                {t('polls.cannotChangeTypeWithVotes')}
+              </span>
+            </label>
+          )}
+        </div>
+
+        {formData.pollType === 'multiple' && (
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('polls.maxSelections')}</span>
+            </label>
+            <input
+              type="number"
+              className="input input-bordered w-24"
+              min={1}
+              value={formData.maxSelections || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  maxSelections: e.target.value ? parseInt(e.target.value) : null,
+                }))
+              }
+              placeholder={t('polls.unlimited')}
+              disabled={hasVotes}
+            />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('polls.startsAt')}</span>
+            </label>
+            <input
+              type="datetime-local"
+              className="input input-bordered"
+              value={formData.startsAt ? formData.startsAt.slice(0, 16) : ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  startsAt: e.target.value ? new Date(e.target.value).toISOString() : null,
+                }))
+              }
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('polls.endsAt')}</span>
+            </label>
+            <input
+              type="datetime-local"
+              className="input input-bordered"
+              value={formData.endsAt ? formData.endsAt.slice(0, 16) : ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  endsAt: e.target.value ? new Date(e.target.value).toISOString() : null,
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        <div className="divider">{t('polls.settings')}</div>
+
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={formData.isAnonymous}
+              onChange={(e) => setFormData((prev) => ({ ...prev, isAnonymous: e.target.checked }))}
+              disabled={hasVotes}
+            />
+            <span className="text-sm">{t('polls.anonymousVoting')}</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={formData.showResultsBeforeClose}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, showResultsBeforeClose: e.target.checked }))
+              }
+            />
+            <span className="text-sm">{t('polls.showResultsBeforeClose')}</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm"
+              checked={formData.allowComments}
+              onChange={(e) => setFormData((prev) => ({ ...prev, allowComments: e.target.checked }))}
+            />
+            <span className="text-sm">{t('polls.allowComments')}</span>
+          </label>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit || updateMutation.isPending}
+          >
+            {updateMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              <>
+                <Icon name="check" size={16} className="mr-1" />
+                {t('common.save')}
               </>
             )}
           </button>

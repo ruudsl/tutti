@@ -9,6 +9,7 @@ import {
   createOutfit,
   updateOutfit,
   deleteOutfit,
+  reorderOutfits,
   Outfit,
   CreateOutfitData,
 } from '../api/outfits';
@@ -17,6 +18,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
+import { SortableList } from '../components/SortableList';
 
 export default function Outfits() {
   const { user } = useAuth();
@@ -36,6 +38,7 @@ export default function Outfits() {
     isDefault: false,
   });
   const [itemInput, setItemInput] = useState('');
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   const canManage = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
@@ -88,6 +91,23 @@ export default function Outfits() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: reorderOutfits,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outfits'] });
+      showSuccess(t('outfits.reordered'));
+      setIsReorderMode(false);
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('outfits.errorReorder'));
+    },
+  });
+
+  const handleReorder = (reorderedOutfits: Outfit[]) => {
+    const outfitIds = reorderedOutfits.map(o => o.id);
+    reorderMutation.mutate(outfitIds);
+  };
+
   const resetForm = () => {
     setFormData({ name: '', description: '', colorCode: '', items: [], isDefault: false });
     setItemInput('');
@@ -130,10 +150,23 @@ export default function Outfits() {
       <div className="page-header flex justify-between items-center mb-4">
         <h1>{t('outfits.title')}</h1>
         {canManage && (
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            <Icon name="plus" className="w-4 h-4 mr-2" />
-            {t('outfits.add')}
-          </button>
+          <div className="flex gap-2">
+            {outfits.length > 1 && (
+              <button
+                className={`btn ${isReorderMode ? 'btn-warning' : 'btn-outline'}`}
+                onClick={() => setIsReorderMode(!isReorderMode)}
+              >
+                <Icon name="menu" className="w-4 h-4 mr-2" />
+                {isReorderMode ? t('common.cancel') : t('outfits.reorder')}
+              </button>
+            )}
+            {!isReorderMode && (
+              <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+                <Icon name="plus" className="w-4 h-4 mr-2" />
+                {t('outfits.add')}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -141,6 +174,42 @@ export default function Outfits() {
         <div className="card p-8 text-center">
           <Icon name="package" className="w-12 h-12 mx-auto mb-4 text-base-content/30" />
           <p className="text-base-content/60">{t('outfits.empty')}</p>
+        </div>
+      ) : isReorderMode ? (
+        <div className="space-y-2">
+          <p className="text-sm text-base-content/70 mb-4">{t('outfits.reorderHint')}</p>
+          <SortableList
+            items={outfits}
+            onReorder={handleReorder}
+            disabled={reorderMutation.isPending}
+            renderItem={(outfit) => (
+              <div className="card bg-base-100 shadow-md p-4">
+                <div className="flex items-center gap-4">
+                  <Icon name="menu" className="w-5 h-5 text-base-content/50 cursor-grab" />
+                  <div className="flex items-center gap-2 flex-1">
+                    {outfit.colorCode && (
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: outfit.colorCode }}
+                      />
+                    )}
+                    <span className="font-medium">{outfit.name}</span>
+                    {outfit.isDefault && (
+                      <span className="badge badge-primary badge-sm">{t('outfits.default')}</span>
+                    )}
+                  </div>
+                  <span className="text-sm text-base-content/50">
+                    {t('outfits.usedIn', { count: outfit.usageCount })}
+                  </span>
+                </div>
+              </div>
+            )}
+          />
+          {reorderMutation.isPending && (
+            <div className="flex justify-center p-4">
+              <span className="loading loading-spinner loading-md" />
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

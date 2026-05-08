@@ -24,6 +24,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
+import { PostCategoriesManager } from '../components/PostCategoriesManager';
 
 const STATUS_COLORS: Record<PostStatus, string> = {
   draft: 'badge-secondary',
@@ -44,6 +45,7 @@ export default function Posts() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCategoriesManager, setShowCategoriesManager] = useState(false);
 
   const canCreate = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
@@ -90,13 +92,23 @@ export default function Posts() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('posts.title')}</h1>
         {canCreate && (
-          <button
-            className="btn btn-primary gap-2"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Icon name="plus" size={16} />
-            {t('posts.createPost')}
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-outline btn-sm gap-1"
+              onClick={() => setShowCategoriesManager(true)}
+              title={t('posts.categories.manage')}
+            >
+              <Icon name="folder" size={16} />
+              {t('posts.categories.title')}
+            </button>
+            <button
+              className="btn btn-primary gap-2"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Icon name="plus" size={16} />
+              {t('posts.createPost')}
+            </button>
+          </div>
         )}
       </div>
 
@@ -282,6 +294,11 @@ export default function Posts() {
             setShowEditModal(false);
           }}
         />
+      )}
+
+      {/* Categories Manager Modal */}
+      {showCategoriesManager && (
+        <PostCategoriesManager onClose={() => setShowCategoriesManager(false)} />
       )}
     </div>
   );

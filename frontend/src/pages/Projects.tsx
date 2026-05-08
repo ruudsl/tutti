@@ -8,6 +8,8 @@ import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { formatDate } from '../utils/dateFormat';
+import { ProjectEventsSection } from '../components/ProjectEventsSection';
+import { ProjectSetlistSection } from '../components/ProjectSetlistSection';
 
 const STATUS_COLORS: Record<ProjectStatus, string> = {
   planning: 'badge-info',
@@ -332,12 +334,18 @@ function ProjectDetailModal({
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'setlist' | 'schedule'>('overview');
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'setlist' | 'events' | 'schedule'>('overview');
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
   });
+
+  const handleProjectUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+  };
 
   if (isLoading) {
     return (
@@ -410,7 +418,7 @@ function ProjectDetailModal({
         </div>
 
         {/* Tabs */}
-        <div className="tabs tabs-boxed">
+        <div className="tabs tabs-boxed flex-wrap">
           <button
             className={`tab ${activeTab === 'overview' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('overview')}
@@ -433,6 +441,13 @@ function ProjectDetailModal({
             {t('projects.setlist')} ({project.setlist.length})
           </button>
           <button
+            className={`tab ${activeTab === 'events' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('events')}
+          >
+            <Icon name="link" size={16} className="mr-1" />
+            {t('projects.events', 'Events')}
+          </button>
+          <button
             className={`tab ${activeTab === 'schedule' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('schedule')}
           >
@@ -445,7 +460,8 @@ function ProjectDetailModal({
         <div className="min-h-[300px]">
           {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
           {activeTab === 'members' && <ProjectMembersTab members={project.members} />}
-          {activeTab === 'setlist' && <ProjectSetlistTab setlist={project.setlist} />}
+          {activeTab === 'setlist' && <ProjectSetlistSection project={project} onUpdate={handleProjectUpdate} />}
+          {activeTab === 'events' && <ProjectEventsSection project={project} onUpdate={handleProjectUpdate} />}
           {activeTab === 'schedule' && <ProjectScheduleTab concerts={project.concerts} rehearsals={project.rehearsals} />}
         </div>
       </div>

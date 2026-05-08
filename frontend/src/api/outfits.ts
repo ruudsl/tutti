@@ -61,3 +61,8 @@ export const unlinkOutfitFromConcert = async (outfitId: string, concertId: strin
   const { data } = await api.delete(`/outfits/${outfitId}/concerts/${concertId}`);
   return data;
 };
+
+export const reorderOutfits = async (outfitIds: string[]): Promise<{ message: string }> => {
+  const { data } = await api.put('/outfits/reorder', { outfitIds });
+  return data;
+};

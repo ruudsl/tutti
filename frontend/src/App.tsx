@@ -113,6 +113,7 @@ import GuestList from './pages/GuestList';
 import PaymentSettings from './pages/PaymentSettings';
 import PublicTicketSale from './pages/PublicTicketSale';
 import PublicCalendar from './pages/PublicCalendar';
+import InfoScreen from './pages/InfoScreen';
 import MockPayment from './pages/MockPayment';
 import TicketTransfer from './pages/TicketTransfer';
 import AcceptTransfer from './pages/AcceptTransfer';
@@ -186,6 +187,8 @@ function AppRoutes() {
       <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
       {/* Public calendar embed and info screen */}
       <Route path="/calendar/:slug" element={<PublicCalendar />} />
+      {/* Dedicated info screen for lobby displays */}
+      <Route path="/info-screen/:slug" element={<InfoScreen />} />
       <Route
         path="/"
         element={

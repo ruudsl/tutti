@@ -10,7 +10,15 @@ import {
   deleteWorkflow,
   runWorkflow,
   getWorkflowExecutions,
+  addWorkflowTrigger,
+  removeWorkflowTrigger,
+  updateWorkflowTrigger,
+  addWorkflowAction,
+  removeWorkflowAction,
+  updateWorkflowAction,
   Workflow,
+  WorkflowTrigger,
+  WorkflowAction,
   CreateWorkflowData,
 } from '../api/workflows';
 import { showSuccess, showError } from '../utils/toast';
@@ -238,73 +246,18 @@ export default function Workflows() {
 
       {/* Detail Modal */}
       {selectedWorkflow && workflowDetail && (
-        <Modal onClose={() => setSelectedWorkflow(null)} title={workflowDetail.name} size="large">
-          <div className="space-y-6">
-            {workflowDetail.description && <p>{workflowDetail.description}</p>}
-
-            <div>
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <Icon name="warning" className="w-4 h-4" />
-                {t('workflows.triggersTitle')}
-              </h4>
-              <div className="space-y-2">
-                {workflowDetail.triggers.map((trigger) => (
-                  <div key={trigger.id} className="flex items-center gap-2 p-2 rounded bg-base-200">
-                    <Icon name={TRIGGER_TYPE_ICONS[trigger.triggerType] || 'circle'} className="w-4 h-4" />
-                    <span>{t(`workflows.triggerType.${trigger.triggerType}`)}</span>
-                    {trigger.eventName && <span className="badge badge-sm">{trigger.eventName}</span>}
-                    {trigger.scheduleCron && <code className="text-xs bg-base-300 px-1 rounded">{trigger.scheduleCron}</code>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <Icon name="play" className="w-4 h-4" />
-                {t('workflows.actionsTitle')}
-              </h4>
-              <div className="space-y-2">
-                {workflowDetail.actions.map((action, idx) => (
-                  <div key={action.id} className="flex items-center gap-2 p-2 rounded bg-base-200">
-                    <span className="badge badge-sm badge-outline">{idx + 1}</span>
-                    <Icon name={ACTION_TYPE_ICONS[action.actionType] || 'circle'} className="w-4 h-4" />
-                    <span>{t(`workflows.actionType.${action.actionType}`)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4 border-t">
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => runMutation.mutate(selectedWorkflow.id)}
-                disabled={!workflowDetail.isActive || runMutation.isPending}
-              >
-                <Icon name="play" className="w-4 h-4 mr-1" />
-                {t('workflows.run')}
-              </button>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => setShowExecutionsModal(true)}
-              >
-                <Icon name="clipboard" className="w-4 h-4 mr-1" />
-                {t('workflows.viewExecutions')}
-              </button>
-              <button
-                className="btn btn-error btn-outline btn-sm"
-                onClick={() => {
-                  if (confirm(t('workflows.confirmDelete'))) {
-                    deleteMutation.mutate(selectedWorkflow.id);
-                  }
-                }}
-              >
-                <Icon name="trash" className="w-4 h-4 mr-1" />
-                {t('common.delete')}
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <WorkflowDetailModal
+          workflow={workflowDetail}
+          onClose={() => setSelectedWorkflow(null)}
+          onRun={() => runMutation.mutate(selectedWorkflow.id)}
+          onDelete={() => {
+            if (confirm(t('workflows.confirmDelete'))) {
+              deleteMutation.mutate(selectedWorkflow.id);
+            }
+          }}
+          onViewExecutions={() => setShowExecutionsModal(true)}
+          isRunning={runMutation.isPending}
+        />
       )}
 
       {/* Executions Modal */}
@@ -418,5 +371,600 @@ export default function Workflows() {
         </form>
       </Modal>}
     </div>
+  );
+}
+
+interface WorkflowDetailModalProps {
+  workflow: {
+    id: string;
+    name: string;
+    description?: string;
+    isActive: boolean;
+    triggers: WorkflowTrigger[];
+    actions: WorkflowAction[];
+  };
+  onClose: () => void;
+  onRun: () => void;
+  onDelete: () => void;
+  onViewExecutions: () => void;
+  isRunning: boolean;
+}
+
+function WorkflowDetailModal({
+  workflow,
+  onClose,
+  onRun,
+  onDelete,
+  onViewExecutions,
+  isRunning,
+}: WorkflowDetailModalProps) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
+  const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const [showAddTrigger, setShowAddTrigger] = useState(false);
+  const [showAddAction, setShowAddAction] = useState(false);
+
+  const [triggerFormData, setTriggerFormData] = useState<Partial<WorkflowTrigger>>({});
+  const [actionFormData, setActionFormData] = useState<Partial<WorkflowAction>>({});
+
+  const addTriggerMutation = useMutation({
+    mutationFn: (data: Omit<WorkflowTrigger, 'id' | 'isActive'>) => addWorkflowTrigger(workflow.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.triggerAdded'));
+      setShowAddTrigger(false);
+      setTriggerFormData({});
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorAddTrigger'));
+    },
+  });
+
+  const updateTriggerMutation = useMutation({
+    mutationFn: ({ triggerId, updates }: { triggerId: string; updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>> }) =>
+      updateWorkflowTrigger(workflow.id, triggerId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.triggerUpdated'));
+      setEditingTriggerId(null);
+      setTriggerFormData({});
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorUpdateTrigger'));
+    },
+  });
+
+  const removeTriggerMutation = useMutation({
+    mutationFn: (triggerId: string) => removeWorkflowTrigger(workflow.id, triggerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.triggerRemoved'));
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorRemoveTrigger'));
+    },
+  });
+
+  const addActionMutation = useMutation({
+    mutationFn: (data: Omit<WorkflowAction, 'id' | 'isActive'>) => addWorkflowAction(workflow.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.actionAdded'));
+      setShowAddAction(false);
+      setActionFormData({});
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorAddAction'));
+    },
+  });
+
+  const updateActionMutation = useMutation({
+    mutationFn: ({ actionId, updates }: { actionId: string; updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>> }) =>
+      updateWorkflowAction(workflow.id, actionId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.actionUpdated'));
+      setEditingActionId(null);
+      setActionFormData({});
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorUpdateAction'));
+    },
+  });
+
+  const removeActionMutation = useMutation({
+    mutationFn: (actionId: string) => removeWorkflowAction(workflow.id, actionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+      showSuccess(t('workflows.actionRemoved'));
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('workflows.errorRemoveAction'));
+    },
+  });
+
+  const startEditTrigger = (trigger: WorkflowTrigger) => {
+    setEditingTriggerId(trigger.id);
+    setTriggerFormData({
+      triggerType: trigger.triggerType,
+      eventName: trigger.eventName || '',
+      scheduleCron: trigger.scheduleCron || '',
+      dateFieldEntity: trigger.dateFieldEntity || '',
+      dateFieldName: trigger.dateFieldName || '',
+      daysBefore: trigger.daysBefore,
+      daysAfter: trigger.daysAfter,
+      timeOfDay: trigger.timeOfDay || '',
+      conditions: trigger.conditions,
+    });
+  };
+
+  const startEditAction = (action: WorkflowAction) => {
+    setEditingActionId(action.id);
+    setActionFormData({
+      actionType: action.actionType,
+      actionOrder: action.actionOrder,
+      config: action.config,
+      conditions: action.conditions,
+    });
+  };
+
+  const renderTriggerForm = (isNew: boolean) => (
+    <div className="p-3 rounded bg-base-200 space-y-3">
+      <div className="form-control">
+        <label className="label"><span className="label-text">{t('workflows.triggerTypeLabel')}</span></label>
+        <select
+          className="select select-bordered select-sm"
+          value={triggerFormData.triggerType || 'manual'}
+          onChange={(e) => setTriggerFormData({ ...triggerFormData, triggerType: e.target.value as WorkflowTrigger['triggerType'] })}
+        >
+          <option value="manual">{t('workflows.triggerType.manual')}</option>
+          <option value="event">{t('workflows.triggerType.event')}</option>
+          <option value="schedule">{t('workflows.triggerType.schedule')}</option>
+          <option value="date_field">{t('workflows.triggerType.date_field')}</option>
+        </select>
+      </div>
+
+      {triggerFormData.triggerType === 'event' && (
+        <div className="form-control">
+          <label className="label"><span className="label-text">{t('workflows.eventName')}</span></label>
+          <input
+            type="text"
+            className="input input-bordered input-sm"
+            placeholder="e.g., member.created"
+            value={triggerFormData.eventName || ''}
+            onChange={(e) => setTriggerFormData({ ...triggerFormData, eventName: e.target.value })}
+          />
+        </div>
+      )}
+
+      {triggerFormData.triggerType === 'schedule' && (
+        <div className="form-control">
+          <label className="label"><span className="label-text">{t('workflows.cronExpression')}</span></label>
+          <input
+            type="text"
+            className="input input-bordered input-sm"
+            placeholder="0 9 * * 1"
+            value={triggerFormData.scheduleCron || ''}
+            onChange={(e) => setTriggerFormData({ ...triggerFormData, scheduleCron: e.target.value })}
+          />
+        </div>
+      )}
+
+      {triggerFormData.triggerType === 'date_field' && (
+        <>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.dateFieldEntity')}</span></label>
+            <input
+              type="text"
+              className="input input-bordered input-sm"
+              placeholder="e.g., event"
+              value={triggerFormData.dateFieldEntity || ''}
+              onChange={(e) => setTriggerFormData({ ...triggerFormData, dateFieldEntity: e.target.value })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.dateFieldName')}</span></label>
+            <input
+              type="text"
+              className="input input-bordered input-sm"
+              placeholder="e.g., startDate"
+              value={triggerFormData.dateFieldName || ''}
+              onChange={(e) => setTriggerFormData({ ...triggerFormData, dateFieldName: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="form-control flex-1">
+              <label className="label"><span className="label-text">{t('workflows.daysBefore')}</span></label>
+              <input
+                type="number"
+                className="input input-bordered input-sm"
+                value={triggerFormData.daysBefore ?? ''}
+                onChange={(e) => setTriggerFormData({ ...triggerFormData, daysBefore: e.target.value ? parseInt(e.target.value) : undefined })}
+              />
+            </div>
+            <div className="form-control flex-1">
+              <label className="label"><span className="label-text">{t('workflows.daysAfter')}</span></label>
+              <input
+                type="number"
+                className="input input-bordered input-sm"
+                value={triggerFormData.daysAfter ?? ''}
+                onChange={(e) => setTriggerFormData({ ...triggerFormData, daysAfter: e.target.value ? parseInt(e.target.value) : undefined })}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => {
+            if (isNew) {
+              setShowAddTrigger(false);
+            } else {
+              setEditingTriggerId(null);
+            }
+            setTriggerFormData({});
+          }}
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => {
+            if (isNew) {
+              addTriggerMutation.mutate({
+                triggerType: triggerFormData.triggerType || 'manual',
+                eventName: triggerFormData.eventName,
+                scheduleCron: triggerFormData.scheduleCron,
+                dateFieldEntity: triggerFormData.dateFieldEntity,
+                dateFieldName: triggerFormData.dateFieldName,
+                daysBefore: triggerFormData.daysBefore,
+                daysAfter: triggerFormData.daysAfter,
+                timeOfDay: triggerFormData.timeOfDay,
+                conditions: triggerFormData.conditions,
+              });
+            } else {
+              updateTriggerMutation.mutate({
+                triggerId: editingTriggerId!,
+                updates: {
+                  triggerType: triggerFormData.triggerType,
+                  eventName: triggerFormData.eventName,
+                  scheduleCron: triggerFormData.scheduleCron,
+                  dateFieldEntity: triggerFormData.dateFieldEntity,
+                  dateFieldName: triggerFormData.dateFieldName,
+                  daysBefore: triggerFormData.daysBefore,
+                  daysAfter: triggerFormData.daysAfter,
+                  timeOfDay: triggerFormData.timeOfDay,
+                  conditions: triggerFormData.conditions,
+                },
+              });
+            }
+          }}
+          disabled={addTriggerMutation.isPending || updateTriggerMutation.isPending}
+        >
+          {(addTriggerMutation.isPending || updateTriggerMutation.isPending) ? t('common.saving') : t('common.save')}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderActionForm = (isNew: boolean) => (
+    <div className="p-3 rounded bg-base-200 space-y-3">
+      <div className="form-control">
+        <label className="label"><span className="label-text">{t('workflows.actionTypeLabel')}</span></label>
+        <select
+          className="select select-bordered select-sm"
+          value={actionFormData.actionType || 'send_notification'}
+          onChange={(e) => setActionFormData({ ...actionFormData, actionType: e.target.value as WorkflowAction['actionType'] })}
+        >
+          <option value="send_notification">{t('workflows.actionType.send_notification')}</option>
+          <option value="send_email">{t('workflows.actionType.send_email')}</option>
+          <option value="create_task">{t('workflows.actionType.create_task')}</option>
+          <option value="update_field">{t('workflows.actionType.update_field')}</option>
+          <option value="add_to_group">{t('workflows.actionType.add_to_group')}</option>
+          <option value="remove_from_group">{t('workflows.actionType.remove_from_group')}</option>
+          <option value="webhook">{t('workflows.actionType.webhook')}</option>
+          <option value="delay">{t('workflows.actionType.delay')}</option>
+        </select>
+      </div>
+
+      {actionFormData.actionType === 'send_email' && (
+        <>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.emailSubject')}</span></label>
+            <input
+              type="text"
+              className="input input-bordered input-sm"
+              value={(actionFormData.config as Record<string, unknown>)?.subject as string || ''}
+              onChange={(e) => setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), subject: e.target.value },
+              })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.emailTemplate')}</span></label>
+            <textarea
+              className="textarea textarea-bordered textarea-sm"
+              rows={3}
+              value={(actionFormData.config as Record<string, unknown>)?.template as string || ''}
+              onChange={(e) => setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), template: e.target.value },
+              })}
+            />
+          </div>
+        </>
+      )}
+
+      {actionFormData.actionType === 'send_notification' && (
+        <div className="form-control">
+          <label className="label"><span className="label-text">{t('workflows.notificationMessage')}</span></label>
+          <textarea
+            className="textarea textarea-bordered textarea-sm"
+            rows={2}
+            value={(actionFormData.config as Record<string, unknown>)?.message as string || ''}
+            onChange={(e) => setActionFormData({
+              ...actionFormData,
+              config: { ...(actionFormData.config || {}), message: e.target.value },
+            })}
+          />
+        </div>
+      )}
+
+      {actionFormData.actionType === 'webhook' && (
+        <>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.webhookUrl')}</span></label>
+            <input
+              type="url"
+              className="input input-bordered input-sm"
+              value={(actionFormData.config as Record<string, unknown>)?.url as string || ''}
+              onChange={(e) => setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), url: e.target.value },
+              })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label"><span className="label-text">{t('workflows.webhookMethod')}</span></label>
+            <select
+              className="select select-bordered select-sm"
+              value={(actionFormData.config as Record<string, unknown>)?.method as string || 'POST'}
+              onChange={(e) => setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), method: e.target.value },
+              })}
+            >
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+          </div>
+        </>
+      )}
+
+      {actionFormData.actionType === 'delay' && (
+        <div className="form-control">
+          <label className="label"><span className="label-text">{t('workflows.delayMinutes')}</span></label>
+          <input
+            type="number"
+            className="input input-bordered input-sm"
+            min="1"
+            value={(actionFormData.config as Record<string, unknown>)?.minutes as number || ''}
+            onChange={(e) => setActionFormData({
+              ...actionFormData,
+              config: { ...(actionFormData.config || {}), minutes: parseInt(e.target.value) || 0 },
+            })}
+          />
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => {
+            if (isNew) {
+              setShowAddAction(false);
+            } else {
+              setEditingActionId(null);
+            }
+            setActionFormData({});
+          }}
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => {
+            if (isNew) {
+              addActionMutation.mutate({
+                actionType: actionFormData.actionType || 'send_notification',
+                actionOrder: workflow.actions.length,
+                config: actionFormData.config || {},
+                conditions: actionFormData.conditions,
+              });
+            } else {
+              updateActionMutation.mutate({
+                actionId: editingActionId!,
+                updates: {
+                  actionType: actionFormData.actionType,
+                  actionOrder: actionFormData.actionOrder,
+                  config: actionFormData.config,
+                  conditions: actionFormData.conditions,
+                },
+              });
+            }
+          }}
+          disabled={addActionMutation.isPending || updateActionMutation.isPending}
+        >
+          {(addActionMutation.isPending || updateActionMutation.isPending) ? t('common.saving') : t('common.save')}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal onClose={onClose} title={workflow.name} size="large">
+      <div className="space-y-6">
+        {workflow.description && <p>{workflow.description}</p>}
+
+        {/* Triggers Section */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Icon name="warning" className="w-4 h-4" />
+              {t('workflows.triggersTitle')}
+            </h4>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setShowAddTrigger(true);
+                setTriggerFormData({ triggerType: 'manual' });
+              }}
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              {t('workflows.addTrigger')}
+            </button>
+          </div>
+
+          {showAddTrigger && renderTriggerForm(true)}
+
+          <div className="space-y-2">
+            {workflow.triggers.map((trigger) => (
+              <div key={trigger.id}>
+                {editingTriggerId === trigger.id ? (
+                  renderTriggerForm(false)
+                ) : (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-base-200">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Icon name={TRIGGER_TYPE_ICONS[trigger.triggerType] || 'circle'} className="w-4 h-4" />
+                      <span>{t(`workflows.triggerType.${trigger.triggerType}`)}</span>
+                      {trigger.eventName && <span className="badge badge-sm">{trigger.eventName}</span>}
+                      {trigger.scheduleCron && <code className="text-xs bg-base-300 px-1 rounded">{trigger.scheduleCron}</code>}
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => startEditTrigger(trigger)}
+                        title={t('common.edit')}
+                      >
+                        <Icon name="pencil" className="w-3 h-3" />
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-xs text-error"
+                        onClick={() => {
+                          if (confirm(t('workflows.confirmRemoveTrigger'))) {
+                            removeTriggerMutation.mutate(trigger.id);
+                          }
+                        }}
+                        title={t('common.delete')}
+                      >
+                        <Icon name="trash" className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {workflow.triggers.length === 0 && !showAddTrigger && (
+              <p className="text-base-content/60 text-sm">{t('workflows.noTriggers')}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Actions Section */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Icon name="play" className="w-4 h-4" />
+              {t('workflows.actionsTitle')}
+            </h4>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setShowAddAction(true);
+                setActionFormData({ actionType: 'send_notification', config: {} });
+              }}
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              {t('workflows.addAction')}
+            </button>
+          </div>
+
+          {showAddAction && renderActionForm(true)}
+
+          <div className="space-y-2">
+            {workflow.actions.map((action, idx) => (
+              <div key={action.id}>
+                {editingActionId === action.id ? (
+                  renderActionForm(false)
+                ) : (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded bg-base-200">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="badge badge-sm badge-outline">{idx + 1}</span>
+                      <Icon name={ACTION_TYPE_ICONS[action.actionType] || 'circle'} className="w-4 h-4" />
+                      <span>{t(`workflows.actionType.${action.actionType}`)}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => startEditAction(action)}
+                        title={t('common.edit')}
+                      >
+                        <Icon name="pencil" className="w-3 h-3" />
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-xs text-error"
+                        onClick={() => {
+                          if (confirm(t('workflows.confirmRemoveAction'))) {
+                            removeActionMutation.mutate(action.id);
+                          }
+                        }}
+                        title={t('common.delete')}
+                      >
+                        <Icon name="trash" className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {workflow.actions.length === 0 && !showAddAction && (
+              <p className="text-base-content/60 text-sm">{t('workflows.noActions')}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-4 border-t">
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={onRun}
+            disabled={!workflow.isActive || isRunning}
+          >
+            <Icon name="play" className="w-4 h-4 mr-1" />
+            {t('workflows.run')}
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={onViewExecutions}
+          >
+            <Icon name="clipboard" className="w-4 h-4 mr-1" />
+            {t('workflows.viewExecutions')}
+          </button>
+          <button
+            className="btn btn-error btn-outline btn-sm"
+            onClick={onDelete}
+          >
+            <Icon name="trash" className="w-4 h-4 mr-1" />
+            {t('common.delete')}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

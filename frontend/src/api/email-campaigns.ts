@@ -147,3 +147,61 @@ export async function sendTestEmail(campaignId: string, email: string): Promise<
   const response = await api.post(`/email-campaigns/${campaignId}/test`, { email });
   return response.data;
 }
+
+// Attachments
+export interface CampaignAttachment {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+}
+
+export async function getCampaignAttachments(campaignId: string): Promise<CampaignAttachment[]> {
+  const response = await api.get(`/email-campaigns/${campaignId}/attachments`);
+  return response.data;
+}
+
+export async function uploadCampaignAttachment(campaignId: string, file: File): Promise<{ id: string; message: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post(`/email-campaigns/${campaignId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
+export async function deleteCampaignAttachment(campaignId: string, attachmentId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/email-campaigns/${campaignId}/attachments/${attachmentId}`);
+  return response.data;
+}
+
+// Recipients
+export type RecipientDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'opened' | 'clicked' | 'bounced' | 'failed';
+
+export interface CampaignRecipient {
+  id: string;
+  email: string;
+  name: string;
+  status: RecipientDeliveryStatus;
+  sentAt?: string;
+  deliveredAt?: string;
+  openedAt?: string;
+  clickedAt?: string;
+  bouncedAt?: string;
+  bounceReason?: string;
+}
+
+export interface CampaignRecipientsResponse {
+  recipients: CampaignRecipient[];
+  total: number;
+  byStatus: Record<RecipientDeliveryStatus, number>;
+}
+
+export async function getCampaignRecipients(campaignId: string): Promise<CampaignRecipientsResponse> {
+  const response = await api.get(`/email-campaigns/${campaignId}/recipients`);
+  return response.data;
+}

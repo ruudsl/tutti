@@ -39,7 +39,10 @@
     "orchestra": "Orkest",
     "notes": "Notities",
     "allOrchestras": "Alle orkesten",
-    "create": "Aanmaken"
+    "create": "Aanmaken",
+    "more": "meer",
+    "show": "Tonen",
+    "hide": "Verbergen"
   },
   "music": {
     "title": "Muziekstuk",
@@ -638,7 +641,13 @@
     "templateDeleted": "Template verwijderd",
     "taskCreatedFromTemplate": "Taak aangemaakt van template",
     "errorCreateTemplate": "Fout bij aanmaken template",
-    "errorDeleteTemplate": "Fout bij verwijderen template"
+    "errorDeleteTemplate": "Fout bij verwijderen template",
+    "color": "Kleur",
+    "statusSummary": "Statusoverzicht",
+    "totalOpen": "Totaal open",
+    "myTasks": "Mijn taken",
+    "overdueTasks": "Achterstallig",
+    "recentlyCompleted": "Recent voltooid"
   },
   "posts": {
     "title": "Berichten",
@@ -4189,6 +4198,7 @@
     "archive": "Archiveren",
     "overview": "Overzicht",
     "setlist": "Setlist",
+    "events": "Evenementen",
     "schedule": "Planning",
     "role": "Rol",
     "noMembers": "Nog geen leden toegewezen.",
@@ -4216,6 +4226,30 @@
       "invited": "Uitgenodigd",
       "confirmed": "Bevestigd",
       "declined": "Afgewezen"
+    },
+    "events": {
+      "linkConcert": "Concert koppelen",
+      "unlinkConcert": "Concert ontkoppelen",
+      "linkRehearsal": "Repetitie koppelen",
+      "unlinkRehearsal": "Repetitie ontkoppelen",
+      "concertLinked": "Concert gekoppeld aan project",
+      "concertUnlinked": "Concert ontkoppeld van project",
+      "rehearsalLinked": "Repetitie gekoppeld aan project",
+      "rehearsalUnlinked": "Repetitie ontkoppeld van project",
+      "errorLinkConcert": "Fout bij koppelen concert",
+      "errorUnlinkConcert": "Fout bij ontkoppelen concert",
+      "errorLinkRehearsal": "Fout bij koppelen repetitie",
+      "errorUnlinkRehearsal": "Fout bij ontkoppelen repetitie",
+      "noConcerts": "Geen concerten gekoppeld aan dit project.",
+      "noRehearsals": "Geen repetities gekoppeld aan dit project.",
+      "noConcertsFound": "Geen concerten gevonden.",
+      "allConcertsLinked": "Alle beschikbare concerten zijn al gekoppeld.",
+      "noRehearsalsAvailable": "Geen beschikbare repetities om te koppelen.",
+      "rehearsalDateRange": "Toont repetities voor de komende 3 maanden."
+    },
+    "setlistReorder": {
+      "saved": "Setlist volgorde opgeslagen",
+      "error": "Fout bij opslaan setlist volgorde"
     }
   },
   "tours": {
@@ -4331,6 +4365,57 @@
       "endTime": "Eindtijd",
       "created": "Reservering aangemaakt",
       "errorCreate": "Fout bij aanmaken reservering"
+    },
+    "manageCategories": "Categorieën beheren",
+    "details": "Details",
+    "deleteResource": "Middel verwijderen",
+    "minBookingHours": "Min. reserveringsuren",
+    "maxBookingHours": "Max. reserveringsuren",
+    "upcomingBookings": "Komende Reserveringen",
+    "availability": {
+      "title": "Beschikbaarheidsregels",
+      "addRule": "Regel toevoegen",
+      "noRules": "Geen beschikbaarheidsregels geconfigureerd",
+      "noRulesHint": "Voeg regels toe om te bepalen wanneer dit middel beschikbaar of niet beschikbaar is",
+      "available": "Beschikbaar",
+      "unavailable": "Niet beschikbaar",
+      "custom": "Aangepaste regel",
+      "deleted": "Beschikbaarheidsregel verwijderd",
+      "errorDelete": "Fout bij verwijderen beschikbaarheidsregel",
+      "deleteRule": "Regel verwijderen",
+      "deleteConfirm": "Weet je zeker dat je deze beschikbaarheidsregel wilt verwijderen?",
+      "added": "Beschikbaarheidsregel toegevoegd",
+      "errorAdd": "Fout bij toevoegen beschikbaarheidsregel",
+      "ruleType": "Regeltype",
+      "recurring": "Herhalend (wekelijks)",
+      "dateRange": "Datumbereik",
+      "dayOfWeek": "Dag van de week",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "startTime": "Starttijd",
+      "endTime": "Eindtijd",
+      "status": "Status"
+    },
+    "categories": {
+      "manage": "Middelcategorieën beheren",
+      "description": "Categorieën helpen je middelen te organiseren. Sleep om te herschikken.",
+      "add": "Categorie toevoegen",
+      "edit": "Categorie bewerken",
+      "delete": "Categorie verwijderen",
+      "noCategories": "Geen categorieën gevonden",
+      "created": "Categorie aangemaakt",
+      "updated": "Categorie bijgewerkt",
+      "deleted": "Categorie verwijderd",
+      "reordered": "Categorieën herschikt",
+      "errorCreate": "Fout bij aanmaken categorie",
+      "errorUpdate": "Fout bij bijwerken categorie",
+      "errorDelete": "Fout bij verwijderen categorie",
+      "errorReorder": "Fout bij herschikken categorieën",
+      "deleteConfirm": "Weet je zeker dat je de categorie \"{{name}}\" wilt verwijderen?",
+      "color": "Kleur",
+      "icon": "Icoon",
+      "dragHint": "Sleep categorieën om ze te herschikken",
+      "untitled": "Naamloze categorie"
     }
   },
   "equipment": {

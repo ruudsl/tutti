@@ -106,3 +106,31 @@ export async function removeSetlistItem(projectId: string, itemId: string): Prom
   const response = await api.delete(`/projects/${projectId}/setlist/${itemId}`);
   return response.data;
 }
+
+// Concert linking
+export async function linkConcertToProject(projectId: string, concertId: string): Promise<{ message: string }> {
+  const response = await api.post(`/projects/${projectId}/concerts`, { concertId });
+  return response.data;
+}
+
+export async function unlinkConcertFromProject(projectId: string, concertId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/projects/${projectId}/concerts/${concertId}`);
+  return response.data;
+}
+
+// Rehearsal linking
+export async function linkRehearsalToProject(projectId: string, rehearsalId: string): Promise<{ message: string }> {
+  const response = await api.post(`/projects/${projectId}/rehearsals`, { rehearsalId });
+  return response.data;
+}
+
+export async function unlinkRehearsalFromProject(projectId: string, rehearsalId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/projects/${projectId}/rehearsals/${rehearsalId}`);
+  return response.data;
+}
+
+// Setlist reorder
+export async function reorderProjectSetlist(projectId: string, itemIds: string[]): Promise<{ message: string }> {
+  const response = await api.put(`/projects/${projectId}/setlist/reorder`, { itemIds });
+  return response.data;
+}

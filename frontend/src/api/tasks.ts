@@ -250,6 +250,14 @@ export async function createTaskFromTemplate(
   return response.data;
 }
 
+export async function applyTaskTemplate(
+  templateId: string,
+  data?: { listId?: string }
+): Promise<{ tasks: { id: string; title: string }[]; message: string }> {
+  const response = await api.post(`/tasks/templates/${templateId}/apply`, data || {});
+  return response.data;
+}
+
 // Summary (for dashboard)
 export interface TaskSummary {
   statusSummary: Record<TaskStatus, number>;

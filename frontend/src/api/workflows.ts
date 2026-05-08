@@ -124,6 +124,24 @@ export const removeWorkflowAction = async (workflowId: string, actionId: string)
   return data;
 };
 
+export const updateWorkflowTrigger = async (
+  workflowId: string,
+  triggerId: string,
+  updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>>
+): Promise<{ message: string }> => {
+  const { data } = await api.patch(`/workflows/${workflowId}/triggers/${triggerId}`, updates);
+  return data;
+};
+
+export const updateWorkflowAction = async (
+  workflowId: string,
+  actionId: string,
+  updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>>
+): Promise<{ message: string }> => {
+  const { data } = await api.patch(`/workflows/${workflowId}/actions/${actionId}`, updates);
+  return data;
+};
+
 export const runWorkflow = async (id: string): Promise<{ executionId: string; message: string }> => {
   const { data } = await api.post(`/workflows/${id}/run`);
   return data;

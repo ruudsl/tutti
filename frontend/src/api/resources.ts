@@ -179,3 +179,34 @@ export async function cancelBooking(id: string): Promise<{ message: string }> {
   const response = await api.delete(`/resources/bookings/${id}`);
   return response.data;
 }
+
+// Availability rules
+export interface AddAvailabilityData {
+  dayOfWeek?: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime: string; // HH:mm format
+  endTime: string; // HH:mm format
+  isAvailable: boolean;
+  startDate?: string; // ISO date for date range rules
+  endDate?: string; // ISO date for date range rules
+}
+
+export async function addResourceAvailability(resourceId: string, data: AddAvailabilityData): Promise<{ id: string; message: string }> {
+  const response = await api.post(`/resources/${resourceId}/availability`, data);
+  return response.data;
+}
+
+export async function deleteResourceAvailability(resourceId: string, ruleId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/resources/${resourceId}/availability/${ruleId}`);
+  return response.data;
+}
+
+// Category management
+export async function updateResourceCategory(categoryId: string, data: { name?: string; color?: string; icon?: string }): Promise<{ message: string }> {
+  const response = await api.patch(`/resources/categories/${categoryId}`, data);
+  return response.data;
+}
+
+export async function reorderResourceCategories(categoryIds: string[]): Promise<{ message: string }> {
+  const response = await api.put('/resources/categories/reorder', { categoryIds });
+  return response.data;
+}

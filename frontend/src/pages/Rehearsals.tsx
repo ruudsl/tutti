@@ -26,6 +26,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import SeatingChartVisualization from '../components/SeatingChartVisualization';
 import { AddToCalendarButton } from '../components/CalendarSync';
 import AttendanceDashboard, { AttendanceMember as DashboardMember, RehearsalAttendance, AttendanceTrend, AttendanceFilters } from '../components/AttendanceDashboard';
+import { CustomFieldFormSection, CustomFieldRenderer } from '../components/CustomFields';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
 
@@ -732,6 +733,28 @@ export default function Rehearsals() {
             )}
           </div>
         )}
+
+        {/* Custom Fields Section */}
+        <div className="card mt-3">
+          <div className="card-header">
+            <h2 className="card-title">{t('customFields.additionalFields')}</h2>
+          </div>
+          <div className="card-body">
+            {isManager ? (
+              <CustomFieldFormSection
+                entityType="rehearsal"
+                entityId={selectedRehearsal.id}
+                autoSave={true}
+              />
+            ) : (
+              <CustomFieldRenderer
+                entityType="rehearsal"
+                entityId={selectedRehearsal.id}
+                layout="horizontal"
+              />
+            )}
+          </div>
+        </div>
       </div>
     );
   }

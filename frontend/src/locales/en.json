@@ -39,7 +39,11 @@
     "orchestra": "Orchestra",
     "notes": "Notes",
     "allOrchestras": "All orchestras",
-    "create": "Create"
+    "create": "Create",
+    "more": "more",
+    "show": "Show",
+    "hide": "Hide",
+    "dragToReorder": "Drag items to reorder"
   },
   "music": {
     "title": "Music piece",
@@ -666,7 +670,13 @@
     "templateDeleted": "Template deleted",
     "taskCreatedFromTemplate": "Task created from template",
     "errorCreateTemplate": "Error creating template",
-    "errorDeleteTemplate": "Error deleting template"
+    "errorDeleteTemplate": "Error deleting template",
+    "color": "Color",
+    "statusSummary": "Status Summary",
+    "totalOpen": "Total Open",
+    "myTasks": "My Tasks",
+    "overdueTasks": "Overdue",
+    "recentlyCompleted": "Recently Completed"
   },
   "posts": {
     "title": "News",
@@ -4154,6 +4164,7 @@
     "archive": "Archive",
     "overview": "Overview",
     "setlist": "Setlist",
+    "events": "Events",
     "schedule": "Schedule",
     "role": "Role",
     "noMembers": "No members assigned yet.",
@@ -4181,6 +4192,30 @@
       "invited": "Invited",
       "confirmed": "Confirmed",
       "declined": "Declined"
+    },
+    "events": {
+      "linkConcert": "Link concert",
+      "unlinkConcert": "Unlink concert",
+      "linkRehearsal": "Link rehearsal",
+      "unlinkRehearsal": "Unlink rehearsal",
+      "concertLinked": "Concert linked to project",
+      "concertUnlinked": "Concert unlinked from project",
+      "rehearsalLinked": "Rehearsal linked to project",
+      "rehearsalUnlinked": "Rehearsal unlinked from project",
+      "errorLinkConcert": "Error linking concert",
+      "errorUnlinkConcert": "Error unlinking concert",
+      "errorLinkRehearsal": "Error linking rehearsal",
+      "errorUnlinkRehearsal": "Error unlinking rehearsal",
+      "noConcerts": "No concerts linked to this project.",
+      "noRehearsals": "No rehearsals linked to this project.",
+      "noConcertsFound": "No concerts found.",
+      "allConcertsLinked": "All available concerts are already linked.",
+      "noRehearsalsAvailable": "No available rehearsals to link.",
+      "rehearsalDateRange": "Showing rehearsals for the next 3 months."
+    },
+    "setlistReorder": {
+      "saved": "Setlist order saved",
+      "error": "Error saving setlist order"
     }
   },
   "tours": {
@@ -4296,6 +4331,57 @@
       "endTime": "End time",
       "created": "Booking created",
       "errorCreate": "Error creating booking"
+    },
+    "manageCategories": "Manage Categories",
+    "details": "Details",
+    "deleteResource": "Delete Resource",
+    "minBookingHours": "Min. booking hours",
+    "maxBookingHours": "Max. booking hours",
+    "upcomingBookings": "Upcoming Bookings",
+    "availability": {
+      "title": "Availability Rules",
+      "addRule": "Add Rule",
+      "noRules": "No availability rules configured",
+      "noRulesHint": "Add rules to define when this resource is available or unavailable",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "custom": "Custom rule",
+      "deleted": "Availability rule deleted",
+      "errorDelete": "Error deleting availability rule",
+      "deleteRule": "Delete Rule",
+      "deleteConfirm": "Are you sure you want to delete this availability rule?",
+      "added": "Availability rule added",
+      "errorAdd": "Error adding availability rule",
+      "ruleType": "Rule Type",
+      "recurring": "Recurring (weekly)",
+      "dateRange": "Date Range",
+      "dayOfWeek": "Day of Week",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "status": "Status"
+    },
+    "categories": {
+      "manage": "Manage Resource Categories",
+      "description": "Categories help organize your resources. Drag to reorder.",
+      "add": "Add Category",
+      "edit": "Edit Category",
+      "delete": "Delete Category",
+      "noCategories": "No categories found",
+      "created": "Category created",
+      "updated": "Category updated",
+      "deleted": "Category deleted",
+      "reordered": "Categories reordered",
+      "errorCreate": "Error creating category",
+      "errorUpdate": "Error updating category",
+      "errorDelete": "Error deleting category",
+      "errorReorder": "Error reordering categories",
+      "deleteConfirm": "Are you sure you want to delete the category \"{{name}}\"?",
+      "color": "Color",
+      "icon": "Icon",
+      "dragHint": "Drag categories to reorder them",
+      "untitled": "Untitled Category"
     }
   },
   "equipment": {

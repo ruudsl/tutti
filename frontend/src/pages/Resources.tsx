@@ -2,12 +2,15 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getResources, getResourceCategories, getResourceBookings, createResource, createResourceBooking, Resource, ResourceType, CreateResourceData, ResourceBooking } from '../api/resources';
+import { getResources, getResourceCategories, getResourceBookings, getResource, createResource, createResourceBooking, deleteResource, Resource, ResourceType, ResourceDetail, CreateResourceData, ResourceBooking } from '../api/resources';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatDate } from '../utils/dateFormat';
+import { ResourceAvailabilitySection } from '../components/ResourceAvailabilitySection';
+import { ResourceCategoriesManager } from '../components/ResourceCategoriesManager';
 
 const TYPE_ICONS: Record<ResourceType, string> = {
   room: 'building',
@@ -26,6 +29,8 @@ export default function Resources() {
   const [typeFilter, setTypeFilter] = useState<ResourceType | ''>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState<Resource | null>(null);
+  const [showCategoriesManager, setShowCategoriesManager] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   const [calendarWeekStart, setCalendarWeekStart] = useState(() => {
     const now = new Date();
@@ -68,10 +73,16 @@ export default function Resources() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('resources.title')}</h1>
-        <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
-          <Icon name="plus" size={18} />
-          {t('resources.new')}
-        </button>
+        <div className="flex gap-2">
+          <button className="btn btn-outline gap-2" onClick={() => setShowCategoriesManager(true)}>
+            <Icon name="folder" size={18} />
+            {t('resources.manageCategories')}
+          </button>
+          <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
+            <Icon name="plus" size={18} />
+            {t('resources.new')}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -195,6 +206,12 @@ export default function Resources() {
                     )}
 
                     <div className="card-actions justify-end mt-2">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setSelectedResourceId(resource.id)}
+                      >
+                        {t('common.details')}
+                      </button>
                       {resource.isActive && (
                         <button
                           className="btn btn-primary btn-sm"
@@ -255,6 +272,21 @@ export default function Resources() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['resources'] });
             setShowBookingModal(null);
+          }}
+        />
+      )}
+
+      {showCategoriesManager && (
+        <ResourceCategoriesManager onClose={() => setShowCategoriesManager(false)} />
+      )}
+
+      {selectedResourceId && (
+        <ResourceDetailModal
+          resourceId={selectedResourceId}
+          onClose={() => setSelectedResourceId(null)}
+          onBook={(resource) => {
+            setSelectedResourceId(null);
+            setShowBookingModal(resource);
           }}
         />
       )}
@@ -605,5 +637,198 @@ function ResourceCalendar({
         </div>
       </div>
     </div>
+  );
+}
+
+function ResourceDetailModal({
+  resourceId,
+  onClose,
+  onBook,
+}: {
+  resourceId: string;
+  onClose: () => void;
+  onBook: (resource: Resource) => void;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const { data: resource, isLoading } = useQuery({
+    queryKey: ['resource', resourceId],
+    queryFn: () => getResource(resourceId),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteResource(resourceId),
+    onSuccess: () => {
+      showSuccess(t('resources.deleted'));
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      onClose();
+    },
+    onError: () => showError(t('resources.errorDelete')),
+  });
+
+  if (isLoading || !resource) {
+    return (
+      <Modal onClose={onClose} title={t('resources.details')}>
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-lg" />
+        </div>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal onClose={onClose} title={resource.name} size="large">
+      <div className="space-y-6">
+        {/* Resource Info */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 rounded-lg p-3">
+                <Icon name={TYPE_ICONS[resource.resourceType] as any} size={24} className="text-primary" />
+              </div>
+              <div>
+                <span className="text-sm text-base-content/60">{t(`resources.types.${resource.resourceType}`)}</span>
+                <div className={`badge ml-2 ${resource.isActive ? 'badge-success' : 'badge-ghost'}`}>
+                  {resource.isActive ? t('resources.active') : t('resources.inactive')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {resource.description && (
+            <p className="text-base-content/70">{resource.description}</p>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            {resource.location && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.location')}</div>
+                <div className="flex items-center gap-1">
+                  <Icon name="mapPin" size={14} />
+                  {resource.location}
+                </div>
+              </div>
+            )}
+            {resource.capacity && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.capacity')}</div>
+                <div className="flex items-center gap-1">
+                  <Icon name="users" size={14} />
+                  {resource.capacity}
+                </div>
+              </div>
+            )}
+            {resource.costPerHour && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.costPerHour')}</div>
+                <div>€{resource.costPerHour}</div>
+              </div>
+            )}
+            {resource.costPerDay && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.costPerDay')}</div>
+                <div>€{resource.costPerDay}</div>
+              </div>
+            )}
+            {resource.minBookingHours && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.minBookingHours')}</div>
+                <div>{resource.minBookingHours}h</div>
+              </div>
+            )}
+            {resource.maxBookingHours && (
+              <div>
+                <div className="text-base-content/60 text-xs">{t('resources.maxBookingHours')}</div>
+                <div>{resource.maxBookingHours}h</div>
+              </div>
+            )}
+          </div>
+
+          {resource.requiresApproval && (
+            <div className="alert alert-info">
+              <Icon name="info" size={16} />
+              <span>{t('resources.requiresApproval')}</span>
+            </div>
+          )}
+
+          {resource.notes && (
+            <div className="bg-base-200 p-3 rounded-lg">
+              <div className="text-xs text-base-content/60 mb-1">{t('common.notes')}</div>
+              <p className="text-sm">{resource.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Availability Rules Section */}
+        <div className="divider" />
+        <ResourceAvailabilitySection
+          resourceId={resourceId}
+          availability={resource.availability || []}
+        />
+
+        {/* Upcoming Bookings */}
+        {resource.upcomingBookings && resource.upcomingBookings.length > 0 && (
+          <>
+            <div className="divider" />
+            <div>
+              <h4 className="font-medium mb-3">{t('resources.upcomingBookings')}</h4>
+              <div className="space-y-2">
+                {resource.upcomingBookings.slice(0, 5).map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+                    <div>
+                      <div className="font-medium text-sm">{booking.title}</div>
+                      <div className="text-xs text-base-content/60">
+                        {formatDate(booking.startDatetime)} - {formatDate(booking.endDatetime)}
+                      </div>
+                    </div>
+                    <span className={`badge badge-sm ${BOOKING_STATUS_COLORS[booking.status]?.replace('bg-', 'badge-') || 'badge-ghost'}`}>
+                      {t(`resources.bookingStatuses.${booking.status}`)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-between pt-4 border-t">
+          <button
+            className="btn btn-error btn-outline"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Icon name="trash" size={16} />
+            {t('common.delete')}
+          </button>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost" onClick={onClose}>
+              {t('common.close')}
+            </button>
+            {resource.isActive && (
+              <button
+                className="btn btn-primary"
+                onClick={() => onBook(resource)}
+              >
+                {t('resources.book')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title={t('resources.deleteResource')}
+          message={t('resources.confirmDelete')}
+          confirmLabel={t('common.delete')}
+          onConfirm={() => deleteMutation.mutate()}
+          onCancel={() => setShowDeleteConfirm(false)}
+          isLoading={deleteMutation.isPending}
+          variant="danger"
+        />
+      )}
+    </Modal>
   );
 }

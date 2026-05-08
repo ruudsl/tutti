@@ -39,7 +39,10 @@
     "orchestra": "Orchester",
     "notes": "Notizen",
     "allOrchestras": "Alle Orchester",
-    "create": "Erstellen"
+    "create": "Erstellen",
+    "more": "weitere",
+    "show": "Zeigen",
+    "hide": "Ausblenden"
   },
   "music": {
     "title": "Musikstück",
@@ -682,7 +685,13 @@
     "templateDeleted": "Vorlage gelöscht",
     "taskCreatedFromTemplate": "Aufgabe aus Vorlage erstellt",
     "errorCreateTemplate": "Fehler beim Erstellen der Vorlage",
-    "errorDeleteTemplate": "Fehler beim Löschen der Vorlage"
+    "errorDeleteTemplate": "Fehler beim Löschen der Vorlage",
+    "color": "Farbe",
+    "statusSummary": "Statusübersicht",
+    "totalOpen": "Offene Aufgaben",
+    "myTasks": "Meine Aufgaben",
+    "overdueTasks": "Überfällig",
+    "recentlyCompleted": "Kürzlich erledigt"
   },
   "posts": {
     "title": "Neuigkeiten",
@@ -4089,6 +4098,7 @@
     "archive": "Archivieren",
     "overview": "Übersicht",
     "setlist": "Setlist",
+    "events": "Veranstaltungen",
     "schedule": "Zeitplan",
     "role": "Rolle",
     "noMembers": "Noch keine Mitglieder zugewiesen.",
@@ -4116,6 +4126,30 @@
       "invited": "Eingeladen",
       "confirmed": "Bestätigt",
       "declined": "Abgelehnt"
+    },
+    "events": {
+      "linkConcert": "Konzert verknüpfen",
+      "unlinkConcert": "Konzert trennen",
+      "linkRehearsal": "Probe verknüpfen",
+      "unlinkRehearsal": "Probe trennen",
+      "concertLinked": "Konzert mit Projekt verknüpft",
+      "concertUnlinked": "Konzert von Projekt getrennt",
+      "rehearsalLinked": "Probe mit Projekt verknüpft",
+      "rehearsalUnlinked": "Probe von Projekt getrennt",
+      "errorLinkConcert": "Fehler beim Verknüpfen des Konzerts",
+      "errorUnlinkConcert": "Fehler beim Trennen des Konzerts",
+      "errorLinkRehearsal": "Fehler beim Verknüpfen der Probe",
+      "errorUnlinkRehearsal": "Fehler beim Trennen der Probe",
+      "noConcerts": "Keine Konzerte mit diesem Projekt verknüpft.",
+      "noRehearsals": "Keine Proben mit diesem Projekt verknüpft.",
+      "noConcertsFound": "Keine Konzerte gefunden.",
+      "allConcertsLinked": "Alle verfügbaren Konzerte sind bereits verknüpft.",
+      "noRehearsalsAvailable": "Keine verfügbaren Proben zum Verknüpfen.",
+      "rehearsalDateRange": "Zeigt Proben für die nächsten 3 Monate."
+    },
+    "setlistReorder": {
+      "saved": "Setlist-Reihenfolge gespeichert",
+      "error": "Fehler beim Speichern der Setlist-Reihenfolge"
     }
   },
   "tours": {

@@ -8,6 +8,8 @@ import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { formatDate } from '../utils/dateFormat';
+import { TourDayPlanningSection } from '../components/TourDayPlanningSection';
+import { TourTransportSection } from '../components/TourTransportSection';
 
 const STATUS_COLORS: Record<TourStatus, string> = {
   planning: 'badge-info',
@@ -457,9 +459,21 @@ function TourDetailModal({
 
         {/* Tab Content */}
         <div className="min-h-[300px]">
-          {activeTab === 'days' && <TourDaysTab days={tour.days} />}
+          {activeTab === 'days' && (
+            <TourDayPlanningSection
+              tourId={tourId}
+              days={tour.days}
+              onRefresh={() => refetch()}
+            />
+          )}
           {activeTab === 'accommodations' && <TourAccommodationsTab accommodations={tour.accommodations} />}
-          {activeTab === 'transport' && <TourTransportTab transport={tour.transport} />}
+          {activeTab === 'transport' && (
+            <TourTransportSection
+              tourId={tourId}
+              transport={tour.transport}
+              onRefresh={() => refetch()}
+            />
+          )}
           {activeTab === 'participants' && <TourParticipantsTab participants={tour.participants} />}
         </div>
 
@@ -475,74 +489,6 @@ function TourDetailModal({
   );
 }
 
-function TourDaysTab({ days }: { days: TourDetail['days'] }) {
-  const { t } = useTranslation();
-
-  if (days.length === 0) {
-    return (
-      <div className="text-center py-8 text-base-content/60">
-        <Icon name="calendar" size={32} className="mx-auto mb-2 opacity-50" />
-        <p>{t('tours.noDays')}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {days.map(day => (
-        <div key={day.id} className="card bg-base-200">
-          <div className="card-body p-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <span className="badge badge-primary">
-                {t('tours.day')} {day.dayNumber}
-              </span>
-              <span>{formatDate(day.dayDate)}</span>
-              {day.title && <span className="text-base-content/70">- {day.title}</span>}
-            </h4>
-            {day.description && (
-              <p className="text-sm text-base-content/70">{day.description}</p>
-            )}
-            {day.activities.length > 0 && (
-              <div className="mt-2 space-y-2">
-                {day.activities.map(activity => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3 p-2 bg-base-100 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{activity.title}</span>
-                        <span className="badge badge-sm badge-ghost">{activity.activityType}</span>
-                        {activity.isMandatory && (
-                          <span className="badge badge-sm badge-warning">{t('tours.mandatory')}</span>
-                        )}
-                      </div>
-                      {activity.location && (
-                        <div className="text-sm text-base-content/60 flex items-center gap-1">
-                          <Icon name="mapPin" size={12} />
-                          {activity.location}
-                        </div>
-                      )}
-                      {(activity.startTime || activity.endTime) && (
-                        <div className="text-sm text-base-content/60 flex items-center gap-1">
-                          <Icon name="clock" size={12} />
-                          {activity.startTime || '?'} - {activity.endTime || '?'}
-                        </div>
-                      )}
-                    </div>
-                    {activity.cost && (
-                      <span className="text-sm font-medium">€{activity.cost.toFixed(2)}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail['accommodations'] }) {
   const { t } = useTranslation();
@@ -606,49 +552,6 @@ function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail[
   );
 }
 
-function TourTransportTab({ transport }: { transport: TourDetail['transport'] }) {
-  const { t } = useTranslation();
-
-  if (transport.length === 0) {
-    return (
-      <div className="text-center py-8 text-base-content/60">
-        <Icon name="truck" size={32} className="mx-auto mb-2 opacity-50" />
-        <p>{t('tours.noTransport')}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {transport.map(tr => (
-        <div key={tr.id} className="card bg-base-200">
-          <div className="card-body p-4">
-            <div className="flex items-center gap-2">
-              <span className="badge badge-primary">{tr.transportType}</span>
-              {tr.provider && <span className="text-base-content/70">{tr.provider}</span>}
-            </div>
-            <div className="flex flex-wrap gap-6 text-sm">
-              {tr.departureLocation && (
-                <div>
-                  <div className="text-base-content/60">{t('tours.departure')}</div>
-                  <div className="font-medium">{tr.departureLocation}</div>
-                  {tr.departureTime && <div className="text-base-content/70">{tr.departureTime}</div>}
-                </div>
-              )}
-              {tr.arrivalLocation && (
-                <div>
-                  <div className="text-base-content/60">{t('tours.arrival')}</div>
-                  <div className="font-medium">{tr.arrivalLocation}</div>
-                  {tr.arrivalTime && <div className="text-base-content/70">{tr.arrivalTime}</div>}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function TourParticipantsTab({ participants }: { participants: TourDetail['participants'] }) {
   const { t } = useTranslation();

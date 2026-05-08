@@ -222,4 +222,37 @@ router.delete('/:id/concerts/:concertId', requireRole('admin', 'music_committee'
   res.json({ message: 'Outfit unlinked from concert' });
 }));
 
+// PUT /api/outfits/reorder - Reorder outfits
+const reorderOutfitsSchema = z.object({
+  outfitIds: z.array(z.string().uuid()),
+});
+
+router.put('/reorder', requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const associationId = req.user!.associationId;
+  const data = reorderOutfitsSchema.parse(req.body);
+
+  // Verify all outfits belong to this association
+  const placeholders = data.outfitIds.map(() => '?').join(',');
+  const existingOutfits = db.prepare(`
+    SELECT id FROM outfits
+    WHERE id IN (${placeholders}) AND association_id = ? AND deleted_at IS NULL
+  `).all(...data.outfitIds, associationId) as { id: string }[];
+
+  if (existingOutfits.length !== data.outfitIds.length) {
+    throw new ApiError(400, 'Some outfits not found or do not belong to this association');
+  }
+
+  // Update sort_order for each outfit
+  const updateStmt = db.prepare(`UPDATE outfits SET sort_order = ?, updated_at = ? WHERE id = ?`);
+  const now = new Date().toISOString();
+
+  db.transaction(() => {
+    data.outfitIds.forEach((outfitId, index) => {
+      updateStmt.run(index, now, outfitId);
+    });
+  })();
+
+  res.json({ message: 'Outfits reordered successfully' });
+}));
+
 export default router;

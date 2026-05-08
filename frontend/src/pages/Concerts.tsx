@@ -39,7 +39,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { Concert, TicketType } from '../types';
 import { FloatingActionButton } from '../components/FloatingActionButton';
-import { CustomFieldRenderer } from '../components/CustomFields';
+import { CustomFieldRenderer, CustomFieldFormSection } from '../components/CustomFields';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -807,6 +807,16 @@ export default function Concerts() {
               rows={2}
             />
           </div>
+          {editingConcert && (
+            <>
+              <div className="divider my-4">{t('customFields.additionalFields')}</div>
+              <CustomFieldFormSection
+                entityType="concert"
+                entityId={editingConcert.id}
+                autoSave={true}
+              />
+            </>
+          )}
         </FormModal>
       )}
 

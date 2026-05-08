@@ -8,6 +8,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { formatDate } from '../utils/dateFormat';
+import { EquipmentStats } from '../components/EquipmentStats';
 import type { EquipmentDetail } from '../types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -50,13 +51,10 @@ export default function Equipment() {
     onSuccess: () => {
       showSuccess(t('equipment.deleted'));
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment-stats'] });
     },
     onError: () => showError(t('equipment.errorDelete')),
   });
-
-  const availableCount = equipment.filter(e => e.status === 'available').length;
-  const onLoanCount = equipment.filter(e => e.status === 'on_loan').length;
-  const inRepairCount = equipment.filter(e => e.status === 'in_repair').length;
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -69,32 +67,7 @@ export default function Equipment() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <div className="text-sm text-base-content/60">{t('equipment.total')}</div>
-            <div className="text-2xl font-bold">{equipment.length}</div>
-          </div>
-        </div>
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <div className="text-sm text-base-content/60">{t('equipment.available')}</div>
-            <div className="text-2xl font-bold text-success">{availableCount}</div>
-          </div>
-        </div>
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <div className="text-sm text-base-content/60">{t('equipment.onLoan')}</div>
-            <div className="text-2xl font-bold text-warning">{onLoanCount}</div>
-          </div>
-        </div>
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <div className="text-sm text-base-content/60">{t('equipment.inRepair')}</div>
-            <div className="text-2xl font-bold text-info">{inRepairCount}</div>
-          </div>
-        </div>
-      </div>
+      <EquipmentStats />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">

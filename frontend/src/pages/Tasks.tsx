@@ -11,6 +11,7 @@ import {
   deleteTask,
   getTaskLists,
   createTaskList,
+  updateTaskList,
   deleteTaskList,
   addChecklistItem,
   updateChecklistItem,
@@ -30,6 +31,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
+import { TaskTemplatesDialog } from '../components/TaskTemplatesDialog';
+import { TaskSummary } from '../components/TaskSummary';
 
 const STATUS_ICONS: Record<TaskStatus, IconName> = {
   todo: 'circle',
@@ -76,6 +79,8 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showListsModal, setShowListsModal] = useState(false);
+  const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
 
   const canManageLists = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
@@ -149,7 +154,21 @@ export default function Tasks() {
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn btn-ghost btn-sm gap-2"
+            onClick={() => setShowSummary(!showSummary)}
+          >
+            <Icon name="chart" size={16} />
+            {showSummary ? t('common.hide') : t('common.show')} {t('tasks.statusSummary')}
+          </button>
+          <button
+            className="btn btn-outline btn-sm gap-2"
+            onClick={() => setShowTemplatesDialog(true)}
+          >
+            <Icon name="clipboard" size={16} />
+            {t('tasks.templates')}
+          </button>
           {canManageLists && (
             <button
               className="btn btn-outline btn-sm gap-2"
@@ -168,6 +187,17 @@ export default function Tasks() {
           </button>
         </div>
       </div>
+
+      {/* Task Summary */}
+      {showSummary && (
+        <TaskSummary
+          compact
+          onTaskClick={(taskId) => {
+            const task = tasks.find((t) => t.id === taskId);
+            if (task) setSelectedTask(task);
+          }}
+        />
+      )}
 
       {/* Filters */}
       <div className="card bg-base-200 p-4">
@@ -388,6 +418,19 @@ export default function Tasks() {
           onClose={() => setShowListsModal(false)}
           onUpdate={() => {
             queryClient.invalidateQueries({ queryKey: ['task-lists'] });
+          }}
+        />
+      )}
+
+      {/* Task Templates Dialog */}
+      {showTemplatesDialog && (
+        <TaskTemplatesDialog
+          taskLists={taskLists}
+          onClose={() => setShowTemplatesDialog(false)}
+          onTasksCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['task-lists'] });
+            queryClient.invalidateQueries({ queryKey: ['task-summary'] });
           }}
         />
       )}
@@ -805,16 +848,46 @@ function ManageListsModal({
 }) {
   const { t } = useTranslation();
   const [newListName, setNewListName] = useState('');
+  const [newListColor, setNewListColor] = useState('#3b82f6');
+  const [editingList, setEditingList] = useState<TaskList | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+
+  const LIST_COLORS = [
+    '#ef4444', // red
+    '#f97316', // orange
+    '#eab308', // yellow
+    '#22c55e', // green
+    '#14b8a6', // teal
+    '#3b82f6', // blue
+    '#8b5cf6', // violet
+    '#ec4899', // pink
+    '#6b7280', // gray
+  ];
 
   const createMutation = useMutation({
-    mutationFn: () => createTaskList({ name: newListName }),
+    mutationFn: () => createTaskList({ name: newListName, color: newListColor }),
     onSuccess: () => {
       showSuccess(t('tasks.listCreated'));
       setNewListName('');
+      setNewListColor('#3b82f6');
       onUpdate();
     },
     onError: (error: any) => {
       showError(error.response?.data?.error || t('tasks.errorCreateList'));
+    },
+  });
+
+  const updateListMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; color?: string } }) =>
+      updateTaskList(id, data),
+    onSuccess: () => {
+      showSuccess(t('tasks.updated'));
+      setEditingList(null);
+      onUpdate();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('tasks.errorUpdate'));
     },
   });
 
@@ -829,6 +902,20 @@ function ManageListsModal({
     },
   });
 
+  const startEditing = (list: TaskList) => {
+    setEditingList(list);
+    setEditName(list.name);
+    setEditColor(list.color || '#3b82f6');
+  };
+
+  const saveEdit = () => {
+    if (!editingList || !editName.trim()) return;
+    updateListMutation.mutate({
+      id: editingList.id,
+      data: { name: editName, color: editColor },
+    });
+  };
+
   return (
     <Modal onClose={onClose} size="medium" title={t('tasks.manageLists')}>
       <div className="space-y-4">
@@ -837,48 +924,133 @@ function ManageListsModal({
         ) : (
           <div className="space-y-2">
             {lists.map((list) => (
-              <div key={list.id} className="flex items-center justify-between p-3 bg-base-200 rounded-lg">
-                <div>
-                  <span className="font-medium">{list.name}</span>
-                  <span className="text-sm text-base-content/60 ml-2">
-                    ({list.openCount}/{list.totalCount})
-                  </span>
-                </div>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    if (confirm(t('tasks.confirmDeleteList'))) {
-                      deleteMutation.mutate(list.id);
-                    }
-                  }}
-                >
-                  <Icon name="trash" size={14} />
-                </button>
+              <div key={list.id} className="p-3 bg-base-200 rounded-lg">
+                {editingList?.id === list.id ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      className="input input-bordered input-sm w-full"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder={t('tasks.newListName')}
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-base-content/60">{t('tasks.color')}:</span>
+                      <div className="flex gap-1">
+                        {LIST_COLORS.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setEditColor(color)}
+                            className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                            style={{
+                              backgroundColor: color,
+                              borderColor: editColor === color ? 'var(--bc)' : 'transparent',
+                            }}
+                            aria-label={color}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setEditingList(null)}
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={saveEdit}
+                        disabled={!editName.trim() || updateListMutation.isPending}
+                      >
+                        {updateListMutation.isPending ? (
+                          <span className="loading loading-spinner loading-xs" />
+                        ) : (
+                          t('common.save')
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: list.color || '#6b7280' }}
+                      />
+                      <span className="font-medium">{list.name}</span>
+                      <span className="text-sm text-base-content/60">
+                        ({list.openCount}/{list.totalCount})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => startEditing(list)}
+                        title={t('common.edit')}
+                      >
+                        <Icon name="pencil" size={14} />
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          if (confirm(t('tasks.confirmDeleteList'))) {
+                            deleteMutation.mutate(list.id);
+                          }
+                        }}
+                        title={t('common.delete')}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex gap-2">
-          <input
-            type="text"
-            className="input input-bordered flex-1"
-            placeholder={t('tasks.newListName')}
-            value={newListName}
-            onChange={(e) => setNewListName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && newListName.trim()) {
-                createMutation.mutate();
-              }
-            }}
-          />
-          <button
-            className="btn btn-primary"
-            onClick={() => createMutation.mutate()}
-            disabled={!newListName.trim() || createMutation.isPending}
-          >
-            <Icon name="plus" size={16} />
-          </button>
+        {/* Create new list */}
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="input input-bordered flex-1"
+              placeholder={t('tasks.newListName')}
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newListName.trim()) {
+                  createMutation.mutate();
+                }
+              }}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => createMutation.mutate()}
+              disabled={!newListName.trim() || createMutation.isPending}
+            >
+              <Icon name="plus" size={16} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-base-content/60">{t('tasks.color')}:</span>
+            <div className="flex gap-1">
+              {LIST_COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setNewListColor(color)}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: color,
+                    borderColor: newListColor === color ? 'var(--bc)' : 'transparent',
+                  }}
+                  aria-label={color}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </Modal>
