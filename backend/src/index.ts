@@ -400,6 +400,22 @@ if (config.isProduction) {
     }
 }
 
+// Debug route for unexpected POST to root (tracking browser privacy tool interference)
+app.post('/', (req, res) => {
+    logger.warn('Unexpected POST to root path', {
+        headers: {
+            'user-agent': req.headers['user-agent'],
+            'referer': req.headers['referer'],
+            'origin': req.headers['origin'],
+            'content-type': req.headers['content-type'],
+        },
+        body: req.body,
+        query: req.query,
+        ip: req.ip,
+    });
+    res.status(404).json({ error: 'Not found', message: 'POST to root is not a valid endpoint' });
+});
+
 // 404 handler for unknown API routes
 app.use('/api/*', notFoundHandler);
 
