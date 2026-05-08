@@ -73,7 +73,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                 className={`rounded-lg p-3 ${STATUS_COLORS[status]}`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <Icon name={STATUS_ICONS[status]} size={14} />
+                  <Icon name={STATUS_ICONS[status]} size={14} aria-hidden={true} />
                   <span className="text-xs font-medium">{t(`tasks.status.${status}`)}</span>
                 </div>
                 <div className="text-2xl font-bold">
@@ -98,15 +98,17 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
             </h3>
             <div className="space-y-2">
               {summary.myTasks.slice(0, compact ? 3 : 5).map((task) => (
-                <div
+                <button
                   key={task.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
+                  type="button"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-300 cursor-pointer transition-colors w-full text-left"
                   onClick={() => onTaskClick?.(task.id)}
                 >
                   <Icon
                     name={STATUS_ICONS[task.status]}
                     size={14}
                     className={PRIORITY_COLORS[task.priority]}
+                    aria-hidden={true}
                   />
                   <span className="flex-1 truncate text-sm">{task.title}</span>
                   {task.listName && (
@@ -122,7 +124,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                       {new Date(task.dueDate).toLocaleDateString()}
                     </span>
                   )}
-                </div>
+                </button>
               ))}
               {summary.myTasks.length > (compact ? 3 : 5) && (
                 <div className="text-center pt-2">
@@ -141,17 +143,18 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
         <div className="card bg-error/10 border border-error/30">
           <div className="card-body p-4">
             <h3 className="font-semibold text-sm uppercase tracking-wider text-error mb-3 flex items-center gap-2">
-              <Icon name="warning" size={14} />
+              <Icon name="warning" size={14} aria-hidden={true} />
               {t('tasks.overdueTasks')}
             </h3>
             <div className="space-y-2">
               {summary.overdueTasks.slice(0, compact ? 3 : 5).map((task) => (
-                <div
+                <button
                   key={task.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-error/20 cursor-pointer transition-colors"
+                  type="button"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-error/20 cursor-pointer transition-colors w-full text-left"
                   onClick={() => onTaskClick?.(task.id)}
                 >
-                  <Icon name={STATUS_ICONS[task.status]} size={14} className="text-error" />
+                  <Icon name={STATUS_ICONS[task.status]} size={14} className="text-error" aria-hidden={true} />
                   <span className="flex-1 truncate text-sm">{task.title}</span>
                   {task.assignedToName && (
                     <span className="text-xs text-base-content/50">
@@ -163,7 +166,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                       {new Date(task.dueDate).toLocaleDateString()}
                     </span>
                   )}
-                </div>
+                </button>
               ))}
               {summary.overdueTasks.length > (compact ? 3 : 5) && (
                 <div className="text-center pt-2">
@@ -182,17 +185,18 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
         <div className="card bg-base-200">
           <div className="card-body p-4">
             <h3 className="font-semibold text-sm uppercase tracking-wider text-base-content/60 mb-3 flex items-center gap-2">
-              <Icon name="checkCircle" size={14} className="text-success" />
+              <Icon name="checkCircle" size={14} className="text-success" aria-hidden={true} />
               {t('tasks.recentlyCompleted')}
             </h3>
             <div className="space-y-2">
               {summary.recentCompleted.slice(0, 5).map((task) => (
-                <div
+                <button
                   key={task.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-300 cursor-pointer transition-colors opacity-70"
+                  type="button"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-base-300 cursor-pointer transition-colors opacity-70 w-full text-left"
                   onClick={() => onTaskClick?.(task.id)}
                 >
-                  <Icon name="checkCircle" size={14} className="text-success" />
+                  <Icon name="checkCircle" size={14} className="text-success" aria-hidden={true} />
                   <span className="flex-1 truncate text-sm line-through">{task.title}</span>
                   {task.listName && (
                     <span
@@ -202,7 +206,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                       {task.listName}
                     </span>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>

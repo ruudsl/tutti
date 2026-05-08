@@ -73,9 +73,11 @@ function SortableSetlistItem({ item, index }: SortableSetlistItemProps) {
         className="cursor-grab active:cursor-grabbing text-base-content/50 hover:text-base-content p-1"
         {...attributes}
         {...listeners}
-        title="Drag to reorder"
+        aria-label="Drag to reorder"
+        role="button"
+        tabIndex={0}
       >
-        <span className="text-lg select-none">&#8942;&#8942;</span>
+        <span className="text-lg select-none" aria-hidden={true}>&#8942;&#8942;</span>
       </div>
       <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-medium flex-shrink-0">
         {index + 1}
@@ -100,7 +102,7 @@ function SortableSetlistItem({ item, index }: SortableSetlistItemProps) {
 function SetlistItemOverlay({ item, index }: { item: SetlistItem; index: number }) {
   return (
     <div className="flex items-center gap-4 p-3 bg-base-100 rounded-lg shadow-xl border-2 border-primary">
-      <div className="cursor-grabbing text-base-content/50 p-1">
+      <div className="cursor-grabbing text-base-content/50 p-1" aria-hidden={true}>
         <span className="text-lg select-none">&#8942;&#8942;</span>
       </div>
       <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-medium flex-shrink-0">
@@ -205,7 +207,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
   if (items.length === 0) {
     return (
       <div className="text-center py-8 text-base-content/60">
-        <Icon name="listMusic" size={32} className="mx-auto mb-2 opacity-50" />
+        <Icon name="listMusic" size={32} className="mx-auto mb-2 opacity-50" aria-hidden={true} />
         <p>{t('projects.noSetlist')}</p>
       </div>
     );
@@ -240,7 +242,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
               {reorderMutation.isPending ? (
                 <span className="loading loading-spinner loading-xs" />
               ) : (
-                <Icon name="check" size={14} />
+                <Icon name="check" size={14} aria-hidden={true} />
               )}
               {t('common.save')}
             </button>
@@ -274,7 +276,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
 
       {/* Help text */}
       <p className="text-xs text-base-content/50 text-center">
-        <Icon name="move" size={12} className="inline mr-1" />
+        <Icon name="move" size={12} className="inline mr-1" aria-hidden={true} />
         {t('common.dragToReorder', 'Drag items to reorder')}
       </p>
     </div>

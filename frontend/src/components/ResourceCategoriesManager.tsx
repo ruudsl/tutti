@@ -102,7 +102,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
             className="btn btn-sm btn-primary gap-1"
             onClick={() => setShowAddModal(true)}
           >
-            <Icon name="plus" size={14} />
+            <Icon name="plus" size={14} aria-hidden={true} />
             {t('resources.categories.add')}
           </button>
         </div>
@@ -113,7 +113,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
           </div>
         ) : sortedCategories.length === 0 ? (
           <div className="text-center py-8 bg-base-200 rounded-lg">
-            <Icon name="folder" size={32} className="mx-auto mb-2 opacity-50" />
+            <Icon name="folder" size={32} className="mx-auto mb-2 opacity-50" aria-hidden={true} />
             <p className="text-base-content/60">{t('resources.categories.noCategories')}</p>
           </div>
         ) : (
@@ -125,6 +125,15 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
                 onDragStart={() => handleDragStart(category)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleDragStart(category);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`${t('common.dragToReorder')} ${category.name}`}
                 className={`
                   flex items-center justify-between p-3 bg-base-200 rounded-lg cursor-move
                   ${dragOverIndex === index ? 'ring-2 ring-primary' : ''}
@@ -132,13 +141,14 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
                 `}
               >
                 <div className="flex items-center gap-3">
-                  <Icon name="menu" size={16} className="text-base-content/40" />
+                  <Icon name="menu" size={16} className="text-base-content/40" aria-hidden={true} />
                   <div
                     className="w-4 h-4 rounded"
                     style={{ backgroundColor: category.color || '#6366f1' }}
+                    aria-hidden={true}
                   />
                   {category.icon && (
-                    <Icon name={category.icon as IconName} size={18} />
+                    <Icon name={category.icon as IconName} size={18} aria-hidden={true} />
                   )}
                   <div>
                     <div className="font-medium">{category.name}</div>
@@ -154,7 +164,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
                     onClick={() => setEditingCategory(category)}
                     aria-label={t('common.edit')}
                   >
-                    <Icon name="pencil" size={14} />
+                    <Icon name="pencil" size={14} aria-hidden={true} />
                   </button>
                   <button
                     className="btn btn-ghost btn-sm btn-square text-error"
@@ -162,7 +172,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
                     aria-label={t('common.delete')}
                     disabled={category.resourceCount > 0}
                   >
-                    <Icon name="trash" size={14} />
+                    <Icon name="trash" size={14} aria-hidden={true} />
                   </button>
                 </div>
               </div>
@@ -303,7 +313,7 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
           <label className="label">
             <span className="label-text font-medium">{t('resources.categories.color')}</span>
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('resources.categories.color')}>
             {AVAILABLE_COLORS.map((color) => (
               <button
                 key={color}
@@ -313,7 +323,10 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
                 }`}
                 style={{ backgroundColor: color }}
                 onClick={() => setFormData({ ...formData, color })}
-                aria-label={color}
+                aria-label={t('resources.categories.selectColor', { color })}
+                aria-pressed={formData.color === color}
+                role="radio"
+                aria-checked={formData.color === color}
               />
             ))}
           </div>
@@ -323,11 +336,13 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
           <label className="label">
             <span className="label-text font-medium">{t('resources.categories.icon')}</span>
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('resources.categories.icon')}>
             <button
               type="button"
               className={`btn btn-sm ${!formData.icon ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setFormData({ ...formData, icon: '' })}
+              role="radio"
+              aria-checked={!formData.icon}
             >
               {t('common.none')}
             </button>
@@ -337,9 +352,11 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
                 type="button"
                 className={`btn btn-sm btn-square ${formData.icon === icon ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => setFormData({ ...formData, icon })}
-                aria-label={icon}
+                aria-label={t('resources.categories.selectIcon', { icon })}
+                role="radio"
+                aria-checked={formData.icon === icon}
               >
-                <Icon name={icon} size={16} />
+                <Icon name={icon} size={16} aria-hidden={true} />
               </button>
             ))}
           </div>
@@ -350,14 +367,15 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
           <label className="label">
             <span className="label-text font-medium">{t('common.preview')}</span>
           </label>
-          <div className="p-3 bg-base-200 rounded-lg">
+          <div className="p-3 bg-base-200 rounded-lg" aria-live="polite">
             <div className="flex items-center gap-3">
               <div
                 className="w-4 h-4 rounded"
                 style={{ backgroundColor: formData.color }}
+                aria-hidden={true}
               />
               {formData.icon && (
-                <Icon name={formData.icon as IconName} size={18} />
+                <Icon name={formData.icon as IconName} size={18} aria-hidden={true} />
               )}
               <span className="font-medium">{formData.name || t('resources.categories.untitled')}</span>
             </div>

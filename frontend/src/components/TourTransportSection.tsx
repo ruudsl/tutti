@@ -75,14 +75,14 @@ export function TourTransportSection({
           className="btn btn-primary btn-sm gap-1"
           onClick={() => setShowAddModal(true)}
         >
-          <Icon name="plus" size={16} />
+          <Icon name="plus" size={16} aria-hidden={true} />
           {t('tours.addTransport')}
         </button>
       </div>
 
       {transport.length === 0 ? (
         <div className="text-center py-8 text-base-content/60">
-          <Icon name="truck" size={32} className="mx-auto mb-2 opacity-50" />
+          <Icon name="truck" size={32} className="mx-auto mb-2 opacity-50" aria-hidden={true} />
           <p>{t('tours.noTransport')}</p>
           <p className="text-sm mt-1">{t('tours.addTransportHint')}</p>
         </div>
@@ -98,6 +98,7 @@ export function TourTransportSection({
                         name={TRANSPORT_ICONS[tr.transportType] || 'truck'}
                         size={18}
                         className="text-primary"
+                        aria-hidden={true}
                       />
                       <span className="badge badge-primary">{t(`tours.transportTypes.${tr.transportType}`) || tr.transportType}</span>
                       {tr.provider && (
@@ -108,7 +109,7 @@ export function TourTransportSection({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Departure */}
                       <div className="flex items-start gap-2">
-                        <div className="w-3 h-3 rounded-full bg-success mt-1.5 flex-shrink-0" />
+                        <div className="w-3 h-3 rounded-full bg-success mt-1.5 flex-shrink-0" role="img" aria-label={t('tours.departure')} />
                         <div>
                           <div className="text-xs text-base-content/60 uppercase">
                             {t('tours.departure')}
@@ -126,7 +127,7 @@ export function TourTransportSection({
 
                       {/* Arrival */}
                       <div className="flex items-start gap-2">
-                        <div className="w-3 h-3 rounded-full bg-error mt-1.5 flex-shrink-0" />
+                        <div className="w-3 h-3 rounded-full bg-error mt-1.5 flex-shrink-0" role="img" aria-label={t('tours.arrival')} />
                         <div>
                           <div className="text-xs text-base-content/60 uppercase">
                             {t('tours.arrival')}
@@ -152,9 +153,9 @@ export function TourTransportSection({
                       }
                     }}
                     disabled={deleteMutation.isPending}
-                    title={t('common.delete')}
+                    aria-label={t('common.delete')}
                   >
-                    <Icon name="trash" size={16} />
+                    <Icon name="trash" size={16} aria-hidden={true} />
                   </button>
                 </div>
               </div>

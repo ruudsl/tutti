@@ -157,7 +157,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
             className="btn btn-primary btn-sm gap-1"
             onClick={() => setShowAddModal(true)}
           >
-            <Icon name="plus" size={14} />
+            <Icon name="plus" size={14} aria-hidden={true} />
             {t('posts.categories.add')}
           </button>
         </div>
@@ -169,7 +169,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
           </div>
         ) : categories.length === 0 ? (
           <div className="text-center p-8 bg-base-200 rounded-lg">
-            <Icon name="folder" size={48} className="mx-auto opacity-50 mb-4" />
+            <Icon name="folder" size={48} className="mx-auto opacity-50 mb-4" aria-hidden={true} />
             <p className="text-base-content/70">{t('posts.categories.noCategories')}</p>
           </div>
         ) : (
@@ -205,17 +205,17 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => openEditModal(category)}
-                          title={t('common.edit')}
+                          aria-label={t('common.edit')}
                         >
-                          <Icon name="pencil" size={14} />
+                          <Icon name="pencil" size={14} aria-hidden={true} />
                         </button>
                         <button
                           className="btn btn-ghost btn-sm text-error"
                           onClick={() => setDeletingCategory(category)}
-                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
                           disabled={category.postCount > 0}
                         >
-                          <Icon name="trash" size={14} />
+                          <Icon name="trash" size={14} aria-hidden={true} />
                         </button>
                       </div>
                     </td>
@@ -354,7 +354,7 @@ function CategoryForm({
           <span className="label-text">{t('posts.categories.color')}</span>
         </label>
         <div className="flex items-center gap-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="radiogroup" aria-label={t('posts.categories.color')}>
             {DEFAULT_COLORS.map((color) => (
               <button
                 key={color}
@@ -364,7 +364,9 @@ function CategoryForm({
                 }`}
                 style={{ backgroundColor: color }}
                 onClick={() => setFormData((prev) => ({ ...prev, color }))}
-                title={color}
+                aria-label={t('posts.categories.selectColor', { color })}
+                role="radio"
+                aria-checked={formData.color === color}
               />
             ))}
           </div>
@@ -373,7 +375,7 @@ function CategoryForm({
             className="w-8 h-8 rounded cursor-pointer"
             value={formData.color || DEFAULT_COLORS[0]}
             onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
-            title={t('posts.categories.customColor')}
+            aria-label={t('posts.categories.customColor')}
           />
         </div>
       </div>

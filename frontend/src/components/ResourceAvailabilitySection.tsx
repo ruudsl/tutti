@@ -71,14 +71,14 @@ export function ResourceAvailabilitySection({ resourceId, availability }: Resour
           className="btn btn-sm btn-primary gap-1"
           onClick={() => setShowAddModal(true)}
         >
-          <Icon name="plus" size={14} />
+          <Icon name="plus" size={14} aria-hidden={true} />
           {t('resources.availability.addRule')}
         </button>
       </div>
 
       {availability.length === 0 ? (
         <div className="text-sm text-base-content/60 p-4 bg-base-200 rounded-lg text-center">
-          <Icon name="calendar" size={24} className="mx-auto mb-2 opacity-50" />
+          <Icon name="calendar" size={24} className="mx-auto mb-2 opacity-50" aria-hidden={true} />
           <p>{t('resources.availability.noRules')}</p>
           <p className="text-xs mt-1">{t('resources.availability.noRulesHint')}</p>
         </div>
@@ -90,7 +90,10 @@ export function ResourceAvailabilitySection({ resourceId, availability }: Resour
               className="flex items-center justify-between p-3 bg-base-200 rounded-lg"
             >
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${rule.availabilityType === 'available' ? 'bg-success' : 'bg-error'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${rule.availabilityType === 'available' ? 'bg-success' : 'bg-error'}`}
+                  aria-hidden={true}
+                />
                 <div>
                   <div className="font-medium text-sm">
                     {getRuleDescription(rule)}
@@ -108,7 +111,7 @@ export function ResourceAvailabilitySection({ resourceId, availability }: Resour
                 onClick={() => setDeletingRule(rule)}
                 aria-label={t('common.delete')}
               >
-                <Icon name="trash" size={16} />
+                <Icon name="trash" size={16} aria-hidden={true} />
               </button>
             </div>
           ))}

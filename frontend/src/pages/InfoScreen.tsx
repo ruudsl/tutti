@@ -52,8 +52,8 @@ export default function InfoScreen() {
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="text-center">
-          <Icon name="warning" size={48} className="mx-auto mb-4 opacity-50" />
+        <div className="text-center" role="alert">
+          <Icon name="warning" size={48} className="mx-auto mb-4 opacity-50" aria-hidden={true} />
           <h1 className="text-xl font-bold mb-2">Info Screen Not Available</h1>
           <p className="text-base-content/70">
             {error instanceof Error ? error.message : 'Association not found'}
@@ -101,7 +101,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
           <div className="card bg-primary text-primary-content shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-primary-content/80">
-                <Icon name="music2" size={20} />
+                <Icon name="music2" size={20} aria-hidden={true} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Next Concert</span>
               </div>
               <h2 className="card-title text-3xl mt-2">{data.nextConcert.name}</h2>
@@ -111,7 +111,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
               )}
               {data.nextConcert.venue && (
                 <div className="flex items-center gap-1 mt-2">
-                  <Icon name="mapPin" size={16} />
+                  <Icon name="mapPin" size={16} aria-hidden={true} />
                   {data.nextConcert.venue}{data.nextConcert.city && `, ${data.nextConcert.city}`}
                 </div>
               )}
@@ -131,7 +131,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-base-content/60">
-                <Icon name="users" size={20} />
+                <Icon name="users" size={20} aria-hidden={true} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Next Rehearsal</span>
               </div>
               <h2 className="card-title text-2xl mt-2">
@@ -139,13 +139,13 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
               </h2>
               <div className="text-lg">{formatDate(data.nextRehearsal.date)}</div>
               <div className="flex items-center gap-2">
-                <Icon name="clock" size={16} className="opacity-70" />
+                <Icon name="clock" size={16} className="opacity-70" aria-hidden={true} />
                 {formatTime(data.nextRehearsal.startTime)}
                 {data.nextRehearsal.endTime && ` - ${formatTime(data.nextRehearsal.endTime)}`}
               </div>
               {data.nextRehearsal.location && (
                 <div className="flex items-center gap-1 opacity-70">
-                  <Icon name="mapPin" size={16} />
+                  <Icon name="mapPin" size={16} aria-hidden={true} />
                   {data.nextRehearsal.location}
                 </div>
               )}
@@ -158,7 +158,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-base-content/60">
-                <Icon name="calendar" size={20} />
+                <Icon name="calendar" size={20} aria-hidden={true} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Coming Up</span>
               </div>
               <div className="space-y-3 mt-2">
@@ -186,7 +186,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
           <div className="card bg-warning/10 shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-warning">
-                <Icon name="bell" size={20} />
+                <Icon name="bell" size={20} aria-hidden={true} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Announcement</span>
               </div>
               <h3 className="font-semibold text-xl mt-2">{data.announcement.title}</h3>
@@ -203,7 +203,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
       {/* Empty state when no content */}
       {!data.nextConcert && !data.nextRehearsal && data.upcomingConcerts.length === 0 && (
         <div className="text-center py-20">
-          <Icon name="calendar" size={64} className="mx-auto mb-4 opacity-30" />
+          <Icon name="calendar" size={64} className="mx-auto mb-4 opacity-30" aria-hidden={true} />
           <p className="text-xl text-base-content/50">No upcoming events</p>
         </div>
       )}

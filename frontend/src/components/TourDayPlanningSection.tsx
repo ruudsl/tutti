@@ -82,14 +82,14 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
           className="btn btn-primary btn-sm gap-1"
           onClick={() => setShowAddDayModal(true)}
         >
-          <Icon name="plus" size={16} />
+          <Icon name="plus" size={16} aria-hidden={true} />
           {t('tours.addDay')}
         </button>
       </div>
 
       {sortedDays.length === 0 ? (
         <div className="text-center py-8 text-base-content/60">
-          <Icon name="calendar" size={32} className="mx-auto mb-2 opacity-50" />
+          <Icon name="calendar" size={32} className="mx-auto mb-2 opacity-50" aria-hidden={true} />
           <p>{t('tours.noDays')}</p>
           <p className="text-sm mt-1">{t('tours.addDayHint')}</p>
         </div>
@@ -100,9 +100,12 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
             return (
               <div key={day.id} className="card bg-base-200">
                 <div className="card-body p-4">
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
+                  <button
+                    type="button"
+                    className="flex items-center justify-between cursor-pointer w-full text-left bg-transparent border-none p-0"
                     onClick={() => setExpandedDay(isExpanded ? null : day.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`day-details-${day.id}`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="badge badge-primary font-medium">
@@ -123,10 +126,10 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                         className="text-base-content/60"
                       />
                     </div>
-                  </div>
+                  </button>
 
                   {isExpanded && (
-                    <div className="mt-4 space-y-3">
+                    <div id={`day-details-${day.id}`} className="mt-4 space-y-3">
                       {day.description && (
                         <p className="text-sm text-base-content/70">{day.description}</p>
                       )}
@@ -163,7 +166,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                                 )}
                                 {activity.location && (
                                   <div className="text-sm text-base-content/60 flex items-center gap-1 mt-1">
-                                    <Icon name="mapPin" size={12} />
+                                    <Icon name="mapPin" size={12} aria-hidden={true} />
                                     {activity.location}
                                   </div>
                                 )}
@@ -183,9 +186,9 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                                     })
                                   }
                                   disabled={deleteActivityMutation.isPending}
-                                  title={t('common.delete')}
+                                  aria-label={t('common.delete')}
                                 >
-                                  <Icon name="trash" size={14} />
+                                  <Icon name="trash" size={14} aria-hidden={true} />
                                 </button>
                               </div>
                             </div>
@@ -199,7 +202,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                           className="btn btn-sm btn-ghost gap-1"
                           onClick={() => setAddActivityForDay(day.id)}
                         >
-                          <Icon name="plus" size={14} />
+                          <Icon name="plus" size={14} aria-hidden={true} />
                           {t('tours.addActivity')}
                         </button>
                         <button
@@ -211,7 +214,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                           }}
                           disabled={deleteDayMutation.isPending}
                         >
-                          <Icon name="trash" size={14} />
+                          <Icon name="trash" size={14} aria-hidden={true} />
                           {t('tours.deleteDay')}
                         </button>
                       </div>

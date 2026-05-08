@@ -67,22 +67,23 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
           </div>
         ) : templates.length === 0 ? (
           <div className="text-center py-8">
-            <Icon name="clipboard" size={48} className="mx-auto opacity-50 mb-4" />
+            <Icon name="clipboard" size={48} className="mx-auto opacity-50 mb-4" aria-hidden={true} />
             <p className="text-base-content/70">{t('tasks.noTemplates')}</p>
           </div>
         ) : !selectedTemplate ? (
           <div className="space-y-2">
             <p className="text-sm text-base-content/70 mb-4">{t('tasks.useTemplate')}</p>
             {templates.map((template) => (
-              <div
+              <button
                 key={template.id}
-                className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer"
+                type="button"
+                className="card bg-base-200 hover:bg-base-300 transition-colors cursor-pointer w-full text-left"
                 onClick={() => setSelectedTemplate(template)}
               >
                 <div className="card-body p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Icon name="clipboard" size={20} className="text-primary" />
+                      <Icon name="clipboard" size={20} className="text-primary" aria-hidden={true} />
                       <div>
                         <h4 className="font-medium">{template.name}</h4>
                         {template.description && (
@@ -99,11 +100,11 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
                           {template.checklistItems.length} {t('tasks.checklist').toLowerCase()}
                         </span>
                       )}
-                      <Icon name="chevronRight" size={16} className="text-base-content/50" />
+                      <Icon name="chevronRight" size={16} className="text-base-content/50" aria-hidden={true} />
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         ) : (
@@ -113,7 +114,7 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
               className="btn btn-ghost btn-sm gap-1"
               onClick={() => setSelectedTemplate(null)}
             >
-              <Icon name="chevronLeft" size={16} />
+              <Icon name="chevronLeft" size={16} aria-hidden={true} />
               {t('common.back')}
             </button>
 
@@ -180,7 +181,7 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
                   <span className="loading loading-spinner loading-sm" />
                 ) : (
                   <>
-                    <Icon name="plus" size={16} className="mr-1" />
+                    <Icon name="plus" size={16} className="mr-1" aria-hidden={true} />
                     {t('tasks.createFromTemplate')}
                   </>
                 )}

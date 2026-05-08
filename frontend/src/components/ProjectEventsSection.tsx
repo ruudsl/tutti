@@ -84,14 +84,14 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
       <div className="card bg-base-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold flex items-center gap-2">
-            <Icon name="music2" size={18} className="text-primary" />
+            <Icon name="music2" size={18} className="text-primary" aria-hidden={true} />
             {t('projects.concerts')} ({project.concerts.length})
           </h4>
           <button
             className="btn btn-sm btn-ghost gap-1"
             onClick={() => setShowLinkConcertModal(true)}
           >
-            <Icon name="plus" size={16} />
+            <Icon name="plus" size={16} aria-hidden={true} />
             {t('projects.events.linkConcert')}
           </button>
         </div>
@@ -112,11 +112,11 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
                   <div className="flex-1">
                     <div className="font-medium">{concert.name}</div>
                     <div className="text-sm text-base-content/60 flex items-center gap-2">
-                      <Icon name="calendar" size={12} />
+                      <Icon name="calendar" size={12} aria-hidden={true} />
                       {formatDate(concert.date)}
                       {concert.venue && (
                         <>
-                          <Icon name="mapPin" size={12} />
+                          <Icon name="mapPin" size={12} aria-hidden={true} />
                           {concert.venue}
                         </>
                       )}
@@ -126,10 +126,10 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
                     className="btn btn-ghost btn-sm text-error"
                     onClick={() => unlinkConcertMutation.mutate(concert.id)}
                     disabled={unlinkConcertMutation.isPending}
-                    title={t('projects.events.unlinkConcert')}
+                    aria-label={t('projects.events.unlinkConcert')}
                   >
-                    <Icon name="link" size={16} />
-                    <Icon name="close" size={12} className="-ml-2" />
+                    <Icon name="link" size={16} aria-hidden={true} />
+                    <Icon name="close" size={12} className="-ml-2" aria-hidden={true} />
                   </button>
                 </div>
               ))}
@@ -141,14 +141,14 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
       <div className="card bg-base-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold flex items-center gap-2">
-            <Icon name="users" size={18} className="text-primary" />
+            <Icon name="users" size={18} className="text-primary" aria-hidden={true} />
             {t('projects.rehearsals')} ({project.rehearsals.length})
           </h4>
           <button
             className="btn btn-sm btn-ghost gap-1"
             onClick={() => setShowLinkRehearsalModal(true)}
           >
-            <Icon name="plus" size={16} />
+            <Icon name="plus" size={16} aria-hidden={true} />
             {t('projects.events.linkRehearsal')}
           </button>
         </div>
@@ -171,11 +171,11 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
                       {t('projects.rehearsal')} - {formatDate(rehearsal.date)}
                     </div>
                     <div className="text-sm text-base-content/60 flex items-center gap-2">
-                      <Icon name="clock" size={12} />
+                      <Icon name="clock" size={12} aria-hidden={true} />
                       {rehearsal.startTime} - {rehearsal.endTime}
                       {rehearsal.location && (
                         <>
-                          <Icon name="mapPin" size={12} />
+                          <Icon name="mapPin" size={12} aria-hidden={true} />
                           {rehearsal.location}
                         </>
                       )}
@@ -185,10 +185,10 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
                     className="btn btn-ghost btn-sm text-error"
                     onClick={() => unlinkRehearsalMutation.mutate(rehearsal.id)}
                     disabled={unlinkRehearsalMutation.isPending}
-                    title={t('projects.events.unlinkRehearsal')}
+                    aria-label={t('projects.events.unlinkRehearsal')}
                   >
-                    <Icon name="link" size={16} />
-                    <Icon name="close" size={12} className="-ml-2" />
+                    <Icon name="link" size={16} aria-hidden={true} />
+                    <Icon name="close" size={12} className="-ml-2" aria-hidden={true} />
                   </button>
                 </div>
               ))}
@@ -284,17 +284,16 @@ function LinkConcertModal({
             availableConcerts.map((concert) => (
               <div
                 key={concert.id}
-                className="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
-                onClick={() => !isLoading && onLink(concert.id)}
+                className="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
               >
                 <div>
                   <div className="font-medium">{concert.name}</div>
                   <div className="text-sm text-base-content/60 flex items-center gap-2">
-                    <Icon name="calendar" size={12} />
+                    <Icon name="calendar" size={12} aria-hidden={true} />
                     {formatDate(concert.date)}
                     {concert.location && (
                       <>
-                        <Icon name="mapPin" size={12} />
+                        <Icon name="mapPin" size={12} aria-hidden={true} />
                         {concert.location}
                       </>
                     )}
@@ -303,8 +302,10 @@ function LinkConcertModal({
                 <button
                   className="btn btn-sm btn-primary gap-1"
                   disabled={isLoading}
+                  onClick={() => !isLoading && onLink(concert.id)}
+                  aria-label={`${t('common.add')} ${concert.name}`}
                 >
-                  <Icon name="plus" size={14} />
+                  <Icon name="plus" size={14} aria-hidden={true} />
                   {t('common.add')}
                 </button>
               </div>
@@ -372,25 +373,24 @@ function LinkRehearsalModal({
             availableRehearsals.map((rehearsal) => (
               <div
                 key={rehearsal.id}
-                className="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 cursor-pointer transition-colors"
-                onClick={() => !isLoading && onLink(rehearsal.id)}
+                className="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
               >
                 <div>
                   <div className="font-medium">
                     {t('projects.rehearsal')} - {formatDate(rehearsal.date)}
                   </div>
                   <div className="text-sm text-base-content/60 flex items-center gap-2">
-                    <Icon name="clock" size={12} />
+                    <Icon name="clock" size={12} aria-hidden={true} />
                     {rehearsal.start_time} - {rehearsal.end_time}
                     {rehearsal.location && (
                       <>
-                        <Icon name="mapPin" size={12} />
+                        <Icon name="mapPin" size={12} aria-hidden={true} />
                         {rehearsal.location}
                       </>
                     )}
                     {rehearsal.orchestra_name && (
                       <>
-                        <Icon name="music" size={12} />
+                        <Icon name="music" size={12} aria-hidden={true} />
                         {rehearsal.orchestra_name}
                       </>
                     )}
@@ -399,8 +399,10 @@ function LinkRehearsalModal({
                 <button
                   className="btn btn-sm btn-primary gap-1"
                   disabled={isLoading}
+                  onClick={() => !isLoading && onLink(rehearsal.id)}
+                  aria-label={`${t('common.add')} ${t('projects.rehearsal')} - ${formatDate(rehearsal.date)}`}
                 >
-                  <Icon name="plus" size={14} />
+                  <Icon name="plus" size={14} aria-hidden={true} />
                   {t('common.add')}
                 </button>
               </div>

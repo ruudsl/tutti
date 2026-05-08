@@ -42,7 +42,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="package" size={18} className="text-primary" />
+            <Icon name="package" size={18} className="text-primary" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.total')}</span>
           </div>
           <div className="text-2xl font-bold">{stats.totalItems}</div>
@@ -53,7 +53,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="checkCircle" size={18} className="text-success" />
+            <Icon name="checkCircle" size={18} className="text-success" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.available')}</span>
           </div>
           <div className="text-2xl font-bold text-success">{availableCount}</div>
@@ -64,7 +64,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="user" size={18} className="text-warning" />
+            <Icon name="user" size={18} className="text-warning" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.inUse')}</span>
           </div>
           <div className="text-2xl font-bold text-warning">{inUseCount}</div>
@@ -75,7 +75,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="arrow" size={18} className="text-info" />
+            <Icon name="arrow" size={18} className="text-info" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.activeLoans')}</span>
           </div>
           <div className="text-2xl font-bold text-info">{stats.activeLoans}</div>
@@ -86,7 +86,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="wrench" size={18} className="text-error" />
+            <Icon name="wrench" size={18} className="text-error" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.inMaintenance')}</span>
           </div>
           <div className="text-2xl font-bold text-error">{maintenanceCount + repairCount}</div>
@@ -97,7 +97,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="creditCard" size={18} className="text-primary" />
+            <Icon name="creditCard" size={18} className="text-primary" aria-hidden={true} />
             <span className="text-sm text-base-content/60">{t('equipment.stats.totalValue')}</span>
           </div>
           <div className="text-2xl font-bold">
