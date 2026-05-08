@@ -158,7 +158,7 @@ export default function Accounting() {
 
   const createFiscalYearMutation = useMutation({
     mutationFn: createFiscalYear,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-years'] });
       showSuccess(t('accounting.fiscalYearCreated'));
       setShowFiscalYearModal(false);
@@ -2257,7 +2257,7 @@ function FiscalYearModal({
   };
 
   return (
-    <Modal isOpen onClose={onClose} title={t('accounting.newFiscalYear')}>
+    <Modal onClose={onClose} title={t('accounting.newFiscalYear')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
           <label className="label">
