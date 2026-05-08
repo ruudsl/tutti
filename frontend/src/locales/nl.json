@@ -984,7 +984,15 @@
     "musicaInfoSelect": "Selecteer",
     "musicaInfoApply": "Overnemen",
     "musicaInfoComposer": "Componist",
-    "musicaInfoPublisher": "Uitgever"
+    "musicaInfoPublisher": "Uitgever",
+    "confirmDeleteMp3": "Weet je zeker dat je het MP3-bestand wilt verwijderen?",
+    "metadataSaved": "Metadata opgeslagen",
+    "mp3Uploaded": "MP3 geüpload",
+    "mp3Deleted": "MP3 verwijderd",
+    "errorFetchYouTube": "Kon YouTube-metadata niet ophalen",
+    "errorSaveMetadata": "Fout bij opslaan metadata",
+    "errorUploadMp3": "Fout bij uploaden MP3",
+    "errorDeleteMp3": "Fout bij verwijderen MP3"
   },
   "streaming": {
     "title": "Streaming Links",
@@ -1035,7 +1043,9 @@
     "tip": "Tip",
     "instrumentTip": "Het instrument wordt automatisch herkend via de instrumentenlijst en aliassen.",
     "newList": "Nieuwe lijst",
-    "newListPlaceholder": "Naam van de nieuwe lijst..."
+    "newListPlaceholder": "Naam van de nieuwe lijst...",
+    "filesFailed": "bestand(en) mislukt",
+    "filesUploaded": "bestand(en) succesvol geüpload"
   },
   "instruments": {
     "title": "Instrumenten",
