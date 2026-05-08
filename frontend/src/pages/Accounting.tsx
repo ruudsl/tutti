@@ -17,10 +17,24 @@ import {
   getRelations,
   getCostCenters,
   getBudgets,
+  createTransaction,
+  createInvoice,
+  createRelation,
+  createCostCenter,
+  createBudget,
   Account,
   AccountType,
   AccountSubtype,
   CreateAccountData,
+  Transaction,
+  TransactionType,
+  CreateTransactionData,
+  Invoice,
+  CreateInvoiceData,
+  AccountingRelation,
+  RelationType,
+  CostCenter,
+  Budget,
 } from '../api/accounting';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton';
@@ -54,6 +68,13 @@ export default function Accounting() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string | undefined>();
+
+  // Modal states for all entity types
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showRelationModal, setShowRelationModal] = useState(false);
+  const [showCostCenterModal, setShowCostCenterModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
 
   const { data: fiscalYears = [] } = useQuery({
     queryKey: ['fiscal-years'],
@@ -473,7 +494,7 @@ export default function Accounting() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">{t('accounting.journalEntries')}</h2>
-            <button className="btn btn-primary gap-2">
+            <button className="btn btn-primary gap-2" onClick={() => setShowTransactionModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newEntry')}
             </button>
@@ -534,7 +555,7 @@ export default function Accounting() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">{t('accounting.invoices')}</h2>
-            <button className="btn btn-primary gap-2">
+            <button className="btn btn-primary gap-2" onClick={() => setShowInvoiceModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newInvoice')}
             </button>
@@ -595,7 +616,7 @@ export default function Accounting() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">{t('accounting.relations')}</h2>
-            <button className="btn btn-primary gap-2">
+            <button className="btn btn-primary gap-2" onClick={() => setShowRelationModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newRelation')}
             </button>
@@ -655,7 +676,7 @@ export default function Accounting() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">{t('accounting.costCenters')}</h2>
-            <button className="btn btn-primary gap-2">
+            <button className="btn btn-primary gap-2" onClick={() => setShowCostCenterModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newCostCenter')}
             </button>
@@ -706,7 +727,7 @@ export default function Accounting() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">{t('accounting.budgets')}</h2>
-            <button className="btn btn-primary gap-2">
+            <button className="btn btn-primary gap-2" onClick={() => setShowBudgetModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newBudget')}
             </button>
@@ -885,6 +906,70 @@ export default function Accounting() {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             setShowAccountModal(false);
             setEditingAccount(null);
+          }}
+        />
+      )}
+
+      {/* Transaction Modal */}
+      {showTransactionModal && (
+        <TransactionModal
+          accounts={accounts}
+          costCenters={costCenters}
+          onClose={() => setShowTransactionModal(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            setShowTransactionModal(false);
+          }}
+        />
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && (
+        <InvoiceModal
+          accounts={accounts}
+          relations={relations}
+          costCenters={costCenters}
+          onClose={() => setShowInvoiceModal(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            setShowInvoiceModal(false);
+          }}
+        />
+      )}
+
+      {/* Relation Modal */}
+      {showRelationModal && (
+        <RelationModal
+          onClose={() => setShowRelationModal(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['accounting-relations'] });
+            setShowRelationModal(false);
+          }}
+        />
+      )}
+
+      {/* Cost Center Modal */}
+      {showCostCenterModal && (
+        <CostCenterModal
+          onClose={() => setShowCostCenterModal(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['cost-centers'] });
+            setShowCostCenterModal(false);
+          }}
+        />
+      )}
+
+      {/* Budget Modal */}
+      {showBudgetModal && (
+        <BudgetModal
+          accounts={accounts}
+          costCenters={costCenters}
+          fiscalYears={fiscalYears}
+          currentFiscalYearId={currentFiscalYear?.id}
+          onClose={() => setShowBudgetModal(false)}
+          onSave={() => {
+            queryClient.invalidateQueries({ queryKey: ['budgets'] });
+            setShowBudgetModal(false);
           }}
         />
       )}
