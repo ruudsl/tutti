@@ -1933,7 +1933,15 @@
     "selectUser": "Mitglied auswählen",
     "loanAgreement": "Leihvertrag",
     "generateAgreement": "Vertrag erstellen",
-    "deleteConfirm": "Möchten Sie dieses Instrument wirklich löschen?"
+    "deleteConfirm": "Möchten Sie dieses Instrument wirklich löschen?",
+    "stats": {
+      "total": "Gesamt",
+      "available": "Verfügbar",
+      "inUse": "In Benutzung",
+      "activeLoans": "Aktive Ausleihen",
+      "inMaintenance": "In Wartung",
+      "totalValue": "Gesamtwert"
+    }
   },
   "uniforms": {
     "title": "Uniformen",
@@ -4414,7 +4422,11 @@
     "errorCreate": "Fehler beim Erstellen der Kleiderordnung",
     "errorUpdate": "Fehler beim Aktualisieren der Kleiderordnung",
     "errorDelete": "Fehler beim Löschen der Kleiderordnung",
-    "confirmDelete": "Möchten Sie diese Kleiderordnung wirklich löschen?"
+    "confirmDelete": "Möchten Sie diese Kleiderordnung wirklich löschen?",
+    "reorder": "Reihenfolge ändern",
+    "reordered": "Reihenfolge aktualisiert",
+    "errorReorder": "Fehler beim Ändern der Reihenfolge",
+    "reorderHint": "Ziehen Sie Elemente, um die Reihenfolge zu ändern. Änderungen werden automatisch gespeichert."
   },
   "wiki": {
     "title": "Wiki",
