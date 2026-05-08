@@ -43,7 +43,9 @@
     "more": "weitere",
     "show": "Zeigen",
     "hide": "Ausblenden",
-    "dragToReorder": "Elemente ziehen um neu zu ordnen"
+    "dragToReorder": "Elemente ziehen um neu zu ordnen",
+    "details": "Details",
+    "preview": "Vorschau"
   },
   "music": {
     "title": "Musikstück",

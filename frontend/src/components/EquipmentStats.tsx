@@ -35,7 +35,6 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
   const inUseCount = stats.byStatus['in_use'] || 0;
   const maintenanceCount = stats.byStatus['maintenance'] || 0;
   const repairCount = stats.byStatus['repair'] || 0;
-  const retiredCount = stats.byStatus['retired'] || 0;
 
   return (
     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 ${className}`}>
@@ -76,7 +75,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="arrowRight" size={18} className="text-info" />
+            <Icon name="arrow" size={18} className="text-info" />
             <span className="text-sm text-base-content/60">{t('equipment.stats.activeLoans')}</span>
           </div>
           <div className="text-2xl font-bold text-info">{stats.activeLoans}</div>
@@ -98,7 +97,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center gap-2">
-            <Icon name="currency" size={18} className="text-primary" />
+            <Icon name="creditCard" size={18} className="text-primary" />
             <span className="text-sm text-base-content/60">{t('equipment.stats.totalValue')}</span>
           </div>
           <div className="text-2xl font-bold">

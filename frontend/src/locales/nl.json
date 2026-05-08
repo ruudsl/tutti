@@ -43,7 +43,9 @@
     "more": "meer",
     "show": "Tonen",
     "hide": "Verbergen",
-    "dragToReorder": "Sleep items om te herschikken"
+    "dragToReorder": "Sleep items om te herschikken",
+    "details": "Details",
+    "preview": "Voorbeeld"
   },
   "music": {
     "title": "Muziekstuk",

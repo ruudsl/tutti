@@ -43,7 +43,9 @@
     "more": "more",
     "show": "Show",
     "hide": "Hide",
-    "dragToReorder": "Drag items to reorder"
+    "dragToReorder": "Drag items to reorder",
+    "details": "Details",
+    "preview": "Preview"
   },
   "music": {
     "title": "Music piece",
