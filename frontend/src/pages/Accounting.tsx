@@ -26,10 +26,8 @@ import {
   AccountType,
   AccountSubtype,
   CreateAccountData,
-  Transaction,
   TransactionType,
   CreateTransactionData,
-  Invoice,
   CreateInvoiceData,
   AccountingRelation,
   RelationType,
@@ -794,12 +792,22 @@ export default function Accounting() {
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
+          {!currentFiscalYear && (
+            <div className="alert alert-warning">
+              <Icon name="warning" size={16} />
+              <span>{t('accounting.noFiscalYearForReports')}</span>
+            </div>
+          )}
           {/* Balance Report */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h3 className="card-title">{t('accounting.balanceSheet')}</h3>
-              {!balanceReport ? (
+              {!currentFiscalYear ? (
+                <p className="text-base-content/60">{t('accounting.selectFiscalYearFirst')}</p>
+              ) : !balanceReport ? (
                 <SkeletonCard />
+              ) : balanceReport.assets?.length === 0 && balanceReport.liabilities?.length === 0 && balanceReport.equity?.length === 0 ? (
+                <p className="text-base-content/60">{t('accounting.noAccountsForReport')}</p>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
@@ -808,7 +816,7 @@ export default function Accounting() {
                       {balanceReport.assets?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
                           <span>{item.code} - {item.name}</span>
-                          <span className="font-mono">{formatCurrency(item.balance)}</span>
+                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between font-bold border-t pt-2">
@@ -823,13 +831,13 @@ export default function Accounting() {
                       {balanceReport.liabilities?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
                           <span>{item.code} - {item.name}</span>
-                          <span className="font-mono">{formatCurrency(item.balance)}</span>
+                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
                       {balanceReport.equity?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
                           <span>{item.code} - {item.name}</span>
-                          <span className="font-mono">{formatCurrency(item.balance)}</span>
+                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between font-bold border-t pt-2">
@@ -847,8 +855,12 @@ export default function Accounting() {
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
               <h3 className="card-title">{t('accounting.profitLoss')}</h3>
-              {!profitLossReport ? (
+              {!currentFiscalYear ? (
+                <p className="text-base-content/60">{t('accounting.selectFiscalYearFirst')}</p>
+              ) : !profitLossReport ? (
                 <SkeletonCard />
+              ) : profitLossReport.income?.length === 0 && profitLossReport.expenses?.length === 0 ? (
+                <p className="text-base-content/60">{t('accounting.noTransactionsForReport')}</p>
               ) : (
                 <div className="space-y-4">
                   <div>
@@ -1147,6 +1159,1024 @@ function AccountModal({
             disabled={createMutation.isPending || updateMutation.isPending}
           >
             {createMutation.isPending || updateMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              t('common.save')
+            )}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// =====================================================
+// TRANSACTION MODAL
+// =====================================================
+function TransactionModal({
+  accounts,
+  costCenters,
+  onClose,
+  onSave,
+}: {
+  accounts: Account[];
+  costCenters: CostCenter[];
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<CreateTransactionData>({
+    transactionDate: new Date().toISOString().split('T')[0],
+    transactionType: 'journal',
+    description: '',
+    lines: [
+      { accountId: '', debitAmount: 0, creditAmount: 0 },
+      { accountId: '', debitAmount: 0, creditAmount: 0 },
+    ],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateTransactionData) => createTransaction(data),
+    onSuccess: () => {
+      showSuccess(t('accounting.transactionCreated'));
+      onSave();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('accounting.errorSave'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Filter out empty lines and validate
+    const validLines = formData.lines.filter(
+      (line) => line.accountId && (line.debitAmount > 0 || line.creditAmount > 0)
+    );
+    if (validLines.length < 2) {
+      showError(t('accounting.minTwoLines'));
+      return;
+    }
+    const totalDebit = validLines.reduce((sum, l) => sum + (l.debitAmount || 0), 0);
+    const totalCredit = validLines.reduce((sum, l) => sum + (l.creditAmount || 0), 0);
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      showError(t('accounting.debitCreditMustMatch'));
+      return;
+    }
+    createMutation.mutate({ ...formData, lines: validLines });
+  };
+
+  const addLine = () => {
+    setFormData({
+      ...formData,
+      lines: [...formData.lines, { accountId: '', debitAmount: 0, creditAmount: 0 }],
+    });
+  };
+
+  const updateLine = (index: number, field: string, value: any) => {
+    const newLines = [...formData.lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setFormData({ ...formData, lines: newLines });
+  };
+
+  const removeLine = (index: number) => {
+    if (formData.lines.length <= 2) return;
+    setFormData({
+      ...formData,
+      lines: formData.lines.filter((_, i) => i !== index),
+    });
+  };
+
+  const totalDebit = formData.lines.reduce((sum, l) => sum + (l.debitAmount || 0), 0);
+  const totalCredit = formData.lines.reduce((sum, l) => sum + (l.creditAmount || 0), 0);
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+  return (
+    <Modal title={t('accounting.newEntry')} onClose={onClose} size="large">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.date')} *</span>
+            </label>
+            <input
+              type="date"
+              className="input input-bordered"
+              value={formData.transactionDate}
+              onChange={(e) => setFormData({ ...formData, transactionDate: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.type')} *</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.transactionType}
+              onChange={(e) => setFormData({ ...formData, transactionType: e.target.value as TransactionType })}
+            >
+              {(['journal', 'payment', 'receipt', 'bank', 'transfer'] as TransactionType[]).map((type) => (
+                <option key={type} value={type}>{t(`accounting.transactionTypes.${type}`)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.reference')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.reference || ''}
+              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('accounting.description')} *</span>
+          </label>
+          <input
+            type="text"
+            className="input input-bordered"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="divider">{t('accounting.lines')}</div>
+
+        <div className="overflow-x-auto">
+          <table className="table table-sm">
+            <thead>
+              <tr>
+                <th className="w-2/5">{t('accounting.account')}</th>
+                <th>{t('accounting.costCenter')}</th>
+                <th className="text-right">{t('accounting.debit')}</th>
+                <th className="text-right">{t('accounting.credit')}</th>
+                <th className="w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {formData.lines.map((line, index) => (
+                <tr key={index}>
+                  <td>
+                    <select
+                      className="select select-bordered select-sm w-full"
+                      value={line.accountId}
+                      onChange={(e) => updateLine(index, 'accountId', e.target.value)}
+                    >
+                      <option value="">{t('accounting.selectAccount')}</option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      className="select select-bordered select-sm w-full"
+                      value={line.costCenterId || ''}
+                      onChange={(e) => updateLine(index, 'costCenterId', e.target.value || undefined)}
+                    >
+                      <option value="">-</option>
+                      {costCenters.map((cc) => (
+                        <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input input-bordered input-sm w-24 text-right"
+                      value={line.debitAmount || ''}
+                      onChange={(e) => updateLine(index, 'debitAmount', parseFloat(e.target.value) || 0)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input input-bordered input-sm w-24 text-right"
+                      value={line.creditAmount || ''}
+                      onChange={(e) => updateLine(index, 'creditAmount', parseFloat(e.target.value) || 0)}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm text-error"
+                      onClick={() => removeLine(index)}
+                      disabled={formData.lines.length <= 2}
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className={`font-bold ${isBalanced ? '' : 'text-error'}`}>
+                <td colSpan={2} className="text-right">{t('common.total')}</td>
+                <td className="text-right">{totalDebit.toFixed(2)}</td>
+                <td className="text-right">{totalCredit.toFixed(2)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <button type="button" className="btn btn-ghost btn-sm gap-2" onClick={addLine}>
+          <Icon name="plus" size={14} />
+          {t('accounting.addLine')}
+        </button>
+
+        {!isBalanced && (
+          <div className="alert alert-warning">
+            <Icon name="warning" size={16} />
+            <span>{t('accounting.debitCreditMustMatch')}</span>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createMutation.isPending || !isBalanced}
+          >
+            {createMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              t('common.save')
+            )}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// =====================================================
+// INVOICE MODAL
+// =====================================================
+function InvoiceModal({
+  accounts,
+  relations,
+  costCenters: _costCenters,
+  onClose,
+  onSave,
+}: {
+  accounts: Account[];
+  relations: AccountingRelation[];
+  costCenters: CostCenter[];
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  void _costCenters; // Future use for cost center allocation on invoice lines
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<CreateInvoiceData>({
+    invoiceType: 'sales',
+    relationId: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    lines: [{ description: '', quantity: 1, unitPrice: 0 }],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateInvoiceData) => createInvoice(data),
+    onSuccess: () => {
+      showSuccess(t('accounting.invoiceCreated'));
+      onSave();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('accounting.errorSave'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const validLines = formData.lines.filter((line) => line.description && line.quantity > 0);
+    if (validLines.length === 0) {
+      showError(t('accounting.minOneLine'));
+      return;
+    }
+    createMutation.mutate({ ...formData, lines: validLines });
+  };
+
+  const addLine = () => {
+    setFormData({
+      ...formData,
+      lines: [...formData.lines, { description: '', quantity: 1, unitPrice: 0 }],
+    });
+  };
+
+  const updateLine = (index: number, field: string, value: any) => {
+    const newLines = [...formData.lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setFormData({ ...formData, lines: newLines });
+  };
+
+  const removeLine = (index: number) => {
+    if (formData.lines.length <= 1) return;
+    setFormData({
+      ...formData,
+      lines: formData.lines.filter((_, i) => i !== index),
+    });
+  };
+
+  const incomeAccounts = accounts.filter((a) => a.accountType === 'income');
+  const expenseAccounts = accounts.filter((a) => a.accountType === 'expense');
+  const relevantAccounts = formData.invoiceType === 'sales' ? incomeAccounts : expenseAccounts;
+
+  const subtotal = formData.lines.reduce((sum, l) => sum + (l.quantity * l.unitPrice), 0);
+
+  return (
+    <Modal title={t('accounting.newInvoice')} onClose={onClose} size="large">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.invoiceType')} *</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.invoiceType}
+              onChange={(e) => setFormData({ ...formData, invoiceType: e.target.value as any })}
+            >
+              <option value="sales">{t('accounting.invoiceTypes.sales')}</option>
+              <option value="purchase">{t('accounting.invoiceTypes.purchase')}</option>
+              <option value="credit_note">{t('accounting.invoiceTypes.credit_note')}</option>
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.relation')} *</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.relationId}
+              onChange={(e) => setFormData({ ...formData, relationId: e.target.value })}
+              required
+            >
+              <option value="">{t('accounting.selectRelation')}</option>
+              {relations.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.invoiceDate')} *</span>
+            </label>
+            <input
+              type="date"
+              className="input input-bordered"
+              value={formData.invoiceDate}
+              onChange={(e) => setFormData({ ...formData, invoiceDate: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.dueDate')} *</span>
+            </label>
+            <input
+              type="date"
+              className="input input-bordered"
+              value={formData.dueDate}
+              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.reference')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.reference || ''}
+              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.description')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="divider">{t('accounting.invoiceLines')}</div>
+
+        <div className="overflow-x-auto">
+          <table className="table table-sm">
+            <thead>
+              <tr>
+                <th className="w-2/5">{t('accounting.description')}</th>
+                <th className="text-right">{t('accounting.quantity')}</th>
+                <th className="text-right">{t('accounting.unitPrice')}</th>
+                <th>{t('accounting.account')}</th>
+                <th className="text-right">{t('accounting.lineTotal')}</th>
+                <th className="w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {formData.lines.map((line, index) => (
+                <tr key={index}>
+                  <td>
+                    <input
+                      type="text"
+                      className="input input-bordered input-sm w-full"
+                      value={line.description}
+                      onChange={(e) => updateLine(index, 'description', e.target.value)}
+                      placeholder={t('accounting.lineDescription')}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      className="input input-bordered input-sm w-20 text-right"
+                      value={line.quantity}
+                      onChange={(e) => updateLine(index, 'quantity', parseInt(e.target.value) || 1)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input input-bordered input-sm w-24 text-right"
+                      value={line.unitPrice}
+                      onChange={(e) => updateLine(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    />
+                  </td>
+                  <td>
+                    <select
+                      className="select select-bordered select-sm w-full"
+                      value={line.accountId || ''}
+                      onChange={(e) => updateLine(index, 'accountId', e.target.value || undefined)}
+                    >
+                      <option value="">-</option>
+                      {relevantAccounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="text-right font-mono">
+                    {(line.quantity * line.unitPrice).toFixed(2)}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm text-error"
+                      onClick={() => removeLine(index)}
+                      disabled={formData.lines.length <= 1}
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-bold">
+                <td colSpan={4} className="text-right">{t('accounting.subtotal')}</td>
+                <td className="text-right font-mono">{subtotal.toFixed(2)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <button type="button" className="btn btn-ghost btn-sm gap-2" onClick={addLine}>
+          <Icon name="plus" size={14} />
+          {t('accounting.addLine')}
+        </button>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('accounting.notes')}</span>
+          </label>
+          <textarea
+            className="textarea textarea-bordered"
+            value={formData.notes || ''}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows={2}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              t('common.save')
+            )}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// =====================================================
+// RELATION MODAL
+// =====================================================
+function RelationModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<Partial<AccountingRelation>>({
+    relationType: 'customer',
+    name: '',
+    paymentTermDays: 30,
+    isActive: true,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<AccountingRelation>) => createRelation(data),
+    onSuccess: () => {
+      showSuccess(t('accounting.relationCreated'));
+      onSave();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('accounting.errorSave'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(formData);
+  };
+
+  return (
+    <Modal title={t('accounting.newRelation')} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.relationType')} *</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.relationType}
+              onChange={(e) => setFormData({ ...formData, relationType: e.target.value as RelationType })}
+            >
+              <option value="customer">{t('accounting.relationTypes.customer')}</option>
+              <option value="supplier">{t('accounting.relationTypes.supplier')}</option>
+              <option value="both">{t('accounting.relationTypes.both')}</option>
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.name')} *</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.email')}</span>
+            </label>
+            <input
+              type="email"
+              className="input input-bordered"
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.phone')}</span>
+            </label>
+            <input
+              type="tel"
+              className="input input-bordered"
+              value={formData.phone || ''}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('common.address')}</span>
+          </label>
+          <input
+            type="text"
+            className="input input-bordered"
+            value={formData.addressLine || ''}
+            onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.postalCode')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.postalCode || ''}
+              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.city')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.city || ''}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.country')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.country || ''}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              placeholder="Nederland"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.iban')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.iban || ''}
+              onChange={(e) => setFormData({ ...formData, iban: e.target.value.toUpperCase() })}
+              placeholder="NL00BANK0000000000"
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.vatNumber')}</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.vatNumber || ''}
+              onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value.toUpperCase() })}
+              placeholder="NL000000000B00"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.paymentTermDays')}</span>
+            </label>
+            <input
+              type="number"
+              min="0"
+              className="input input-bordered"
+              value={formData.paymentTermDays || 30}
+              onChange={(e) => setFormData({ ...formData, paymentTermDays: parseInt(e.target.value) || 30 })}
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.creditLimit')}</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="input input-bordered"
+              value={formData.creditLimit || ''}
+              onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || undefined })}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              t('common.save')
+            )}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// =====================================================
+// COST CENTER MODAL
+// =====================================================
+function CostCenterModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<Partial<CostCenter>>({
+    code: '',
+    name: '',
+    isActive: true,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<CostCenter>) => createCostCenter(data),
+    onSuccess: () => {
+      showSuccess(t('accounting.costCenterCreated'));
+      onSave();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('accounting.errorSave'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(formData);
+  };
+
+  return (
+    <Modal title={t('accounting.newCostCenter')} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.code')} *</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('common.name')} *</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('common.description')}</span>
+          </label>
+          <textarea
+            className="textarea textarea-bordered"
+            value={formData.description || ''}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('accounting.budgetAmount')}</span>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className="input input-bordered"
+            value={formData.budgetAmount || ''}
+            onChange={(e) => setFormData({ ...formData, budgetAmount: parseFloat(e.target.value) || undefined })}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              t('common.save')
+            )}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// =====================================================
+// BUDGET MODAL
+// =====================================================
+function BudgetModal({
+  accounts,
+  costCenters,
+  fiscalYears,
+  currentFiscalYearId,
+  onClose,
+  onSave,
+}: {
+  accounts: Account[];
+  costCenters: CostCenter[];
+  fiscalYears: { id: string; name: string; isCurrent: boolean }[];
+  currentFiscalYearId?: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation();
+  const [formData, setFormData] = useState<Partial<Budget>>({
+    name: '',
+    amount: 0,
+    accountId: '',
+    fiscalYearId: currentFiscalYearId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Budget>) => createBudget(data),
+    onSuccess: () => {
+      showSuccess(t('accounting.budgetCreated'));
+      onSave();
+    },
+    onError: (error: any) => {
+      showError(error.response?.data?.error || t('accounting.errorSave'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(formData);
+  };
+
+  const expenseAccounts = accounts.filter((a) => a.accountType === 'expense');
+
+  return (
+    <Modal title={t('accounting.newBudget')} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('common.name')} *</span>
+          </label>
+          <input
+            type="text"
+            className="input input-bordered"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('accounting.account')} *</span>
+          </label>
+          <select
+            className="select select-bordered"
+            value={formData.accountId || ''}
+            onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+            required
+          >
+            <option value="">{t('accounting.selectAccount')}</option>
+            {expenseAccounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.fiscalYear')}</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.fiscalYearId || ''}
+              onChange={(e) => setFormData({ ...formData, fiscalYearId: e.target.value || undefined })}
+            >
+              <option value="">{t('accounting.allYears')}</option>
+              {fiscalYears.map((fy) => (
+                <option key={fy.id} value={fy.id}>{fy.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t('accounting.costCenter')}</span>
+            </label>
+            <select
+              className="select select-bordered"
+              value={formData.costCenterId || ''}
+              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value || undefined })}
+            >
+              <option value="">-</option>
+              {costCenters.map((cc) => (
+                <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('accounting.budgetAmount')} *</span>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className="input input-bordered"
+            value={formData.amount || ''}
+            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+            required
+          />
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">{t('common.notes')}</span>
+          </label>
+          <textarea
+            className="textarea textarea-bordered"
+            value={formData.notes || ''}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createMutation.isPending}
+          >
+            {createMutation.isPending ? (
               <span className="loading loading-spinner loading-sm" />
             ) : (
               t('common.save')
