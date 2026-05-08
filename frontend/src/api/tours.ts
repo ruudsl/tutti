@@ -167,3 +167,68 @@ export async function removeTourAccommodation(tourId: string, accId: string): Pr
   const response = await api.delete(`/tours/${tourId}/accommodations/${accId}`);
   return response.data;
 }
+
+// Tour Days API
+export interface AddTourDayData {
+  date: string;
+  title?: string;
+}
+
+export async function addTourDay(tourId: string, data: AddTourDayData): Promise<{ id: string; message: string }> {
+  const response = await api.post(`/tours/${tourId}/days`, data);
+  return response.data;
+}
+
+export async function deleteTourDay(tourId: string, dayId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/tours/${tourId}/days/${dayId}`);
+  return response.data;
+}
+
+// Tour Day Activities API
+export interface AddDayActivityData {
+  time: string;
+  title: string;
+  description?: string;
+  location?: string;
+}
+
+export async function addDayActivity(
+  tourId: string,
+  dayId: string,
+  data: AddDayActivityData
+): Promise<{ id: string; message: string }> {
+  const response = await api.post(`/tours/${tourId}/days/${dayId}/activities`, data);
+  return response.data;
+}
+
+export async function deleteDayActivity(
+  tourId: string,
+  dayId: string,
+  activityId: string
+): Promise<{ message: string }> {
+  const response = await api.delete(`/tours/${tourId}/days/${dayId}/activities/${activityId}`);
+  return response.data;
+}
+
+// Tour Transport API
+export interface AddTourTransportData {
+  type: string;
+  departureTime: string;
+  arrivalTime: string;
+  from: string;
+  to: string;
+  details?: string;
+}
+
+export async function addTourTransport(
+  tourId: string,
+  data: AddTourTransportData
+): Promise<{ id: string; message: string }> {
+  const response = await api.post(`/tours/${tourId}/transport`, data);
+  return response.data;
+}
+
+export async function deleteTourTransport(tourId: string, transportId: string): Promise<{ message: string }> {
+  const response = await api.delete(`/tours/${tourId}/transport/${transportId}`);
+  return response.data;
+}
