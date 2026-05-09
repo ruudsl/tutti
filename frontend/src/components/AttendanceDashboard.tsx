@@ -492,9 +492,9 @@ export function AttendanceDashboard({
 
       {/* Trend chart */}
       <div className="attendance-trend-section">
-        <h3 className="section-title">Aanwezigheid over tijd</h3>
+        <h3 className="section-title">{t('attendanceDashboard.attendanceOverTime')}</h3>
         <div className="trend-chart-container">
-          <TrendChart data={trends} isDark={isDark} />
+          <TrendChart data={trends} isDark={isDark} noDataText={t('attendanceDashboard.noDataAvailable')} />
         </div>
       </div>
 
