@@ -669,7 +669,7 @@ export function ConcertPosterGenerator({
         html2canvas = html2canvasModule.default;
       } catch {
         // html2canvas not installed, provide a fallback message
-        alert('Installeer html2canvas voor poster downloads: npm install html2canvas');
+        alert(t('posterGenerator.installHtml2canvas'));
         setIsGenerating(false);
         return;
       }
@@ -828,19 +828,19 @@ export function ConcertPosterGenerator({
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Extra informatie</h3>
+            <h3 className="form-section-title">{t('posterGenerator.extraInfo')}</h3>
             <div className="form-group">
-              <label htmlFor="ticketInfo">Ticketinformatie</label>
+              <label htmlFor="ticketInfo">{t('posterGenerator.ticketInfo')}</label>
               <input
                 id="ticketInfo"
                 type="text"
                 value={data.ticketInfo}
                 onChange={(e) => updateData('ticketInfo', e.target.value)}
-                placeholder="Bijv. Toegang gratis of Tickets via..."
+                placeholder={t('posterGenerator.ticketInfoPlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="logo">Logo uploaden</label>
+              <label htmlFor="logo">{t('posterGenerator.uploadLogo')}</label>
               <input
                 id="logo"
                 type="file"
@@ -850,7 +850,7 @@ export function ConcertPosterGenerator({
               />
               {data.logoUrl && (
                 <div className="logo-preview">
-                  <img src={data.logoUrl} alt="Logo preview" />
+                  <img src={data.logoUrl} alt={t('posterGenerator.logoPreview')} />
                   <button
                     type="button"
                     className="remove-logo-btn"
@@ -868,21 +868,21 @@ export function ConcertPosterGenerator({
         <div className="poster-preview-panel">
           <h2 className="panel-title">
             <Icon name="eye" size={20} />
-            Voorbeeld
+            {t('posterGenerator.preview')}
           </h2>
 
           {/* Template selection */}
           <div className="template-selection">
-            <label>Sjabloon</label>
+            <label>{t('posterGenerator.template')}</label>
             <div className="template-buttons">
-              {(['classic', 'modern', 'minimal'] as PosterTemplate[]).map((t) => (
+              {(['classic', 'modern', 'minimal'] as PosterTemplate[]).map((tmpl) => (
                 <button
-                  key={t}
+                  key={tmpl}
                   type="button"
-                  className={`template-btn ${template === t ? 'active' : ''}`}
-                  onClick={() => setTemplate(t)}
+                  className={`template-btn ${template === tmpl ? 'active' : ''}`}
+                  onClick={() => setTemplate(tmpl)}
                 >
-                  {t === 'classic' ? 'Klassiek' : t === 'modern' ? 'Modern' : 'Minimaal'}
+                  {tmpl === 'classic' ? t('posterGenerator.classic') : tmpl === 'modern' ? t('posterGenerator.modern') : t('posterGenerator.minimal')}
                 </button>
               ))}
             </div>
@@ -890,7 +890,7 @@ export function ConcertPosterGenerator({
 
           {/* Theme selection */}
           <div className="theme-selection">
-            <label>Kleurthema</label>
+            <label>{t('posterGenerator.colorTheme')}</label>
             <div className="theme-swatches">
               {allThemes.map((theme) => (
                 <button
@@ -926,11 +926,11 @@ export function ConcertPosterGenerator({
               disabled={isGenerating}
             >
               {isGenerating ? (
-                <>Genereren...</>
+                <>{t('posterGenerator.generating')}</>
               ) : (
                 <>
                   <Icon name="download" size={18} />
-                  Downloaden als PNG
+                  {t('posterGenerator.downloadAsPng')}
                 </>
               )}
             </button>

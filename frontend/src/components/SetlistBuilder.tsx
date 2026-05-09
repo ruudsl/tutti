@@ -58,9 +58,11 @@ interface SortablePieceItemProps {
   index: number;
   onRemove: (id: string) => void;
   isDark: boolean;
+  dragToReorderTitle: string;
+  removeFromSetlistTitle: string;
 }
 
-function SortablePieceItem({ piece, index, onRemove, isDark }: SortablePieceItemProps) {
+function SortablePieceItem({ piece, index, onRemove, isDark, dragToReorderTitle, removeFromSetlistTitle }: SortablePieceItemProps) {
   const {
     attributes,
     listeners,
@@ -94,7 +96,7 @@ function SortablePieceItem({ piece, index, onRemove, isDark }: SortablePieceItem
         className="setlist-drag-handle"
         {...attributes}
         {...listeners}
-        title="Sleep om te herschikken"
+        title={dragToReorderTitle}
       >
         <span className="drag-handle-icon">⋮⋮</span>
       </div>
@@ -112,7 +114,7 @@ function SortablePieceItem({ piece, index, onRemove, isDark }: SortablePieceItem
       <button
         className="setlist-remove-btn"
         onClick={() => onRemove(piece.id)}
-        title="Verwijderen uit setlist"
+        title={removeFromSetlistTitle}
         type="button"
       >
         <Icon name="trash" size={16} />
@@ -250,8 +252,7 @@ export function SetlistBuilder({
   onCancel,
   isLoading = false,
 }: SetlistBuilderProps) {
-  // Translation hook available for i18n when needed
-  useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
 
   const [setlistName, setSetlistName] = useState(initialSetlist?.name || '');
@@ -357,13 +358,13 @@ export function SetlistBuilder({
       <div className="setlist-header">
         <div className="setlist-name-input-wrapper">
           <label htmlFor="setlist-name" className="sr-only">
-            Setlist naam
+            {t('setlistBuilder.setlistName')}
           </label>
           <input
             id="setlist-name"
             type="text"
             className="setlist-name-input"
-            placeholder="Naam van de setlist..."
+            placeholder={t('setlistBuilder.setlistNamePlaceholder')}
             value={setlistName}
             onChange={(e) => setSetlistName(e.target.value)}
           />
@@ -375,7 +376,7 @@ export function SetlistBuilder({
               onClick={onCancel}
               type="button"
             >
-              Annuleren
+              {t('common.cancel')}
             </button>
           )}
           <button
@@ -384,7 +385,7 @@ export function SetlistBuilder({
             disabled={isLoading || !setlistName.trim() || pieces.length === 0}
             type="button"
           >
-            {isLoading ? 'Opslaan...' : 'Opslaan'}
+            {isLoading ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -393,24 +394,24 @@ export function SetlistBuilder({
       <div className="setlist-stats">
         <div className="setlist-stat">
           <Icon name="listMusic" size={18} />
-          <span>{pieces.length} {pieces.length === 1 ? 'stuk' : 'stukken'}</span>
+          <span>{t('setlistBuilder.piecesCount', { count: pieces.length })}</span>
         </div>
         <div className="setlist-stat">
           <Icon name="clock" size={18} />
-          <span>Totale duur: {totalDuration}</span>
+          <span>{t('setlistBuilder.totalDuration')}: {totalDuration}</span>
         </div>
       </div>
 
       <div className="setlist-content">
         {/* Setlist pieces */}
         <div className="setlist-pieces-section">
-          <h3 className="setlist-section-title">Programma</h3>
+          <h3 className="setlist-section-title">{t('setlistBuilder.program')}</h3>
 
           {pieces.length === 0 ? (
             <div className="setlist-empty">
               <Icon name="listMusic" size={48} />
-              <p>Voeg stukken toe aan je setlist</p>
-              <p className="text-sm text-muted">Sleep stukken hierheen of klik op de + knop</p>
+              <p>{t('setlistBuilder.addPiecesToSetlist')}</p>
+              <p className="text-sm text-muted">{t('setlistBuilder.dragOrClickToAdd')}</p>
             </div>
           ) : (
             <DndContext
@@ -431,6 +432,8 @@ export function SetlistBuilder({
                       index={index}
                       onRemove={handleRemovePiece}
                       isDark={isDark}
+                      dragToReorderTitle={t('setlistBuilder.dragToReorder')}
+                      removeFromSetlistTitle={t('setlistBuilder.removeFromSetlist')}
                     />
                   ))}
                 </div>
