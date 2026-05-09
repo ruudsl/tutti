@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AnnotationToolbarProps, ToolType, ShapeType } from './types';
 import { Icon, type IconName } from '../Icon';
 import { useDarkMode } from '../../hooks/useDarkMode';
@@ -6,53 +7,53 @@ import { Tooltip } from '../Tooltip';
 
 interface ToolConfig {
   icon: IconName;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }
 
 const TOOLS: Record<ToolType, ToolConfig> = {
-  select: { icon: 'mousePointer', label: 'Selecteren', description: 'Selecteer en verplaats annotaties' },
-  freehand: { icon: 'penTool', label: 'Tekenen', description: 'Vrije hand tekenen' },
-  highlight: { icon: 'highlighter', label: 'Markeren', description: 'Tekst markeren' },
-  text: { icon: 'type', label: 'Tekst', description: 'Tekst toevoegen' },
-  stamp: { icon: 'stamp', label: 'Stempels', description: 'Muzieknotatie stempels' },
-  shape: { icon: 'shapes', label: 'Vormen', description: 'Rechthoek, cirkel, lijn, pijl' },
-  eraser: { icon: 'eraser', label: 'Gum', description: 'Annotaties wissen' },
+  select: { icon: 'mousePointer', labelKey: 'annotationToolbar.tools.select', descriptionKey: 'annotationToolbar.tools.selectDesc' },
+  freehand: { icon: 'penTool', labelKey: 'annotationToolbar.tools.freehand', descriptionKey: 'annotationToolbar.tools.freehandDesc' },
+  highlight: { icon: 'highlighter', labelKey: 'annotationToolbar.tools.highlight', descriptionKey: 'annotationToolbar.tools.highlightDesc' },
+  text: { icon: 'type', labelKey: 'annotationToolbar.tools.text', descriptionKey: 'annotationToolbar.tools.textDesc' },
+  stamp: { icon: 'stamp', labelKey: 'annotationToolbar.tools.stamp', descriptionKey: 'annotationToolbar.tools.stampDesc' },
+  shape: { icon: 'shapes', labelKey: 'annotationToolbar.tools.shape', descriptionKey: 'annotationToolbar.tools.shapeDesc' },
+  eraser: { icon: 'eraser', labelKey: 'annotationToolbar.tools.eraser', descriptionKey: 'annotationToolbar.tools.eraserDesc' },
 };
 
-const SHAPE_TYPES: { type: ShapeType; icon: IconName; label: string }[] = [
-  { type: 'rectangle', icon: 'square', label: 'Rechthoek' },
-  { type: 'circle', icon: 'circle', label: 'Cirkel' },
-  { type: 'line', icon: 'line', label: 'Lijn' },
-  { type: 'arrow', icon: 'arrow', label: 'Pijl' },
+const SHAPE_TYPE_KEYS: { type: ShapeType; icon: IconName; labelKey: string }[] = [
+  { type: 'rectangle', icon: 'square', labelKey: 'annotationToolbar.shapes.rectangle' },
+  { type: 'circle', icon: 'circle', labelKey: 'annotationToolbar.shapes.circle' },
+  { type: 'line', icon: 'line', labelKey: 'annotationToolbar.shapes.line' },
+  { type: 'arrow', icon: 'arrow', labelKey: 'annotationToolbar.shapes.arrow' },
 ];
 
-const COLORS = [
-  { value: '#DC2626', name: 'Rood' },
-  { value: '#EA580C', name: 'Oranje' },
-  { value: '#CA8A04', name: 'Goud' },
-  { value: '#16A34A', name: 'Groen' },
-  { value: '#2563EB', name: 'Blauw' },
-  { value: '#7C3AED', name: 'Paars' },
-  { value: '#DB2777', name: 'Roze' },
-  { value: '#171717', name: 'Zwart' },
-  { value: '#FFFFFF', name: 'Wit' },
+const COLORS_DATA = [
+  { value: '#DC2626', nameKey: 'annotationToolbar.colors.red' },
+  { value: '#EA580C', nameKey: 'annotationToolbar.colors.orange' },
+  { value: '#CA8A04', nameKey: 'annotationToolbar.colors.gold' },
+  { value: '#16A34A', nameKey: 'annotationToolbar.colors.green' },
+  { value: '#2563EB', nameKey: 'annotationToolbar.colors.blue' },
+  { value: '#7C3AED', nameKey: 'annotationToolbar.colors.purple' },
+  { value: '#DB2777', nameKey: 'annotationToolbar.colors.pink' },
+  { value: '#171717', nameKey: 'annotationToolbar.colors.black' },
+  { value: '#FFFFFF', nameKey: 'annotationToolbar.colors.white' },
 ];
 
-const STROKE_WIDTHS = [
-  { value: 1, label: 'Dun' },
-  { value: 2, label: 'Normaal' },
-  { value: 4, label: 'Medium' },
-  { value: 8, label: 'Dik' },
-  { value: 12, label: 'Extra dik' },
+const STROKE_WIDTH_KEYS = [
+  { value: 1, labelKey: 'annotationToolbar.strokeWidth.thin' },
+  { value: 2, labelKey: 'annotationToolbar.strokeWidth.normal' },
+  { value: 4, labelKey: 'annotationToolbar.strokeWidth.medium' },
+  { value: 8, labelKey: 'annotationToolbar.strokeWidth.thick' },
+  { value: 12, labelKey: 'annotationToolbar.strokeWidth.extraThick' },
 ];
 
-const STAMP_CATEGORIES = [
-  { id: 'dynamics', name: 'Dynamiek', icon: '🔊' },
-  { id: 'tempo', name: 'Tempo', icon: '⏱️' },
-  { id: 'articulation', name: 'Articulatie', icon: '🎵' },
-  { id: 'navigation', name: 'Navigatie', icon: '🔄' },
-  { id: 'general', name: 'Algemeen', icon: '✓' },
+const STAMP_CATEGORY_KEYS = [
+  { id: 'dynamics', nameKey: 'annotationToolbar.stampCategories.dynamics', icon: '🔊' },
+  { id: 'tempo', nameKey: 'annotationToolbar.stampCategories.tempo', icon: '⏱️' },
+  { id: 'articulation', nameKey: 'annotationToolbar.stampCategories.articulation', icon: '🎵' },
+  { id: 'navigation', nameKey: 'annotationToolbar.stampCategories.navigation', icon: '🔄' },
+  { id: 'general', nameKey: 'annotationToolbar.stampCategories.general', icon: '✓' },
 ];
 
 interface ToolButtonProps {
@@ -62,14 +63,16 @@ interface ToolButtonProps {
   onClick: () => void;
   shortcut?: string;
   isDarkMode?: boolean;
+  label: string;
+  description: string;
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shortcut, isDarkMode }) => (
-  <Tooltip content={`${config.description}${shortcut ? ` (${shortcut})` : ''}`} position="right">
+const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shortcut, isDarkMode, label, description }) => (
+  <Tooltip content={`${description}${shortcut ? ` (${shortcut})` : ''}`} position="right">
     <button
       onClick={onClick}
       className={`annotation-tool-btn ${isActive ? 'active' : ''}`}
-      aria-label={config.label}
+      aria-label={label}
       style={{
         width: '40px',
         height: '40px',
@@ -120,6 +123,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   selectedShapeType = 'rectangle',
   onShapeTypeChange,
 }) => {
+  const { t } = useTranslation();
   const [showStampPicker, setShowStampPicker] = useState(false);
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [stampCategory, setStampCategory] = useState('dynamics');
@@ -226,13 +230,13 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         paddingBottom: '8px',
         borderBottom: `1px solid ${borderColor}`,
       }}>
-        Annotatiegereedschap
+        {t('annotationToolbar.title')}
       </div>
 
       {/* Tool Selection */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <span style={{ fontSize: '11px', fontWeight: 500, color: textLightColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Gereedschap (1-7)
+          {t('annotationToolbar.toolsLabel')}
         </span>
         <div style={{
           display: 'grid',
@@ -251,6 +255,8 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
               onClick={() => handleToolClick(tool)}
               shortcut={String(index + 1)}
               isDarkMode={isDarkMode}
+              label={t(config.labelKey)}
+              description={t(config.descriptionKey)}
             />
           ))}
         </div>
@@ -260,7 +266,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {showShapePicker && activeTool === 'shape' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Vormtype
+            {t('annotationToolbar.shapeType')}
           </span>
           <div style={{
             display: 'flex',
@@ -269,11 +275,11 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             padding: '4px',
             borderRadius: '8px',
           }}>
-            {SHAPE_TYPES.map(shape => (
+            {SHAPE_TYPE_KEYS.map(shape => (
               <button
                 key={shape.type}
                 onClick={() => onShapeTypeChange?.(shape.type)}
-                title={shape.label}
+                title={t(shape.labelKey)}
                 style={{
                   flex: 1,
                   height: '36px',
@@ -298,7 +304,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {/* Color Picker */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Kleur
+          {t('annotationToolbar.color')}
         </span>
         <div style={{
           display: 'flex',
@@ -308,11 +314,11 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
           backgroundColor: '#f9fafb',
           borderRadius: '8px',
         }}>
-          {COLORS.map(c => (
+          {COLORS_DATA.map(c => (
             <button
               key={c.value}
               onClick={() => onColorChange(c.value)}
-              title={c.name}
+              title={t(c.nameKey)}
               style={{
                 width: '28px',
                 height: '28px',
@@ -332,7 +338,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Lijndikte
+            {t('annotationToolbar.strokeWidthLabel')}
           </span>
           <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>
             {strokeWidth}px
@@ -345,11 +351,11 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
           backgroundColor: '#f9fafb',
           borderRadius: '8px',
         }}>
-          {STROKE_WIDTHS.map(w => (
+          {STROKE_WIDTH_KEYS.map(w => (
             <button
               key={w.value}
               onClick={() => onStrokeWidthChange(w.value)}
-              title={w.label}
+              title={t(w.labelKey)}
               style={{
                 flex: 1,
                 height: '32px',
@@ -378,7 +384,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Dekking
+            {t('annotationToolbar.opacity')}
           </span>
           <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>
             {Math.round(opacity * 100)}%
@@ -409,11 +415,11 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         paddingTop: '12px',
         borderTop: '1px solid #e5e7eb',
       }}>
-        <Tooltip content="Ongedaan maken (Ctrl+Z)" position="top" disabled={!canUndo}>
+        <Tooltip content={t('annotationToolbar.undoTooltip')} position="top" disabled={!canUndo}>
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            aria-label="Ongedaan maken"
+            aria-label={t('annotationToolbar.undo')}
             style={{
               flex: 1,
               padding: '10px',
@@ -434,11 +440,11 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             <Icon name="undo" size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Opnieuw (Ctrl+Y)" position="top" disabled={!canRedo}>
+        <Tooltip content={t('annotationToolbar.redoTooltip')} position="top" disabled={!canRedo}>
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            aria-label="Opnieuw"
+            aria-label={t('annotationToolbar.redo')}
             style={{
               flex: 1,
               padding: '10px',
@@ -459,14 +465,14 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             <Icon name="redo" size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="Alles wissen" position="top">
+        <Tooltip content={t('annotationToolbar.clearAll')} position="top">
           <button
             onClick={() => {
-              if (confirm('Alle annotaties op deze pagina wissen?')) {
+              if (confirm(t('annotationToolbar.clearConfirm'))) {
                 onClear();
               }
             }}
-            aria-label="Alles wissen"
+            aria-label={t('annotationToolbar.clearAll')}
             style={{
               padding: '10px 14px',
               border: 'none',
@@ -500,14 +506,14 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             display: 'block',
             marginBottom: '8px',
           }}>
-            Stempels
+            {t('annotationToolbar.stamps')}
           </span>
 
           {/* Stamp search */}
           <div style={{ marginBottom: '8px' }}>
             <input
               type="text"
-              placeholder="Zoek stempels..."
+              placeholder={t('annotationToolbar.searchStamps')}
               value={stampSearch}
               onChange={(e) => setStampSearch(e.target.value)}
               style={{
@@ -534,7 +540,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             borderRadius: '8px',
             overflowX: 'auto',
           }}>
-            {STAMP_CATEGORIES.map(cat => (
+            {STAMP_CATEGORY_KEYS.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => setStampCategory(cat.id)}
@@ -552,7 +558,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                {cat.name}
+                {t(cat.nameKey)}
               </button>
             ))}
           </div>
@@ -575,7 +581,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                 fontSize: '12px',
                 padding: '16px',
               }}>
-                Geen stempels in deze categorie
+                {t('annotationToolbar.noStampsInCategory')}
               </div>
             ) : (
               filteredStamps.map(stamp => {

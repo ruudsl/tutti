@@ -51,7 +51,13 @@
     "address": "Address",
     "postalCode": "Postal code",
     "city": "City",
-    "country": "Country"
+    "country": "Country",
+    "export": "Export",
+    "saving": "Saving...",
+    "selectItem": "Select item {{id}}"
+  },
+  "lazyImage": {
+    "notLoaded": "Not loaded"
   },
   "music": {
     "title": "Music piece",
@@ -362,7 +368,9 @@
       "title": "Report Issue",
       "piece": "Music piece",
       "pageNumber": "Page number",
+      "pageNumberPlaceholder": "E.g. 2",
       "measureNumber": "Measure number",
+      "measureNumberPlaceholder": "E.g. 42 or 42-45",
       "description": "Description of the issue",
       "descriptionPlaceholder": "Describe the issue you found, e.g. 'Wrong note in measure 24' or 'Page missing'",
       "submit": "Submit report",
@@ -417,6 +425,28 @@
       "tuningHelp": "Green = in tune | Yellow = close | Red = too high/low",
       "startTitle": "Start tuner",
       "stopTitle": "Stop tuner"
+    },
+    "pitchPipe": {
+      "title": "Pitch Pipe",
+      "play": "Play",
+      "stop": "Stop",
+      "referencePitch": "Reference pitch",
+      "commonPitches": "Common pitches",
+      "showAllNotes": "Show all notes",
+      "hideAllNotes": "Hide all notes"
+    },
+    "practiceTimer": {
+      "title": "Practice Timer",
+      "start": "Start",
+      "stop": "Stop",
+      "pause": "Pause",
+      "resume": "Resume",
+      "goal": "Goal",
+      "minutes": "minutes",
+      "practicing": "Practicing...",
+      "goalReached": "Goal reached!",
+      "customGoal": "Custom goal",
+      "changeGoal": "Change goal"
     }
   },
   "issues": {
@@ -1971,8 +2001,16 @@
   "errorBoundary": {
     "title": "Something went wrong",
     "description": "An unexpected error occurred. Try refreshing the page.",
+    "descriptionExtended": "An unexpected error occurred. Try reloading the page or go back to the home page.",
     "retry": "Try again",
-    "backToHome": "Back to home"
+    "backToHome": "Go to home page",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "reportProblem": "Report problem",
+    "errorLabel": "Error",
+    "timestamp": "Timestamp",
+    "copiedToClipboard": "Error information has been copied to the clipboard. You can now paste this into an email to support.",
+    "copyErrorInfo": "Copy this error information:"
   },
   "notFound": {
     "title": "Page not found",
@@ -3763,6 +3801,31 @@
     "clearSelection": "Clear selection",
     "legend": "Legend"
   },
+  "seatSelector": {
+    "ariaLabel": "Interactive seat map",
+    "legendAvailability": "Availability",
+    "legendSeatTypes": "Seat Types",
+    "panHint": "Drag to pan the view",
+    "removeSeat": "Remove seat",
+    "reset": "Reset",
+    "resetView": "Reset View",
+    "rowLabel": "Row {{row}}",
+    "seatAriaLabel": "Seat {{seat}} in row {{row}}, {{status}}",
+    "seatLabel": "Seat {{number}}",
+    "selectedCount": "{{count}} seat(s) selected",
+    "selectedSeats": "Selected Seats",
+    "stage": "Stage",
+    "status": {
+      "available": "Available",
+      "reserved": "Reserved",
+      "sold": "Sold"
+    },
+    "statusSelected": "Selected",
+    "total": "Total",
+    "totalLabel": "Total: {{amount}}",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
+  },
   "ticketTransfer": {
     "title": "Ticket Transfer",
     "transferTicket": "Transfer Ticket",
@@ -4919,5 +4982,152 @@
     "uniquePieces": "Unique pieces",
     "noData": "No data available",
     "allPiecesPlayed": "All pieces in the library have been played"
+  },
+  "attendanceDashboard": {
+    "title": "Attendance Overview",
+    "totalMembers": "Total members",
+    "averageAttendance": "Average attendance",
+    "highAttendance": "High attendance (>80%)",
+    "lowAttendance": "Low attendance (<50%)",
+    "from": "From",
+    "to": "To",
+    "section": "Section",
+    "allSections": "All sections",
+    "sortBy": "Sort by",
+    "name": "Name",
+    "attendancePercent": "Attendance %",
+    "present": "Present",
+    "absent": "Absent",
+    "sortOrder": "Order",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "attendanceOverTime": "Attendance over time",
+    "noDataAvailable": "No data available",
+    "memberList": "Member list",
+    "noMembersFound": "No members found",
+    "instrument": "Instrument",
+    "percentage": "Percentage",
+    "rehearsals": "Rehearsals",
+    "noRehearsalsFound": "No rehearsals found"
+  },
+  "posterGenerator": {
+    "posterData": "Poster data",
+    "general": "General",
+    "orchestraAssociation": "Orchestra / Association",
+    "orchestraNamePlaceholder": "Name of the orchestra",
+    "title": "Title",
+    "concertTitlePlaceholder": "Title of the concert",
+    "subtitleOptional": "Subtitle (optional)",
+    "subtitlePlaceholder": "E.g. theme or special feature",
+    "dateAndLocation": "Date and location",
+    "date": "Date",
+    "time": "Time",
+    "location": "Location",
+    "locationPlaceholder": "Name of the venue",
+    "addressOptional": "Address (optional)",
+    "addressPlaceholder": "Street and city",
+    "program": "Program",
+    "worksOnePerLine": "Works (one per line)",
+    "programPlaceholder": "Mozart - Overture\nBeethoven - Symphony No. 5\nDvorak - Slavonic Dances",
+    "extraInfo": "Additional information",
+    "ticketInfo": "Ticket information",
+    "ticketInfoPlaceholder": "E.g. Free admission or Tickets via...",
+    "uploadLogo": "Upload logo",
+    "logoPreview": "Logo preview",
+    "preview": "Preview",
+    "template": "Template",
+    "classic": "Classic",
+    "modern": "Modern",
+    "minimal": "Minimal",
+    "colorTheme": "Color theme",
+    "generating": "Generating...",
+    "downloadAsPng": "Download as PNG",
+    "installHtml2canvas": "Install html2canvas for poster downloads: npm install html2canvas"
+  },
+  "setlistBuilder": {
+    "setlistName": "Setlist name",
+    "setlistNamePlaceholder": "Name of the setlist...",
+    "piecesCount": "{{count}} piece",
+    "piecesCount_plural": "{{count}} pieces",
+    "totalDuration": "Total duration",
+    "program": "Program",
+    "addPiecesToSetlist": "Add pieces to your setlist",
+    "dragOrClickToAdd": "Drag pieces here or click the + button",
+    "dragToReorder": "Drag to reorder",
+    "removeFromSetlist": "Remove from setlist",
+    "availablePieces": "Available pieces",
+    "searchPiecesPlaceholder": "Search pieces...",
+    "noPiecesFound": "No pieces found",
+    "allPiecesAdded": "All pieces have been added",
+    "addToSetlist": "Add to setlist"
+  },
+  "annotationToolbar": {
+    "title": "Annotation Tools",
+    "toolsLabel": "Tools (1-7)",
+    "tools": {
+      "select": "Select",
+      "selectDesc": "Select and move annotations",
+      "freehand": "Draw",
+      "freehandDesc": "Freehand drawing",
+      "highlight": "Highlight",
+      "highlightDesc": "Highlight text",
+      "text": "Text",
+      "textDesc": "Add text",
+      "stamp": "Stamps",
+      "stampDesc": "Music notation stamps",
+      "shape": "Shapes",
+      "shapeDesc": "Rectangle, circle, line, arrow",
+      "eraser": "Eraser",
+      "eraserDesc": "Erase annotations"
+    },
+    "shapeType": "Shape type",
+    "shapes": {
+      "rectangle": "Rectangle",
+      "circle": "Circle",
+      "line": "Line",
+      "arrow": "Arrow"
+    },
+    "color": "Color",
+    "colors": {
+      "red": "Red",
+      "orange": "Orange",
+      "gold": "Gold",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink",
+      "black": "Black",
+      "white": "White"
+    },
+    "strokeWidthLabel": "Stroke width",
+    "strokeWidth": {
+      "thin": "Thin",
+      "normal": "Normal",
+      "medium": "Medium",
+      "thick": "Thick",
+      "extraThick": "Extra thick"
+    },
+    "opacity": "Opacity",
+    "undo": "Undo",
+    "undoTooltip": "Undo (Ctrl+Z)",
+    "redo": "Redo",
+    "redoTooltip": "Redo (Ctrl+Y)",
+    "clearAll": "Clear all",
+    "clearConfirm": "Clear all annotations on this page?",
+    "stamps": "Stamps",
+    "searchStamps": "Search stamps...",
+    "stampCategories": {
+      "dynamics": "Dynamics",
+      "tempo": "Tempo",
+      "articulation": "Articulation",
+      "navigation": "Navigation",
+      "general": "General"
+    },
+    "noStampsInCategory": "No stamps in this category"
+  },
+  "favorites": {
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "favorite": "Favorite"
   }
 }

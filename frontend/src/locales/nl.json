@@ -51,7 +51,13 @@
     "address": "Adres",
     "postalCode": "Postcode",
     "city": "Plaats",
-    "country": "Land"
+    "country": "Land",
+    "export": "Exporteren",
+    "saving": "Opslaan...",
+    "selectItem": "Selecteer item {{id}}"
+  },
+  "lazyImage": {
+    "notLoaded": "Niet geladen"
   },
   "music": {
     "title": "Muziekstuk",
@@ -334,7 +340,9 @@
       "title": "Fout melden",
       "piece": "Muziekstuk",
       "pageNumber": "Paginanummer",
+      "pageNumberPlaceholder": "Bijv. 2",
       "measureNumber": "Maatnummer",
+      "measureNumberPlaceholder": "Bijv. 42 of 42-45",
       "description": "Beschrijving van de fout",
       "descriptionPlaceholder": "Beschrijf de fout die je hebt gevonden, bijv. 'Verkeerde noot in maat 24' of 'Pagina ontbreekt'",
       "submit": "Melding versturen",
@@ -389,6 +397,28 @@
       "tuningHelp": "Groen = goed gestemd | Geel = bijna | Rood = te hoog/laag",
       "startTitle": "Start stemapparaat",
       "stopTitle": "Stop stemapparaat"
+    },
+    "pitchPipe": {
+      "title": "Stemfluit",
+      "play": "Afspelen",
+      "stop": "Stoppen",
+      "referencePitch": "Referentietoon",
+      "commonPitches": "Veelgebruikte tonen",
+      "showAllNotes": "Alle noten tonen",
+      "hideAllNotes": "Alle noten verbergen"
+    },
+    "practiceTimer": {
+      "title": "Oefentimer",
+      "start": "Start",
+      "stop": "Stop",
+      "pause": "Pauze",
+      "resume": "Doorgaan",
+      "goal": "Doel",
+      "minutes": "minuten",
+      "practicing": "Aan het oefenen...",
+      "goalReached": "Doel bereikt!",
+      "customGoal": "Aangepast doel",
+      "changeGoal": "Doel wijzigen"
     }
   },
   "issues": {
@@ -1825,8 +1855,16 @@
   "errorBoundary": {
     "title": "Er is iets misgegaan",
     "description": "Er is een onverwachte fout opgetreden. Probeer de pagina te vernieuwen.",
+    "descriptionExtended": "Er is een onverwachte fout opgetreden. Probeer de pagina opnieuw te laden of ga terug naar de startpagina.",
     "retry": "Probeer opnieuw",
-    "backToHome": "Terug naar home"
+    "backToHome": "Naar startpagina",
+    "showDetails": "Toon details",
+    "hideDetails": "Verberg details",
+    "reportProblem": "Probleem melden",
+    "errorLabel": "Fout",
+    "timestamp": "Tijdstip",
+    "copiedToClipboard": "Foutinformatie is gekopieerd naar het klembord. Je kunt dit nu plakken in een e-mail naar ondersteuning.",
+    "copyErrorInfo": "Kopieer deze foutinformatie:"
   },
   "notFound": {
     "title": "Pagina niet gevonden",
@@ -3741,6 +3779,31 @@
     "clearSelection": "Selectie wissen",
     "legend": "Legenda"
   },
+  "seatSelector": {
+    "ariaLabel": "Interactieve stoelkaart",
+    "legendAvailability": "Beschikbaarheid",
+    "legendSeatTypes": "Stoeltypes",
+    "panHint": "Sleep om te verplaatsen",
+    "removeSeat": "Stoel verwijderen",
+    "reset": "Reset",
+    "resetView": "Weergave Resetten",
+    "rowLabel": "Rij {{row}}",
+    "seatAriaLabel": "Stoel {{seat}} in rij {{row}}, {{status}}",
+    "seatLabel": "Stoel {{number}}",
+    "selectedCount": "{{count}} stoel(en) geselecteerd",
+    "selectedSeats": "Geselecteerde Stoelen",
+    "stage": "Podium",
+    "status": {
+      "available": "Beschikbaar",
+      "reserved": "Gereserveerd",
+      "sold": "Verkocht"
+    },
+    "statusSelected": "Geselecteerd",
+    "total": "Totaal",
+    "totalLabel": "Totaal: {{amount}}",
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen"
+  },
   "ticketTransfer": {
     "title": "Ticket Overdracht",
     "transferTicket": "Ticket Overdragen",
@@ -4919,5 +4982,152 @@
     "uniquePieces": "Unieke stukken",
     "noData": "Geen gegevens beschikbaar",
     "allPiecesPlayed": "Alle stukken in de bibliotheek zijn al eens gespeeld"
+  },
+  "attendanceDashboard": {
+    "title": "Aanwezigheidsoverzicht",
+    "totalMembers": "Totaal leden",
+    "averageAttendance": "Gemiddelde aanwezigheid",
+    "highAttendance": "Hoge aanwezigheid (>80%)",
+    "lowAttendance": "Lage aanwezigheid (<50%)",
+    "from": "Van",
+    "to": "Tot",
+    "section": "Sectie",
+    "allSections": "Alle secties",
+    "sortBy": "Sorteren op",
+    "name": "Naam",
+    "attendancePercent": "Aanwezigheid %",
+    "present": "Aanwezig",
+    "absent": "Afwezig",
+    "sortOrder": "Volgorde",
+    "ascending": "Oplopend",
+    "descending": "Aflopend",
+    "attendanceOverTime": "Aanwezigheid over tijd",
+    "noDataAvailable": "Geen data beschikbaar",
+    "memberList": "Ledenlijst",
+    "noMembersFound": "Geen leden gevonden",
+    "instrument": "Instrument",
+    "percentage": "Percentage",
+    "rehearsals": "Repetities",
+    "noRehearsalsFound": "Geen repetities gevonden"
+  },
+  "posterGenerator": {
+    "posterData": "Postergegevens",
+    "general": "Algemeen",
+    "orchestraAssociation": "Orkest / Vereniging",
+    "orchestraNamePlaceholder": "Naam van het orkest",
+    "title": "Titel",
+    "concertTitlePlaceholder": "Titel van het concert",
+    "subtitleOptional": "Ondertitel (optioneel)",
+    "subtitlePlaceholder": "Bijv. thema of bijzonderheid",
+    "dateAndLocation": "Datum en locatie",
+    "date": "Datum",
+    "time": "Tijd",
+    "location": "Locatie",
+    "locationPlaceholder": "Naam van de locatie",
+    "addressOptional": "Adres (optioneel)",
+    "addressPlaceholder": "Straat en plaats",
+    "program": "Programma",
+    "worksOnePerLine": "Werken (een per regel)",
+    "programPlaceholder": "Mozart - Ouverture\nBeethoven - Symfonie No. 5\nDvorak - Slavische Dansen",
+    "extraInfo": "Extra informatie",
+    "ticketInfo": "Ticketinformatie",
+    "ticketInfoPlaceholder": "Bijv. Toegang gratis of Tickets via...",
+    "uploadLogo": "Logo uploaden",
+    "logoPreview": "Logo voorbeeld",
+    "preview": "Voorbeeld",
+    "template": "Sjabloon",
+    "classic": "Klassiek",
+    "modern": "Modern",
+    "minimal": "Minimaal",
+    "colorTheme": "Kleurthema",
+    "generating": "Genereren...",
+    "downloadAsPng": "Downloaden als PNG",
+    "installHtml2canvas": "Installeer html2canvas voor poster downloads: npm install html2canvas"
+  },
+  "setlistBuilder": {
+    "setlistName": "Setlist naam",
+    "setlistNamePlaceholder": "Naam van de setlist...",
+    "piecesCount": "{{count}} stuk",
+    "piecesCount_plural": "{{count}} stukken",
+    "totalDuration": "Totale duur",
+    "program": "Programma",
+    "addPiecesToSetlist": "Voeg stukken toe aan je setlist",
+    "dragOrClickToAdd": "Sleep stukken hierheen of klik op de + knop",
+    "dragToReorder": "Sleep om te herschikken",
+    "removeFromSetlist": "Verwijderen uit setlist",
+    "availablePieces": "Beschikbare stukken",
+    "searchPiecesPlaceholder": "Zoek stukken...",
+    "noPiecesFound": "Geen stukken gevonden",
+    "allPiecesAdded": "Alle stukken zijn toegevoegd",
+    "addToSetlist": "Toevoegen aan setlist"
+  },
+  "annotationToolbar": {
+    "title": "Annotatiegereedschap",
+    "toolsLabel": "Gereedschap (1-7)",
+    "tools": {
+      "select": "Selecteren",
+      "selectDesc": "Selecteer en verplaats annotaties",
+      "freehand": "Tekenen",
+      "freehandDesc": "Vrije hand tekenen",
+      "highlight": "Markeren",
+      "highlightDesc": "Tekst markeren",
+      "text": "Tekst",
+      "textDesc": "Tekst toevoegen",
+      "stamp": "Stempels",
+      "stampDesc": "Muzieknotatie stempels",
+      "shape": "Vormen",
+      "shapeDesc": "Rechthoek, cirkel, lijn, pijl",
+      "eraser": "Gum",
+      "eraserDesc": "Annotaties wissen"
+    },
+    "shapeType": "Vormtype",
+    "shapes": {
+      "rectangle": "Rechthoek",
+      "circle": "Cirkel",
+      "line": "Lijn",
+      "arrow": "Pijl"
+    },
+    "color": "Kleur",
+    "colors": {
+      "red": "Rood",
+      "orange": "Oranje",
+      "gold": "Goud",
+      "green": "Groen",
+      "blue": "Blauw",
+      "purple": "Paars",
+      "pink": "Roze",
+      "black": "Zwart",
+      "white": "Wit"
+    },
+    "strokeWidthLabel": "Lijndikte",
+    "strokeWidth": {
+      "thin": "Dun",
+      "normal": "Normaal",
+      "medium": "Medium",
+      "thick": "Dik",
+      "extraThick": "Extra dik"
+    },
+    "opacity": "Dekking",
+    "undo": "Ongedaan maken",
+    "undoTooltip": "Ongedaan maken (Ctrl+Z)",
+    "redo": "Opnieuw",
+    "redoTooltip": "Opnieuw (Ctrl+Y)",
+    "clearAll": "Alles wissen",
+    "clearConfirm": "Alle annotaties op deze pagina wissen?",
+    "stamps": "Stempels",
+    "searchStamps": "Zoek stempels...",
+    "stampCategories": {
+      "dynamics": "Dynamiek",
+      "tempo": "Tempo",
+      "articulation": "Articulatie",
+      "navigation": "Navigatie",
+      "general": "Algemeen"
+    },
+    "noStampsInCategory": "Geen stempels in deze categorie"
+  },
+  "favorites": {
+    "addToFavorites": "Toevoegen aan favorieten",
+    "removeFromFavorites": "Verwijderen uit favorieten",
+    "favorite": "Favoriet"
   }
 }

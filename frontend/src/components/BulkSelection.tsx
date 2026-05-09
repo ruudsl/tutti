@@ -17,6 +17,7 @@ import {
   memo,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon, IconName } from './Icon';
 
@@ -266,6 +267,7 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
   size = 'md',
   label,
 }: SelectionCheckboxProps) {
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const { isSelected, toggleItem } = useBulkSelection();
   const checked = isSelected(itemId);
@@ -315,7 +317,7 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
           width: 0,
           height: 0,
         }}
-        aria-label={label ?? `Selecteer item ${itemId}`}
+        aria-label={label ?? t('common.selectItem', { id: itemId })}
       />
       <span style={checkboxStyles}>
         {checked && (

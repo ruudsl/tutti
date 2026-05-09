@@ -40,7 +40,7 @@ interface State {
  * </ErrorBoundary>
  * ```
  */
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryComponent extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -199,4 +199,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default withTranslation()(ErrorBoundary);
+const ErrorBoundary = withTranslation()(ErrorBoundaryComponent);
+
+export { ErrorBoundary };
+export default ErrorBoundary;
