@@ -861,6 +861,742 @@ router.get('/tickets/my', authenticateToken, asyncHandler(async (req: AuthReques
 
 /**
  * @swagger
+ * /tickets/dashboard/{concertId}:
+ *   get:
+ *     summary: Get ticket dashboard stats for a concert
+ *     tags: [Tickets Admin]
+ */
+router.get('/tickets/dashboard/:concertId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { concertId } = req.params;
+
+    // Verify concert belongs to user's association
+    const concert = db.prepare(`
+        SELECT id, name, date, location
+        FROM concerts
+        WHERE id = ? AND association_id = ?
+    `).get(concertId, req.user!.associationId) as {
+        id: string;
+        name: string;
+        date: string;
+        location: string | null;
+    } | undefined;
+
+    if (!concert) {
+        throw new ApiError(404, 'Concert not found');
+    }
+
+    // Get ticket types with sales data
+    const ticketTypes = db.prepare(`
+        SELECT
+            id,
+            name,
+            price,
+            quantity,
+            sold
+        FROM ticket_types
+        WHERE concert_id = ?
+    `).all(concertId) as {
+        id: string;
+        name: string;
+        price: number;
+        quantity: number;
+        sold: number;
+    }[];
+
+    // Calculate totals
+    const totalCapacity = ticketTypes.reduce((sum, tt) => sum + tt.quantity, 0);
+    const totalTicketsSold = ticketTypes.reduce((sum, tt) => sum + tt.sold, 0);
+
+    // Calculate revenue
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString();
+
+    const revenueResult = db.prepare(`
+        SELECT
+            SUM(CASE WHEN o.paid_at >= ? THEN o.total ELSE 0 END) as revenue_today,
+            SUM(CASE WHEN o.paid_at >= ? THEN o.total ELSE 0 END) as revenue_week,
+            SUM(o.total) as revenue_all_time
+        FROM ticket_orders o
+        WHERE o.concert_id = ? AND o.status = 'paid'
+    `).get(todayStart, weekStart, concertId) as {
+        revenue_today: number | null;
+        revenue_week: number | null;
+        revenue_all_time: number | null;
+    };
+
+    // Get sales over time (last 30 days)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const salesOverTime = db.prepare(`
+        SELECT
+            DATE(o.paid_at) as date,
+            COUNT(DISTINCT t.id) as tickets_sold,
+            SUM(o.total) as revenue
+        FROM ticket_orders o
+        JOIN tickets t ON t.order_id = o.id
+        WHERE o.concert_id = ? AND o.status = 'paid' AND DATE(o.paid_at) >= ?
+        GROUP BY DATE(o.paid_at)
+        ORDER BY date ASC
+    `).all(concertId, thirtyDaysAgo) as {
+        date: string;
+        tickets_sold: number;
+        revenue: number;
+    }[];
+
+    // Get recent orders
+    const recentOrders = db.prepare(`
+        SELECT
+            o.id,
+            o.buyer_name,
+            o.buyer_email,
+            o.total,
+            o.status,
+            o.created_at,
+            (SELECT COUNT(*) FROM tickets t WHERE t.order_id = o.id) as ticket_count
+        FROM ticket_orders o
+        WHERE o.concert_id = ?
+        ORDER BY o.created_at DESC
+        LIMIT 10
+    `).all(concertId) as {
+        id: string;
+        buyer_name: string;
+        buyer_email: string;
+        total: number;
+        status: string;
+        created_at: string;
+        ticket_count: number;
+    }[];
+
+    // Get guest list count
+    const guestListResult = db.prepare(`
+        SELECT COALESCE(SUM(ticket_count), 0) as total
+        FROM guest_list
+        WHERE concert_id = ?
+    `).get(concertId) as { total: number };
+
+    res.json({
+        concertId: concert.id,
+        concertName: concert.name,
+        concertDate: concert.date,
+        concertLocation: concert.location,
+        totalTicketsSold,
+        totalCapacity,
+        revenueToday: revenueResult.revenue_today || 0,
+        revenueThisWeek: revenueResult.revenue_week || 0,
+        revenueAllTime: revenueResult.revenue_all_time || 0,
+        ticketTypes: ticketTypes.map(tt => ({
+            id: tt.id,
+            name: tt.name,
+            price: tt.price,
+            quantity: tt.quantity,
+            sold: tt.sold,
+            available: tt.quantity - tt.sold,
+            revenue: tt.price * tt.sold,
+        })),
+        salesOverTime: salesOverTime.map(s => ({
+            date: s.date,
+            ticketsSold: s.tickets_sold,
+            revenue: s.revenue,
+        })),
+        recentOrders: recentOrders.map(o => ({
+            id: o.id,
+            buyerName: o.buyer_name,
+            buyerEmail: o.buyer_email,
+            total: o.total,
+            ticketCount: o.ticket_count,
+            status: o.status,
+            createdAt: o.created_at,
+        })),
+        guestListTickets: guestListResult.total,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/transferable:
+ *   get:
+ *     summary: Get user's transferable tickets
+ *     tags: [Tickets]
+ */
+router.get('/tickets/transferable', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+
+    // Get valid tickets that the user owns and that are for upcoming concerts
+    const tickets = db.prepare(`
+        SELECT
+            t.id,
+            t.qr_code,
+            t.buyer_name,
+            t.status,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location,
+            (SELECT COUNT(*) FROM ticket_transfers tr WHERE tr.ticket_id = t.id AND tr.status = 'pending') as pending_transfer_count
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        JOIN ticket_orders o ON t.order_id = o.id
+        WHERE (t.user_id = ? OR t.buyer_email = ?)
+          AND o.status = 'paid'
+          AND t.status = 'valid'
+          AND c.date >= DATE('now')
+        ORDER BY c.date ASC
+    `).all(userId, userEmail) as {
+        id: string;
+        qr_code: string;
+        buyer_name: string;
+        status: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+        pending_transfer_count: number;
+    }[];
+
+    res.json(tickets.map(t => ({
+        id: t.id,
+        code: t.qr_code,
+        ticketType: t.ticket_type_name,
+        buyerName: t.buyer_name,
+        status: t.status,
+        concert: {
+            id: t.concert_id,
+            name: t.concert_name,
+            date: t.concert_date,
+            location: t.concert_location,
+        },
+        hasPendingTransfer: t.pending_transfer_count > 0,
+    })));
+}));
+
+/**
+ * @swagger
+ * /tickets/transfers:
+ *   get:
+ *     summary: Get user's pending transfers (initiated by them)
+ *     tags: [Tickets]
+ */
+router.get('/tickets/transfers', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+
+    // Get pending transfers initiated by this user
+    const transfers = db.prepare(`
+        SELECT
+            tr.id,
+            tr.ticket_id,
+            tr.recipient_email,
+            tr.recipient_name,
+            tr.transfer_code,
+            tr.status,
+            tr.created_at,
+            tr.expires_at,
+            tr.accepted_at,
+            tr.cancelled_at,
+            t.qr_code as ticket_code,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM ticket_transfers tr
+        JOIN tickets t ON tr.ticket_id = t.id
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE (tr.from_user_id = ? OR tr.from_email = ?)
+          AND tr.status = 'pending'
+        ORDER BY tr.created_at DESC
+    `).all(userId, userEmail) as {
+        id: string;
+        ticket_id: string;
+        recipient_email: string;
+        recipient_name: string;
+        transfer_code: string;
+        status: string;
+        created_at: string;
+        expires_at: string;
+        accepted_at: string | null;
+        cancelled_at: string | null;
+        ticket_code: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    }[];
+
+    res.json(transfers.map(tr => ({
+        id: tr.id,
+        ticketId: tr.ticket_id,
+        ticket: {
+            id: tr.ticket_id,
+            code: tr.ticket_code,
+            ticketType: tr.ticket_type_name,
+            concert: {
+                id: tr.concert_id,
+                name: tr.concert_name,
+                date: tr.concert_date,
+                location: tr.concert_location,
+            },
+        },
+        recipientEmail: tr.recipient_email,
+        recipientName: tr.recipient_name,
+        transferCode: tr.transfer_code,
+        status: tr.status,
+        createdAt: tr.created_at,
+        expiresAt: tr.expires_at,
+        acceptedAt: tr.accepted_at,
+        cancelledAt: tr.cancelled_at,
+    })));
+}));
+
+/**
+ * @swagger
+ * /tickets/transfers/history:
+ *   get:
+ *     summary: Get user's transfer history
+ *     tags: [Tickets]
+ */
+router.get('/tickets/transfers/history', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+
+    // Get all transfers where user is sender or recipient
+    const transfers = db.prepare(`
+        SELECT
+            tr.id,
+            tr.ticket_id,
+            tr.from_email,
+            tr.from_name,
+            tr.recipient_email,
+            tr.recipient_name,
+            tr.status,
+            tr.created_at,
+            tr.accepted_at,
+            t.qr_code as ticket_code,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date
+        FROM ticket_transfers tr
+        JOIN tickets t ON tr.ticket_id = t.id
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE tr.from_user_id = ? OR tr.from_email = ? OR tr.recipient_email = ?
+        ORDER BY tr.created_at DESC
+        LIMIT 50
+    `).all(userId, userEmail, userEmail) as {
+        id: string;
+        ticket_id: string;
+        from_email: string;
+        from_name: string;
+        recipient_email: string;
+        recipient_name: string;
+        status: string;
+        created_at: string;
+        accepted_at: string | null;
+        ticket_code: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+    }[];
+
+    res.json(transfers.map(tr => ({
+        id: tr.id,
+        ticketId: tr.ticket_id,
+        ticket: {
+            id: tr.ticket_id,
+            code: tr.ticket_code,
+            ticketType: tr.ticket_type_name,
+            concert: {
+                id: tr.concert_id,
+                name: tr.concert_name,
+                date: tr.concert_date,
+            },
+        },
+        fromEmail: tr.from_email,
+        fromName: tr.from_name,
+        toEmail: tr.recipient_email,
+        toName: tr.recipient_name,
+        status: tr.status,
+        transferredAt: tr.accepted_at || tr.created_at,
+    })));
+}));
+
+/**
+ * @swagger
+ * /tickets/transfers/{transferCode}:
+ *   get:
+ *     summary: Get transfer details by code (for accepting)
+ *     tags: [Tickets]
+ */
+router.get('/tickets/transfers/:transferCode', optionalAuth, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { transferCode } = req.params;
+
+    const transfer = db.prepare(`
+        SELECT
+            tr.id,
+            tr.ticket_id,
+            tr.from_name,
+            tr.recipient_email,
+            tr.recipient_name,
+            tr.transfer_code,
+            tr.status,
+            tr.created_at,
+            tr.expires_at,
+            tr.accepted_at,
+            tr.cancelled_at,
+            t.qr_code as ticket_code,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM ticket_transfers tr
+        JOIN tickets t ON tr.ticket_id = t.id
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE tr.transfer_code = ?
+    `).get(transferCode) as {
+        id: string;
+        ticket_id: string;
+        from_name: string;
+        recipient_email: string;
+        recipient_name: string;
+        transfer_code: string;
+        status: string;
+        created_at: string;
+        expires_at: string;
+        accepted_at: string | null;
+        cancelled_at: string | null;
+        ticket_code: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    } | undefined;
+
+    if (!transfer) {
+        throw new ApiError(404, 'Transfer not found');
+    }
+
+    // Check if expired
+    if (transfer.status === 'pending' && new Date(transfer.expires_at) < new Date()) {
+        // Mark as expired
+        db.prepare(`UPDATE ticket_transfers SET status = 'expired' WHERE id = ?`).run(transfer.id);
+        transfer.status = 'expired';
+    }
+
+    res.json({
+        id: transfer.id,
+        ticketId: transfer.ticket_id,
+        ticket: {
+            id: transfer.ticket_id,
+            code: transfer.ticket_code,
+            ticketType: transfer.ticket_type_name,
+            concert: {
+                id: transfer.concert_id,
+                name: transfer.concert_name,
+                date: transfer.concert_date,
+                location: transfer.concert_location,
+            },
+        },
+        recipientEmail: transfer.recipient_email,
+        recipientName: transfer.recipient_name,
+        transferCode: transfer.transfer_code,
+        status: transfer.status,
+        createdAt: transfer.created_at,
+        expiresAt: transfer.expires_at,
+        acceptedAt: transfer.accepted_at,
+        cancelledAt: transfer.cancelled_at,
+    });
+}));
+
+/**
+ * @swagger
+ * /tickets/transfers/{transferId}:
+ *   delete:
+ *     summary: Cancel a pending transfer
+ *     tags: [Tickets]
+ */
+router.delete('/tickets/transfers/:transferId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { transferId } = req.params;
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+
+    // Verify transfer exists and belongs to user
+    const transfer = db.prepare(`
+        SELECT id, status, from_user_id, from_email
+        FROM ticket_transfers
+        WHERE id = ?
+    `).get(transferId) as {
+        id: string;
+        status: string;
+        from_user_id: string | null;
+        from_email: string;
+    } | undefined;
+
+    if (!transfer) {
+        throw new ApiError(404, 'Transfer not found');
+    }
+
+    // Check ownership
+    if (transfer.from_user_id !== userId && transfer.from_email !== userEmail) {
+        throw new ApiError(403, 'Not authorized to cancel this transfer');
+    }
+
+    if (transfer.status !== 'pending') {
+        throw new ApiError(400, `Cannot cancel transfer with status: ${transfer.status}`);
+    }
+
+    // Cancel the transfer
+    db.prepare(`
+        UPDATE ticket_transfers
+        SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(transferId);
+
+    res.json({ success: true, message: 'Transfer cancelled successfully' });
+}));
+
+/**
+ * @swagger
+ * /tickets/transfers/{transferCode}/accept:
+ *   post:
+ *     summary: Accept a ticket transfer
+ *     tags: [Tickets]
+ */
+router.post('/tickets/transfers/:transferCode/accept', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { transferCode } = req.params;
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    // Get the transfer
+    const transfer = db.prepare(`
+        SELECT
+            tr.id,
+            tr.ticket_id,
+            tr.status,
+            tr.expires_at,
+            tr.recipient_email,
+            t.qr_code,
+            t.status as ticket_status,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM ticket_transfers tr
+        JOIN tickets t ON tr.ticket_id = t.id
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        WHERE tr.transfer_code = ?
+    `).get(transferCode) as {
+        id: string;
+        ticket_id: string;
+        status: string;
+        expires_at: string;
+        recipient_email: string;
+        qr_code: string;
+        ticket_status: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    } | undefined;
+
+    if (!transfer) {
+        throw new ApiError(404, 'Transfer not found');
+    }
+
+    if (transfer.status !== 'pending') {
+        throw new ApiError(400, `Transfer has status: ${transfer.status}`);
+    }
+
+    // Check if expired
+    if (new Date(transfer.expires_at) < new Date()) {
+        db.prepare(`UPDATE ticket_transfers SET status = 'expired' WHERE id = ?`).run(transfer.id);
+        throw new ApiError(400, 'Transfer has expired');
+    }
+
+    // Optional: verify recipient email matches (be lenient - allow any authenticated user)
+    // In production you might want to enforce this more strictly
+
+    // Transfer the ticket
+    const acceptTransfer = db.transaction(() => {
+        // Update the ticket ownership
+        db.prepare(`
+            UPDATE tickets
+            SET user_id = ?, buyer_name = ?, buyer_email = ?
+            WHERE id = ?
+        `).run(userId, userName, userEmail, transfer.ticket_id);
+
+        // Mark transfer as accepted
+        db.prepare(`
+            UPDATE ticket_transfers
+            SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP, accepted_by_user_id = ?
+            WHERE id = ?
+        `).run(userId, transfer.id);
+    });
+
+    acceptTransfer();
+
+    // Generate QR code for response
+    const qrCodeDataUrl = await generateQRCode(transfer.qr_code);
+
+    res.json({
+        success: true,
+        ticket: {
+            id: transfer.ticket_id,
+            code: transfer.qr_code,
+            buyerName: userName,
+            status: transfer.ticket_status,
+            ticketType: transfer.ticket_type_name,
+            concert: {
+                id: transfer.concert_id,
+                name: transfer.concert_name,
+                date: transfer.concert_date,
+                location: transfer.concert_location,
+            },
+            qrCodeDataUrl,
+        },
+        message: 'Ticket transferred successfully',
+    });
+}));
+
+// Validation schema for ticket transfer
+const initiateTransferSchema = z.object({
+    recipientEmail: z.string().email('Valid email required'),
+    recipientName: z.string().min(1, 'Recipient name is required'),
+});
+
+/**
+ * @swagger
+ * /tickets/{id}/transfer:
+ *   post:
+ *     summary: Initiate a ticket transfer
+ *     tags: [Tickets]
+ */
+router.post('/tickets/:id/transfer', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: ticketId } = req.params;
+    const userId = req.user!.id;
+    const userEmail = req.user!.email;
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    const validation = initiateTransferSchema.safeParse(req.body);
+    if (!validation.success) {
+        throw new ApiError(400, validation.error.issues[0].message);
+    }
+
+    const { recipientEmail, recipientName } = validation.data;
+
+    // Verify ticket exists and belongs to user
+    const ticket = db.prepare(`
+        SELECT
+            t.id,
+            t.user_id,
+            t.buyer_email,
+            t.status,
+            t.qr_code,
+            tt.name as ticket_type_name,
+            c.id as concert_id,
+            c.name as concert_name,
+            c.date as concert_date,
+            c.location as concert_location
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        JOIN concerts c ON tt.concert_id = c.id
+        JOIN ticket_orders o ON t.order_id = o.id
+        WHERE t.id = ? AND o.status = 'paid'
+    `).get(ticketId) as {
+        id: string;
+        user_id: string | null;
+        buyer_email: string;
+        status: string;
+        qr_code: string;
+        ticket_type_name: string;
+        concert_id: string;
+        concert_name: string;
+        concert_date: string;
+        concert_location: string | null;
+    } | undefined;
+
+    if (!ticket) {
+        throw new ApiError(404, 'Ticket not found');
+    }
+
+    // Check ownership
+    if (ticket.user_id !== userId && ticket.buyer_email !== userEmail) {
+        throw new ApiError(403, 'Not authorized to transfer this ticket');
+    }
+
+    if (ticket.status !== 'valid') {
+        throw new ApiError(400, `Cannot transfer ticket with status: ${ticket.status}`);
+    }
+
+    // Check for existing pending transfer
+    const existingTransfer = db.prepare(`
+        SELECT id FROM ticket_transfers
+        WHERE ticket_id = ? AND status = 'pending'
+    `).get(ticketId) as { id: string } | undefined;
+
+    if (existingTransfer) {
+        throw new ApiError(400, 'Ticket already has a pending transfer');
+    }
+
+    // Cannot transfer to yourself
+    if (recipientEmail.toLowerCase() === userEmail.toLowerCase()) {
+        throw new ApiError(400, 'Cannot transfer ticket to yourself');
+    }
+
+    // Create the transfer
+    const transferId = uuidv4();
+    const transferCode = generateSecureTicketCode(); // Reuse the secure code generator
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    db.prepare(`
+        INSERT INTO ticket_transfers (id, ticket_id, from_user_id, from_email, from_name, recipient_email, recipient_name, transfer_code, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(transferId, ticketId, userId, userEmail, userName, recipientEmail, recipientName, transferCode, expiresAt);
+
+    res.status(201).json({
+        transfer: {
+            id: transferId,
+            ticketId: ticketId,
+            ticket: {
+                id: ticket.id,
+                code: ticket.qr_code,
+                ticketType: ticket.ticket_type_name,
+                concert: {
+                    id: ticket.concert_id,
+                    name: ticket.concert_name,
+                    date: ticket.concert_date,
+                    location: ticket.concert_location,
+                },
+            },
+            recipientEmail,
+            recipientName,
+            transferCode,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            expiresAt,
+            acceptedAt: null,
+            cancelledAt: null,
+        },
+        message: 'Transfer initiated. Share the transfer code with the recipient.',
+    });
+}));
+
+/**
+ * @swagger
  * /tickets/sales:
  *   get:
  *     summary: Get all ticket sales/orders for admin overview

@@ -393,7 +393,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{members.length}</span>
-            <span className="summary-label">Totaal leden</span>
+            <span className="summary-label">{t('attendanceDashboard.totalMembers')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -402,7 +402,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.avgRate.toFixed(0)}%</span>
-            <span className="summary-label">Gemiddelde aanwezigheid</span>
+            <span className="summary-label">{t('attendanceDashboard.averageAttendance')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -411,7 +411,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.highAttendance}</span>
-            <span className="summary-label">Hoge aanwezigheid (&gt;80%)</span>
+            <span className="summary-label">{t('attendanceDashboard.highAttendance')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -420,7 +420,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.lowAttendance}</span>
-            <span className="summary-label">Lage aanwezigheid (&lt;50%)</span>
+            <span className="summary-label">{t('attendanceDashboard.lowAttendance')}</span>
           </div>
         </div>
       </div>
