@@ -455,7 +455,8 @@ router.patch('/:id', authenticateToken, requireRole('admin', 'music_committee'),
         }
     });
 
-    logger.info(`Contact updated: ${req.params.id}`, { updatedBy: req.user!.id });
+    const sanitizedContactIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
+    logger.info(`Contact updated: ${sanitizedContactIdForLog}`, { updatedBy: req.user!.id });
 
     logAuditEvent(
         req.user!.id,
