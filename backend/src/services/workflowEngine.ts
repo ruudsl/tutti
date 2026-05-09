@@ -1,6 +1,7 @@
 import db from '../database/connection';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/email';
+import sanitizeHtml from 'sanitize-html';
 
 interface WorkflowAction {
   id: string;
@@ -168,7 +169,10 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
       await sendEmail({
         to: email,
         subject: processedSubject,
-        text: processedBody.replace(/<[^>]*>/g, ''),
+        text: sanitizeHtml(processedBody, {
+          allowedTags: [],
+          allowedAttributes: {},
+        }),
         html: processedBody,
       });
       context.log.push(`Email sent to ${email}`);
