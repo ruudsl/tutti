@@ -5715,23 +5715,3 @@ a:not(.btn):not(.nav-link):not(.sidebar-direct-link):not(.sidebar-sub-link):hove
 .modal .select-sm {
   height: 2rem;
 }
-
-/* ===== Mobile menu sublinks ===== */
-.mobile-menu-sublink {
-  display: block;
-  padding: 0.625rem 1rem 0.625rem 3rem;
-  color: var(--text);
-  text-decoration: none;
-  font-size: 0.875rem;
-  transition: background 0.2s;
-}
-
-.mobile-menu-sublink:hover,
-.mobile-menu-sublink:active {
-  background: var(--surface-hover);
-}
-
-.mobile-menu-sublink.active {
-  color: var(--primary);
-  background: var(--primary-light);
-}

@@ -1161,7 +1161,7 @@ function AccountModal({
   return (
     <Modal title={account ? t('accounting.editAccount') : t('accounting.newAccount')} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label">
               <span className="label-text">{t('accounting.code')} *</span>
@@ -1203,7 +1203,7 @@ function AccountModal({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label">
               <span className="label-text">{t('accounting.subtype')}</span>
@@ -2344,7 +2344,7 @@ function FiscalYearModal({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label">
               <span className="label-text">{t('accounting.startDate')} *</span>

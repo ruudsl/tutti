@@ -2409,8 +2409,8 @@ router.get('/export/invoices', authenticateToken, requireRole('admin', 'board'),
             i.description,
             i.subtotal,
             i.vat_amount,
-            i.total_amount,
-            i.paid_amount
+            i.total,
+            i.amount_paid
         FROM invoices i
         LEFT JOIN accounting_relations r ON i.relation_id = r.id
         WHERE i.association_id = ?
@@ -2439,8 +2439,8 @@ router.get('/export/invoices', authenticateToken, requireRole('admin', 'board'),
             { key: 'description', header: 'Omschrijving' },
             { key: 'subtotal', header: 'Subtotaal' },
             { key: 'vat_amount', header: 'BTW' },
-            { key: 'total_amount', header: 'Totaal' },
-            { key: 'paid_amount', header: 'Betaald' },
+            { key: 'total', header: 'Totaal' },
+            { key: 'amount_paid', header: 'Betaald' },
         ]);
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
