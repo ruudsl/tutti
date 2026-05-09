@@ -102,7 +102,7 @@ function AttendanceBadge({ rate, isDark }: { rate: number; isDark: boolean }) {
   );
 }
 
-function TrendChart({ data }: { data: AttendanceTrend[]; isDark: boolean }) {
+function TrendChart({ data, noDataText }: { data: AttendanceTrend[]; isDark: boolean; noDataText: string }) {
   if (data.length === 0) {
     return (
       <div
@@ -114,7 +114,7 @@ function TrendChart({ data }: { data: AttendanceTrend[]; isDark: boolean }) {
           color: 'var(--text-muted)',
         }}
       >
-        Geen data beschikbaar
+        {noDataText}
       </div>
     );
   }
@@ -277,8 +277,7 @@ export function AttendanceDashboard({
   onExport,
   isLoading = false,
 }: AttendanceDashboardProps) {
-  // Translation hook available for i18n when needed
-  useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
 
   const [filters, setFilters] = useState<AttendanceFilters>(getDefaultFilters);
@@ -358,7 +357,7 @@ export function AttendanceDashboard({
       <div className="attendance-header">
         <h2 className="attendance-title">
           <Icon name="users" size={24} />
-          Aanwezigheidsoverzicht
+          {t('attendanceDashboard.title')}
         </h2>
         <div className="attendance-header-actions">
           <div className="export-dropdown">
@@ -368,7 +367,7 @@ export function AttendanceDashboard({
               type="button"
             >
               <Icon name="download" size={18} />
-              Exporteren
+              {t('common.export')}
             </button>
             {showExportMenu && (
               <div className="export-menu">
