@@ -855,7 +855,8 @@ router.post('/:id/vote', authenticateToken, cacheInvalidator(CACHE_PATH), asyncH
         insertVote.run(uuidv4(), req.params.id, optionId, req.user!.id, rank, votedAt);
     });
 
-    logger.info(`Vote submitted for poll ${req.params.id}`, { userId: req.user!.id });
+    const safePollIdForLog = String(req.params.id).replace(/[\r\n\x00-\x1F\x7F]/g, '');
+    logger.info(`Vote submitted for poll ${safePollIdForLog}`, { userId: req.user!.id });
 
     res.json({ message: 'Stem succesvol uitgebracht.' });
 }));
