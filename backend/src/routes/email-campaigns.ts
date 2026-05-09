@@ -11,6 +11,7 @@ import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { sendEmail } from '../utils/email';
 import { z } from 'zod';
+import sanitizeHtml from 'sanitize-html';
 
 const uploadsDir = path.join(process.cwd(), 'uploads', 'email-attachments');
 if (!fs.existsSync(uploadsDir)) {
@@ -631,7 +632,7 @@ router.post('/:id/test', authenticateToken, requireRole('admin'), asyncHandler(a
         email: email,
     });
 
-    const text = personalizeEmail(campaign.body_text || campaign.body_html.replace(/<[^>]*>/g, ''), {
+    const text = personalizeEmail(campaign.body_text || sanitizeHtml(campaign.body_html, { allowedTags: [], allowedAttributes: {} }), {
         firstName: 'Test',
         lastName: 'Gebruiker',
         email: email,
