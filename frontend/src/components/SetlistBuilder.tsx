@@ -451,7 +451,7 @@ export function SetlistBuilder({
         <div className="setlist-available-section">
           <div className="setlist-available-header">
             <h3 className="setlist-section-title">
-              Beschikbare stukken
+              {t('setlistBuilder.availablePieces')}
               <button
                 className="setlist-toggle-btn"
                 onClick={() => setShowAvailable(!showAvailable)}
@@ -466,7 +466,7 @@ export function SetlistBuilder({
                 <Icon name="search" size={16} />
                 <input
                   type="text"
-                  placeholder="Zoek stukken..."
+                  placeholder={t('setlistBuilder.searchPiecesPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -478,7 +478,7 @@ export function SetlistBuilder({
             <div className="setlist-available-list">
               {filteredAvailablePieces.length === 0 ? (
                 <p className="text-muted text-center py-4">
-                  {searchQuery ? 'Geen stukken gevonden' : 'Alle stukken zijn toegevoegd'}
+                  {searchQuery ? t('setlistBuilder.noPiecesFound') : t('setlistBuilder.allPiecesAdded')}
                 </p>
               ) : (
                 filteredAvailablePieces.map((piece) => (
@@ -495,7 +495,7 @@ export function SetlistBuilder({
                     <button
                       className="setlist-add-btn"
                       onClick={() => handleAddPiece(piece)}
-                      title="Toevoegen aan setlist"
+                      title={t('setlistBuilder.addToSetlist')}
                       type="button"
                     >
                       <Icon name="plus" size={18} />
