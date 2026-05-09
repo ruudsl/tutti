@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDropzone, FileRejection, Accept } from 'react-dropzone';
 import { showError } from '../utils/toast';
 import { formatFileSize } from '../utils/format';
@@ -26,16 +27,17 @@ export function FileDropzone({
   disabled = false,
   children,
 }: FileDropzoneProps) {
+  const { t } = useTranslation();
   const onDrop = useCallback(
     (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
       if (rejectedFiles.length > 0) {
         const errors = rejectedFiles.map((rejection) => {
           const errorMessages = rejection.errors.map((e) => {
             if (e.code === 'file-too-large') {
-              return `${rejection.file.name} is te groot (max ${formatFileSize(maxSize)})`;
+              return t('fileDropzone.fileTooLarge', { fileName: rejection.file.name, maxSize: formatFileSize(maxSize) });
             }
             if (e.code === 'file-invalid-type') {
-              return `${rejection.file.name} heeft een ongeldig bestandstype`;
+              return t('fileDropzone.invalidFileType', { fileName: rejection.file.name });
             }
             return e.message;
           });
@@ -48,7 +50,7 @@ export function FileDropzone({
         onFilesAccepted(acceptedFiles);
       }
     },
-    [onFilesAccepted, maxSize]
+    [onFilesAccepted, maxSize, t]
   );
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -65,7 +67,7 @@ export function FileDropzone({
       {...getRootProps()}
       className={`dropzone ${isDragActive ? 'drag-active' : ''} ${isDragReject ? 'drag-reject' : ''} ${disabled ? 'disabled' : ''}`}
       role="button"
-      aria-label="Upload bestanden - sleep hierheen of klik om te selecteren"
+      aria-label={t('fileDropzone.ariaLabel')}
     >
       <input {...getInputProps()} />
       {children || (
@@ -73,15 +75,15 @@ export function FileDropzone({
           <div className="dropzone-icon" aria-hidden="true"><Icon name="folder" size={48} /></div>
           <p className="dropzone-text">
             {isDragActive ? (
-              'Laat bestanden hier los...'
+              t('fileDropzone.dropHere')
             ) : (
               <>
-                Sleep bestanden hierheen of <strong>klik om te selecteren</strong>
+                {t('fileDropzone.dragOrClick')}
               </>
             )}
           </p>
           <p className="dropzone-text" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
-            Alleen PDF bestanden, max {formatFileSize(maxSize)} per bestand
+            {t('fileDropzone.pdfOnly', { maxSize: formatFileSize(maxSize) })}
           </p>
         </>
       )}

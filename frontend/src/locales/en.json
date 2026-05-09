@@ -63,6 +63,14 @@
   "lazyImage": {
     "notLoaded": "Not loaded"
   },
+  "fileDropzone": {
+    "ariaLabel": "Upload files - drag here or click to select",
+    "dropHere": "Drop files here...",
+    "dragOrClick": "Drag files here or <strong>click to select</strong>",
+    "pdfOnly": "PDF files only, max {{maxSize}} per file",
+    "fileTooLarge": "{{fileName}} is too large (max {{maxSize}})",
+    "invalidFileType": "{{fileName}} has an invalid file type"
+  },
   "music": {
     "title": "Music piece",
     "composer": "Composer"

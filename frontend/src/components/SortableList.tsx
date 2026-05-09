@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   closestCenter,
@@ -112,6 +113,7 @@ interface DraggableListItemProps {
 }
 
 export function DraggableListItem({ children, className, style }: DraggableListItemProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={className}
@@ -135,7 +137,7 @@ export function DraggableListItem({ children, className, style }: DraggableListI
           lineHeight: 1,
           userSelect: 'none',
         }}
-        title="Sleep om te herschikken"
+        title={t('common.dragToReorder')}
       >
         ⋮⋮
       </span>

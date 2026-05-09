@@ -63,6 +63,14 @@
   "lazyImage": {
     "notLoaded": "Niet geladen"
   },
+  "fileDropzone": {
+    "ariaLabel": "Upload bestanden - sleep hierheen of klik om te selecteren",
+    "dropHere": "Laat bestanden hier los...",
+    "dragOrClick": "Sleep bestanden hierheen of <strong>klik om te selecteren</strong>",
+    "pdfOnly": "Alleen PDF bestanden, max {{maxSize}} per bestand",
+    "fileTooLarge": "{{fileName}} is te groot (max {{maxSize}})",
+    "invalidFileType": "{{fileName}} heeft een ongeldig bestandstype"
+  },
   "music": {
     "title": "Muziekstuk",
     "composer": "Componist"
