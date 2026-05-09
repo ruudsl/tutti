@@ -500,26 +500,26 @@ export function AttendanceDashboard({
 
       {/* Member table */}
       <div className="attendance-table-section">
-        <h3 className="section-title">Ledenlijst ({filteredMembers.length})</h3>
+        <h3 className="section-title">{t('attendanceDashboard.memberList')} ({filteredMembers.length})</h3>
         {isLoading ? (
           <div className="loading-state">
-            <span>Laden...</span>
+            <span>{t('common.loading')}</span>
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="empty-state">
             <Icon name="users" size={48} />
-            <p>Geen leden gevonden</p>
+            <p>{t('attendanceDashboard.noMembersFound')}</p>
           </div>
         ) : (
           <div className="attendance-table-wrapper">
             <table className="attendance-table">
               <thead>
                 <tr>
-                  <th>Naam</th>
-                  <th>Instrument</th>
-                  <th>Aanwezig</th>
-                  <th>Afwezig</th>
-                  <th>Percentage</th>
+                  <th>{t('attendanceDashboard.name')}</th>
+                  <th>{t('attendanceDashboard.instrument')}</th>
+                  <th>{t('attendanceDashboard.present')}</th>
+                  <th>{t('attendanceDashboard.absent')}</th>
+                  <th>{t('attendanceDashboard.percentage')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -547,12 +547,12 @@ export function AttendanceDashboard({
 
       {/* Rehearsal breakdown */}
       <div className="attendance-rehearsal-section">
-        <h3 className="section-title">Repetities ({rehearsals.length})</h3>
+        <h3 className="section-title">{t('attendanceDashboard.rehearsals')} ({rehearsals.length})</h3>
         <div className="rehearsal-list">
           {rehearsals.length === 0 ? (
             <div className="empty-state">
               <Icon name="calendar" size={48} />
-              <p>Geen repetities gevonden</p>
+              <p>{t('attendanceDashboard.noRehearsalsFound')}</p>
             </div>
           ) : (
             rehearsals.slice(0, 10).map((rehearsal) => (

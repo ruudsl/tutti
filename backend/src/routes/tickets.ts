@@ -1376,7 +1376,10 @@ router.post('/tickets/transfers/:transferCode/accept', authenticateToken, asyncH
     const { transferCode } = req.params;
     const userId = req.user!.id;
     const userEmail = req.user!.email;
-    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    // Get user's name from database
+    const user = db.prepare(`SELECT first_name, last_name FROM users WHERE id = ?`).get(userId) as { first_name: string; last_name: string } | undefined;
+    const userName = user ? `${user.first_name} ${user.last_name}` : userEmail;
 
     // Get the transfer
     const transfer = db.prepare(`
@@ -1489,7 +1492,10 @@ router.post('/tickets/:id/transfer', authenticateToken, asyncHandler(async (req:
     const { id: ticketId } = req.params;
     const userId = req.user!.id;
     const userEmail = req.user!.email;
-    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+
+    // Get user's name from database
+    const user = db.prepare(`SELECT first_name, last_name FROM users WHERE id = ?`).get(userId) as { first_name: string; last_name: string } | undefined;
+    const userName = user ? `${user.first_name} ${user.last_name}` : userEmail;
 
     const validation = initiateTransferSchema.safeParse(req.body);
     if (!validation.success) {
