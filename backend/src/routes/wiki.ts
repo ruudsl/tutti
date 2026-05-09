@@ -111,7 +111,8 @@ function formatPageListItem(page: any): any {
 router.get('/search', asyncHandler(async (req: AuthRequest, res: Response) => {
   const associationId = req.user!.associationId;
   const userRole = req.user!.role;
-  const query = req.query.q as string || '';
+  const rawQuery = req.query.q;
+  const query = typeof rawQuery === 'string' ? rawQuery : '';
 
   if (query.length < 2) {
     res.json([]);
