@@ -140,7 +140,7 @@ async function executeAction(action: WorkflowAction, context: ExecutionContext):
 }
 
 async function executeSendEmail(config: Record<string, any>, context: ExecutionContext): Promise<void> {
-  const { recipientType, recipientEmail, subject, body, templateId } = config;
+  const { recipientType, recipientEmail, subject, body } = config;
 
   let recipients: string[] = [];
 
