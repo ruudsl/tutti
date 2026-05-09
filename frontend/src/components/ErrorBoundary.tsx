@@ -1,7 +1,8 @@
 import { Component, ReactNode, ErrorInfo } from 'react';
+import { withTranslation, WithTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 
-interface Props {
+interface OwnProps {
   children: ReactNode;
   /** Custom fallback UI when error occurs */
   fallback?: ReactNode;
@@ -14,6 +15,8 @@ interface Props {
   /** Custom retry handler */
   onRetry?: () => void;
 }
+
+type Props = OwnProps & WithTranslation;
 
 interface State {
   hasError: boolean;
@@ -56,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
 
     // Always log error to console
-    console.error('ErrorBoundary heeft een fout opgevangen:', error);
+    console.error('ErrorBoundary caught an error:', error);
     console.error('Component stack:', errorInfo.componentStack);
 
     // Call optional error handler
@@ -76,24 +79,25 @@ export class ErrorBoundary extends Component<Props, State> {
   handleReport = (): void => {
     const { error, errorInfo } = this.state;
     if (error) {
+      const { t } = this.props;
       if (this.props.onReport) {
         this.props.onReport(error, errorInfo);
       } else {
         // Default: copy error info to clipboard
         const errorText = [
-          `Fout: ${error.message}`,
+          `${t('errorBoundary.errorLabel')}: ${error.message}`,
           `Stack: ${error.stack}`,
           errorInfo?.componentStack ? `Component stack: ${errorInfo.componentStack}` : '',
-          `Tijdstip: ${new Date().toISOString()}`,
+          `${t('errorBoundary.timestamp')}: ${new Date().toISOString()}`,
           `URL: ${window.location.href}`,
           `User Agent: ${navigator.userAgent}`,
         ].filter(Boolean).join('\n\n');
 
         navigator.clipboard.writeText(errorText).then(() => {
-          alert('Foutinformatie is gekopieerd naar het klembord. Je kunt dit nu plakken in een e-mail naar ondersteuning.');
+          alert(t('errorBoundary.copiedToClipboard'));
         }).catch(() => {
           // Fallback: show in prompt
-          prompt('Kopieer deze foutinformatie:', errorText);
+          prompt(t('errorBoundary.copyErrorInfo'), errorText);
         });
       }
     }
@@ -114,7 +118,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       const { error, errorInfo, showDetails } = this.state;
-      const { showReportButton = true } = this.props;
+      const { showReportButton = true, t } = this.props;
 
       return (
         <div className="error-boundary" role="alert">
@@ -123,10 +127,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <Icon name="warning" size={48} />
             </div>
 
-            <h1>Er is iets misgegaan</h1>
+            <h1>{t('errorBoundary.title')}</h1>
             <p>
-              Er is een onverwachte fout opgetreden. Probeer de pagina opnieuw te laden
-              of ga terug naar de startpagina.
+              {t('errorBoundary.descriptionExtended')}
             </p>
 
             {/* Show error details in development or when toggled */}
@@ -154,7 +157,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.toggleDetails}
                 style={{ marginBottom: '1rem' }}
               >
-                {showDetails ? 'Verberg details' : 'Toon details'}
+                {showDetails ? t('errorBoundary.hideDetails') : t('errorBoundary.showDetails')}
               </button>
             )}
 

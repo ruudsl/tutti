@@ -154,6 +154,36 @@ export const migrations: Migration[] = [
       `ALTER TABLE workflow_executions ADD COLUMN status TEXT DEFAULT 'pending'`,
     ],
   },
+  {
+    version: 10,
+    name: 'add_ticket_transfers',
+    up: [
+      `CREATE TABLE IF NOT EXISTS ticket_transfers (
+        id TEXT PRIMARY KEY,
+        ticket_id TEXT NOT NULL,
+        from_user_id TEXT,
+        from_email TEXT NOT NULL,
+        from_name TEXT NOT NULL,
+        recipient_email TEXT NOT NULL,
+        recipient_name TEXT NOT NULL,
+        transfer_code TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'pending', -- pending, accepted, cancelled, expired
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        accepted_at DATETIME,
+        cancelled_at DATETIME,
+        accepted_by_user_id TEXT,
+        FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+        FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (accepted_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_ticket ON ticket_transfers(ticket_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_code ON ticket_transfers(transfer_code)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_from_user ON ticket_transfers(from_user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_recipient ON ticket_transfers(recipient_email)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_status ON ticket_transfers(status)`,
+    ],
+  },
 ];
 
 /**
