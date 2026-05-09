@@ -69,6 +69,15 @@ const accommodationSchema = z.object({
   notes: z.string().optional(),
 });
 
+const transportSchema = z.object({
+  type: z.enum(['bus', 'train', 'plane', 'ferry', 'car', 'other']),
+  departureTime: z.string(),
+  arrivalTime: z.string(),
+  from: z.string().min(1),
+  to: z.string().min(1),
+  details: z.string().optional(),
+});
+
 // GET /tours - List all tours
 router.get(
   '/',
@@ -602,6 +611,128 @@ router.delete(
     db.prepare('DELETE FROM tour_accommodations WHERE id = ? AND tour_id = ?').run(accId, id);
 
     res.json({ message: 'Accommodatie verwijderd' });
+  })
+);
+
+// POST /tours/:id/transport - Add transport
+router.post(
+  '/:id/transport',
+  authenticateToken,
+  requireRole('admin', 'board'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const data = transportSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+
+    const tour = db.prepare(
+      'SELECT id FROM tours WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
+
+    if (!tour) {
+      throw new ApiError(404, 'Tour niet gevonden');
+    }
+
+    const transportId = uuidv4();
+    db.prepare(`
+      INSERT INTO tour_transport (id, tour_id, transport_type, departure_location, departure_time,
+        arrival_location, arrival_time, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      transportId, id, data.type, data.from, data.departureTime,
+      data.to, data.arrivalTime, data.details || null
+    );
+
+    res.status(201).json({ id: transportId, message: 'Transport toegevoegd' });
+  })
+);
+
+// DELETE /tours/:id/transport/:transportId - Remove transport
+router.delete(
+  '/:id/transport/:transportId',
+  authenticateToken,
+  requireRole('admin', 'board'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id, transportId } = req.params;
+    const associationId = req.user!.associationId;
+
+    // Verify the tour belongs to the user's association
+    const tour = db.prepare(
+      'SELECT id FROM tours WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
+
+    if (!tour) {
+      throw new ApiError(404, 'Tour niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM tour_transport WHERE id = ? AND tour_id = ?').run(transportId, id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Transport niet gevonden');
+    }
+
+    res.json({ message: 'Transport verwijderd' });
+  })
+);
+
+// DELETE /tours/:id/days/:dayId - Delete tour day
+router.delete(
+  '/:id/days/:dayId',
+  authenticateToken,
+  requireRole('admin', 'board'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id, dayId } = req.params;
+    const associationId = req.user!.associationId;
+
+    // Verify the tour belongs to the user's association
+    const tour = db.prepare(
+      'SELECT id FROM tours WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
+
+    if (!tour) {
+      throw new ApiError(404, 'Tour niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM tour_days WHERE id = ? AND tour_id = ?').run(dayId, id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Dag niet gevonden');
+    }
+
+    res.json({ message: 'Dag verwijderd' });
+  })
+);
+
+// DELETE /tours/:id/days/:dayId/activities/:activityId - Delete activity from tour day
+router.delete(
+  '/:id/days/:dayId/activities/:activityId',
+  authenticateToken,
+  requireRole('admin', 'board'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id, dayId, activityId } = req.params;
+    const associationId = req.user!.associationId;
+
+    // Verify the tour belongs to the user's association
+    const tour = db.prepare(
+      'SELECT id FROM tours WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
+    ).get(id, associationId);
+
+    if (!tour) {
+      throw new ApiError(404, 'Tour niet gevonden');
+    }
+
+    // Verify the day belongs to the tour
+    const day = db.prepare('SELECT id FROM tour_days WHERE id = ? AND tour_id = ?').get(dayId, id);
+    if (!day) {
+      throw new ApiError(404, 'Dag niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM tour_activities WHERE id = ? AND tour_day_id = ?').run(activityId, dayId);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Activiteit niet gevonden');
+    }
+
+    res.json({ message: 'Activiteit verwijderd' });
   })
 );
 
