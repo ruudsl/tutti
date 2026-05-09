@@ -770,10 +770,10 @@ export function ConcertPosterGenerator({
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Datum en locatie</h3>
+            <h3 className="form-section-title">{t('posterGenerator.dateAndLocation')}</h3>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="date">Datum</label>
+                <label htmlFor="date">{t('posterGenerator.date')}</label>
                 <input
                   id="date"
                   type="date"
@@ -782,7 +782,7 @@ export function ConcertPosterGenerator({
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="time">Tijd</label>
+                <label htmlFor="time">{t('posterGenerator.time')}</label>
                 <input
                   id="time"
                   type="time"
@@ -792,36 +792,36 @@ export function ConcertPosterGenerator({
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="location">Locatie</label>
+              <label htmlFor="location">{t('posterGenerator.location')}</label>
               <input
                 id="location"
                 type="text"
                 value={data.location}
                 onChange={(e) => updateData('location', e.target.value)}
-                placeholder="Naam van de locatie"
+                placeholder={t('posterGenerator.locationPlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="address">Adres (optioneel)</label>
+              <label htmlFor="address">{t('posterGenerator.addressOptional')}</label>
               <input
                 id="address"
                 type="text"
                 value={data.address}
                 onChange={(e) => updateData('address', e.target.value)}
-                placeholder="Straat en plaats"
+                placeholder={t('posterGenerator.addressPlaceholder')}
               />
             </div>
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Programma</h3>
+            <h3 className="form-section-title">{t('posterGenerator.program')}</h3>
             <div className="form-group">
-              <label htmlFor="program">Werken (een per regel)</label>
+              <label htmlFor="program">{t('posterGenerator.worksOnePerLine')}</label>
               <textarea
                 id="program"
                 value={programInput}
                 onChange={(e) => handleProgramChange(e.target.value)}
-                placeholder="Mozart - Ouverture&#10;Beethoven - Symfonie No. 5&#10;Dvorak - Slavische Dansen"
+                placeholder={t('posterGenerator.programPlaceholder')}
                 rows={5}
               />
             </div>
