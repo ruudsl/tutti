@@ -736,35 +736,35 @@ export function ConcertPosterGenerator({
           </h2>
 
           <div className="form-section">
-            <h3 className="form-section-title">Algemeen</h3>
+            <h3 className="form-section-title">{t('posterGenerator.general')}</h3>
             <div className="form-group">
-              <label htmlFor="orchestraName">Orkest / Vereniging</label>
+              <label htmlFor="orchestraName">{t('posterGenerator.orchestraAssociation')}</label>
               <input
                 id="orchestraName"
                 type="text"
                 value={data.orchestraName}
                 onChange={(e) => updateData('orchestraName', e.target.value)}
-                placeholder="Naam van het orkest"
+                placeholder={t('posterGenerator.orchestraNamePlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="title">Titel</label>
+              <label htmlFor="title">{t('posterGenerator.title')}</label>
               <input
                 id="title"
                 type="text"
                 value={data.title}
                 onChange={(e) => updateData('title', e.target.value)}
-                placeholder="Titel van het concert"
+                placeholder={t('posterGenerator.concertTitlePlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="subtitle">Ondertitel (optioneel)</label>
+              <label htmlFor="subtitle">{t('posterGenerator.subtitleOptional')}</label>
               <input
                 id="subtitle"
                 type="text"
                 value={data.subtitle}
                 onChange={(e) => updateData('subtitle', e.target.value)}
-                placeholder="Bijv. thema of bijzonderheid"
+                placeholder={t('posterGenerator.subtitlePlaceholder')}
               />
             </div>
           </div>
