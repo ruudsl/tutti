@@ -199,7 +199,8 @@ router.get('/by-composer', asyncHandler(async (req: AuthRequest, res: Response) 
 // GET /api/performances/search - Search performance history
 router.get('/search', asyncHandler(async (req: AuthRequest, res: Response) => {
   const associationId = req.user!.associationId;
-  const query = req.query.q as string || '';
+  const rawQuery = req.query.q;
+  const query = typeof rawQuery === 'string' ? rawQuery : '';
 
   if (query.length < 2) {
     res.json([]);
