@@ -167,14 +167,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleRetry}
                 type="button"
               >
-                Opnieuw proberen
+                {t('errorBoundary.retry')}
               </button>
               <button
                 className="btn btn-outline"
                 onClick={this.handleGoHome}
                 type="button"
               >
-                Naar startpagina
+                {t('errorBoundary.backToHome')}
               </button>
             </div>
 
@@ -186,7 +186,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="error-boundary-report-btn"
                   onClick={this.handleReport}
                 >
-                  Probleem melden
+                  {t('errorBoundary.reportProblem')}
                 </button>
               </div>
             )}
@@ -199,4 +199,4 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default ErrorBoundary;
+export default withTranslation()(ErrorBoundary);
