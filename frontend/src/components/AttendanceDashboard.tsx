@@ -428,7 +428,7 @@ export function AttendanceDashboard({
       {/* Filters */}
       <div className="attendance-filters">
         <div className="filter-group">
-          <label htmlFor="date-from">Van</label>
+          <label htmlFor="date-from">{t('attendanceDashboard.from')}</label>
           <input
             id="date-from"
             type="date"
@@ -437,7 +437,7 @@ export function AttendanceDashboard({
           />
         </div>
         <div className="filter-group">
-          <label htmlFor="date-to">Tot</label>
+          <label htmlFor="date-to">{t('attendanceDashboard.to')}</label>
           <input
             id="date-to"
             type="date"
@@ -446,13 +446,13 @@ export function AttendanceDashboard({
           />
         </div>
         <div className="filter-group">
-          <label htmlFor="section-filter">Sectie</label>
+          <label htmlFor="section-filter">{t('attendanceDashboard.section')}</label>
           <select
             id="section-filter"
             value={filters.section}
             onChange={(e) => updateFilter('section', e.target.value)}
           >
-            <option value="">Alle secties</option>
+            <option value="">{t('attendanceDashboard.allSections')}</option>
             {sections.map((section) => (
               <option key={section} value={section}>
                 {section}
@@ -461,27 +461,27 @@ export function AttendanceDashboard({
           </select>
         </div>
         <div className="filter-group">
-          <label htmlFor="sort-by">Sorteren op</label>
+          <label htmlFor="sort-by">{t('attendanceDashboard.sortBy')}</label>
           <select
             id="sort-by"
             value={filters.sortBy}
             onChange={(e) => updateFilter('sortBy', e.target.value as AttendanceFilters['sortBy'])}
           >
-            <option value="name">Naam</option>
-            <option value="rate">Aanwezigheid %</option>
-            <option value="present">Aanwezig</option>
-            <option value="absent">Afwezig</option>
+            <option value="name">{t('attendanceDashboard.name')}</option>
+            <option value="rate">{t('attendanceDashboard.attendancePercent')}</option>
+            <option value="present">{t('attendanceDashboard.present')}</option>
+            <option value="absent">{t('attendanceDashboard.absent')}</option>
           </select>
         </div>
         <div className="filter-group">
-          <label htmlFor="sort-order">Volgorde</label>
+          <label htmlFor="sort-order">{t('attendanceDashboard.sortOrder')}</label>
           <select
             id="sort-order"
             value={filters.sortOrder}
             onChange={(e) => updateFilter('sortOrder', e.target.value as 'asc' | 'desc')}
           >
-            <option value="asc">Oplopend</option>
-            <option value="desc">Aflopend</option>
+            <option value="asc">{t('attendanceDashboard.ascending')}</option>
+            <option value="desc">{t('attendanceDashboard.descending')}</option>
           </select>
         </div>
         <button className="btn btn-text" onClick={resetFilters} type="button">
