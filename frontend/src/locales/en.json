@@ -54,7 +54,11 @@
     "country": "Country",
     "export": "Export",
     "saving": "Saving...",
-    "selectItem": "Select item {{id}}"
+    "selectItem": "Select item {{id}}",
+    "selected": "{{count}} selected",
+    "clearSelection": "Clear selection",
+    "move": "Move",
+    "archive": "Archive"
   },
   "lazyImage": {
     "notLoaded": "Not loaded"
@@ -2024,7 +2028,8 @@
     "notFound": "Not found.",
     "unauthorized": "Unauthorized.",
     "forbidden": "Access denied.",
-    "validation": "Please check the entered data."
+    "validation": "Please check the entered data.",
+    "deleteFailed": "Delete failed"
   },
   "equipment": {
     "title": "Equipment Management",

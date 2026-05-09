@@ -54,7 +54,11 @@
     "country": "Land",
     "export": "Exportieren",
     "saving": "Speichern...",
-    "selectItem": "Element {{id}} auswählen"
+    "selectItem": "Element {{id}} auswählen",
+    "selected": "{{count}} ausgewählt",
+    "clearSelection": "Auswahl löschen",
+    "move": "Verschieben",
+    "archive": "Archivieren"
   },
   "lazyImage": {
     "notLoaded": "Nicht geladen"
@@ -2003,7 +2007,8 @@
     "notFound": "Nicht gefunden.",
     "unauthorized": "Nicht autorisiert.",
     "forbidden": "Zugriff verweigert.",
-    "validation": "Bitte überprüfen Sie die eingegebenen Daten."
+    "validation": "Bitte überprüfen Sie die eingegebenen Daten.",
+    "deleteFailed": "Löschen fehlgeschlagen"
   },
   "equipment": {
     "title": "Instrumentenverwaltung",

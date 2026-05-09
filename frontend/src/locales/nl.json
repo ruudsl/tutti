@@ -54,7 +54,11 @@
     "country": "Land",
     "export": "Exporteren",
     "saving": "Opslaan...",
-    "selectItem": "Selecteer item {{id}}"
+    "selectItem": "Selecteer item {{id}}",
+    "selected": "{{count}} geselecteerd",
+    "clearSelection": "Selectie wissen",
+    "move": "Verplaatsen",
+    "archive": "Archiveren"
   },
   "lazyImage": {
     "notLoaded": "Niet geladen"
@@ -1878,7 +1882,8 @@
     "notFound": "Niet gevonden.",
     "unauthorized": "Niet geautoriseerd.",
     "forbidden": "Geen toegang.",
-    "validation": "Controleer de ingevoerde gegevens."
+    "validation": "Controleer de ingevoerde gegevens.",
+    "deleteFailed": "Verwijderen mislukt"
   },
   "equipment": {
     "title": "Instrumentenbeheer",
