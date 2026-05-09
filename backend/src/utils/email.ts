@@ -2,6 +2,13 @@ import nodemailer from 'nodemailer';
 import logger from './logger';
 import db from '../database/connection';
 
+const sanitizeForLog = (value: unknown): string => {
+  return String(value ?? '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+    .trim();
+};
+
 interface SmtpConfig {
   smtp_host: string | null;
   smtp_port: number | null;
@@ -112,9 +119,13 @@ interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   const { to, subject, text, html, associationId, attachments } = options;
+  const safeTo = sanitizeForLog(to);
+  const safeSubject = sanitizeForLog(subject);
+  const safeText = sanitizeForLog(text);
+  const safeAttachmentNames = attachments?.map(a => sanitizeForLog(a.filename)).join(', ');
 
   // Log email for development/debugging
-  logger.info(`Sending email to ${to}: ${subject}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
+  logger.info(`Sending email to ${safeTo}: ${safeSubject}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
 
   const transporter = getSmtpTransporter(associationId);
 
@@ -122,11 +133,11 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     // Log the email content when no SMTP is configured
     logger.warn('No SMTP configuration found. Emails will be logged to console only.');
     logger.info('Email content (no SMTP configured):');
-    logger.info(`To: ${to}`);
-    logger.info(`Subject: ${subject}`);
-    logger.info(`Body: ${text}`);
+    logger.info(`To: ${safeTo}`);
+    logger.info(`Subject: ${safeSubject}`);
+    logger.info(`Body: ${safeText}`);
     if (attachments?.length) {
-      logger.info(`Attachments: ${attachments.map(a => a.filename).join(', ')}`);
+      logger.info(`Attachments: ${safeAttachmentNames}`);
     }
     return true; // Pretend it was sent successfully
   }
