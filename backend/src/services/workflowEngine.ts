@@ -464,8 +464,6 @@ export function processScheduledWorkflows(): void {
 }
 
 export function processDateFieldWorkflows(): void {
-  const today = new Date().toISOString().split('T')[0];
-
   // Find workflows with date_field triggers
   const triggers = db.prepare(`
     SELECT t.*, w.id as workflow_id, w.association_id
