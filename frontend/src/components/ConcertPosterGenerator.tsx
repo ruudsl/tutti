@@ -610,8 +610,7 @@ export function ConcertPosterGenerator({
   onDownload,
   customThemes = [],
 }: ConcertPosterGeneratorProps) {
-  // Translation hook available for i18n when needed
-  useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const posterContainerRef = useRef<HTMLDivElement>(null);
 
@@ -733,7 +732,7 @@ export function ConcertPosterGenerator({
         <div className="poster-form-panel">
           <h2 className="panel-title">
             <Icon name="pencil" size={20} />
-            Postergegevens
+            {t('posterGenerator.posterData')}
           </h2>
 
           <div className="form-section">
