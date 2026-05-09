@@ -1,4 +1,4 @@
-import { Component, ReactNode, ErrorInfo } from 'react';
+import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { withTranslation, WithTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 
@@ -199,7 +199,11 @@ class ErrorBoundaryComponent extends Component<Props, State> {
   }
 }
 
-const ErrorBoundary = withTranslation()(ErrorBoundaryComponent);
+// Wrap with translation HOC - the HOC injects t, i18n, tReady props
+const ErrorBoundaryWithTranslation = withTranslation()(ErrorBoundaryComponent);
+
+// Re-export with proper typing that only requires OwnProps
+const ErrorBoundary = ErrorBoundaryWithTranslation as React.ComponentType<OwnProps>;
 
 export { ErrorBoundary };
 export default ErrorBoundary;
