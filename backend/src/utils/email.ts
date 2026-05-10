@@ -125,7 +125,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   const safeAttachmentNames = attachments?.map(a => sanitizeForLog(a.filename)).join(', ');
 
   // Log email for development/debugging
-  logger.info(`Sending email to ${safeTo}: ${safeSubject}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
+  logger.info(`Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
 
   const transporter = getSmtpTransporter(associationId);
 

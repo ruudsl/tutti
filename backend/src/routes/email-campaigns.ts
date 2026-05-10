@@ -13,6 +13,12 @@ import { sendEmail } from '../utils/email';
 import { z } from 'zod';
 import sanitizeHtml from 'sanitize-html';
 
+const sanitizeForLog = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+    .trim();
+
 const uploadsDir = path.join(process.cwd(), 'uploads', 'email-attachments');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -642,7 +648,7 @@ router.post('/:id/test', authenticateToken, requireRole('admin'), asyncHandler(a
     const attachments = getCampaignAttachments(req.params.id);
 
     const success = await sendEmail({
-        to: email,
+        to: sanitizeForLog(email),
         subject: `[TEST] ${campaign.subject}`,
         text,
         html,
