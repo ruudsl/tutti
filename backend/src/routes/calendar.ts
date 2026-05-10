@@ -544,4 +544,222 @@ router.post('/google/sync', authenticateToken, asyncHandler(async (req: AuthRequ
     });
 }));
 
+/**
+ * @swagger
+ * /calendar/public/{associationSlug}:
+ *   get:
+ *     summary: Public calendar events (no auth required)
+ *     description: Returns upcoming public events for embedding on external websites
+ *     tags: [Calendar]
+ */
+router.get('/public/:associationSlug', asyncHandler(async (req, res: Response) => {
+    const { associationSlug } = req.params;
+    const { months = '3', format = 'json' } = req.query;
+
+    // Find association by slug or ID
+    const association = db.prepare(`
+        SELECT id, name, slug FROM associations
+        WHERE slug = ? OR id = ?
+    `).get(associationSlug, associationSlug) as { id: string; name: string; slug: string } | undefined;
+
+    if (!association) {
+        throw new ApiError(404, 'Association not found');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + parseInt(months as string, 10));
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // Get public concerts
+    const concerts = db.prepare(`
+        SELECT id, name, date, start_time, end_time, venue, address, city, ticket_price,
+               description, status
+        FROM concerts
+        WHERE association_id = ? AND date >= ? AND date <= ? AND status != 'cancelled'
+        ORDER BY date, start_time
+    `).all(association.id, today, endDateStr) as any[];
+
+    // Get public rehearsals (optionally include if setting allows)
+    const publicSettings = db.prepare(`
+        SELECT show_rehearsals_public FROM associations WHERE id = ?
+    `).get(association.id) as { show_rehearsals_public: number } | undefined;
+
+    let rehearsals: any[] = [];
+    if (publicSettings?.show_rehearsals_public) {
+        rehearsals = db.prepare(`
+            SELECT r.id, r.date, r.start_time, r.end_time, r.location,
+                   o.name as orchestra_name
+            FROM rehearsals r
+            LEFT JOIN orchestras o ON r.orchestra_id = o.id
+            WHERE r.association_id = ? AND r.date >= ? AND r.date <= ? AND r.type != 'cancelled'
+            ORDER BY r.date, r.start_time
+        `).all(association.id, today, endDateStr);
+    }
+
+    const events = [
+        ...concerts.map((c: any) => ({
+            id: c.id,
+            type: 'concert' as const,
+            title: c.name,
+            date: c.date,
+            startTime: c.start_time,
+            endTime: c.end_time,
+            venue: c.venue as string | undefined,
+            location: c.venue as string | undefined,
+            address: c.address,
+            city: c.city,
+            ticketPrice: c.ticket_price,
+            description: c.description as string | undefined,
+        })),
+        ...rehearsals.map((r: any) => ({
+            id: r.id,
+            type: 'rehearsal' as const,
+            title: r.orchestra_name ? `Rehearsal - ${r.orchestra_name}` : 'Rehearsal',
+            date: r.date,
+            startTime: r.start_time,
+            endTime: r.end_time,
+            venue: r.location as string | undefined,
+            location: r.location as string | undefined,
+            address: undefined as string | undefined,
+            city: undefined as string | undefined,
+            ticketPrice: undefined as number | undefined,
+            description: undefined as string | undefined,
+        })),
+    ].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
+
+    if (format === 'ics') {
+        const calEvents = events.map(e => ({
+            id: e.id,
+            title: e.title,
+            start: new Date(`${e.date}T${e.startTime || '00:00'}`),
+            end: new Date(`${e.date}T${e.endTime || '23:59'}`),
+            location: e.location || '',
+            description: e.description || '',
+        }));
+
+        const icsContent = generateCalendarFeed(calEvents as any[], association.name);
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return res.send(icsContent);
+    }
+
+    // JSON format with CORS headers for embedding
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json({
+        association: {
+            name: association.name,
+            slug: association.slug,
+        },
+        events,
+        generatedAt: new Date().toISOString(),
+    });
+}));
+
+/**
+ * @swagger
+ * /calendar/info-screen/{associationSlug}:
+ *   get:
+ *     summary: Info screen data for display boards
+ *     description: Returns optimized data for info screens/kiosks
+ *     tags: [Calendar]
+ */
+router.get('/info-screen/:associationSlug', asyncHandler(async (req, res: Response) => {
+    const { associationSlug } = req.params;
+
+    const association = db.prepare(`
+        SELECT id, name, slug FROM associations
+        WHERE slug = ? OR id = ?
+    `).get(associationSlug, associationSlug) as { id: string; name: string; slug: string } | undefined;
+
+    if (!association) {
+        throw new ApiError(404, 'Association not found');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const oneMonthLater = new Date();
+    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+    const endDateStr = oneMonthLater.toISOString().split('T')[0];
+
+    // Get next concert
+    const nextConcert = db.prepare(`
+        SELECT id, name, date, start_time, venue, city, description
+        FROM concerts
+        WHERE association_id = ? AND date >= ? AND status != 'cancelled'
+        ORDER BY date, start_time
+        LIMIT 1
+    `).get(association.id, today) as any;
+
+    // Get next rehearsal
+    const nextRehearsal = db.prepare(`
+        SELECT r.id, r.date, r.start_time, r.end_time, r.location,
+               o.name as orchestra_name
+        FROM rehearsals r
+        LEFT JOIN orchestras o ON r.orchestra_id = o.id
+        WHERE r.association_id = ? AND r.date >= ? AND r.type != 'cancelled'
+        ORDER BY r.date, r.start_time
+        LIMIT 1
+    `).get(association.id, today) as any;
+
+    // Get upcoming events (next 5)
+    const upcomingConcerts = db.prepare(`
+        SELECT id, name, date, start_time, venue, city
+        FROM concerts
+        WHERE association_id = ? AND date >= ? AND date <= ? AND status != 'cancelled'
+        ORDER BY date, start_time
+        LIMIT 5
+    `).all(association.id, today, endDateStr) as any[];
+
+    // Get latest announcement/post
+    const latestPost = db.prepare(`
+        SELECT id, title, content, published_at
+        FROM posts
+        WHERE association_id = ? AND status = 'published' AND is_pinned = 1
+        ORDER BY published_at DESC
+        LIMIT 1
+    `).get(association.id) as any;
+
+    // Allow CORS for info screens
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json({
+        association: {
+            name: association.name,
+        },
+        nextConcert: nextConcert ? {
+            id: nextConcert.id,
+            name: nextConcert.name,
+            date: nextConcert.date,
+            startTime: nextConcert.start_time,
+            venue: nextConcert.venue,
+            city: nextConcert.city,
+            daysUntil: Math.ceil((new Date(nextConcert.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+        } : null,
+        nextRehearsal: nextRehearsal ? {
+            id: nextRehearsal.id,
+            date: nextRehearsal.date,
+            startTime: nextRehearsal.start_time,
+            endTime: nextRehearsal.end_time,
+            location: nextRehearsal.location,
+            orchestraName: nextRehearsal.orchestra_name,
+        } : null,
+        upcomingConcerts: upcomingConcerts.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            date: c.date,
+            startTime: c.start_time,
+            venue: c.venue,
+            city: c.city,
+        })),
+        announcement: latestPost ? {
+            title: latestPost.title,
+            content: latestPost.content?.substring(0, 500),
+            publishedAt: latestPost.published_at,
+        } : null,
+        currentTime: new Date().toISOString(),
+        refreshInterval: 60,
+    });
+}));
+
 export default router;

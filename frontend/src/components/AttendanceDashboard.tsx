@@ -102,7 +102,7 @@ function AttendanceBadge({ rate, isDark }: { rate: number; isDark: boolean }) {
   );
 }
 
-function TrendChart({ data }: { data: AttendanceTrend[]; isDark: boolean }) {
+function TrendChart({ data, noDataText }: { data: AttendanceTrend[]; isDark: boolean; noDataText: string }) {
   if (data.length === 0) {
     return (
       <div
@@ -114,7 +114,7 @@ function TrendChart({ data }: { data: AttendanceTrend[]; isDark: boolean }) {
           color: 'var(--text-muted)',
         }}
       >
-        Geen data beschikbaar
+        {noDataText}
       </div>
     );
   }
@@ -277,8 +277,7 @@ export function AttendanceDashboard({
   onExport,
   isLoading = false,
 }: AttendanceDashboardProps) {
-  // Translation hook available for i18n when needed
-  useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
 
   const [filters, setFilters] = useState<AttendanceFilters>(getDefaultFilters);
@@ -358,7 +357,7 @@ export function AttendanceDashboard({
       <div className="attendance-header">
         <h2 className="attendance-title">
           <Icon name="users" size={24} />
-          Aanwezigheidsoverzicht
+          {t('attendanceDashboard.title')}
         </h2>
         <div className="attendance-header-actions">
           <div className="export-dropdown">
@@ -368,7 +367,7 @@ export function AttendanceDashboard({
               type="button"
             >
               <Icon name="download" size={18} />
-              Exporteren
+              {t('common.export')}
             </button>
             {showExportMenu && (
               <div className="export-menu">
@@ -394,7 +393,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{members.length}</span>
-            <span className="summary-label">Totaal leden</span>
+            <span className="summary-label">{t('attendanceDashboard.totalMembers')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -403,7 +402,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.avgRate.toFixed(0)}%</span>
-            <span className="summary-label">Gemiddelde aanwezigheid</span>
+            <span className="summary-label">{t('attendanceDashboard.averageAttendance')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -412,7 +411,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.highAttendance}</span>
-            <span className="summary-label">Hoge aanwezigheid (&gt;80%)</span>
+            <span className="summary-label">{t('attendanceDashboard.highAttendance')}</span>
           </div>
         </div>
         <div className="summary-card">
@@ -421,7 +420,7 @@ export function AttendanceDashboard({
           </div>
           <div className="summary-content">
             <span className="summary-value">{summaryStats.lowAttendance}</span>
-            <span className="summary-label">Lage aanwezigheid (&lt;50%)</span>
+            <span className="summary-label">{t('attendanceDashboard.lowAttendance')}</span>
           </div>
         </div>
       </div>
@@ -429,7 +428,7 @@ export function AttendanceDashboard({
       {/* Filters */}
       <div className="attendance-filters">
         <div className="filter-group">
-          <label htmlFor="date-from">Van</label>
+          <label htmlFor="date-from">{t('attendanceDashboard.from')}</label>
           <input
             id="date-from"
             type="date"
@@ -438,7 +437,7 @@ export function AttendanceDashboard({
           />
         </div>
         <div className="filter-group">
-          <label htmlFor="date-to">Tot</label>
+          <label htmlFor="date-to">{t('attendanceDashboard.to')}</label>
           <input
             id="date-to"
             type="date"
@@ -447,13 +446,13 @@ export function AttendanceDashboard({
           />
         </div>
         <div className="filter-group">
-          <label htmlFor="section-filter">Sectie</label>
+          <label htmlFor="section-filter">{t('attendanceDashboard.section')}</label>
           <select
             id="section-filter"
             value={filters.section}
             onChange={(e) => updateFilter('section', e.target.value)}
           >
-            <option value="">Alle secties</option>
+            <option value="">{t('attendanceDashboard.allSections')}</option>
             {sections.map((section) => (
               <option key={section} value={section}>
                 {section}
@@ -462,27 +461,27 @@ export function AttendanceDashboard({
           </select>
         </div>
         <div className="filter-group">
-          <label htmlFor="sort-by">Sorteren op</label>
+          <label htmlFor="sort-by">{t('attendanceDashboard.sortBy')}</label>
           <select
             id="sort-by"
             value={filters.sortBy}
             onChange={(e) => updateFilter('sortBy', e.target.value as AttendanceFilters['sortBy'])}
           >
-            <option value="name">Naam</option>
-            <option value="rate">Aanwezigheid %</option>
-            <option value="present">Aanwezig</option>
-            <option value="absent">Afwezig</option>
+            <option value="name">{t('attendanceDashboard.name')}</option>
+            <option value="rate">{t('attendanceDashboard.attendancePercent')}</option>
+            <option value="present">{t('attendanceDashboard.present')}</option>
+            <option value="absent">{t('attendanceDashboard.absent')}</option>
           </select>
         </div>
         <div className="filter-group">
-          <label htmlFor="sort-order">Volgorde</label>
+          <label htmlFor="sort-order">{t('attendanceDashboard.sortOrder')}</label>
           <select
             id="sort-order"
             value={filters.sortOrder}
             onChange={(e) => updateFilter('sortOrder', e.target.value as 'asc' | 'desc')}
           >
-            <option value="asc">Oplopend</option>
-            <option value="desc">Aflopend</option>
+            <option value="asc">{t('attendanceDashboard.ascending')}</option>
+            <option value="desc">{t('attendanceDashboard.descending')}</option>
           </select>
         </div>
         <button className="btn btn-text" onClick={resetFilters} type="button">
@@ -493,34 +492,34 @@ export function AttendanceDashboard({
 
       {/* Trend chart */}
       <div className="attendance-trend-section">
-        <h3 className="section-title">Aanwezigheid over tijd</h3>
+        <h3 className="section-title">{t('attendanceDashboard.attendanceOverTime')}</h3>
         <div className="trend-chart-container">
-          <TrendChart data={trends} isDark={isDark} />
+          <TrendChart data={trends} isDark={isDark} noDataText={t('attendanceDashboard.noDataAvailable')} />
         </div>
       </div>
 
       {/* Member table */}
       <div className="attendance-table-section">
-        <h3 className="section-title">Ledenlijst ({filteredMembers.length})</h3>
+        <h3 className="section-title">{t('attendanceDashboard.memberList')} ({filteredMembers.length})</h3>
         {isLoading ? (
           <div className="loading-state">
-            <span>Laden...</span>
+            <span>{t('common.loading')}</span>
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="empty-state">
             <Icon name="users" size={48} />
-            <p>Geen leden gevonden</p>
+            <p>{t('attendanceDashboard.noMembersFound')}</p>
           </div>
         ) : (
           <div className="attendance-table-wrapper">
             <table className="attendance-table">
               <thead>
                 <tr>
-                  <th>Naam</th>
-                  <th>Instrument</th>
-                  <th>Aanwezig</th>
-                  <th>Afwezig</th>
-                  <th>Percentage</th>
+                  <th>{t('attendanceDashboard.name')}</th>
+                  <th>{t('attendanceDashboard.instrument')}</th>
+                  <th>{t('attendanceDashboard.present')}</th>
+                  <th>{t('attendanceDashboard.absent')}</th>
+                  <th>{t('attendanceDashboard.percentage')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -548,12 +547,12 @@ export function AttendanceDashboard({
 
       {/* Rehearsal breakdown */}
       <div className="attendance-rehearsal-section">
-        <h3 className="section-title">Repetities ({rehearsals.length})</h3>
+        <h3 className="section-title">{t('attendanceDashboard.rehearsals')} ({rehearsals.length})</h3>
         <div className="rehearsal-list">
           {rehearsals.length === 0 ? (
             <div className="empty-state">
               <Icon name="calendar" size={48} />
-              <p>Geen repetities gevonden</p>
+              <p>{t('attendanceDashboard.noRehearsalsFound')}</p>
             </div>
           ) : (
             rehearsals.slice(0, 10).map((rehearsal) => (

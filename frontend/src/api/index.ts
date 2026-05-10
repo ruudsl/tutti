@@ -156,3 +156,23 @@ export * from './activity';
 export * from './guest-list';
 export * from './audit';
 export * from './availability';
+
+// Phase A features
+export * from './contacts';
+export * from './custom-fields';
+export * from './privacy-settings';
+
+// Phase B-D features
+export * from './polls';
+export * from './posts';
+export * from './tasks';
+export * from './email-campaigns';
+export * from './projects';
+export * from './tours';
+export * from './resources';
+
+// Phase E features
+export * from './outfits';
+export * from './wiki';
+export * from './workflows';
+export * from './performances';

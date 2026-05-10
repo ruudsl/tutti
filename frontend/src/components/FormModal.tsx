@@ -1,4 +1,5 @@
 import { ReactNode, FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
 interface FormModalProps {
@@ -18,14 +19,17 @@ export function FormModal({
   onClose,
   onSubmit,
   isLoading = false,
-  submitLabel = 'Opslaan',
-  cancelLabel = 'Annuleren',
+  submitLabel,
+  cancelLabel,
   size = 'medium',
 }: FormModalProps) {
+  const { t } = useTranslation();
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit();
   };
+  const finalSubmitLabel = submitLabel || t('common.save');
+  const finalCancelLabel = cancelLabel || t('common.cancel');
 
   return (
     <Modal
@@ -40,7 +44,7 @@ export function FormModal({
             className="px-4 py-2 border rounded-lg hover:bg-gray-50"
             disabled={isLoading}
           >
-            {cancelLabel}
+            {finalCancelLabel}
           </button>
           <button
             type="submit"
@@ -48,7 +52,7 @@ export function FormModal({
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             disabled={isLoading}
           >
-            {isLoading ? 'Bezig...' : submitLabel}
+            {isLoading ? t('common.loading') : finalSubmitLabel}
           </button>
         </div>
       }

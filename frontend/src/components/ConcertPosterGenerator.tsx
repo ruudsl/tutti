@@ -610,8 +610,7 @@ export function ConcertPosterGenerator({
   onDownload,
   customThemes = [],
 }: ConcertPosterGeneratorProps) {
-  // Translation hook available for i18n when needed
-  useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const posterContainerRef = useRef<HTMLDivElement>(null);
 
@@ -670,7 +669,7 @@ export function ConcertPosterGenerator({
         html2canvas = html2canvasModule.default;
       } catch {
         // html2canvas not installed, provide a fallback message
-        alert('Installeer html2canvas voor poster downloads: npm install html2canvas');
+        alert(t('posterGenerator.installHtml2canvas'));
         setIsGenerating(false);
         return;
       }
@@ -733,48 +732,48 @@ export function ConcertPosterGenerator({
         <div className="poster-form-panel">
           <h2 className="panel-title">
             <Icon name="pencil" size={20} />
-            Postergegevens
+            {t('posterGenerator.posterData')}
           </h2>
 
           <div className="form-section">
-            <h3 className="form-section-title">Algemeen</h3>
+            <h3 className="form-section-title">{t('posterGenerator.general')}</h3>
             <div className="form-group">
-              <label htmlFor="orchestraName">Orkest / Vereniging</label>
+              <label htmlFor="orchestraName">{t('posterGenerator.orchestraAssociation')}</label>
               <input
                 id="orchestraName"
                 type="text"
                 value={data.orchestraName}
                 onChange={(e) => updateData('orchestraName', e.target.value)}
-                placeholder="Naam van het orkest"
+                placeholder={t('posterGenerator.orchestraNamePlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="title">Titel</label>
+              <label htmlFor="title">{t('posterGenerator.title')}</label>
               <input
                 id="title"
                 type="text"
                 value={data.title}
                 onChange={(e) => updateData('title', e.target.value)}
-                placeholder="Titel van het concert"
+                placeholder={t('posterGenerator.concertTitlePlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="subtitle">Ondertitel (optioneel)</label>
+              <label htmlFor="subtitle">{t('posterGenerator.subtitleOptional')}</label>
               <input
                 id="subtitle"
                 type="text"
                 value={data.subtitle}
                 onChange={(e) => updateData('subtitle', e.target.value)}
-                placeholder="Bijv. thema of bijzonderheid"
+                placeholder={t('posterGenerator.subtitlePlaceholder')}
               />
             </div>
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Datum en locatie</h3>
+            <h3 className="form-section-title">{t('posterGenerator.dateAndLocation')}</h3>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="date">Datum</label>
+                <label htmlFor="date">{t('posterGenerator.date')}</label>
                 <input
                   id="date"
                   type="date"
@@ -783,7 +782,7 @@ export function ConcertPosterGenerator({
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="time">Tijd</label>
+                <label htmlFor="time">{t('posterGenerator.time')}</label>
                 <input
                   id="time"
                   type="time"
@@ -793,55 +792,55 @@ export function ConcertPosterGenerator({
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="location">Locatie</label>
+              <label htmlFor="location">{t('posterGenerator.location')}</label>
               <input
                 id="location"
                 type="text"
                 value={data.location}
                 onChange={(e) => updateData('location', e.target.value)}
-                placeholder="Naam van de locatie"
+                placeholder={t('posterGenerator.locationPlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="address">Adres (optioneel)</label>
+              <label htmlFor="address">{t('posterGenerator.addressOptional')}</label>
               <input
                 id="address"
                 type="text"
                 value={data.address}
                 onChange={(e) => updateData('address', e.target.value)}
-                placeholder="Straat en plaats"
+                placeholder={t('posterGenerator.addressPlaceholder')}
               />
             </div>
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Programma</h3>
+            <h3 className="form-section-title">{t('posterGenerator.program')}</h3>
             <div className="form-group">
-              <label htmlFor="program">Werken (een per regel)</label>
+              <label htmlFor="program">{t('posterGenerator.worksOnePerLine')}</label>
               <textarea
                 id="program"
                 value={programInput}
                 onChange={(e) => handleProgramChange(e.target.value)}
-                placeholder="Mozart - Ouverture&#10;Beethoven - Symfonie No. 5&#10;Dvorak - Slavische Dansen"
+                placeholder={t('posterGenerator.programPlaceholder')}
                 rows={5}
               />
             </div>
           </div>
 
           <div className="form-section">
-            <h3 className="form-section-title">Extra informatie</h3>
+            <h3 className="form-section-title">{t('posterGenerator.extraInfo')}</h3>
             <div className="form-group">
-              <label htmlFor="ticketInfo">Ticketinformatie</label>
+              <label htmlFor="ticketInfo">{t('posterGenerator.ticketInfo')}</label>
               <input
                 id="ticketInfo"
                 type="text"
                 value={data.ticketInfo}
                 onChange={(e) => updateData('ticketInfo', e.target.value)}
-                placeholder="Bijv. Toegang gratis of Tickets via..."
+                placeholder={t('posterGenerator.ticketInfoPlaceholder')}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="logo">Logo uploaden</label>
+              <label htmlFor="logo">{t('posterGenerator.uploadLogo')}</label>
               <input
                 id="logo"
                 type="file"
@@ -851,7 +850,7 @@ export function ConcertPosterGenerator({
               />
               {data.logoUrl && (
                 <div className="logo-preview">
-                  <img src={data.logoUrl} alt="Logo preview" />
+                  <img src={data.logoUrl} alt={t('posterGenerator.logoPreview')} />
                   <button
                     type="button"
                     className="remove-logo-btn"
@@ -869,21 +868,21 @@ export function ConcertPosterGenerator({
         <div className="poster-preview-panel">
           <h2 className="panel-title">
             <Icon name="eye" size={20} />
-            Voorbeeld
+            {t('posterGenerator.preview')}
           </h2>
 
           {/* Template selection */}
           <div className="template-selection">
-            <label>Sjabloon</label>
+            <label>{t('posterGenerator.template')}</label>
             <div className="template-buttons">
-              {(['classic', 'modern', 'minimal'] as PosterTemplate[]).map((t) => (
+              {(['classic', 'modern', 'minimal'] as PosterTemplate[]).map((tmpl) => (
                 <button
-                  key={t}
+                  key={tmpl}
                   type="button"
-                  className={`template-btn ${template === t ? 'active' : ''}`}
-                  onClick={() => setTemplate(t)}
+                  className={`template-btn ${template === tmpl ? 'active' : ''}`}
+                  onClick={() => setTemplate(tmpl)}
                 >
-                  {t === 'classic' ? 'Klassiek' : t === 'modern' ? 'Modern' : 'Minimaal'}
+                  {tmpl === 'classic' ? t('posterGenerator.classic') : tmpl === 'modern' ? t('posterGenerator.modern') : t('posterGenerator.minimal')}
                 </button>
               ))}
             </div>
@@ -891,7 +890,7 @@ export function ConcertPosterGenerator({
 
           {/* Theme selection */}
           <div className="theme-selection">
-            <label>Kleurthema</label>
+            <label>{t('posterGenerator.colorTheme')}</label>
             <div className="theme-swatches">
               {allThemes.map((theme) => (
                 <button
@@ -927,11 +926,11 @@ export function ConcertPosterGenerator({
               disabled={isGenerating}
             >
               {isGenerating ? (
-                <>Genereren...</>
+                <>{t('posterGenerator.generating')}</>
               ) : (
                 <>
                   <Icon name="download" size={18} />
-                  Downloaden als PNG
+                  {t('posterGenerator.downloadAsPng')}
                 </>
               )}
             </button>

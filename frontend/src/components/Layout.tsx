@@ -64,12 +64,24 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.members',
     icon: 'users',
-    basePaths: ['/members', '/issues', '/practice-schedules', '/practice'],
+    basePaths: ['/members', '/issues', '/practice-schedules', '/practice', '/contacts'],
     items: [
       { path: '/members', labelKey: 'nav.memberDirectory' },
+      { path: '/contacts', labelKey: 'nav.contacts' },
       { path: '/issues', labelKey: 'nav.issues' },
       { path: '/practice-schedules', labelKey: 'nav.practiceSchedules' },
       { path: '/practice', labelKey: 'nav.practice' },
+    ],
+  },
+  {
+    titleKey: 'sidebar.communication',
+    icon: 'message',
+    basePaths: ['/polls', '/tasks', '/posts', '/email-campaigns'],
+    items: [
+      { path: '/posts', labelKey: 'nav.posts' },
+      { path: '/polls', labelKey: 'nav.polls' },
+      { path: '/tasks', labelKey: 'nav.tasks' },
+      { path: '/email-campaigns', labelKey: 'nav.emailCampaigns', roles: [ROLES.ADMIN] },
     ],
   },
   {
@@ -110,20 +122,44 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.inventory',
     icon: 'package',
-    basePaths: ['/instrument-assets', '/uniforms'],
+    basePaths: ['/instrument-assets', '/uniforms', '/equipment'],
     items: [
       { path: '/instrument-assets', labelKey: 'nav.instrumentAssets', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
       { path: '/uniforms', labelKey: 'nav.uniforms', roles: [ROLES.ADMIN, ROLES.UNIFORMS_COMMITTEE] },
+      { path: '/equipment', labelKey: 'nav.equipment', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.operations',
+    icon: 'clipboard',
+    basePaths: ['/projects', '/tours', '/resources'],
+    items: [
+      { path: '/projects', labelKey: 'nav.projects', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/tours', labelKey: 'nav.tours', roles: [ROLES.ADMIN, ROLES.BOARD] },
+      { path: '/resources', labelKey: 'nav.resources', roles: [ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE] },
+    ],
+  },
+  {
+    titleKey: 'sidebar.content',
+    icon: 'fileText',
+    basePaths: ['/wiki', '/outfits', '/performances', '/workflows'],
+    items: [
+      { path: '/wiki', labelKey: 'nav.wiki' },
+      { path: '/outfits', labelKey: 'nav.outfits' },
+      { path: '/performances', labelKey: 'nav.performances' },
+      { path: '/workflows', labelKey: 'nav.workflows', roles: [ROLES.ADMIN] },
     ],
   },
   {
     titleKey: 'sidebar.admin',
     icon: 'settings',
-    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
+    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields', '/accounting'],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
       { path: '/orchestras', labelKey: 'nav.orchestras', roles: [ROLES.ADMIN] },
+      { path: '/custom-fields', labelKey: 'nav.customFields', roles: [ROLES.ADMIN] },
+      { path: '/accounting', labelKey: 'nav.accounting', roles: [ROLES.ADMIN] },
       { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
@@ -381,6 +417,16 @@ export default function Layout() {
                 <Icon name="user" size={18} />
               </span>
               <span className="sidebar-item-label">{t('nav.profile')}</span>
+            </NavLink>
+            <NavLink
+              to="/privacy-settings"
+              className={({ isActive }) => `sidebar-direct-link sidebar-footer-link ${isActive ? 'active' : ''}`}
+              title={sidebarCollapsed ? t('nav.privacySettings') : undefined}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">
+                <Icon name="shield" size={18} />
+              </span>
+              <span className="sidebar-item-label">{t('nav.privacySettings')}</span>
             </NavLink>
             <button
               className="sidebar-direct-link sidebar-footer-link"

@@ -1,4 +1,5 @@
 import { useState, useEffect, CSSProperties, ImgHTMLAttributes, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLazyLoad } from '../hooks/useLazyLoad';
 
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'onLoad' | 'onError'> {
@@ -104,6 +105,7 @@ export const LazyImage = memo(function LazyImage({
   style,
   ...imgProps
 }: LazyImageProps) {
+  const { t } = useTranslation();
   const { ref, isVisible } = useLazyLoad({ rootMargin });
   const [loadState, setLoadState] = useState<ImageLoadState>('idle');
 
@@ -248,7 +250,7 @@ export const LazyImage = memo(function LazyImage({
             <circle cx="8.5" cy="8.5" r="1.5" />
             <polyline points="21 15 16 10 5 21" />
           </svg>
-          <span>Niet geladen</span>
+          <span>{t('lazyImage.notLoaded')}</span>
         </div>
       )}
     </div>

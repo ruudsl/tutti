@@ -74,7 +74,7 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
       });
       onSuccess?.();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Verwijderen mislukt';
+      const message = error instanceof Error ? error.message : t('errors.deleteFailed');
       setUploadResult({
         success: false,
         message,

@@ -8,6 +8,7 @@ import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
+import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES, STORAGE_KEYS } from '../utils/constants';
@@ -524,12 +525,19 @@ export default function Users() {
           title={t('users.edit')}
           submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
+          size="large"
         >
           <UserForm
             form={form}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={true}
+          />
+          <div className="divider my-4">{t('customFields.additionalFields')}</div>
+          <CustomFieldFormSection
+            entityType="user"
+            entityId={editingUser.id}
+            autoSave={true}
           />
         </FormModal>
       )}

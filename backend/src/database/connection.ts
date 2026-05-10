@@ -3,6 +3,7 @@ const initSqlJs = require('sql.js');
 import path from 'path';
 import fs from 'fs';
 import { schema } from './schema';
+import { runMigrations } from './migrations';
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/harmonie.db');
 
@@ -31,8 +32,10 @@ class DatabaseWrapper {
         this.initPromise = (async () => {
             const SQL = await initSqlJs();
 
+            const isExistingDb = fs.existsSync(this.dbPath);
+
             // Load existing database or create new one
-            if (fs.existsSync(this.dbPath)) {
+            if (isExistingDb) {
                 const buffer = fs.readFileSync(this.dbPath);
                 this.db = new SQL.Database(buffer);
             } else {
@@ -42,8 +45,43 @@ class DatabaseWrapper {
             // Enable foreign keys
             this.db.run('PRAGMA foreign_keys = ON');
 
-            // Initialize schema
-            this.db.run(schema);
+            // For existing databases, run migrations first to add missing columns
+            if (isExistingDb) {
+                try {
+                    runMigrations(this);
+                } catch (err) {
+                    console.warn('Migration warning:', err);
+                }
+            }
+
+            // Initialize schema (CREATE TABLE IF NOT EXISTS statements)
+            // Run each statement separately to handle partial failures gracefully
+            const schemaStatements = schema.split(';').filter(s => s.trim());
+            for (const statement of schemaStatements) {
+                const trimmed = statement.trim();
+                if (!trimmed) continue;
+
+                try {
+                    this.db.run(trimmed);
+                } catch (err: any) {
+                    // If index creation fails due to missing column, skip it
+                    // The column will be added by migrations and index created on next restart
+                    if (err.message?.includes('no such column') && trimmed.includes('CREATE INDEX')) {
+                        console.warn(`Skipping index creation (column not yet added): ${err.message}`);
+                        continue;
+                    }
+                    // If schema fails on existing DB for other column issues, log but continue
+                    if (isExistingDb && err.message?.includes('no such column')) {
+                        console.error('Schema error (may need manual migration):', err.message);
+                        continue;
+                    }
+                    // For duplicate table/index errors, skip silently
+                    if (err.message?.includes('already exists')) {
+                        continue;
+                    }
+                    throw err;
+                }
+            }
 
             // Save to disk
             this.save();

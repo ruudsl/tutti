@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Modal, FormModal } from './Modal';
 import { BottomSheet } from './BottomSheet';
@@ -132,6 +133,7 @@ export function AdaptiveFormModal({
   className = '',
   mobileBreakpoint = 768,
 }: AdaptiveFormModalProps) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile(mobileBreakpoint);
 
   if (!isOpen) return null;
@@ -150,7 +152,7 @@ export function AdaptiveFormModal({
           onClick={onClose}
           disabled={isSubmitting}
         >
-          {cancelLabel || 'Annuleren'}
+          {cancelLabel || t('common.cancel')}
         </button>
         <button
           type="submit"
@@ -158,7 +160,7 @@ export function AdaptiveFormModal({
           className="btn btn-primary"
           disabled={isSubmitting || submitDisabled}
         >
-          {isSubmitting ? 'Bezig...' : (submitLabel || 'Opslaan')}
+          {isSubmitting ? t('common.loading') : (submitLabel || t('common.save'))}
         </button>
       </div>
     );

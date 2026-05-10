@@ -17,6 +17,7 @@ import {
   memo,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon, IconName } from './Icon';
 
@@ -266,6 +267,7 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
   size = 'md',
   label,
 }: SelectionCheckboxProps) {
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const { isSelected, toggleItem } = useBulkSelection();
   const checked = isSelected(itemId);
@@ -315,7 +317,7 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
           width: 0,
           height: 0,
         }}
-        aria-label={label ?? `Selecteer item ${itemId}`}
+        aria-label={label ?? t('common.selectItem', { id: itemId })}
       />
       <span style={checkboxStyles}>
         {checked && (
@@ -445,6 +447,7 @@ export const FloatingActionBar = memo(function FloatingActionBar({
   className = '',
   style,
 }: FloatingActionBarProps) {
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const { selectedIds, selectedCount, clearSelection, isSelectionActive } = useBulkSelection();
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
@@ -540,7 +543,7 @@ export const FloatingActionBar = memo(function FloatingActionBar({
           }}
         >
           <Icon name="check" size={16} />
-          {selectedCount} geselecteerd
+          {t('common.selected', { count: selectedCount })}
         </span>
 
         {/* Action buttons */}
@@ -598,8 +601,8 @@ export const FloatingActionBar = memo(function FloatingActionBar({
             marginLeft: '0.25rem',
           }}
           onClick={clearSelection}
-          aria-label="Selectie wissen"
-          title="Selectie wissen"
+          aria-label={t('common.clearSelection')}
+          title={t('common.clearSelection')}
         >
           <Icon name="close" size={18} />
         </button>
@@ -613,18 +616,21 @@ export const FloatingActionBar = memo(function FloatingActionBar({
 // Default Bulk Actions
 // ============================================
 
-export function createDefaultBulkActions(handlers: {
-  onDelete?: (ids: string[]) => void | Promise<void>;
-  onArchive?: (ids: string[]) => void | Promise<void>;
-  onMove?: (ids: string[]) => void | Promise<void>;
-  onExport?: (ids: string[]) => void | Promise<void>;
-}): BulkAction[] {
+export function createDefaultBulkActions(
+  handlers: {
+    onDelete?: (ids: string[]) => void | Promise<void>;
+    onArchive?: (ids: string[]) => void | Promise<void>;
+    onMove?: (ids: string[]) => void | Promise<void>;
+    onExport?: (ids: string[]) => void | Promise<void>;
+  },
+  t: (key: string) => string
+): BulkAction[] {
   const actions: BulkAction[] = [];
 
   if (handlers.onExport) {
     actions.push({
       id: 'export',
-      label: 'Exporteren',
+      label: t('common.export'),
       icon: 'download',
       onAction: handlers.onExport,
     });
@@ -633,7 +639,7 @@ export function createDefaultBulkActions(handlers: {
   if (handlers.onMove) {
     actions.push({
       id: 'move',
-      label: 'Verplaatsen',
+      label: t('common.move'),
       icon: 'folder',
       onAction: handlers.onMove,
     });
@@ -642,7 +648,7 @@ export function createDefaultBulkActions(handlers: {
   if (handlers.onArchive) {
     actions.push({
       id: 'archive',
-      label: 'Archiveren',
+      label: t('common.archive'),
       icon: 'archive',
       onAction: handlers.onArchive,
     });
@@ -651,7 +657,7 @@ export function createDefaultBulkActions(handlers: {
   if (handlers.onDelete) {
     actions.push({
       id: 'delete',
-      label: 'Verwijderen',
+      label: t('common.delete'),
       icon: 'trash',
       onAction: handlers.onDelete,
       destructive: true,

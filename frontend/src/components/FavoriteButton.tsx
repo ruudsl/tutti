@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useFavorites, useFavoriteStatus } from '../hooks/useFavorites';
 import { Icon } from './Icon';
 
@@ -8,6 +9,7 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }: FavoriteButtonProps) {
+  const { t } = useTranslation();
   const { toggleFavorite, isToggling, isFavorite: checkIsFavorite } = useFavorites();
   const { isFavorite: statusFavorite, isLoading } = useFavoriteStatus(musicTitleId);
 
@@ -30,7 +32,7 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
     <button
       onClick={handleClick}
       disabled={isToggling || isLoading}
-      title={isFavorite ? 'Verwijderen uit favorieten' : 'Toevoegen aan favorieten'}
+      title={isFavorite ? t('favorites.removeFromFavorites') : t('favorites.addToFavorites')}
       style={{
         background: 'transparent',
         border: 'none',
@@ -54,7 +56,7 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
         size={sizes[size].iconSize}
         className={isFavorite ? 'is-favorite' : ''}
       />
-      {showLabel && <span style={{ fontSize: '0.875rem' }}>{isFavorite ? 'Favoriet' : 'Favoriet'}</span>}
+      {showLabel && <span style={{ fontSize: '0.875rem' }}>{t('favorites.favorite')}</span>}
     </button>
   );
 }

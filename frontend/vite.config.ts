@@ -14,6 +14,7 @@ export default defineConfig({
       manifest: false, // We use external manifest file
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB to accommodate large bundles
         additionalManifestEntries: [
           { url: '/offline.html', revision: '1' },
         ],

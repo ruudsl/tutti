@@ -84,7 +84,7 @@ export function ReportIssueModal({ pieceId, pieceTitle, onClose }: ReportIssueMo
               value={pageNumber}
               onChange={(e) => setPageNumber(e.target.value)}
               min={1}
-              placeholder="Bijv. 2"
+              placeholder={t('myMusic.reportIssue.pageNumberPlaceholder')}
             />
           </div>
           <div className="form-group">
@@ -97,7 +97,7 @@ export function ReportIssueModal({ pieceId, pieceTitle, onClose }: ReportIssueMo
               className="form-control"
               value={measureNumber}
               onChange={(e) => setMeasureNumber(e.target.value)}
-              placeholder="Bijv. 42 of 42-45"
+              placeholder={t('myMusic.reportIssue.measureNumberPlaceholder')}
             />
           </div>
         </div>

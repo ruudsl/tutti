@@ -2,6 +2,13 @@ import nodemailer from 'nodemailer';
 import logger from './logger';
 import db from '../database/connection';
 
+const sanitizeForLog = (value: unknown): string => {
+  return String(value ?? '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+    .trim();
+};
+
 interface SmtpConfig {
   smtp_host: string | null;
   smtp_port: number | null;
@@ -94,29 +101,44 @@ const getFromAddress = (associationId?: string | null): string => {
   return process.env.SMTP_FROM || '"Harmonie App" <noreply@harmonie.app>';
 };
 
+interface EmailAttachment {
+  filename: string;
+  path?: string;
+  content?: Buffer | string;
+  contentType?: string;
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
   text: string;
   html?: string;
   associationId?: string | null;
+  attachments?: EmailAttachment[];
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
-  const { to, subject, text, html, associationId } = options;
+  const { to, subject, text, html, associationId, attachments } = options;
+  const safeTo = sanitizeForLog(to);
+  const safeSubject = sanitizeForLog(subject);
+  const safeText = sanitizeForLog(text);
+  const safeAttachmentNames = attachments?.map(a => sanitizeForLog(a.filename)).join(', ');
 
   // Log email for development/debugging
-  logger.info(`Sending email to ${to}: ${subject}`);
+  logger.info(`Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
 
   const transporter = getSmtpTransporter(associationId);
 
   if (!transporter) {
-    // Log the email content when no SMTP is configured
+    // Log metadata only when no SMTP is configured (avoid logging user-controlled body content)
     logger.warn('No SMTP configuration found. Emails will be logged to console only.');
     logger.info('Email content (no SMTP configured):');
-    logger.info(`To: ${to}`);
-    logger.info(`Subject: ${subject}`);
-    logger.info(`Body: ${text}`);
+    logger.info(`To: ${safeTo}`);
+    logger.info(`Subject: ${safeSubject}`);
+    logger.info(`Body length: ${safeText.length} characters`);
+    if (attachments?.length) {
+      logger.info(`Attachments: ${safeAttachmentNames}`);
+    }
     return true; // Pretend it was sent successfully
   }
 
@@ -128,6 +150,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       subject,
       text,
       html: html || text,
+      attachments: attachments?.map(a => ({
+        filename: a.filename,
+        path: a.path,
+        content: a.content,
+        contentType: a.contentType,
+      })),
     });
 
     logger.info(`Email sent successfully: ${info.messageId}`);

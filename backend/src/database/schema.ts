@@ -1206,6 +1206,33 @@ CREATE INDEX IF NOT EXISTS idx_ticket_orders_user ON ticket_orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_orders_status ON ticket_orders(status);
 CREATE INDEX IF NOT EXISTS idx_ticket_order_items_order ON ticket_order_items(order_id);
 
+-- Ticket transfers (for transferring tickets between users)
+CREATE TABLE IF NOT EXISTS ticket_transfers (
+    id TEXT PRIMARY KEY,
+    ticket_id TEXT NOT NULL,
+    from_user_id TEXT,
+    from_email TEXT NOT NULL,
+    from_name TEXT NOT NULL,
+    recipient_email TEXT NOT NULL,
+    recipient_name TEXT NOT NULL,
+    transfer_code TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, accepted, cancelled, expired
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    accepted_at DATETIME,
+    cancelled_at DATETIME,
+    accepted_by_user_id TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (accepted_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_transfers_ticket ON ticket_transfers(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_transfers_code ON ticket_transfers(transfer_code);
+CREATE INDEX IF NOT EXISTS idx_ticket_transfers_from_user ON ticket_transfers(from_user_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_transfers_recipient ON ticket_transfers(recipient_email);
+CREATE INDEX IF NOT EXISTS idx_ticket_transfers_status ON ticket_transfers(status);
+
 -- ===========================================
 -- SECURITY: IP WHITELIST
 -- ===========================================
@@ -1591,4 +1618,1841 @@ CREATE INDEX IF NOT EXISTS idx_music_title_instruments_title ON music_title_inst
 CREATE INDEX IF NOT EXISTS idx_music_title_instruments_uri ON music_title_instruments(instrument_uri);
 CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_title ON music_title_vocabulary(music_title_id);
 CREATE INDEX IF NOT EXISTS idx_music_title_vocabulary_type ON music_title_vocabulary(vocabulary_type);
+
+-- =====================================================
+-- EXTERNAL CONTACTS MODULE
+-- =====================================================
+
+-- Contact categories (configurable per association)
+CREATE TABLE IF NOT EXISTS contact_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_categories_assoc ON contact_categories(association_id);
+
+-- External contacts (organizations, persons, venues, vendors)
+CREATE TABLE IF NOT EXISTS contacts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    contact_type TEXT NOT NULL CHECK (contact_type IN ('organization', 'person', 'venue', 'vendor')),
+    name TEXT NOT NULL,
+    contact_person TEXT,
+    email TEXT,
+    phone TEXT,
+    mobile TEXT,
+    address_line TEXT,
+    postal_code TEXT,
+    city TEXT,
+    country TEXT DEFAULT 'NL',
+    iban TEXT,
+    iban_holder_name TEXT,
+    bic TEXT,
+    vat_number TEXT,
+    chamber_of_commerce TEXT,
+    website TEXT,
+    notes TEXT,
+    is_active INTEGER DEFAULT 1,
+    promoted_to_user_id TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (promoted_to_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_assoc ON contacts(association_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_type ON contacts(contact_type);
+CREATE INDEX IF NOT EXISTS idx_contacts_name ON contacts(name);
+CREATE INDEX IF NOT EXISTS idx_contacts_active ON contacts(is_active);
+
+-- Link contacts to categories (many-to-many)
+CREATE TABLE IF NOT EXISTS contact_category_links (
+    contact_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    PRIMARY KEY (contact_id, category_id),
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES contact_categories(id) ON DELETE CASCADE
+);
+
+-- Contact persons for organization-type contacts
+CREATE TABLE IF NOT EXISTS contact_persons (
+    id TEXT PRIMARY KEY,
+    contact_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT,
+    email TEXT,
+    phone TEXT,
+    is_primary INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_persons_contact ON contact_persons(contact_id);
+
+-- =====================================================
+-- CUSTOM FIELDS MODULE
+-- =====================================================
+
+-- Custom field definitions (configurable per association)
+CREATE TABLE IF NOT EXISTS custom_field_definitions (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL CHECK (entity_type IN (
+        'user', 'orchestra', 'rehearsal', 'concert', 'music_piece', 'loan', 'instrument', 'contact'
+    )),
+    field_key TEXT NOT NULL,
+    field_label TEXT NOT NULL,
+    field_type TEXT NOT NULL CHECK (field_type IN (
+        'text', 'textarea', 'number', 'date', 'datetime',
+        'boolean', 'select', 'multiselect', 'email', 'phone', 'url', 'file'
+    )),
+    field_options TEXT,
+    is_required INTEGER NOT NULL DEFAULT 0,
+    is_unique INTEGER NOT NULL DEFAULT 0,
+    visibility TEXT NOT NULL DEFAULT 'all' CHECK (visibility IN (
+        'all', 'admin_only', 'committee_plus', 'self_only'
+    )),
+    self_editable INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    placeholder TEXT,
+    default_value TEXT,
+    validation_regex TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, entity_type, field_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_field_defs_assoc ON custom_field_definitions(association_id);
+CREATE INDEX IF NOT EXISTS idx_custom_field_defs_entity ON custom_field_definitions(entity_type);
+
+-- Custom field values
+CREATE TABLE IF NOT EXISTS custom_field_values (
+    id TEXT PRIMARY KEY,
+    field_definition_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    value_text TEXT,
+    value_number REAL,
+    value_date DATETIME,
+    value_boolean INTEGER,
+    value_json TEXT,
+    updated_by TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (field_definition_id) REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(field_definition_id, entity_type, entity_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_custom_field_values_def ON custom_field_values(field_definition_id);
+CREATE INDEX IF NOT EXISTS idx_custom_field_values_entity ON custom_field_values(entity_type, entity_id);
+
+-- =====================================================
+-- PRIVACY SETTINGS MODULE
+-- =====================================================
+
+-- Per-user privacy settings for each field
+CREATE TABLE IF NOT EXISTS user_privacy_settings (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    visibility TEXT NOT NULL CHECK (visibility IN (
+        'admin_only', 'committee', 'orchestra', 'section', 'all_members', 'public'
+    )),
+    custom_field_id TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (custom_field_id) REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    UNIQUE(user_id, field_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_privacy_user ON user_privacy_settings(user_id);
+
+-- Association-wide privacy defaults
+CREATE TABLE IF NOT EXISTS association_privacy_defaults (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    default_visibility TEXT NOT NULL,
+    purpose_statement TEXT,
+    is_required INTEGER DEFAULT 0,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, field_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assoc_privacy_assoc ON association_privacy_defaults(association_id);
+
+-- Privacy consent tracking
+CREATE TABLE IF NOT EXISTS privacy_consents (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    consent_version TEXT NOT NULL,
+    consented_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_privacy_consents_user ON privacy_consents(user_id);
+
+-- =====================================================
+-- POLLS MODULE
+-- =====================================================
+
+-- Polls (voting/surveys)
+CREATE TABLE IF NOT EXISTS polls (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    poll_type TEXT NOT NULL DEFAULT 'single' CHECK (poll_type IN ('single', 'multiple', 'ranked')),
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'closed', 'archived')),
+    is_anonymous INTEGER DEFAULT 0,
+    show_results_before_close INTEGER DEFAULT 0,
+    allow_comments INTEGER DEFAULT 1,
+    max_selections INTEGER,
+    starts_at DATETIME,
+    ends_at DATETIME,
+    target_orchestras TEXT,
+    target_roles TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_polls_assoc ON polls(association_id);
+CREATE INDEX IF NOT EXISTS idx_polls_status ON polls(status);
+CREATE INDEX IF NOT EXISTS idx_polls_created_by ON polls(created_by);
+
+-- Poll options/choices
+CREATE TABLE IF NOT EXISTS poll_options (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    option_text TEXT NOT NULL,
+    option_description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_options_poll ON poll_options(poll_id);
+
+-- Poll votes
+CREATE TABLE IF NOT EXISTS poll_votes (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    option_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    rank_position INTEGER,
+    voted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+    FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_votes_poll ON poll_votes(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_option ON poll_votes(option_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_user ON poll_votes(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_poll_votes_single ON poll_votes(poll_id, option_id, user_id);
+
+-- Poll comments
+CREATE TABLE IF NOT EXISTS poll_comments (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES poll_comments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_comments_poll ON poll_comments(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_comments_user ON poll_comments(user_id);
+
+-- =====================================================
+-- TASKS MODULE
+-- =====================================================
+
+-- Task lists (projects/categories for tasks)
+CREATE TABLE IF NOT EXISTS task_lists (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_archived INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_lists_assoc ON task_lists(association_id);
+
+-- Tasks
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    task_list_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'review', 'done', 'cancelled')),
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    due_date DATETIME,
+    reminder_at DATETIME,
+    estimated_hours REAL,
+    actual_hours REAL,
+    sort_order INTEGER DEFAULT 0,
+    related_entity_type TEXT,
+    related_entity_id TEXT,
+    created_by TEXT NOT NULL,
+    assigned_to TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assoc ON tasks(association_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_list ON tasks(task_list_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
+
+-- Task assignments (for multiple assignees)
+CREATE TABLE IF NOT EXISTS task_assignments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    assigned_by TEXT NOT NULL,
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignments_task ON task_assignments(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_assignments_user ON task_assignments(user_id);
+
+-- Task comments
+CREATE TABLE IF NOT EXISTS task_comments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
+
+-- Task checklists (subtasks)
+CREATE TABLE IF NOT EXISTS task_checklist_items (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_completed INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    completed_by TEXT,
+    completed_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_checklist_task ON task_checklist_items(task_id);
+
+-- Task templates (predefined tasks with checklists)
+CREATE TABLE IF NOT EXISTS task_templates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    task_list_id TEXT,
+    priority TEXT DEFAULT 'medium',
+    estimated_hours REAL,
+    checklist_items TEXT, -- JSON array of checklist item strings
+    is_active BOOLEAN DEFAULT 1,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_templates_assoc ON task_templates(association_id);
+CREATE INDEX IF NOT EXISTS idx_task_templates_active ON task_templates(is_active);
+
+-- =====================================================
+-- POSTS/NEWS MODULE
+-- =====================================================
+
+-- Post categories
+CREATE TABLE IF NOT EXISTS post_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_categories_assoc ON post_categories(association_id);
+
+-- Posts/News articles
+CREATE TABLE IF NOT EXISTS posts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    excerpt TEXT,
+    content TEXT NOT NULL,
+    content_format TEXT DEFAULT 'markdown' CHECK (content_format IN ('markdown', 'html')),
+    featured_image TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'published', 'archived')),
+    is_pinned INTEGER DEFAULT 0,
+    is_featured INTEGER DEFAULT 0,
+    allow_comments INTEGER DEFAULT 1,
+    view_count INTEGER DEFAULT 0,
+    target_orchestras TEXT,
+    target_roles TEXT,
+    published_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_assoc ON posts(association_id);
+CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
+CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published_at);
+CREATE INDEX IF NOT EXISTS idx_posts_pinned ON posts(is_pinned);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_slug ON posts(association_id, slug);
+
+-- Post to category mapping
+CREATE TABLE IF NOT EXISTS post_category_mapping (
+    post_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    PRIMARY KEY (post_id, category_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES post_categories(id) ON DELETE CASCADE
+);
+
+-- Post comments
+CREATE TABLE IF NOT EXISTS post_comments (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_id TEXT,
+    is_approved INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES post_comments(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_comments_post ON post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_user ON post_comments(user_id);
+
+-- Post attachments
+CREATE TABLE IF NOT EXISTS post_attachments (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_type TEXT,
+    file_size INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_attachments_post ON post_attachments(post_id);
+
+-- Post read tracking
+CREATE TABLE IF NOT EXISTS post_reads (
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- EMAIL BULK MAILING MODULE
+-- =====================================================
+
+-- Email templates
+CREATE TABLE IF NOT EXISTS email_templates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT,
+    is_system INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_templates_assoc ON email_templates(association_id);
+
+-- Email campaigns/mailings
+CREATE TABLE IF NOT EXISTS email_campaigns (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    body_text TEXT,
+    template_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'cancelled')),
+    target_type TEXT NOT NULL CHECK (target_type IN ('all', 'orchestras', 'roles', 'custom')),
+    target_orchestras TEXT,
+    target_roles TEXT,
+    target_user_ids TEXT,
+    scheduled_at DATETIME,
+    sent_at DATETIME,
+    total_recipients INTEGER DEFAULT 0,
+    delivered_count INTEGER DEFAULT 0,
+    opened_count INTEGER DEFAULT 0,
+    clicked_count INTEGER DEFAULT 0,
+    bounced_count INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES email_templates(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_assoc ON email_campaigns(association_id);
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_status ON email_campaigns(status);
+
+-- Email campaign recipients (tracking per recipient)
+CREATE TABLE IF NOT EXISTS email_campaign_recipients (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed')),
+    sent_at DATETIME,
+    opened_at DATETIME,
+    clicked_at DATETIME,
+    bounce_reason TEXT,
+    FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_recipients_campaign ON email_campaign_recipients(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_email_recipients_user ON email_campaign_recipients(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_recipients_status ON email_campaign_recipients(status);
+
+-- =====================================================
+-- ACCOUNTING / BOEKHOUDING MODULE
+-- =====================================================
+
+-- Boekjaren
+CREATE TABLE IF NOT EXISTS fiscal_years (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'locked')),
+    is_current INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_years_assoc ON fiscal_years(association_id);
+CREATE INDEX IF NOT EXISTS idx_fiscal_years_current ON fiscal_years(association_id, is_current);
+
+-- Grootboekrekeningen (Chart of Accounts)
+CREATE TABLE IF NOT EXISTS accounts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    account_type TEXT NOT NULL CHECK (account_type IN (
+        'asset', 'liability', 'equity', 'income', 'expense'
+    )),
+    account_subtype TEXT CHECK (account_subtype IN (
+        'bank', 'cash', 'receivable', 'payable', 'inventory',
+        'fixed_asset', 'current_liability', 'long_term_liability',
+        'retained_earnings', 'membership_fees', 'donations', 'grants',
+        'ticket_sales', 'sponsoring', 'personnel', 'materials', 'rent',
+        'utilities', 'insurance', 'depreciation', 'other'
+    )),
+    parent_id TEXT,
+    description TEXT,
+    is_system INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0,
+    opening_balance REAL DEFAULT 0,
+    current_balance REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    UNIQUE(association_id, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_accounts_assoc ON accounts(association_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
+CREATE INDEX IF NOT EXISTS idx_accounts_parent ON accounts(parent_id);
+
+-- Kostenplaatsen (Cost Centers)
+CREATE TABLE IF NOT EXISTS cost_centers (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    orchestra_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    budget_amount REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    UNIQUE(association_id, code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cost_centers_assoc ON cost_centers(association_id);
+
+-- Contributie-categorieën
+CREATE TABLE IF NOT EXISTS membership_fee_types (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    amount REAL NOT NULL,
+    frequency TEXT NOT NULL DEFAULT 'yearly' CHECK (frequency IN ('monthly', 'quarterly', 'half_yearly', 'yearly', 'one_time')),
+    age_min INTEGER,
+    age_max INTEGER,
+    is_default INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    income_account_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (income_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fee_types_assoc ON membership_fee_types(association_id);
+
+-- Lidmaatschappen (koppeling user -> contributie)
+CREATE TABLE IF NOT EXISTS memberships (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    fee_type_id TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled', 'expired')),
+    discount_percentage REAL DEFAULT 0,
+    discount_reason TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (fee_type_id) REFERENCES membership_fee_types(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_fee_type ON memberships(fee_type_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_status ON memberships(status);
+
+-- Bankrekeningen
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    iban TEXT NOT NULL,
+    bic TEXT,
+    bank_name TEXT,
+    is_primary INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    balance REAL DEFAULT 0,
+    last_sync_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, iban)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_assoc ON bank_accounts(association_id);
+
+-- Relaties (debiteur/crediteur)
+CREATE TABLE IF NOT EXISTS accounting_relations (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    relation_type TEXT NOT NULL CHECK (relation_type IN ('customer', 'supplier', 'both')),
+    user_id TEXT,
+    contact_id TEXT,
+    relation_number TEXT,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    address_line TEXT,
+    postal_code TEXT,
+    city TEXT,
+    country TEXT DEFAULT 'NL',
+    iban TEXT,
+    vat_number TEXT,
+    payment_term_days INTEGER DEFAULT 30,
+    receivable_account_id TEXT,
+    payable_account_id TEXT,
+    credit_limit REAL,
+    balance REAL DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
+    FOREIGN KEY (receivable_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (payable_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_acc_relations_assoc ON accounting_relations(association_id);
+CREATE INDEX IF NOT EXISTS idx_acc_relations_user ON accounting_relations(user_id);
+CREATE INDEX IF NOT EXISTS idx_acc_relations_contact ON accounting_relations(contact_id);
+
+-- Facturen
+CREATE TABLE IF NOT EXISTS invoices (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    invoice_number TEXT NOT NULL,
+    invoice_type TEXT NOT NULL CHECK (invoice_type IN ('sales', 'purchase', 'credit_note')),
+    relation_id TEXT NOT NULL,
+    user_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled', 'written_off')),
+    invoice_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    reference TEXT,
+    description TEXT,
+    subtotal REAL NOT NULL DEFAULT 0,
+    vat_amount REAL NOT NULL DEFAULT 0,
+    total REAL NOT NULL DEFAULT 0,
+    amount_paid REAL DEFAULT 0,
+    amount_due REAL GENERATED ALWAYS AS (total - amount_paid) VIRTUAL,
+    currency TEXT DEFAULT 'EUR',
+    payment_reference TEXT,
+    sepa_mandate_id TEXT,
+    notes TEXT,
+    sent_at DATETIME,
+    paid_at DATETIME,
+    reminder_count INTEGER DEFAULT 0,
+    last_reminder_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, invoice_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_assoc ON invoices(association_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_relation ON invoices(relation_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_fiscal ON invoices(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date);
+
+-- Factuurregels
+CREATE TABLE IF NOT EXISTS invoice_lines (
+    id TEXT PRIMARY KEY,
+    invoice_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    quantity REAL NOT NULL DEFAULT 1,
+    unit_price REAL NOT NULL,
+    vat_rate REAL DEFAULT 0,
+    vat_amount REAL DEFAULT 0,
+    line_total REAL NOT NULL,
+    account_id TEXT,
+    cost_center_id TEXT,
+    membership_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL,
+    FOREIGN KEY (membership_id) REFERENCES memberships(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice ON invoice_lines(invoice_id);
+
+-- Transacties (journaalboekingen)
+CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    transaction_number TEXT NOT NULL,
+    transaction_date DATE NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN (
+        'journal', 'payment', 'receipt', 'bank', 'opening', 'closing', 'transfer'
+    )),
+    reference TEXT,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    invoice_id TEXT,
+    bank_statement_line_id TEXT,
+    is_reconciled INTEGER DEFAULT 0,
+    reconciled_at DATETIME,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, transaction_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_assoc ON transactions(association_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_fiscal ON transactions(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_transactions_invoice ON transactions(invoice_id);
+
+-- Transactieregels (debet/credit boekingen)
+CREATE TABLE IF NOT EXISTS transaction_lines (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    account_id TEXT NOT NULL,
+    cost_center_id TEXT,
+    description TEXT,
+    debit_amount REAL DEFAULT 0,
+    credit_amount REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transaction_lines_trans ON transaction_lines(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_lines_account ON transaction_lines(account_id);
+
+-- Bankafschriften
+CREATE TABLE IF NOT EXISTS bank_statements (
+    id TEXT PRIMARY KEY,
+    bank_account_id TEXT NOT NULL,
+    statement_number TEXT,
+    statement_date DATE NOT NULL,
+    opening_balance REAL NOT NULL,
+    closing_balance REAL NOT NULL,
+    total_debit REAL DEFAULT 0,
+    total_credit REAL DEFAULT 0,
+    line_count INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'imported' CHECK (status IN ('imported', 'processing', 'reconciled', 'closed')),
+    import_file_name TEXT,
+    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reconciled_at DATETIME,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_statements_account ON bank_statements(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_bank_statements_date ON bank_statements(statement_date);
+
+-- Bankafschriftregels
+CREATE TABLE IF NOT EXISTS bank_statement_lines (
+    id TEXT PRIMARY KEY,
+    statement_id TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    booking_date DATE NOT NULL,
+    value_date DATE,
+    amount REAL NOT NULL,
+    counterparty_name TEXT,
+    counterparty_iban TEXT,
+    description TEXT,
+    reference TEXT,
+    transaction_type TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'matched', 'manual', 'ignored')),
+    matched_invoice_id TEXT,
+    matched_relation_id TEXT,
+    transaction_id TEXT,
+    match_confidence REAL,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reconciled_at DATETIME,
+    FOREIGN KEY (statement_id) REFERENCES bank_statements(id) ON DELETE CASCADE,
+    FOREIGN KEY (matched_invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (matched_relation_id) REFERENCES accounting_relations(id) ON DELETE SET NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_lines_statement ON bank_statement_lines(statement_id);
+CREATE INDEX IF NOT EXISTS idx_bank_lines_status ON bank_statement_lines(status);
+CREATE INDEX IF NOT EXISTS idx_bank_lines_invoice ON bank_statement_lines(matched_invoice_id);
+
+-- Budgetten
+CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    account_id TEXT,
+    cost_center_id TEXT,
+    budget_type TEXT NOT NULL CHECK (budget_type IN ('income', 'expense')),
+    amount REAL NOT NULL,
+    jan_amount REAL, feb_amount REAL, mar_amount REAL,
+    apr_amount REAL, may_amount REAL, jun_amount REAL,
+    jul_amount REAL, aug_amount REAL, sep_amount REAL,
+    oct_amount REAL, nov_amount REAL, dec_amount REAL,
+    notes TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (cost_center_id) REFERENCES cost_centers(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_budgets_assoc ON budgets(association_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_fiscal ON budgets(fiscal_year_id);
+
+-- Donaties
+CREATE TABLE IF NOT EXISTS donations (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    fiscal_year_id TEXT NOT NULL,
+    relation_id TEXT,
+    donor_name TEXT NOT NULL,
+    donor_email TEXT,
+    donor_address TEXT,
+    amount REAL NOT NULL,
+    donation_date DATE NOT NULL,
+    donation_type TEXT NOT NULL CHECK (donation_type IN ('one_time', 'recurring', 'in_kind', 'legacy')),
+    payment_method TEXT,
+    campaign TEXT,
+    is_anonymous INTEGER DEFAULT 0,
+    is_tax_deductible INTEGER DEFAULT 1,
+    receipt_number TEXT,
+    receipt_sent_at DATETIME,
+    notes TEXT,
+    account_id TEXT,
+    transaction_id TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE SET NULL,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_donations_assoc ON donations(association_id);
+CREATE INDEX IF NOT EXISTS idx_donations_fiscal ON donations(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_donations_date ON donations(donation_date);
+
+-- SEPA Mandaten
+CREATE TABLE IF NOT EXISTS sepa_mandates (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    relation_id TEXT NOT NULL,
+    mandate_reference TEXT NOT NULL,
+    mandate_type TEXT NOT NULL CHECK (mandate_type IN ('RCUR', 'OOFF')),
+    iban TEXT NOT NULL,
+    bic TEXT,
+    signature_date DATE NOT NULL,
+    signature_location TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired')),
+    first_collection_date DATE,
+    last_collection_date DATE,
+    sequence_type TEXT DEFAULT 'RCUR' CHECK (sequence_type IN ('FRST', 'RCUR', 'FNAL', 'OOFF')),
+    cancelled_at DATETIME,
+    cancellation_reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, mandate_reference)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_mandates_assoc ON sepa_mandates(association_id);
+CREATE INDEX IF NOT EXISTS idx_sepa_mandates_relation ON sepa_mandates(relation_id);
+
+-- SEPA Batches (incasso-batches)
+CREATE TABLE IF NOT EXISTS sepa_batches (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    bank_account_id TEXT NOT NULL,
+    batch_reference TEXT NOT NULL,
+    batch_type TEXT NOT NULL CHECK (batch_type IN ('DD', 'CT')),
+    collection_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'generated', 'submitted', 'processed', 'failed')),
+    total_amount REAL NOT NULL DEFAULT 0,
+    transaction_count INTEGER DEFAULT 0,
+    xml_file_path TEXT,
+    generated_at DATETIME,
+    submitted_at DATETIME,
+    processed_at DATETIME,
+    error_message TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    UNIQUE(association_id, batch_reference)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_batches_assoc ON sepa_batches(association_id);
+
+-- SEPA Batch Items
+CREATE TABLE IF NOT EXISTS sepa_batch_items (
+    id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL,
+    invoice_id TEXT,
+    mandate_id TEXT NOT NULL,
+    relation_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    reference TEXT,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'rejected', 'returned')),
+    rejection_reason TEXT,
+    return_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES sepa_batches(id) ON DELETE CASCADE,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (mandate_id) REFERENCES sepa_mandates(id) ON DELETE RESTRICT,
+    FOREIGN KEY (relation_id) REFERENCES accounting_relations(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_sepa_items_batch ON sepa_batch_items(batch_id);
+CREATE INDEX IF NOT EXISTS idx_sepa_items_invoice ON sepa_batch_items(invoice_id);
+
+-- Buma/Stemra rapportage
+CREATE TABLE IF NOT EXISTS music_performance_reports (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    concert_id TEXT NOT NULL,
+    report_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'accepted')),
+    total_works INTEGER DEFAULT 0,
+    total_duration_minutes INTEGER DEFAULT 0,
+    audience_count INTEGER,
+    venue_capacity INTEGER,
+    submitted_at DATETIME,
+    accepted_at DATETIME,
+    reference_number TEXT,
+    notes TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_perf_reports_assoc ON music_performance_reports(association_id);
+CREATE INDEX IF NOT EXISTS idx_perf_reports_concert ON music_performance_reports(concert_id);
+
+-- Buma/Stemra rapportage regels
+CREATE TABLE IF NOT EXISTS music_performance_report_lines (
+    id TEXT PRIMARY KEY,
+    report_id TEXT NOT NULL,
+    music_title_id TEXT,
+    title TEXT NOT NULL,
+    composer TEXT,
+    arranger TEXT,
+    publisher TEXT,
+    duration_minutes INTEGER,
+    is_original INTEGER DEFAULT 1,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (report_id) REFERENCES music_performance_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_perf_report_lines_report ON music_performance_report_lines(report_id);
+
+-- ===========================================
+-- PHASE D: OPERATIONS MODULES
+-- ===========================================
+
+-- ===========================================
+-- PROJECTS MODULE
+-- ===========================================
+
+-- Projects (group of rehearsals + concerts)
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'cancelled', 'archived')),
+    project_type TEXT DEFAULT 'concert' CHECK (project_type IN ('concert', 'competition', 'festival', 'tour', 'recording', 'other')),
+    orchestra_id TEXT,
+    budget REAL,
+    notes TEXT,
+    cover_image_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_assoc ON projects(association_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_dates ON projects(start_date, end_date);
+
+-- Project members (specific participants for a project)
+CREATE TABLE IF NOT EXISTS project_members (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    role TEXT DEFAULT 'participant' CHECK (role IN ('participant', 'leader', 'coordinator', 'soloist', 'substitute')),
+    status TEXT DEFAULT 'confirmed' CHECK (status IN ('invited', 'confirmed', 'declined', 'tentative')),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(project_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
+
+-- Link projects to concerts
+CREATE TABLE IF NOT EXISTS project_concerts (
+    project_id TEXT NOT NULL,
+    concert_id TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    PRIMARY KEY (project_id, concert_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
+);
+
+-- Link projects to rehearsals
+CREATE TABLE IF NOT EXISTS project_rehearsals (
+    project_id TEXT NOT NULL,
+    rehearsal_instance_id TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    PRIMARY KEY (project_id, rehearsal_instance_id),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (rehearsal_instance_id) REFERENCES rehearsal_instances(id) ON DELETE CASCADE
+);
+
+-- Project setlist (music pieces for the project)
+CREATE TABLE IF NOT EXISTS project_setlist (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    music_title_id TEXT,
+    custom_title TEXT,
+    sort_order INTEGER DEFAULT 0,
+    duration_minutes INTEGER,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_setlist_project ON project_setlist(project_id);
+
+-- ===========================================
+-- TOURS MODULE
+-- ===========================================
+
+-- Tours (multi-day concert trips)
+CREATE TABLE IF NOT EXISTS tours (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    project_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    destination TEXT,
+    country TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'confirmed', 'active', 'completed', 'cancelled')),
+    budget REAL,
+    cost_per_person REAL,
+    max_participants INTEGER,
+    registration_deadline DATE,
+    notes TEXT,
+    cover_image_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_tours_assoc ON tours(association_id);
+CREATE INDEX IF NOT EXISTS idx_tours_dates ON tours(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_tours_status ON tours(status);
+
+-- Tour participants
+CREATE TABLE IF NOT EXISTS tour_participants (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    status TEXT DEFAULT 'registered' CHECK (status IN ('invited', 'registered', 'confirmed', 'declined', 'cancelled', 'waitlist')),
+    registration_date DATETIME,
+    room_preference TEXT,
+    dietary_requirements TEXT,
+    emergency_contact TEXT,
+    emergency_phone TEXT,
+    paid_amount REAL DEFAULT 0,
+    payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'partial', 'paid', 'refunded')),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(tour_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_participants_tour ON tour_participants(tour_id);
+CREATE INDEX IF NOT EXISTS idx_tour_participants_user ON tour_participants(user_id);
+
+-- Tour days/schedule
+CREATE TABLE IF NOT EXISTS tour_days (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    day_date DATE NOT NULL,
+    day_number INTEGER NOT NULL,
+    title TEXT,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE,
+    UNIQUE(tour_id, day_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_days_tour ON tour_days(tour_id);
+
+-- Tour activities (events within a tour day)
+CREATE TABLE IF NOT EXISTS tour_activities (
+    id TEXT PRIMARY KEY,
+    tour_day_id TEXT NOT NULL,
+    activity_type TEXT NOT NULL CHECK (activity_type IN ('travel', 'rehearsal', 'concert', 'meal', 'accommodation', 'sightseeing', 'free_time', 'meeting', 'other')),
+    title TEXT NOT NULL,
+    description TEXT,
+    location TEXT,
+    address TEXT,
+    start_time TIME,
+    end_time TIME,
+    is_mandatory BOOLEAN DEFAULT 1,
+    cost REAL,
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_day_id) REFERENCES tour_days(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_activities_day ON tour_activities(tour_day_id);
+
+-- Tour accommodations
+CREATE TABLE IF NOT EXISTS tour_accommodations (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    address TEXT,
+    city TEXT,
+    country TEXT,
+    phone TEXT,
+    email TEXT,
+    website TEXT,
+    check_in_date DATE,
+    check_out_date DATE,
+    room_count INTEGER,
+    cost_per_night REAL,
+    total_cost REAL,
+    confirmation_number TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_accommodations_tour ON tour_accommodations(tour_id);
+
+-- Tour room assignments
+CREATE TABLE IF NOT EXISTS tour_room_assignments (
+    id TEXT PRIMARY KEY,
+    accommodation_id TEXT NOT NULL,
+    room_number TEXT,
+    room_type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (accommodation_id) REFERENCES tour_accommodations(id) ON DELETE CASCADE
+);
+
+-- Tour room occupants
+CREATE TABLE IF NOT EXISTS tour_room_occupants (
+    room_assignment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    PRIMARY KEY (room_assignment_id, user_id),
+    FOREIGN KEY (room_assignment_id) REFERENCES tour_room_assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Tour transport
+CREATE TABLE IF NOT EXISTS tour_transport (
+    id TEXT PRIMARY KEY,
+    tour_id TEXT NOT NULL,
+    transport_type TEXT NOT NULL CHECK (transport_type IN ('bus', 'train', 'plane', 'ferry', 'car', 'other')),
+    provider TEXT,
+    departure_location TEXT,
+    departure_time DATETIME,
+    arrival_location TEXT,
+    arrival_time DATETIME,
+    vehicle_info TEXT,
+    booking_reference TEXT,
+    cost REAL,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_transport_tour ON tour_transport(tour_id);
+
+-- ===========================================
+-- RESOURCES/BOOKING MODULE
+-- ===========================================
+
+-- Resource categories
+CREATE TABLE IF NOT EXISTS resource_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, name)
+);
+
+-- Resources (bookable items: rooms, equipment, vehicles)
+CREATE TABLE IF NOT EXISTS resources (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    resource_type TEXT NOT NULL CHECK (resource_type IN ('room', 'vehicle', 'equipment', 'instrument', 'service', 'other')),
+    location TEXT,
+    capacity INTEGER,
+    is_active BOOLEAN DEFAULT 1,
+    requires_approval BOOLEAN DEFAULT 0,
+    approved_by_roles TEXT,
+    min_booking_hours REAL,
+    max_booking_hours REAL,
+    advance_booking_days INTEGER,
+    cost_per_hour REAL,
+    cost_per_day REAL,
+    deposit_amount REAL,
+    image_path TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES resource_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_resources_assoc ON resources(association_id);
+CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category_id);
+CREATE INDEX IF NOT EXISTS idx_resources_type ON resources(resource_type);
+
+-- Resource availability (blocked times, regular availability)
+CREATE TABLE IF NOT EXISTS resource_availability (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    availability_type TEXT NOT NULL CHECK (availability_type IN ('available', 'blocked', 'maintenance')),
+    day_of_week INTEGER,
+    start_time TIME,
+    end_time TIME,
+    start_date DATE,
+    end_date DATE,
+    reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_resource_availability_resource ON resource_availability(resource_id);
+
+-- Resource bookings
+CREATE TABLE IF NOT EXISTS resource_bookings (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_datetime DATETIME NOT NULL,
+    end_datetime DATETIME NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled', 'completed')),
+    related_rehearsal_id TEXT,
+    related_concert_id TEXT,
+    related_project_id TEXT,
+    approved_by TEXT,
+    approved_at DATETIME,
+    rejection_reason TEXT,
+    actual_start DATETIME,
+    actual_end DATETIME,
+    notes TEXT,
+    internal_notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_rehearsal_id) REFERENCES rehearsal_instances(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_resource ON resource_bookings(resource_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user ON resource_bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_dates ON resource_bookings(start_datetime, end_datetime);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON resource_bookings(status);
+
+-- Recurring booking patterns
+CREATE TABLE IF NOT EXISTS booking_recurrence (
+    id TEXT PRIMARY KEY,
+    resource_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    recurrence_type TEXT NOT NULL CHECK (recurrence_type IN ('daily', 'weekly', 'biweekly', 'monthly')),
+    day_of_week INTEGER,
+    day_of_month INTEGER,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ===========================================
+-- EQUIPMENT INVENTORY MODULE
+-- ===========================================
+
+-- Equipment categories
+CREATE TABLE IF NOT EXISTS equipment_categories (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    parent_id TEXT,
+    color TEXT,
+    icon TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES equipment_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_categories_assoc ON equipment_categories(association_id);
+
+-- Equipment items
+CREATE TABLE IF NOT EXISTS equipment_items (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    inventory_number TEXT,
+    serial_number TEXT,
+    brand TEXT,
+    model TEXT,
+    equipment_type TEXT NOT NULL CHECK (equipment_type IN ('instrument', 'accessory', 'audio', 'lighting', 'furniture', 'transport', 'misc')),
+    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'in_use', 'maintenance', 'repair', 'retired', 'lost', 'sold')),
+    condition TEXT DEFAULT 'good' CHECK (condition IN ('new', 'excellent', 'good', 'fair', 'poor', 'broken')),
+    location TEXT,
+    storage_location TEXT,
+    purchase_date DATE,
+    purchase_price REAL,
+    current_value REAL,
+    depreciation_years INTEGER,
+    warranty_expiry DATE,
+    last_maintenance DATE,
+    next_maintenance DATE,
+    maintenance_interval_months INTEGER,
+    insurance_value REAL,
+    insurance_policy TEXT,
+    is_loanable BOOLEAN DEFAULT 1,
+    requires_training BOOLEAN DEFAULT 0,
+    image_path TEXT,
+    manual_path TEXT,
+    notes TEXT,
+    qr_code TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES equipment_categories(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_assoc ON equipment_items(association_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment_items(category_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment_items(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_inventory ON equipment_items(inventory_number);
+
+-- Equipment loans/checkouts
+CREATE TABLE IF NOT EXISTS equipment_loans (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    checkout_date DATETIME NOT NULL,
+    expected_return_date DATETIME,
+    actual_return_date DATETIME,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'returned', 'overdue', 'lost')),
+    condition_at_checkout TEXT,
+    condition_at_return TEXT,
+    checkout_notes TEXT,
+    return_notes TEXT,
+    related_concert_id TEXT,
+    related_rehearsal_id TEXT,
+    related_project_id TEXT,
+    created_by TEXT NOT NULL,
+    returned_to TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_rehearsal_id) REFERENCES rehearsal_instances(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_equipment ON equipment_loans(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_user ON equipment_loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_status ON equipment_loans(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_loans_dates ON equipment_loans(checkout_date, expected_return_date);
+
+-- Equipment maintenance records
+CREATE TABLE IF NOT EXISTS equipment_maintenance (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    maintenance_type TEXT NOT NULL CHECK (maintenance_type IN ('inspection', 'cleaning', 'repair', 'service', 'calibration', 'replacement')),
+    description TEXT NOT NULL,
+    performed_date DATE NOT NULL,
+    performed_by TEXT,
+    external_provider TEXT,
+    cost REAL,
+    parts_replaced TEXT,
+    next_maintenance_date DATE,
+    notes TEXT,
+    receipt_path TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (performed_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_date ON equipment_maintenance(performed_date);
+
+-- Equipment reservations (for future use)
+CREATE TABLE IF NOT EXISTS equipment_reservations (
+    id TEXT PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    purpose TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled', 'completed')),
+    related_concert_id TEXT,
+    related_project_id TEXT,
+    approved_by TEXT,
+    approved_at DATETIME,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipment_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_concert_id) REFERENCES concerts(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_project_id) REFERENCES projects(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_equipment ON equipment_reservations(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_user ON equipment_reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_reservations_dates ON equipment_reservations(start_date, end_date);
+
+-- ===========================================
+-- PHASE E: OUTFITS MODULE
+-- ===========================================
+
+-- Outfit definitions (concert attire)
+CREATE TABLE IF NOT EXISTS outfits (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    color_code TEXT,
+    image_path TEXT,
+    items TEXT, -- JSON array of required items
+    is_default INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_outfits_association ON outfits(association_id);
+
+-- Link concerts to outfits
+CREATE TABLE IF NOT EXISTS concert_outfits (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    outfit_id TEXT NOT NULL,
+    notes TEXT,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (outfit_id) REFERENCES outfits(id) ON DELETE CASCADE,
+    UNIQUE(concert_id, outfit_id)
+);
+
+-- ===========================================
+-- PHASE E: PUBLIC CALENDAR EMBEDDING
+-- ===========================================
+
+-- Public calendar settings (for website embed)
+CREATE TABLE IF NOT EXISTS public_calendar_settings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL UNIQUE,
+    is_enabled INTEGER DEFAULT 0,
+    embed_token TEXT UNIQUE,
+    show_concert_details INTEGER DEFAULT 1,
+    show_rehearsals INTEGER DEFAULT 0,
+    show_locations INTEGER DEFAULT 1,
+    custom_css TEXT,
+    allowed_origins TEXT, -- JSON array of allowed embed origins
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
+);
+
+-- ===========================================
+-- PHASE E: WIKI MODULE
+-- ===========================================
+
+-- Wiki pages
+CREATE TABLE IF NOT EXISTS wiki_pages (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    content_format TEXT DEFAULT 'markdown' CHECK (content_format IN ('markdown', 'html')),
+    parent_id TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_published INTEGER DEFAULT 1,
+    visibility TEXT DEFAULT 'members' CHECK (visibility IN ('public', 'members', 'committee', 'admin')),
+    allow_comments INTEGER DEFAULT 0,
+    is_pinned INTEGER DEFAULT 0,
+    view_count INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    updated_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES wiki_pages(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(association_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_association ON wiki_pages(association_id);
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_slug ON wiki_pages(slug);
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_parent ON wiki_pages(parent_id);
+
+-- Wiki page versions (history)
+CREATE TABLE IF NOT EXISTS wiki_page_versions (
+    id TEXT PRIMARY KEY,
+    page_id TEXT NOT NULL,
+    version_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    change_summary TEXT,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(page_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiki_versions_page ON wiki_page_versions(page_id);
+
+-- Wiki attachments
+CREATE TABLE IF NOT EXISTS wiki_attachments (
+    id TEXT PRIMARY KEY,
+    page_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER,
+    mime_type TEXT,
+    uploaded_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- ===========================================
+-- PHASE E: WORKFLOW AUTOMATION
+-- ===========================================
+
+-- Workflow definitions
+CREATE TABLE IF NOT EXISTS workflows (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    run_once_per_entity INTEGER DEFAULT 0,
+    created_by TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflows_association ON workflows(association_id);
+CREATE INDEX IF NOT EXISTS idx_workflows_active ON workflows(is_active);
+
+-- Workflow triggers
+CREATE TABLE IF NOT EXISTS workflow_triggers (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    trigger_type TEXT NOT NULL CHECK (trigger_type IN (
+        'schedule', 'event', 'date_field', 'manual'
+    )),
+    event_name TEXT, -- e.g., 'user.created', 'concert.upcoming', 'rehearsal.reminder'
+    schedule_cron TEXT, -- For schedule triggers
+    date_field_entity TEXT, -- e.g., 'concert', 'rehearsal'
+    date_field_name TEXT, -- e.g., 'date', 'registration_deadline'
+    days_before INTEGER DEFAULT 0,
+    days_after INTEGER DEFAULT 0,
+    time_of_day TEXT, -- HH:MM format
+    conditions TEXT, -- JSON conditions
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_triggers_workflow ON workflow_triggers(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_triggers_type ON workflow_triggers(trigger_type);
+
+-- Workflow actions
+CREATE TABLE IF NOT EXISTS workflow_actions (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    action_type TEXT NOT NULL CHECK (action_type IN (
+        'send_email', 'send_notification', 'create_task', 'update_field',
+        'add_to_group', 'remove_from_group', 'webhook', 'delay'
+    )),
+    action_order INTEGER NOT NULL DEFAULT 0,
+    config TEXT NOT NULL, -- JSON configuration for the action
+    conditions TEXT, -- JSON conditions for this specific action
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_actions_workflow ON workflow_actions(workflow_id);
+
+-- Workflow execution log
+CREATE TABLE IF NOT EXISTS workflow_executions (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    trigger_id TEXT,
+    triggered_by TEXT, -- 'system', 'manual', 'schedule'
+    triggered_by_user_id TEXT,
+    entity_type TEXT, -- e.g., 'user', 'concert', 'rehearsal'
+    entity_id TEXT,
+    status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    started_at DATETIME,
+    completed_at DATETIME,
+    error_message TEXT,
+    execution_log TEXT, -- JSON log of actions executed
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+    FOREIGN KEY (trigger_id) REFERENCES workflow_triggers(id) ON DELETE SET NULL,
+    FOREIGN KEY (triggered_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_workflow ON workflow_executions(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_status ON workflow_executions(status);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_entity ON workflow_executions(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_executions_date ON workflow_executions(created_at);
+
+-- Workflow entity tracking (to prevent duplicate runs)
+CREATE TABLE IF NOT EXISTS workflow_entity_runs (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    trigger_id TEXT NOT NULL,
+    last_run_at DATETIME NOT NULL,
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+    FOREIGN KEY (trigger_id) REFERENCES workflow_triggers(id) ON DELETE CASCADE,
+    UNIQUE(workflow_id, entity_type, entity_id, trigger_id)
+);
 `;

@@ -12,6 +12,12 @@ import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
+const sanitizeForLog = (value: unknown): string =>
+    String(value ?? '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+        .trim();
+
 const router = Router();
 
 interface User {
@@ -553,7 +559,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
     if (!user) {
         // Don't reveal that email doesn't exist
-        logger.info(`Password reset requested for unknown email: ${email}`);
+        logger.info(`Password reset requested for unknown email: ${sanitizeForLog(email)}`);
         return res.json({ message: successMessage });
     }
 
@@ -579,7 +585,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     const emailSent = await sendPasswordResetEmail(email, token, userName, user.association_id);
 
     if (!emailSent) {
-        logger.error(`Failed to send password reset email to ${email}`);
+        logger.error(`Failed to send password reset email to ${sanitizeForLog(email)}`);
     }
 
     logger.info(`Password reset token generated for user ${user.id}`);

@@ -8,6 +8,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { GdprExport } from '../components/GdprExport';
 import NotificationPreferences from '../components/NotificationPreferences';
 import { CalendarSync } from '../components/CalendarSync';
+import { CustomFieldsSection } from '../components/CustomFields';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -191,6 +192,16 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Custom Fields */}
+      {user?.id && (
+        <CustomFieldsSection
+          entityType="user"
+          entityId={user.id}
+          editable={true}
+          className="mt-3"
+        />
+      )}
 
       {/* MFA Section */}
       <div className="card mt-2">

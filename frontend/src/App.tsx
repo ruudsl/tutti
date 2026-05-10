@@ -12,6 +12,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { AriaLiveProvider } from './components/AriaLiveRegion';
+import { PrivacyConsentGate } from './components/PrivacyConsentGate';
 import { ROLES } from './utils/constants';
 
 // All pages - loaded immediately to avoid lazy loading issues
@@ -31,6 +32,26 @@ import DataExport from './pages/DataExport';
 import MyMusic from './pages/MyMusic';
 import Tools from './pages/Tools';
 import Issues from './pages/Issues';
+import Contacts from './pages/Contacts';
+import CustomFieldsAdmin from './pages/CustomFieldsAdmin';
+import PrivacySettings from './pages/PrivacySettings';
+import Polls from './pages/Polls';
+import Tasks from './pages/Tasks';
+import Posts from './pages/Posts';
+import EmailCampaigns from './pages/EmailCampaigns';
+import Accounting from './pages/Accounting';
+
+// Phase D: Operations
+import Projects from './pages/Projects';
+import Tours from './pages/Tours';
+import Resources from './pages/Resources';
+import Equipment from './pages/Equipment';
+
+// Phase E: Automation + Content
+import Outfits from './pages/Outfits';
+import Wiki from './pages/Wiki';
+import Workflows from './pages/Workflows';
+import Performances from './pages/Performances';
 
 // Music management
 import MusicPieces from './pages/MusicPieces';
@@ -91,6 +112,8 @@ import TicketSales from './pages/TicketSales';
 import GuestList from './pages/GuestList';
 import PaymentSettings from './pages/PaymentSettings';
 import PublicTicketSale from './pages/PublicTicketSale';
+import PublicCalendar from './pages/PublicCalendar';
+import InfoScreen from './pages/InfoScreen';
 import MockPayment from './pages/MockPayment';
 import TicketTransfer from './pages/TicketTransfer';
 import AcceptTransfer from './pages/AcceptTransfer';
@@ -162,11 +185,17 @@ function AppRoutes() {
       <Route path="/tickets/orders/:orderId/mock-payment" element={<MockPayment />} />
       {/* Accept ticket transfer - accessible without login (handles redirect) */}
       <Route path="/tickets/transfer/accept/:code" element={<AcceptTransfer />} />
+      {/* Public calendar embed and info screen */}
+      <Route path="/calendar/:slug" element={<PublicCalendar />} />
+      {/* Dedicated info screen for lobby displays */}
+      <Route path="/info-screen/:slug" element={<InfoScreen />} />
       <Route
         path="/"
         element={
           <PrivateRoute>
-            <Layout />
+            <PrivacyConsentGate>
+              <Layout />
+            </PrivacyConsentGate>
           </PrivateRoute>
         }
       >
@@ -177,6 +206,79 @@ function AppRoutes() {
         <Route path="my-music" element={<MyMusic />} />
         <Route path="tools" element={<Tools />} />
         <Route path="issues" element={<Issues />} />
+        <Route path="contacts" element={<Contacts />} />
+        <Route
+          path="custom-fields"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <CustomFieldsAdmin />
+            </PrivateRoute>
+          }
+        />
+        <Route path="privacy-settings" element={<PrivacySettings />} />
+        <Route path="polls" element={<Polls />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="posts" element={<Posts />} />
+        <Route
+          path="email-campaigns"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <EmailCampaigns />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="accounting"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Accounting />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="projects"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <Projects />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="tours"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
+              <Tours />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="resources"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
+              <Resources />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="equipment"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.EQUIPMENT_COMMITTEE]}>
+              <Equipment />
+            </PrivateRoute>
+          }
+        />
+        {/* Phase E: Automation + Content */}
+        <Route path="outfits" element={<Outfits />} />
+        <Route path="wiki" element={<Wiki />} />
+        <Route
+          path="workflows"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <Workflows />
+            </PrivateRoute>
+          }
+        />
+        <Route path="performances" element={<Performances />} />
         <Route
           path="music-pieces"
           element={

@@ -93,6 +93,23 @@ import instrumentAssetsRoutes from './routes/instrument-assets';
 import instrumentInsuranceRoutes from './routes/instrument-insurance';
 import eventsRoutes from './routes/events';
 import multiAssociationRoutes from './routes/multi-association';
+import contactsRoutes from './routes/contacts';
+import customFieldsRoutes from './routes/custom-fields';
+import privacySettingsRoutes from './routes/privacy-settings';
+import pollsRoutes from './routes/polls';
+import tasksRoutes from './routes/tasks';
+import postsRoutes from './routes/posts';
+import emailCampaignsRoutes from './routes/email-campaigns';
+import accountingRoutes from './routes/accounting';
+import projectsRoutes from './routes/projects';
+import toursRoutes from './routes/tours';
+import resourcesRoutes from './routes/resources';
+
+// Phase E routes
+import outfitsRoutes from './routes/outfits';
+import wikiRoutes from './routes/wiki';
+import workflowsRoutes from './routes/workflows';
+import performancesRoutes from './routes/performances';
 
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
@@ -266,6 +283,23 @@ app.use('/api/instrument-assets', instrumentAssetsRoutes);
 app.use('/api/instrument-insurance', instrumentInsuranceRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/multi-association', multiAssociationRoutes);
+app.use('/api/contacts', contactsRoutes);
+app.use('/api/custom-fields', customFieldsRoutes);
+app.use('/api/privacy-settings', privacySettingsRoutes);
+app.use('/api/polls', pollsRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/posts', postsRoutes);
+app.use('/api/email-campaigns', emailCampaignsRoutes);
+app.use('/api/accounting', accountingRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/tours', toursRoutes);
+app.use('/api/resources', resourcesRoutes);
+
+// Phase E routes
+app.use('/api/outfits', outfitsRoutes);
+app.use('/api/wiki', wikiRoutes);
+app.use('/api/workflows', workflowsRoutes);
+app.use('/api/performances', performancesRoutes);
 app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
@@ -365,6 +399,22 @@ if (config.isProduction) {
         logger.info('Frontend not bundled - running as API-only backend');
     }
 }
+
+// Debug route for unexpected POST to root (tracking browser privacy tool interference)
+app.post('/', (req, res) => {
+    logger.warn('Unexpected POST to root path', {
+        headers: {
+            'user-agent': req.headers['user-agent'],
+            'referer': req.headers['referer'],
+            'origin': req.headers['origin'],
+            'content-type': req.headers['content-type'],
+        },
+        body: req.body,
+        query: req.query,
+        ip: req.ip,
+    });
+    res.status(404).json({ error: 'Not found', message: 'POST to root is not a valid endpoint' });
+});
 
 // 404 handler for unknown API routes
 app.use('/api/*', notFoundHandler);

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardWidget, WidgetType } from '../hooks/useDashboardWidgets';
 import { getUpcomingRehearsals } from '../api';
+import { getTaskSummary, type TaskPriority } from '../api/tasks';
 import { Icon, type IconName } from './Icon';
 import type { Rehearsal } from '../types';
 
@@ -98,6 +99,8 @@ function WidgetRenderer({ type }: { type: WidgetType; config?: Record<string, un
   switch (type) {
     case 'stats':
       return <StatsWidget />;
+    case 'tasks':
+      return <TasksWidget />;
     case 'music-lists':
       return <MusicListsWidget />;
     case 'upcoming-rehearsals':
@@ -176,6 +179,86 @@ function StatsWidget() {
           <div className="stat-value">{stats?.downloadsThisMonth || 0}</div>
           <div className="stat-label">{t('dashboard.downloadsThisMonth')}</div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Tasks Widget
+function TasksWidget() {
+  const { t } = useTranslation();
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ['task-summary'],
+    queryFn: getTaskSummary,
+  });
+
+  const priorityColors: Record<TaskPriority, string> = {
+    low: 'text-gray-500',
+    medium: 'text-blue-500',
+    high: 'text-orange-500',
+    urgent: 'text-red-500',
+  };
+
+  const priorityIcons: Record<TaskPriority, string> = {
+    low: '○',
+    medium: '●',
+    high: '▲',
+    urgent: '⚠',
+  };
+
+  return (
+    <div className="widget">
+      <div className="widget-header">
+        <h3 className="widget-title">{t('widgets.myTasks')}</h3>
+        <Link to="/tasks" className="widget-link">
+          {t('widgets.viewAll')}
+        </Link>
+      </div>
+      <div className="widget-body">
+        {isLoading ? (
+          <p className="text-light text-sm">{t('common.loading')}</p>
+        ) : summary?.myTasks && summary.myTasks.length > 0 ? (
+          <>
+            <div className="flex gap-2 mb-3 text-sm">
+              <span className="badge badge-primary badge-sm">
+                {summary.totalOpen} {t('widgets.openTasks')}
+              </span>
+              {summary.overdueTasks.length > 0 && (
+                <span className="badge badge-error badge-sm">
+                  {summary.overdueTasks.length} {t('widgets.overdue')}
+                </span>
+              )}
+            </div>
+            <ul className="widget-list">
+              {summary.myTasks.map((task) => (
+                <li key={task.id} className="flex items-center gap-2">
+                  <span className={priorityColors[task.priority]} title={task.priority}>
+                    {priorityIcons[task.priority]}
+                  </span>
+                  <Link to={`/tasks?id=${task.id}`} className="flex-1 truncate">
+                    {task.title}
+                  </Link>
+                  {task.dueDate && (
+                    <span className={`text-xs ${new Date(task.dueDate) < new Date() ? 'text-red-500' : 'text-base-content/50'}`}>
+                      {new Date(task.dueDate).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <div className="widget-empty-state">
+            <span className="widget-empty-icon" aria-hidden="true">
+              <Icon name="checkCircle" size={32} />
+            </span>
+            <p className="text-light text-sm">{t('widgets.noTasks')}</p>
+            <Link to="/tasks" className="btn btn-outline btn-sm mt-1">{t('nav.tasks')}</Link>
+          </div>
+        )}
       </div>
     </div>
   );
