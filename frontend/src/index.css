@@ -4286,14 +4286,15 @@ select:focus-visible,
 /* Mobile responsive FAB */
 @media (max-width: 640px) {
   .quick-actions-fab {
-    bottom: 1rem;
+    /* Position above mobile bottom tabs (60px + safe area) */
+    bottom: calc(60px + env(safe-area-inset-bottom, 0) + 1rem);
     right: 1rem;
     width: 52px;
     height: 52px;
   }
 
   .quick-actions-menu {
-    bottom: 4.5rem;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0) + 4.5rem);
     right: 1rem;
     left: 1rem;
     max-width: none;
