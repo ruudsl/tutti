@@ -2077,6 +2077,19 @@ select:focus-visible,
   outline-offset: -2px;
 }
 
+/* Fix DaisyUI dropdown menu list styling */
+.dropdown-content.menu,
+.dropdown-content.menu ul,
+.dropdown-content.menu li {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.dropdown-content.menu li::marker {
+  content: none;
+}
+
 .pagination-btn:focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
