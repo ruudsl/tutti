@@ -759,7 +759,11 @@ async function sendCampaign(campaignId: string, associationId: string): Promise<
 
         try {
             const html = personalizeEmail(campaign.body_html, recipient);
-            const text = personalizeEmail(campaign.body_text || campaign.body_html.replace(/<[^>]*>/g, ''), recipient);
+            const text = personalizeEmail(
+                campaign.body_text ||
+                    sanitizeHtml(campaign.body_html, { allowedTags: [], allowedAttributes: {} }),
+                recipient
+            );
 
             const success = await sendEmail({
                 to: recipient.email,
