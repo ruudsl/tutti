@@ -130,12 +130,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   const transporter = getSmtpTransporter(associationId);
 
   if (!transporter) {
-    // Log the email content when no SMTP is configured
+    // Log metadata only when no SMTP is configured (avoid logging user-controlled body content)
     logger.warn('No SMTP configuration found. Emails will be logged to console only.');
     logger.info('Email content (no SMTP configured):');
     logger.info(`To: ${safeTo}`);
     logger.info(`Subject: ${safeSubject}`);
-    logger.info(`Body: ${safeText}`);
+    logger.info(`Body length: ${safeText.length} characters`);
     if (attachments?.length) {
       logger.info(`Attachments: ${safeAttachmentNames}`);
     }
