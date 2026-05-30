@@ -417,8 +417,16 @@ router.post('/rotate', authenticateToken, requireRole('music_committee', 'admin'
   }
 
   const pdfBytes = await pdfDoc.save();
-  const filename = `rotated_${req.file.originalname}`;
-  const filepath = path.join(TEMP_DIR, `${uuidv4()}_${filename}`);
+  const safeOriginalName = path
+    .basename(req.file.originalname)
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filename = `rotated_${safeOriginalName || 'document.pdf'}`;
+  const tempRoot = path.resolve(TEMP_DIR);
+  const filepath = path.resolve(tempRoot, `${uuidv4()}_${filename}`);
+
+  if (!filepath.startsWith(tempRoot + path.sep)) {
+    return res.status(400).json({ error: 'Ongeldige bestandsnaam' });
+  }
 
   fs.writeFileSync(filepath, pdfBytes);
 
