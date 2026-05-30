@@ -230,6 +230,14 @@ export function computeFieldChanges(
 }
 
 /**
+ * Sanitize values for safe inclusion in plain-text log messages.
+ * Removes CR/LF to prevent log injection/forgery.
+ */
+function sanitizeForLog(value: unknown): string {
+  return String(value ?? '').replace(/[\r\n]/g, '');
+}
+
+/**
  * Log audit event with field-level change tracking
  * @param userId The user performing the action
  * @param action The action type (create, update, delete, etc.)
@@ -259,7 +267,12 @@ export function logAuditEvent(
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `).run(id, userId, action, entityType, entityId, entityName, changesJson, ipAddress, userAgent);
 
-    logger.info(`Audit: ${action} ${entityType} ${entityId} by user ${userId}`, {
+    const safeAction = sanitizeForLog(action);
+    const safeEntityType = sanitizeForLog(entityType);
+    const safeEntityId = sanitizeForLog(entityId);
+    const safeUserId = sanitizeForLog(userId);
+
+    logger.info(`Audit: ${safeAction} ${safeEntityType} ${safeEntityId} by user ${safeUserId}`, {
       hasFieldChanges: !!(changes as AuditChanges)?.fields?.length,
       changeCount: (changes as AuditChanges)?.fields?.length ?? 0,
     });
