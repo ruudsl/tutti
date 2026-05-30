@@ -364,10 +364,11 @@ router.post('/download-zip', authenticateToken, requireRole('music_committee', '
 
 // Merge multiple PDFs into one
 router.post('/merge', authenticateToken, requireRole('music_committee', 'admin'), upload.array('pdfs', 50), asyncHandler(async (req: Request, res: Response) => {
-  const files = req.files as Express.Multer.File[];
-  if (!files || files.length < 2) {
+  const uploadedFiles = req.files;
+  if (!Array.isArray(uploadedFiles) || uploadedFiles.length < 2) {
     return res.status(400).json({ error: 'Minimaal 2 PDF bestanden vereist' });
   }
+  const files = uploadedFiles as Express.Multer.File[];
 
   const mergedPdf = await PDFDocument.create();
 
