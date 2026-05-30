@@ -2077,6 +2077,61 @@ select:focus-visible,
   outline-offset: -2px;
 }
 
+/* Enhanced focus styles for form controls */
+.form-control:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* Focus styles for checkbox and radio inputs */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Focus styles for toggle switches */
+.toggle:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Sidebar navigation focus styles */
+.sidebar-direct-link:focus-visible,
+.sidebar-sub-link:focus-visible,
+.sidebar-group-header:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-light);
+}
+
+/* Mobile navigation focus styles */
+.bottom-tab:focus-visible,
+.mobile-menu-link:focus-visible,
+.mobile-menu-sublink:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Card and list item focus styles */
+.notification-item:focus-visible,
+.global-search-result:focus-visible,
+.quick-action-btn:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Focus styles for table rows */
+tr[tabindex]:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-light) !important;
+}
+
 /* Fix DaisyUI dropdown menu list styling */
 .dropdown-content.menu,
 .dropdown-content.menu ul,

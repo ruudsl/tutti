@@ -83,12 +83,48 @@ export const getMfaStatus = async (): Promise<{ mfaEnabled: boolean }> => {
   return data;
 };
 
-// Users
-export const getUsers = async (): Promise<User[]> => {
-  // Request all users by setting a high limit (max 1000 users should be enough for most associations)
-  const { data } = await api.get('/users?limit=1000');
+// Pagination configuration
+export const DEFAULT_PAGE_SIZE = 50;
+export const MAX_PAGE_SIZE = 100;
+
+// Users with pagination support
+export interface UsersFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: string;
+  orchestraId?: string;
+}
+
+// Users - backwards compatible version that fetches all
+export const getUsers = async (filters?: UsersFilters): Promise<User[]> => {
+  // For backwards compatibility, fetch all users when no filters provided
+  // Use a high limit for existing components that expect all users
+  const params = filters ? { ...filters } : { limit: 1000 };
+  const { data } = await api.get('/users', { params });
   // Backend returns paginated data, extract the data array
   return Array.isArray(data) ? data : data.data || [];
+};
+
+// Users - paginated version for new components
+export const getUsersPaginated = async (filters?: UsersFilters): Promise<PaginatedResponse<User>> => {
+  const params = {
+    page: filters?.page || 1,
+    pageSize: Math.min(filters?.pageSize || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+    ...filters,
+  };
+  const { data } = await api.get('/users', { params });
+  // Ensure we return proper paginated structure
+  if (Array.isArray(data)) {
+    return {
+      data,
+      total: data.length,
+      page: 1,
+      pageSize: data.length,
+      totalPages: 1,
+    };
+  }
+  return data;
 };
 
 export const getUser = async (id: string): Promise<User> => {
@@ -424,10 +460,25 @@ export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
   await api.delete(`/music-pieces/title-mp3/${titleId}`);
 };
 
-export const getMp3Url = (filename: string): string => {
-  const baseUrl = api.defaults.baseURL || '';
-  const token = localStorage.getItem('token');
-  return `${baseUrl}/music-pieces/mp3/${filename}?token=${token}`;
+// Fetch MP3 as a blob with proper Authorization header (avoids token in URL)
+export const getMp3Blob = async (filename: string): Promise<Blob> => {
+  const response = await api.get(`/music-pieces/mp3/${filename}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+// Create a blob URL for audio playback - use this instead of direct URL with token
+export const createMp3BlobUrl = async (filename: string): Promise<string> => {
+  const blob = await getMp3Blob(filename);
+  return URL.createObjectURL(blob);
+};
+
+// Revoke a blob URL when no longer needed to free memory
+export const revokeBlobUrl = (url: string): void => {
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
 };
 
 // Associations
