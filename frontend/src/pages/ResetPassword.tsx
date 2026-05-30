@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { validateResetToken, resetPassword } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { resetPasswordSchema, type ResetPasswordFormData } from '../lib/validation/schemas';
-import { createI18nErrorMap } from '../lib/validation/utils';
+
+interface ResetPasswordFormData {
+  password: string;
+  confirmPassword: string;
+}
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -22,18 +24,16 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Create error map with i18n support
-  const errorMap = createI18nErrorMap(t);
-
-  // Form with Zod validation
-  // For Zod v4, use 'error' option instead of 'errorMap'
-  const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema, { error: errorMap }),
+  // Form with validation rules
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<ResetPasswordFormData>({
     defaultValues: {
       password: '',
       confirmPassword: '',
     },
   });
+
+  // Watch password field for confirmation validation
+  const password = watch('password');
 
   useEffect(() => {
     const validate = async () => {
@@ -157,11 +157,14 @@ export default function ResetPassword() {
           )}
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group">
-              <label className="form-label">{t('resetPassword.newPassword')}</label>
+              <label className="form-label">{t('resetPassword.newPassword')} *</label>
               <input
                 type="password"
                 className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                {...register('password')}
+                {...register('password', {
+                  required: t('errors.required'),
+                  minLength: { value: 8, message: t('errors.passwordTooShort', { min: 8 }) },
+                })}
                 placeholder={t('resetPassword.minLength')}
                 autoFocus
               />
@@ -170,11 +173,14 @@ export default function ResetPassword() {
               )}
             </div>
             <div className="form-group">
-              <label className="form-label">{t('resetPassword.confirmPassword')}</label>
+              <label className="form-label">{t('resetPassword.confirmPassword')} *</label>
               <input
                 type="password"
                 className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                {...register('confirmPassword')}
+                {...register('confirmPassword', {
+                  required: t('errors.required'),
+                  validate: (value) => value === password || t('errors.passwordMismatch'),
+                })}
                 placeholder={t('resetPassword.repeatPassword')}
               />
               {errors.confirmPassword && (

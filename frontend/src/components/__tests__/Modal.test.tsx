@@ -213,13 +213,11 @@ describe('FormModal', () => {
   })
 
   it('prevents default form submission', async () => {
-    const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<FormModal {...defaultProps} onSubmit={onSubmit} />)
 
     const form = document.querySelector('form')
     const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
-    const preventDefault = vi.spyOn(submitEvent, 'preventDefault')
 
     form?.dispatchEvent(submitEvent)
 

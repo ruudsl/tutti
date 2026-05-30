@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
@@ -14,7 +12,6 @@ import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES, STORAGE_KEYS } from '../utils/constants';
-import { createI18nErrorMap } from '../lib/validation/utils';
 
 // Helper to get photo URL with auth token for img src
 const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
@@ -23,19 +20,15 @@ const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
   return token ? `${photoUrl}?token=${token}` : null;
 };
 
-// Unified user form schema that works for both create and edit
-// Password is required only for new users (handled by validation context)
-const userFormSchema = z.object({
-  email: z.string().min(1).email(),
-  password: z.string().optional().default(''),
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
-  role: z.enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor']).default('member'),
-  instrumentIds: z.array(z.string()).default([]),
-  orchestraIds: z.array(z.string()).default([]),
-});
-
-type UserFormData = z.infer<typeof userFormSchema>;
+interface UserFormData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  instrumentIds: string[];
+  orchestraIds: string[];
+}
 
 const defaultValues: UserFormData = {
   email: '',
@@ -60,15 +53,8 @@ export default function Users() {
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'sections'>('table');
 
-  // Create error map with i18n support
-  const errorMap = createI18nErrorMap(t);
-
-  // React Hook Form with Zod validation
-  // For Zod v4, use 'error' option instead of 'errorMap'
-  const form = useForm<UserFormData>({
-    defaultValues,
-    resolver: zodResolver(userFormSchema, { error: errorMap }),
-  });
+  // React Hook Form with validation rules
+  const form = useForm<UserFormData>({ defaultValues });
 
   // TanStack Query hooks
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -82,12 +68,6 @@ export default function Users() {
   const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
   const handleCreate = (data: UserFormData) => {
-    // Validate password is required for new users
-    if (!data.password || data.password.length < 8) {
-      form.setError('password', { type: 'manual', message: t('errors.passwordTooShort', { min: 8 }) });
-      return;
-    }
-
     createMutation.mutate({
       email: data.email,
       password: data.password,
@@ -577,7 +557,7 @@ export default function Users() {
   );
 }
 
-// Extracted form component using react-hook-form with Zod validation
+// Extracted form component using react-hook-form with validation
 interface UserFormProps {
   form: UseFormReturn<UserFormData>;
   instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
@@ -593,22 +573,30 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
     <>
       <div className="grid grid-2">
         <div className="form-group">
-          <label className="form-label">{t('users.firstName')}</label>
+          <label className="form-label">{t('users.firstName')} *</label>
           <input
             type="text"
             className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
-            {...register('firstName')}
+            {...register('firstName', {
+              required: t('errors.required'),
+              minLength: { value: 1, message: t('errors.required') },
+              maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
+            })}
           />
           {errors.firstName && (
             <span className="form-error">{errors.firstName.message}</span>
           )}
         </div>
         <div className="form-group">
-          <label className="form-label">{t('users.lastName')}</label>
+          <label className="form-label">{t('users.lastName')} *</label>
           <input
             type="text"
             className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
-            {...register('lastName')}
+            {...register('lastName', {
+              required: t('errors.required'),
+              minLength: { value: 1, message: t('errors.required') },
+              maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
+            })}
           />
           {errors.lastName && (
             <span className="form-error">{errors.lastName.message}</span>
@@ -617,11 +605,17 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">{t('users.email')}</label>
+        <label className="form-label">{t('users.email')} *</label>
         <input
           type="email"
           className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-          {...register('email')}
+          {...register('email', {
+            required: t('errors.required'),
+            pattern: {
+              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              message: t('errors.invalidEmail'),
+            },
+          })}
         />
         {errors.email && (
           <span className="form-error">{errors.email.message}</span>
@@ -630,17 +624,20 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
 
       <div className="form-group">
         <label className="form-label">
-          {isEditing ? t('users.passwordHint') : t('users.password')}
+          {isEditing ? t('users.passwordHint') : `${t('users.password')} *`}
         </label>
         <input
           type="password"
           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-          {...register('password')}
+          {...register('password', {
+            required: !isEditing ? t('errors.required') : false,
+            minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,
+          })}
         />
         {errors.password && (
           <span className="form-error">{errors.password.message}</span>
         )}
-        {!isEditing && (
+        {!isEditing && !errors.password && (
           <span className="form-hint">{t('errors.passwordTooShort', { min: 8 })}</span>
         )}
       </div>

@@ -60,8 +60,8 @@ describe('useFavorites', () => {
 
   it('should return favorites from API', async () => {
     const mockFavorites = [
-      { id: '1', title: 'Symphony No. 5' },
-      { id: '2', title: 'Concerto in D' },
+      { id: '1', title: 'Symphony No. 5', arranger: null, youtubeUrl: null, durationSeconds: 0, grade: null, pieceCount: 1, favoritedAt: '2024-01-01' },
+      { id: '2', title: 'Concerto in D', arranger: null, youtubeUrl: null, durationSeconds: 0, grade: null, pieceCount: 1, favoritedAt: '2024-01-01' },
     ]
     vi.mocked(getFavorites).mockResolvedValue(mockFavorites)
 
@@ -75,7 +75,7 @@ describe('useFavorites', () => {
   })
 
   it('should check if item is favorite', async () => {
-    const mockFavorites = [{ id: '1', title: 'Test' }]
+    const mockFavorites = [{ id: '1', title: 'Test', arranger: null, youtubeUrl: null, durationSeconds: 0, grade: null, pieceCount: 1, favoritedAt: '2024-01-01' }]
     vi.mocked(getFavorites).mockResolvedValue(mockFavorites)
 
     const { result } = renderHook(() => useFavorites(), { wrapper })
@@ -90,7 +90,7 @@ describe('useFavorites', () => {
 
   it('should add favorite and show success message', async () => {
     vi.mocked(getFavorites).mockResolvedValue([])
-    vi.mocked(addFavorite).mockResolvedValue({ success: true })
+    vi.mocked(addFavorite).mockResolvedValue({ message: 'Added to favorites' })
 
     const { result } = renderHook(() => useFavorites(), { wrapper })
 
@@ -131,9 +131,9 @@ describe('useFavorites', () => {
   })
 
   it('should remove favorite and show success message', async () => {
-    const mockFavorites = [{ id: '1', title: 'Test' }]
+    const mockFavorites = [{ id: '1', title: 'Test', arranger: null, youtubeUrl: null, durationSeconds: 0, grade: null, pieceCount: 1, favoritedAt: '2024-01-01' }]
     vi.mocked(getFavorites).mockResolvedValue(mockFavorites)
-    vi.mocked(removeFavorite).mockResolvedValue({ success: true })
+    vi.mocked(removeFavorite).mockResolvedValue({ message: 'Removed from favorites' })
 
     const { result } = renderHook(() => useFavorites(), { wrapper })
 
@@ -151,10 +151,10 @@ describe('useFavorites', () => {
   })
 
   it('should toggle favorite correctly', async () => {
-    const mockFavorites = [{ id: '1', title: 'Test' }]
+    const mockFavorites = [{ id: '1', title: 'Test', arranger: null, youtubeUrl: null, durationSeconds: 0, grade: null, pieceCount: 1, favoritedAt: '2024-01-01' }]
     vi.mocked(getFavorites).mockResolvedValue(mockFavorites)
-    vi.mocked(removeFavorite).mockResolvedValue({ success: true })
-    vi.mocked(addFavorite).mockResolvedValue({ success: true })
+    vi.mocked(removeFavorite).mockResolvedValue({ message: 'Removed from favorites' })
+    vi.mocked(addFavorite).mockResolvedValue({ message: 'Added to favorites' })
 
     const { result } = renderHook(() => useFavorites(), { wrapper })
 
@@ -185,7 +185,7 @@ describe('useFavorites', () => {
     vi.mocked(addFavorite).mockImplementation(
       () =>
         new Promise((resolve) => {
-          resolveAdd = () => resolve({ success: true })
+          resolveAdd = () => resolve({ message: 'Added to favorites' })
         })
     )
 

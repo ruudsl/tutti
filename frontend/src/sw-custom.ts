@@ -64,7 +64,7 @@ registerRoute(
     plugins: [
       new BackgroundSyncPlugin('api-mutations-queue', {
         maxRetentionTime: 24 * 60, // 24 hours in minutes
-        onSync: async ({ queue }) => {
+        onSync: async ({ queue: _queue }) => {
           // Notify the app when sync happens
           const clients = await self.clients.matchAll({ type: 'window' });
           for (const client of clients) {
