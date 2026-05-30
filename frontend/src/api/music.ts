@@ -300,8 +300,38 @@ export const getPdfInfo = async (filename: string): Promise<{ filename: string; 
   return data;
 };
 
+/**
+ * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs.
+ * Tokens in URLs can be logged by servers, proxies, and browser history.
+ * This function is kept for backward compatibility with existing audio elements.
+ */
 export const getMp3Url = (filename: string): string => {
   const baseUrl = api.defaults.baseURL || '';
   const token = localStorage.getItem('token');
   return `${baseUrl}/music-pieces/mp3/${filename}?token=${token}`;
+};
+
+// Fetch MP3 as a blob with proper Authorization header (avoids token in URL)
+export const getMp3Blob = async (filename: string): Promise<Blob> => {
+  const response = await api.get(`/music-pieces/mp3/${filename}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+/**
+ * Create a blob URL for audio playback - RECOMMENDED over getMp3Url.
+ * This approach keeps the JWT token in the Authorization header instead of the URL.
+ * Remember to call revokeBlobUrl() when the audio element is unmounted to free memory.
+ */
+export const createMp3BlobUrl = async (filename: string): Promise<string> => {
+  const blob = await getMp3Blob(filename);
+  return URL.createObjectURL(blob);
+};
+
+// Revoke a blob URL when no longer needed to free memory
+export const revokeBlobUrl = (url: string): void => {
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
 };

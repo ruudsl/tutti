@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
@@ -12,6 +13,8 @@ import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES, STORAGE_KEYS } from '../utils/constants';
+import { createUserSchema, updateUserSchema, type CreateUserFormData, type UpdateUserFormData } from '../lib/validation/schemas';
+import { createI18nErrorMap } from '../lib/validation/utils';
 
 // Helper to get photo URL with auth token for img src
 const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
@@ -20,17 +23,10 @@ const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
   return token ? `${photoUrl}?token=${token}` : null;
 };
 
-interface UserFormData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  instrumentIds: string[];
-  orchestraIds: string[];
-}
+// Use the imported types from validation schemas
+type UserFormData = CreateUserFormData | UpdateUserFormData;
 
-const defaultValues: UserFormData = {
+const defaultValues: CreateUserFormData = {
   email: '',
   password: '',
   firstName: '',
@@ -53,8 +49,23 @@ export default function Users() {
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'sections'>('table');
 
-  // React Hook Form
-  const form = useForm<UserFormData>({ defaultValues });
+  // Create error map with i18n support
+  const errorMap = createI18nErrorMap(t);
+
+  // React Hook Form with Zod validation
+  // For Zod v4, use 'error' option instead of 'errorMap'
+  const createForm = useForm<CreateUserFormData>({
+    defaultValues,
+    resolver: zodResolver(createUserSchema, { error: errorMap }),
+  });
+
+  const updateForm = useForm<UpdateUserFormData>({
+    defaultValues,
+    resolver: zodResolver(updateUserSchema, { error: errorMap }),
+  });
+
+  // Use the appropriate form based on context
+  const form = editingUser ? updateForm : createForm;
 
   // TanStack Query hooks
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -67,7 +78,7 @@ export default function Users() {
 
   const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
-  const handleCreate = (data: UserFormData) => {
+  const handleCreate = (data: CreateUserFormData) => {
     createMutation.mutate({
       email: data.email,
       password: data.password,
@@ -79,12 +90,12 @@ export default function Users() {
     }, {
       onSuccess: () => {
         setShowAddModal(false);
-        form.reset(defaultValues);
+        createForm.reset(defaultValues);
       },
     });
   };
 
-  const handleUpdate = (data: UserFormData) => {
+  const handleUpdate = (data: UpdateUserFormData) => {
     if (!editingUser) return;
 
     updateMutation.mutate({
@@ -101,7 +112,7 @@ export default function Users() {
     }, {
       onSuccess: () => {
         setEditingUser(null);
-        form.reset(defaultValues);
+        updateForm.reset(defaultValues);
       },
     });
   };
@@ -117,17 +128,17 @@ export default function Users() {
   };
 
   const openAddModal = () => {
-    form.reset(defaultValues);
+    createForm.reset(defaultValues);
     setShowAddModal(true);
   };
 
   const openEditModal = (user: User) => {
-    form.reset({
+    updateForm.reset({
       email: user.email,
       password: '',
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      role: user.role as UpdateUserFormData['role'],
       instrumentIds: user.instruments?.map((i) => i.id) || [],
       orchestraIds: user.orchestras?.map((o) => o.id) || [],
     });
@@ -498,15 +509,15 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setShowAddModal(false);
-            form.reset(defaultValues);
+            createForm.reset(defaultValues);
           }}
-          onSubmit={form.handleSubmit(handleCreate)}
+          onSubmit={createForm.handleSubmit(handleCreate)}
           title={t('users.newMember')}
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <UserForm
-            form={form}
+            form={createForm}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={false}
@@ -519,16 +530,16 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setEditingUser(null);
-            form.reset(defaultValues);
+            updateForm.reset(defaultValues);
           }}
-          onSubmit={form.handleSubmit(handleUpdate)}
+          onSubmit={updateForm.handleSubmit(handleUpdate)}
           title={t('users.edit')}
           submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
           size="large"
         >
           <UserForm
-            form={form}
+            form={updateForm}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={true}
@@ -557,9 +568,9 @@ export default function Users() {
   );
 }
 
-// Extracted form component using react-hook-form
+// Extracted form component using react-hook-form with Zod validation
 interface UserFormProps {
-  form: UseFormReturn<UserFormData>;
+  form: UseFormReturn<CreateUserFormData> | UseFormReturn<UpdateUserFormData>;
   instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
   orchestras: { id: string; name: string }[];
   isEditing: boolean;
@@ -577,16 +588,22 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           <input
             type="text"
             className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
-            {...register('firstName', { required: true })}
+            {...register('firstName')}
           />
+          {errors.firstName && (
+            <span className="form-error">{errors.firstName.message}</span>
+          )}
         </div>
         <div className="form-group">
           <label className="form-label">{t('users.lastName')}</label>
           <input
             type="text"
             className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
-            {...register('lastName', { required: true })}
+            {...register('lastName')}
           />
+          {errors.lastName && (
+            <span className="form-error">{errors.lastName.message}</span>
+          )}
         </div>
       </div>
 
@@ -595,8 +612,11 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
         <input
           type="email"
           className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-          {...register('email', { required: true })}
+          {...register('email')}
         />
+        {errors.email && (
+          <span className="form-error">{errors.email.message}</span>
+        )}
       </div>
 
       <div className="form-group">
@@ -606,11 +626,14 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
         <input
           type="password"
           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-          {...register('password', {
-            required: !isEditing,
-            minLength: isEditing ? undefined : 6,
-          })}
+          {...register('password')}
         />
+        {errors.password && (
+          <span className="form-error">{errors.password.message}</span>
+        )}
+        {!isEditing && (
+          <span className="form-hint">{t('errors.passwordTooShort', { min: 8 })}</span>
+        )}
       </div>
 
       <div className="form-group">

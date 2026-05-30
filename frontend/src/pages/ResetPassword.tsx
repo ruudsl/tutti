@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { validateResetToken, resetPassword } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { resetPasswordSchema, type ResetPasswordFormData } from '../lib/validation/schemas';
+import { createI18nErrorMap } from '../lib/validation/utils';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -12,13 +16,24 @@ export default function ResetPassword() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.resetPassword');
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isValidating, setIsValidating] = useState(true);
   const [isValid, setIsValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  // Create error map with i18n support
+  const errorMap = createI18nErrorMap(t);
+
+  // Form with Zod validation
+  // For Zod v4, use 'error' option instead of 'errorMap'
+  const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema, { error: errorMap }),
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   useEffect(() => {
     const validate = async () => {
@@ -40,24 +55,12 @@ export default function ResetPassword() {
     validate();
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: ResetPasswordFormData) => {
     setError('');
-
-    if (newPassword !== confirmPassword) {
-      setError(t('resetPassword.passwordMismatch'));
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError(t('resetPassword.passwordTooShort'));
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      await resetPassword(token!, newPassword);
+      await resetPassword(token!, data.password);
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.error || t('errors.generic'));
@@ -152,31 +155,31 @@ export default function ResetPassword() {
           {error && (
             <div className="alert alert-error mb-2">{error}</div>
           )}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group">
               <label className="form-label">{t('resetPassword.newPassword')}</label>
               <input
                 type="password"
-                className="form-control"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                {...register('password')}
                 placeholder={t('resetPassword.minLength')}
-                required
-                minLength={8}
                 autoFocus
               />
+              {errors.password && (
+                <span className="form-error">{errors.password.message}</span>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">{t('resetPassword.confirmPassword')}</label>
               <input
                 type="password"
-                className="form-control"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                {...register('confirmPassword')}
                 placeholder={t('resetPassword.repeatPassword')}
-                required
-                minLength={8}
               />
+              {errors.confirmPassword && (
+                <span className="form-error">{errors.confirmPassword.message}</span>
+              )}
             </div>
             <button
               type="submit"

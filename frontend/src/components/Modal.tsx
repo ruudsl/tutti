@@ -3,6 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { Icon } from './Icon';
 
+/**
+ * Get all focusable elements within a container
+ */
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const focusableSelectors = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(', ');
+
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelectors));
+}
+
 interface ModalProps {
   title: string;
   children: ReactNode;
@@ -81,10 +97,34 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
       modalRef.current?.focus();
     }
 
-    // Handle Escape key using ref to avoid re-running effect
+    // Handle keyboard events: Escape to close and Tab for focus trap
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onCloseRef.current();
+        return;
+      }
+
+      // Focus trap: cycle focus within modal
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = getFocusableElements(modalRef.current);
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          // Shift+Tab: if on first element, wrap to last
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Tab: if on last element, wrap to first
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
       }
     };
 

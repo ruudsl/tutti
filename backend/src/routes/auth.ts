@@ -572,7 +572,7 @@ router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthReques
  *                 message:
  *                   type: string
  */
-router.post('/forgot-password', asyncHandler(async (req, res) => {
+router.post('/forgot-password', passwordResetRateLimiter, asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     if (!email) {

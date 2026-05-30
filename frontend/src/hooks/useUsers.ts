@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '../lib/queryClient';
-import { getUsers, createUser, updateUser, deleteUser } from '../api';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { queryKeys, staleTimes, cacheTimes } from '../lib/queryClient';
+import { getUsers, getUsersPaginated, createUser, updateUser, deleteUser } from '../api';
+import type { UsersFilters } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
@@ -25,12 +26,43 @@ interface UpdateUserData {
 }
 
 /**
- * Hook to fetch all users
+ * Hook to fetch all users (backwards compatible)
  */
-export function useUsers() {
+export function useUsers(filters?: UsersFilters) {
   return useQuery({
-    queryKey: queryKeys.users,
-    queryFn: getUsers,
+    queryKey: [...queryKeys.users, filters],
+    queryFn: () => getUsers(filters),
+    staleTime: staleTimes.users,
+    gcTime: cacheTimes.users,
+  });
+}
+
+/**
+ * Hook to fetch users with pagination
+ */
+export function useUsersPaginated(filters?: UsersFilters) {
+  return useQuery({
+    queryKey: ['users', 'paginated', filters],
+    queryFn: () => getUsersPaginated(filters),
+    staleTime: staleTimes.users,
+    gcTime: cacheTimes.users,
+  });
+}
+
+/**
+ * Hook to fetch users with infinite scroll pagination
+ */
+export function useUsersInfinite(filters?: Omit<UsersFilters, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: ['users', 'infinite', filters],
+    queryFn: ({ pageParam = 1 }) => getUsersPaginated({ ...filters, page: pageParam }),
+    getNextPageParam: (lastPage) => {
+      const nextPage = lastPage.page + 1;
+      return nextPage <= lastPage.totalPages ? nextPage : undefined;
+    },
+    initialPageParam: 1,
+    staleTime: staleTimes.users,
+    gcTime: cacheTimes.users,
   });
 }
 

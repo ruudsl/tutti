@@ -13,7 +13,8 @@ interface SkeletonProps {
 }
 
 /**
- * Basic skeleton placeholder for loading states
+ * Basic skeleton placeholder for loading states.
+ * Includes aria-hidden to prevent screen readers from announcing placeholders.
  */
 export function Skeleton({
   width = '100%',
@@ -35,6 +36,7 @@ export function Skeleton({
         borderRadius: circle ? '50%' : borderRadius,
         ...style,
       }}
+      aria-hidden="true"
     />
   );
 }
@@ -87,26 +89,30 @@ export function SkeletonTableRow({ columns = 5 }: { columns?: number }) {
 }
 
 /**
- * Skeleton for a table
+ * Skeleton for a table.
+ * Includes role="status" and aria-label for screen reader announcement.
  */
 export function SkeletonTable({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          {Array.from({ length: columns }).map((_, i) => (
-            <th key={i}>
-              <Skeleton height="0.875rem" width="50%" />
-            </th>
+    <div role="status" aria-label="Gegevens worden geladen" aria-busy="true">
+      <span className="sr-only">Gegevens worden geladen...</span>
+      <table className="table" aria-hidden="true">
+        <thead>
+          <tr>
+            {Array.from({ length: columns }).map((_, i) => (
+              <th key={i}>
+                <Skeleton height="0.875rem" width="50%" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, i) => (
+            <SkeletonTableRow key={i} columns={columns} />
           ))}
-        </tr>
-      </thead>
-      <tbody>
-        {Array.from({ length: rows }).map((_, i) => (
-          <SkeletonTableRow key={i} columns={columns} />
-        ))}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -187,15 +193,22 @@ export function SkeletonPageHeader() {
 }
 
 /**
- * Skeleton grid for multiple cards
+ * Skeleton grid for multiple cards.
+ * Includes accessible loading state announcement.
  */
 export function SkeletonGrid({ count = 6, columns = 3 }: { count?: number; columns?: number }) {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: `repeat(${columns}, 1fr)`,
-      gap: '1rem',
-    }}>
+    <div
+      role="status"
+      aria-label="Inhoud wordt geladen"
+      aria-busy="true"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gap: '1rem',
+      }}
+    >
+      <span className="sr-only">Inhoud wordt geladen...</span>
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonCard key={i} />
       ))}

@@ -7,9 +7,11 @@ import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { EmptyState } from '../components/EmptyState';
 import { formatDate } from '../utils/dateFormat';
 import { EquipmentStats } from '../components/EquipmentStats';
-import type { EquipmentDetail } from '../types';
+import type { EquipmentDetail, Equipment as EquipmentItem } from '../types';
 
 const STATUS_COLORS: Record<string, string> = {
   available: 'badge-success',
@@ -29,6 +31,7 @@ export default function Equipment() {
   const [typeFilter, setTypeFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
+  const [deletingItem, setDeletingItem] = useState<EquipmentItem | null>(null);
 
   const { data: equipmentData, isLoading } = useQuery({
     queryKey: ['equipment', search, statusFilter, typeFilter],
@@ -110,10 +113,13 @@ export default function Equipment() {
           {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
         </div>
       ) : equipment.length === 0 ? (
-        <div className="card bg-base-200 p-8 text-center">
-          <Icon name="package" size={48} className="mx-auto opacity-50 mb-4" />
-          <p className="text-base-content/70">{t('equipment.noEquipment')}</p>
-        </div>
+        <EmptyState
+          icon="package"
+          title={t('equipment.noEquipment')}
+          description={t('equipment.noEquipmentDescription')}
+          actionLabel={t('equipment.new')}
+          onAction={() => setShowCreateModal(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {equipment.map(item => (
@@ -179,10 +185,9 @@ export default function Equipment() {
                       )}
                       <li><button>{t('equipment.recordMaintenance')}</button></li>
                       <li className="text-error">
-                        <button onClick={() => {
-                          if (confirm(t('equipment.confirmDelete'))) {
-                            deleteMutation.mutate(item.id);
-                          }
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingItem(item);
                         }}>{t('common.delete')}</button>
                       </li>
                     </ul>
@@ -210,6 +215,22 @@ export default function Equipment() {
           equipmentId={selectedEquipmentId}
           onClose={() => setSelectedEquipmentId(null)}
           onRefresh={() => queryClient.invalidateQueries({ queryKey: ['equipment'] })}
+        />
+      )}
+
+      {deletingItem && (
+        <ConfirmDialog
+          title={t('equipment.deleteTitle')}
+          message={t('equipment.confirmDelete', { name: deletingItem.instrumentType })}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingItem.id, {
+              onSuccess: () => setDeletingItem(null),
+            });
+          }}
+          onCancel={() => setDeletingItem(null)}
         />
       )}
     </div>

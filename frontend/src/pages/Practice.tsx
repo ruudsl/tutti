@@ -13,12 +13,13 @@ import {
   deletePracticeGoal,
   getMusicTitles,
 } from '../api';
-import type { PracticeGoalsResponse } from '../api/practice';
+import type { PracticeGoalsResponse, PracticeLog, PracticeGoal } from '../api/practice';
 import { SkeletonTable } from '../components/Skeleton';
 import PracticeTimer from '../components/PracticeTimer';
 import { PracticeLogModal } from '../components/PracticeLogModal';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { BottomSheet } from '../components/BottomSheet';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function Practice() {
@@ -49,6 +50,11 @@ export default function Practice() {
 
   // AudioRecorder state
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+
+  // Delete confirmation
+  const [deletingLog, setDeletingLog] = useState<PracticeLog | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState<PracticeGoal | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Queries
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -113,15 +119,18 @@ export default function Practice() {
   };
 
   const handleDeleteLog = async (id: string) => {
-    if (!confirm(t('practice.deleteConfirm'))) return;
+    setIsDeleting(true);
     try {
       await deletePracticeLog(id);
       showSuccess(t('practice.deleted'));
       queryClient.invalidateQueries({ queryKey: ['practiceLogs'] });
       queryClient.invalidateQueries({ queryKey: ['practiceStats'] });
       queryClient.invalidateQueries({ queryKey: ['practiceGoals'] });
+      setDeletingLog(null);
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -141,13 +150,16 @@ export default function Practice() {
   };
 
   const handleDeleteGoal = async (id: string) => {
-    if (!confirm(t('practice.deleteGoalConfirm'))) return;
+    setIsDeleting(true);
     try {
       await deletePracticeGoal(id);
       showSuccess(t('practice.goalDeleted'));
       queryClient.invalidateQueries({ queryKey: ['practiceGoals'] });
+      setDeletingGoal(null);
     } catch (e: any) {
       showError(e.response?.data?.error || t('common.error'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -293,7 +305,7 @@ export default function Practice() {
                 {dailyGoal && (
                   <button
                     className="btn btn-outline btn-sm"
-                    onClick={() => handleDeleteGoal(dailyGoal.id)}
+                    onClick={() => setDeletingGoal(dailyGoal)}
                     style={{ padding: '0.1rem 0.3rem', fontSize: '0.7rem' }}
                   >
                     &times;
@@ -335,7 +347,7 @@ export default function Practice() {
                 {weeklyGoal && (
                   <button
                     className="btn btn-outline btn-sm"
-                    onClick={() => handleDeleteGoal(weeklyGoal.id)}
+                    onClick={() => setDeletingGoal(weeklyGoal)}
                     style={{ padding: '0.1rem 0.3rem', fontSize: '0.7rem' }}
                   >
                     &times;
@@ -448,7 +460,7 @@ export default function Practice() {
                     <td style={{ textAlign: 'right' }}>
                       <button
                         className="btn btn-outline btn-sm"
-                        onClick={() => handleDeleteLog(log.id)}
+                        onClick={() => setDeletingLog(log)}
                         style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--danger)' }}
                       >
                         {t('common.delete')}
@@ -665,6 +677,32 @@ export default function Practice() {
       {showAudioRecorder && (
         <AudioRecorder
           onClose={handleAudioRecorderClose}
+        />
+      )}
+
+      {/* Delete Log Confirmation */}
+      {deletingLog && (
+        <ConfirmDialog
+          title={t('practice.deleteLogTitle')}
+          message={t('practice.deleteConfirm')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={() => handleDeleteLog(deletingLog.id)}
+          onCancel={() => setDeletingLog(null)}
+        />
+      )}
+
+      {/* Delete Goal Confirmation */}
+      {deletingGoal && (
+        <ConfirmDialog
+          title={t('practice.deleteGoalTitle')}
+          message={t('practice.deleteGoalConfirm')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={() => handleDeleteGoal(deletingGoal.id)}
+          onCancel={() => setDeletingGoal(null)}
         />
       )}
     </div>

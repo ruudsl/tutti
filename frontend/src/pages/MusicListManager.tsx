@@ -25,6 +25,8 @@ import type { MusicList, MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
 import { FormModal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { showSuccess, showError } from '../utils/toast';
 import { TitleMetadataModal } from '../components/TitleMetadataModal';
 import { SkeletonCard, SkeletonListItem } from '../components/Skeleton';
 
@@ -91,6 +93,11 @@ export default function MusicListManager() {
 
   // Title metadata modal
   const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
+
+  // Delete confirmations
+  const [deletingList, setDeletingList] = useState<MusicList | null>(null);
+  const [deletingTitle, setDeletingTitle] = useState<MusicTitle | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Set initial orchestra from URL or first available
   // Also reset if current selection doesn't exist in the list (e.g., after association switch)
@@ -175,17 +182,20 @@ export default function MusicListManager() {
     }
   };
 
-  const handleDeleteList = async (id: string) => {
-    if (!confirm('Weet je zeker dat je deze lijst wilt verwijderen?')) return;
-
+  const handleDeleteList = async (list: MusicList) => {
+    setIsDeleting(true);
     try {
-      await deleteMusicList(id);
+      await deleteMusicList(list.id);
+      showSuccess(t('lists.deleted'));
       refreshLists();
-      if (selectedList?.id === id) {
+      if (selectedList?.id === list.id) {
         navigate('/lists');
       }
+      setDeletingList(null);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen lijst');
+      showError(error.response?.data?.error || t('lists.errorDelete'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -219,17 +229,20 @@ export default function MusicListManager() {
     }
   };
 
-  const handleRemoveTitle = async (title: string) => {
+  const handleRemoveTitle = async (titleObj: MusicTitle) => {
     if (!selectedList) return;
-    if (!confirm(`Weet je zeker dat je "${title}" van de lijst wilt verwijderen?`)) return;
-
+    setIsDeleting(true);
     try {
-      await removeTitleFromList(selectedList.id, title);
+      await removeTitleFromList(selectedList.id, titleObj.title);
+      showSuccess(t('lists.titleRemoved'));
       refreshSelectedList();
       refreshLists();
       refreshTitles();
+      setDeletingTitle(null);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Fout bij verwijderen titel');
+      showError(error.response?.data?.error || t('lists.errorRemoveTitle'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -437,7 +450,7 @@ export default function MusicListManager() {
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
-                      onClick={() => handleDeleteList(list.id)}
+                      onClick={() => setDeletingList(list)}
                       title={t('common.delete')}
                     >
                       <Icon name="trash" size={16} />
@@ -547,7 +560,7 @@ export default function MusicListManager() {
                                 )}
                                 <button
                                   className="btn btn-danger btn-sm"
-                                  onClick={() => handleRemoveTitle(item.title)}
+                                  onClick={() => titleData && setDeletingTitle(titleData)}
                                 >
                                   {t('lists.remove')}
                                 </button>
@@ -762,6 +775,32 @@ export default function MusicListManager() {
           genres={genres}
           onClose={() => setEditingTitle(null)}
           onSave={handleSaveTitleMeta}
+        />
+      )}
+
+      {/* Delete List Confirmation */}
+      {deletingList && (
+        <ConfirmDialog
+          title={t('lists.deleteListTitle')}
+          message={t('lists.confirmDeleteList', { name: deletingList.name })}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={() => handleDeleteList(deletingList)}
+          onCancel={() => setDeletingList(null)}
+        />
+      )}
+
+      {/* Remove Title Confirmation */}
+      {deletingTitle && (
+        <ConfirmDialog
+          title={t('lists.removeTitleTitle')}
+          message={t('lists.confirmRemoveTitle', { title: deletingTitle.title })}
+          confirmLabel={t('lists.remove')}
+          variant="warning"
+          isLoading={isDeleting}
+          onConfirm={() => handleRemoveTitle(deletingTitle)}
+          onCancel={() => setDeletingTitle(null)}
         />
       )}
     </div>

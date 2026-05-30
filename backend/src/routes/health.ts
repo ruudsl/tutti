@@ -6,6 +6,7 @@ import db from '../database/connection';
 import config from '../config';
 import logger from '../logging/logger';
 import { authenticateToken, requireRole } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
@@ -248,47 +249,38 @@ router.get('/', (req: Request, res: Response) => {
  *       403:
  *         description: Forbidden - Admin only
  */
-router.get('/detailed', authenticateToken, requireRole('admin'), async (req: Request, res: Response) => {
-    try {
-        const databaseStatus = await checkDatabase();
-        const diskStatus = checkDiskSpace();
-        const memoryStatus = checkMemory();
+router.get('/detailed', authenticateToken, requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
+    const databaseStatus = await checkDatabase();
+    const diskStatus = checkDiskSpace();
+    const memoryStatus = checkMemory();
 
-        const services = {
-            database: databaseStatus,
-            disk: diskStatus,
-            memory: memoryStatus,
-        };
+    const services = {
+        database: databaseStatus,
+        disk: diskStatus,
+        memory: memoryStatus,
+    };
 
-        const overallStatus = calculateOverallStatus(services);
+    const overallStatus = calculateOverallStatus(services);
 
-        const response: DetailedHealthCheckResponse = {
-            status: overallStatus,
-            timestamp: new Date().toISOString(),
-            uptime: Math.floor(process.uptime()),
-            version: process.env.npm_package_version || '1.0.0',
-            environment: config.nodeEnv,
-            services,
-            system: {
-                platform: os.platform(),
-                arch: os.arch(),
-                nodeVersion: process.version,
-                cpuCount: os.cpus().length,
-                hostname: os.hostname(),
-                loadAverage: os.loadavg(),
-            },
-        };
+    const response: DetailedHealthCheckResponse = {
+        status: overallStatus,
+        timestamp: new Date().toISOString(),
+        uptime: Math.floor(process.uptime()),
+        version: process.env.npm_package_version || '1.0.0',
+        environment: config.nodeEnv,
+        services,
+        system: {
+            platform: os.platform(),
+            arch: os.arch(),
+            nodeVersion: process.version,
+            cpuCount: os.cpus().length,
+            hostname: os.hostname(),
+            loadAverage: os.loadavg(),
+        },
+    };
 
-        const statusCode = overallStatus === 'unhealthy' ? 503 : 200;
-        res.status(statusCode).json(response);
-    } catch (error) {
-        logger.error('Detailed health check failed', { error: (error as Error).message });
-        res.status(503).json({
-            status: 'unhealthy',
-            timestamp: new Date().toISOString(),
-            error: (error as Error).message,
-        });
-    }
-});
+    const statusCode = overallStatus === 'unhealthy' ? 503 : 200;
+    res.status(statusCode).json(response);
+}));
 
 export default router;

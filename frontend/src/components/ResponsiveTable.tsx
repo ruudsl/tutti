@@ -13,6 +13,7 @@ import {
   CSSProperties,
   memo,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon, IconName } from './Icon';
 
@@ -227,6 +228,7 @@ function ResponsiveTableComponent<T>({
   renderCardSuffix,
 }: ResponsiveTableProps<T>) {
   const { isDark } = useDarkMode();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery(`(max-width: ${mobileBreakpoint}px)`);
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
@@ -499,11 +501,17 @@ function ResponsiveTableComponent<T>({
 
   // Desktop table view
   return (
-    <div style={tableWrapperStyles} className={`responsive-table ${className}`}>
-      <table style={tableStyles}>
+    <div
+      style={tableWrapperStyles}
+      className={`responsive-table ${className}`}
+      role="region"
+      aria-label={emptyMessage ? undefined : 'Data table'}
+      tabIndex={0}
+    >
+      <table style={tableStyles} role="table" aria-rowcount={data.length}>
         <thead>
-          <tr>
-            {visibleColumns.map((column) => (
+          <tr role="row">
+            {visibleColumns.map((column, colIndex) => (
               <th
                 key={column.id}
                 style={headerCellStyles(column)}
@@ -515,12 +523,15 @@ function ResponsiveTableComponent<T>({
                   }
                 }}
                 tabIndex={column.sortable ? 0 : undefined}
-                role={column.sortable ? 'columnheader' : undefined}
+                role="columnheader"
+                scope="col"
+                aria-colindex={colIndex + 1}
                 aria-sort={
                   sortColumn === column.id
-                    ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : undefined)
+                    ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none')
                     : undefined
                 }
+                aria-label={column.sortable ? `${column.header}, ${t('accessibility.sortable', 'sorteerbaar')}` : column.header}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                   {column.headerIcon && <Icon name={column.headerIcon} size={14} />}
@@ -544,6 +555,8 @@ function ResponsiveTableComponent<T>({
                 onMouseEnter={() => hoverable && setHoveredRowId(rowId)}
                 onMouseLeave={() => setHoveredRowId(null)}
                 tabIndex={onRowClick ? 0 : undefined}
+                role="row"
+                aria-rowindex={index + 2}
                 onKeyDown={(e) => {
                   if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
@@ -551,8 +564,13 @@ function ResponsiveTableComponent<T>({
                   }
                 }}
               >
-                {visibleColumns.map((column) => (
-                  <td key={column.id} style={bodyCellStyles(column)}>
+                {visibleColumns.map((column, colIndex) => (
+                  <td
+                    key={column.id}
+                    style={bodyCellStyles(column)}
+                    role="cell"
+                    aria-colindex={colIndex + 1}
+                  >
                     {column.accessor(row)}
                   </td>
                 ))}

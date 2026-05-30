@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { requestPasswordReset } from '../api';
@@ -11,6 +11,8 @@ export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const { t } = useTranslation();
+  const errorRef = useRef<HTMLDivElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   useDocumentTitle('pageTitle.forgotPassword');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +25,11 @@ export default function ForgotPassword() {
       setSubmitted(true);
     } catch (err: any) {
       setError(err.response?.data?.error || t('errors.generic'));
+      // Focus error message, then input for retry
+      setTimeout(() => {
+        errorRef.current?.focus();
+        setTimeout(() => emailInputRef.current?.focus(), 100);
+      }, 0);
     } finally {
       setIsSubmitting(false);
     }
@@ -66,12 +73,22 @@ export default function ForgotPassword() {
         </div>
         <div className="login-body">
           {error && (
-            <div className="alert alert-error mb-2">{error}</div>
+            <div
+              ref={errorRef}
+              className="alert alert-danger mb-2"
+              role="alert"
+              aria-live="assertive"
+              tabIndex={-1}
+            >
+              {error}
+            </div>
           )}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">{t('common.email')}</label>
+              <label htmlFor="forgot-email" className="form-label">{t('common.email')}</label>
               <input
+                ref={emailInputRef}
+                id="forgot-email"
                 type="email"
                 className="form-control"
                 value={email}
@@ -79,6 +96,7 @@ export default function ForgotPassword() {
                 placeholder={t('forgotPassword.emailPlaceholder')}
                 required
                 autoFocus
+                aria-describedby={error ? 'forgot-error' : undefined}
               />
             </div>
             <button

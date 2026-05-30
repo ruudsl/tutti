@@ -18,9 +18,13 @@ export const staleTimes = {
   user: 1000 * 60 * 10,
   association: 1000 * 60 * 10,
 
+  // User list data - 15 minutes (frequently accessed but doesn't change often)
+  users: 1000 * 60 * 15,
+
   // Content data - 5 minutes (default)
   musicPieces: 1000 * 60 * 5,
   musicLists: 1000 * 60 * 5,
+  musicTitles: 1000 * 60 * 5,
   concerts: 1000 * 60 * 5,
   rehearsals: 1000 * 60 * 5,
 
@@ -37,6 +41,28 @@ export const staleTimes = {
   favorites: 1000 * 60 * 2,
   recentViews: 1000 * 60 * 2,
   practiceLogs: 1000 * 60 * 2,
+};
+
+/**
+ * Cache time (gcTime) configuration per data type
+ * How long data stays in cache after becoming unused
+ */
+export const cacheTimes = {
+  // Reference data - 1 hour (keep in cache longer)
+  instruments: 1000 * 60 * 60,
+  genres: 1000 * 60 * 60,
+  orchestras: 1000 * 60 * 60,
+  concertTypes: 1000 * 60 * 60,
+  users: 1000 * 60 * 60,
+
+  // Content data - 30 minutes
+  musicPieces: 1000 * 60 * 30,
+  musicLists: 1000 * 60 * 30,
+  musicTitles: 1000 * 60 * 30,
+
+  // Frequently changing - 10 minutes
+  tickets: 1000 * 60 * 10,
+  seating: 1000 * 60 * 10,
 };
 
 export const queryClient = new QueryClient({

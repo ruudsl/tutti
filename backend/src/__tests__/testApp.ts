@@ -14,6 +14,8 @@ import rehearsalRoutes from '../routes/rehearsals';
 import annotationsRoutes from '../routes/annotations';
 import instrumentsRoutes from '../routes/instruments';
 import notificationsRoutes from '../routes/notifications';
+import musicPiecesRoutes from '../routes/music-pieces';
+import concertsRoutes from '../routes/concerts';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -32,6 +34,8 @@ app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/annotations', annotationsRoutes);
 app.use('/api/instruments', instrumentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/music-pieces', musicPiecesRoutes);
+app.use('/api/concerts', concertsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

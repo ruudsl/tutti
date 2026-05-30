@@ -3455,4 +3455,37 @@ CREATE TABLE IF NOT EXISTS workflow_entity_runs (
     FOREIGN KEY (trigger_id) REFERENCES workflow_triggers(id) ON DELETE CASCADE,
     UNIQUE(workflow_id, entity_type, entity_id, trigger_id)
 );
+
+-- ===========================================
+-- FAILED IMPORTS TRACKING
+-- ===========================================
+
+-- Track failed imports for recovery
+CREATE TABLE IF NOT EXISTS failed_imports (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    file_path TEXT,
+    import_type TEXT NOT NULL DEFAULT 'pdf', -- pdf, zip, cloud, imslp
+    error_message TEXT NOT NULL,
+    error_code TEXT,
+    metadata_json TEXT, -- Store any parsed metadata for retry
+    source_info TEXT, -- Additional info about the source (e.g., cloud provider, IMSLP URL)
+    list_id TEXT, -- Target music list if specified
+    retry_count INTEGER DEFAULT 0,
+    max_retries INTEGER DEFAULT 3,
+    status TEXT NOT NULL DEFAULT 'failed', -- failed, retrying, recovered, dismissed
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_retry_at DATETIME,
+    recovered_at DATETIME,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (list_id) REFERENCES music_lists(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_failed_imports_association ON failed_imports(association_id);
+CREATE INDEX IF NOT EXISTS idx_failed_imports_status ON failed_imports(status);
+CREATE INDEX IF NOT EXISTS idx_failed_imports_created_by ON failed_imports(created_by);
+CREATE INDEX IF NOT EXISTS idx_failed_imports_created_at ON failed_imports(created_at);
 `;

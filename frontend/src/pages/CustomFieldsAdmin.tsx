@@ -17,6 +17,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const ENTITY_TYPES: { value: EntityType; labelKey: string; icon: IconName }[] = [
   { value: 'user', labelKey: 'customFields.entityTypes.user', icon: 'user' },
@@ -58,6 +59,7 @@ export default function CustomFieldsAdmin() {
   const [selectedEntityType, setSelectedEntityType] = useState<EntityType>('user');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingField, setEditingField] = useState<CustomFieldDefinition | null>(null);
+  const [deletingField, setDeletingField] = useState<CustomFieldDefinition | null>(null);
 
   const { data: definitions = [], isLoading } = useQuery({
     queryKey: ['custom-field-definitions', selectedEntityType],
@@ -76,9 +78,7 @@ export default function CustomFieldsAdmin() {
   });
 
   const handleDelete = (field: CustomFieldDefinition) => {
-    if (confirm(t('customFields.confirmDelete', { name: field.fieldLabel }))) {
-      deleteMutation.mutate(field.id);
-    }
+    setDeletingField(field);
   };
 
   const entityTypeInfo = ENTITY_TYPES.find(e => e.value === selectedEntityType);
@@ -204,6 +204,23 @@ export default function CustomFieldsAdmin() {
           field={editingField}
           entityType={selectedEntityType}
           onClose={() => setEditingField(null)}
+        />
+      )}
+
+      {/* Delete Field Confirmation */}
+      {deletingField && (
+        <ConfirmDialog
+          title={t('customFields.deleteTitle')}
+          message={t('customFields.confirmDelete', { name: deletingField.fieldLabel })}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingField.id, {
+              onSuccess: () => setDeletingField(null),
+            });
+          }}
+          onCancel={() => setDeletingField(null)}
         />
       )}
     </div>

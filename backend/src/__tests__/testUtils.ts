@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import testDb from './testDb';
 
 // Test JWT secret (matches setup.ts)
-const JWT_SECRET = 'test-jwt-secret-for-testing';
+const JWT_SECRET = 'test-jwt-secret-for-testing-must-be-at-least-32-characters';
 
 export interface TestUser {
     id: string;

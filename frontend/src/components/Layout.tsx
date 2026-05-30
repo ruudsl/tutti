@@ -16,6 +16,7 @@ import { getSettings } from '../api';
 import { Icon, type IconName } from './Icon';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { AssociationSwitcher } from './AssociationSwitcher';
+import { SectionErrorBoundary } from './SectionErrorBoundary';
 import type { AssociationSettings } from '../types';
 
 interface SidebarNavItem {
@@ -443,8 +444,12 @@ export default function Layout() {
 
         {/* Main content area */}
         <main id="main-content" className="main-content">
-          <Breadcrumbs />
-          <Outlet />
+          <SectionErrorBoundary sectionName="Breadcrumbs" compact>
+            <Breadcrumbs />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary sectionName="Page Content">
+            <Outlet />
+          </SectionErrorBoundary>
         </main>
       </div>
 
@@ -482,9 +487,20 @@ export default function Layout() {
           <div
             className="mobile-menu-overlay"
             onClick={() => setMobileMenuOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setMobileMenuOpen(false);
+              }
+            }}
+            role="presentation"
             aria-hidden="true"
           />
-          <div className="mobile-menu-panel">
+          <div
+            className="mobile-menu-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('nav.mobileMenu', 'Menu')}
+          >
             <div className="mobile-menu-header">
               <div className="mobile-user-info">
                 <div className="user-name">{user?.firstName} {user?.lastName}</div>
@@ -583,12 +599,18 @@ export default function Layout() {
         </a>
       </footer>
 
-      <QuickActionsMenu onOpenSearch={openSearch} />
+      <SectionErrorBoundary sectionName="Quick Actions" compact>
+        <QuickActionsMenu onOpenSearch={openSearch} />
+      </SectionErrorBoundary>
 
-      <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+      <SectionErrorBoundary sectionName="Global Search" compact>
+        <GlobalSearch isOpen={isSearchOpen} onClose={closeSearch} />
+      </SectionErrorBoundary>
 
-      <KeyboardShortcutsHelp />
-      <SequenceIndicator />
+      <SectionErrorBoundary sectionName="Keyboard Shortcuts" compact>
+        <KeyboardShortcutsHelp />
+        <SequenceIndicator />
+      </SectionErrorBoundary>
 
       <OnboardingTour
         forceShow={showOnboarding || undefined}
