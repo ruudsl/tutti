@@ -2690,7 +2690,9 @@ router.post('/batch-export-by-title', authenticateToken, asyncHandler(async (req
     const timestamp = new Date().toISOString().slice(0, 10);
     const zipFilename = `${safeTitle}-${timestamp}.zip`;
 
-    logger.info(`Batch export by title: ${pieces.length} pieces for "${title}"`, {
+    // Sanitize user input for log safety (prevent log injection via CR/LF)
+    const safeTitleForLog = String(title).replace(/[\r\n]/g, '');
+    logger.info(`Batch export by title: ${pieces.length} pieces for "${safeTitleForLog}"`, {
         exportedBy: req.user!.id
     });
 
