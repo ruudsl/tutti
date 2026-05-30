@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
 import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
@@ -13,7 +14,6 @@ import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES, STORAGE_KEYS } from '../utils/constants';
-import { createUserSchema, updateUserSchema, type CreateUserFormData, type UpdateUserFormData } from '../lib/validation/schemas';
 import { createI18nErrorMap } from '../lib/validation/utils';
 
 // Helper to get photo URL with auth token for img src
@@ -23,10 +23,21 @@ const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
   return token ? `${photoUrl}?token=${token}` : null;
 };
 
-// Use the imported types from validation schemas
-type UserFormData = CreateUserFormData | UpdateUserFormData;
+// Unified user form schema that works for both create and edit
+// Password is required only for new users (handled by validation context)
+const userFormSchema = z.object({
+  email: z.string().min(1).email(),
+  password: z.string().optional().default(''),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  role: z.enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor']).default('member'),
+  instrumentIds: z.array(z.string()).default([]),
+  orchestraIds: z.array(z.string()).default([]),
+});
 
-const defaultValues: CreateUserFormData = {
+type UserFormData = z.infer<typeof userFormSchema>;
+
+const defaultValues: UserFormData = {
   email: '',
   password: '',
   firstName: '',
@@ -54,18 +65,10 @@ export default function Users() {
 
   // React Hook Form with Zod validation
   // For Zod v4, use 'error' option instead of 'errorMap'
-  const createForm = useForm<CreateUserFormData>({
+  const form = useForm<UserFormData>({
     defaultValues,
-    resolver: zodResolver(createUserSchema, { error: errorMap }),
+    resolver: zodResolver(userFormSchema, { error: errorMap }),
   });
-
-  const updateForm = useForm<UpdateUserFormData>({
-    defaultValues,
-    resolver: zodResolver(updateUserSchema, { error: errorMap }),
-  });
-
-  // Use the appropriate form based on context
-  const form = editingUser ? updateForm : createForm;
 
   // TanStack Query hooks
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -78,7 +81,13 @@ export default function Users() {
 
   const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
-  const handleCreate = (data: CreateUserFormData) => {
+  const handleCreate = (data: UserFormData) => {
+    // Validate password is required for new users
+    if (!data.password || data.password.length < 8) {
+      form.setError('password', { type: 'manual', message: t('errors.passwordTooShort', { min: 8 }) });
+      return;
+    }
+
     createMutation.mutate({
       email: data.email,
       password: data.password,
@@ -90,12 +99,12 @@ export default function Users() {
     }, {
       onSuccess: () => {
         setShowAddModal(false);
-        createForm.reset(defaultValues);
+        form.reset(defaultValues);
       },
     });
   };
 
-  const handleUpdate = (data: UpdateUserFormData) => {
+  const handleUpdate = (data: UserFormData) => {
     if (!editingUser) return;
 
     updateMutation.mutate({
@@ -112,7 +121,7 @@ export default function Users() {
     }, {
       onSuccess: () => {
         setEditingUser(null);
-        updateForm.reset(defaultValues);
+        form.reset(defaultValues);
       },
     });
   };
@@ -128,17 +137,17 @@ export default function Users() {
   };
 
   const openAddModal = () => {
-    createForm.reset(defaultValues);
+    form.reset(defaultValues);
     setShowAddModal(true);
   };
 
   const openEditModal = (user: User) => {
-    updateForm.reset({
+    form.reset({
       email: user.email,
       password: '',
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role as UpdateUserFormData['role'],
+      role: user.role as UserFormData['role'],
       instrumentIds: user.instruments?.map((i) => i.id) || [],
       orchestraIds: user.orchestras?.map((o) => o.id) || [],
     });
@@ -509,15 +518,15 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setShowAddModal(false);
-            createForm.reset(defaultValues);
+            form.reset(defaultValues);
           }}
-          onSubmit={createForm.handleSubmit(handleCreate)}
+          onSubmit={form.handleSubmit(handleCreate)}
           title={t('users.newMember')}
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
           <UserForm
-            form={createForm}
+            form={form}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={false}
@@ -530,16 +539,16 @@ export default function Users() {
         <FormModal
           onClose={() => {
             setEditingUser(null);
-            updateForm.reset(defaultValues);
+            form.reset(defaultValues);
           }}
-          onSubmit={updateForm.handleSubmit(handleUpdate)}
+          onSubmit={form.handleSubmit(handleUpdate)}
           title={t('users.edit')}
           submitLabel={t('common.save')}
           isSubmitting={updateMutation.isPending}
           size="large"
         >
           <UserForm
-            form={updateForm}
+            form={form}
             instruments={instruments}
             orchestras={orchestras}
             isEditing={true}
@@ -570,7 +579,7 @@ export default function Users() {
 
 // Extracted form component using react-hook-form with Zod validation
 interface UserFormProps {
-  form: UseFormReturn<CreateUserFormData> | UseFormReturn<UpdateUserFormData>;
+  form: UseFormReturn<UserFormData>;
   instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
   orchestras: { id: string; name: string }[];
   isEditing: boolean;
