@@ -15,9 +15,9 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
-    "@tanstack/query-sync-storage-persister": "^5.100.11",
-    "@tanstack/react-query": "^5.100.11",
-    "@tanstack/react-query-persist-client": "^5.100.11",
+    "@tanstack/query-sync-storage-persister": "^5.100.14",
+    "@tanstack/react-query": "^5.100.14",
+    "@tanstack/react-query-persist-client": "^5.100.14",
     "@types/react-window": "^1.8.8",
     "axios": "^1.16.1",
     "date-fns": "^4.3.0",
@@ -37,7 +37,7 @@
     "react-router-dom": "^6.21.1",
     "react-window": "^2.2.7",
     "socket.io-client": "^4.8.3",
-    "ua-parser-js": "^2.0.9",
+    "ua-parser-js": "^2.0.10",
     "zod": "^4.4.3"
   },
   "devDependencies": {
