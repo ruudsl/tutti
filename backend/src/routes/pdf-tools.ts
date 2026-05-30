@@ -9,7 +9,6 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler';
 import db from '../database/connection';
 import logger from '../utils/logger';
-import { backgroundQueue, JOB_TYPES } from '../utils/backgroundQueue';
 
 const router = Router();
 
