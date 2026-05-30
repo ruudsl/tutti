@@ -72,6 +72,13 @@ const nestedRouteConfig: Record<string, { labelKey: string; parent: string }> = 
   '/titles/:id': { labelKey: 'breadcrumbs.titleDetail', parent: '/titles' },
   '/uniforms/:id': { labelKey: 'breadcrumbs.uniformDetail', parent: '/uniforms' },
   '/users/:id': { labelKey: 'breadcrumbs.userDetail', parent: '/users' },
+  '/equipment/:id': { labelKey: 'breadcrumbs.equipmentDetail', parent: '/equipment' },
+  '/projects/:id': { labelKey: 'breadcrumbs.projectDetail', parent: '/projects' },
+  '/tours/:id': { labelKey: 'breadcrumbs.tourDetail', parent: '/tours' },
+  '/resources/:id': { labelKey: 'breadcrumbs.resourceDetail', parent: '/resources' },
+  '/contacts/:id': { labelKey: 'breadcrumbs.contactDetail', parent: '/contacts' },
+  '/polls/:id': { labelKey: 'breadcrumbs.pollDetail', parent: '/polls' },
+  '/tasks/:id': { labelKey: 'breadcrumbs.taskDetail', parent: '/tasks' },
 };
 
 // Maximum items to show before collapsing

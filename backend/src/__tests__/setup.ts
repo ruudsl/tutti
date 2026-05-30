@@ -77,7 +77,7 @@ vi.mock('../routes/audit-logs', () => ({
 
 // Set test environment
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-jwt-secret-for-testing';
+process.env.JWT_SECRET = 'test-jwt-secret-for-testing-must-be-at-least-32-characters';
 process.env.CSRF_ENABLED = 'false';
 
 import testDb from './testDb';

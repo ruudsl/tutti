@@ -35,7 +35,7 @@ export default function NeighborPreferences() {
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
     enabled: !!isManager,
     staleTime: 5 * 60 * 1000,
   });

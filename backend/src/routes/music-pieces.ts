@@ -2457,4 +2457,251 @@ router.delete('/bulk', authenticateToken, requireRole('admin', 'music_committee'
     });
 }));
 
+/**
+ * @swagger
+ * /music-pieces/batch-export:
+ *   post:
+ *     summary: Export multiple music pieces as a ZIP file
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pieceIds
+ *             properties:
+ *               pieceIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of music piece IDs to export
+ *               includeMetadata:
+ *                 type: boolean
+ *                 description: Include a metadata JSON file in the ZIP
+ *     responses:
+ *       200:
+ *         description: ZIP file containing the requested music pieces
+ *         content:
+ *           application/zip:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.post('/batch-export', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { pieceIds, includeMetadata = true } = req.body;
+
+    if (!Array.isArray(pieceIds) || pieceIds.length === 0) {
+        throw new ApiError(400, 'Geen muziekstukken geselecteerd voor export.');
+    }
+
+    if (pieceIds.length > 100) {
+        throw new ApiError(400, 'Maximaal 100 muziekstukken tegelijk exporteren.');
+    }
+
+    // Get pieces with their metadata
+    const placeholders = pieceIds.map(() => '?').join(', ');
+    const pieces = db.prepare(`
+        SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
+               mp.file_path, mp.original_filename, mp.youtube_url, mp.created_at,
+               i.name as instrument_name
+        FROM music_pieces mp
+        LEFT JOIN instruments i ON mp.instrument_id = i.id
+        WHERE mp.id IN (${placeholders}) AND mp.association_id = ?
+    `).all(...pieceIds, req.user!.associationId) as any[];
+
+    if (pieces.length === 0) {
+        throw new ApiError(404, 'Geen muziekstukken gevonden.');
+    }
+
+    // Create ZIP file
+    const zip = new AdmZip();
+    const metadata: any[] = [];
+    const addedFiles = new Set<string>();
+
+    for (const piece of pieces) {
+        const filePath = path.join(UPLOAD_DIR, piece.file_path);
+
+        if (fs.existsSync(filePath)) {
+            // Generate unique filename to avoid conflicts
+            let filename = piece.original_filename || `${piece.title}.pdf`;
+            let counter = 1;
+            while (addedFiles.has(filename)) {
+                const ext = path.extname(filename);
+                const base = path.basename(filename, ext);
+                filename = `${base}_${counter}${ext}`;
+                counter++;
+            }
+            addedFiles.add(filename);
+
+            zip.addLocalFile(filePath, '', filename);
+
+            // Add to metadata
+            metadata.push({
+                id: piece.id,
+                title: piece.title,
+                arranger: piece.arranger,
+                instrument: piece.instrument_name,
+                tuning: piece.tuning,
+                groupNumber: piece.group_number,
+                clef: piece.clef,
+                youtubeUrl: piece.youtube_url,
+                originalFilename: piece.original_filename,
+                exportedFilename: filename,
+                createdAt: piece.created_at,
+            });
+        }
+    }
+
+    // Add metadata file if requested
+    if (includeMetadata && metadata.length > 0) {
+        const metadataJson = JSON.stringify(metadata, null, 2);
+        zip.addFile('metadata.json', Buffer.from(metadataJson, 'utf8'));
+    }
+
+    // Log audit event
+    logAuditEvent(
+        req.user!.id,
+        'batch_export',
+        'music_pieces',
+        pieceIds.join(','),
+        `${pieces.length} muziekstukken geexporteerd`,
+        { count: pieces.length },
+        req.ip,
+        req.get('user-agent')
+    );
+
+    logger.info(`Batch export: ${pieces.length} pieces`, { exportedBy: req.user!.id });
+
+    // Generate ZIP filename with timestamp
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const zipFilename = `muziekstukken-export-${timestamp}.zip`;
+
+    // Send ZIP file
+    res.set({
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${zipFilename}"`,
+    });
+
+    res.send(zip.toBuffer());
+}));
+
+/**
+ * @swagger
+ * /music-pieces/batch-export-by-title:
+ *   post:
+ *     summary: Export all pieces for a specific title as a ZIP file
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Title of the music piece
+ *               arranger:
+ *                 type: string
+ *                 description: Optional arranger filter
+ *     responses:
+ *       200:
+ *         description: ZIP file containing all pieces for the title
+ */
+router.post('/batch-export-by-title', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { title, arranger } = req.body;
+
+    if (!title) {
+        throw new ApiError(400, 'Titel is verplicht.');
+    }
+
+    // Get all pieces for this title
+    let query = `
+        SELECT mp.id, mp.title, mp.arranger, mp.tuning, mp.group_number, mp.clef,
+               mp.file_path, mp.original_filename, mp.youtube_url, mp.created_at,
+               i.name as instrument_name
+        FROM music_pieces mp
+        LEFT JOIN instruments i ON mp.instrument_id = i.id
+        WHERE mp.title = ? AND mp.association_id = ?
+    `;
+    const params: any[] = [title, req.user!.associationId];
+
+    if (arranger) {
+        query += ' AND mp.arranger = ?';
+        params.push(arranger);
+    }
+
+    query += ' ORDER BY i.name, mp.group_number';
+
+    const pieces = db.prepare(query).all(...params) as any[];
+
+    if (pieces.length === 0) {
+        throw new ApiError(404, 'Geen muziekstukken gevonden voor deze titel.');
+    }
+
+    // Create ZIP file
+    const zip = new AdmZip();
+    const metadata: any[] = [];
+    const addedFiles = new Set<string>();
+
+    for (const piece of pieces) {
+        const filePath = path.join(UPLOAD_DIR, piece.file_path);
+
+        if (fs.existsSync(filePath)) {
+            // Generate organized filename
+            let filename = piece.original_filename || `${piece.title}.pdf`;
+            let counter = 1;
+            while (addedFiles.has(filename)) {
+                const ext = path.extname(filename);
+                const base = path.basename(filename, ext);
+                filename = `${base}_${counter}${ext}`;
+                counter++;
+            }
+            addedFiles.add(filename);
+
+            zip.addLocalFile(filePath, '', filename);
+
+            metadata.push({
+                id: piece.id,
+                title: piece.title,
+                arranger: piece.arranger,
+                instrument: piece.instrument_name,
+                tuning: piece.tuning,
+                groupNumber: piece.group_number,
+                clef: piece.clef,
+                exportedFilename: filename,
+            });
+        }
+    }
+
+    // Add metadata file
+    zip.addFile('metadata.json', Buffer.from(JSON.stringify(metadata, null, 2), 'utf8'));
+
+    // Generate safe filename
+    const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const zipFilename = `${safeTitle}-${timestamp}.zip`;
+
+    // Sanitize user input for log safety (prevent log injection via CR/LF)
+    const safeTitleForLog = String(title).replace(/[\r\n]/g, '');
+    logger.info(`Batch export by title: ${pieces.length} pieces for "${safeTitleForLog}"`, {
+        exportedBy: req.user!.id
+    });
+
+    res.set({
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${zipFilename}"`,
+    });
+
+    res.send(zip.toBuffer());
+}));
+
 export default router;

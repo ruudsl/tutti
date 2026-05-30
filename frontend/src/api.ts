@@ -83,12 +83,48 @@ export const getMfaStatus = async (): Promise<{ mfaEnabled: boolean }> => {
   return data;
 };
 
-// Users
-export const getUsers = async (): Promise<User[]> => {
-  // Request all users by setting a high limit (max 1000 users should be enough for most associations)
-  const { data } = await api.get('/users?limit=1000');
+// Pagination configuration
+export const DEFAULT_PAGE_SIZE = 50;
+export const MAX_PAGE_SIZE = 100;
+
+// Users with pagination support
+export interface UsersFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: string;
+  orchestraId?: string;
+}
+
+// Users - backwards compatible version that fetches all
+export const getUsers = async (filters?: UsersFilters): Promise<User[]> => {
+  // For backwards compatibility, fetch all users when no filters provided
+  // Use a high limit for existing components that expect all users
+  const params = filters ? { ...filters } : { limit: 1000 };
+  const { data } = await api.get('/users', { params });
   // Backend returns paginated data, extract the data array
   return Array.isArray(data) ? data : data.data || [];
+};
+
+// Users - paginated version for new components
+export const getUsersPaginated = async (filters?: UsersFilters): Promise<PaginatedResponse<User>> => {
+  const params = {
+    page: filters?.page || 1,
+    pageSize: Math.min(filters?.pageSize || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+    ...filters,
+  };
+  const { data } = await api.get('/users', { params });
+  // Ensure we return proper paginated structure
+  if (Array.isArray(data)) {
+    return {
+      data,
+      total: data.length,
+      page: 1,
+      pageSize: data.length,
+      totalPages: 1,
+    };
+  }
+  return data;
 };
 
 export const getUser = async (id: string): Promise<User> => {
@@ -306,6 +342,41 @@ export const uploadMusicPieces = async (
   return data;
 };
 
+// Upload with progress tracking
+export const uploadMusicPiecesWithProgress = async (
+  files: File[],
+  options: {
+    listId?: string;
+    youtubeUrls?: Record<string, string>;
+    onProgress?: (progress: number) => void;
+    onUploadStart?: () => void;
+    onUploadComplete?: () => void;
+  } = {}
+): Promise<{ uploaded: any[]; errors?: any[] }> => {
+  const { listId, youtubeUrls, onProgress, onUploadStart, onUploadComplete } = options;
+
+  const formData = new FormData();
+  files.forEach((file) => formData.append('files', file));
+  if (listId) formData.append('listId', listId);
+  if (youtubeUrls) formData.append('youtubeUrls', JSON.stringify(youtubeUrls));
+
+  onUploadStart?.();
+
+  const { data } = await api.post('/music-pieces/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress?.(percentCompleted);
+      }
+    },
+  });
+
+  onUploadComplete?.();
+
+  return data;
+};
+
 export const refreshInstrumentLinks = async (): Promise<{
   updated: number;
   alreadyLinked: number;
@@ -336,6 +407,69 @@ export const deleteMusicPiece = async (id: string): Promise<void> => {
 export const deleteMusicPiecesBulk = async (ids: string[]): Promise<{ count: number }> => {
   const { data } = await api.post('/music-pieces/bulk-delete', { ids });
   return data;
+};
+
+// Batch export music pieces as ZIP
+export const batchExportMusicPieces = async (
+  pieceIds: string[],
+  includeMetadata = true
+): Promise<void> => {
+  const response = await api.post('/music-pieces/batch-export', {
+    pieceIds,
+    includeMetadata,
+  }, {
+    responseType: 'blob',
+  });
+
+  // Get filename from Content-Disposition header or use default
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = `muziekstukken-export-${new Date().toISOString().slice(0, 10)}.zip`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
+    if (match) filename = match[1] || match[2];
+  }
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// Batch export all pieces for a specific title as ZIP
+export const batchExportByTitle = async (
+  title: string,
+  arranger?: string
+): Promise<void> => {
+  const response = await api.post('/music-pieces/batch-export-by-title', {
+    title,
+    arranger,
+  }, {
+    responseType: 'blob',
+  });
+
+  // Get filename from Content-Disposition header or use default
+  const contentDisposition = response.headers['content-disposition'];
+  const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+  let filename = `${safeTitle}-${new Date().toISOString().slice(0, 10)}.zip`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
+    if (match) filename = match[1] || match[2];
+  }
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 export const downloadMusicPiece = async (id: string): Promise<void> => {
@@ -424,10 +558,40 @@ export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
   await api.delete(`/music-pieces/title-mp3/${titleId}`);
 };
 
+/**
+ * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs.
+ * Tokens in URLs can be logged by servers, proxies, and browser history.
+ * This function is kept for backward compatibility with existing audio elements.
+ */
 export const getMp3Url = (filename: string): string => {
   const baseUrl = api.defaults.baseURL || '';
   const token = localStorage.getItem('token');
   return `${baseUrl}/music-pieces/mp3/${filename}?token=${token}`;
+};
+
+// Fetch MP3 as a blob with proper Authorization header (avoids token in URL)
+export const getMp3Blob = async (filename: string): Promise<Blob> => {
+  const response = await api.get(`/music-pieces/mp3/${filename}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+/**
+ * Create a blob URL for audio playback - RECOMMENDED over getMp3Url.
+ * This approach keeps the JWT token in the Authorization header instead of the URL.
+ * Remember to call revokeBlobUrl() when the audio element is unmounted to free memory.
+ */
+export const createMp3BlobUrl = async (filename: string): Promise<string> => {
+  const blob = await getMp3Blob(filename);
+  return URL.createObjectURL(blob);
+};
+
+// Revoke a blob URL when no longer needed to free memory
+export const revokeBlobUrl = (url: string): void => {
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
 };
 
 // Associations
@@ -3058,5 +3222,68 @@ export {
 export {
   uploadMusicPiecesZip,
 } from './api/music';
+
+// =============================================
+// FAILED IMPORTS API
+// =============================================
+
+export interface FailedImport {
+  id: string;
+  originalFilename: string;
+  filePath: string | null;
+  importType: string;
+  errorMessage: string;
+  errorCode: string | null;
+  metadata: Record<string, unknown> | null;
+  sourceInfo: string | null;
+  listId: string | null;
+  listName: string | null;
+  retryCount: number;
+  maxRetries: number;
+  status: 'failed' | 'retrying' | 'recovered' | 'dismissed';
+  createdByName: string | null;
+  createdAt: string;
+  lastRetryAt: string | null;
+  recoveredAt: string | null;
+}
+
+export interface FailedImportStats {
+  total: number;
+  failed: number;
+  retrying: number;
+  recovered: number;
+  dismissed: number;
+}
+
+export const getFailedImports = async (status?: string): Promise<FailedImport[]> => {
+  const params = status ? { status } : {};
+  const { data } = await api.get('/failed-imports', { params });
+  return data;
+};
+
+export const getFailedImportStats = async (): Promise<FailedImportStats> => {
+  const { data } = await api.get('/failed-imports/stats');
+  return data;
+};
+
+export const retryFailedImport = async (id: string): Promise<{ message: string; pieceId?: string }> => {
+  const { data } = await api.post(`/failed-imports/${id}/retry`);
+  return data;
+};
+
+export const dismissFailedImport = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.post(`/failed-imports/${id}/dismiss`);
+  return data;
+};
+
+export const deleteFailedImport = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/failed-imports/${id}`);
+  return data;
+};
+
+export const bulkDismissFailedImports = async (ids: string[]): Promise<{ message: string; dismissed: number }> => {
+  const { data } = await api.post('/failed-imports/bulk-dismiss', { ids });
+  return data;
+};
 
 export default api;

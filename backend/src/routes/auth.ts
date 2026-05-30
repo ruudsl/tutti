@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
+import rateLimit from 'express-rate-limit';
 import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
@@ -11,6 +12,32 @@ import { loginSchema, changePasswordSchema } from '../validation/schemas';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+
+// Rate limiter for login: 5 attempts per 15 minutes per IP
+const loginRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false, // Count all attempts, not just failures
+    keyGenerator: (req) => req.ip || 'unknown',
+});
+
+// Rate limiter for password reset: 3 attempts per hour per email
+// Uses a custom key generator to rate limit by email address
+const passwordResetRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3,
+    message: { error: 'Te veel wachtwoord reset verzoeken. Probeer het over een uur opnieuw.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Rate limit by email address (normalized to lowercase)
+        const email = req.body?.email?.toLowerCase?.() || req.ip || 'unknown';
+        return `pwd-reset:${email}`;
+    },
+});
 
 const sanitizeForLog = (value: unknown): string =>
     String(value ?? '')
@@ -62,7 +89,7 @@ interface User {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
     const { email, password, mfaCode } = req.body;
 
     // Validate basic login credentials
@@ -545,7 +572,7 @@ router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthReques
  *                 message:
  *                   type: string
  */
-router.post('/forgot-password', asyncHandler(async (req, res) => {
+router.post('/forgot-password', passwordResetRateLimiter, asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     if (!email) {

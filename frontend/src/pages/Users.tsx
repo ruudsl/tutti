@@ -53,7 +53,7 @@ export default function Users() {
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'sections'>('table');
 
-  // React Hook Form
+  // React Hook Form with validation rules
   const form = useForm<UserFormData>({ defaultValues });
 
   // TanStack Query hooks
@@ -127,7 +127,7 @@ export default function Users() {
       password: '',
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      role: user.role as UserFormData['role'],
       instrumentIds: user.instruments?.map((i) => i.id) || [],
       orchestraIds: user.orchestras?.map((o) => o.id) || [],
     });
@@ -557,7 +557,7 @@ export default function Users() {
   );
 }
 
-// Extracted form component using react-hook-form
+// Extracted form component using react-hook-form with validation
 interface UserFormProps {
   form: UseFormReturn<UserFormData>;
   instruments: { id: string; name: string; tuning?: string | null; clef?: string | null }[];
@@ -573,44 +573,73 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
     <>
       <div className="grid grid-2">
         <div className="form-group">
-          <label className="form-label">{t('users.firstName')}</label>
+          <label className="form-label">{t('users.firstName')} *</label>
           <input
             type="text"
             className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
-            {...register('firstName', { required: true })}
+            {...register('firstName', {
+              required: t('errors.required'),
+              minLength: { value: 1, message: t('errors.required') },
+              maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
+            })}
           />
+          {errors.firstName && (
+            <span className="form-error">{errors.firstName.message}</span>
+          )}
         </div>
         <div className="form-group">
-          <label className="form-label">{t('users.lastName')}</label>
+          <label className="form-label">{t('users.lastName')} *</label>
           <input
             type="text"
             className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
-            {...register('lastName', { required: true })}
+            {...register('lastName', {
+              required: t('errors.required'),
+              minLength: { value: 1, message: t('errors.required') },
+              maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
+            })}
           />
+          {errors.lastName && (
+            <span className="form-error">{errors.lastName.message}</span>
+          )}
         </div>
       </div>
 
       <div className="form-group">
-        <label className="form-label">{t('users.email')}</label>
+        <label className="form-label">{t('users.email')} *</label>
         <input
           type="email"
           className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-          {...register('email', { required: true })}
+          {...register('email', {
+            required: t('errors.required'),
+            pattern: {
+              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              message: t('errors.invalidEmail'),
+            },
+          })}
         />
+        {errors.email && (
+          <span className="form-error">{errors.email.message}</span>
+        )}
       </div>
 
       <div className="form-group">
         <label className="form-label">
-          {isEditing ? t('users.passwordHint') : t('users.password')}
+          {isEditing ? t('users.passwordHint') : `${t('users.password')} *`}
         </label>
         <input
           type="password"
           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
           {...register('password', {
-            required: !isEditing,
-            minLength: isEditing ? undefined : 6,
+            required: !isEditing ? t('errors.required') : false,
+            minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,
           })}
         />
+        {errors.password && (
+          <span className="form-error">{errors.password.message}</span>
+        )}
+        {!isEditing && !errors.password && (
+          <span className="form-hint">{t('errors.passwordTooShort', { min: 8 })}</span>
+        )}
       </div>
 
       <div className="form-group">

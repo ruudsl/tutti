@@ -33,7 +33,7 @@ export default function Occupancy() {
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
     staleTime: 5 * 60 * 1000,
   });
 

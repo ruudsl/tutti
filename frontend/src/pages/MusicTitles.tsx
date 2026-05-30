@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useReducer, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { Icon } from '../components/Icon';
@@ -6,6 +6,7 @@ import { useGenres } from '../hooks/useGenres';
 import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url, searchMusicaInfo, getMusicaInfoDetail } from '../api';
 import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 import { useDebounce } from '../hooks/useDebounce';
 import { formatDuration, parseDuration } from '../utils/format';
 import { showSuccess, showError } from '../utils/toast';
@@ -35,16 +36,71 @@ interface TitleMetaForm {
   internalNotes: string;
 }
 
-export default function MusicTitles() {
-  const { t } = useTranslation();
-  useDocumentTitle('pageTitle.titles');
-  const [search, setSearch] = useState('');
-  const [filterGenre, setFilterGenre] = useState('');
-  const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
+// Consolidated state interface for better state management
+interface MusicTitlesState {
+  // Filter state
+  search: string;
+  filterGenre: string;
+  expandedTitle: string | null;
 
-  // Edit state
-  const [editingTitle, setEditingTitle] = useState<MusicTitle | null>(null);
-  const [titleMetaForm, setTitleMetaForm] = useState<TitleMetaForm>({
+  // Edit modal state
+  editingTitle: MusicTitle | null;
+  titleMetaForm: TitleMetaForm;
+  youtubeMeta: { title: string; author: string } | null;
+  currentMp3Path: string | null;
+  pendingMp3File: File | null;
+
+  // Loading states
+  fetchingYouTube: boolean;
+  saving: boolean;
+  uploadingMp3: boolean;
+
+  // MusicaInfo state
+  musicaInfoSearching: boolean;
+  musicaInfoResults: MusicaInfoSearchResult[] | null;
+  musicaInfoSearchUrl: string;
+  musicaInfoError: string;
+  musicaInfoLoadingDetail: string | null;
+  musicaInfoDetail: MusicaInfoDetail | null;
+
+  // Modal states
+  showImslpSearch: boolean;
+  imslpSearchTitle: string;
+  showStreamingEditor: boolean;
+}
+
+type MusicTitlesAction =
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_FILTER_GENRE'; payload: string }
+  | { type: 'SET_EXPANDED_TITLE'; payload: string | null }
+  | { type: 'CLEAR_FILTERS' }
+  | { type: 'OPEN_EDIT_MODAL'; payload: MusicTitle }
+  | { type: 'CLOSE_EDIT_MODAL' }
+  | { type: 'UPDATE_TITLE_META_FORM'; payload: Partial<TitleMetaForm> }
+  | { type: 'SET_YOUTUBE_META'; payload: { title: string; author: string } | null }
+  | { type: 'SET_FETCHING_YOUTUBE'; payload: boolean }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_UPLOADING_MP3'; payload: boolean }
+  | { type: 'SET_CURRENT_MP3_PATH'; payload: string | null }
+  | { type: 'SET_PENDING_MP3_FILE'; payload: File | null }
+  | { type: 'MUSICAINFO_SEARCH_START' }
+  | { type: 'MUSICAINFO_SEARCH_SUCCESS'; payload: { results: MusicaInfoSearchResult[]; searchUrl: string } }
+  | { type: 'MUSICAINFO_SEARCH_ERROR'; payload: string }
+  | { type: 'MUSICAINFO_LOAD_DETAIL_START'; payload: string }
+  | { type: 'MUSICAINFO_LOAD_DETAIL_SUCCESS'; payload: MusicaInfoDetail }
+  | { type: 'MUSICAINFO_LOAD_DETAIL_ERROR'; payload: string }
+  | { type: 'MUSICAINFO_APPLY_DETAIL'; payload: MusicaInfoDetail }
+  | { type: 'MUSICAINFO_RESET' }
+  | { type: 'SHOW_IMSLP_SEARCH'; payload: string }
+  | { type: 'HIDE_IMSLP_SEARCH' }
+  | { type: 'SET_SHOW_STREAMING_EDITOR'; payload: boolean };
+
+const initialState: MusicTitlesState = {
+  search: '',
+  filterGenre: '',
+  expandedTitle: null,
+  editingTitle: null,
+  titleMetaForm: {
     youtubeUrl: '',
     description: '',
     durationStr: '',
@@ -52,29 +108,173 @@ export default function MusicTitles() {
     genreIds: [],
     isShared: false,
     internalNotes: '',
-  });
-  const [youtubeMeta, setYoutubeMeta] = useState<{ title: string; author: string } | null>(null);
-  const [fetchingYouTube, setFetchingYouTube] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [uploadingMp3, setUploadingMp3] = useState(false);
-  const [currentMp3Path, setCurrentMp3Path] = useState<string | null>(null);
-  const [pendingMp3File, setPendingMp3File] = useState<File | null>(null);
+  },
+  youtubeMeta: null,
+  currentMp3Path: null,
+  pendingMp3File: null,
+  fetchingYouTube: false,
+  saving: false,
+  uploadingMp3: false,
+  musicaInfoSearching: false,
+  musicaInfoResults: null,
+  musicaInfoSearchUrl: '',
+  musicaInfoError: '',
+  musicaInfoLoadingDetail: null,
+  musicaInfoDetail: null,
+  showImslpSearch: false,
+  imslpSearchTitle: '',
+  showStreamingEditor: false,
+};
+
+function musicTitlesReducer(state: MusicTitlesState, action: MusicTitlesAction): MusicTitlesState {
+  switch (action.type) {
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload };
+    case 'SET_FILTER_GENRE':
+      return { ...state, filterGenre: action.payload };
+    case 'SET_EXPANDED_TITLE':
+      return { ...state, expandedTitle: action.payload };
+    case 'CLEAR_FILTERS':
+      return { ...state, search: '', filterGenre: '' };
+    case 'OPEN_EDIT_MODAL':
+      return {
+        ...state,
+        editingTitle: action.payload,
+        titleMetaForm: {
+          youtubeUrl: action.payload.youtubeUrl || '',
+          description: action.payload.description || '',
+          durationStr: formatDurationForForm(action.payload.durationSeconds),
+          grade: action.payload.grade || '',
+          genreIds: action.payload.genres?.map(g => g.id) || [],
+          isShared: action.payload.isShared || false,
+          internalNotes: action.payload.internalNotes || '',
+        },
+        currentMp3Path: action.payload.mp3FilePath || null,
+        pendingMp3File: null,
+        youtubeMeta: null,
+        musicaInfoResults: null,
+        musicaInfoDetail: null,
+        musicaInfoError: '',
+      };
+    case 'CLOSE_EDIT_MODAL':
+      return {
+        ...state,
+        editingTitle: null,
+        showStreamingEditor: false,
+      };
+    case 'UPDATE_TITLE_META_FORM':
+      return { ...state, titleMetaForm: { ...state.titleMetaForm, ...action.payload } };
+    case 'SET_YOUTUBE_META':
+      return { ...state, youtubeMeta: action.payload };
+    case 'SET_FETCHING_YOUTUBE':
+      return { ...state, fetchingYouTube: action.payload };
+    case 'SET_SAVING':
+      return { ...state, saving: action.payload };
+    case 'SET_UPLOADING_MP3':
+      return { ...state, uploadingMp3: action.payload };
+    case 'SET_CURRENT_MP3_PATH':
+      return { ...state, currentMp3Path: action.payload };
+    case 'SET_PENDING_MP3_FILE':
+      return { ...state, pendingMp3File: action.payload };
+    case 'MUSICAINFO_SEARCH_START':
+      return {
+        ...state,
+        musicaInfoSearching: true,
+        musicaInfoError: '',
+        musicaInfoResults: null,
+        musicaInfoDetail: null,
+      };
+    case 'MUSICAINFO_SEARCH_SUCCESS':
+      return {
+        ...state,
+        musicaInfoSearching: false,
+        musicaInfoResults: action.payload.results,
+        musicaInfoSearchUrl: action.payload.searchUrl,
+      };
+    case 'MUSICAINFO_SEARCH_ERROR':
+      return {
+        ...state,
+        musicaInfoSearching: false,
+        musicaInfoError: action.payload,
+      };
+    case 'MUSICAINFO_LOAD_DETAIL_START':
+      return {
+        ...state,
+        musicaInfoLoadingDetail: action.payload,
+        musicaInfoDetail: null,
+      };
+    case 'MUSICAINFO_LOAD_DETAIL_SUCCESS':
+      return {
+        ...state,
+        musicaInfoLoadingDetail: null,
+        musicaInfoDetail: action.payload,
+      };
+    case 'MUSICAINFO_LOAD_DETAIL_ERROR':
+      return {
+        ...state,
+        musicaInfoLoadingDetail: null,
+        musicaInfoError: action.payload,
+      };
+    case 'MUSICAINFO_APPLY_DETAIL':
+      return {
+        ...state,
+        titleMetaForm: {
+          ...state.titleMetaForm,
+          durationStr: action.payload.duration || state.titleMetaForm.durationStr,
+          grade: action.payload.difficulty || state.titleMetaForm.grade,
+        },
+        musicaInfoResults: null,
+        musicaInfoDetail: null,
+      };
+    case 'MUSICAINFO_RESET':
+      return {
+        ...state,
+        musicaInfoResults: null,
+        musicaInfoDetail: null,
+        musicaInfoError: '',
+      };
+    case 'SHOW_IMSLP_SEARCH':
+      return { ...state, showImslpSearch: true, imslpSearchTitle: action.payload };
+    case 'HIDE_IMSLP_SEARCH':
+      return { ...state, showImslpSearch: false, imslpSearchTitle: '' };
+    case 'SET_SHOW_STREAMING_EDITOR':
+      return { ...state, showStreamingEditor: action.payload };
+    default:
+      return state;
+  }
+}
+
+export default function MusicTitles() {
+  const { t } = useTranslation();
+  useDocumentTitle('pageTitle.titles');
   const mp3InputRef = useRef<HTMLInputElement>(null);
 
-  // MusicaInfo state
-  const [musicaInfoSearching, setMusicaInfoSearching] = useState(false);
-  const [musicaInfoResults, setMusicaInfoResults] = useState<MusicaInfoSearchResult[] | null>(null);
-  const [musicaInfoSearchUrl, setMusicaInfoSearchUrl] = useState('');
-  const [musicaInfoError, setMusicaInfoError] = useState('');
-  const [musicaInfoLoadingDetail, setMusicaInfoLoadingDetail] = useState<string | null>(null);
-  const [musicaInfoDetail, setMusicaInfoDetail] = useState<MusicaInfoDetail | null>(null);
+  // Use reducer for consolidated state management
+  const [state, dispatch] = useReducer(musicTitlesReducer, initialState);
 
-  // IMSLP state
-  const [showImslpSearch, setShowImslpSearch] = useState(false);
-  const [imslpSearchTitle, setImslpSearchTitle] = useState('');
-
-  // Streaming links state
-  const [showStreamingEditor, setShowStreamingEditor] = useState(false);
+  // Destructure state for easier access
+  const {
+    search,
+    filterGenre,
+    expandedTitle,
+    editingTitle,
+    titleMetaForm,
+    youtubeMeta,
+    currentMp3Path,
+    pendingMp3File,
+    fetchingYouTube,
+    saving,
+    uploadingMp3,
+    musicaInfoSearching,
+    musicaInfoResults,
+    musicaInfoSearchUrl,
+    musicaInfoError,
+    musicaInfoLoadingDetail,
+    musicaInfoDetail,
+    showImslpSearch,
+    imslpSearchTitle,
+    showStreamingEditor,
+  } = state;
 
   // Debounce search for API calls
   const debouncedSearch = useDebounce(search, 300);
@@ -91,88 +291,58 @@ export default function MusicTitles() {
 
   const isLoading = titlesLoading || genresLoading;
 
-  const toggleExpand = (title: string) => {
-    setExpandedTitle(expandedTitle === title ? null : title);
-  };
+  const toggleExpand = useCallback((title: string) => {
+    dispatch({ type: 'SET_EXPANDED_TITLE', payload: expandedTitle === title ? null : title });
+  }, [expandedTitle]);
 
-  const openTitleMetaModal = (title: MusicTitle) => {
-    setEditingTitle(title);
-    setTitleMetaForm({
-      youtubeUrl: title.youtubeUrl || '',
-      description: title.description || '',
-      durationStr: formatDurationForForm(title.durationSeconds),
-      grade: title.grade || '',
-      genreIds: title.genres?.map(g => g.id) || [],
-      isShared: title.isShared || false,
-      internalNotes: title.internalNotes || '',
-    });
-    setCurrentMp3Path(title.mp3FilePath || null);
-    setPendingMp3File(null);
-    setYoutubeMeta(null);
-    setMusicaInfoResults(null);
-    setMusicaInfoDetail(null);
-    setMusicaInfoError('');
-  };
+  const openTitleMetaModal = useCallback((title: MusicTitle) => {
+    dispatch({ type: 'OPEN_EDIT_MODAL', payload: title });
+  }, []);
 
-  const searchOnMusicaInfo = async () => {
+  const searchOnMusicaInfo = useCallback(async () => {
     if (!editingTitle) return;
-    setMusicaInfoSearching(true);
-    setMusicaInfoError('');
-    setMusicaInfoResults(null);
-    setMusicaInfoDetail(null);
+    dispatch({ type: 'MUSICAINFO_SEARCH_START' });
     try {
       const data = await searchMusicaInfo(editingTitle.title);
-      setMusicaInfoResults(data.results);
-      setMusicaInfoSearchUrl(data.searchUrl);
+      dispatch({ type: 'MUSICAINFO_SEARCH_SUCCESS', payload: { results: data.results, searchUrl: data.searchUrl } });
     } catch (error: any) {
-      setMusicaInfoError(error.response?.data?.error || t('titles.musicaInfoError'));
-    } finally {
-      setMusicaInfoSearching(false);
+      dispatch({ type: 'MUSICAINFO_SEARCH_ERROR', payload: error.response?.data?.error || t('titles.musicaInfoError') });
     }
-  };
+  }, [editingTitle, t]);
 
-  const loadMusicaInfoDetail = async (artnr: string) => {
-    setMusicaInfoLoadingDetail(artnr);
-    setMusicaInfoDetail(null);
+  const loadMusicaInfoDetail = useCallback(async (artnr: string) => {
+    dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_START', payload: artnr });
     try {
       const detail = await getMusicaInfoDetail(artnr);
-      setMusicaInfoDetail(detail);
+      dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_SUCCESS', payload: detail });
     } catch (error: any) {
-      setMusicaInfoError(error.response?.data?.error || t('titles.musicaInfoError'));
-    } finally {
-      setMusicaInfoLoadingDetail(null);
+      dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_ERROR', payload: error.response?.data?.error || t('titles.musicaInfoError') });
     }
-  };
+  }, [t]);
 
-  const applyMusicaInfoDetail = (detail: MusicaInfoDetail) => {
-    setTitleMetaForm(f => ({
-      ...f,
-      durationStr: detail.duration || f.durationStr,
-      grade: detail.difficulty || f.grade,
-    }));
-    setMusicaInfoResults(null);
-    setMusicaInfoDetail(null);
-  };
+  const applyMusicaInfoDetail = useCallback((detail: MusicaInfoDetail) => {
+    dispatch({ type: 'MUSICAINFO_APPLY_DETAIL', payload: detail });
+  }, []);
 
-  const fetchYouTubeMetadata = async () => {
+  const fetchYouTubeMetadata = useCallback(async () => {
     if (!titleMetaForm.youtubeUrl) return;
 
-    setFetchingYouTube(true);
+    dispatch({ type: 'SET_FETCHING_YOUTUBE', payload: true });
     try {
       const meta = await getYouTubeMeta(titleMetaForm.youtubeUrl);
-      setYoutubeMeta({ title: meta.title, author: meta.author });
+      dispatch({ type: 'SET_YOUTUBE_META', payload: { title: meta.title, author: meta.author } });
     } catch (error: any) {
       showError(error.response?.data?.error || t('titles.errorFetchYouTube'));
     } finally {
-      setFetchingYouTube(false);
+      dispatch({ type: 'SET_FETCHING_YOUTUBE', payload: false });
     }
-  };
+  }, [titleMetaForm.youtubeUrl, t]);
 
-  const handleSaveTitleMeta = async (e: React.FormEvent) => {
+  const handleSaveTitleMeta = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTitle) return;
 
-    setSaving(true);
+    dispatch({ type: 'SET_SAVING', payload: true });
     try {
       // First save metadata and get the title ID
       const result = await updateTitleMeta({
@@ -200,57 +370,58 @@ export default function MusicTitles() {
         showSuccess(t('titles.metadataSaved'));
       }
 
-      setEditingTitle(null);
-      setPendingMp3File(null);
+      dispatch({ type: 'CLOSE_EDIT_MODAL' });
       refetch();
     } catch (error: any) {
       showError(error.response?.data?.error || t('titles.errorSaveMetadata'));
     } finally {
-      setSaving(false);
+      dispatch({ type: 'SET_SAVING', payload: false });
     }
-  };
+  }, [editingTitle, titleMetaForm, pendingMp3File, t, refetch]);
 
-  const handleMp3Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMp3Upload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingTitle?.id) return;
 
-    setUploadingMp3(true);
+    dispatch({ type: 'SET_UPLOADING_MP3', payload: true });
     try {
       const result = await uploadTitleMp3(editingTitle.id, file);
-      setCurrentMp3Path(result.mp3FilePath);
+      dispatch({ type: 'SET_CURRENT_MP3_PATH', payload: result.mp3FilePath });
       showSuccess(t('titles.mp3Uploaded'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('titles.errorUploadMp3'));
     } finally {
-      setUploadingMp3(false);
+      dispatch({ type: 'SET_UPLOADING_MP3', payload: false });
       if (mp3InputRef.current) {
         mp3InputRef.current.value = '';
       }
     }
-  };
+  }, [editingTitle?.id, t]);
 
-  const handleMp3Delete = async () => {
+  const handleMp3Delete = useCallback(async () => {
     if (!editingTitle?.id || !currentMp3Path) return;
 
     if (!confirm(t('titles.confirmDeleteMp3'))) return;
 
     try {
       await deleteTitleMp3(editingTitle.id);
-      setCurrentMp3Path(null);
+      dispatch({ type: 'SET_CURRENT_MP3_PATH', payload: null });
       showSuccess(t('titles.mp3Deleted'));
     } catch (error: any) {
       showError(error.response?.data?.error || t('titles.errorDeleteMp3'));
     }
-  };
+  }, [editingTitle?.id, currentMp3Path, t]);
 
-  const toggleGenre = (genreId: string) => {
-    setTitleMetaForm(f => ({
-      ...f,
-      genreIds: f.genreIds.includes(genreId)
-        ? f.genreIds.filter(id => id !== genreId)
-        : [...f.genreIds, genreId],
-    }));
-  };
+  const toggleGenre = useCallback((genreId: string) => {
+    dispatch({
+      type: 'UPDATE_TITLE_META_FORM',
+      payload: {
+        genreIds: titleMetaForm.genreIds.includes(genreId)
+          ? titleMetaForm.genreIds.filter(id => id !== genreId)
+          : [...titleMetaForm.genreIds, genreId],
+      },
+    });
+  }, [titleMetaForm.genreIds]);
 
   if (isLoading) {
     return (
@@ -283,14 +454,14 @@ export default function MusicTitles() {
                 className="form-control"
                 placeholder={t('titles.searchPlaceholder')}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
               />
             </div>
             <div className="form-group">
               <select
                 className="form-control form-select"
                 value={filterGenre}
-                onChange={(e) => setFilterGenre(e.target.value)}
+                onChange={(e) => dispatch({ type: 'SET_FILTER_GENRE', payload: e.target.value })}
               >
                 <option value="">{t('titles.allGenres')}</option>
                 {genres.map((genre) => (
@@ -304,10 +475,7 @@ export default function MusicTitles() {
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={() => {
-                  setSearch('');
-                  setFilterGenre('');
-                }}
+                onClick={() => dispatch({ type: 'CLEAR_FILTERS' })}
               >
                 {t('titles.clearFilters')}
               </button>
@@ -346,10 +514,11 @@ export default function MusicTitles() {
               </tbody>
             </table>
           ) : (
-            <div className="empty-state">
-              <div className="empty-icon"><Icon name="music" size={48} /></div>
-              <p>{t('titles.noTitles')}</p>
-            </div>
+            <EmptyState
+              icon="music"
+              title={t('titles.noTitles')}
+              description={t('titles.noTitlesDescription')}
+            />
           )}
         </div>
       </div>
@@ -358,10 +527,10 @@ export default function MusicTitles() {
       {editingTitle && (
         <Modal
           title={t('titles.editMetadata')}
-          onClose={() => setEditingTitle(null)}
+          onClose={() => dispatch({ type: 'CLOSE_EDIT_MODAL' })}
           footer={
             <>
-              <button type="button" className="btn btn-outline" onClick={() => setEditingTitle(null)}>
+              <button type="button" className="btn btn-outline" onClick={() => dispatch({ type: 'CLOSE_EDIT_MODAL' })}>
                 {t('common.cancel')}
               </button>
               <button type="submit" form="edit-title-meta-form" className="btn btn-primary" disabled={saving}>
@@ -412,10 +581,7 @@ export default function MusicTitles() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setImslpSearchTitle(editingTitle.title);
-                        setShowImslpSearch(true);
-                      }}
+                      onClick={() => dispatch({ type: 'SHOW_IMSLP_SEARCH', payload: editingTitle.title })}
                       style={{
                         display: 'block',
                         width: '100%',
@@ -572,7 +738,7 @@ export default function MusicTitles() {
                       type="button"
                       className="btn btn-outline"
                       style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }}
-                      onClick={() => { setMusicaInfoDetail(null); }}
+                      onClick={() => dispatch({ type: 'MUSICAINFO_RESET' })}
                     >
                       {t('common.cancel')}
                     </button>
@@ -589,8 +755,8 @@ export default function MusicTitles() {
                   className="form-control"
                   value={titleMetaForm.youtubeUrl}
                   onChange={(e) => {
-                    setTitleMetaForm(f => ({ ...f, youtubeUrl: e.target.value }));
-                    setYoutubeMeta(null);
+                    dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { youtubeUrl: e.target.value } });
+                    dispatch({ type: 'SET_YOUTUBE_META', payload: null });
                   }}
                   placeholder="https://www.youtube.com/watch?v=..."
                   style={{ flex: 1 }}
@@ -619,7 +785,7 @@ export default function MusicTitles() {
                   type="text"
                   className="form-control"
                   value={titleMetaForm.durationStr}
-                  onChange={(e) => setTitleMetaForm(f => ({ ...f, durationStr: e.target.value }))}
+                  onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { durationStr: e.target.value } })}
                   placeholder="3:45"
                   pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
                 />
@@ -630,7 +796,7 @@ export default function MusicTitles() {
                   type="text"
                   className="form-control"
                   value={titleMetaForm.grade}
-                  onChange={(e) => setTitleMetaForm(f => ({ ...f, grade: e.target.value }))}
+                  onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { grade: e.target.value } })}
                   placeholder={t('titles.difficultyPlaceholder')}
                 />
               </div>
@@ -665,7 +831,7 @@ export default function MusicTitles() {
                     type="button"
                     className="btn btn-danger btn-sm"
                     onClick={() => {
-                      setPendingMp3File(null);
+                      dispatch({ type: 'SET_PENDING_MP3_FILE', payload: null });
                       if (mp3InputRef.current) mp3InputRef.current.value = '';
                     }}
                     title={t('common.delete')}
@@ -685,7 +851,7 @@ export default function MusicTitles() {
                         if (editingTitle?.id) {
                           handleMp3Upload(e);
                         } else {
-                          setPendingMp3File(file);
+                          dispatch({ type: 'SET_PENDING_MP3_FILE', payload: file });
                         }
                       }
                     }}
@@ -715,7 +881,7 @@ export default function MusicTitles() {
               <textarea
                 className="form-control"
                 value={titleMetaForm.description}
-                onChange={(e) => setTitleMetaForm(f => ({ ...f, description: e.target.value }))}
+                onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { description: e.target.value } })}
                 rows={3}
                 placeholder={t('titles.descriptionPlaceholder')}
               />
@@ -725,7 +891,7 @@ export default function MusicTitles() {
               <textarea
                 className="form-control"
                 value={titleMetaForm.internalNotes}
-                onChange={(e) => setTitleMetaForm(f => ({ ...f, internalNotes: e.target.value }))}
+                onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { internalNotes: e.target.value } })}
                 rows={2}
                 placeholder={t('titles.internalNotesPlaceholder')}
                 style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
@@ -767,7 +933,7 @@ export default function MusicTitles() {
                   type="checkbox"
                   className="form-check-input"
                   checked={titleMetaForm.isShared}
-                  onChange={(e) => setTitleMetaForm(f => ({ ...f, isShared: e.target.checked }))}
+                  onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { isShared: e.target.checked } })}
                 />
                 <span style={{ marginLeft: '0.5rem' }}>
                   {t('titles.sharingAllowed')}
@@ -783,7 +949,7 @@ export default function MusicTitles() {
                   <button
                     type="button"
                     className="btn btn-outline btn-sm"
-                    onClick={() => setShowStreamingEditor(true)}
+                    onClick={() => dispatch({ type: 'SET_SHOW_STREAMING_EDITOR', payload: true })}
                     style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }}
                   >
                     {t('streaming.manageLinks')}
@@ -804,14 +970,14 @@ export default function MusicTitles() {
       {showStreamingEditor && editingTitle?.id && (
         <Modal
           title={t('streaming.editLinks')}
-          onClose={() => setShowStreamingEditor(false)}
+          onClose={() => dispatch({ type: 'SET_SHOW_STREAMING_EDITOR', payload: false })}
         >
           <StreamingLinkEditor
             titleId={editingTitle.id}
             titleName={editingTitle.title}
             composer={editingTitle.arranger}
             currentLinks={editingTitle.streamingLinks}
-            onClose={() => setShowStreamingEditor(false)}
+            onClose={() => dispatch({ type: 'SET_SHOW_STREAMING_EDITOR', payload: false })}
             onSave={() => refetch()}
           />
         </Modal>
@@ -820,10 +986,7 @@ export default function MusicTitles() {
       {/* IMSLP Search Modal */}
       {showImslpSearch && (
         <ImslpSearch
-          onClose={() => {
-            setShowImslpSearch(false);
-            setImslpSearchTitle('');
-          }}
+          onClose={() => dispatch({ type: 'HIDE_IMSLP_SEARCH' })}
           initialQuery={imslpSearchTitle}
           onImportSuccess={() => {
             refetch();

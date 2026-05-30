@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,8 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const errorRef = useRef<HTMLDivElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   useDocumentTitle('pageTitle.login');
 
   useEffect(() => {
@@ -50,10 +52,17 @@ export default function Login() {
 
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || t('auth.loginFailed'));
+      const errorMessage = err.response?.data?.error || t('auth.loginFailed');
+      setError(errorMessage);
       if (showMfa) {
         setMfaCode('');
       }
+      // Focus the error message for screen readers, then focus the first input
+      setTimeout(() => {
+        errorRef.current?.focus();
+        // Also focus the email input for keyboard users to retry
+        setTimeout(() => emailInputRef.current?.focus(), 100);
+      }, 0);
     } finally {
       setIsLoading(false);
     }
@@ -104,13 +113,24 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {error && <div className="alert alert-danger">{error}</div>}
+          {error && (
+            <div
+              ref={errorRef}
+              className="alert alert-danger"
+              role="alert"
+              aria-live="assertive"
+              tabIndex={-1}
+            >
+              {error}
+            </div>
+          )}
 
           {!showMfa ? (
             <>
               <div className="form-group">
                 <label htmlFor="email" className="form-label">{t('auth.email')}</label>
                 <input
+                  ref={emailInputRef}
                   type="email"
                   id="email"
                   className="form-control"
@@ -118,6 +138,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoFocus
+                  aria-describedby={error ? 'login-error' : undefined}
                 />
               </div>
 

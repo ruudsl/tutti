@@ -58,7 +58,11 @@ export function NotificationBell() {
         )}
       </button>
       {isOpen && (
-        <div className="notification-bell-dropdown">
+        <div
+          className="notification-bell-dropdown"
+          role="region"
+          aria-label={t('notifications.title', 'Meldingen')}
+        >
           <NotificationDropdown onClose={() => setIsOpen(false)} />
         </div>
       )}
@@ -104,24 +108,31 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="notification-dropdown-panel">
+    <div className="notification-dropdown-panel" role="region" aria-labelledby="notification-header">
       <div className="notification-dropdown-header">
-        <span className="text-semibold">{t('notifications.title', 'Meldingen')}</span>
+        <span id="notification-header" className="text-semibold">{t('notifications.title', 'Meldingen')}</span>
         <button
           className="btn btn-outline btn-sm"
           onClick={() => markAllRead.mutate()}
           disabled={markAllRead.isPending}
+          aria-label={t('notifications.markAllRead', 'Alles als gelezen markeren')}
         >
           {t('notifications.markAllRead', 'Alles als gelezen')}
         </button>
       </div>
-      <div className="notification-dropdown-body">
+      <div
+        className="notification-dropdown-body"
+        role="list"
+        aria-live="polite"
+        aria-busy={isLoading}
+      >
         {isLoading ? (
-          <div className="notification-loading">
+          <div className="notification-loading" role="status">
             <div className="spinner" aria-hidden="true"></div>
+            <span className="sr-only">{t('common.loading', 'Laden...')}</span>
           </div>
         ) : !notifications || notifications.length === 0 ? (
-          <div className="notification-empty">
+          <div className="notification-empty" role="status">
             <span className="notification-empty-icon" aria-hidden="true">
               <Icon name="bell" size={32} />
             </span>
@@ -133,6 +144,8 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
               key={notification.id}
               className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
               onClick={() => handleClick(notification)}
+              role="listitem"
+              aria-label={`${notification.title}. ${notification.body}. ${!notification.isRead ? t('notifications.unread', 'Ongelezen') : ''}`}
             >
               <span className="notification-item-icon" aria-hidden="true">
                 <Icon name={getIcon(notification.type)} size={20} />
@@ -147,7 +160,9 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
                   })}
                 </div>
               </div>
-              {!notification.isRead && <span className="notification-item-dot" aria-hidden="true"></span>}
+              {!notification.isRead && (
+                <span className="notification-item-dot" aria-hidden="true" title={t('notifications.unread', 'Ongelezen')}></span>
+              )}
             </button>
           ))
         )}

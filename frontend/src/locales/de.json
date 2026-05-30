@@ -2003,6 +2003,33 @@
     "copiedToClipboard": "Fehlerinformationen wurden in die Zwischenablage kopiert. Sie können diese jetzt in eine E-Mail an den Support einfügen.",
     "copyErrorInfo": "Kopieren Sie diese Fehlerinformationen:"
   },
+  "sectionError": {
+    "title": "{{section}} konnte nicht geladen werden",
+    "message": "Dieser Bereich hat einen Fehler. Andere Teile der Seite funktionieren noch.",
+    "compactMessage": "{{section}} konnte nicht geladen werden"
+  },
+  "failedImports": {
+    "title": "Fehlgeschlagene Importe",
+    "noItems": "Keine fehlgeschlagenen Importe",
+    "retry": "Erneut versuchen",
+    "dismiss": "Ignorieren",
+    "delete": "Löschen",
+    "retrying": "Erneut versuchen...",
+    "recovered": "Wiederhergestellt",
+    "dismissed": "Ignoriert",
+    "failed": "Fehlgeschlagen",
+    "retryCount": "Versuch {{count}} von {{max}}",
+    "errorMessage": "Fehler: {{message}}",
+    "importedAt": "Importiert am {{date}}",
+    "confirmDelete": "Möchten Sie diesen Import wirklich löschen?",
+    "confirmDismiss": "Möchten Sie diesen Import wirklich ignorieren?",
+    "bulkDismiss": "Ausgewählte ignorieren",
+    "stats": {
+      "total": "Gesamt",
+      "pending": "Ausstehend",
+      "recovered": "Wiederhergestellt"
+    }
+  },
   "notFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
@@ -2013,10 +2040,21 @@
     "generic": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
     "network": "Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.",
     "notFound": "Nicht gefunden.",
-    "unauthorized": "Nicht autorisiert.",
-    "forbidden": "Zugriff verweigert.",
+    "unauthorized": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "forbidden": "Sie haben keinen Zugriff auf diese Aktion.",
     "validation": "Bitte überprüfen Sie die eingegebenen Daten.",
-    "deleteFailed": "Löschen fehlgeschlagen"
+    "conflict": "Ein Element mit diesen Daten existiert bereits.",
+    "serverError": "Ein Serverfehler ist aufgetreten.",
+    "timeout": "Der Server antwortet nicht. Bitte versuchen Sie es später erneut.",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "required": "Dieses Feld ist erforderlich",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "passwordTooShort": "Das Passwort muss mindestens {{min}} Zeichen lang sein",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein",
+    "invalidDate": "Bitte geben Sie ein gültiges Datum ein",
+    "invalidNumber": "Bitte geben Sie eine gültige Zahl ein",
+    "minLength": "Mindestens {{min}} Zeichen erforderlich",
+    "maxLength": "Maximal {{max}} Zeichen erlaubt"
   },
   "equipment": {
     "title": "Instrumentenverwaltung",

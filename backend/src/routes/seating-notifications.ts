@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import db from '../database/connection';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 import twilio from 'twilio';
 
@@ -307,10 +308,9 @@ async function sendWebhook(settings: NotificationSettings, payload: Record<strin
 }
 
 // Send notification manually for a rehearsal (for testing or manual triggering)
-router.post('/send/:rehearsalId', authenticateToken, async (req: Request, res: Response) => {
-    try {
-        const { rehearsalId } = req.params;
-        const authReq = req as AuthRequest;
+router.post('/send/:rehearsalId', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+    const { rehearsalId } = req.params;
+    const authReq = req as AuthRequest;
 
         // Get rehearsal details and verify association
         const rehearsal = db.prepare(`
@@ -472,39 +472,29 @@ router.post('/send/:rehearsalId', authenticateToken, async (req: Request, res: R
             logger.error('Notification failed', { error: result.error });
             res.status(500).json({ error: 'Failed to send notification', details: result.error });
         }
-    } catch (error) {
-        logger.error('Error sending notification', { error });
-        res.status(500).json({ error: 'Failed to send notification' });
-    }
-});
+}));
 
 // Test Twilio connection
-router.post('/test-twilio', authenticateToken, async (req: Request, res: Response) => {
-    try {
-        const { account_sid, auth_token, whatsapp_from, whatsapp_to } = req.body;
+router.post('/test-twilio', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+    const { account_sid, auth_token, whatsapp_from, whatsapp_to } = req.body;
 
-        if (!account_sid || !auth_token || !whatsapp_from || !whatsapp_to) {
-            return res.status(400).json({ error: 'All Twilio fields are required' });
-        }
-
-        const client = twilio(account_sid, auth_token);
-
-        const fromNumber = whatsapp_from.startsWith('whatsapp:') ? whatsapp_from : `whatsapp:${whatsapp_from}`;
-        const toNumber = whatsapp_to.startsWith('whatsapp:') ? whatsapp_to : `whatsapp:${whatsapp_to}`;
-
-        await client.messages.create({
-            body: '✅ Testbericht van Harmonie - WhatsApp koppeling werkt!',
-            from: fromNumber,
-            to: toNumber,
-        });
-
-        res.json({ success: true, message: 'Test message sent successfully' });
-    } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        logger.error('Twilio test failed', { error: errorMsg });
-        res.status(400).json({ error: `Twilio test failed: ${errorMsg}` });
+    if (!account_sid || !auth_token || !whatsapp_from || !whatsapp_to) {
+        return res.status(400).json({ error: 'All Twilio fields are required' });
     }
-});
+
+    const client = twilio(account_sid, auth_token);
+
+    const fromNumber = whatsapp_from.startsWith('whatsapp:') ? whatsapp_from : `whatsapp:${whatsapp_from}`;
+    const toNumber = whatsapp_to.startsWith('whatsapp:') ? whatsapp_to : `whatsapp:${whatsapp_to}`;
+
+    await client.messages.create({
+        body: 'Testbericht van Harmonie - WhatsApp koppeling werkt!',
+        from: fromNumber,
+        to: toNumber,
+    });
+
+    res.json({ success: true, message: 'Test message sent successfully' });
+}));
 
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);

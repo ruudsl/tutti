@@ -348,6 +348,85 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Concert types
+CREATE TABLE IF NOT EXISTS concert_types (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    value TEXT NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    UNIQUE(association_id, value)
+);
+
+-- Concerts
+CREATE TABLE IF NOT EXISTS concerts (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL,
+    end_date TEXT,
+    location TEXT,
+    venue_type TEXT,
+    concert_type TEXT DEFAULT 'concert',
+    description TEXT,
+    notes TEXT,
+    wheelchair_spaces INTEGER DEFAULT 0,
+    companion_spaces INTEGER DEFAULT 0,
+    hearing_loop_available BOOLEAN DEFAULT 0,
+    accessible_parking_info TEXT,
+    accessibility_info TEXT,
+    accessibility_contact_email TEXT,
+    accessibility_contact_phone TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Concert program items
+CREATE TABLE IF NOT EXISTS concert_program_items (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    music_title_id TEXT,
+    title TEXT NOT NULL,
+    composer TEXT,
+    arranger TEXT,
+    sort_order INTEGER DEFAULT 0,
+    notes TEXT,
+    part_of_set TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
+);
+
+-- Concert media
+CREATE TABLE IF NOT EXISTS concert_media (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    url TEXT,
+    file_path TEXT,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
+);
+
+-- Concert attendance
+CREATE TABLE IF NOT EXISTS concert_attendance (
+    id TEXT PRIMARY KEY,
+    concert_id TEXT NOT NULL,
+    user_id TEXT,
+    member_name TEXT NOT NULL,
+    instrument_played TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
 `;
 
 class PreparedStatement {

@@ -97,15 +97,51 @@ export function BottomSheet({
     }
   );
 
-  // Focus management and escape key
+  // Focus management, escape key, and focus trap
   useEffect(() => {
     if (!isOpen) return;
 
     previousActiveElement.current = document.activeElement;
 
+    // Focus the close button or first focusable element
+    const closeButton = sheetRef.current?.querySelector<HTMLElement>('button[aria-label]');
+    if (closeButton) {
+      closeButton.focus();
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+
+      // Focus trap: cycle focus within sheet
+      if (e.key === 'Tab' && sheetRef.current) {
+        const focusableSelectors = [
+          'a[href]',
+          'button:not([disabled])',
+          'input:not([disabled])',
+          'select:not([disabled])',
+          'textarea:not([disabled])',
+          '[tabindex]:not([tabindex="-1"])',
+        ].join(', ');
+
+        const focusableElements = Array.from(
+          sheetRef.current.querySelectorAll<HTMLElement>(focusableSelectors)
+        );
+
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
       }
     };
 
@@ -229,6 +265,8 @@ export function BottomSheet({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px',
               }}
             >
               <Icon name="close" size={20} />

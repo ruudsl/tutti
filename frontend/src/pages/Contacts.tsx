@@ -30,6 +30,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CustomFieldFormSection, CustomFieldRenderer } from '../components/CustomFields';
 
 const CONTACT_TYPE_ICONS: Record<ContactType, IconName> = {
@@ -61,6 +62,7 @@ export default function Contacts() {
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promoteResult, setPromoteResult] = useState<{ email: string; tempPassword: string } | null>(null);
+  const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
 
   const isAdmin = user?.role === ROLES.ADMIN;
   const canEdit = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
@@ -122,9 +124,7 @@ export default function Contacts() {
   });
 
   const handleDelete = (contact: Contact) => {
-    if (confirm(t('contacts.confirmDelete', { name: contact.name }))) {
-      deleteMutation.mutate(contact.id);
-    }
+    setDeletingContact(contact);
   };
 
   const handleToggleActive = (contact: Contact) => {
@@ -406,6 +406,23 @@ export default function Contacts() {
             </div>
           )}
         </Modal>
+      )}
+
+      {/* Delete Contact Confirmation */}
+      {deletingContact && (
+        <ConfirmDialog
+          title={t('contacts.deleteTitle')}
+          message={t('contacts.confirmDelete', { name: deletingContact.name })}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingContact.id, {
+              onSuccess: () => setDeletingContact(null),
+            });
+          }}
+          onCancel={() => setDeletingContact(null)}
+        />
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { Icon } from '../components/Icon';
 import { ResponsiveTable, ColumnDefinition } from '../components/ResponsiveTable';
 import { Tooltip } from '../components/Tooltip';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   getRehearsals, createRehearsal, updateRehearsal, deleteRehearsal,
   getRehearsal, updateRehearsalPieces,
@@ -140,6 +141,11 @@ export default function Rehearsals() {
   const [canSyncToSpond, setCanSyncToSpond] = useState(false);
   const [updatingAttendance, setUpdatingAttendance] = useState(false);
 
+  // Delete confirmation
+  const [deletingRehearsalId, setDeletingRehearsalId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [removingSpondConfig, setRemovingSpondConfig] = useState(false);
+
   // Helper to refresh data after mutations
   const refreshRehearsals = () => {
     queryClient.invalidateQueries({ queryKey: ['rehearsals'] });
@@ -243,14 +249,17 @@ export default function Rehearsals() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('rehearsals.deleteConfirm'))) return;
+    setIsDeleting(true);
     try {
       await deleteRehearsal(id);
       showSuccess(t('rehearsals.deleted'));
       if (selectedRehearsal?.id === id) setSelectedRehearsal(null);
       refreshRehearsals();
+      setDeletingRehearsalId(null);
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -387,11 +396,11 @@ export default function Rehearsals() {
   };
 
   const handleRemoveSpondConfig = async () => {
-    if (!confirm(t('rehearsals.spond.removeConfirm'))) return;
     try {
       await removeSpondConfig();
       showSuccess(t('rehearsals.spond.configRemoved'));
       queryClient.invalidateQueries({ queryKey: ['spondConfig'] });
+      setRemovingSpondConfig(false);
     } catch (e: any) {
       showError(e.response?.data?.error || t('rehearsals.errorSaving'));
     }
@@ -1287,7 +1296,7 @@ export default function Rehearsals() {
                   }}>
                     {t('common.edit')}
                   </button>
-                  <button className="btn btn-outline btn-sm" onClick={handleRemoveSpondConfig} style={{ color: 'var(--danger)' }}>
+                  <button className="btn btn-outline btn-sm" onClick={() => setRemovingSpondConfig(true)} style={{ color: 'var(--danger)' }}>
                     {t('rehearsals.spond.removeConfig')}
                   </button>
                 </div>
@@ -1473,7 +1482,7 @@ export default function Rehearsals() {
                     <Tooltip content={t('common.delete')} position="top">
                       <button
                         className="btn btn-outline btn-sm"
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => setDeletingRehearsalId(r.id)}
                         style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--danger)' }}
                         aria-label={t('common.delete')}
                       >
@@ -1491,6 +1500,31 @@ export default function Rehearsals() {
         </div>
       </div>
       </>}
+
+      {/* Delete Rehearsal Confirmation */}
+      {deletingRehearsalId && (
+        <ConfirmDialog
+          title={t('rehearsals.deleteTitle')}
+          message={t('rehearsals.deleteConfirm')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={() => handleDelete(deletingRehearsalId)}
+          onCancel={() => setDeletingRehearsalId(null)}
+        />
+      )}
+
+      {/* Remove Spond Config Confirmation */}
+      {removingSpondConfig && (
+        <ConfirmDialog
+          title={t('rehearsals.spond.removeTitle')}
+          message={t('rehearsals.spond.removeConfirm')}
+          confirmLabel={t('common.remove')}
+          variant="danger"
+          onConfirm={handleRemoveSpondConfig}
+          onCancel={() => setRemovingSpondConfig(false)}
+        />
+      )}
     </div>
   );
 }

@@ -184,6 +184,75 @@ export const migrations: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_ticket_transfers_status ON ticket_transfers(status)`,
     ],
   },
+  {
+    version: 11,
+    name: 'add_performance_indices',
+    up: [
+      // User queries - commonly filtered by association, status, and role
+      `CREATE INDEX IF NOT EXISTS idx_users_association_status ON users(association_id, status)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_microsoft_id ON users(microsoft_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login)`,
+
+      // User orchestras - frequently joined
+      `CREATE INDEX IF NOT EXISTS idx_user_orchestras_orchestra ON user_orchestras(orchestra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_orchestras_user ON user_orchestras(user_id)`,
+
+      // User instruments - frequently joined
+      `CREATE INDEX IF NOT EXISTS idx_user_instruments_instrument ON user_instruments(instrument_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_instruments_user ON user_instruments(user_id)`,
+
+      // Music pieces - commonly filtered by title, association, uploaded_by
+      `CREATE INDEX IF NOT EXISTS idx_music_pieces_uploaded_by ON music_pieces(uploaded_by)`,
+      `CREATE INDEX IF NOT EXISTS idx_music_pieces_created_at ON music_pieces(created_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_music_pieces_title_association ON music_pieces(title, association_id)`,
+
+      // Music list pieces - join table optimization
+      `CREATE INDEX IF NOT EXISTS idx_music_list_pieces_piece ON music_list_pieces(music_piece_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_music_list_pieces_list ON music_list_pieces(music_list_id)`,
+
+      // Music lists - commonly filtered
+      `CREATE INDEX IF NOT EXISTS idx_music_lists_orchestra ON music_lists(orchestra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_music_lists_active ON music_lists(is_active)`,
+
+      // Rehearsals - commonly filtered by date range
+      `CREATE INDEX IF NOT EXISTS idx_rehearsals_orchestra ON rehearsals(orchestra_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_rehearsals_type ON rehearsals(type)`,
+      `CREATE INDEX IF NOT EXISTS idx_rehearsals_date_association ON rehearsals(date, association_id)`,
+
+      // Concerts - commonly filtered by date and type
+      `CREATE INDEX IF NOT EXISTS idx_concerts_date_association ON concerts(date, association_id)`,
+
+      // Session management
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_expires ON user_sessions(expires_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token_hash)`,
+
+      // User favorites - commonly queried per user
+      `CREATE INDEX IF NOT EXISTS idx_user_favorites_user ON user_favorites(user_id)`,
+
+      // Recent views - commonly queried per user with order by date
+      `CREATE INDEX IF NOT EXISTS idx_user_recent_views_user_date ON user_recent_views(user_id, viewed_at DESC)`,
+
+      // Practice logs - commonly queried per user
+      `CREATE INDEX IF NOT EXISTS idx_practice_logs_user ON practice_logs(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_practice_logs_title ON practice_logs(music_title_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_practice_logs_date ON practice_logs(practiced_at)`,
+
+      // Push subscriptions
+      `CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)`,
+
+      // Music title genres - join table
+      `CREATE INDEX IF NOT EXISTS idx_music_title_genres_title ON music_title_genres(music_title_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_music_title_genres_genre ON music_title_genres(genre_id)`,
+
+      // Ticket orders - commonly filtered
+      `CREATE INDEX IF NOT EXISTS idx_ticket_orders_buyer_email ON ticket_orders(buyer_email)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_orders_paid_at ON ticket_orders(paid_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_ticket_orders_created_at ON ticket_orders(created_at)`,
+    ],
+  },
 ];
 
 /**

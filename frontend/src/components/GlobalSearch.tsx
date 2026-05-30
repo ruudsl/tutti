@@ -125,8 +125,14 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const showSuggestions = query && suggestions.length > 0 && !hasResults && !isLoading;
 
   return (
-    <div className="global-search-overlay" onClick={onClose}>
-      <div className="global-search-modal" onClick={e => e.stopPropagation()}>
+    <div className="global-search-overlay" onClick={onClose} role="presentation">
+      <div
+        className="global-search-modal"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('search.title', 'Zoeken')}
+      >
         {/* Search header */}
         <div className="global-search-header">
           <div className="global-search-input-wrapper">
@@ -254,7 +260,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
           {/* Loading state */}
           {isLoading && (
-            <div className="global-search-loading">
+            <div className="global-search-loading" role="status" aria-live="polite">
               <span className="loading-spinner" aria-hidden="true"></span>
               {t('search.searching', 'Zoeken...')}
             </div>
@@ -262,7 +268,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
           {/* No results */}
           {query && !isLoading && !hasResults && !showSuggestions && (
-            <div className="global-search-empty">
+            <div className="global-search-empty" role="status" aria-live="polite">
               <span className="empty-icon" aria-hidden="true">{'\u2049'}</span>
               <p>{t('search.noResults', 'Geen resultaten gevonden')}</p>
               <p className="empty-hint">{t('search.tryDifferent', 'Probeer een andere zoekterm')}</p>

@@ -1878,6 +1878,33 @@
     "copiedToClipboard": "Foutinformatie is gekopieerd naar het klembord. Je kunt dit nu plakken in een e-mail naar ondersteuning.",
     "copyErrorInfo": "Kopieer deze foutinformatie:"
   },
+  "sectionError": {
+    "title": "{{section}} kon niet worden geladen",
+    "message": "Dit onderdeel heeft een fout. Andere onderdelen van de pagina werken nog wel.",
+    "compactMessage": "{{section}} kon niet worden geladen"
+  },
+  "failedImports": {
+    "title": "Mislukte imports",
+    "noItems": "Geen mislukte imports",
+    "retry": "Opnieuw proberen",
+    "dismiss": "Negeren",
+    "delete": "Verwijderen",
+    "retrying": "Opnieuw proberen...",
+    "recovered": "Hersteld",
+    "dismissed": "Genegeerd",
+    "failed": "Mislukt",
+    "retryCount": "Poging {{count}} van {{max}}",
+    "errorMessage": "Fout: {{message}}",
+    "importedAt": "Geimporteerd op {{date}}",
+    "confirmDelete": "Weet je zeker dat je deze import wilt verwijderen?",
+    "confirmDismiss": "Weet je zeker dat je deze import wilt negeren?",
+    "bulkDismiss": "Selectie negeren",
+    "stats": {
+      "total": "Totaal",
+      "pending": "Wachtend",
+      "recovered": "Hersteld"
+    }
+  },
   "notFound": {
     "title": "Pagina niet gevonden",
     "description": "De pagina die je zoekt bestaat niet of is verplaatst.",
@@ -1888,10 +1915,21 @@
     "generic": "Er is een fout opgetreden. Probeer het later opnieuw.",
     "network": "Netwerkfout. Controleer je internetverbinding.",
     "notFound": "Niet gevonden.",
-    "unauthorized": "Niet geautoriseerd.",
-    "forbidden": "Geen toegang.",
+    "unauthorized": "Je sessie is verlopen. Log opnieuw in.",
+    "forbidden": "Je hebt geen toegang tot deze actie.",
     "validation": "Controleer de ingevoerde gegevens.",
-    "deleteFailed": "Verwijderen mislukt"
+    "conflict": "Er bestaat al een item met deze gegevens.",
+    "serverError": "Er is een serverfout opgetreden.",
+    "timeout": "De server reageert niet. Probeer het later opnieuw.",
+    "deleteFailed": "Verwijderen mislukt",
+    "required": "Dit veld is verplicht",
+    "invalidEmail": "Voer een geldig e-mailadres in",
+    "passwordTooShort": "Wachtwoord moet minimaal {{min}} tekens bevatten",
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "invalidDate": "Voer een geldige datum in",
+    "invalidNumber": "Voer een geldig nummer in",
+    "minLength": "Minimaal {{min}} tekens vereist",
+    "maxLength": "Maximaal {{max}} tekens toegestaan"
   },
   "equipment": {
     "title": "Instrumentenbeheer",

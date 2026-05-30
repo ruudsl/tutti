@@ -27,9 +27,15 @@ cleanupOutdatedCaches();
 self.skipWaiting();
 clientsClaim();
 
-// API calls - Network First with fallback to cache
+// Cache-first strategy for GET API requests when offline
+// This provides better offline support by serving cached data immediately
 registerRoute(
-  /^https?:\/\/.*\/api\/(?!auth).*$/,
+  ({ request, url }) => {
+    // Match GET requests to API endpoints (except auth)
+    return request.method === 'GET' &&
+           url.pathname.startsWith('/api/') &&
+           !url.pathname.startsWith('/api/auth');
+  },
   new NetworkFirst({
     cacheName: 'api-cache',
     plugins: [
@@ -40,8 +46,34 @@ registerRoute(
       new CacheableResponsePlugin({
         statuses: [0, 200],
       }),
-      new BackgroundSyncPlugin('api-queue', {
+    ],
+    networkTimeoutSeconds: 5, // Faster fallback to cache when network is slow
+  })
+);
+
+// Background sync for POST/PUT/DELETE API requests when offline
+registerRoute(
+  ({ request, url }) => {
+    // Match mutating requests to API endpoints
+    return ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) &&
+           url.pathname.startsWith('/api/') &&
+           !url.pathname.startsWith('/api/auth');
+  },
+  new NetworkFirst({
+    cacheName: 'api-mutations-cache',
+    plugins: [
+      new BackgroundSyncPlugin('api-mutations-queue', {
         maxRetentionTime: 24 * 60, // 24 hours in minutes
+        onSync: async ({ queue: _queue }) => {
+          // Notify the app when sync happens
+          const clients = await self.clients.matchAll({ type: 'window' });
+          for (const client of clients) {
+            client.postMessage({
+              type: 'BACKGROUND_SYNC_COMPLETE',
+              queueName: 'api-mutations-queue',
+            });
+          }
+        },
       }),
     ],
     networkTimeoutSeconds: 10,
@@ -369,18 +401,39 @@ async function syncOfflineActions(): Promise<void> {
   const db = await openOfflineDB();
   const actions = await getOfflineActions(db);
 
+  let successCount = 0;
+  let failCount = 0;
+
   for (const action of actions) {
     try {
-      await fetch(action.url, {
+      const response = await fetch(action.url, {
         method: action.method,
         headers: action.headers,
         body: action.body,
         credentials: 'include',
       });
-      await removeOfflineAction(db, action.id);
+
+      if (response.ok) {
+        await removeOfflineAction(db, action.id);
+        successCount++;
+      } else {
+        failCount++;
+      }
     } catch {
+      failCount++;
       // Will retry on next sync
     }
+  }
+
+  // Notify the app about sync completion
+  const clients = await self.clients.matchAll({ type: 'window' });
+  for (const client of clients) {
+    client.postMessage({
+      type: 'OFFLINE_SYNC_COMPLETE',
+      successCount,
+      failCount,
+      remainingActions: actions.length - successCount,
+    });
   }
 }
 

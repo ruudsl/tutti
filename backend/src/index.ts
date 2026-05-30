@@ -111,6 +111,9 @@ import wikiRoutes from './routes/wiki';
 import workflowsRoutes from './routes/workflows';
 import performancesRoutes from './routes/performances';
 
+// Import recovery
+import failedImportsRoutes from './routes/failed-imports';
+
 // Initialize Sentry error monitoring (must be called before app is created)
 initSentry();
 
@@ -187,6 +190,9 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
         baseUri: ["'self'"],
         formAction: ["'self'"],
         frameAncestors: ["'self'"],
+        workerSrc: ["'self'", "blob:"], // Service workers and web workers
+        childSrc: ["'self'", "blob:"], // Web workers (legacy)
+        manifestSrc: ["'self'"], // PWA manifests
         upgradeInsecureRequests: [],
     };
 
@@ -224,8 +230,9 @@ app.use(cors({
     credentials: true,
 }));
 
-// Body parsing
-app.use(express.json());
+// Body parsing with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cookie parsing (required for CSRF)
 app.use(cookieParser());
@@ -323,6 +330,9 @@ app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
+
+// Import recovery
+app.use('/api/failed-imports', failedImportsRoutes);
 
 // Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
