@@ -2003,6 +2003,33 @@
     "copiedToClipboard": "Fehlerinformationen wurden in die Zwischenablage kopiert. Sie können diese jetzt in eine E-Mail an den Support einfügen.",
     "copyErrorInfo": "Kopieren Sie diese Fehlerinformationen:"
   },
+  "sectionError": {
+    "title": "{{section}} konnte nicht geladen werden",
+    "message": "Dieser Bereich hat einen Fehler. Andere Teile der Seite funktionieren noch.",
+    "compactMessage": "{{section}} konnte nicht geladen werden"
+  },
+  "failedImports": {
+    "title": "Fehlgeschlagene Importe",
+    "noItems": "Keine fehlgeschlagenen Importe",
+    "retry": "Erneut versuchen",
+    "dismiss": "Ignorieren",
+    "delete": "Löschen",
+    "retrying": "Erneut versuchen...",
+    "recovered": "Wiederhergestellt",
+    "dismissed": "Ignoriert",
+    "failed": "Fehlgeschlagen",
+    "retryCount": "Versuch {{count}} von {{max}}",
+    "errorMessage": "Fehler: {{message}}",
+    "importedAt": "Importiert am {{date}}",
+    "confirmDelete": "Möchten Sie diesen Import wirklich löschen?",
+    "confirmDismiss": "Möchten Sie diesen Import wirklich ignorieren?",
+    "bulkDismiss": "Ausgewählte ignorieren",
+    "stats": {
+      "total": "Gesamt",
+      "pending": "Ausstehend",
+      "recovered": "Wiederhergestellt"
+    }
+  },
   "notFound": {
     "title": "Seite nicht gefunden",
     "description": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
