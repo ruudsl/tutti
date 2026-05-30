@@ -225,7 +225,8 @@ router.post('/:id/retry', authenticateToken, requireRole('admin', 'music_committ
             WHERE id = ?
         `).run(id);
 
-        logger.info(`Failed import recovered: ${id}`, {
+        const sanitizedIdForLog = id.replace(/[\r\n]/g, '');
+        logger.info(`Failed import recovered: ${sanitizedIdForLog}`, {
             recoveredBy: req.user!.id,
             pieceId,
         });
