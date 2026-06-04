@@ -104,6 +104,7 @@ import accountingRoutes from './routes/accounting';
 import projectsRoutes from './routes/projects';
 import toursRoutes from './routes/tours';
 import resourcesRoutes from './routes/resources';
+import seasonsRoutes from './routes/seasons';
 
 // Phase E routes
 import outfitsRoutes from './routes/outfits';
@@ -301,6 +302,7 @@ app.use('/api/accounting', accountingRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/resources', resourcesRoutes);
+app.use('/api/seasons', seasonsRoutes);
 
 // Phase E routes
 app.use('/api/outfits', outfitsRoutes);
