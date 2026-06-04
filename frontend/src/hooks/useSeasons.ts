@@ -13,7 +13,7 @@ import {
   removeSeasonEvent,
   generateSeasonEvents,
 } from '../api';
-import type { Season, SeasonDetail, SeasonTemplate, GenerateSeasonEventsParams } from '../api';
+import type { GenerateSeasonEventsParams } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 

@@ -1,16 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAuth } from '../context/AuthContext';
-import { showSuccess, showError } from '../utils/toast';
 import { Icon } from '../components/Icon';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import { ROLES } from '../utils/constants';
 import { getOrchestras, getConcertTypes } from '../api';
-import type { Orchestra, ConcertType } from '../types';
-import type { Season, SeasonTemplate, PlannedConcert, GenerateSeasonEventsParams } from '../api';
+import type { PlannedConcert, Season, SeasonTemplate } from '../api';
 import {
   useSeasons,
   useSeason,
@@ -85,10 +82,9 @@ const defaultWizardState: WizardState = {
 export default function SeasonPlanner() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const navigate = useNavigate();
   useDocumentTitle('pageTitle.seasonPlanner');
 
-  const isManager = user && MANAGER_ROLES.includes(user.role);
+  const isManager = user && MANAGER_ROLES.includes(user.role as typeof MANAGER_ROLES[number]);
 
   // Data queries
   const { data: seasons = [], isLoading: seasonsLoading } = useSeasons();

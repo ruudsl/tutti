@@ -13,7 +13,6 @@ import {
   useReplacementRequests,
   useReplacementRequest,
   useCreateReplacementRequest,
-  useUpdateReplacementRequest,
   useCancelReplacementRequest,
   useInviteMusician,
   useUpdateAssignment,
@@ -136,7 +135,6 @@ export default function ReplacementRequests() {
 
   // Mutations
   const createMutation = useCreateReplacementRequest();
-  // const updateMutation = useUpdateReplacementRequest(); // Available for future use
   const cancelMutation = useCancelReplacementRequest();
   const inviteMutation = useInviteMusician();
   const updateAssignmentMutation = useUpdateAssignment();

@@ -2337,6 +2337,8 @@
     "memberName": "Name",
     "instrumentPlayed": "Instrument",
     "noAttendance": "No attendance recorded.",
+    "stageSetup": "Stage Setup",
+    "performanceMode": "Performance Mode",
     "statistics": "Statistics",
     "totalConcerts": "Total concerts",
     "concertsThisYear": "Concerts this year",

@@ -862,7 +862,7 @@ export default function Concerts() {
                   className="btn btn-secondary btn-sm"
                   title={t('concerts.stageSetup', 'Podiumindeling')}
                 >
-                  <Icon name="layout" size={16} /> {t('concerts.stageSetup', 'Podiumindeling')}
+                  <Icon name="shapes" size={16} /> {t('concerts.stageSetup', 'Podiumindeling')}
                 </Link>
                 <AddToCalendarButton type="concert" id={concertDetail.id} />
               </div>
