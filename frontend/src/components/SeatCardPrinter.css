@@ -1,0 +1,179 @@
+/* Seat Card Printer Styles */
+
+.seat-card-printer {
+  padding: 1rem;
+}
+
+.print-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.print-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-light);
+}
+
+.print-info .separator {
+  color: var(--border-color);
+}
+
+.print-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  page-break-after: avoid;
+}
+
+.print-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+}
+
+.print-header .print-date {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-light);
+}
+
+.print-header .print-location {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.seat-cards-grid {
+  padding: 1rem;
+}
+
+.seat-card {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  page-break-inside: avoid;
+}
+
+.seat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.seat-label {
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.seat-stand {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.seat-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.musician-name {
+  font-weight: bold;
+  font-size: 1.4em;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instrument-name {
+  font-size: 1em;
+  color: #555;
+}
+
+.seat-card-footer {
+  border-top: 1px dashed #ccc;
+  padding-top: 0.25rem;
+  text-align: center;
+}
+
+.section-name {
+  font-size: 0.85em;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .seat-card-printer {
+    padding: 0;
+  }
+
+  .print-area {
+    padding: 0;
+  }
+
+  .seat-cards-grid {
+    padding: 5mm;
+  }
+
+  .seat-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-header {
+    margin-top: 10mm;
+  }
+
+  /* Page breaks after every N rows */
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+}
+
+/* Preview mode - simulate print appearance */
+.seat-card-printer .print-area {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 400px;
+}
+
+/* Dark mode adjustments for preview */
+.dark .seat-card-printer .print-area {
+  background: white;
+  color: black;
+}
+
+.dark .seat-card-printer .print-header h1,
+.dark .seat-card-printer .print-header p {
+  color: #333;
+}

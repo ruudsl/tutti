@@ -68,6 +68,7 @@ import Loans from './pages/Loans';
 
 // Statistics and reporting
 import Statistics from './pages/Statistics';
+import AttendanceAnalytics from './pages/AttendanceAnalytics';
 import AuditLogs from './pages/AuditLogs';
 
 // Admin pages
@@ -84,6 +85,8 @@ import Rehearsals from './pages/Rehearsals';
 import Concerts from './pages/Concerts';
 import Availability from './pages/Availability';
 import Practice from './pages/Practice';
+import HolidaySettings from './pages/HolidaySettings';
+import SeasonPlanner from './pages/SeasonPlanner';
 
 // Equipment and uniforms
 import Uniforms from './pages/Uniforms';
@@ -345,6 +348,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="attendance-analytics"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <AttendanceAnalytics />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="users"
           element={
             <PrivateRoute roles={[ROLES.ADMIN]}>
@@ -403,6 +414,22 @@ function AppRoutes() {
         <Route path="rehearsals" element={<Rehearsals />} />
         <Route path="availability" element={<Availability />} />
         <Route path="practice" element={<Practice />} />
+        <Route
+          path="season-planner"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <SeasonPlanner />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="holiday-settings"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN]}>
+              <HolidaySettings />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="seating"
           element={

@@ -52,11 +52,14 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: 'calendar',
-    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
+    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner', '/holiday-settings', '/season-planner', '/attendance-analytics'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/availability', labelKey: 'nav.availability' },
+      { path: '/attendance-analytics', labelKey: 'nav.attendanceAnalytics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/season-planner', labelKey: 'nav.seasonPlanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/holiday-settings', labelKey: 'nav.holidays', roles: [ROLES.ADMIN] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },

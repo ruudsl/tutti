@@ -3475,4 +3475,219 @@ export const generateSeasonEvents = async (
   return data;
 };
 
+// ==================== HOLIDAYS ====================
+
+export interface HolidayRegion {
+  value: string;
+  label: string;
+  labelDutch: string;
+}
+
+export interface Holiday {
+  id: string;
+  name: string;
+  nameEnglish?: string;
+  region: string;
+  country: string;
+  startDate: string;
+  endDate: string;
+  year: number;
+  holidayType: string;
+  isCustom: boolean;
+  source: string;
+}
+
+export interface HolidaySettings {
+  region: string;
+  showHolidaysInCalendar: boolean;
+  autoBlockRehearsals: boolean;
+}
+
+export interface HolidaysResponse {
+  holidays: Holiday[];
+  settings: HolidaySettings;
+  meta: {
+    availableYears: number[];
+    regions: HolidayRegion[];
+  };
+}
+
+export const getHolidays = async (params?: {
+  year?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<HolidaysResponse> => {
+  const { data } = await api.get('/holidays', { params });
+  return data;
+};
+
+export const getUpcomingHolidays = async (limit?: number): Promise<Holiday[]> => {
+  const { data } = await api.get('/holidays/upcoming', { params: { limit } });
+  return data;
+};
+
+export const checkHolidayDate = async (date: string): Promise<{
+  isHoliday: boolean;
+  holiday: {
+    name: string;
+    startDate: string;
+    endDate: string;
+    holidayType: string;
+    isCustom: boolean;
+  } | null;
+}> => {
+  const { data } = await api.get('/holidays/check', { params: { date } });
+  return data;
+};
+
+export const syncHolidays = async (year?: number): Promise<{
+  message: string;
+  count: number;
+  year: number;
+}> => {
+  const { data } = await api.get('/holidays/sync', { params: { year } });
+  return data;
+};
+
+export const createCustomHoliday = async (holiday: {
+  name: string;
+  startDate: string;
+  endDate: string;
+  region?: string;
+  holidayType?: string;
+}): Promise<Holiday> => {
+  const { data } = await api.post('/holidays', holiday);
+  return data;
+};
+
+export const updateCustomHoliday = async (
+  id: string,
+  holiday: {
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    region?: string;
+    holidayType?: string;
+  }
+): Promise<{ message: string }> => {
+  const { data } = await api.put(`/holidays/${id}`, holiday);
+  return data;
+};
+
+export const deleteCustomHoliday = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/holidays/${id}`);
+  return data;
+};
+
+export const getHolidaySettings = async (): Promise<HolidaySettings & { regions: HolidayRegion[] }> => {
+  const { data } = await api.get('/holidays/settings');
+  return data;
+};
+
+export const updateHolidaySettings = async (settings: {
+  region?: string;
+  showHolidaysInCalendar?: boolean;
+  autoBlockRehearsals?: boolean;
+}): Promise<{ message: string; settings: HolidaySettings }> => {
+  const { data } = await api.put('/holidays/settings', settings);
+  return data;
+};
+
+// ==================== STAGE LAYOUTS (PODIUMPLOT DESIGNER) ====================
+
+import type {
+  StageLayout,
+  StageLayoutData,
+  ConcertStageResponse,
+  PrintableSeatCardsResponse,
+  StageAssignment,
+} from './types';
+
+export const getStageLayouts = async (includeTemplates = false): Promise<StageLayout[]> => {
+  const { data } = await api.get('/stage-layouts', {
+    params: { includeTemplates: includeTemplates ? 'true' : 'false' },
+  });
+  return data;
+};
+
+export const getStageLayout = async (id: string): Promise<StageLayout> => {
+  const { data } = await api.get(`/stage-layouts/${id}`);
+  return data;
+};
+
+export const createStageLayout = async (layout: {
+  name: string;
+  description?: string;
+  venueName?: string;
+  stageWidth?: number;
+  stageDepth?: number;
+  isTemplate?: boolean;
+  isDefault?: boolean;
+  layoutData?: StageLayoutData;
+  thumbnailUrl?: string;
+}): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post('/stage-layouts', layout);
+  return data;
+};
+
+export const updateStageLayout = async (
+  id: string,
+  layout: {
+    name?: string;
+    description?: string;
+    venueName?: string;
+    stageWidth?: number;
+    stageDepth?: number;
+    isTemplate?: boolean;
+    isDefault?: boolean;
+    layoutData?: StageLayoutData;
+    thumbnailUrl?: string;
+  }
+): Promise<{ message: string }> => {
+  const { data } = await api.put(`/stage-layouts/${id}`, layout);
+  return data;
+};
+
+export const deleteStageLayout = async (id: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/stage-layouts/${id}`);
+  return data;
+};
+
+export const duplicateStageLayout = async (
+  id: string,
+  name?: string
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post(`/stage-layouts/${id}/duplicate`, { name });
+  return data;
+};
+
+export const getConcertStage = async (concertId: string): Promise<ConcertStageResponse> => {
+  const { data } = await api.get(`/concerts/${concertId}/stage`);
+  return data;
+};
+
+export const saveConcertStage = async (
+  concertId: string,
+  layoutId: string,
+  assignments: Record<string, StageAssignment>
+): Promise<{ message: string }> => {
+  const { data } = await api.put(`/concerts/${concertId}/stage`, {
+    layoutId,
+    assignments,
+  });
+  return data;
+};
+
+export const deleteConcertStage = async (concertId: string): Promise<{ message: string }> => {
+  const { data } = await api.delete(`/concerts/${concertId}/stage`);
+  return data;
+};
+
+export const getPrintableSeatCards = async (
+  concertId: string
+): Promise<PrintableSeatCardsResponse> => {
+  const { data } = await api.get(`/concerts/${concertId}/stage/print`);
+  return data;
+};
+
 export default api;
