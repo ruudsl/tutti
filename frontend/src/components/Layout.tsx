@@ -91,12 +91,15 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.orchestra',
     icon: 'music2',
-    basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences'],
+    basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences', '/stage-designer', '/external-musicians', '/replacement-requests'],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/stage-designer', labelKey: 'nav.stageDesigner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/external-musicians', labelKey: 'nav.externalMusicians', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/replacement-requests', labelKey: 'nav.replacementRequests', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
     ],
   },
   {

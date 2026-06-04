@@ -141,6 +141,7 @@
     "theme": "Design",
     "changelog": "Changelog",
     "rehearsals": "Proben",
+    "holidays": "Schulferien",
     "logout": "Abmelden",
     "profile": "Profil",
     "privacySettings": "Datenschutz",
@@ -187,7 +188,9 @@
     "workflows": "Workflows",
     "availability": "Verfügbarkeit",
     "practice": "Üben",
-    "seasonPlanner": "Saisonplanung"
+    "seasonPlanner": "Saisonplanung",
+    "externalMusicians": "Externe Musiker",
+    "replacementRequests": "Vertretungsanfragen"
   },
   "roles": {
     "admin": "Administrator",
@@ -1989,7 +1992,9 @@
     "workflows": "Workflows - Harmonie",
     "availability": "Verfügbarkeit - Harmonie",
     "practice": "Üben - Harmonie",
-    "seasonPlanner": "Saisonplanung - Harmonie"
+    "seasonPlanner": "Saisonplanung - Harmonie",
+    "externalMusicians": "Externe Musiker - Harmonie",
+    "replacementRequests": "Vertretungsanfragen - Harmonie"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -5361,5 +5366,43 @@
     "fee": "Honorar (optional)",
     "notesPlaceholder": "Details zum Auftritt hinzufügen...",
     "sendInvite": "Einladung senden"
+  },
+  "holidays": {
+    "title": "Schulferien",
+    "settings": "Einstellungen",
+    "region": "Region",
+    "regionDescription": "Schulferien variieren je nach Region in den Niederlanden. Wählen Sie die Region, in der Ihr Orchester aktiv ist.",
+    "displayOptions": "Anzeigeoptionen",
+    "showInCalendar": "Ferien im Kalender anzeigen",
+    "autoBlockRehearsals": "Proben während der Ferien automatisch überspringen",
+    "sync": "Synchronisieren",
+    "holidayList": "Ferien",
+    "addCustom": "Eigene Ferien",
+    "addCustomHoliday": "Eigene Ferien hinzufügen",
+    "namePlaceholder": "z.B. Fortbildungstag",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "noHolidays": "Keine Ferien für dieses Jahr gefunden.",
+    "deleteTitle": "Ferien löschen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie diese Ferien löschen möchten?",
+    "types": {
+      "national": "Nationale Feiertage",
+      "kerst": "Weihnachtsferien",
+      "voorjaar": "Frühlingsferien",
+      "mei": "Maiferien",
+      "zomer": "Sommerferien",
+      "herfst": "Herbstferien",
+      "custom": "Eigene Ferien"
+    },
+    "regions": {
+      "noord": "Nord",
+      "midden": "Mitte",
+      "zuid": "Süd"
+    },
+    "isHoliday": "Ferien",
+    "rehearsalInHoliday": "Hinweis: Dieses Datum fällt in die Ferien ({{name}})"
+  },
+  "pageTitle": {
+    "holidaySettings": "Schulferien - Harmonie"
   }
 }

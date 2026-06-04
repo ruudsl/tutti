@@ -40,7 +40,7 @@ function StarDisplay({ rating }: { rating: number | null }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <Icon
           key={star}
-          name="star"
+          name="check"
           size={14}
           className={star <= rating ? 'text-warning' : 'text-muted'}
           style={{ fill: star <= rating ? 'currentColor' : 'none' }}
@@ -188,7 +188,7 @@ export function ReplacementFinder({
         {selectedInstrumentId ? (
           isLoading ? (
             <div className="text-center p-4">
-              <Icon name="loader" size={24} className="animate-spin" />
+              <Icon name="refresh" size={24} className="animate-spin" />
               <p className="text-muted mt-2">{t('common.loading')}</p>
             </div>
           ) : musicians.length > 0 ? (
@@ -211,7 +211,7 @@ export function ReplacementFinder({
                         <strong>{musician.firstName} {musician.lastName}</strong>
                         {musician.isPrimary && (
                           <span className="badge badge-primary ml-1" title={t('replacementFinder.primaryInstrument')}>
-                            <Icon name="star" size={12} />
+                            <Icon name="check" size={12} />
                           </span>
                         )}
                         {musician.email && (
@@ -243,7 +243,7 @@ export function ReplacementFinder({
                           onClick={() => setInvitingMusician(musician)}
                           title={t('replacementFinder.invite')}
                         >
-                          <Icon name="userPlus" size={16} className="mr-1" />
+                          <Icon name="plus" size={16} className="mr-1" />
                           {t('replacementFinder.invite')}
                         </button>
                       </td>
@@ -318,7 +318,7 @@ export function ReplacementFinder({
                   disabled={inviteMutation.isPending || createRequestMutation.isPending}
                 >
                   {inviteMutation.isPending || createRequestMutation.isPending ? (
-                    <Icon name="loader" size={16} className="animate-spin mr-1" />
+                    <Icon name="refresh" size={16} className="animate-spin mr-1" />
                   ) : (
                     <Icon name="send" size={16} className="mr-1" />
                   )}

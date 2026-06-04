@@ -18,13 +18,15 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
 // Query keys for holidays
+const HOLIDAY_KEYS_BASE = ['holidays'] as const;
+
 export const holidayQueryKeys = {
-  all: ['holidays'] as const,
+  all: HOLIDAY_KEYS_BASE,
   list: (params?: { year?: number; startDate?: string; endDate?: string }) =>
-    [...holidayQueryKeys.all, 'list', params] as const,
-  upcoming: (limit?: number) => [...holidayQueryKeys.all, 'upcoming', limit] as const,
-  check: (date: string) => [...holidayQueryKeys.all, 'check', date] as const,
-  settings: [...holidayQueryKeys.all, 'settings'] as const,
+    [...HOLIDAY_KEYS_BASE, 'list', params] as const,
+  upcoming: (limit?: number) => [...HOLIDAY_KEYS_BASE, 'upcoming', limit] as const,
+  check: (date: string) => [...HOLIDAY_KEYS_BASE, 'check', date] as const,
+  settings: [...HOLIDAY_KEYS_BASE, 'settings'] as const,
 };
 
 /**

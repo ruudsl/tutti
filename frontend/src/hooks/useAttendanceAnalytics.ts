@@ -5,23 +5,35 @@
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  getAttendanceOverview,
-  getAttendanceTrends,
-  getAttendanceBySection,
-  getAttendanceByMember,
-  getAtRiskMembers,
-  getAttendancePredictions,
-  getAttendanceByDayOfWeek,
-  getAttendanceLeaderboard,
-  type AttendanceOverview,
-  type AttendanceTrend,
-  type SectionAttendance,
-  type MemberAttendanceStats,
-  type AtRiskMember,
-  type AttendancePrediction,
-  type DayOfWeekStats,
-  type LeaderboardMember,
-} from '../api';
+  getRehearsalAttendanceOverview,
+  getRehearsalAttendanceTrends,
+  getRehearsalAttendanceBySection,
+  getRehearsalAttendanceByMember,
+  getRehearsalAtRiskMembers,
+  getRehearsalAttendancePredictions,
+  getRehearsalAttendanceByDayOfWeek,
+  getRehearsalAttendanceLeaderboard,
+  type RehearsalAttendanceOverview,
+  type RehearsalAttendanceTrend,
+  type RehearsalSectionAttendance,
+  type RehearsalMemberAttendanceStats,
+  type RehearsalAtRiskMember,
+  type RehearsalAttendancePrediction,
+  type RehearsalDayOfWeekStats,
+  type RehearsalLeaderboardMember,
+} from '../api/attendance-analytics';
+
+// Re-export types for convenience
+export type {
+  RehearsalAttendanceOverview,
+  RehearsalAttendanceTrend,
+  RehearsalSectionAttendance,
+  RehearsalMemberAttendanceStats,
+  RehearsalAtRiskMember,
+  RehearsalAttendancePrediction,
+  RehearsalDayOfWeekStats,
+  RehearsalLeaderboardMember,
+};
 
 // Query keys
 export const attendanceAnalyticsKeys = {
@@ -41,9 +53,9 @@ export const attendanceAnalyticsKeys = {
  * Hook to fetch attendance overview statistics
  */
 export function useAttendanceOverview(orchestraId?: string) {
-  return useQuery<AttendanceOverview>({
+  return useQuery<RehearsalAttendanceOverview>({
     queryKey: attendanceAnalyticsKeys.overview(orchestraId),
-    queryFn: () => getAttendanceOverview(orchestraId),
+    queryFn: () => getRehearsalAttendanceOverview(orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -52,9 +64,9 @@ export function useAttendanceOverview(orchestraId?: string) {
  * Hook to fetch attendance trends over time
  */
 export function useAttendanceTrends(months = 12, orchestraId?: string) {
-  return useQuery<AttendanceTrend[]>({
+  return useQuery<RehearsalAttendanceTrend[]>({
     queryKey: attendanceAnalyticsKeys.trends(months, orchestraId),
-    queryFn: () => getAttendanceTrends(months, orchestraId),
+    queryFn: () => getRehearsalAttendanceTrends(months, orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -63,9 +75,9 @@ export function useAttendanceTrends(months = 12, orchestraId?: string) {
  * Hook to fetch attendance by instrument section
  */
 export function useAttendanceBySection(orchestraId?: string) {
-  return useQuery<SectionAttendance[]>({
+  return useQuery<RehearsalSectionAttendance[]>({
     queryKey: attendanceAnalyticsKeys.bySection(orchestraId),
-    queryFn: () => getAttendanceBySection(orchestraId),
+    queryFn: () => getRehearsalAttendanceBySection(orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -78,9 +90,9 @@ export function useAttendanceByMember(options?: {
   sortBy?: 'rate_asc' | 'rate_desc' | 'name';
   orchestraId?: string;
 }) {
-  return useQuery<MemberAttendanceStats[]>({
+  return useQuery<RehearsalMemberAttendanceStats[]>({
     queryKey: attendanceAnalyticsKeys.byMember(options),
-    queryFn: () => getAttendanceByMember(options),
+    queryFn: () => getRehearsalAttendanceByMember(options),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -89,9 +101,9 @@ export function useAttendanceByMember(options?: {
  * Hook to fetch at-risk members (declining attendance)
  */
 export function useAtRiskMembers(orchestraId?: string) {
-  return useQuery<AtRiskMember[]>({
+  return useQuery<RehearsalAtRiskMember[]>({
     queryKey: attendanceAnalyticsKeys.atRisk(orchestraId),
-    queryFn: () => getAtRiskMembers(orchestraId),
+    queryFn: () => getRehearsalAtRiskMembers(orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -100,9 +112,9 @@ export function useAtRiskMembers(orchestraId?: string) {
  * Hook to fetch attendance predictions for upcoming rehearsals
  */
 export function useAttendancePredictions(limit = 5, orchestraId?: string) {
-  return useQuery<AttendancePrediction[]>({
+  return useQuery<RehearsalAttendancePrediction[]>({
     queryKey: attendanceAnalyticsKeys.predictions(limit, orchestraId),
-    queryFn: () => getAttendancePredictions(limit, orchestraId),
+    queryFn: () => getRehearsalAttendancePredictions(limit, orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -111,9 +123,9 @@ export function useAttendancePredictions(limit = 5, orchestraId?: string) {
  * Hook to fetch attendance by day of week
  */
 export function useAttendanceByDayOfWeek(orchestraId?: string) {
-  return useQuery<DayOfWeekStats[]>({
+  return useQuery<RehearsalDayOfWeekStats[]>({
     queryKey: attendanceAnalyticsKeys.byDayOfWeek(orchestraId),
-    queryFn: () => getAttendanceByDayOfWeek(orchestraId),
+    queryFn: () => getRehearsalAttendanceByDayOfWeek(orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -122,9 +134,9 @@ export function useAttendanceByDayOfWeek(orchestraId?: string) {
  * Hook to fetch attendance leaderboard
  */
 export function useAttendanceLeaderboard(limit = 10, orchestraId?: string) {
-  return useQuery<LeaderboardMember[]>({
+  return useQuery<RehearsalLeaderboardMember[]>({
     queryKey: attendanceAnalyticsKeys.leaderboard(limit, orchestraId),
-    queryFn: () => getAttendanceLeaderboard(limit, orchestraId),
+    queryFn: () => getRehearsalAttendanceLeaderboard(limit, orchestraId),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

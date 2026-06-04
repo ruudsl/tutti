@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import type {
   StagePosition,
   StageShape,
-  StageSection,
   StageLayoutData,
   StagePositionType,
   StageShapeType,

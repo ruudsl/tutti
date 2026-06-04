@@ -73,14 +73,6 @@ export default function AttendanceAnalytics() {
     return days[dayOfWeek];
   };
 
-  const getRiskColor = (level: 'high' | 'medium' | 'low') => {
-    switch (level) {
-      case 'high': return 'var(--danger)';
-      case 'medium': return 'var(--warning)';
-      case 'low': return 'var(--info)';
-    }
-  };
-
   const getRiskBadgeClass = (level: 'high' | 'medium' | 'low') => {
     switch (level) {
       case 'high': return 'badge badge-danger';
@@ -200,7 +192,7 @@ export default function AttendanceAnalytics() {
         <div className="card">
           <div className="card-body">
             <h4 style={{ marginBottom: '1rem' }}>
-              <Icon name="barChart" size={18} style={{ marginRight: '0.5rem' }} />
+              <Icon name="chart" size={18} style={{ marginRight: '0.5rem' }} />
               {t('attendanceAnalytics.bySection', 'Per sectie')}
             </h4>
             {sectionsLoading ? (
@@ -250,7 +242,7 @@ export default function AttendanceAnalytics() {
         <div className="card">
           <div className="card-body">
             <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Icon name="alertTriangle" size={18} style={{ color: 'var(--warning)' }} />
+              <Icon name="warning" size={18} style={{ color: 'var(--warning)' }} />
               {t('attendanceAnalytics.atRiskMembers', 'Aandachtspunten')}
             </h4>
             {atRiskLoading ? (
@@ -335,7 +327,7 @@ export default function AttendanceAnalytics() {
                           {pred.understaffedSections.length > 0 ? (
                             <span
                               className="badge badge-warning"
-                              title={pred.understaffedSections.map((s) => s.instrument).join(', ')}
+                              title={pred.understaffedSections.map((s: { instrument: string }) => s.instrument).join(', ')}
                             >
                               {pred.understaffedSections.length} {t('attendanceAnalytics.understaffed', 'sectie(s)')}
                             </span>

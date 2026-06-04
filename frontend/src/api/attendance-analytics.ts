@@ -5,8 +5,8 @@
 
 import api from './client';
 
-// Types
-export interface AttendanceOverview {
+// Types - prefixed with "Rehearsal" to avoid conflicts with concert attendance types
+export interface RehearsalAttendanceOverview {
   avgAttendanceRate: number;
   totalMembers: number;
   totalRehearsals: number;
@@ -17,14 +17,14 @@ export interface AttendanceOverview {
   trend: number;
 }
 
-export interface AttendanceTrend {
+export interface RehearsalAttendanceTrend {
   month: string;
   attendanceRate: number;
   uniqueAttendees: number;
   totalRehearsals: number;
 }
 
-export interface SectionAttendance {
+export interface RehearsalSectionAttendance {
   instrumentId: string;
   instrument: string;
   attendanceRate: number;
@@ -32,7 +32,7 @@ export interface SectionAttendance {
   totalResponses: number;
 }
 
-export interface MemberAttendanceStats {
+export interface RehearsalMemberAttendanceStats {
   id: string;
   firstName: string;
   lastName: string;
@@ -42,7 +42,7 @@ export interface MemberAttendanceStats {
   instrument: string | null;
 }
 
-export interface AtRiskMember {
+export interface RehearsalAtRiskMember {
   id: string;
   firstName: string;
   lastName: string;
@@ -52,7 +52,7 @@ export interface AtRiskMember {
   riskLevel: 'high' | 'medium' | 'low';
 }
 
-export interface AttendancePrediction {
+export interface RehearsalAttendancePrediction {
   rehearsalId: string;
   date: string;
   predictedCount: number;
@@ -61,13 +61,13 @@ export interface AttendancePrediction {
   understaffedSections: { instrument: string; expected: number; needed: number }[];
 }
 
-export interface DayOfWeekStats {
+export interface RehearsalDayOfWeekStats {
   dayOfWeek: number;
   rehearsalCount: number;
   attendanceRate: number;
 }
 
-export interface LeaderboardMember {
+export interface RehearsalLeaderboardMember {
   rank: number;
   id: string;
   firstName: string;
@@ -80,28 +80,28 @@ export interface LeaderboardMember {
 
 // API Functions
 
-export async function getAttendanceOverview(orchestraId?: string): Promise<AttendanceOverview> {
+export async function getRehearsalAttendanceOverview(orchestraId?: string): Promise<RehearsalAttendanceOverview> {
   const params = orchestraId ? { orchestraId } : {};
   const { data } = await api.get('/analytics/attendance/overview', { params });
   return data;
 }
 
-export async function getAttendanceTrends(months = 12, orchestraId?: string): Promise<AttendanceTrend[]> {
+export async function getRehearsalAttendanceTrends(months = 12, orchestraId?: string): Promise<RehearsalAttendanceTrend[]> {
   const params: Record<string, string | number> = { months };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/trends', { params });
   return data;
 }
 
-export async function getAttendanceBySection(orchestraId?: string): Promise<SectionAttendance[]> {
+export async function getRehearsalAttendanceBySection(orchestraId?: string): Promise<RehearsalSectionAttendance[]> {
   const params = orchestraId ? { orchestraId } : {};
   const { data } = await api.get('/analytics/attendance/by-section', { params });
   return data;
 }
 
-export async function getAttendanceByMember(
+export async function getRehearsalAttendanceByMember(
   options?: { limit?: number; sortBy?: 'rate_asc' | 'rate_desc' | 'name'; orchestraId?: string }
-): Promise<MemberAttendanceStats[]> {
+): Promise<RehearsalMemberAttendanceStats[]> {
   const params: Record<string, string | number> = {};
   if (options?.limit) params.limit = options.limit;
   if (options?.sortBy) params.sortBy = options.sortBy;
@@ -110,26 +110,26 @@ export async function getAttendanceByMember(
   return data;
 }
 
-export async function getAtRiskMembers(orchestraId?: string): Promise<AtRiskMember[]> {
+export async function getRehearsalAtRiskMembers(orchestraId?: string): Promise<RehearsalAtRiskMember[]> {
   const params = orchestraId ? { orchestraId } : {};
   const { data } = await api.get('/analytics/attendance/at-risk', { params });
   return data;
 }
 
-export async function getAttendancePredictions(limit = 5, orchestraId?: string): Promise<AttendancePrediction[]> {
+export async function getRehearsalAttendancePredictions(limit = 5, orchestraId?: string): Promise<RehearsalAttendancePrediction[]> {
   const params: Record<string, string | number> = { limit };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/predictions', { params });
   return data;
 }
 
-export async function getAttendanceByDayOfWeek(orchestraId?: string): Promise<DayOfWeekStats[]> {
+export async function getRehearsalAttendanceByDayOfWeek(orchestraId?: string): Promise<RehearsalDayOfWeekStats[]> {
   const params = orchestraId ? { orchestraId } : {};
   const { data } = await api.get('/analytics/attendance/by-day-of-week', { params });
   return data;
 }
 
-export async function getAttendanceLeaderboard(limit = 10, orchestraId?: string): Promise<LeaderboardMember[]> {
+export async function getRehearsalAttendanceLeaderboard(limit = 10, orchestraId?: string): Promise<RehearsalLeaderboardMember[]> {
   const params: Record<string, string | number> = { limit };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/leaderboard', { params });

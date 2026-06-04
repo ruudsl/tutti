@@ -4,10 +4,10 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import type { DayOfWeekStats } from '../../api';
+import type { RehearsalDayOfWeekStats } from '../../api/attendance-analytics';
 
 interface DayOfWeekHeatmapProps {
-  data: DayOfWeekStats[];
+  data: RehearsalDayOfWeekStats[];
 }
 
 function getHeatmapColor(rate: number): string {

@@ -15,10 +15,10 @@ import {
   Cell,
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import type { SectionAttendance } from '../../api';
+import type { RehearsalSectionAttendance } from '../../api/attendance-analytics';
 
 interface SectionBarChartProps {
-  data: SectionAttendance[];
+  data: RehearsalSectionAttendance[];
   height?: number;
 }
 
@@ -85,10 +85,10 @@ export function SectionBarChart({ data, height = 300 }: SectionBarChartProps) {
             borderRadius: '8px',
             color: 'var(--text)',
           }}
-          formatter={(value: number) => [`${value}%`, t('attendanceAnalytics.attendanceRate', 'Opkomst')]}
+          formatter={(value) => [`${value}%`, t('attendanceAnalytics.attendanceRate', 'Opkomst')]}
           labelFormatter={(label, payload) => {
             if (payload && payload[0]) {
-              const item = payload[0].payload as SectionAttendance & { shortName: string };
+              const item = payload[0].payload as RehearsalSectionAttendance & { shortName: string };
               return `${item.instrument} (${item.memberCount} ${t('attendanceAnalytics.members', 'leden')})`;
             }
             return label;

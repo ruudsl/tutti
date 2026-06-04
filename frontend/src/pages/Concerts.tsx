@@ -857,6 +857,13 @@ export default function Concerts() {
                     <Icon name="play" size={16} /> {t('concerts.performanceMode', 'Uitvoeringsmodus')}
                   </button>
                 )}
+                <Link
+                  to={`/concerts/${viewingConcert}/stage`}
+                  className="btn btn-secondary btn-sm"
+                  title={t('concerts.stageSetup', 'Podiumindeling')}
+                >
+                  <Icon name="layout" size={16} /> {t('concerts.stageSetup', 'Podiumindeling')}
+                </Link>
                 <AddToCalendarButton type="concert" id={concertDetail.id} />
               </div>
             </div>

@@ -172,6 +172,7 @@
     "voiceParts": "Voice Parts",
     "occupancy": "Occupancy",
     "neighborPreferences": "Neighbor Preferences",
+    "stageDesigner": "Stage Layout",
     "onboarding": "Member Management",
     "myTickets": "My Tickets",
     "ticketSales": "Ticket Sales",
@@ -189,7 +190,9 @@
     "performances": "Performances",
     "workflows": "Workflows",
     "seasonPlanner": "Season Planning",
-    "attendanceAnalytics": "Attendance Analytics"
+    "attendanceAnalytics": "Attendance Analytics",
+    "externalMusicians": "External Musicians",
+    "replacementRequests": "Replacement Requests"
   },
   "roles": {
     "admin": "Administrator",
@@ -2049,7 +2052,9 @@
     "wiki": "Wiki - Harmonie",
     "outfits": "Concert Attire - Harmonie",
     "performances": "Performances - Harmonie",
-    "workflows": "Workflows - Harmonie"
+    "workflows": "Workflows - Harmonie",
+    "externalMusicians": "External Musicians - Harmonie",
+    "replacementRequests": "Replacement Requests - Harmonie"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -5439,5 +5444,105 @@
     "fee": "Fee (optional)",
     "notesPlaceholder": "Add any details about the performance...",
     "sendInvite": "Send Invite"
+  },
+  "stageDesigner": {
+    "title": "Stage Layout Designer",
+    "newLayout": "New layout",
+    "nameRequired": "Name is required",
+    "unsavedChanges": "Unsaved changes",
+    "discardChanges": "Discard changes?",
+    "confirmDelete": "Are you sure you want to delete this stage layout?",
+    "selectLayoutFirst": "Please select a layout first",
+    "tabs": {
+      "layouts": "Layouts",
+      "editor": "Editor"
+    },
+    "noLayouts": "No stage layouts yet.",
+    "createFirst": "Create your first layout",
+    "venue": "Venue",
+    "dimensions": "Dimensions",
+    "usage": "Usage",
+    "concerts": "concert(s)",
+    "duplicate": "Duplicate",
+    "cannotDeleteInUse": "Cannot delete: in use",
+    "default": "Default",
+    "template": "Template",
+    "tools": {
+      "title": "Tools",
+      "select": "Select",
+      "chair": "Chair",
+      "stand": "Music stand",
+      "conductor": "Conductor",
+      "piano": "Piano",
+      "percussion": "Percussion",
+      "rect": "Rectangle",
+      "circle": "Circle",
+      "text": "Text"
+    },
+    "zoom": "Zoom",
+    "gridSnap": "Grid snap",
+    "hideProperties": "Hide properties",
+    "showProperties": "Show properties",
+    "sections": "Sections",
+    "noSection": "No section",
+    "addSection": "Add section",
+    "editSection": "Edit section",
+    "sectionNameRequired": "Section name is required",
+    "sectionNamePlaceholder": "e.g. Violins 1",
+    "color": "Color",
+    "instrument": "Instrument",
+    "properties": "Properties",
+    "layoutProperties": "Layout",
+    "positionProperties": "Position",
+    "shapeProperties": "Shape",
+    "venuePlaceholder": "e.g. Concert Hall",
+    "width": "Width",
+    "depth": "Depth",
+    "setAsDefault": "Set as default",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Vl1-1",
+    "section": "Section",
+    "rotation": "Rotation",
+    "fillColor": "Fill color",
+    "height": "Height",
+    "radius": "Radius",
+    "fontSize": "Font size",
+    "deleteElement": "Delete element",
+    "statistics": "Statistics",
+    "positions": "Positions",
+    "shapes": "Shapes",
+    "namePlaceholder": "e.g. Standard symphony orchestra",
+    "front": "FRONT (AUDIENCE)"
+  },
+  "concertStageSetup": {
+    "title": "Concert Stage Setup",
+    "discardChanges": "Discard changes?",
+    "concertNotFound": "Concert not found.",
+    "tabs": {
+      "assign": "Assign",
+      "print": "Print"
+    },
+    "selectLayout": "Select layout",
+    "noLayouts": "No layouts available.",
+    "createLayout": "Create a layout",
+    "members": "Members",
+    "selectLayoutFirst": "Please select a stage layout first",
+    "positionDetails": "Position details",
+    "selectPosition": "Select position",
+    "assignedTo": "Assigned to",
+    "removeAssignment": "Remove",
+    "noAssignment": "Click on a member to assign",
+    "clickPosition": "Click on a position on the stage to see details and assign a member.",
+    "assigned": "Assigned",
+    "positions": "positions",
+    "noPrintData": "No print data available. Save the stage setup first."
+  },
+  "seatCards": {
+    "cards": "cards",
+    "print": "Print"
+  },
+  "pageTitle": {
+    "stageDesigner": "Stage Layout Designer",
+    "concertStageSetup": "Concert Stage Setup"
   }
 }

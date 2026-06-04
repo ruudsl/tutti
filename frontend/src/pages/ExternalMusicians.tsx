@@ -46,7 +46,7 @@ function StarRating({ rating, onChange, readOnly = false }: { rating: number | n
           style={{ background: 'none', border: 'none', padding: 0 }}
         >
           <Icon
-            name="star"
+            name="heart"
             size={20}
             className={star <= (rating || 0) ? 'text-warning' : 'text-muted'}
             style={{ fill: star <= (rating || 0) ? 'currentColor' : 'none' }}
@@ -374,7 +374,7 @@ export default function ExternalMusicians() {
                                 onClick={() => setDeletingMusician(musician)}
                                 title={t('externalMusicians.deactivate')}
                               >
-                                <Icon name="userMinus" size={16} />
+                                <Icon name="trash" size={16} />
                               </button>
                             )}
                           </>

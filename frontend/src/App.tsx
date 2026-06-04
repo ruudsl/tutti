@@ -94,6 +94,10 @@ import InstrumentAssets from './pages/InstrumentAssets';
 import Events from './pages/Events';
 import MultiAssociation from './pages/MultiAssociation';
 
+// External Musicians Network
+import ExternalMusicians from './pages/ExternalMusicians';
+import ReplacementRequests from './pages/ReplacementRequests';
+
 // Seating management
 import Seating from './pages/Seating';
 import VoiceParts from './pages/VoiceParts';
@@ -121,6 +125,10 @@ import InfoScreen from './pages/InfoScreen';
 import MockPayment from './pages/MockPayment';
 import TicketTransfer from './pages/TicketTransfer';
 import AcceptTransfer from './pages/AcceptTransfer';
+
+// Stage Layout Designer
+import StageDesigner from './pages/StageDesigner';
+import ConcertStageSetup from './pages/ConcertStageSetup';
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
@@ -274,6 +282,23 @@ function AppRoutes() {
         {/* Phase E: Automation + Content */}
         <Route path="outfits" element={<Outfits />} />
         <Route path="wiki" element={<Wiki />} />
+        {/* External Musicians Network */}
+        <Route
+          path="external-musicians"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <ExternalMusicians />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="replacement-requests"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <ReplacementRequests />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="workflows"
           element={
@@ -483,6 +508,22 @@ function AppRoutes() {
           element={
             <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
               <Concerts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="stage-designer"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <StageDesigner />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="concerts/:concertId/stage"
+          element={
+            <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
+              <ConcertStageSetup />
             </PrivateRoute>
           }
         />

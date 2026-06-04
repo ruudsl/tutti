@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useInstruments } from '../hooks/useInstruments';
 import {
@@ -17,9 +17,8 @@ import type {
   StagePosition,
   StageShape,
   StageSection,
-  StagePositionType,
 } from '../types';
-import { showSuccess, showError } from '../utils/toast';
+import { showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import './StageDesigner.css';
 
@@ -42,7 +41,6 @@ const DEFAULT_LAYOUT_DATA: StageLayoutData = {
 
 export default function StageDesigner() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle('pageTitle.stageDesigner');
 

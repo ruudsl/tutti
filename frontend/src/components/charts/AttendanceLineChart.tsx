@@ -15,10 +15,10 @@ import {
   Legend,
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import type { AttendanceTrend } from '../../api';
+import type { RehearsalAttendanceTrend } from '../../api/attendance-analytics';
 
 interface AttendanceLineChartProps {
-  data: AttendanceTrend[];
+  data: RehearsalAttendanceTrend[];
   height?: number;
   showAttendees?: boolean;
 }
@@ -88,11 +88,11 @@ export function AttendanceLineChart({
             borderRadius: '8px',
             color: 'var(--text)',
           }}
-          formatter={(value: number, name: string) => {
+          formatter={(value, name) => {
             if (name === 'attendanceRate') {
               return [`${value}%`, t('attendanceAnalytics.attendanceRate', 'Opkomst')];
             }
-            return [value, t('attendanceAnalytics.uniqueAttendees', 'Unieke aanwezigen')];
+            return [String(value), t('attendanceAnalytics.uniqueAttendees', 'Unieke aanwezigen')];
           }}
           labelFormatter={(label) => label}
         />

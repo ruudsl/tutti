@@ -127,7 +127,8 @@ export default function ReplacementRequests() {
 
   const { data: requestDetail } = useReplacementRequest(viewingRequest?.id || null);
   const { data: instruments = [] } = useInstruments();
-  const { data: concerts = [] } = useConcerts();
+  const { data: concertsData } = useConcerts();
+  const concerts = concertsData?.data || [];
   const { data: suggestedMusicians = [] } = useExternalMusicianSearch(
     inviteInstrumentId,
     { activeOnly: true }
@@ -135,7 +136,7 @@ export default function ReplacementRequests() {
 
   // Mutations
   const createMutation = useCreateReplacementRequest();
-  const updateMutation = useUpdateReplacementRequest();
+  // const updateMutation = useUpdateReplacementRequest(); // Available for future use
   const cancelMutation = useCancelReplacementRequest();
   const inviteMutation = useInviteMusician();
   const updateAssignmentMutation = useUpdateAssignment();
@@ -349,14 +350,14 @@ export default function ReplacementRequests() {
                               onClick={() => openInviteModal(request)}
                               title={t('replacementRequests.invite')}
                             >
-                              <Icon name="userPlus" size={16} />
+                              <Icon name="plus" size={16} />
                             </button>
                             <button
                               className="btn btn-danger btn-sm"
                               onClick={() => setCancellingRequest(request)}
                               title={t('common.cancel')}
                             >
-                              <Icon name="x" size={16} />
+                              <Icon name="close" size={16} />
                             </button>
                           </>
                         )}
@@ -437,7 +438,7 @@ export default function ReplacementRequests() {
                     className="btn btn-primary btn-sm"
                     onClick={() => openInviteModal(requestDetail)}
                   >
-                    <Icon name="userPlus" size={16} className="mr-1" />
+                    <Icon name="plus" size={16} className="mr-1" />
                     {t('replacementRequests.inviteMusician')}
                   </button>
                 )}
@@ -542,7 +543,7 @@ export default function ReplacementRequests() {
                   <option value="">{t('replacementRequests.selectEvent')}</option>
                   {concerts.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.title} - {new Date(c.date).toLocaleDateString()}
+                      {c.name} - {new Date(c.date).toLocaleDateString()}
                     </option>
                   ))}
                 </select>

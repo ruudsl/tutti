@@ -12,11 +12,8 @@ import {
   addSeasonEvent,
   removeSeasonEvent,
   generateSeasonEvents,
-  type Season,
-  type SeasonDetail,
-  type SeasonTemplate,
-  type GenerateSeasonEventsParams,
 } from '../api';
+import type { Season, SeasonDetail, SeasonTemplate, GenerateSeasonEventsParams } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
