@@ -86,23 +86,28 @@ export default function StageCanvas({
   const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // Handle canvas click (add new element or deselect)
+  // Uses capture phase (onClickCapture) so it fires before child elements
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (readOnly || isDragging) return;
 
+      // When using a placement tool, ALWAYS add element regardless of what was clicked
+      if (tool !== 'select') {
+        e.stopPropagation(); // Prevent element selection
+        const pos = screenToSvg(e.clientX, e.clientY);
+        const snapped = snapToGrid(pos.x, pos.y);
+        addElement(snapped.x, snapped.y);
+        return;
+      }
+
+      // In select mode, clicking background deselects (handled by normal event flow)
       const target = e.target as SVGElement;
-      if (target === svgRef.current || target.classList.contains('stage-background')) {
-        // Clicked on background - deselect or add element
-        if (tool === 'select') {
-          onSelectionChange([]);
-        } else {
-          const pos = screenToSvg(e.clientX, e.clientY);
-          const snapped = snapToGrid(pos.x, pos.y);
-          addElement(snapped.x, snapped.y);
-        }
+      const isBackground = target === svgRef.current || target.classList.contains('stage-background');
+      if (isBackground) {
+        onSelectionChange([]);
       }
     },
-    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange]
+    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange, addElement]
   );
 
   // Add new element based on current tool
@@ -144,18 +149,14 @@ export default function StageCanvas({
     [layoutData, tool, currentSection, onLayoutChange, onSelectionChange]
   );
 
-  // Handle element click (select or add new element)
+  // Handle element click (select only - placement is handled by canvas click)
   const handleElementClick = useCallback(
     (e: React.MouseEvent, id: string) => {
       if (readOnly) return;
 
-      // When not in select mode, add a new element at click position
+      // When not in select mode, let the click bubble to canvas for placement
       if (tool !== 'select') {
-        e.stopPropagation();
-        const pos = screenToSvg(e.clientX, e.clientY);
-        const snapped = snapToGrid(pos.x, pos.y);
-        addElement(snapped.x, snapped.y);
-        return;
+        return; // Don't stop propagation - let canvas handle it
       }
 
       e.stopPropagation();
@@ -171,7 +172,7 @@ export default function StageCanvas({
         onSelectionChange([id]);
       }
     },
-    [readOnly, tool, selectedIds, onSelectionChange, screenToSvg, snapToGrid, addElement]
+    [readOnly, tool, selectedIds, onSelectionChange]
   );
 
   // Handle drag start
@@ -607,7 +608,7 @@ export default function StageCanvas({
                 : 'default'
               : 'crosshair',
         }}
-        onClick={handleCanvasClick}
+        onClickCapture={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
