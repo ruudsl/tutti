@@ -122,13 +122,13 @@ router.put('/templates/:id', authenticateToken, requireRole(...SEASON_MANAGERS),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
-    name,
-    description,
-    defaultRehearsalDay,
-    defaultRehearsalTime,
-    defaultRehearsalDuration,
-    defaultRehearsalLocation,
-    typicalConcertsCount,
+    name ?? null,
+    description ?? null,
+    defaultRehearsalDay ?? null,
+    defaultRehearsalTime ?? null,
+    defaultRehearsalDuration ?? null,
+    defaultRehearsalLocation ?? null,
+    typicalConcertsCount ?? null,
     templateData ? JSON.stringify(templateData) : null,
     id
   );
@@ -323,7 +323,7 @@ router.put('/:id', authenticateToken, requireRole(...SEASON_MANAGERS), asyncHand
       notes = COALESCE(?, notes),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(name, startDate, endDate, templateId, status, budgetTotal, budgetAllocated, notes, id);
+  `).run(name ?? null, startDate ?? null, endDate ?? null, templateId ?? null, status ?? null, budgetTotal ?? null, budgetAllocated ?? null, notes ?? null, id);
 
   res.json({ message: 'Seizoen bijgewerkt.' });
 }));
