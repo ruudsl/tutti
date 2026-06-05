@@ -144,13 +144,19 @@ export default function StageCanvas({
     [layoutData, tool, currentSection, onLayoutChange, onSelectionChange]
   );
 
-  // Handle element click (select)
+  // Handle element click (select or add new element)
   const handleElementClick = useCallback(
     (e: React.MouseEvent, id: string) => {
       if (readOnly) return;
 
-      // When not in select mode, don't capture the click - let it bubble to canvas to add new elements
-      if (tool !== 'select') return;
+      // When not in select mode, add a new element at click position
+      if (tool !== 'select') {
+        e.stopPropagation();
+        const pos = screenToSvg(e.clientX, e.clientY);
+        const snapped = snapToGrid(pos.x, pos.y);
+        addElement(snapped.x, snapped.y);
+        return;
+      }
 
       e.stopPropagation();
 
@@ -165,7 +171,7 @@ export default function StageCanvas({
         onSelectionChange([id]);
       }
     },
-    [readOnly, tool, selectedIds, onSelectionChange]
+    [readOnly, tool, selectedIds, onSelectionChange, screenToSvg, snapToGrid, addElement]
   );
 
   // Handle drag start
