@@ -317,7 +317,7 @@ router.put('/settings', authenticateToken, requireRole('admin'), asyncHandler(as
             updated_at = CURRENT_TIMESTAMP
         WHERE association_id = ?
     `).run(
-        region,
+        region ?? null,
         showHolidaysInCalendar !== undefined ? (showHolidaysInCalendar ? 1 : 0) : null,
         autoBlockRehearsals !== undefined ? (autoBlockRehearsals ? 1 : 0) : null,
         req.user!.associationId
