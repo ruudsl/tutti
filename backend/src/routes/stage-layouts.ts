@@ -246,7 +246,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'c
     `).run(req.user!.associationId, req.params.id);
   }
 
-  const layoutDataJson = data.layoutData ? JSON.stringify(data.layoutData) : undefined;
+  const layoutDataJson = data.layoutData ? JSON.stringify(data.layoutData) : null;
 
   db.prepare(`
     UPDATE stage_layouts SET
@@ -262,15 +262,15 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'c
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
-    data.name,
-    data.description,
-    data.venueName,
-    data.stageWidth,
-    data.stageDepth,
-    data.isTemplate !== undefined ? (data.isTemplate ? 1 : 0) : undefined,
-    data.isDefault !== undefined ? (data.isDefault ? 1 : 0) : undefined,
+    data.name ?? null,
+    data.description ?? null,
+    data.venueName ?? null,
+    data.stageWidth ?? null,
+    data.stageDepth ?? null,
+    data.isTemplate !== undefined ? (data.isTemplate ? 1 : 0) : null,
+    data.isDefault !== undefined ? (data.isDefault ? 1 : 0) : null,
     layoutDataJson,
-    data.thumbnailUrl,
+    data.thumbnailUrl ?? null,
     req.params.id
   );
 
