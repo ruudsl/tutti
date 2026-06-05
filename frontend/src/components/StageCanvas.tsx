@@ -85,31 +85,6 @@ export default function StageCanvas({
   // Generate unique ID
   const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Handle canvas click (add new element or deselect)
-  // Uses capture phase (onClickCapture) so it fires before child elements
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (readOnly || isDragging) return;
-
-      // When using a placement tool, ALWAYS add element regardless of what was clicked
-      if (tool !== 'select') {
-        e.stopPropagation(); // Prevent element selection
-        const pos = screenToSvg(e.clientX, e.clientY);
-        const snapped = snapToGrid(pos.x, pos.y);
-        addElement(snapped.x, snapped.y);
-        return;
-      }
-
-      // In select mode, clicking background deselects (handled by normal event flow)
-      const target = e.target as SVGElement;
-      const isBackground = target === svgRef.current || target.classList.contains('stage-background');
-      if (isBackground) {
-        onSelectionChange([]);
-      }
-    },
-    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange, addElement]
-  );
-
   // Add new element based on current tool
   const addElement = useCallback(
     (x: number, y: number) => {
@@ -147,6 +122,31 @@ export default function StageCanvas({
       }
     },
     [layoutData, tool, currentSection, onLayoutChange, onSelectionChange]
+  );
+
+  // Handle canvas click (add new element or deselect)
+  // Uses capture phase (onClickCapture) so it fires before child elements
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (readOnly || isDragging) return;
+
+      // When using a placement tool, ALWAYS add element regardless of what was clicked
+      if (tool !== 'select') {
+        e.stopPropagation(); // Prevent element selection
+        const pos = screenToSvg(e.clientX, e.clientY);
+        const snapped = snapToGrid(pos.x, pos.y);
+        addElement(snapped.x, snapped.y);
+        return;
+      }
+
+      // In select mode, clicking background deselects (handled by normal event flow)
+      const target = e.target as SVGElement;
+      const isBackground = target === svgRef.current || target.classList.contains('stage-background');
+      if (isBackground) {
+        onSelectionChange([]);
+      }
+    },
+    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange, addElement]
   );
 
   // Handle element click (select only - placement is handled by canvas click)
