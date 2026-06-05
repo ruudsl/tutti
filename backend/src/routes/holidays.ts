@@ -271,6 +271,136 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
 }));
 
 /**
+ * GET /holidays/settings - Get association holiday settings
+ * IMPORTANT: This route must be defined BEFORE /:id routes
+ */
+router.get('/settings', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user!.associationId) {
+        throw new ApiError(400, 'Geen vereniging geselecteerd.');
+    }
+    const settings = getOrCreateSettings(req.user!.associationId);
+
+    res.json({
+        region: settings.region,
+        showHolidaysInCalendar: settings.show_holidays_in_calendar,
+        autoBlockRehearsals: settings.auto_block_rehearsals,
+        regions: getRegions(),
+    });
+}));
+
+/**
+ * PUT /holidays/settings - Update association holiday settings
+ * IMPORTANT: This route must be defined BEFORE /:id routes
+ */
+router.put('/settings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user!.associationId) {
+        throw new ApiError(400, 'Geen vereniging geselecteerd.');
+    }
+    const { region, showHolidaysInCalendar, autoBlockRehearsals } = req.body;
+
+    // Validate region if provided
+    if (region) {
+        const validRegions = ['noord', 'midden', 'zuid'];
+        if (!validRegions.includes(region)) {
+            throw new ApiError(400, 'Ongeldige regio. Kies uit: noord, midden, zuid.');
+        }
+    }
+
+    // Ensure settings exist
+    getOrCreateSettings(req.user!.associationId);
+
+    db.prepare(`
+        UPDATE association_holiday_settings
+        SET region = COALESCE(?, region),
+            show_holidays_in_calendar = COALESCE(?, show_holidays_in_calendar),
+            auto_block_rehearsals = COALESCE(?, auto_block_rehearsals),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE association_id = ?
+    `).run(
+        region,
+        showHolidaysInCalendar !== undefined ? (showHolidaysInCalendar ? 1 : 0) : null,
+        autoBlockRehearsals !== undefined ? (autoBlockRehearsals ? 1 : 0) : null,
+        req.user!.associationId
+    );
+
+    logger.info('Holiday settings updated', {
+        associationId: req.user!.associationId,
+        region,
+        showHolidaysInCalendar,
+        autoBlockRehearsals,
+    });
+
+    const updatedSettings = getOrCreateSettings(req.user!.associationId);
+
+    res.json({
+        message: 'Instellingen bijgewerkt.',
+        settings: {
+            region: updatedSettings.region,
+            showHolidaysInCalendar: updatedSettings.show_holidays_in_calendar,
+            autoBlockRehearsals: updatedSettings.auto_block_rehearsals,
+        },
+    });
+}));
+
+/**
+ * GET /holidays/upcoming - Get upcoming holidays
+ * Query params: limit (default 5)
+ * IMPORTANT: This route must be defined BEFORE /:id routes
+ */
+router.get('/upcoming', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user!.associationId) {
+        throw new ApiError(400, 'Geen vereniging geselecteerd.');
+    }
+    const settings = getOrCreateSettings(req.user!.associationId);
+    const region = (settings.region || 'midden') as DutchRegion;
+    const limit = parseInt(req.query.limit as string) || 5;
+
+    const today = new Date().toISOString().split('T')[0];
+    const oneYearLater = new Date();
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    const endDate = oneYearLater.toISOString().split('T')[0];
+
+    const systemHolidays = getHolidaysInRange(today, endDate, region);
+
+    // Get custom holidays
+    const customHolidays = db.prepare(`
+        SELECT * FROM school_holidays
+        WHERE association_id = ?
+        AND end_date >= ?
+        AND is_custom = TRUE
+        ORDER BY start_date
+    `).all(req.user!.associationId, today) as HolidayRow[];
+
+    // Combine and format
+    const allHolidays = [
+        ...systemHolidays.map(h => ({
+            id: `system-${h.holidayType}-${h.startDate}-${h.region}`,
+            name: h.nameDutch,
+            startDate: h.startDate,
+            endDate: h.endDate,
+            holidayType: h.holidayType,
+            isCustom: false,
+        })),
+        ...customHolidays.map(h => ({
+            id: h.id,
+            name: h.name,
+            startDate: h.start_date,
+            endDate: h.end_date,
+            holidayType: h.holiday_type,
+            isCustom: true,
+        })),
+    ];
+
+    // Sort by start date and filter future holidays
+    const upcoming = allHolidays
+        .filter(h => h.startDate >= today)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate))
+        .slice(0, limit);
+
+    res.json(upcoming);
+}));
+
+/**
  * PUT /holidays/:id - Update a custom holiday
  */
 router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -331,133 +461,6 @@ router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee')
     logger.info('Custom holiday deleted', { id, associationId: req.user!.associationId });
 
     res.json({ message: 'Feestdag verwijderd.' });
-}));
-
-/**
- * GET /holidays/settings - Get association holiday settings
- */
-router.get('/settings', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user!.associationId) {
-        throw new ApiError(400, 'Geen vereniging geselecteerd.');
-    }
-    const settings = getOrCreateSettings(req.user!.associationId);
-
-    res.json({
-        region: settings.region,
-        showHolidaysInCalendar: settings.show_holidays_in_calendar,
-        autoBlockRehearsals: settings.auto_block_rehearsals,
-        regions: getRegions(),
-    });
-}));
-
-/**
- * PUT /holidays/settings - Update association holiday settings
- */
-router.put('/settings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user!.associationId) {
-        throw new ApiError(400, 'Geen vereniging geselecteerd.');
-    }
-    const { region, showHolidaysInCalendar, autoBlockRehearsals } = req.body;
-
-    // Validate region if provided
-    if (region) {
-        const validRegions = ['noord', 'midden', 'zuid'];
-        if (!validRegions.includes(region)) {
-            throw new ApiError(400, 'Ongeldige regio. Kies uit: noord, midden, zuid.');
-        }
-    }
-
-    // Ensure settings exist
-    getOrCreateSettings(req.user!.associationId);
-
-    db.prepare(`
-        UPDATE association_holiday_settings
-        SET region = COALESCE(?, region),
-            show_holidays_in_calendar = COALESCE(?, show_holidays_in_calendar),
-            auto_block_rehearsals = COALESCE(?, auto_block_rehearsals),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE association_id = ?
-    `).run(
-        region,
-        showHolidaysInCalendar !== undefined ? (showHolidaysInCalendar ? 1 : 0) : null,
-        autoBlockRehearsals !== undefined ? (autoBlockRehearsals ? 1 : 0) : null,
-        req.user!.associationId
-    );
-
-    logger.info('Holiday settings updated', {
-        associationId: req.user!.associationId,
-        region,
-        showHolidaysInCalendar,
-        autoBlockRehearsals,
-    });
-
-    const updatedSettings = getOrCreateSettings(req.user!.associationId);
-
-    res.json({
-        message: 'Instellingen bijgewerkt.',
-        settings: {
-            region: updatedSettings.region,
-            showHolidaysInCalendar: updatedSettings.show_holidays_in_calendar,
-            autoBlockRehearsals: updatedSettings.auto_block_rehearsals,
-        },
-    });
-}));
-
-/**
- * GET /holidays/upcoming - Get upcoming holidays
- * Query params: limit (default 5)
- */
-router.get('/upcoming', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user!.associationId) {
-        throw new ApiError(400, 'Geen vereniging geselecteerd.');
-    }
-    const settings = getOrCreateSettings(req.user!.associationId);
-    const region = (settings.region || 'midden') as DutchRegion;
-    const limit = parseInt(req.query.limit as string) || 5;
-
-    const today = new Date().toISOString().split('T')[0];
-    const oneYearLater = new Date();
-    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-    const endDate = oneYearLater.toISOString().split('T')[0];
-
-    const systemHolidays = getHolidaysInRange(today, endDate, region);
-
-    // Get custom holidays
-    const customHolidays = db.prepare(`
-        SELECT * FROM school_holidays
-        WHERE association_id = ?
-        AND end_date >= ?
-        AND is_custom = TRUE
-        ORDER BY start_date
-    `).all(req.user!.associationId, today) as HolidayRow[];
-
-    // Combine and format
-    const allHolidays = [
-        ...systemHolidays.map(h => ({
-            id: `system-${h.holidayType}-${h.startDate}-${h.region}`,
-            name: h.nameDutch,
-            startDate: h.startDate,
-            endDate: h.endDate,
-            holidayType: h.holidayType,
-            isCustom: false,
-        })),
-        ...customHolidays.map(h => ({
-            id: h.id,
-            name: h.name,
-            startDate: h.start_date,
-            endDate: h.end_date,
-            holidayType: h.holiday_type,
-            isCustom: true,
-        })),
-    ];
-
-    // Sort by start date and filter future holidays
-    const upcoming = allHolidays
-        .filter(h => h.startDate >= today)
-        .sort((a, b) => a.startDate.localeCompare(b.startDate))
-        .slice(0, limit);
-
-    res.json(upcoming);
 }));
 
 export default router;
