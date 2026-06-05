@@ -148,9 +148,11 @@ export default function StageCanvas({
   const handleElementClick = useCallback(
     (e: React.MouseEvent, id: string) => {
       if (readOnly) return;
-      e.stopPropagation();
 
+      // When not in select mode, don't capture the click - let it bubble to canvas to add new elements
       if (tool !== 'select') return;
+
+      e.stopPropagation();
 
       if (e.shiftKey) {
         // Multi-select
@@ -169,7 +171,9 @@ export default function StageCanvas({
   // Handle drag start
   const handleDragStart = useCallback(
     (e: React.MouseEvent, id: string) => {
+      // Only allow dragging in select mode
       if (readOnly || tool !== 'select') return;
+
       e.stopPropagation();
 
       if (!selectedIds.includes(id)) {
