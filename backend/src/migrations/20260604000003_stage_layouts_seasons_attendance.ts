@@ -21,11 +21,13 @@ export function up(): void {
       association_id TEXT NOT NULL,
       name TEXT NOT NULL,
       description TEXT,
+      venue_name TEXT,
       stage_width INTEGER DEFAULT 1000,
       stage_depth INTEGER DEFAULT 600,
       layout_data TEXT NOT NULL DEFAULT '{}',
       is_template INTEGER DEFAULT 0,
       is_default INTEGER DEFAULT 0,
+      thumbnail_url TEXT,
       created_by TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -36,6 +38,25 @@ export function up(): void {
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_layouts_association ON stage_layouts(association_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_stage_layouts_template ON stage_layouts(is_template)');
+
+  // Concert Stage Assignments - links a stage layout to a concert with member positions
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS concert_stage_assignments (
+      id TEXT PRIMARY KEY,
+      concert_id TEXT NOT NULL,
+      layout_id TEXT NOT NULL,
+      assignments_data TEXT NOT NULL DEFAULT '{}',
+      created_by TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+      FOREIGN KEY (layout_id) REFERENCES stage_layouts(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_stage_concert ON concert_stage_assignments(concert_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_stage_layout ON concert_stage_assignments(layout_id)');
 
   // Seasons table
   db.exec(`
@@ -160,5 +181,6 @@ export function down(): void {
   db.exec('DROP TABLE IF EXISTS season_templates');
   db.exec('DROP TABLE IF EXISTS season_events');
   db.exec('DROP TABLE IF EXISTS seasons');
+  db.exec('DROP TABLE IF EXISTS concert_stage_assignments');
   db.exec('DROP TABLE IF EXISTS stage_layouts');
 }
