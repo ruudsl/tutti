@@ -1552,9 +1552,8 @@ export default function Concerts() {
             setShowSetlistMode(false);
             setSetlistModeData(null);
           }}
-          onPieceSelect={(piece, index) => {
-            // Optional: Log piece selection for analytics
-            console.log('Piece selected:', piece.title, 'at index', index);
+          onPieceSelect={(_piece, _index) => {
+            // Piece selection handler - extend for analytics if needed
           }}
         />
       )}

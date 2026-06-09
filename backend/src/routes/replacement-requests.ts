@@ -480,13 +480,22 @@ router.post(
       invitedBy: req.user!.id,
     });
 
-    // TODO: Send email notification to musician
-    // This would integrate with the existing notification system
-    // For now, we log the invitation
+    // Email notification - requires email service configuration
+    // Log warning that email is not sent automatically
+    if (musician?.email) {
+      logger.warn('Musician invitation email not configured', {
+        assignmentId,
+        musicianEmail: musician.email,
+        musicianName: `${musician.first_name} ${musician.last_name}`,
+        action: 'MANUAL_CONTACT_REQUIRED',
+      });
+    }
 
     res.status(201).json({
       id: assignmentId,
-      message: 'Muzikant succesvol uitgenodigd',
+      message: musician?.email
+        ? 'Muzikant uitgenodigd. Let op: automatisch e-mailen is niet geconfigureerd - neem handmatig contact op.'
+        : 'Muzikant succesvol uitgenodigd',
     });
   })
 );

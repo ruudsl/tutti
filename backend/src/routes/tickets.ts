@@ -260,7 +260,9 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
             throw new ApiError(400, `Maximum ${ticketType.max_per_order} tickets per order for "${ticketType.name}"`);
         }
 
-        // Check availability
+        // Early availability check for better UX (quick error with ticket name)
+        // Note: The actual atomic reservation happens in the transaction below,
+        // which uses conditional UPDATE to prevent race conditions / overselling
         const available = ticketType.quantity - ticketType.sold;
         if (item.quantity > available) {
             throw new ApiError(400, `Only ${available} tickets available for "${ticketType.name}"`);
@@ -300,11 +302,11 @@ router.post('/concerts/:id/tickets/order', optionalAuth, asyncHandler(async (req
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
 
     const createOrder = db.transaction(() => {
-        // Reserve tickets
+        // Reserve tickets atomically (prevents race conditions / overselling)
         for (const item of orderItems) {
             const reservation = reserveTickets(item.ticketTypeId, item.quantity);
             if (!reservation.success) {
-                throw new ApiError(400, reservation.message);
+                throw new ApiError(400, `${item.name}: ${reservation.message}`);
             }
         }
 

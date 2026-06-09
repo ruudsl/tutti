@@ -4,6 +4,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
+import logger from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -675,10 +676,19 @@ router.post('/invoices/:id/send', authenticateToken, requireRole('admin'), async
         WHERE id = ?
     `).run(req.params.id);
 
-    // TODO: Actually send the invoice via email
+    // Email sending - requires email service configuration (SendGrid, SMTP, etc.)
+    // For now, log a warning that email is not actually sent
+    logger.warn('Invoice marked as sent but email delivery not configured', {
+        invoiceId: req.params.id,
+        invoiceNumber: invoice.invoice_number,
+        recipientEmail: invoice.client_email,
+        action: 'MANUAL_DELIVERY_REQUIRED',
+    });
 
     await logAuditEvent(req.user!.id, 'send', 'invoice', req.params.id, invoice.invoice_number);
-    res.json({ message: 'Factuur verzonden.' });
+    res.json({
+        message: 'Factuur gemarkeerd als verzonden. Let op: automatisch e-mailen is niet geconfigureerd - lever handmatig af.',
+    });
 }));
 
 router.post('/invoices/:id/mark-paid', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {

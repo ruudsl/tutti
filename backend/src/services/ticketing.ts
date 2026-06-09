@@ -375,27 +375,32 @@ export function getAvailableTickets(ticketTypeId: string): number {
 
 /**
  * Reserve tickets temporarily (during checkout)
- * Note: This is a simplified version. In production, use Redis with TTL
+ * Uses atomic conditional UPDATE to prevent race conditions / overselling
  */
 export function reserveTickets(
     ticketTypeId: string,
     quantity: number
-): { success: boolean; message: string } {
-    const available = getAvailableTickets(ticketTypeId);
-
-    if (available < quantity) {
-        return {
-            success: false,
-            message: `Only ${available} tickets available`,
-        };
-    }
-
-    // Update sold count (reservation)
-    db.prepare(`
+): { success: boolean; message: string; available?: number } {
+    // Atomic check-and-update: only succeeds if enough tickets available
+    // This prevents race conditions where two concurrent requests both pass
+    // the availability check before either updates the sold count
+    const result = db.prepare(`
         UPDATE ticket_types
         SET sold = sold + ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    `).run(quantity, ticketTypeId);
+        WHERE id = ? AND (quantity - sold) >= ?
+    `).run(quantity, ticketTypeId, quantity);
+
+    if (result.changes === 0) {
+        // Update failed - either ticket type doesn't exist or not enough available
+        const available = getAvailableTickets(ticketTypeId);
+        return {
+            success: false,
+            message: available === 0
+                ? 'No tickets available'
+                : `Only ${available} tickets available`,
+            available,
+        };
+    }
 
     return {
         success: true,

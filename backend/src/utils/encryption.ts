@@ -3,13 +3,29 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const SALT_LENGTH = 32;
+const KEY_LENGTH = 32;
+
+// Cache the derived key to avoid repeated key derivation
+let cachedKey: Buffer | null = null;
+let cachedSalt: string | null = null;
 
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_SECRET || process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('ENCRYPTION_SECRET or JWT_SECRET must be set');
   }
-  return crypto.scryptSync(secret, 'tutti-salt', 32);
+
+  // Use configurable salt from environment, fallback to derived salt from secret
+  const salt = process.env.ENCRYPTION_SALT || crypto.createHash('sha256').update(secret + '-salt').digest('hex').slice(0, 32);
+
+  // Return cached key if secret and salt haven't changed
+  if (cachedKey && cachedSalt === salt) {
+    return cachedKey;
+  }
+
+  cachedKey = crypto.scryptSync(secret, salt, KEY_LENGTH);
+  cachedSalt = salt;
+  return cachedKey;
 }
 
 export function encrypt(plaintext: string): string {
