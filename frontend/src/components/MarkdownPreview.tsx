@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import DOMPurify from 'dompurify';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -62,7 +63,7 @@ export function MarkdownPreview({ content, className = '' }: MarkdownPreviewProp
   return (
     <div
       className={`prose prose-sm max-w-none ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   );
 }

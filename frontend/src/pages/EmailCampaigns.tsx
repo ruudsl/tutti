@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon, IconName } from '../components/Icon';
@@ -341,7 +342,7 @@ function CampaignDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-base-content/70 mb-2">{t('emailCampaigns.content')}</h4>
             <div className="bg-base-200 p-4 rounded-lg max-h-64 overflow-y-auto border border-base-300">
-              <div dangerouslySetInnerHTML={{ __html: campaign.bodyHtml }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.bodyHtml) }} />
             </div>
           </div>
 

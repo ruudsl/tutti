@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
 import { getChangelog } from '../api';
 
@@ -54,7 +55,7 @@ export default function Changelog() {
           {data && (
             <div
               className="changelog-content"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(data.content) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(data.content)) }}
             />
           )}
         </div>
