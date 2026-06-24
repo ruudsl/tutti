@@ -457,6 +457,7 @@ router.put('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music
   `).get(req.params.id) as any;
 
   const assignmentsJson = JSON.stringify(data.assignments);
+  const safeConcertId = req.params.id.replace(/[\r\n]/g, '');
 
   if (existing) {
     db.prepare(`
@@ -467,7 +468,7 @@ router.put('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music
       WHERE id = ?
     `).run(data.layoutId, assignmentsJson, existing.id);
 
-    logger.info(`Concert stage assignment updated: concert ${req.params.id}`, { updatedBy: req.user!.id });
+    logger.info(`Concert stage assignment updated: concert ${safeConcertId}`, { updatedBy: req.user!.id });
   } else {
     const id = uuidv4();
     db.prepare(`
@@ -475,7 +476,7 @@ router.put('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music
       VALUES (?, ?, ?, ?)
     `).run(id, req.params.id, data.layoutId, assignmentsJson);
 
-    logger.info(`Concert stage assignment created: concert ${req.params.id}`, { id, createdBy: req.user!.id });
+    logger.info(`Concert stage assignment created: concert ${safeConcertId}`, { id, createdBy: req.user!.id });
   }
 
   res.json({ message: 'Podiumindeling voor concert opgeslagen.' });
