@@ -1,0 +1,394 @@
+/* ============================================================
+   TUTTI — 2026 MODERN THEME LAYER
+   Loaded after index.css; refines the UI with:
+   - Glassmorphism surfaces (header, tab bar, modals)
+   - Gradient brand accents
+   - Soft elevation & hover micro-interactions
+   - Fluid responsive behavior for mobile / tablet / desktop
+   ============================================================ */
+
+/* ---------- Typography refinement ---------- */
+body {
+  font-optical-sizing: auto;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, .page-title, .card-title {
+  text-wrap: balance;
+}
+
+/* ---------- App background: subtle ambient gradient ---------- */
+.app-with-sidebar {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, var(--primary-light) 0%, transparent 55%),
+    var(--background);
+}
+
+/* ---------- Glass header ---------- */
+.app-header {
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  height: 56px;
+}
+
+/* Brand with gradient text */
+.navbar-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.navbar-brand img,
+.navbar-brand svg {
+  -webkit-text-fill-color: initial;
+}
+
+/* Header icon buttons: round, quiet */
+.header-search-btn,
+.notification-bell-btn,
+.dark-mode-toggle,
+.sidebar-toggle-btn {
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.header-search-btn:hover,
+.notification-bell-btn:hover,
+.dark-mode-toggle:hover,
+.sidebar-toggle-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ---------- Sidebar: floating panel feel ---------- */
+.app-sidebar {
+  top: 56px;
+  height: calc(100vh - 56px);
+  background: transparent;
+  border-right: 1px solid var(--border);
+  padding: 0.5rem 0.5rem 0;
+}
+
+[data-theme="dark"] .app-sidebar {
+  background: transparent;
+}
+
+/* Rounded pill nav items */
+.sidebar-direct-link,
+.sidebar-group-header {
+  border-radius: var(--radius-sm);
+  margin: 0.0625rem 0;
+  border-left: none;
+}
+
+.sidebar-direct-link.active {
+  background: var(--gradient-brand);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+.sidebar-group-header.active {
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-sub-link {
+  border-radius: var(--radius-sm);
+  margin: 0.0625rem 0 0.0625rem 1.6rem;
+  padding-left: 1.15rem;
+  border-left: 2px solid var(--border);
+}
+
+.sidebar-sub-link.active {
+  border-left-color: var(--primary);
+  background: var(--primary-light);
+}
+
+[data-theme="dark"] .sidebar-direct-link.active {
+  box-shadow: 0 2px 10px rgba(129, 140, 248, 0.3);
+  background: var(--gradient-brand);
+  color: #0c0e1a;
+}
+
+/* ---------- Main content: wider on large screens ---------- */
+.main-content {
+  max-width: 1320px;
+  padding: 1.5rem 2rem 3rem;
+}
+
+/* ---------- Cards: soft elevation + hover lift ---------- */
+.card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.btn-primary {
+  background: var(--gradient-brand);
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.3), 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+              filter var(--transition-fast);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--gradient-brand);
+  filter: brightness(1.08);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.35), 0 8px 20px rgba(79, 70, 229, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+[data-theme="dark"] .btn-primary {
+  color: #0c0e1a;
+}
+
+.btn-outline {
+  border-color: var(--border-strong);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* ---------- Inputs ---------- */
+.form-control {
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.form-control:hover:not(:focus):not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+/* ---------- Tables: airy rows ---------- */
+.table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.table td {
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+}
+
+.table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+/* ---------- Modals: glass + scale-in ---------- */
+.modal-overlay {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  background: rgba(10, 11, 20, 0.45);
+  animation: overlay-fade 200ms var(--ease-out);
+}
+
+.modal {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xl);
+  animation: modal-pop 250ms var(--ease-spring);
+}
+
+@keyframes overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---------- Page entrance ---------- */
+.main-content > * {
+  animation: page-in 300ms var(--ease-out) both;
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Mobile bottom tab bar: floating glass dock ---------- */
+@media (max-width: 768px) {
+  .mobile-bottom-tabs {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.625rem + env(safe-area-inset-bottom, 0));
+    height: 64px;
+    padding-bottom: 0;
+    border-radius: 1.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface-glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .bottom-tab {
+    position: relative;
+    gap: 0.2rem;
+    font-weight: 500;
+  }
+
+  .bottom-tab.active {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Active indicator pill above icon */
+  .bottom-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1.5rem;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--gradient-brand);
+  }
+
+  /* Content clearance for floating dock */
+  .main-content {
+    padding: 1rem 1rem calc(64px + 1.5rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .app-footer {
+    padding-bottom: calc(64px + 1.5rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .mobile-menu-panel {
+    bottom: calc(64px + 1.25rem + env(safe-area-inset-bottom, 0));
+    border-radius: var(--radius-xl);
+    left: 0.75rem;
+    right: 0.75rem;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    background: var(--surface-glass);
+  }
+}
+
+/* ---------- Tablet (769–1024): comfortable density ---------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    padding: 1.25rem 1.25rem 2.5rem;
+  }
+
+  .app-sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+}
+
+/* ---------- Large desktop (≥1600): use the space ---------- */
+@media (min-width: 1600px) {
+  .main-content {
+    max-width: 1480px;
+  }
+}
+
+/* ---------- Modern scrollbars ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ---------- Focus visibility (keyboard users) ---------- */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- Badges: pill shape ---------- */
+.badge {
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Footer: quiet ---------- */
+.app-footer {
+  background: transparent;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Reduced motion: disable all theme animations ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .main-content > *,
+  .modal,
+  .modal-overlay {
+    animation: none !important;
+  }
+
+  .card,
+  .btn,
+  .btn-primary {
+    transition: none !important;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: none;
+  }
+}

@@ -52,11 +52,14 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.agenda',
     icon: 'calendar',
-    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner'],
+    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner', '/holiday-settings', '/season-planner', '/attendance-analytics'],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/availability', labelKey: 'nav.availability' },
+      { path: '/attendance-analytics', labelKey: 'nav.attendanceAnalytics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/season-planner', labelKey: 'nav.seasonPlanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/holiday-settings', labelKey: 'nav.holidays', roles: [ROLES.ADMIN] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
@@ -88,12 +91,15 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.orchestra',
     icon: 'music2',
-    basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences'],
+    basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences', '/stage-designer', '/external-musicians', '/replacement-requests'],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/stage-designer', labelKey: 'nav.stageDesigner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/external-musicians', labelKey: 'nav.externalMusicians', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      { path: '/replacement-requests', labelKey: 'nav.replacementRequests', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
     ],
   },
   {
@@ -228,7 +234,9 @@ export default function Layout() {
   };
 
   const loadBrandSettings = () => {
-    getSettings().then(setBrandSettings).catch(() => {});
+    getSettings().then(setBrandSettings).catch((error) => {
+      console.warn('Failed to load brand settings:', error);
+    });
   };
 
   useEffect(() => {

@@ -49,6 +49,7 @@ const profilePhotoUpload = multer({
 /**
  * GET /users/directory
  * Public member directory (all authenticated users can see)
+ * Optimized with batch queries to avoid N+1 problem
  */
 router.get('/directory', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const orchestraId = req.query.orchestraId as string | undefined;
@@ -72,31 +73,57 @@ router.get('/directory', authenticateToken, asyncHandler(async (req: AuthRequest
         ORDER BY u.last_name, u.first_name
     `).all(...params) as { id: string; first_name: string; last_name: string; profile_photo_path: string | null }[];
 
-    // Get instruments and orchestras for all users in batch
-    const result = users.map(user => {
-        const instruments = db.prepare(`
-            SELECT i.id, i.name, i.tuning
-            FROM instruments i
-            JOIN user_instruments ui ON i.id = ui.instrument_id
-            WHERE ui.user_id = ?
-        `).all(user.id) as { id: string; name: string; tuning: string | null }[];
+    if (users.length === 0) {
+        res.json([]);
+        return;
+    }
 
-        const orchestras = db.prepare(`
-            SELECT o.id, o.name
-            FROM orchestras o
-            JOIN user_orchestras uo ON o.id = uo.orchestra_id
-            WHERE uo.user_id = ?
-        `).all(user.id) as { id: string; name: string }[];
+    // Batch fetch all instruments for all users in ONE query
+    const userIds = users.map(u => u.id);
+    const placeholders = userIds.map(() => '?').join(',');
 
-        return {
-            id: user.id,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
-            instruments,
-            orchestras,
-        };
-    }).filter(user => {
+    const allInstruments = db.prepare(`
+        SELECT ui.user_id, i.id, i.name, i.tuning
+        FROM instruments i
+        JOIN user_instruments ui ON i.id = ui.instrument_id
+        WHERE ui.user_id IN (${placeholders})
+    `).all(...userIds) as { user_id: string; id: string; name: string; tuning: string | null }[];
+
+    // Batch fetch all orchestras for all users in ONE query
+    const allOrchestras = db.prepare(`
+        SELECT uo.user_id, o.id, o.name
+        FROM orchestras o
+        JOIN user_orchestras uo ON o.id = uo.orchestra_id
+        WHERE uo.user_id IN (${placeholders})
+    `).all(...userIds) as { user_id: string; id: string; name: string }[];
+
+    // Group instruments and orchestras by user_id
+    const instrumentsByUser = new Map<string, { id: string; name: string; tuning: string | null }[]>();
+    const orchestrasByUser = new Map<string, { id: string; name: string }[]>();
+
+    for (const inst of allInstruments) {
+        if (!instrumentsByUser.has(inst.user_id)) {
+            instrumentsByUser.set(inst.user_id, []);
+        }
+        instrumentsByUser.get(inst.user_id)!.push({ id: inst.id, name: inst.name, tuning: inst.tuning });
+    }
+
+    for (const orch of allOrchestras) {
+        if (!orchestrasByUser.has(orch.user_id)) {
+            orchestrasByUser.set(orch.user_id, []);
+        }
+        orchestrasByUser.get(orch.user_id)!.push({ id: orch.id, name: orch.name });
+    }
+
+    // Build result with pre-fetched data
+    const result = users.map(user => ({
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
+        instruments: instrumentsByUser.get(user.id) || [],
+        orchestras: orchestrasByUser.get(user.id) || [],
+    })).filter(user => {
         // Apply orchestra filter
         if (orchestraId && !user.orchestras.some(o => o.id === orchestraId)) {
             return false;

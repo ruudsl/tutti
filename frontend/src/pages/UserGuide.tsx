@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAuth } from '../context/AuthContext';
@@ -133,7 +134,7 @@ export default function UserGuide() {
               <h2>{t(currentSection.titleKey)}</h2>
               <div
                 className="user-guide-text"
-                dangerouslySetInnerHTML={{ __html: t(currentSection.contentKey) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t(currentSection.contentKey)) }}
               />
             </>
           )}

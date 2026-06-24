@@ -100,7 +100,15 @@ export const config = {
     frontendUrl: validatedEnv.FRONTEND_URL || 'http://localhost:5173',
 
     // JWT
-    jwtSecret: validatedEnv.JWT_SECRET || 'harmonie-dev-secret-change-in-production',
+    jwtSecret: (() => {
+        if (validatedEnv.JWT_SECRET) {
+            return validatedEnv.JWT_SECRET;
+        }
+        if (validatedEnv.NODE_ENV === 'production') {
+            throw new Error('JWT_SECRET environment variable must be set in production');
+        }
+        return 'harmonie-dev-secret-change-in-production';
+    })(),
     jwtExpiresIn: validatedEnv.JWT_EXPIRES_IN || '7d',
 
     // Database

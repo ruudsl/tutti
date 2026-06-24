@@ -801,6 +801,684 @@ router.get('/activity/export', authenticateToken, requireRole('admin'), asyncHan
 }));
 
 // =============================================================================
+// ATTENDANCE ANALYTICS
+// =============================================================================
+
+interface AttendanceOverview {
+  avgAttendanceRate: number;
+  totalMembers: number;
+  totalRehearsals: number;
+  acceptedCount: number;
+  declinedCount: number;
+  currentMonthRate: number;
+  previousMonthRate: number;
+  trend: number;
+}
+
+interface AttendanceTrend {
+  month: string;
+  attendanceRate: number;
+  uniqueAttendees: number;
+  totalRehearsals: number;
+}
+
+interface SectionAttendance {
+  instrumentId: string;
+  instrument: string;
+  attendanceRate: number;
+  memberCount: number;
+  totalResponses: number;
+}
+
+interface AtRiskMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  recentRate: number;
+  previousRate: number;
+  trend: number;
+  riskLevel: 'high' | 'medium' | 'low';
+}
+
+interface MemberAttendanceStats {
+  id: string;
+  firstName: string;
+  lastName: string;
+  attendanceRate: number;
+  presentCount: number;
+  totalCount: number;
+  instrument: string | null;
+}
+
+interface AttendancePrediction {
+  rehearsalId: string;
+  date: string;
+  predictedCount: number;
+  predictedRate: number;
+  dayOfWeek: number;
+  understaffedSections: { instrument: string; expected: number; needed: number }[];
+}
+
+/**
+ * @swagger
+ * /analytics/attendance/overview:
+ *   get:
+ *     summary: Get overall attendance statistics
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Attendance overview statistics
+ */
+router.get('/attendance/overview', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+
+  // Build orchestra filter for rehearsals query
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  // Get overall attendance stats for last 6 months
+  const overallStats = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) as accepted_count,
+      COUNT(CASE WHEN a.status = 'declined' THEN 1 END) as declined_count,
+      COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) as total_responses,
+      COUNT(DISTINCT a.user_id) as total_members,
+      COUNT(DISTINCT a.rehearsal_id) as total_rehearsals,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as avg_attendance_rate
+    FROM rehearsal_attendance a
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ? AND r.date >= date('now', '-6 months')${orchestraFilter}
+  `).get(...params) as any;
+
+  // Current month rate
+  const currentMonthStats = db.prepare(`
+    SELECT
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as rate
+    FROM rehearsal_attendance a
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ? AND r.date >= date('now', 'start of month')${orchestraFilter}
+  `).get(...params) as any;
+
+  // Previous month rate
+  const previousMonthParams = [...params];
+  const previousMonthStats = db.prepare(`
+    SELECT
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as rate
+    FROM rehearsal_attendance a
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ?
+      AND r.date >= date('now', 'start of month', '-1 month')
+      AND r.date < date('now', 'start of month')${orchestraFilter}
+  `).get(...previousMonthParams) as any;
+
+  const overview: AttendanceOverview = {
+    avgAttendanceRate: Math.round((overallStats.avg_attendance_rate || 0) * 10) / 10,
+    totalMembers: overallStats.total_members || 0,
+    totalRehearsals: overallStats.total_rehearsals || 0,
+    acceptedCount: overallStats.accepted_count || 0,
+    declinedCount: overallStats.declined_count || 0,
+    currentMonthRate: Math.round((currentMonthStats?.rate || 0) * 10) / 10,
+    previousMonthRate: Math.round((previousMonthStats?.rate || 0) * 10) / 10,
+    trend: Math.round(((currentMonthStats?.rate || 0) - (previousMonthStats?.rate || 0)) * 10) / 10,
+  };
+
+  res.json(overview);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/trends:
+ *   get:
+ *     summary: Get attendance trends over time
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: months
+ *         schema:
+ *           type: integer
+ *           default: 12
+ *         description: Number of months to include
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Monthly attendance trends
+ */
+router.get('/attendance/trends', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { months = '12', orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+  const monthsNum = parseInt(months as string) || 12;
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId, monthsNum];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  const trends = db.prepare(`
+    SELECT
+      strftime('%Y-%m', r.date) as month,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as attendance_rate,
+      COUNT(DISTINCT CASE WHEN a.status = 'accepted' THEN a.user_id END) as unique_attendees,
+      COUNT(DISTINCT r.id) as total_rehearsals
+    FROM rehearsals r
+    LEFT JOIN rehearsal_attendance a ON r.id = a.rehearsal_id
+    WHERE r.association_id = ? AND r.date >= date('now', '-' || ? || ' months')${orchestraFilter}
+    GROUP BY strftime('%Y-%m', r.date)
+    ORDER BY month
+  `).all(...params) as any[];
+
+  const result: AttendanceTrend[] = trends.map(t => ({
+    month: t.month,
+    attendanceRate: Math.round((t.attendance_rate || 0) * 10) / 10,
+    uniqueAttendees: t.unique_attendees || 0,
+    totalRehearsals: t.total_rehearsals || 0,
+  }));
+
+  res.json(result);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/by-section:
+ *   get:
+ *     summary: Get attendance breakdown by instrument section
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Attendance by instrument section
+ */
+router.get('/attendance/by-section', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  const sections = db.prepare(`
+    SELECT
+      i.name as instrument,
+      i.id as instrument_id,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as attendance_rate,
+      COUNT(DISTINCT a.user_id) as member_count,
+      COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) as total_responses
+    FROM rehearsal_attendance a
+    JOIN users u ON a.user_id = u.id
+    JOIN user_instruments ui ON u.id = ui.user_id
+    JOIN instruments i ON ui.instrument_id = i.id
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ? AND r.date >= date('now', '-6 months')${orchestraFilter}
+    GROUP BY i.id
+    HAVING total_responses > 0
+    ORDER BY attendance_rate ASC
+  `).all(...params) as any[];
+
+  const result: SectionAttendance[] = sections.map(s => ({
+    instrumentId: s.instrument_id,
+    instrument: s.instrument,
+    attendanceRate: Math.round((s.attendance_rate || 0) * 10) / 10,
+    memberCount: s.member_count || 0,
+    totalResponses: s.total_responses || 0,
+  }));
+
+  res.json(result);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/by-member:
+ *   get:
+ *     summary: Get individual member attendance statistics
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of members to return
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [rate_asc, rate_desc, name]
+ *           default: rate_desc
+ *         description: Sort order
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Member attendance statistics
+ */
+router.get('/attendance/by-member', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { limit = '50', sortBy = 'rate_desc', orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+  const limitNum = Math.min(parseInt(limit as string) || 50, 200);
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  // Determine sort order
+  let orderClause = 'ORDER BY attendance_rate DESC';
+  if (sortBy === 'rate_asc') orderClause = 'ORDER BY attendance_rate ASC';
+  else if (sortBy === 'name') orderClause = 'ORDER BY u.last_name, u.first_name';
+
+  params.push(limitNum);
+
+  const members = db.prepare(`
+    SELECT
+      u.id,
+      u.first_name,
+      u.last_name,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as attendance_rate,
+      COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) as present_count,
+      COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) as total_count,
+      (SELECT i.name FROM user_instruments ui2 JOIN instruments i ON ui2.instrument_id = i.id WHERE ui2.user_id = u.id LIMIT 1) as instrument
+    FROM users u
+    JOIN rehearsal_attendance a ON u.id = a.user_id
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ? AND r.date >= date('now', '-6 months') AND u.status = 'active'${orchestraFilter}
+    GROUP BY u.id
+    HAVING total_count > 0
+    ${orderClause}
+    LIMIT ?
+  `).all(...params) as any[];
+
+  const result: MemberAttendanceStats[] = members.map(m => ({
+    id: m.id,
+    firstName: m.first_name,
+    lastName: m.last_name,
+    attendanceRate: Math.round((m.attendance_rate || 0) * 10) / 10,
+    presentCount: m.present_count || 0,
+    totalCount: m.total_count || 0,
+    instrument: m.instrument,
+  }));
+
+  res.json(result);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/at-risk:
+ *   get:
+ *     summary: Get members with declining attendance
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: At-risk members list
+ */
+router.get('/attendance/at-risk', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  // Get members with declining attendance (recent 2 months vs previous 4 months)
+  const atRisk = db.prepare(`
+    WITH recent AS (
+      SELECT
+        a.user_id,
+        CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+          THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+          ELSE NULL END as recent_rate
+      FROM rehearsal_attendance a
+      JOIN rehearsals r ON a.rehearsal_id = r.id
+      WHERE r.association_id = ? AND r.date >= date('now', '-2 months')${orchestraFilter}
+      GROUP BY a.user_id
+    ),
+    previous AS (
+      SELECT
+        a.user_id,
+        CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+          THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+          ELSE NULL END as previous_rate
+      FROM rehearsal_attendance a
+      JOIN rehearsals r ON a.rehearsal_id = r.id
+      WHERE r.association_id = ? AND r.date >= date('now', '-6 months') AND r.date < date('now', '-2 months')${orchestraFilter}
+      GROUP BY a.user_id
+    )
+    SELECT
+      u.id,
+      u.first_name,
+      u.last_name,
+      COALESCE(recent.recent_rate, 0) as recent_rate,
+      COALESCE(previous.previous_rate, 0) as previous_rate,
+      (COALESCE(recent.recent_rate, 0) - COALESCE(previous.previous_rate, 0)) as trend
+    FROM users u
+    JOIN recent ON u.id = recent.user_id
+    LEFT JOIN previous ON u.id = previous.user_id
+    WHERE u.status = 'active'
+      AND (
+        (recent.recent_rate IS NOT NULL AND previous.previous_rate IS NOT NULL AND recent.recent_rate < previous.previous_rate - 10)
+        OR recent.recent_rate < 50
+      )
+    ORDER BY trend ASC, recent_rate ASC
+    LIMIT 20
+  `).all(associationId, ...params.slice(1), associationId, ...params.slice(1)) as any[];
+
+  const result: AtRiskMember[] = atRisk.map(m => {
+    let riskLevel: 'high' | 'medium' | 'low' = 'low';
+    if (m.recent_rate < 30 || m.trend < -30) riskLevel = 'high';
+    else if (m.recent_rate < 50 || m.trend < -15) riskLevel = 'medium';
+
+    return {
+      id: m.id,
+      firstName: m.first_name,
+      lastName: m.last_name,
+      recentRate: Math.round((m.recent_rate || 0) * 10) / 10,
+      previousRate: Math.round((m.previous_rate || 0) * 10) / 10,
+      trend: Math.round((m.trend || 0) * 10) / 10,
+      riskLevel,
+    };
+  });
+
+  res.json(result);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/predictions:
+ *   get:
+ *     summary: Get predicted attendance for upcoming rehearsals
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
+ *         description: Number of upcoming rehearsals to predict
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Attendance predictions for upcoming rehearsals
+ */
+router.get('/attendance/predictions', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { limit = '5', orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+  const limitNum = Math.min(parseInt(limit as string) || 5, 10);
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+  params.push(limitNum);
+
+  // Get upcoming rehearsals
+  const upcomingRehearsals = db.prepare(`
+    SELECT id, date, orchestra_id,
+           CAST(strftime('%w', date) AS INTEGER) as day_of_week
+    FROM rehearsals r
+    WHERE r.association_id = ? AND r.date >= date('now')${orchestraFilter}
+    ORDER BY date
+    LIMIT ?
+  `).all(...params) as any[];
+
+  // Get historical attendance rate by day of week
+  const dayRates = db.prepare(`
+    SELECT
+      CAST(strftime('%w', r.date) AS INTEGER) as day_of_week,
+      AVG(CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END) as avg_rate
+    FROM rehearsals r
+    LEFT JOIN rehearsal_attendance a ON r.id = a.rehearsal_id
+    WHERE r.association_id = ? AND r.date >= date('now', '-6 months') AND r.date < date('now')${orchestraFilter}
+    GROUP BY strftime('%w', r.date)
+  `).all(associationId, ...(orchestraId ? [orchestraId] : [])) as any[];
+
+  const dayRateMap = new Map(dayRates.map(d => [d.day_of_week, d.avg_rate || 70]));
+
+  // Get total active members count
+  const memberCount = db.prepare(`
+    SELECT COUNT(*) as count FROM users WHERE association_id = ? AND status = 'active'
+  `).get(associationId) as { count: number };
+
+  // Get section averages for understaffed detection
+  const sectionAverages = db.prepare(`
+    SELECT
+      i.name as instrument,
+      COUNT(DISTINCT u.id) as member_count,
+      AVG(CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END) as avg_rate
+    FROM users u
+    JOIN user_instruments ui ON u.id = ui.user_id
+    JOIN instruments i ON ui.instrument_id = i.id
+    LEFT JOIN rehearsal_attendance a ON u.id = a.user_id
+    LEFT JOIN rehearsals r ON a.rehearsal_id = r.id AND r.date >= date('now', '-3 months')
+    WHERE u.association_id = ? AND u.status = 'active'
+    GROUP BY i.id
+  `).all(associationId) as any[];
+
+  const predictions: AttendancePrediction[] = upcomingRehearsals.map(rehearsal => {
+    const dayRate = dayRateMap.get(rehearsal.day_of_week) || 70;
+    const predictedRate = Math.round(dayRate * 10) / 10;
+    const predictedCount = Math.round((memberCount.count * predictedRate) / 100);
+
+    // Find potentially understaffed sections
+    const understaffedSections = sectionAverages
+      .filter(s => {
+        const expected = Math.round((s.member_count * (s.avg_rate || 70)) / 100);
+        return expected < 2 && s.member_count >= 2; // Section might be understaffed
+      })
+      .map(s => ({
+        instrument: s.instrument,
+        expected: Math.round((s.member_count * (s.avg_rate || 70)) / 100),
+        needed: 2, // Minimum needed
+      }));
+
+    return {
+      rehearsalId: rehearsal.id,
+      date: rehearsal.date,
+      predictedCount,
+      predictedRate,
+      dayOfWeek: rehearsal.day_of_week,
+      understaffedSections,
+    };
+  });
+
+  res.json(predictions);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/by-day-of-week:
+ *   get:
+ *     summary: Get attendance heatmap by day of week
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Attendance by day of week
+ */
+router.get('/attendance/by-day-of-week', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+
+  const dayStats = db.prepare(`
+    SELECT
+      CAST(strftime('%w', r.date) AS INTEGER) as day_of_week,
+      COUNT(DISTINCT r.id) as rehearsal_count,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as attendance_rate
+    FROM rehearsals r
+    LEFT JOIN rehearsal_attendance a ON r.id = a.rehearsal_id
+    WHERE r.association_id = ? AND r.date >= date('now', '-12 months')${orchestraFilter}
+    GROUP BY strftime('%w', r.date)
+    ORDER BY day_of_week
+  `).all(...params) as any[];
+
+  const result = dayStats.map(d => ({
+    dayOfWeek: d.day_of_week,
+    rehearsalCount: d.rehearsal_count || 0,
+    attendanceRate: Math.round((d.attendance_rate || 0) * 10) / 10,
+  }));
+
+  res.json(result);
+}));
+
+/**
+ * @swagger
+ * /analytics/attendance/leaderboard:
+ *   get:
+ *     summary: Get top members by attendance
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of members to return
+ *       - in: query
+ *         name: orchestraId
+ *         schema:
+ *           type: string
+ *         description: Filter by orchestra ID
+ *     responses:
+ *       200:
+ *         description: Top members by attendance
+ */
+router.get('/attendance/leaderboard', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { limit = '10', orchestraId } = req.query;
+  const associationId = req.user!.associationId!;
+  const limitNum = Math.min(parseInt(limit as string) || 10, 50);
+
+  let orchestraFilter = '';
+  const params: any[] = [associationId];
+  if (orchestraId) {
+    orchestraFilter = ' AND r.orchestra_id = ?';
+    params.push(orchestraId);
+  }
+  params.push(limitNum);
+
+  const leaders = db.prepare(`
+    SELECT
+      u.id,
+      u.first_name,
+      u.last_name,
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+        ELSE 0 END as attendance_rate,
+      COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) as present_count,
+      COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) as total_count,
+      (SELECT i.name FROM user_instruments ui2 JOIN instruments i ON ui2.instrument_id = i.id WHERE ui2.user_id = u.id LIMIT 1) as instrument
+    FROM users u
+    JOIN rehearsal_attendance a ON u.id = a.user_id
+    JOIN rehearsals r ON a.rehearsal_id = r.id
+    WHERE r.association_id = ? AND r.date >= date('now', '-6 months') AND u.status = 'active'${orchestraFilter}
+    GROUP BY u.id
+    HAVING total_count >= 5
+    ORDER BY attendance_rate DESC, present_count DESC
+    LIMIT ?
+  `).all(...params) as any[];
+
+  const result = leaders.map((m, index) => ({
+    rank: index + 1,
+    id: m.id,
+    firstName: m.first_name,
+    lastName: m.last_name,
+    attendanceRate: Math.round((m.attendance_rate || 0) * 10) / 10,
+    presentCount: m.present_count || 0,
+    totalCount: m.total_count || 0,
+    instrument: m.instrument,
+  }));
+
+  res.json(result);
+}));
+
+// =============================================================================
 // REPERTOIRE ANALYTICS (Existing routes)
 // =============================================================================
 

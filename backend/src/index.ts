@@ -104,12 +104,19 @@ import accountingRoutes from './routes/accounting';
 import projectsRoutes from './routes/projects';
 import toursRoutes from './routes/tours';
 import resourcesRoutes from './routes/resources';
+import seasonsRoutes from './routes/seasons';
+import holidaysRoutes from './routes/holidays';
+
+// External Musicians Network routes
+import externalMusiciansRoutes from './routes/external-musicians';
+import replacementRequestsRoutes from './routes/replacement-requests';
 
 // Phase E routes
 import outfitsRoutes from './routes/outfits';
 import wikiRoutes from './routes/wiki';
 import workflowsRoutes from './routes/workflows';
 import performancesRoutes from './routes/performances';
+import stageLayoutsRoutes from './routes/stage-layouts';
 
 // Import recovery
 import failedImportsRoutes from './routes/failed-imports';
@@ -301,6 +308,7 @@ app.use('/api/accounting', accountingRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/resources', resourcesRoutes);
+app.use('/api/seasons', seasonsRoutes);
 
 // Phase E routes
 app.use('/api/outfits', outfitsRoutes);
@@ -330,6 +338,13 @@ app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/holidays', holidaysRoutes);
+app.use('/api/stage-layouts', stageLayoutsRoutes);
+app.use('/api', stageLayoutsRoutes); // Also mount for /concerts/:id/stage routes
+
+// External Musicians Network
+app.use('/api/external-musicians', externalMusiciansRoutes);
+app.use('/api/replacement-requests', replacementRequestsRoutes);
 
 // Import recovery
 app.use('/api/failed-imports', failedImportsRoutes);
