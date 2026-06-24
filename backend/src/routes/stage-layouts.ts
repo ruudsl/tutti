@@ -274,7 +274,8 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'c
     req.params.id
   );
 
-  logger.info(`Stage layout updated: ${req.params.id}`, { updatedBy: req.user!.id });
+  const safeLayoutIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
+  logger.info(`Stage layout updated: ${safeLayoutIdForLog}`, { updatedBy: req.user!.id });
 
   res.json({ message: 'Podiumindeling bijgewerkt.' });
 }));
