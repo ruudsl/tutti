@@ -156,14 +156,6 @@ export function useOfflineData(): OfflineDataHook {
     loadMetadata();
   }, []);
 
-  // Auto-sync when coming back online
-  useEffect(() => {
-    if (syncState.isOnline && syncState.status === 'idle') {
-      // Process pending mutations when coming online
-      processPendingMutations();
-    }
-  }, [syncState.isOnline]);
-
   /**
    * Sync a single entity from API to IndexedDB
    */
@@ -278,14 +270,12 @@ export function useOfflineData(): OfflineDataHook {
   const syncAll = useCallback(async (): Promise<void> => {
     // Prevent concurrent syncs
     if (syncInProgress.current) {
-      console.log('Sync already in progress, skipping');
       return;
     }
 
     // Throttle syncs
     const now = Date.now();
     if (now - lastSyncAttempt.current < MIN_SYNC_INTERVAL) {
-      console.log('Sync throttled, skipping');
       return;
     }
 
@@ -420,6 +410,13 @@ export function useOfflineData(): OfflineDataHook {
       pendingMutations: remainingMutations.length,
     }));
   }, []);
+
+  // Auto-sync when coming back online
+  useEffect(() => {
+    if (syncState.isOnline && syncState.status === 'idle') {
+      processPendingMutations();
+    }
+  }, [syncState.isOnline, syncState.status, processPendingMutations]);
 
   // Data accessors that prefer online data but fall back to offline
 

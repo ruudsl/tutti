@@ -253,6 +253,110 @@ export const migrations: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_ticket_orders_created_at ON ticket_orders(created_at)`,
     ],
   },
+  {
+    version: 12,
+    name: 'add_stage_layouts',
+    up: [
+      // Stage layouts table
+      `CREATE TABLE IF NOT EXISTS stage_layouts (
+        id TEXT PRIMARY KEY,
+        association_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        venue_name TEXT,
+        stage_width INTEGER DEFAULT 1000,
+        stage_depth INTEGER DEFAULT 600,
+        is_template BOOLEAN DEFAULT 0,
+        is_default BOOLEAN DEFAULT 0,
+        layout_data TEXT NOT NULL,
+        thumbnail_url TEXT,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_stage_layouts_assoc ON stage_layouts(association_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_stage_layouts_template ON stage_layouts(is_template)`,
+
+      // Concert stage assignments table
+      `CREATE TABLE IF NOT EXISTS concert_stage_assignments (
+        id TEXT PRIMARY KEY,
+        concert_id TEXT NOT NULL,
+        layout_id TEXT NOT NULL,
+        assignments TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
+        FOREIGN KEY (layout_id) REFERENCES stage_layouts(id) ON DELETE CASCADE
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_concert_stage_concert ON concert_stage_assignments(concert_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_concert_stage_layout ON concert_stage_assignments(layout_id)`,
+    ],
+  },
+  {
+    version: 13,
+    name: 'add_season_planning',
+    up: [
+      // Season templates table
+      `CREATE TABLE IF NOT EXISTS season_templates (
+        id TEXT PRIMARY KEY,
+        association_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        default_rehearsal_day INTEGER,
+        default_rehearsal_time TEXT,
+        default_rehearsal_duration INTEGER DEFAULT 120,
+        default_rehearsal_location TEXT,
+        typical_concerts_count INTEGER DEFAULT 4,
+        template_data TEXT,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (association_id) REFERENCES associations(id),
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_season_templates_assoc ON season_templates(association_id)`,
+
+      // Seasons table
+      `CREATE TABLE IF NOT EXISTS seasons (
+        id TEXT PRIMARY KEY,
+        association_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        template_id TEXT,
+        status TEXT DEFAULT 'draft',
+        budget_total REAL,
+        budget_allocated REAL DEFAULT 0,
+        notes TEXT,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (association_id) REFERENCES associations(id),
+        FOREIGN KEY (template_id) REFERENCES season_templates(id),
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_seasons_assoc ON seasons(association_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_seasons_status ON seasons(status)`,
+      `CREATE INDEX IF NOT EXISTS idx_seasons_dates ON seasons(start_date, end_date)`,
+
+      // Season events (links concerts/rehearsals to seasons)
+      `CREATE TABLE IF NOT EXISTS season_events (
+        id TEXT PRIMARY KEY,
+        season_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        event_id TEXT,
+        planned_date DATE,
+        budget_amount REAL,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_season_events_season ON season_events(season_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_season_events_type ON season_events(event_type)`,
+    ],
+  },
 ];
 
 /**

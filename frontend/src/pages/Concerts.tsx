@@ -857,6 +857,13 @@ export default function Concerts() {
                     <Icon name="play" size={16} /> {t('concerts.performanceMode', 'Uitvoeringsmodus')}
                   </button>
                 )}
+                <Link
+                  to={`/concerts/${viewingConcert}/stage`}
+                  className="btn btn-secondary btn-sm"
+                  title={t('concerts.stageSetup', 'Podiumindeling')}
+                >
+                  <Icon name="shapes" size={16} /> {t('concerts.stageSetup', 'Podiumindeling')}
+                </Link>
                 <AddToCalendarButton type="concert" id={concertDetail.id} />
               </div>
             </div>
@@ -1545,9 +1552,8 @@ export default function Concerts() {
             setShowSetlistMode(false);
             setSetlistModeData(null);
           }}
-          onPieceSelect={(piece, index) => {
-            // Optional: Log piece selection for analytics
-            console.log('Piece selected:', piece.title, 'at index', index);
+          onPieceSelect={(_piece, _index) => {
+            // Piece selection handler - extend for analytics if needed
           }}
         />
       )}

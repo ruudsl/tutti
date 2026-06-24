@@ -139,7 +139,10 @@ async function initializeDatabase() {
 
         // Create admin user with password from env var or generated random password
         const adminId = uuidv4();
-        const adminPassword = process.env.ADMIN_INIT_PASSWORD || Math.random().toString(36).slice(-12) + 'A1!';
+        const adminPassword = process.env.ADMIN_INIT_PASSWORD || (() => {
+            const crypto = require('crypto');
+            return crypto.randomBytes(16).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) + 'A1!';
+        })();
         const passwordHash = bcrypt.hashSync(adminPassword, 10);
         db.prepare(
             'INSERT INTO users (id, email, password_hash, first_name, last_name, role, association_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -156,8 +159,14 @@ async function initializeDatabase() {
         if (process.env.ADMIN_INIT_PASSWORD) {
             console.log('Password: (set via ADMIN_INIT_PASSWORD env var)');
         } else {
-            console.log(`Generated password: ${adminPassword}`);
-            console.log('⚠️  Save this password! Set ADMIN_INIT_PASSWORD env var to use a custom password.');
+            // Write password to a secure file instead of logging to console
+            const fs = require('fs');
+            const path = require('path');
+            const passwordFile = path.join(process.cwd(), 'data', 'admin-password.txt');
+            fs.mkdirSync(path.dirname(passwordFile), { recursive: true });
+            fs.writeFileSync(passwordFile, `Admin password: ${adminPassword}\nGenerated at: ${new Date().toISOString()}\n\nIMPORTANT: Delete this file after saving the password securely!\n`, { mode: 0o600 });
+            console.log(`Generated password saved to: ${passwordFile}`);
+            console.log('WARNING: Delete the password file after saving the password securely!');
         }
     }
 

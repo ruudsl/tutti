@@ -717,6 +717,20 @@ function VoteModal({
   );
 }
 
+// Helper to generate unique option IDs for form state
+let optionIdCounter = 0;
+const generateOptionId = () => `option-${++optionIdCounter}-${Date.now()}`;
+
+// Internal type for form state with stable IDs
+interface FormOption {
+  text: string;
+  _id: string;
+}
+
+interface CreatePollFormData extends Omit<CreatePollData, 'options'> {
+  options: FormOption[];
+}
+
 // Create Poll Modal Component
 function CreatePollModal({
   onClose,
@@ -726,14 +740,14 @@ function CreatePollModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<CreatePollData>({
+  const [formData, setFormData] = useState<CreatePollFormData>({
     title: '',
     description: '',
     pollType: 'single',
     isAnonymous: false,
     showResultsBeforeClose: false,
     allowComments: true,
-    options: [{ text: '' }, { text: '' }],
+    options: [{ text: '', _id: generateOptionId() }, { text: '', _id: generateOptionId() }],
   });
 
   const createMutation = useMutation({
@@ -750,7 +764,7 @@ function CreatePollModal({
   const addOption = () => {
     setFormData((prev) => ({
       ...prev,
-      options: [...prev.options, { text: '' }],
+      options: [...prev.options, { text: '', _id: generateOptionId() }],
     }));
   };
 
@@ -766,7 +780,7 @@ function CreatePollModal({
   const updateOption = (index: number, text: string) => {
     setFormData((prev) => ({
       ...prev,
-      options: prev.options.map((opt, i) => (i === index ? { ...opt, text } : opt)),
+      options: prev.options.map((opt, i) => (i === index ? { text, _id: opt._id } : opt)),
     }));
   };
 
@@ -777,7 +791,9 @@ function CreatePollModal({
   const handleSubmit = () => {
     const data: CreatePollData = {
       ...formData,
-      options: formData.options.filter((o) => o.text.trim()),
+      options: formData.options
+        .filter((o) => o.text.trim())
+        .map(({ text }) => ({ text })),
     };
     createMutation.mutate(data);
   };
@@ -852,7 +868,7 @@ function CreatePollModal({
             <span className="label-text">{t('polls.optionsLabel')} *</span>
           </label>
           {formData.options.map((option, index) => (
-            <div key={index} className="flex gap-2">
+            <div key={option._id} className="flex gap-2">
               <input
                 type="text"
                 className="input input-bordered flex-1"
