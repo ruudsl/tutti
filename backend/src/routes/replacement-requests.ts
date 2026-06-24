@@ -381,7 +381,8 @@ router.put(
       `).run(...params);
     }
 
-    logger.info(`Replacement request updated: ${id}`, { updatedBy: req.user!.id });
+    const safeIdForLog = id.replace(/[\r\n]/g, '');
+    logger.info(`Replacement request updated: ${safeIdForLog}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Verzoek succesvol bijgewerkt' });
   })
