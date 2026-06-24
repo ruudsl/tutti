@@ -124,7 +124,6 @@ router.get(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { eventId } = req.params;
-    const { eventType } = req.query;
     const associationId = req.user!.associationId;
 
     // Get open requests for this event
