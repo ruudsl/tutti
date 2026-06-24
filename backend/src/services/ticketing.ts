@@ -1056,7 +1056,13 @@ export async function generateDynamicQRCode(
     const validUntil = new Date((timestamp + 1) * 30000);
 
     // Create HMAC of ticket ID + timestamp
-    const secret = process.env.QR_SECRET || 'default-qr-secret';
+    const secret = process.env.QR_SECRET;
+    if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('QR_SECRET environment variable must be set in production');
+        }
+        throw new Error('QR_SECRET environment variable is not set');
+    }
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(`${ticketId}:${timestamp}`);
     const token = hmac.digest('hex').substring(0, 16);
@@ -1100,7 +1106,13 @@ export function validateDynamicQRCode(ticketId: string, qrData: string): boolean
         }
 
         // Verify token
-        const secret = process.env.QR_SECRET || 'default-qr-secret';
+        const secret = process.env.QR_SECRET;
+        if (!secret) {
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error('QR_SECRET environment variable must be set in production');
+            }
+            throw new Error('QR_SECRET environment variable is not set');
+        }
         const hmac = crypto.createHmac('sha256', secret);
         hmac.update(`${ticketId}:${timestamp}`);
         const expectedToken = hmac.digest('hex').substring(0, 16);
@@ -1219,7 +1231,13 @@ export function getTicketsForOfflineSync(concertId: string, syncToken: string): 
     }[];
 
     // Add validation hash to each ticket
-    const secret = process.env.OFFLINE_SYNC_SECRET || 'default-offline-secret';
+    const secret = process.env.OFFLINE_SYNC_SECRET;
+    if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('OFFLINE_SYNC_SECRET environment variable must be set in production');
+        }
+        throw new Error('OFFLINE_SYNC_SECRET environment variable is not set');
+    }
     const ticketsWithHash = tickets.map(ticket => {
         const hmac = crypto.createHmac('sha256', secret);
         hmac.update(`${ticket.ticketId}:${ticket.qrCode}:${ticket.status}`);

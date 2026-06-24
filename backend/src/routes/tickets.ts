@@ -2678,9 +2678,14 @@ router.get('/concerts/:id/tickets/predictions', authenticateToken, requireRole('
 }));
 
 /**
- * Mock payment endpoint for development
+ * Mock payment endpoint for development only
  */
-router.post('/tickets/orders/:id/mock-payment', asyncHandler(async (req: Request, res: Response) => {
+router.post('/tickets/orders/:id/mock-payment', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Only allow mock payments in development mode
+    if (process.env.NODE_ENV === 'production') {
+        throw new ApiError(403, 'Mock payment endpoint is disabled in production');
+    }
+
     const { id: orderId } = req.params;
     const { action } = req.body; // 'pay' or 'cancel'
 
