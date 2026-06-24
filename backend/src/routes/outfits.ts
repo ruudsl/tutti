@@ -96,26 +96,28 @@ router.post('/', requireRole('admin', 'music_committee'), asyncHandler(async (re
   const id = uuidv4();
   const now = new Date().toISOString();
 
-  // If this is default, unset other defaults
-  if (data.isDefault) {
-    db.prepare(`UPDATE outfits SET is_default = 0 WHERE association_id = ?`).run(associationId);
-  }
+  db.transaction(() => {
+    // If this is default, unset other defaults
+    if (data.isDefault) {
+      db.prepare(`UPDATE outfits SET is_default = 0 WHERE association_id = ?`).run(associationId);
+    }
 
-  db.prepare(`
-    INSERT INTO outfits (id, association_id, name, description, color_code, items, is_default, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    associationId,
-    data.name,
-    data.description || null,
-    data.colorCode || null,
-    data.items ? JSON.stringify(data.items) : null,
-    data.isDefault ? 1 : 0,
-    req.user!.id,
-    now,
-    now
-  );
+    db.prepare(`
+      INSERT INTO outfits (id, association_id, name, description, color_code, items, is_default, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      associationId,
+      data.name,
+      data.description || null,
+      data.colorCode || null,
+      data.items ? JSON.stringify(data.items) : null,
+      data.isDefault ? 1 : 0,
+      req.user!.id,
+      now,
+      now
+    );
+  })();
 
   res.status(201).json({ id, message: 'Outfit created' });
 }));
@@ -131,11 +133,6 @@ router.patch('/:id', requireRole('admin', 'music_committee'), asyncHandler(async
 
   if (!outfit) {
     throw new ApiError(404, 'Outfit not found');
-  }
-
-  // If setting as default, unset other defaults
-  if (data.isDefault) {
-    db.prepare(`UPDATE outfits SET is_default = 0 WHERE association_id = ?`).run(associationId);
   }
 
   const updates: string[] = [];
@@ -167,7 +164,14 @@ router.patch('/:id', requireRole('admin', 'music_committee'), asyncHandler(async
 
   values.push(req.params.id);
 
-  db.prepare(`UPDATE outfits SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  db.transaction(() => {
+    // If setting as default, unset other defaults
+    if (data.isDefault) {
+      db.prepare(`UPDATE outfits SET is_default = 0 WHERE association_id = ?`).run(associationId);
+    }
+
+    db.prepare(`UPDATE outfits SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  })();
 
   res.json({ message: 'Outfit updated' });
 }));

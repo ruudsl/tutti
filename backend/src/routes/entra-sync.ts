@@ -165,24 +165,26 @@ function findOrCreateOrchestras(orchestraNames: string[], associationId: string 
     if (!associationId) return [];
     const orchestraIds: string[] = [];
 
-    for (const name of orchestraNames) {
-        // Try to find existing orchestra (case-insensitive)
-        let orchestra = db.prepare(
-            'SELECT id FROM orchestras WHERE LOWER(name) = LOWER(?) AND association_id = ?'
-        ).get(name, associationId) as { id: string } | undefined;
+    db.transaction(() => {
+        for (const name of orchestraNames) {
+            // Try to find existing orchestra (case-insensitive)
+            let orchestra = db.prepare(
+                'SELECT id FROM orchestras WHERE LOWER(name) = LOWER(?) AND association_id = ?'
+            ).get(name, associationId) as { id: string } | undefined;
 
-        if (!orchestra) {
-            // Create new orchestra
-            const id = uuidv4();
-            db.prepare(
-                'INSERT INTO orchestras (id, name, association_id) VALUES (?, ?, ?)'
-            ).run(id, name, associationId);
-            orchestraIds.push(id);
-            logger.info(`Orchestra created from Entra department: ${name}`, { orchestraId: id, associationId });
-        } else {
-            orchestraIds.push(orchestra.id);
+            if (!orchestra) {
+                // Create new orchestra
+                const id = uuidv4();
+                db.prepare(
+                    'INSERT INTO orchestras (id, name, association_id) VALUES (?, ?, ?)'
+                ).run(id, name, associationId);
+                orchestraIds.push(id);
+                logger.info(`Orchestra created from Entra department: ${name}`, { orchestraId: id, associationId });
+            } else {
+                orchestraIds.push(orchestra.id);
+            }
         }
-    }
+    })();
 
     return orchestraIds;
 }

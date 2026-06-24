@@ -137,23 +137,25 @@ router.post('/generate', authenticateToken, requireRole(...REHEARSAL_MANAGERS), 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay();
-        const dateStr = d.toISOString().split('T')[0];
+    db.transaction(() => {
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay();
+            const dateStr = d.toISOString().split('T')[0];
 
-        const matching = defaults.filter(def => def.day_of_week === dayOfWeek);
-        for (const def of matching) {
-            const key = `${dateStr}|${def.orchestra_id || ''}`;
-            if (existingSet.has(key)) continue;
+            const matching = defaults.filter(def => def.day_of_week === dayOfWeek);
+            for (const def of matching) {
+                const key = `${dateStr}|${def.orchestra_id || ''}`;
+                if (existingSet.has(key)) continue;
 
-            const id = uuidv4();
-            db.prepare(`
-                INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?)
-            `).run(id, req.user!.associationId, def.orchestra_id || null, dateStr, def.start_time, def.end_time, def.location, req.user!.id);
-            created.push(dateStr);
+                const id = uuidv4();
+                db.prepare(`
+                    INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?)
+                `).run(id, req.user!.associationId, def.orchestra_id || null, dateStr, def.start_time, def.end_time, def.location, req.user!.id);
+                created.push(dateStr);
+            }
         }
-    }
+    })();
 
     logger.info(`Generated ${created.length} rehearsals`, { associationId: req.user!.associationId });
 
@@ -211,19 +213,21 @@ router.post('/recurring', authenticateToken, requireRole(...REHEARSAL_MANAGERS),
     const seriesId = uuidv4();
     const created: string[] = [];
 
-    for (const occurrence of occurrences) {
-        const dateStr = occurrence.toISOString().split('T')[0];
-        const key = `${dateStr}|${orchestraId || ''}`;
+    db.transaction(() => {
+        for (const occurrence of occurrences) {
+            const dateStr = occurrence.toISOString().split('T')[0];
+            const key = `${dateStr}|${orchestraId || ''}`;
 
-        if (existingSet.has(key)) continue;
+            if (existingSet.has(key)) continue;
 
-        const id = uuidv4();
-        db.prepare(`
-            INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, series_id, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?, ?)
-        `).run(id, req.user!.associationId, orchestraId || null, dateStr, startTime, endTime, location || null, seriesId, req.user!.id);
-        created.push(dateStr);
-    }
+            const id = uuidv4();
+            db.prepare(`
+                INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, series_id, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'regular', ?, ?)
+            `).run(id, req.user!.associationId, orchestraId || null, dateStr, startTime, endTime, location || null, seriesId, req.user!.id);
+            created.push(dateStr);
+        }
+    })();
 
     logger.info(`Generated ${created.length} recurring rehearsals from RRULE`, {
         seriesId,
