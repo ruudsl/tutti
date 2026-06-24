@@ -158,7 +158,6 @@ router.get('/check', authenticateToken, asyncHandler(async (req: AuthRequest, re
     const region = (settings.region || 'midden') as DutchRegion;
 
     // Check system holidays
-    const year = parseInt(date.substring(0, 4));
     const systemHolidays = getHolidaysInRange(date, date, region);
 
     // Check custom holidays
