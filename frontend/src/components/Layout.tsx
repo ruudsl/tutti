@@ -234,7 +234,9 @@ export default function Layout() {
   };
 
   const loadBrandSettings = () => {
-    getSettings().then(setBrandSettings).catch(() => {});
+    getSettings().then(setBrandSettings).catch((error) => {
+      console.warn('Failed to load brand settings:', error);
+    });
   };
 
   useEffect(() => {

@@ -56,6 +56,49 @@ export function SetlistMode({
     return () => clearInterval(timer);
   }, []);
 
+  // Navigation handlers (defined before useEffect that uses them)
+  const goToNext = useCallback(() => {
+    if (currentIndex < pieces.length - 1) {
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+      onPieceSelect?.(pieces[newIndex], newIndex);
+      triggerHaptic('light');
+    }
+  }, [currentIndex, pieces, onPieceSelect]);
+
+  const goToPrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
+      onPieceSelect?.(pieces[newIndex], newIndex);
+      triggerHaptic('light');
+    }
+  }, [currentIndex, pieces, onPieceSelect]);
+
+  const goToIndex = useCallback((index: number) => {
+    if (index >= 0 && index < pieces.length) {
+      setCurrentIndex(index);
+      onPieceSelect?.(pieces[index], index);
+      triggerHaptic('selection');
+    }
+  }, [pieces, onPieceSelect]);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+    setIsFullscreen(false);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      exitFullscreen();
+    }
+  }, [exitFullscreen]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -104,49 +147,7 @@ export function SetlistMode({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, pieces.length, isFullscreen, onExit]);
-
-  const goToNext = useCallback(() => {
-    if (currentIndex < pieces.length - 1) {
-      const newIndex = currentIndex + 1;
-      setCurrentIndex(newIndex);
-      onPieceSelect?.(pieces[newIndex], newIndex);
-      triggerHaptic('light');
-    }
-  }, [currentIndex, pieces, onPieceSelect]);
-
-  const goToPrevious = useCallback(() => {
-    if (currentIndex > 0) {
-      const newIndex = currentIndex - 1;
-      setCurrentIndex(newIndex);
-      onPieceSelect?.(pieces[newIndex], newIndex);
-      triggerHaptic('light');
-    }
-  }, [currentIndex, pieces, onPieceSelect]);
-
-  const goToIndex = useCallback((index: number) => {
-    if (index >= 0 && index < pieces.length) {
-      setCurrentIndex(index);
-      onPieceSelect?.(pieces[index], index);
-      triggerHaptic('selection');
-    }
-  }, [pieces, onPieceSelect]);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      exitFullscreen();
-    }
-  }, []);
-
-  const exitFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-    setIsFullscreen(false);
-  }, []);
+  }, [goToNext, goToPrevious, goToIndex, toggleFullscreen, exitFullscreen, pieces.length, isFullscreen, onExit]);
 
   // Format duration
   const formatDuration = (seconds?: number): string => {
