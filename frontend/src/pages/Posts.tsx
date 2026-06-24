@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -392,7 +393,7 @@ function PostDetailModal({
           {post.contentFormat === 'markdown' ? (
             <div className="whitespace-pre-wrap">{post.content}</div>
           ) : (
-            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
           )}
         </div>
 

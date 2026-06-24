@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useTranslation } from 'react-i18next';
 import type { AnnotationToolbarProps, ToolType, ShapeType } from './types';
 import { Icon, type IconName } from '../Icon';
@@ -624,7 +625,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                         width="28"
                         height="28"
                         viewBox="0 0 30 30"
-                        dangerouslySetInnerHTML={{ __html: stamp.svgData }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stamp.svgData) }}
                       />
                     )}
                   </button>

@@ -97,6 +97,9 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
+  TrendingUp,
+  Target,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -199,6 +202,9 @@ const iconMap = {
   checkCircle: CheckCircle,
   xCircle: XCircle,
   helpCircle: HelpCircle,
+  trendingUp: TrendingUp,
+  target: Target,
+  trophy: Trophy,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

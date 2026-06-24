@@ -78,8 +78,8 @@ export function useTheme() {
         setTheme(data.theme);
         applyTheme(data.theme);
       }
-    } catch {
-      // Silently fail - use default theme
+    } catch (error) {
+      console.warn('Failed to load theme settings, using defaults:', error);
     }
   };
 

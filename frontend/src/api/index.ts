@@ -176,3 +176,10 @@ export * from './outfits';
 export * from './wiki';
 export * from './workflows';
 export * from './performances';
+
+// External Musicians Network
+export * from './external-musicians';
+export * from './replacement-requests';
+
+// Attendance Analytics
+export * from './attendance-analytics';

@@ -19,8 +19,9 @@ import {
   getRehearsalSeating, generateRehearsalSeating,
   getMyAttendanceStatus, updateMyAttendance,
   createRecurringRehearsals,
+  getHolidays,
 } from '../api';
-import type { AttendanceMember } from '../api';
+import type { AttendanceMember, Holiday } from '../api';
 import type { Rehearsal, RehearsalDetail, SpondGroup, RehearsalSeat } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
@@ -72,6 +73,22 @@ export default function Rehearsals() {
     enabled: user?.role === ROLES.ADMIN,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch holidays for the date range
+  const { data: holidaysData } = useQuery({
+    queryKey: ['holidays', today, endDate],
+    queryFn: () => getHolidays({ startDate: today, endDate }),
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  const holidays = holidaysData?.holidays || [];
+  const showHolidaysInCalendar = holidaysData?.settings?.showHolidaysInCalendar ?? true;
+
+  // Helper to check if a date falls within any holiday
+  const getHolidayForDate = (date: string): Holiday | undefined => {
+    if (!showHolidaysInCalendar) return undefined;
+    return holidays.find(h => date >= h.startDate && date <= h.endDate);
+  };
 
   const isLoading = rehearsalsLoading;
 
@@ -1388,14 +1405,33 @@ export default function Rehearsals() {
               {
                 id: 'date',
                 header: t('rehearsals.date'),
-                accessor: (r) => (
-                  <div style={getTypeStyle(r.type)}>
-                    <strong>{formatDate(r.date, t)}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                      {r.start_time} - {r.end_time}
+                accessor: (r) => {
+                  const holiday = getHolidayForDate(r.date);
+                  return (
+                    <div style={getTypeStyle(r.type)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <strong>{formatDate(r.date, t)}</strong>
+                        {holiday && (
+                          <Tooltip content={t('holidays.rehearsalInHoliday', { name: holiday.name })} position="top">
+                            <span style={{
+                              backgroundColor: 'var(--warning)',
+                              color: 'white',
+                              padding: '0.1rem 0.3rem',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '0.65rem',
+                              fontWeight: 500,
+                            }}>
+                              {t('holidays.isHoliday')}
+                            </span>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                        {r.start_time} - {r.end_time}
+                      </div>
                     </div>
-                  </div>
-                ),
+                  );
+                },
                 priority: 1,
                 showInCard: true,
               },

@@ -1441,3 +1441,115 @@ export interface PaginatedResult<T> {
   limit: number;
   totalPages?: number;
 }
+
+// ==================== STAGE LAYOUTS (PODIUMPLOT DESIGNER) ====================
+
+export type StagePositionType = 'chair' | 'stand' | 'conductor' | 'piano' | 'percussion' | 'other';
+export type StageShapeType = 'rect' | 'circle' | 'line' | 'text';
+
+export interface StagePosition {
+  id: string;
+  x: number;
+  y: number;
+  type: StagePositionType;
+  rotation?: number;
+  label?: string;
+  section?: string;
+  instrumentId?: string;
+}
+
+export interface StageShape {
+  id: string;
+  type: StageShapeType;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  radius?: number;
+  label?: string;
+  fill?: string;
+  stroke?: string;
+  fontSize?: number;
+}
+
+export interface StageSection {
+  id: string;
+  name: string;
+  color: string;
+  instrumentId?: string;
+}
+
+export interface StageLayoutData {
+  positions: StagePosition[];
+  shapes: StageShape[];
+  sections: StageSection[];
+}
+
+export interface StageLayout {
+  id: string;
+  name: string;
+  description: string | null;
+  venueName: string | null;
+  stageWidth: number;
+  stageDepth: number;
+  isTemplate: boolean;
+  isDefault: boolean;
+  layoutData?: StageLayoutData;
+  thumbnailUrl: string | null;
+  usageCount?: number;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StageAssignment {
+  userId?: string;
+  instrumentId?: string;
+  name?: string;
+}
+
+export interface ConcertStageAssignment {
+  id: string;
+  layoutId: string;
+  layoutName: string;
+  stageWidth: number;
+  stageDepth: number;
+  layoutData: StageLayoutData;
+  assignments: Record<string, StageAssignment>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConcertStageResponse {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+  };
+  assignment: ConcertStageAssignment | null;
+}
+
+export interface SeatCard {
+  positionId: string;
+  label: string;
+  section: string;
+  sectionColor: string;
+  musicianName: string;
+  instrument: string;
+  standNumber: number;
+}
+
+export interface PrintableSeatCardsResponse {
+  concert: {
+    id: string;
+    name: string;
+    date: string;
+    location: string | null;
+  };
+  layoutName: string;
+  seatCards: SeatCard[];
+}
