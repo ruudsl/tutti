@@ -270,11 +270,28 @@ export const getConcertAttendees = async (concertId: string): Promise<AttendeeEx
   return data;
 };
 
+/**
+ * Retrieves seat selection heatmap data for a concert.
+ *
+ * @description Fetches data showing seat popularity and selection patterns for venue visualization.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<SeatHeatmapData>} Heatmap data for seat visualization
+ * @throws {AxiosError} When concert not found or seating not configured
+ */
 export const getSeatHeatmapData = async (concertId: string): Promise<SeatHeatmapData> => {
   const { data } = await api.get(`/concerts/${concertId}/seats/heatmap-data`);
   return data;
 };
 
+/**
+ * Exports concert attendees to a CSV file.
+ *
+ * @description Downloads a CSV file containing all attendee information for a concert.
+ * Triggers a browser file download.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<void>} Resolves when download is initiated
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const exportConcertAttendeesCsv = async (concertId: string): Promise<void> => {
   const response = await api.get(`/concerts/${concertId}/attendees?format=csv`, {
     responseType: 'blob',
@@ -288,11 +305,28 @@ export const exportConcertAttendeesCsv = async (concertId: string): Promise<void
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * Cancels a ticket.
+ *
+ * @description Cancels an individual ticket. Does not automatically process refund.
+ * @param {string} ticketId - The ticket identifier
+ * @returns {Promise<{success: boolean, message: string}>} Cancellation result
+ * @throws {AxiosError} When ticket not found, already cancelled, or already scanned
+ */
 export const cancelTicket = async (ticketId: string): Promise<{ success: boolean; message: string }> => {
   const { data } = await api.post(`/tickets/${ticketId}/cancel`);
   return data;
 };
 
+/**
+ * Processes a refund for a ticket order.
+ *
+ * @description Initiates a refund through the payment provider and cancels associated tickets.
+ * @param {string} orderId - The order identifier
+ * @param {string} [reason] - Optional reason for the refund
+ * @returns {Promise<{success: boolean, refundId?: string, message: string}>} Refund result
+ * @throws {AxiosError} When order not found, already refunded, or refund fails
+ */
 export const refundOrder = async (orderId: string, reason?: string): Promise<{ success: boolean; refundId?: string; message: string }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/refund`, { reason });
   return data;
