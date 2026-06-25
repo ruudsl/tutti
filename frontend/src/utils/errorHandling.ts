@@ -201,6 +201,20 @@ export function handleApiError(error: unknown, fallbackMessage?: string): never 
   throw new AppError(message, code, status);
 }
 
+/**
+ * Logs an error to the console in development mode.
+ *
+ * @description Formats and logs error information with optional context.
+ * Only logs in development environment.
+ * @param {unknown} error - Error to log
+ * @param {string} [context] - Optional context description (e.g., function name)
+ * @example
+ * try {
+ *   await loadUsers();
+ * } catch (error) {
+ *   logError(error, 'loadUsers');
+ * }
+ */
 export function logError(error: unknown, context?: string): void {
   const message = getErrorMessage(error);
   const code = getErrorCode(error);
