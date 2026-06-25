@@ -58,6 +58,31 @@ function setGlobalState(update: Partial<KeyboardShortcutsState>) {
   stateListeners.forEach((listener) => listener());
 }
 
+/**
+ * @description Hook for accessing global keyboard shortcuts state.
+ * Provides state and controls for the shortcuts help dialog and pending sequences.
+ *
+ * @returns {Object} Shortcuts state and controls
+ * @returns {boolean} returns.isHelpOpen - Whether help dialog is open
+ * @returns {string | null} returns.pendingSequence - Current pending key sequence (e.g., 'G')
+ * @returns {Function} returns.openHelp - Open the help dialog
+ * @returns {Function} returns.closeHelp - Close the help dialog
+ * @returns {Function} returns.toggleHelp - Toggle the help dialog
+ *
+ * @example
+ * ```tsx
+ * function ShortcutsHelpDialog() {
+ *   const { isHelpOpen, closeHelp, pendingSequence } = useKeyboardShortcutsState();
+ *
+ *   return (
+ *     <>
+ *       {pendingSequence && <PendingKeyIndicator sequence={pendingSequence} />}
+ *       {isHelpOpen && <HelpModal onClose={closeHelp} />}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
 export function useKeyboardShortcutsState() {
   const [state, setState] = useState(globalState);
 

@@ -1,3 +1,12 @@
+/**
+ * Tickets API Module
+ *
+ * Provides functions for ticket purchasing, management, validation, and transfers.
+ * Includes both public-facing ticket sales and admin management endpoints.
+ *
+ * @module api/tickets
+ */
+
 import api from './client';
 import type {
   ConcertTicketInfo,
@@ -19,6 +28,16 @@ import type {
 } from '../types';
 
 // Public ticket endpoints
+
+/**
+ * Retrieves ticket information for a concert.
+ *
+ * @description Fetches available ticket types, prices, and availability for a concert.
+ * This is a public endpoint accessible without authentication.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<ConcertTicketInfo>} Concert ticket information including available types
+ * @throws {AxiosError} When concert not found (404) or tickets not configured
+ */
 export const getConcertTickets = async (concertId: string): Promise<ConcertTicketInfo> => {
   const { data } = await api.get(`/concerts/${concertId}/tickets`);
   return data;

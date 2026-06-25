@@ -1,6 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
 import { syncManager, offlineDb, ConflictRecord } from '../lib/offlineDb';
 
+/**
+ * @description Hook for managing offline state and synchronization.
+ * Tracks online/offline status, pending changes, and data conflicts.
+ * Provides methods to force sync and resolve conflicts.
+ *
+ * @returns {Object} Offline state and controls
+ * @returns {boolean} returns.isOnline - Whether the device is currently online
+ * @returns {boolean} returns.isOffline - Whether the device is currently offline
+ * @returns {number} returns.pendingChanges - Count of changes waiting to sync
+ * @returns {ConflictRecord[]} returns.conflicts - Array of data conflicts to resolve
+ * @returns {boolean} returns.hasConflicts - Whether there are any conflicts
+ * @returns {boolean} returns.isSyncing - Whether a sync operation is in progress
+ * @returns {Function} returns.forceSync - Manually trigger sync when online
+ * @returns {Function} returns.resolveConflict - Resolve a specific conflict
+ * @returns {Function} returns.clearOfflineData - Clear all offline cached data
+ *
+ * @example
+ * ```tsx
+ * function SyncStatus() {
+ *   const { isOnline, pendingChanges, isSyncing, forceSync } = useOffline();
+ *
+ *   return (
+ *     <div>
+ *       <span>{isOnline ? 'Online' : 'Offline'}</span>
+ *       {pendingChanges > 0 && (
+ *         <button onClick={forceSync} disabled={isSyncing}>
+ *           Sync {pendingChanges} changes
+ *         </button>
+ *       )}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useOffline() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingChanges, setPendingChanges] = useState(0);
@@ -73,6 +107,42 @@ export function useOffline() {
   };
 }
 
+/**
+ * @description Hook for fetching data with offline fallback support.
+ * Automatically uses cached data when offline and syncs from server when online.
+ *
+ * @template T - The type of data being fetched
+ * @param {Function} fetchOnline - Function to fetch fresh data from server
+ * @param {Function} getCached - Function to retrieve cached data
+ * @param {Function} cacheData - Function to cache data after fetching
+ * @param {any[]} deps - Dependencies that trigger re-fetch
+ *
+ * @returns {Object} Data fetching state
+ * @returns {T | undefined} returns.data - The fetched or cached data
+ * @returns {boolean} returns.isLoading - Whether data is being fetched
+ * @returns {Error | null} returns.error - Error if fetch failed
+ * @returns {boolean} returns.isFromCache - Whether current data is from cache
+ *
+ * @example
+ * ```tsx
+ * function MusicList() {
+ *   const { data, isLoading, isFromCache } = useOfflineData(
+ *     () => api.getMusicPieces(),
+ *     () => offlineDb.musicPieces.toArray(),
+ *     (data) => offlineDb.musicPieces.bulkPut(data),
+ *     []
+ *   );
+ *
+ *   if (isLoading) return <Spinner />;
+ *   return (
+ *     <div>
+ *       {isFromCache && <Badge>Offline data</Badge>}
+ *       <List items={data} />
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useOfflineData<T>(
   fetchOnline: () => Promise<T>,
   getCached: () => Promise<T | undefined>,
