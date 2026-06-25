@@ -85,6 +85,20 @@ export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
 
+/**
+ * Extracts a user-friendly error message from any error type.
+ *
+ * @description Handles Axios errors, AppErrors, standard Errors, and strings.
+ * Returns Dutch error messages for common cases.
+ * @param {unknown} error - Error to extract message from
+ * @returns {string} Human-readable error message
+ * @example
+ * try {
+ *   await api.get('/users');
+ * } catch (error) {
+ *   toast.error(getErrorMessage(error));
+ * }
+ */
 export function getErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
     if (error.response?.data?.error) {
@@ -111,6 +125,19 @@ export function getErrorMessage(error: unknown): string {
   return 'Er is een onbekende fout opgetreden';
 }
 
+/**
+ * Extracts an error code from any error type.
+ *
+ * @description Maps HTTP status codes and error types to standardized error codes.
+ * Useful for conditional error handling and logging.
+ * @param {unknown} error - Error to extract code from
+ * @returns {string} Error code (e.g., 'UNAUTHORIZED', 'NOT_FOUND', 'NETWORK_ERROR')
+ * @example
+ * const code = getErrorCode(error);
+ * if (code === 'UNAUTHORIZED') {
+ *   redirectToLogin();
+ * }
+ */
 export function getErrorCode(error: unknown): string {
   if (isAxiosError(error)) {
     if (error.response?.status === 401) return 'UNAUTHORIZED';
@@ -131,6 +158,14 @@ export function getErrorCode(error: unknown): string {
   return 'UNKNOWN_ERROR';
 }
 
+/**
+ * Extracts the HTTP status code from an error.
+ *
+ * @description Returns the HTTP status from Axios errors or AppErrors.
+ * Defaults to 500 for unknown error types.
+ * @param {unknown} error - Error to extract status from
+ * @returns {number} HTTP status code
+ */
 export function getHttpStatus(error: unknown): number {
   if (isAxiosError(error) && error.response?.status) {
     return error.response.status;
@@ -143,6 +178,21 @@ export function getHttpStatus(error: unknown): number {
   return 500;
 }
 
+/**
+ * Handles an API error by throwing a standardized AppError.
+ *
+ * @description Extracts error information and throws an AppError with
+ * the extracted message, code, and status.
+ * @param {unknown} error - Error to handle
+ * @param {string} [fallbackMessage] - Message to use if none can be extracted
+ * @throws {AppError} Always throws an AppError with extracted/fallback information
+ * @example
+ * try {
+ *   await api.get('/users');
+ * } catch (error) {
+ *   handleApiError(error, 'Failed to load users');
+ * }
+ */
 export function handleApiError(error: unknown, fallbackMessage?: string): never {
   const message = getErrorMessage(error) || fallbackMessage || 'Er is een fout opgetreden';
   const code = getErrorCode(error);
