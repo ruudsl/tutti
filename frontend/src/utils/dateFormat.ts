@@ -356,7 +356,13 @@ export function isTomorrow(date: Date | string | number): boolean {
 }
 
 /**
- * Check if a date is yesterday
+ * Checks if a date is yesterday.
+ *
+ * @description Compares the given date to yesterday's date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is yesterday, false otherwise or for invalid dates
+ * @example
+ * isYesterday(new Date(Date.now() - 86400000)); // true
  */
 export function isYesterday(date: Date | string | number): boolean {
   const d = toDate(date);
@@ -374,11 +380,23 @@ export function isYesterday(date: Date | string | number): boolean {
 
 // Helper functions
 
+/**
+ * Converts various date formats to a Date object.
+ * @param {Date | string | number} date - Input date
+ * @returns {Date} Date object
+ * @private
+ */
 function toDate(date: Date | string | number): Date {
   if (date instanceof Date) return date;
   return new Date(date);
 }
 
+/**
+ * Checks if a Date object represents a valid date.
+ * @param {Date} date - Date to validate
+ * @returns {boolean} True if the date is valid
+ * @private
+ */
 function isValidDate(date: Date): boolean {
   return !isNaN(date.getTime());
 }
