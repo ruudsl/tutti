@@ -10,8 +10,29 @@ const FONT_FAMILIES: Record<string, string> = {
 };
 
 /**
- * Maps theme settings to CSS custom properties and applies them to :root.
- * Fetches the theme on mount and listens for 'theme-updated' events.
+ * @description Hook for managing application theme settings.
+ * Maps theme settings to CSS custom properties and applies them to the document root.
+ * Automatically fetches theme on mount and listens for 'theme-updated' events.
+ *
+ * @returns {Object} Theme state and controls
+ * @returns {ThemeSettings | null} returns.theme - Current theme settings
+ * @returns {Function} returns.applyTheme - Manually apply theme settings
+ *
+ * @example
+ * ```tsx
+ * function ThemeProvider({ children }: { children: React.ReactNode }) {
+ *   const { theme, applyTheme } = useTheme();
+ *
+ *   // Theme is automatically applied, but can be customized:
+ *   const handleReset = () => applyTheme(null);
+ *
+ *   return (
+ *     <ThemeContext.Provider value={{ theme, reset: handleReset }}>
+ *       {children}
+ *     </ThemeContext.Provider>
+ *   );
+ * }
+ * ```
  */
 export function useTheme() {
   const [theme, setTheme] = useState<ThemeSettings | null>(null);

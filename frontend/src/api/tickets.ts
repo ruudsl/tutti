@@ -229,17 +229,42 @@ export const updateTicketType = async (
   return data;
 };
 
+/**
+ * Deletes a ticket type.
+ *
+ * @description Removes a ticket type. Cannot delete if tickets have been sold.
+ * @param {string} ticketTypeId - The ticket type identifier
+ * @returns {Promise<{success: boolean}>} Success indicator
+ * @throws {AxiosError} When ticket type not found, has sold tickets, or user lacks permission
+ */
 export const deleteTicketType = async (ticketTypeId: string): Promise<{ success: boolean }> => {
   const { data } = await api.delete(`/ticket-types/${ticketTypeId}`);
   return data;
 };
 
 // Admin ticket management
+
+/**
+ * Retrieves ticket sales statistics for a concert.
+ *
+ * @description Fetches aggregate statistics including total sold, revenue, and per-type breakdown.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<TicketStats>} Ticket sales statistics
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const getConcertTicketStats = async (concertId: string): Promise<TicketStats> => {
   const { data } = await api.get(`/concerts/${concertId}/ticket-stats`);
   return data;
 };
 
+/**
+ * Retrieves list of attendees for a concert.
+ *
+ * @description Fetches all ticket holders for a concert with their details.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<AttendeeExport[]>} Array of attendee records
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const getConcertAttendees = async (concertId: string): Promise<AttendeeExport[]> => {
   const { data } = await api.get(`/concerts/${concertId}/attendees`);
   return data;
