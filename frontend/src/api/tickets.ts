@@ -164,6 +164,23 @@ export const getMyTickets = async (): Promise<Ticket[]> => {
 };
 
 // Admin ticket type management
+
+/**
+ * Creates a new ticket type for a concert.
+ *
+ * @description Defines a new ticket category with pricing and availability. Requires admin access.
+ * @param {string} concertId - The concert identifier
+ * @param {Object} ticketType - Ticket type configuration
+ * @param {string} ticketType.name - Display name (e.g., "Standard", "VIP")
+ * @param {number} ticketType.price - Price in cents
+ * @param {number} ticketType.quantity - Total available tickets
+ * @param {string} [ticketType.description] - Description of what's included
+ * @param {string} [ticketType.saleStart] - ISO date when sales begin
+ * @param {string} [ticketType.saleEnd] - ISO date when sales end
+ * @param {number} [ticketType.maxPerOrder] - Maximum tickets per order
+ * @returns {Promise<TicketType>} Created ticket type
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const createTicketType = async (
   concertId: string,
   ticketType: {
@@ -180,6 +197,22 @@ export const createTicketType = async (
   return data;
 };
 
+/**
+ * Updates an existing ticket type.
+ *
+ * @description Modifies ticket type properties. Price changes only affect new orders.
+ * @param {string} ticketTypeId - The ticket type identifier
+ * @param {Object} updates - Fields to update
+ * @param {string} [updates.name] - New display name
+ * @param {number} [updates.price] - New price in cents
+ * @param {number} [updates.quantity] - New total quantity
+ * @param {string} [updates.description] - New description
+ * @param {string} [updates.saleStart] - New sale start date
+ * @param {string} [updates.saleEnd] - New sale end date
+ * @param {number} [updates.maxPerOrder] - New max per order limit
+ * @returns {Promise<{success: boolean}>} Success indicator
+ * @throws {AxiosError} When ticket type not found or user lacks admin permission
+ */
 export const updateTicketType = async (
   ticketTypeId: string,
   updates: {
