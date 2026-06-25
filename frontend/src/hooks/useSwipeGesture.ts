@@ -53,6 +53,48 @@ const defaultOptions: Required<SwipeOptions> = {
   disabled: false,
 };
 
+/**
+ * @description Hook for detecting swipe gestures on touch devices.
+ * Supports four-directional swipes with configurable thresholds, velocity detection,
+ * and scroll prevention options.
+ *
+ * @template T - The HTML element type (default: HTMLDivElement)
+ * @param {SwipeCallbacks} callbacks - Callback functions for swipe events
+ * @param {Function} callbacks.onSwipeLeft - Called when user swipes left
+ * @param {Function} callbacks.onSwipeRight - Called when user swipes right
+ * @param {Function} callbacks.onSwipeUp - Called when user swipes up
+ * @param {Function} callbacks.onSwipeDown - Called when user swipes down
+ * @param {Function} callbacks.onSwipeStart - Called when swipe begins
+ * @param {Function} callbacks.onSwipeMove - Called during swipe with delta and velocity
+ * @param {Function} callbacks.onSwipeEnd - Called when swipe ends
+ * @param {SwipeOptions} options - Configuration options
+ * @param {number} options.threshold - Minimum distance to trigger swipe (default: 50)
+ * @param {number} options.maxTime - Maximum time for gesture in ms (default: 300)
+ * @param {boolean} options.preventScrollOnHorizontalSwipe - Prevent scroll during horizontal swipe (default: true)
+ * @param {number} options.minVelocity - Minimum velocity to trigger swipe (default: 0.3)
+ * @param {boolean} options.disabled - Disable swipe detection (default: false)
+ *
+ * @returns {Object} Gesture handlers
+ * @returns {React.RefObject<T>} returns.ref - Ref to attach to the element
+ * @returns {Function} returns.bind - Returns props to spread on the element
+ *
+ * @example
+ * ```tsx
+ * function SwipeableCard({ onDismiss }: { onDismiss: () => void }) {
+ *   const { ref } = useSwipeGesture<HTMLDivElement>({
+ *     onSwipeLeft: onDismiss,
+ *     onSwipeMove: (deltaX) => {
+ *       ref.current?.style.setProperty('transform', `translateX(${deltaX}px)`);
+ *     },
+ *     onSwipeEnd: (completed) => {
+ *       if (!completed) ref.current?.style.setProperty('transform', 'translateX(0)');
+ *     }
+ *   });
+ *
+ *   return <div ref={ref}>Swipe to dismiss</div>;
+ * }
+ * ```
+ */
 export function useSwipeGesture<T extends HTMLElement = HTMLDivElement>(
   callbacks: SwipeCallbacks,
   options: SwipeOptions = {}

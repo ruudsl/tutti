@@ -122,11 +122,29 @@ export const payTicketOrder = async (
   return data;
 };
 
+/**
+ * Retrieves a ticket by its unique code.
+ *
+ * @description Fetches ticket details using the ticket code (typically from QR code).
+ * @param {string} code - The unique ticket code
+ * @returns {Promise<Ticket>} Ticket details
+ * @throws {AxiosError} When ticket not found (404)
+ */
 export const getTicketByCode = async (code: string): Promise<Ticket> => {
   const { data } = await api.get(`/tickets/${code}`);
   return data;
 };
 
+/**
+ * Validates and scans a ticket for entry.
+ *
+ * @description Validates a ticket code for concert entry. Marks the ticket as scanned
+ * if valid. Can optionally verify against a specific concert.
+ * @param {string} code - The ticket code to validate
+ * @param {string} [concertId] - Optional concert ID to validate against
+ * @returns {Promise<TicketValidationResult>} Validation result with ticket status
+ * @throws {AxiosError} When ticket invalid, already used, or wrong concert
+ */
 export const validateTicket = async (code: string, concertId?: string): Promise<TicketValidationResult> => {
   const { data } = await api.post(`/tickets/${code}/validate`, { concertId });
   return data;
