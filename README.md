@@ -55,7 +55,7 @@ cd tutti
 # Install dependencies
 npm install
 
-# Create configuration
+# Create configuration (see .env.example for all 69 documented variables)
 cp backend/.env.example backend/.env
 
 # Start development server
@@ -127,14 +127,61 @@ See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for self-hosting options.
 
 ## Documentation
 
+### User Documentation
+
 | Document | Description |
 |---|---|
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | Complete user guide (Dutch) |
 | [FEATURES.md](docs/FEATURES.md) | Complete feature list |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide for Render/Vercel/Docker |
-| [ADMIN.md](docs/ADMIN.md) | Administration guide, roles, super-admin |
-| [API.md](docs/API.md) | API documentation |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture and design decisions |
+| [KEYBOARD_SHORTCUTS.md](docs/KEYBOARD_SHORTCUTS.md) | Keyboard shortcuts reference |
+| [MOBILE_APP.md](docs/MOBILE_APP.md) | Mobile/PWA guide |
+| [FAQ.md](docs/FAQ.md) | Frequently asked questions (Dutch) |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Troubleshooting guide (Dutch) |
+
+### Admin & Operations
+
+| Document | Description |
+|---|---|
+| [ADMIN.md](docs/ADMIN.md) | Administration guide |
+| [ROLE_PERMISSIONS.md](docs/ROLE_PERMISSIONS.md) | Role-based permissions matrix |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide (Render/Vercel/Docker) |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Self-hosting guide |
+| [MONITORING.md](docs/MONITORING.md) | Monitoring & observability |
+
+### Developer Documentation
+
+| Document | Description |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+| [DATABASE.md](docs/DATABASE.md) | Database schema & ERD |
+| [API.md](docs/API.md) | REST API documentation |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Auth flows & JWT/MFA |
+| [WEBSOCKET.md](docs/WEBSOCKET.md) | WebSocket events reference |
+| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend state patterns |
+| [HOOKS.md](docs/HOOKS.md) | React hooks documentation |
+| [TESTING.md](docs/TESTING.md) | Testing strategy & guidelines |
+| [THEMING.md](docs/THEMING.md) | Theming system |
+
+### Integration & Compliance
+
+| Document | Description |
+|---|---|
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md) | Third-party integrations |
+| [GDPR.md](docs/GDPR.md) | GDPR compliance guide |
+| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email template reference |
+| [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Print templates (tickets, posters) |
+
+### Architecture Decisions
+
+See [docs/adr/](docs/adr/) for Architecture Decision Records (ADRs).
+
+### API Testing
+
+Import the [Postman collection](docs/postman/tutti-api-collection.json) for interactive API testing.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for our security policy and how to report vulnerabilities.
 
 ## Tech Stack
 

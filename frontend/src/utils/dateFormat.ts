@@ -1,11 +1,24 @@
 /**
- * Dutch date formatting utilities using Intl.DateTimeFormat
+ * Dutch Date Formatting Utilities
+ *
+ * Provides comprehensive date formatting functions using Intl.DateTimeFormat
+ * with Dutch (nl-NL) locale. All functions handle invalid dates gracefully.
+ *
+ * @module utils/dateFormat
  */
 
+/** Dutch locale code for date formatting */
 const LOCALE = 'nl-NL';
 
 /**
- * Format a date to Dutch format: "4 mei 2026"
+ * Formats a date to Dutch format.
+ *
+ * @description Converts a date to the format "day month year" in Dutch.
+ * @param {Date | string | number} date - Date to format (Date object, ISO string, or timestamp)
+ * @returns {string} Formatted date (e.g., "4 mei 2026") or "-" for invalid dates
+ * @example
+ * formatDate(new Date('2026-05-04')); // "4 mei 2026"
+ * formatDate('2026-12-25');           // "25 december 2026"
  */
 export function formatDate(date: Date | string | number): string {
   const d = toDate(date);
@@ -19,7 +32,13 @@ export function formatDate(date: Date | string | number): string {
 }
 
 /**
- * Format a date with time: "4 mei 2026 om 14:30"
+ * Formats a date with time in Dutch.
+ *
+ * @description Converts a date to the format "day month year om HH:MM" in Dutch.
+ * @param {Date | string | number} date - Date to format
+ * @returns {string} Formatted date and time (e.g., "4 mei 2026 om 14:30") or "-" for invalid dates
+ * @example
+ * formatDateTime('2026-05-04T14:30:00'); // "4 mei 2026 om 14:30"
  */
 export function formatDateTime(date: Date | string | number): string {
   const d = toDate(date);
@@ -41,7 +60,13 @@ export function formatDateTime(date: Date | string | number): string {
 }
 
 /**
- * Format a date with short time: "4 mei 14:30"
+ * Formats a date with short time (no year).
+ *
+ * @description Converts a date to a compact format with abbreviated month and time.
+ * @param {Date | string | number} date - Date to format
+ * @returns {string} Formatted date and time (e.g., "4 mei 14:30") or "-" for invalid dates
+ * @example
+ * formatDateTimeShort('2026-05-04T14:30:00'); // "4 mei 14:30"
  */
 export function formatDateTimeShort(date: Date | string | number): string {
   const d = toDate(date);
@@ -62,7 +87,14 @@ export function formatDateTimeShort(date: Date | string | number): string {
 }
 
 /**
- * Format time only: "14:30"
+ * Formats time only (no date).
+ *
+ * @description Extracts and formats the time portion of a date in 24-hour format.
+ * @param {Date | string | number} date - Date to extract time from
+ * @returns {string} Formatted time (e.g., "14:30") or "-" for invalid dates
+ * @example
+ * formatTime('2026-05-04T14:30:00'); // "14:30"
+ * formatTime(new Date());             // Current time
  */
 export function formatTime(date: Date | string | number): string {
   const d = toDate(date);
@@ -76,23 +108,29 @@ export function formatTime(date: Date | string | number): string {
 }
 
 /**
- * Format relative time in Dutch:
+ * Formats a date as relative time in Dutch.
+ *
+ * @description Converts a date to a human-readable relative time string in Dutch.
+ * Supports both past and future dates with appropriate phrasing.
+ *
+ * Past date examples:
  * - "zojuist" (just now)
  * - "5 minuten geleden" (5 minutes ago)
- * - "2 uur geleden" (2 hours ago)
  * - "gisteren" (yesterday)
- * - "eergisteren" (day before yesterday)
- * - "3 dagen geleden" (3 days ago)
  * - "vorige week" (last week)
- * - "2 weken geleden" (2 weeks ago)
- * - "vorige maand" (last month)
- * - Date if older
  *
- * Also supports future dates:
+ * Future date examples:
+ * - "zo meteen" (in a moment)
  * - "over 5 minuten" (in 5 minutes)
  * - "morgen" (tomorrow)
- * - "overmorgen" (day after tomorrow)
- * - etc.
+ * - "volgende week" (next week)
+ *
+ * @param {Date | string | number} date - Date to format
+ * @returns {string} Relative time string or formatted date for very old/far dates
+ * @example
+ * formatRelative(new Date()); // "zojuist"
+ * formatRelative(new Date(Date.now() - 86400000)); // "gisteren"
+ * formatRelative(new Date(Date.now() + 86400000)); // "morgen"
  */
 export function formatRelative(date: Date | string | number): string {
   const d = toDate(date);
@@ -142,11 +180,15 @@ export function formatRelative(date: Date | string | number): string {
 }
 
 /**
- * Format duration in minutes to readable Dutch string:
- * - "30 min" (30 minutes)
- * - "1 uur" (1 hour)
- * - "1 uur 30 min" (1 hour 30 minutes)
- * - "2 uur 15 min" (2 hours 15 minutes)
+ * Formats a duration in minutes to a readable Dutch string.
+ *
+ * @description Converts minutes to a human-readable format with hours and minutes.
+ * @param {number} minutes - Duration in minutes
+ * @returns {string} Formatted duration (e.g., "30 min", "1 uur", "2 uur 15 min") or "-" for invalid input
+ * @example
+ * formatDuration(30);  // "30 min"
+ * formatDuration(60);  // "1 uur"
+ * formatDuration(135); // "2 uur 15 min"
  */
 export function formatDuration(minutes: number): string {
   if (!minutes || minutes <= 0) return '-';
@@ -166,7 +208,14 @@ export function formatDuration(minutes: number): string {
 }
 
 /**
- * Format duration from seconds to readable Dutch string
+ * Formats a duration in seconds to a readable Dutch string.
+ *
+ * @description Converts seconds to minutes, then formats using formatDuration.
+ * @param {number} seconds - Duration in seconds
+ * @returns {string} Formatted duration (e.g., "1 uur 30 min") or "-" for invalid input
+ * @example
+ * formatDurationSeconds(1800);  // "30 min"
+ * formatDurationSeconds(5400);  // "1 uur 30 min"
  */
 export function formatDurationSeconds(seconds: number): string {
   if (!seconds || seconds <= 0) return '-';
@@ -174,7 +223,16 @@ export function formatDurationSeconds(seconds: number): string {
 }
 
 /**
- * Format a date range: "4 - 6 mei 2026" or "4 mei - 2 juni 2026"
+ * Formats a date range in Dutch.
+ *
+ * @description Creates a compact date range string, intelligently handling same month/year cases.
+ * @param {Date | string | number} start - Start date
+ * @param {Date | string | number} end - End date
+ * @returns {string} Formatted range (e.g., "4 - 6 mei 2026", "4 mei - 2 juni 2026") or "-" for invalid dates
+ * @example
+ * formatDateRange('2026-05-04', '2026-05-06'); // "4 - 6 mei 2026"
+ * formatDateRange('2026-05-04', '2026-06-02'); // "4 mei - 2 juni 2026"
+ * formatDateRange('2026-05-04', '2027-06-02'); // "4 mei 2026 - 2 juni 2027"
  */
 export function formatDateRange(start: Date | string | number, end: Date | string | number): string {
   const startDate = toDate(start);
@@ -215,7 +273,16 @@ export function formatDateRange(start: Date | string | number, end: Date | strin
 }
 
 /**
- * Get the day name in Dutch: "maandag", "dinsdag", etc.
+ * Gets the day name in Dutch.
+ *
+ * @description Returns the weekday name in the specified style.
+ * @param {Date | string | number} date - Date to get day name from
+ * @param {'long' | 'short' | 'narrow'} [style='long'] - Name format: 'long' for full name, 'short' for abbreviated, 'narrow' for initial
+ * @returns {string} Day name (e.g., "maandag", "ma", "M") or "-" for invalid dates
+ * @example
+ * getDayName('2026-05-04');          // "maandag"
+ * getDayName('2026-05-04', 'short'); // "ma"
+ * getDayName('2026-05-04', 'narrow'); // "M"
  */
 export function getDayName(date: Date | string | number, style: 'long' | 'short' | 'narrow' = 'long'): string {
   const d = toDate(date);
@@ -225,7 +292,16 @@ export function getDayName(date: Date | string | number, style: 'long' | 'short'
 }
 
 /**
- * Get the month name in Dutch: "januari", "februari", etc.
+ * Gets the month name in Dutch.
+ *
+ * @description Returns the month name in the specified style.
+ * @param {Date | string | number} date - Date to get month name from
+ * @param {'long' | 'short' | 'narrow'} [style='long'] - Name format: 'long' for full name, 'short' for abbreviated, 'narrow' for initial
+ * @returns {string} Month name (e.g., "januari", "jan", "J") or "-" for invalid dates
+ * @example
+ * getMonthName('2026-05-04');          // "mei"
+ * getMonthName('2026-05-04', 'short'); // "mei"
+ * getMonthName('2026-01-04', 'narrow'); // "J"
  */
 export function getMonthName(date: Date | string | number, style: 'long' | 'short' | 'narrow' = 'long'): string {
   const d = toDate(date);
@@ -235,7 +311,14 @@ export function getMonthName(date: Date | string | number, style: 'long' | 'shor
 }
 
 /**
- * Check if a date is today
+ * Checks if a date is today.
+ *
+ * @description Compares the given date to the current date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is today, false otherwise or for invalid dates
+ * @example
+ * isToday(new Date()); // true
+ * isToday('2020-01-01'); // false
  */
 export function isToday(date: Date | string | number): boolean {
   const d = toDate(date);
@@ -250,7 +333,13 @@ export function isToday(date: Date | string | number): boolean {
 }
 
 /**
- * Check if a date is tomorrow
+ * Checks if a date is tomorrow.
+ *
+ * @description Compares the given date to tomorrow's date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is tomorrow, false otherwise or for invalid dates
+ * @example
+ * isTomorrow(new Date(Date.now() + 86400000)); // true
  */
 export function isTomorrow(date: Date | string | number): boolean {
   const d = toDate(date);
@@ -267,7 +356,13 @@ export function isTomorrow(date: Date | string | number): boolean {
 }
 
 /**
- * Check if a date is yesterday
+ * Checks if a date is yesterday.
+ *
+ * @description Compares the given date to yesterday's date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is yesterday, false otherwise or for invalid dates
+ * @example
+ * isYesterday(new Date(Date.now() - 86400000)); // true
  */
 export function isYesterday(date: Date | string | number): boolean {
   const d = toDate(date);
@@ -285,11 +380,23 @@ export function isYesterday(date: Date | string | number): boolean {
 
 // Helper functions
 
+/**
+ * Converts various date formats to a Date object.
+ * @param {Date | string | number} date - Input date
+ * @returns {Date} Date object
+ * @private
+ */
 function toDate(date: Date | string | number): Date {
   if (date instanceof Date) return date;
   return new Date(date);
 }
 
+/**
+ * Checks if a Date object represents a valid date.
+ * @param {Date} date - Date to validate
+ * @returns {boolean} True if the date is valid
+ * @private
+ */
 function isValidDate(date: Date): boolean {
   return !isNaN(date.getTime());
 }

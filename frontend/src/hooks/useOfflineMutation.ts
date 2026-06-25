@@ -21,6 +21,47 @@ function setQueue(queue: QueuedMutation[]) {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
+/**
+ * @description Hook for mutations that work offline by queuing changes locally.
+ * When offline, mutations are stored in localStorage and synced when back online.
+ * Supports automatic sync on reconnection and cache invalidation.
+ *
+ * @template TData - The return type of the mutation
+ * @template TVariables - The input type for the mutation
+ * @param {Function} mutationFn - The async function to execute the mutation
+ * @param {Object} options - Configuration options
+ * @param {Function} options.onSuccess - Callback when mutation succeeds
+ * @param {Function} options.onError - Callback when mutation fails
+ * @param {string[][]} options.invalidateKeys - Query keys to invalidate after sync
+ * @param {string} options.mutationKey - Unique key to identify this mutation type in queue
+ *
+ * @returns {UseMutationResult} React Query mutation result
+ *
+ * @example
+ * ```tsx
+ * function PracticeLogger() {
+ *   const logPractice = useOfflineMutation(
+ *     (data: PracticeLog) => api.post('/practice', data),
+ *     {
+ *       mutationKey: 'practice-log',
+ *       invalidateKeys: [['practice-logs']],
+ *       onSuccess: () => showSuccess('Practice logged!')
+ *     }
+ *   );
+ *
+ *   const handleSubmit = async (data: PracticeLog) => {
+ *     try {
+ *       await logPractice.mutateAsync(data);
+ *     } catch (e) {
+ *       // If offline, mutation is queued - no error shown
+ *       if (e.message.includes('queued')) {
+ *         showInfo('Will sync when online');
+ *       }
+ *     }
+ *   };
+ * }
+ * ```
+ */
 export function useOfflineMutation<TData, TVariables>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options?: {
@@ -98,7 +139,20 @@ export function useOfflineMutation<TData, TVariables>(
 }
 
 /**
- * Hook to get the number of pending offline mutations
+ * @description Hook to get the number of pending offline mutations in the queue.
+ * Useful for showing sync status indicators.
+ *
+ * @returns {number} Count of pending mutations
+ *
+ * @example
+ * ```tsx
+ * function SyncIndicator() {
+ *   const pendingCount = usePendingMutationsCount();
+ *
+ *   if (pendingCount === 0) return null;
+ *   return <Badge>{pendingCount} pending</Badge>;
+ * }
+ * ```
  */
 export function usePendingMutationsCount() {
   const queue = getQueue();

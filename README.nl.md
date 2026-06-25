@@ -55,7 +55,7 @@ cd tutti
 # Installeer dependencies
 npm install
 
-# Maak configuratie aan
+# Maak configuratie aan (zie .env.example voor alle 69 gedocumenteerde variabelen)
 cp backend/.env.example backend/.env
 
 # Start development server
@@ -127,14 +127,61 @@ Zie [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) voor self-hosting opties.
 
 ## Documentatie
 
+### Gebruikersdocumentatie
+
 | Document | Beschrijving |
 |---|---|
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | Complete gebruikershandleiding |
 | [FEATURES.md](docs/FEATURES.md) | Complete functielijst |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment handleiding voor Render/Vercel/Docker |
-| [ADMIN.md](docs/ADMIN.md) | Beheerhandleiding, rollen, super-admin |
-| [API.md](docs/API.md) | API documentatie |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systeemarchitectuur en ontwerpbeslissingen |
+| [KEYBOARD_SHORTCUTS.md](docs/KEYBOARD_SHORTCUTS.md) | Sneltoetsen overzicht |
+| [MOBILE_APP.md](docs/MOBILE_APP.md) | Mobiele app / PWA handleiding |
+| [FAQ.md](docs/FAQ.md) | Veelgestelde vragen |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Probleemoplossing |
+
+### Beheer & Operaties
+
+| Document | Beschrijving |
+|---|---|
+| [ADMIN.md](docs/ADMIN.md) | Beheerhandleiding |
+| [ROLE_PERMISSIONS.md](docs/ROLE_PERMISSIONS.md) | Rol-gebaseerde rechtenmatrix |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment handleiding (Render/Vercel/Docker) |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Self-hosting handleiding |
+| [MONITORING.md](docs/MONITORING.md) | Monitoring & observability |
+
+### Ontwikkelaarsdocumentatie
+
+| Document | Beschrijving |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systeemarchitectuur |
+| [DATABASE.md](docs/DATABASE.md) | Database schema & ERD |
+| [API.md](docs/API.md) | REST API documentatie |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Authenticatie flows & JWT/MFA |
+| [WEBSOCKET.md](docs/WEBSOCKET.md) | WebSocket events referentie |
+| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend state patronen |
+| [HOOKS.md](docs/HOOKS.md) | React hooks documentatie |
+| [TESTING.md](docs/TESTING.md) | Teststrategie & richtlijnen |
+| [THEMING.md](docs/THEMING.md) | Theming systeem |
+
+### Integraties & Compliance
+
+| Document | Beschrijving |
+|---|---|
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md) | Externe integraties |
+| [GDPR.md](docs/GDPR.md) | AVG/GDPR compliance handleiding |
+| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | E-mail templates referentie |
+| [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Print templates (tickets, posters) |
+
+### Architectuurbeslissingen
+
+Zie [docs/adr/](docs/adr/) voor Architecture Decision Records (ADR's).
+
+### API Testen
+
+Importeer de [Postman collectie](docs/postman/tutti-api-collection.json) voor interactief API testen.
+
+## Beveiliging
+
+Zie [SECURITY.md](SECURITY.md) voor ons beveiligingsbeleid en het melden van kwetsbaarheden.
 
 ## Tech Stack
 

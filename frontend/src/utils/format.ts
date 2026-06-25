@@ -1,5 +1,22 @@
 /**
- * Format duration from seconds to mm:ss or h:mm:ss
+ * Formatting Utilities Module
+ *
+ * Provides functions for formatting durations, dates, file sizes, and currency.
+ *
+ * @module utils/format
+ */
+
+/**
+ * Formats a duration from seconds to a human-readable string.
+ *
+ * @description Converts seconds to mm:ss format, or h:mm:ss for durations of an hour or more.
+ * Returns '-' for zero or invalid values.
+ * @param {number} seconds - Duration in seconds
+ * @returns {string} Formatted duration string (e.g., "3:45" or "1:23:45")
+ * @example
+ * formatDuration(185);  // "3:05"
+ * formatDuration(3725); // "1:02:05"
+ * formatDuration(0);    // "-"
  */
 export function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return '-';
@@ -13,7 +30,16 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
- * Parse duration string (mm:ss or h:mm:ss) to seconds
+ * Parses a duration string to seconds.
+ *
+ * @description Converts a time string in mm:ss or h:mm:ss format to total seconds.
+ * Returns 0 for invalid or empty input.
+ * @param {string} str - Duration string to parse
+ * @returns {number} Duration in seconds
+ * @example
+ * parseDuration("3:05");    // 185
+ * parseDuration("1:02:05"); // 3725
+ * parseDuration("");        // 0
  */
 export function parseDuration(str: string): number {
   if (!str) return 0;
@@ -28,7 +54,14 @@ export function parseDuration(str: string): number {
 }
 
 /**
- * Format date to locale string
+ * Formats a date to Dutch locale string.
+ *
+ * @description Converts a date to a human-readable Dutch format with full month name.
+ * @param {string | Date} date - Date to format (ISO string or Date object)
+ * @returns {string} Formatted date (e.g., "4 mei 2026")
+ * @example
+ * formatDate(new Date('2026-05-04')); // "4 mei 2026"
+ * formatDate('2026-12-25');           // "25 december 2026"
  */
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString('nl-NL', {
@@ -39,7 +72,15 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
- * Format relative time (e.g., "2 hours ago")
+ * Formats a date as relative time in Dutch.
+ *
+ * @description Converts a date to a human-readable relative time string.
+ * Falls back to full date format for dates older than a week.
+ * @param {string | Date} date - Date to format
+ * @returns {string} Relative time string (e.g., "zojuist", "5 minuten geleden", "3 dagen geleden")
+ * @example
+ * formatRelativeTime(new Date()); // "zojuist"
+ * formatRelativeTime(new Date(Date.now() - 3600000)); // "1 uur geleden"
  */
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date();
@@ -57,7 +98,16 @@ export function formatRelativeTime(date: string | Date): string {
 }
 
 /**
- * Truncate text with ellipsis
+ * Truncates text to a maximum length with ellipsis.
+ *
+ * @description Cuts text at the specified length and adds "..." if truncated.
+ * Returns original text if within limit.
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length including ellipsis
+ * @returns {string} Truncated text with ellipsis or original text
+ * @example
+ * truncate("Hello World", 8);  // "Hello..."
+ * truncate("Hello", 10);       // "Hello"
  */
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
@@ -65,7 +115,15 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
- * Format file size to human-readable string
+ * Formats a file size to a human-readable string.
+ *
+ * @description Converts bytes to the most appropriate unit (B, KB, MB, GB).
+ * @param {number} bytes - File size in bytes
+ * @returns {string} Formatted file size (e.g., "1.5 MB", "256 KB")
+ * @example
+ * formatFileSize(1024);       // "1 KB"
+ * formatFileSize(1536000);    // "1.5 MB"
+ * formatFileSize(0);          // "0 B"
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -78,7 +136,18 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * Format currency to Euro format
+ * Formats a currency amount to Dutch Euro format.
+ *
+ * @description Converts a number to a localized currency string using Dutch formatting.
+ * Returns '-' for null or undefined values.
+ * @param {number | null | undefined} amount - Amount to format
+ * @param {string} [currency='EUR'] - Currency code (ISO 4217)
+ * @returns {string} Formatted currency string (e.g., "EUR 25,00")
+ * @example
+ * formatCurrency(25.50);        // "EUR 25,50"
+ * formatCurrency(1000);         // "EUR 1.000,00"
+ * formatCurrency(null);         // "-"
+ * formatCurrency(100, 'USD');   // "USD 100,00"
  */
 export function formatCurrency(amount: number | null | undefined, currency = 'EUR'): string {
   if (amount == null) return '-';

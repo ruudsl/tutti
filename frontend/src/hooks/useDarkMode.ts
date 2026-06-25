@@ -34,6 +34,34 @@ function clearDarkInlineVars(root: HTMLElement) {
   }
 }
 
+/**
+ * @description Hook for managing dark mode preferences with system preference detection.
+ * Supports three modes: 'light', 'dark', and 'system' (follows OS preference).
+ * Persists the user's preference to localStorage and applies CSS custom properties
+ * for dark mode styling.
+ *
+ * @returns {Object} Dark mode state and controls
+ * @returns {boolean} returns.isDark - Whether dark mode is currently active
+ * @returns {boolean} returns.isDarkMode - Alias for isDark
+ * @returns {DarkModePreference} returns.mode - Current mode setting ('light' | 'dark' | 'system')
+ * @returns {Function} returns.toggleDarkMode - Cycles through modes: light -> dark -> system -> light
+ * @returns {Function} returns.setDarkMode - Sets a specific mode
+ *
+ * @example
+ * ```tsx
+ * function ThemeToggle() {
+ *   const { isDark, mode, toggleDarkMode, setDarkMode } = useDarkMode();
+ *
+ *   return (
+ *     <div>
+ *       <p>Current: {mode} (dark: {isDark ? 'yes' : 'no'})</p>
+ *       <button onClick={toggleDarkMode}>Toggle</button>
+ *       <button onClick={() => setDarkMode('system')}>Use System</button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useDarkMode() {
   const [mode, setMode] = useState<DarkModePreference>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);

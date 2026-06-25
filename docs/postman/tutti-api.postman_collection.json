@@ -1,0 +1,1791 @@
+{
+  "info": {
+    "name": "Tutti API",
+    "description": "Postman collection for the Tutti (Harmonie) music association management API.\n\nThis API provides endpoints for managing users, music pieces, rehearsals, concerts, settings, and more.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "tutti-api-collection-v1"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api",
+      "type": "string",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT authentication token"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints for login, logout, password management, and MFA",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.token);",
+                  "        console.log('Token saved to collection variables');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"muzikant@harmonie.nl\",\n  \"password\": \"wachtwoord123\",\n  \"mfaCode\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate user and get JWT token. If MFA is enabled, provide the mfaCode."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user profile with instruments and orchestras."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Change password for authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Request a password reset email."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"newSecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Reset password using reset token from email."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Reset Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password/validate?token=reset-token-from-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password", "validate"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "reset-token-from-email"
+                }
+              ]
+            },
+            "description": "Validate a password reset token before using it."
+          },
+          "response": []
+        },
+        {
+          "name": "MFA - Setup",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/mfa/setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "mfa", "setup"]
+            },
+            "description": "Generate MFA secret and QR code for setup."
+          },
+          "response": []
+        },
+        {
+          "name": "MFA - Enable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/mfa/enable",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "mfa", "enable"]
+            },
+            "description": "Verify MFA code and enable MFA for the user."
+          },
+          "response": []
+        },
+        {
+          "name": "MFA - Disable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"currentPassword\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/mfa/disable",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "mfa", "disable"]
+            },
+            "description": "Disable MFA (requires password confirmation)."
+          },
+          "response": []
+        },
+        {
+          "name": "MFA - Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/mfa/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "mfa", "status"]
+            },
+            "description": "Get current MFA status for authenticated user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints (admin only for most operations)",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=25&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Get all users with pagination. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-uuid"
+                }
+              ]
+            },
+            "description": "Get single user by ID. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"securePassword123\",\n  \"firstName\": \"Jan\",\n  \"lastName\": \"Janssen\",\n  \"role\": \"member\",\n  \"instrumentIds\": [],\n  \"orchestraIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Create a new user. Admin only. Role can be: admin, music_committee, member"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated@example.com\",\n  \"firstName\": \"Jan\",\n  \"lastName\": \"Janssen\",\n  \"role\": \"member\",\n  \"instrumentIds\": [],\n  \"orchestraIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-uuid"
+                }
+              ]
+            },
+            "description": "Update user. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-uuid"
+                }
+              ]
+            },
+            "description": "Delete user. Admin only. Cannot delete yourself."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Directory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/directory?orchestraId=&instrumentId=&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "directory"],
+              "query": [
+                {
+                  "key": "orchestraId",
+                  "value": ""
+                },
+                {
+                  "key": "instrumentId",
+                  "value": ""
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Public member directory (Smoelenboek). All authenticated users can see."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Photo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id/photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id", "photo"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-uuid"
+                }
+              ]
+            },
+            "description": "Get a user's profile photo."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload User Photo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "description": "Profile photo (PNG, JPG, or WebP, max 2MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/:id/photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id", "photo"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-uuid"
+                }
+              ]
+            },
+            "description": "Upload a profile photo for a user. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Export User Data (GDPR)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/export-data",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "export-data"]
+            },
+            "description": "Export all user data for GDPR/AVG compliance."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Music Pieces",
+      "description": "Music piece management including upload, download, and metadata",
+      "item": [
+        {
+          "name": "List Music Pieces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces?search=&instrumentId=&listId=&page=1&pageSize=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by title or arranger"
+                },
+                {
+                  "key": "instrumentId",
+                  "value": "",
+                  "description": "Filter by instrument ID (use __none__ for pieces without instrument)"
+                },
+                {
+                  "key": "listId",
+                  "value": "",
+                  "description": "Filter by music list ID"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get all music pieces. Regular members only see pieces for their instruments."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Pieces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/my-pieces",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "my-pieces"]
+            },
+            "description": "Get music pieces for current user's instruments and orchestras."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Titles (Grouped View)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/titles?search=&listId=&genreId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "titles"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "listId",
+                  "value": ""
+                },
+                {
+                  "key": "genreId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Get all unique titles with piece counts. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Title Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/title-meta/:title?arranger=",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "title-meta", ":title"],
+              "query": [
+                {
+                  "key": "arranger",
+                  "value": ""
+                }
+              ],
+              "variable": [
+                {
+                  "key": "title",
+                  "value": "Song Title"
+                }
+              ]
+            },
+            "description": "Get or create title metadata. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Title Metadata",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Song Title\",\n  \"arranger\": \"Arranger Name\",\n  \"youtubeUrl\": \"https://youtube.com/watch?v=...\",\n  \"description\": \"Description of the piece\",\n  \"durationSeconds\": 240,\n  \"grade\": \"3\",\n  \"isShared\": false,\n  \"internalNotes\": \"Internal notes\",\n  \"genreIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/title-meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "title-meta"]
+            },
+            "description": "Update title metadata (YouTube, description, duration, genres, sharing). Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Music Piece (PDF)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "PDF file (max 50MB)"
+                },
+                {
+                  "key": "title",
+                  "value": "Song Title",
+                  "type": "text"
+                },
+                {
+                  "key": "arranger",
+                  "value": "Arranger Name",
+                  "type": "text"
+                },
+                {
+                  "key": "instrumentId",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "tuning",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "groupNumber",
+                  "value": "",
+                  "type": "text"
+                },
+                {
+                  "key": "clef",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces"]
+            },
+            "description": "Upload a music piece PDF. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload ZIP (Bulk Import)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "ZIP file containing PDFs (max 200MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/bulk-upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "bulk-upload"]
+            },
+            "description": "Upload a ZIP file with multiple PDFs for bulk import. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Download Music Piece PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/:id/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", ":id", "download"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "piece-uuid"
+                }
+              ]
+            },
+            "description": "Download the PDF file for a music piece."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Music Piece",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"arranger\": \"Updated Arranger\",\n  \"instrumentId\": \"instrument-uuid\",\n  \"tuning\": \"Bb\",\n  \"groupNumber\": \"1\",\n  \"clef\": \"treble\",\n  \"youtubeUrl\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "piece-uuid"
+                }
+              ]
+            },
+            "description": "Update music piece metadata. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Music Piece",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "piece-uuid"
+                }
+              ]
+            },
+            "description": "Delete a music piece. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Update Pieces",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"piece-uuid-1\", \"piece-uuid-2\"],\n  \"instrumentId\": \"new-instrument-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/bulk-update",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "bulk-update"]
+            },
+            "description": "Bulk update multiple pieces. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Delete Pieces",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"piece-uuid-1\", \"piece-uuid-2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music-pieces/bulk-delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["music-pieces", "bulk-delete"]
+            },
+            "description": "Bulk delete multiple pieces. Admin only."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rehearsals",
+      "description": "Rehearsal management including scheduling, attendance, and repertoire",
+      "item": [
+        {
+          "name": "List Rehearsals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals?startDate=&endDate=",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "description": "Filter by start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "Filter by end date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get rehearsals. Regular members only see rehearsals for their orchestras."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Upcoming Rehearsals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/upcoming?limit=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "upcoming"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "3",
+                  "description": "Number of upcoming rehearsals to return"
+                }
+              ]
+            },
+            "description": "Get the next N upcoming rehearsals."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Rehearsal by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "rehearsal-uuid"
+                }
+              ]
+            },
+            "description": "Get a single rehearsal with pieces and attendance."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Rehearsal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-15\",\n  \"startTime\": \"19:30\",\n  \"endTime\": \"22:00\",\n  \"location\": \"Verenigingsgebouw\",\n  \"type\": \"regular\",\n  \"notes\": \"Voorbereiding zomerconcert\",\n  \"orchestraId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals"]
+            },
+            "description": "Create a rehearsal. Admin/Music Committee/Conductor only. Type: regular, extra, cancelled"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Rehearsal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-15\",\n  \"startTime\": \"19:30\",\n  \"endTime\": \"22:00\",\n  \"location\": \"Verenigingsgebouw\",\n  \"type\": \"regular\",\n  \"notes\": \"Updated notes\",\n  \"orchestraId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "rehearsal-uuid"
+                }
+              ]
+            },
+            "description": "Update a rehearsal. Admin/Music Committee/Conductor only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Rehearsal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "rehearsal-uuid"
+                }
+              ]
+            },
+            "description": "Delete a rehearsal. Admin/Music Committee/Conductor only."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Rehearsal Pieces",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pieces\": [\n    { \"title\": \"Opening March\", \"notes\": \"Start at bar 24\" },\n    { \"title\": \"Concerto in D\", \"notes\": \"\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/:id/pieces",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", ":id", "pieces"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "rehearsal-uuid"
+                }
+              ]
+            },
+            "description": "Set pieces for a rehearsal (replaces all existing pieces)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/attendance/summary?from=2026-01-01&to=2026-12-31&orchestraId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "attendance", "summary"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "description": "End date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "orchestraId",
+                  "value": "",
+                  "description": "Optional orchestra filter"
+                }
+              ]
+            },
+            "description": "Get attendance summary per person for a date range."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Default Days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/default-days",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "default-days"]
+            },
+            "description": "Get default rehearsal days (recurring schedule)."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Default Day",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayOfWeek\": 2,\n  \"startTime\": \"19:30\",\n  \"endTime\": \"22:00\",\n  \"location\": \"Verenigingsgebouw\",\n  \"orchestraId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/default-days",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "default-days"]
+            },
+            "description": "Add a default rehearsal day. dayOfWeek: 0=Sunday, 1=Monday, etc."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Default Day",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayOfWeek\": 2,\n  \"startTime\": \"19:30\",\n  \"endTime\": \"22:00\",\n  \"location\": \"New Location\",\n  \"orchestraId\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/default-days/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "default-days", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "default-day-uuid"
+                }
+              ]
+            },
+            "description": "Update a default rehearsal day."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Default Day",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/default-days/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "default-days", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "default-day-uuid"
+                }
+              ]
+            },
+            "description": "Delete a default rehearsal day."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Rehearsals from Defaults",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "generate"]
+            },
+            "description": "Generate rehearsals for a date range from default days."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Recurring Rehearsals (RRULE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rrule\": \"FREQ=WEEKLY;BYDAY=TU;COUNT=10\",\n  \"startTime\": \"19:30\",\n  \"endTime\": \"22:00\",\n  \"location\": \"Verenigingsgebouw\",\n  \"orchestraId\": \"\",\n  \"until\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/recurring",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "recurring"]
+            },
+            "description": "Create recurring rehearsals from an RRULE."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Recurring Series",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/rehearsals/series/:seriesId?futureOnly=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["rehearsals", "series", ":seriesId"],
+              "query": [
+                {
+                  "key": "futureOnly",
+                  "value": "false",
+                  "description": "Set to true to only delete future rehearsals"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "seriesId",
+                  "value": "series-uuid"
+                }
+              ]
+            },
+            "description": "Delete all rehearsals in a recurring series."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Concerts",
+      "description": "Concert management including program, attendance, and media",
+      "item": [
+        {
+          "name": "List Concerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts?page=1&limit=25&search=&year=&concertType=",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "year",
+                  "value": ""
+                },
+                {
+                  "key": "concertType",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Get all concerts with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Concert Years",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/years",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", "years"]
+            },
+            "description": "Get list of years with concerts."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Concert by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Get single concert with full details including program, media, and attendance."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Concert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zomerconcert 2026\",\n  \"date\": \"2026-07-15\",\n  \"endDate\": \"\",\n  \"location\": \"Muziekgebouw\",\n  \"venueType\": \"indoor\",\n  \"concertType\": \"summer\",\n  \"description\": \"Annual summer concert\",\n  \"notes\": \"Internal notes\",\n  \"wheelchairSpaces\": 4,\n  \"companionSpaces\": 4,\n  \"hearingLoopAvailable\": true,\n  \"accessibleParkingInfo\": \"Parking available at rear entrance\",\n  \"accessibilityInfo\": \"Wheelchair accessible\",\n  \"accessibilityContactEmail\": \"access@harmonie.nl\",\n  \"accessibilityContactPhone\": \"+31612345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts"]
+            },
+            "description": "Create a new concert. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Concert",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Concert Name\",\n  \"location\": \"New Venue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Update a concert. Admin/Music Committee only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Concert",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Delete a concert. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Program Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"musicTitleId\": \"\",\n  \"title\": \"Opening March\",\n  \"composer\": \"John Smith\",\n  \"arranger\": \"Jane Doe\",\n  \"sortOrder\": 0,\n  \"notes\": \"\",\n  \"partOfSet\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/program",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "program"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Add item to concert program."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Program Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"composer\": \"Updated Composer\",\n  \"sortOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/program/:programId",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "program", ":programId"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                },
+                {
+                  "key": "programId",
+                  "value": "program-item-uuid"
+                }
+              ]
+            },
+            "description": "Update a program item."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Program Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/program/:programId",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "program", ":programId"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                },
+                {
+                  "key": "programId",
+                  "value": "program-item-uuid"
+                }
+              ]
+            },
+            "description": "Remove a program item."
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Program Items",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"id\": \"item-uuid-1\", \"sortOrder\": 0 },\n    { \"id\": \"item-uuid-2\", \"sortOrder\": 1 },\n    { \"id\": \"item-uuid-3\", \"sortOrder\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/program/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "program", "reorder"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Reorder program items."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Concert Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/types",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", "types"]
+            },
+            "description": "Get concert types and media types."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Concert Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/statistics",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", "statistics"]
+            },
+            "description": "Get concert statistics including most played pieces."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Piece History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/piece-history/:title",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", "piece-history", ":title"],
+              "variable": [
+                {
+                  "key": "title",
+                  "value": "Opening March"
+                }
+              ]
+            },
+            "description": "Get when a specific piece was last played."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Prediction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/attendance-prediction",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "attendance-prediction"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Get predicted attendance for a concert based on historical data. Admin/Music Committee/Conductor only."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Buma/Stemra Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/buma-stemra-export?startDate=2025-01-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", "buma-stemra-export"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                }
+              ]
+            },
+            "description": "Export played pieces for Buma/Stemra report as CSV."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "description": "Concert ticket management and sales",
+      "item": [
+        {
+          "name": "Get Available Tickets",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "tickets"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Get available ticket types for a concert. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Ticket Order",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"ticketTypeId\": \"ticket-type-uuid\", \"quantity\": 2 }\n  ],\n  \"buyerName\": \"Jan Janssen\",\n  \"buyerEmail\": \"jan@example.com\",\n  \"buyerPhone\": \"+31612345678\",\n  \"notes\": \"\",\n  \"language\": \"nl\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/concerts/:id/tickets/order",
+              "host": ["{{baseUrl}}"],
+              "path": ["concerts", ":id", "tickets", "order"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "concert-uuid"
+                }
+              ]
+            },
+            "description": "Create a ticket order. Public endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "description": "Association settings including branding, theme, and SMTP configuration",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            },
+            "description": "Get association settings including name, logo, and theme."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Harmonie Muziekvereniging\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            },
+            "description": "Update association settings. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Theme",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/theme",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "theme"]
+            },
+            "description": "Get theme settings. Public endpoint (needed for login page)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Theme",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": {\n    \"primaryColor\": \"#2563eb\",\n    \"primaryDarkColor\": \"#1d4ed8\",\n    \"secondaryColor\": \"#64748b\",\n    \"successColor\": \"#22c55e\",\n    \"dangerColor\": \"#ef4444\",\n    \"warningColor\": \"#f59e0b\",\n    \"backgroundColor\": \"#ffffff\",\n    \"surfaceColor\": \"#f8fafc\",\n    \"textColor\": \"#1e293b\",\n    \"textLightColor\": \"#64748b\",\n    \"borderColor\": \"#e2e8f0\",\n    \"fontFamily\": \"system\",\n    \"fontSizeBase\": 16,\n    \"borderRadius\": 0.5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/theme",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "theme"]
+            },
+            "description": "Update theme settings. Admin only. Set theme to null to reset."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Branding",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/branding",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "branding"]
+            },
+            "description": "Get public branding (logo + name). Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Logo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "description": "Logo file (PNG, JPG, SVG, or WebP, max 2MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "logo"]
+            },
+            "description": "Upload association logo. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Logo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "logo"]
+            },
+            "description": "Remove association logo. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Logo File",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/logo/:filename",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "logo", ":filename"],
+              "variable": [
+                {
+                  "key": "filename",
+                  "value": "logo.png"
+                }
+              ]
+            },
+            "description": "Serve logo file. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Get SMTP Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings/smtp",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "smtp"]
+            },
+            "description": "Get SMTP configuration. Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Update SMTP Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"host\": \"smtp.example.com\",\n  \"port\": 587,\n  \"secure\": false,\n  \"user\": \"smtp-user\",\n  \"password\": \"smtp-password\",\n  \"from\": \"noreply@harmonie.nl\",\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/smtp",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings", "smtp"]
+            },
+            "description": "Save SMTP configuration. Admin only."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

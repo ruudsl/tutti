@@ -58,6 +58,31 @@ function setGlobalState(update: Partial<KeyboardShortcutsState>) {
   stateListeners.forEach((listener) => listener());
 }
 
+/**
+ * @description Hook for accessing global keyboard shortcuts state.
+ * Provides state and controls for the shortcuts help dialog and pending sequences.
+ *
+ * @returns {Object} Shortcuts state and controls
+ * @returns {boolean} returns.isHelpOpen - Whether help dialog is open
+ * @returns {string | null} returns.pendingSequence - Current pending key sequence (e.g., 'G')
+ * @returns {Function} returns.openHelp - Open the help dialog
+ * @returns {Function} returns.closeHelp - Close the help dialog
+ * @returns {Function} returns.toggleHelp - Toggle the help dialog
+ *
+ * @example
+ * ```tsx
+ * function ShortcutsHelpDialog() {
+ *   const { isHelpOpen, closeHelp, pendingSequence } = useKeyboardShortcutsState();
+ *
+ *   return (
+ *     <>
+ *       {pendingSequence && <PendingKeyIndicator sequence={pendingSequence} />}
+ *       {isHelpOpen && <HelpModal onClose={closeHelp} />}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
 export function useKeyboardShortcutsState() {
   const [state, setState] = useState(globalState);
 
@@ -79,6 +104,39 @@ export function useKeyboardShortcutsState() {
 
 const EMPTY_SHORTCUTS: Shortcut[] = [];
 
+/**
+ * @description Hook for registering keyboard shortcuts with support for modifier keys and sequences.
+ * Provides default navigation shortcuts and allows custom shortcut registration.
+ * Supports key sequences like 'G H' for go-to navigation.
+ *
+ * @param {Shortcut[]} additionalShortcuts - Additional shortcuts to register
+ *
+ * @returns {Shortcut[]} All registered shortcuts (default + additional)
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const shortcuts = useKeyboardShortcuts([
+ *     {
+ *       key: 'n',
+ *       ctrl: true,
+ *       action: () => openNewItemDialog(),
+ *       description: 'shortcuts.newItem',
+ *       category: 'actions'
+ *     },
+ *     {
+ *       key: 'd',
+ *       sequence: 'g',
+ *       action: () => navigate('/dashboard'),
+ *       description: 'shortcuts.goDashboard',
+ *       category: 'navigation'
+ *     }
+ *   ]);
+ *
+ *   return <div>Press ? for shortcuts help</div>;
+ * }
+ * ```
+ */
 export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHORTCUTS) {
   const navigate = useNavigate();
   const sequenceTimeoutRef = useRef<number | null>(null);
@@ -277,7 +335,34 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
   return allShortcuts;
 }
 
-// Hook to get formatted shortcut labels
+/**
+ * @description Hook for getting formatted keyboard shortcut labels grouped by category.
+ * Useful for displaying a shortcuts help dialog.
+ *
+ * @returns {Record<string, Array<{label: string, description: string}>>} Shortcuts grouped by category
+ *
+ * @example
+ * ```tsx
+ * function ShortcutsHelp() {
+ *   const groupedShortcuts = useKeyboardShortcutsHelp();
+ *
+ *   return (
+ *     <div>
+ *       {Object.entries(groupedShortcuts).map(([category, shortcuts]) => (
+ *         <section key={category}>
+ *           <h3>{category}</h3>
+ *           {shortcuts.map(({ label, description }) => (
+ *             <div key={label}>
+ *               <kbd>{label}</kbd> <span>{t(description)}</span>
+ *             </div>
+ *           ))}
+ *         </section>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useKeyboardShortcutsHelp() {
   const shortcuts = useKeyboardShortcuts();
 
@@ -332,7 +417,26 @@ export function useKeyboardShortcutsHelp() {
   return groupedShortcuts;
 }
 
-// Hook to listen for specific shortcut events
+/**
+ * @description Hook for listening to specific shortcut events emitted by the keyboard system.
+ * Useful for components that need to respond to shortcuts without registering them.
+ *
+ * @param {string} event - The event name to listen for (e.g., 'openSearch', 'save', 'close')
+ * @param {Function} callback - Function to call when event is triggered
+ * @param {React.DependencyList} deps - Dependencies for the callback
+ *
+ * @example
+ * ```tsx
+ * function SearchDialog() {
+ *   const [isOpen, setIsOpen] = useState(false);
+ *
+ *   useShortcutEvent('openSearch', () => setIsOpen(true), []);
+ *   useShortcutEvent('close', () => setIsOpen(false), []);
+ *
+ *   return isOpen ? <SearchModal onClose={() => setIsOpen(false)} /> : null;
+ * }
+ * ```
+ */
 export function useShortcutEvent(
   event: string,
   callback: () => void,

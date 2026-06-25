@@ -41,6 +41,53 @@ type EventCallback<T> = (data: T) => void;
 
 const SOCKET_URL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
+/**
+ * @description Hook for real-time WebSocket communication with the server.
+ * Manages connection lifecycle, authentication, and provides methods for
+ * chat, seating updates, notifications, and presence tracking.
+ *
+ * @returns {Object} WebSocket state and methods
+ * @returns {boolean} returns.isConnected - Whether WebSocket is connected
+ * @returns {Object} returns.lastMessage - Most recent message received
+ * @returns {Function} returns.connect - Manually connect to WebSocket
+ * @returns {Function} returns.disconnect - Disconnect from WebSocket
+ * @returns {Function} returns.emit - Send a custom event
+ * @returns {Function} returns.subscribe - Subscribe to a custom event
+ * @returns {Function} returns.sendChatMessage - Send a chat message
+ * @returns {Function} returns.setTyping - Update typing indicator
+ * @returns {Function} returns.onChatMessage - Subscribe to chat messages
+ * @returns {Function} returns.onTyping - Subscribe to typing indicators
+ * @returns {Function} returns.updateSeating - Update seating arrangement
+ * @returns {Function} returns.onSeatingUpdate - Subscribe to seating changes
+ * @returns {Function} returns.onNotification - Subscribe to notifications
+ * @returns {Function} returns.updatePresence - Update user presence
+ *
+ * @example
+ * ```tsx
+ * function ChatRoom({ orchestraId }: { orchestraId: string }) {
+ *   const { isConnected, sendChatMessage, onChatMessage, setTyping } = useWebSocket();
+ *   const [messages, setMessages] = useState<ChatMessage[]>([]);
+ *
+ *   useEffect(() => {
+ *     return onChatMessage((msg) => {
+ *       setMessages((prev) => [...prev, msg]);
+ *     });
+ *   }, [onChatMessage]);
+ *
+ *   const handleSend = (text: string) => {
+ *     sendChatMessage(text, orchestraId);
+ *   };
+ *
+ *   return (
+ *     <div>
+ *       <ConnectionStatus connected={isConnected} />
+ *       <MessageList messages={messages} />
+ *       <ChatInput onSend={handleSend} onTyping={setTyping} />
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useWebSocket() {
   const { user } = useAuth();
   const socketRef = useRef<Socket | null>(null);

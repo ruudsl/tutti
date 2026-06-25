@@ -55,6 +55,58 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
   return response;
 }
 
+/**
+ * @description Hook for full-text search with autocomplete, recent searches, and keyboard navigation.
+ * Provides debounced search, result grouping by type, and manages search state.
+ *
+ * @param {string} initialQuery - Initial search query (default: '')
+ * @param {SearchFilters} filters - Filter options (type, orchestraId)
+ *
+ * @returns {Object} Search state and controls
+ * @returns {string} returns.query - Current search query
+ * @returns {SearchResult[]} returns.results - Search results
+ * @returns {Record<string, SearchResult[]>} returns.groupedResults - Results grouped by type
+ * @returns {string[]} returns.suggestions - Autocomplete suggestions
+ * @returns {RecentSearch[]} returns.recentSearches - User's recent searches
+ * @returns {boolean} returns.isLoading - Whether search is in progress
+ * @returns {string | null} returns.error - Error message if search failed
+ * @returns {number} returns.selectedIndex - Currently selected result index
+ * @returns {Function} returns.setQuery - Update search query
+ * @returns {Function} returns.search - Trigger search manually
+ * @returns {Function} returns.saveRecentSearch - Save a search to history
+ * @returns {Function} returns.deleteRecentSearch - Delete a recent search
+ * @returns {Function} returns.clearRecentSearches - Clear all recent searches
+ * @returns {Function} returns.handleKeyDown - Keyboard navigation handler
+ * @returns {Function} returns.getSelectedResult - Get currently selected result
+ *
+ * @example
+ * ```tsx
+ * function SearchDialog() {
+ *   const {
+ *     query, setQuery, results, groupedResults,
+ *     isLoading, selectedIndex, handleKeyDown, getSelectedResult
+ *   } = useSearch();
+ *
+ *   const handleSubmit = () => {
+ *     const selected = getSelectedResult();
+ *     if (selected) navigate(selected.path);
+ *   };
+ *
+ *   return (
+ *     <div onKeyDown={handleKeyDown}>
+ *       <input
+ *         value={query}
+ *         onChange={(e) => setQuery(e.target.value)}
+ *         onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+ *       />
+ *       {isLoading ? <Spinner /> : (
+ *         <SearchResults results={results} selectedIndex={selectedIndex} />
+ *       )}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -258,7 +310,24 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   };
 }
 
-// Hook for category labels
+/**
+ * @description Hook that returns localized labels and icons for search result categories.
+ *
+ * @returns {Record<string, {label: string, icon: string}>} Category labels and icons
+ *
+ * @example
+ * ```tsx
+ * function CategoryHeader({ type }: { type: string }) {
+ *   const labels = useSearchCategoryLabels();
+ *   const category = labels[type];
+ *   return (
+ *     <h3>
+ *       <Icon name={category.icon} /> {category.label}
+ *     </h3>
+ *   );
+ * }
+ * ```
+ */
 export function useSearchCategoryLabels() {
   return {
     music: { label: 'Muziek', icon: 'music' },

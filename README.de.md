@@ -55,7 +55,7 @@ cd tutti
 # Abhängigkeiten installieren
 npm install
 
-# Konfiguration erstellen
+# Konfiguration erstellen (siehe .env.example für alle 69 dokumentierten Variablen)
 cp backend/.env.example backend/.env
 
 # Entwicklungsserver starten
@@ -127,14 +127,61 @@ Siehe [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) für Self-Hosting-Optionen.
 
 ## Dokumentation
 
+### Benutzerdokumentation
+
 | Dokument | Beschreibung |
 |---|---|
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | Vollständige Benutzeranleitung (Niederländisch) |
 | [FEATURES.md](docs/FEATURES.md) | Vollständige Funktionsliste |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment-Anleitung für Render/Vercel/Docker |
-| [ADMIN.md](docs/ADMIN.md) | Administrationshandbuch, Rollen, Super-Admin |
-| [API.md](docs/API.md) | API-Dokumentation |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systemarchitektur und Designentscheidungen |
+| [KEYBOARD_SHORTCUTS.md](docs/KEYBOARD_SHORTCUTS.md) | Tastenkürzel-Referenz |
+| [MOBILE_APP.md](docs/MOBILE_APP.md) | Mobile App / PWA-Anleitung |
+| [FAQ.md](docs/FAQ.md) | Häufig gestellte Fragen (Niederländisch) |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Fehlerbehebung (Niederländisch) |
+
+### Administration & Betrieb
+
+| Dokument | Beschreibung |
+|---|---|
+| [ADMIN.md](docs/ADMIN.md) | Administrationshandbuch |
+| [ROLE_PERMISSIONS.md](docs/ROLE_PERMISSIONS.md) | Rollenbasierte Berechtigungsmatrix |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment-Anleitung (Render/Vercel/Docker) |
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Self-Hosting-Anleitung |
+| [MONITORING.md](docs/MONITORING.md) | Monitoring & Observability |
+
+### Entwicklerdokumentation
+
+| Dokument | Beschreibung |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Systemarchitektur |
+| [DATABASE.md](docs/DATABASE.md) | Datenbankschema & ERD |
+| [API.md](docs/API.md) | REST-API-Dokumentation |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Authentifizierungsabläufe & JWT/MFA |
+| [WEBSOCKET.md](docs/WEBSOCKET.md) | WebSocket-Events-Referenz |
+| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend-State-Patterns |
+| [HOOKS.md](docs/HOOKS.md) | React-Hooks-Dokumentation |
+| [TESTING.md](docs/TESTING.md) | Teststrategie & Richtlinien |
+| [THEMING.md](docs/THEMING.md) | Theming-System |
+
+### Integration & Compliance
+
+| Dokument | Beschreibung |
+|---|---|
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md) | Externe Integrationen |
+| [GDPR.md](docs/GDPR.md) | DSGVO-Compliance-Anleitung |
+| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | E-Mail-Vorlagen-Referenz |
+| [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Druckvorlagen (Tickets, Poster) |
+
+### Architekturentscheidungen
+
+Siehe [docs/adr/](docs/adr/) für Architecture Decision Records (ADRs).
+
+### API-Tests
+
+Importieren Sie die [Postman-Sammlung](docs/postman/tutti-api-collection.json) für interaktive API-Tests.
+
+## Sicherheit
+
+Siehe [SECURITY.md](SECURITY.md) für unsere Sicherheitsrichtlinie und das Melden von Schwachstellen.
 
 ## Tech Stack
 
