@@ -549,6 +549,14 @@ export const getTransferByCode = async (transferCode: string): Promise<TicketTra
   return data;
 };
 
+/**
+ * Retrieves ticket transfer history.
+ *
+ * @description Fetches complete transfer history for the current user,
+ * including both sent and received transfers.
+ * @returns {Promise<TicketTransferHistory[]>} Array of historical transfer records
+ * @throws {AxiosError} When user is not authenticated (401)
+ */
 export const getTransferHistory = async (): Promise<TicketTransferHistory[]> => {
   const { data } = await api.get('/tickets/transfers/history');
   return data;
