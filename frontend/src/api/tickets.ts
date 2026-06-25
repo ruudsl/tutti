@@ -150,6 +150,14 @@ export const validateTicket = async (code: string, concertId?: string): Promise<
   return data;
 };
 
+/**
+ * Retrieves tickets owned by the current user.
+ *
+ * @description Fetches all tickets associated with the logged-in user's email.
+ * Includes both upcoming and past concert tickets.
+ * @returns {Promise<Ticket[]>} Array of user's tickets
+ * @throws {AxiosError} When user is not authenticated (401)
+ */
 export const getMyTickets = async (): Promise<Ticket[]> => {
   const { data } = await api.get('/tickets/my');
   return data;
