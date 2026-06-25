@@ -189,6 +189,7 @@
     "availability": "Verfügbarkeit",
     "practice": "Üben",
     "seasonPlanner": "Saisonplanung",
+    "attendanceAnalytics": "Anwesenheitsanalyse",
     "externalMusicians": "Externe Musiker",
     "replacementRequests": "Vertretungsanfragen",
     "stageDesigner": "Bühnenaufstellung"
@@ -1362,6 +1363,43 @@
       "play_audio": "Audio abgespielt"
     }
   },
+  "attendanceAnalytics": {
+    "title": "Anwesenheitsanalyse",
+    "avgAttendance": "Durchschn. Teilnahme",
+    "totalRehearsals": "Proben (6 Mon.)",
+    "mostReliableSection": "Zuverlässigste Sektion",
+    "activeMembers": "Aktive Mitglieder",
+    "trendOverTime": "Anwesenheitstrend",
+    "bySection": "Nach Sektion",
+    "currentMonth": "Dieser Monat",
+    "currentMonthRate": "Aktuelle Teilnahme",
+    "byDayOfWeek": "Nach Wochentag",
+    "atRiskMembers": "Aufmerksamkeit erforderlich",
+    "noAtRiskMembers": "Keine Mitglieder mit sinkender Anwesenheit!",
+    "predictions": "Prognosen",
+    "expected": "Erwartet",
+    "alerts": "Hinweise",
+    "noUpcoming": "Keine bevorstehenden Proben",
+    "understaffed": "Sektion(en)",
+    "predictionNote": "Basierend auf historischen Mustern nach Wochentag",
+    "leaderboard": "Top-Mitglieder",
+    "leaderboardHidden": "Klicken Sie auf \"Anzeigen\" um die Rangliste zu sehen",
+    "noData": "Keine Daten verfügbar",
+    "attendanceRate": "Anwesenheit",
+    "uniqueAttendees": "Einzelne Anwesende",
+    "members": "Mitglieder",
+    "rehearsals": "Proben",
+    "target": "Ziel"
+  },
+  "days": {
+    "sunday": "So",
+    "monday": "Mo",
+    "tuesday": "Di",
+    "wednesday": "Mi",
+    "thursday": "Do",
+    "friday": "Fr",
+    "saturday": "Sa"
+  },
   "users": {
     "title": "Mitglieder",
     "newMember": "Neues Mitglied",
@@ -1957,6 +1995,7 @@
     "pdfTools": "PDF-Tools - Harmonie",
     "loans": "Ausleihen - Harmonie",
     "statistics": "Statistiken - Harmonie",
+    "attendanceAnalytics": "Anwesenheitsanalyse - Harmonie",
     "users": "Mitglieder - Harmonie",
     "orchestras": "Orchester - Harmonie",
     "lists": "Musiklisten - Harmonie",
@@ -5502,7 +5541,6 @@
     "print": "Drucken"
   },
   "pageTitle": {
-    "holidaySettings": "Schulferien - Harmonie",
     "stageDesigner": "Bühnenaufstellung Designer",
     "concertStageSetup": "Konzert-Bühnenaufstellung"
   }
