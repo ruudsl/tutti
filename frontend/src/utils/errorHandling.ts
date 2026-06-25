@@ -1,12 +1,44 @@
+/**
+ * Error Handling Utilities Module
+ *
+ * Provides error handling utilities including custom error classes,
+ * type guards, and error message extraction functions.
+ *
+ * @module utils/errorHandling
+ */
+
 import { AxiosError } from 'axios';
 
+/**
+ * Structure of API error responses from the backend.
+ */
 export interface ApiErrorResponse {
+  /** Human-readable error message */
   error: string;
+  /** Additional error details */
   details?: string;
+  /** Machine-readable error code */
   code?: string;
 }
 
+/**
+ * Custom application error class with additional metadata.
+ *
+ * @description Extends Error with status code, error code, and optional details.
+ * Useful for consistent error handling throughout the application.
+ * @example
+ * throw new AppError('User not found', 'NOT_FOUND', 404);
+ * throw new AppError('Validation failed', 'VALIDATION_ERROR', 422, 'Email is required');
+ */
 export class AppError extends Error {
+  /**
+   * Creates a new AppError instance.
+   *
+   * @param {string} message - Human-readable error message
+   * @param {string} [code='UNKNOWN_ERROR'] - Machine-readable error code
+   * @param {number} [statusCode=500] - HTTP status code
+   * @param {string} [details] - Additional error details
+   */
   constructor(
     message: string,
     public readonly code: string = 'UNKNOWN_ERROR',
@@ -18,6 +50,21 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * Type guard for Axios errors.
+ *
+ * @description Checks if an error is an Axios error with an API error response.
+ * @param {unknown} error - Error to check
+ * @returns {boolean} True if the error is an AxiosError
+ * @example
+ * try {
+ *   await api.get('/users');
+ * } catch (error) {
+ *   if (isAxiosError(error)) {
+ *     console.log(error.response?.status);
+ *   }
+ * }
+ */
 export function isAxiosError(error: unknown): error is AxiosError<ApiErrorResponse> {
   return (
     typeof error === 'object' &&
@@ -27,6 +74,13 @@ export function isAxiosError(error: unknown): error is AxiosError<ApiErrorRespon
   );
 }
 
+/**
+ * Type guard for AppError instances.
+ *
+ * @description Checks if an error is an instance of AppError.
+ * @param {unknown} error - Error to check
+ * @returns {boolean} True if the error is an AppError
+ */
 export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
