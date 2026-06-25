@@ -11,7 +11,7 @@ import { GlobalSearch, useGlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationCenter';
 import { RecentItems } from './RecentItems';
 import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHelp';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts, useShortcutEvent } from '../hooks/useKeyboardShortcuts';
 import { getSettings } from '../api';
 import { Icon, type IconName } from './Icon';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
@@ -203,6 +203,10 @@ export default function Layout() {
 
   // Global search state
   const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = useGlobalSearch();
+
+  // Connect keyboard shortcuts to actions
+  useShortcutEvent('openSearch', openSearch, [openSearch]);
+  useShortcutEvent('close', closeSearch, [closeSearch]);
 
   // Close mobile menu on route change
   useEffect(() => {
