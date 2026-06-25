@@ -401,16 +401,47 @@ export const getPaymentDetails = async (orderId: string): Promise<PaymentDetails
   return data;
 };
 
+/**
+ * Retrieves sales predictions for a concert.
+ *
+ * @description Fetches AI-generated predictions for expected ticket sales based on
+ * historical data and current trends.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<SalesPredictionResponse>} Sales predictions and confidence intervals
+ * @throws {AxiosError} When concert not found or insufficient data for predictions
+ */
 export const getSalesPredictions = async (concertId: string): Promise<SalesPredictionResponse> => {
   const { data } = await api.get(`/concerts/${concertId}/tickets/predictions`);
   return data;
 };
 
+/**
+ * Retrieves scanned tickets for a concert.
+ *
+ * @description Fetches list of tickets that have been scanned for entry at a concert.
+ * Useful for tracking real-time attendance.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<ScannedTicketsResponse>} Scanned ticket records with timestamps
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const getScannedTickets = async (concertId: string): Promise<ScannedTicketsResponse> => {
   const { data } = await api.get(`/concerts/${concertId}/scanned-tickets`);
   return data;
 };
 
+/**
+ * Exports ticket sales data to a CSV file.
+ *
+ * @description Downloads a CSV file containing filtered ticket sales data.
+ * Triggers a browser file download with date-stamped filename.
+ * @param {Object} [params] - Filter parameters
+ * @param {string} [params.concertId] - Filter by concert
+ * @param {string} [params.status] - Filter by order status
+ * @param {string} [params.startDate] - Filter by start date (ISO format)
+ * @param {string} [params.endDate] - Filter by end date (ISO format)
+ * @returns {Promise<void>} Resolves when download is initiated
+ * @throws {AxiosError} When user lacks admin permission
+ */
 export const exportTicketSalesCsv = async (params?: {
   concertId?: string;
   status?: string;
