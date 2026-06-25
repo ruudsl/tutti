@@ -98,8 +98,28 @@ export function dismissToast(toastId: string): void {
 }
 
 /**
- * Show promise toast (loading -> success/error)
- * Includes screen reader announcements for all states
+ * Shows a promise-based toast that transitions through loading, success, and error states.
+ *
+ * @description Displays a loading toast while the promise is pending, then transitions
+ * to success or error based on the promise outcome. Includes screen reader announcements
+ * for all state transitions.
+ * @template T - Type of the promise result
+ * @param {Promise<T>} promise - The promise to track
+ * @param {Object} messages - Messages for each state
+ * @param {string} messages.loading - Message shown while loading
+ * @param {string} messages.success - Message shown on success
+ * @param {string | ((err: unknown) => string)} messages.error - Error message or function to generate one
+ * @returns {Promise<T>} The original promise result
+ * @throws {unknown} Re-throws the original error if the promise rejects
+ * @example
+ * const user = await showPromise(
+ *   saveUser(userData),
+ *   {
+ *     loading: 'Saving user...',
+ *     success: 'User saved!',
+ *     error: (err) => `Failed to save: ${getErrorMessage(err)}`
+ *   }
+ * );
  */
 export function showPromise<T>(
   promise: Promise<T>,

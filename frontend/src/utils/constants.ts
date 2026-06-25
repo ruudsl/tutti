@@ -1,5 +1,17 @@
 /**
- * User roles
+ * Application Constants Module
+ *
+ * Defines constant values used throughout the application including
+ * user roles, route paths, API endpoints, and configuration defaults.
+ *
+ * @module utils/constants
+ */
+
+/**
+ * User role identifiers.
+ *
+ * @description Defines the available roles in the system. Roles determine
+ * user permissions and access levels throughout the application.
  */
 export const ROLES = {
   ADMIN: 'admin',
@@ -11,10 +23,14 @@ export const ROLES = {
   MEMBER: 'member',
 } as const;
 
+/** Type representing valid role values */
 export type Role = typeof ROLES[keyof typeof ROLES];
 
 /**
- * Route paths
+ * Application route paths.
+ *
+ * @description Defines the URL paths for main application routes.
+ * Use these constants instead of hardcoded strings for type safety and maintainability.
  */
 export const ROUTES = {
   LOGIN: '/login',
@@ -30,7 +46,10 @@ export const ROUTES = {
 } as const;
 
 /**
- * API endpoints
+ * API endpoint paths.
+ *
+ * @description Defines the API endpoint paths relative to the API base URL.
+ * Organized by domain (auth, users, etc.).
  */
 export const API = {
   AUTH: {
@@ -48,7 +67,10 @@ export const API = {
 } as const;
 
 /**
- * Local storage keys
+ * Local storage keys.
+ *
+ * @description Keys used for storing data in browser localStorage.
+ * Use these constants to avoid key collisions and typos.
  */
 export const STORAGE_KEYS = {
   TOKEN: 'token',
@@ -56,7 +78,10 @@ export const STORAGE_KEYS = {
 } as const;
 
 /**
- * Pagination defaults
+ * Pagination configuration defaults.
+ *
+ * @description Default values for pagination throughout the application.
+ * Use these when implementing paginated lists and tables.
  */
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
