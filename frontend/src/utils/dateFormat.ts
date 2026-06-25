@@ -292,7 +292,16 @@ export function getDayName(date: Date | string | number, style: 'long' | 'short'
 }
 
 /**
- * Get the month name in Dutch: "januari", "februari", etc.
+ * Gets the month name in Dutch.
+ *
+ * @description Returns the month name in the specified style.
+ * @param {Date | string | number} date - Date to get month name from
+ * @param {'long' | 'short' | 'narrow'} [style='long'] - Name format: 'long' for full name, 'short' for abbreviated, 'narrow' for initial
+ * @returns {string} Month name (e.g., "januari", "jan", "J") or "-" for invalid dates
+ * @example
+ * getMonthName('2026-05-04');          // "mei"
+ * getMonthName('2026-05-04', 'short'); // "mei"
+ * getMonthName('2026-01-04', 'narrow'); // "J"
  */
 export function getMonthName(date: Date | string | number, style: 'long' | 'short' | 'narrow' = 'long'): string {
   const d = toDate(date);
@@ -302,7 +311,14 @@ export function getMonthName(date: Date | string | number, style: 'long' | 'shor
 }
 
 /**
- * Check if a date is today
+ * Checks if a date is today.
+ *
+ * @description Compares the given date to the current date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is today, false otherwise or for invalid dates
+ * @example
+ * isToday(new Date()); // true
+ * isToday('2020-01-01'); // false
  */
 export function isToday(date: Date | string | number): boolean {
   const d = toDate(date);
@@ -317,7 +333,13 @@ export function isToday(date: Date | string | number): boolean {
 }
 
 /**
- * Check if a date is tomorrow
+ * Checks if a date is tomorrow.
+ *
+ * @description Compares the given date to tomorrow's date (ignoring time).
+ * @param {Date | string | number} date - Date to check
+ * @returns {boolean} True if the date is tomorrow, false otherwise or for invalid dates
+ * @example
+ * isTomorrow(new Date(Date.now() + 86400000)); // true
  */
 export function isTomorrow(date: Date | string | number): boolean {
   const d = toDate(date);
