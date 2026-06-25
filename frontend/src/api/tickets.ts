@@ -43,6 +43,32 @@ export const getConcertTickets = async (concertId: string): Promise<ConcertTicke
   return data;
 };
 
+/**
+ * Creates a new ticket order.
+ *
+ * @description Initiates a ticket purchase by reserving tickets and creating an order.
+ * The order must be paid within the expiration time or tickets are released.
+ * @param {string} concertId - The concert identifier
+ * @param {Object} order - Order details
+ * @param {Array<{ticketTypeId: string, quantity: number}>} order.items - Tickets to purchase
+ * @param {string} order.buyerName - Buyer's full name
+ * @param {string} order.buyerEmail - Buyer's email for ticket delivery
+ * @param {string} [order.buyerPhone] - Optional phone number
+ * @param {string} [order.notes] - Optional order notes
+ * @param {string} [order.captchaToken] - CAPTCHA verification token
+ * @returns {Promise<Object>} Order details with payment information
+ * @returns {string} return.orderId - Unique order identifier
+ * @returns {number} return.total - Total order amount
+ * @returns {string} return.expiresAt - ISO timestamp when reservation expires
+ * @returns {Array} return.items - Line items with pricing details
+ * @throws {AxiosError} When tickets unavailable, validation fails, or concert not found
+ * @example
+ * const order = await createTicketOrder('concert-123', {
+ *   items: [{ ticketTypeId: 'type-a', quantity: 2 }],
+ *   buyerName: 'John Doe',
+ *   buyerEmail: 'john@example.com'
+ * });
+ */
 export const createTicketOrder = async (
   concertId: string,
   order: {
@@ -63,11 +89,31 @@ export const createTicketOrder = async (
   return data;
 };
 
+/**
+ * Retrieves a ticket order by ID.
+ *
+ * @description Fetches order details including status, tickets, and payment info.
+ * @param {string} orderId - The order identifier
+ * @returns {Promise<TicketOrder>} Complete order details
+ * @throws {AxiosError} When order not found (404)
+ */
 export const getTicketOrder = async (orderId: string): Promise<TicketOrder> => {
   const { data } = await api.get(`/tickets/orders/${orderId}`);
   return data;
 };
 
+/**
+ * Initiates payment for a ticket order.
+ *
+ * @description Starts the payment process and returns a checkout URL.
+ * The user should be redirected to the checkout URL to complete payment.
+ * @param {string} orderId - The order identifier
+ * @param {Object} payment - Payment options
+ * @param {string} [payment.method] - Payment method (e.g., 'ideal', 'creditcard')
+ * @param {string} [payment.returnUrl] - URL to redirect after payment completion
+ * @returns {Promise<{paymentId: string, checkoutUrl: string}>} Payment ID and checkout redirect URL
+ * @throws {AxiosError} When order not found, already paid, or expired
+ */
 export const payTicketOrder = async (
   orderId: string,
   payment: { method?: string; returnUrl?: string }
