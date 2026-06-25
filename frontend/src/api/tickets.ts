@@ -462,11 +462,32 @@ export const exportTicketSalesCsv = async (params?: {
 };
 
 // Ticket transfers
+
+/**
+ * Retrieves tickets that can be transferred.
+ *
+ * @description Fetches all tickets owned by the current user that are eligible for transfer.
+ * Excludes already transferred, cancelled, or scanned tickets.
+ * @returns {Promise<TransferableTicket[]>} Array of transferable tickets
+ * @throws {AxiosError} When user is not authenticated (401)
+ */
 export const getTransferableTickets = async (): Promise<TransferableTicket[]> => {
   const { data } = await api.get('/tickets/transferable');
   return data;
 };
 
+/**
+ * Initiates a ticket transfer to another person.
+ *
+ * @description Creates a pending transfer that must be accepted by the recipient.
+ * The recipient receives an email with a transfer link.
+ * @param {string} ticketId - The ticket identifier to transfer
+ * @param {Object} transfer - Transfer recipient details
+ * @param {string} transfer.recipientEmail - Email of the person receiving the ticket
+ * @param {string} transfer.recipientName - Name of the recipient
+ * @returns {Promise<{transfer: TicketTransfer, message: string}>} Transfer details and success message
+ * @throws {AxiosError} When ticket not found, not transferable, or already pending transfer
+ */
 export const initiateTicketTransfer = async (
   ticketId: string,
   transfer: { recipientEmail: string; recipientName: string }
@@ -475,21 +496,54 @@ export const initiateTicketTransfer = async (
   return data;
 };
 
+/**
+ * Retrieves pending ticket transfers.
+ *
+ * @description Fetches all pending transfers initiated by the current user.
+ * @returns {Promise<TicketTransfer[]>} Array of pending transfer records
+ * @throws {AxiosError} When user is not authenticated (401)
+ */
 export const getPendingTransfers = async (): Promise<TicketTransfer[]> => {
   const { data } = await api.get('/tickets/transfers');
   return data;
 };
 
+/**
+ * Cancels a pending ticket transfer.
+ *
+ * @description Cancels an outgoing transfer that has not yet been accepted.
+ * The ticket returns to the original owner.
+ * @param {string} transferId - The transfer identifier
+ * @returns {Promise<{success: boolean, message: string}>} Cancellation result
+ * @throws {AxiosError} When transfer not found, already completed, or user not the initiator
+ */
 export const cancelTicketTransfer = async (transferId: string): Promise<{ success: boolean; message: string }> => {
   const { data } = await api.delete(`/tickets/transfers/${transferId}`);
   return data;
 };
 
+/**
+ * Accepts a ticket transfer.
+ *
+ * @description Claims a ticket that was transferred to the current user.
+ * The ticket ownership is transferred upon acceptance.
+ * @param {string} transferCode - The unique transfer code from the transfer link
+ * @returns {Promise<{success: boolean, ticket: Ticket, message: string}>} Accepted ticket details
+ * @throws {AxiosError} When transfer not found, expired, or already accepted
+ */
 export const acceptTicketTransfer = async (transferCode: string): Promise<{ success: boolean; ticket: Ticket; message: string }> => {
   const { data } = await api.post(`/tickets/transfers/${transferCode}/accept`);
   return data;
 };
 
+/**
+ * Retrieves transfer details by transfer code.
+ *
+ * @description Fetches transfer information for display before accepting.
+ * @param {string} transferCode - The unique transfer code
+ * @returns {Promise<TicketTransfer>} Transfer details including ticket and sender info
+ * @throws {AxiosError} When transfer not found or expired
+ */
 export const getTransferByCode = async (transferCode: string): Promise<TicketTransfer> => {
   const { data } = await api.get(`/tickets/transfers/${transferCode}`);
   return data;
