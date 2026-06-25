@@ -20,7 +20,7 @@
     "@tanstack/react-query-persist-client": "^5.101.0",
     "@types/react-window": "^1.8.8",
     "axios": "^1.16.1",
-    "date-fns": "^4.3.0",
+    "date-fns": "^4.4.0",
     "dexie": "^4.4.2",
     "dompurify": "^3.4.11",
     "html2canvas": "^1.4.1",
