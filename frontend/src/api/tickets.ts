@@ -332,17 +332,50 @@ export const refundOrder = async (orderId: string, reason?: string): Promise<{ s
   return data;
 };
 
+/**
+ * Simulates payment for testing purposes.
+ *
+ * @description Mock payment endpoint for development/testing. Not available in production.
+ * @param {string} orderId - The order identifier
+ * @param {'pay' | 'cancel'} action - Whether to simulate successful payment or cancellation
+ * @returns {Promise<{success: boolean}>} Mock operation result
+ * @throws {AxiosError} When order not found or endpoint disabled in production
+ */
 export const mockPayment = async (orderId: string, action: 'pay' | 'cancel'): Promise<{ success: boolean }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/mock-payment`, { action });
   return data;
 };
 
 // Ticket dashboard & sales
+
+/**
+ * Retrieves the ticket dashboard for a concert.
+ *
+ * @description Fetches comprehensive dashboard data including sales trends, revenue,
+ * and real-time statistics for admin overview.
+ * @param {string} concertId - The concert identifier
+ * @returns {Promise<TicketDashboard>} Dashboard data with metrics and charts
+ * @throws {AxiosError} When concert not found or user lacks admin permission
+ */
 export const getTicketDashboard = async (concertId: string): Promise<TicketDashboard> => {
   const { data } = await api.get(`/tickets/dashboard/${concertId}`);
   return data;
 };
 
+/**
+ * Retrieves ticket sales data with filtering and pagination.
+ *
+ * @description Fetches sales records with optional filters for concert, status, and date range.
+ * @param {Object} [params] - Query parameters
+ * @param {string} [params.concertId] - Filter by concert
+ * @param {string} [params.status] - Filter by order status
+ * @param {string} [params.startDate] - Filter by start date (ISO format)
+ * @param {string} [params.endDate] - Filter by end date (ISO format)
+ * @param {number} [params.page] - Page number for pagination
+ * @param {number} [params.limit] - Items per page
+ * @returns {Promise<TicketSalesResponse>} Paginated sales data
+ * @throws {AxiosError} When user lacks admin permission
+ */
 export const getTicketSales = async (params?: {
   concertId?: string;
   status?: string;
@@ -355,6 +388,14 @@ export const getTicketSales = async (params?: {
   return data;
 };
 
+/**
+ * Retrieves payment details for an order.
+ *
+ * @description Fetches detailed payment information including provider data and transaction history.
+ * @param {string} orderId - The order identifier
+ * @returns {Promise<PaymentDetails>} Payment details and transaction info
+ * @throws {AxiosError} When order not found or user lacks admin permission
+ */
 export const getPaymentDetails = async (orderId: string): Promise<PaymentDetails> => {
   const { data } = await api.get(`/tickets/sales/${orderId}/payment-details`);
   return data;
