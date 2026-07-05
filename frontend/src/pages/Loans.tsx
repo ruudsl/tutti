@@ -17,6 +17,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { Icon } from '../components/Icon';
+import LoanReceiptPrinter from '../components/LoanReceiptPrinter';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -53,6 +54,9 @@ export default function Loans() {
   const [borrowerOrganization, setBorrowerOrganization] = useState('');
   const [notes, setNotes] = useState('');
   const [expectedReturn, setExpectedReturn] = useState('');
+
+  // Loan receipt print state
+  const [printLoan, setPrintLoan] = useState<Loan | null>(null);
 
   // Loan history state
   const [historyTitleId, setHistoryTitleId] = useState<string | null>(null);
@@ -331,6 +335,13 @@ export default function Loans() {
                     </td>
                     <td>
                       <div className="flex gap-1">
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => setPrintLoan(loan)}
+                          title={t('printTemplates.loanReceipt.printButton')}
+                        >
+                          {t('printTemplates.loanReceipt.printButton')}
+                        </button>
                         {loan.status !== 'returned' && (
                           <button
                             className="btn btn-success btn-sm"
@@ -519,6 +530,9 @@ export default function Loans() {
           </form>
         </Modal>
       )}
+
+      {/* Loan Receipt Print View */}
+      {printLoan && <LoanReceiptPrinter loan={printLoan} onClose={() => setPrintLoan(null)} />}
 
       {/* Loan History Modal */}
       {historyTitleId && (

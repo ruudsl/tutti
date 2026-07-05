@@ -5441,5 +5441,50 @@
   "seatCards": {
     "cards": "Karten",
     "print": "Drucken"
+  },
+  "printTemplates": {
+    "print": "Drucken",
+    "loanReceipt": {
+      "printButton": "Beleg drucken",
+      "title": "Ausleihbeleg",
+      "borrower": "Entleiher",
+      "organization": "Organisation",
+      "email": "E-Mail-Adresse",
+      "item": "Gegenstand",
+      "arranger": "Arrangeur",
+      "reference": "Referenznummer",
+      "dateOut": "Ausleihdatum",
+      "expectedReturn": "Voraussichtliches Rückgabedatum",
+      "conditionNotes": "Zustand / Anmerkungen",
+      "signatureIssue": "Ausgabe",
+      "signatureReturn": "Rückgabe",
+      "signature": "Unterschrift",
+      "date": "Datum",
+      "issuedBy": "Ausgegeben von"
+    },
+    "invoice": {
+      "printButton": "Rechnung drucken",
+      "title": "Rechnung",
+      "creditNoteTitle": "Gutschrift",
+      "invoiceNumber": "Rechnungsnummer",
+      "invoiceDate": "Rechnungsdatum",
+      "dueDate": "Fälligkeitsdatum",
+      "reference": "Referenz",
+      "billedTo": "Rechnung an",
+      "description": "Beschreibung",
+      "quantity": "Menge",
+      "unitPrice": "Einzelpreis",
+      "vatRate": "MwSt. %",
+      "lineTotal": "Betrag",
+      "subtotal": "Zwischensumme",
+      "vatAmount": "MwSt.",
+      "total": "Gesamt",
+      "amountPaid": "Bereits bezahlt",
+      "amountDue": "Offener Betrag",
+      "paymentInstructions": "Zahlungshinweise",
+      "paymentInstructionsText": "Bitte überweisen Sie den offenen Betrag von {{amount}} bis {{dueDate}} unter Angabe der Rechnungsnummer {{invoiceNumber}}.",
+      "paymentReference": "Zahlungsreferenz",
+      "notes": "Anmerkungen"
+    }
   }
 }

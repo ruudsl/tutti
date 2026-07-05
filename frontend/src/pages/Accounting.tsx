@@ -39,7 +39,9 @@ import {
   RelationType,
   CostCenter,
   Budget,
+  Invoice,
 } from '../api/accounting';
+import InvoicePrinter from '../components/InvoicePrinter';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -81,6 +83,7 @@ export default function Accounting() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showFiscalYearModal, setShowFiscalYearModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
 
   // Fiscal years intentionally have no `enabled` condition: the fiscal year
   // selector in the page header (and the reports/budgets/export logic) needs
@@ -717,6 +720,9 @@ export default function Accounting() {
                         <th>{t('accounting.due')}</th>
                         <th className="text-right">{t('accounting.amount')}</th>
                         <th>{t('common.status')}</th>
+                        <th>
+                          <span className="sr-only">{t('common.actions')}</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -741,6 +747,15 @@ export default function Accounting() {
                             >
                               {t(`accounting.invoiceStatus.${invoice.status}`)}
                             </span>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setPrintInvoice(invoice)}
+                              title={t('printTemplates.invoice.printButton')}
+                            >
+                              {t('printTemplates.print')}
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1120,6 +1135,9 @@ export default function Accounting() {
           }}
         />
       )}
+
+      {/* Invoice Print View */}
+      {printInvoice && <InvoicePrinter invoice={printInvoice} onClose={() => setPrintInvoice(null)} />}
 
       {/* Relation Modal */}
       {showRelationModal && (

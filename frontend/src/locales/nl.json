@@ -5585,6 +5585,51 @@
     "cards": "kaartjes",
     "print": "Afdrukken"
   },
+  "printTemplates": {
+    "print": "Afdrukken",
+    "loanReceipt": {
+      "printButton": "Print bon",
+      "title": "Uitleenbon",
+      "borrower": "Lener",
+      "organization": "Organisatie",
+      "email": "E-mailadres",
+      "item": "Item",
+      "arranger": "arrangeur",
+      "reference": "Referentienummer",
+      "dateOut": "Uitleendatum",
+      "expectedReturn": "Verwachte retourdatum",
+      "conditionNotes": "Conditie / opmerkingen",
+      "signatureIssue": "Uitgifte",
+      "signatureReturn": "Retour",
+      "signature": "Handtekening",
+      "date": "Datum",
+      "issuedBy": "Uitgegeven door"
+    },
+    "invoice": {
+      "printButton": "Print factuur",
+      "title": "Factuur",
+      "creditNoteTitle": "Creditnota",
+      "invoiceNumber": "Factuurnummer",
+      "invoiceDate": "Factuurdatum",
+      "dueDate": "Vervaldatum",
+      "reference": "Referentie",
+      "billedTo": "Factuur aan",
+      "description": "Omschrijving",
+      "quantity": "Aantal",
+      "unitPrice": "Stukprijs",
+      "vatRate": "BTW %",
+      "lineTotal": "Bedrag",
+      "subtotal": "Subtotaal",
+      "vatAmount": "BTW",
+      "total": "Totaal",
+      "amountPaid": "Reeds betaald",
+      "amountDue": "Te betalen",
+      "paymentInstructions": "Betaalinstructies",
+      "paymentInstructionsText": "Gelieve het openstaande bedrag van {{amount}} te voldoen vóór {{dueDate}}, onder vermelding van factuurnummer {{invoiceNumber}}.",
+      "paymentReference": "Betalingskenmerk",
+      "notes": "Opmerkingen"
+    }
+  },
   "pageTitle": {
     "stageDesigner": "Podiumindeling Designer",
     "concertStageSetup": "Concert Podiumindeling"

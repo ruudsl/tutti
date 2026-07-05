@@ -5585,6 +5585,51 @@
     "cards": "cards",
     "print": "Print"
   },
+  "printTemplates": {
+    "print": "Print",
+    "loanReceipt": {
+      "printButton": "Print receipt",
+      "title": "Loan Receipt",
+      "borrower": "Borrower",
+      "organization": "Organization",
+      "email": "Email address",
+      "item": "Item",
+      "arranger": "arranger",
+      "reference": "Reference number",
+      "dateOut": "Loan date",
+      "expectedReturn": "Expected return date",
+      "conditionNotes": "Condition / notes",
+      "signatureIssue": "Issue",
+      "signatureReturn": "Return",
+      "signature": "Signature",
+      "date": "Date",
+      "issuedBy": "Issued by"
+    },
+    "invoice": {
+      "printButton": "Print invoice",
+      "title": "Invoice",
+      "creditNoteTitle": "Credit Note",
+      "invoiceNumber": "Invoice number",
+      "invoiceDate": "Invoice date",
+      "dueDate": "Due date",
+      "reference": "Reference",
+      "billedTo": "Billed to",
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "vatRate": "VAT %",
+      "lineTotal": "Amount",
+      "subtotal": "Subtotal",
+      "vatAmount": "VAT",
+      "total": "Total",
+      "amountPaid": "Amount paid",
+      "amountDue": "Amount due",
+      "paymentInstructions": "Payment instructions",
+      "paymentInstructionsText": "Please pay the outstanding amount of {{amount}} before {{dueDate}}, quoting invoice number {{invoiceNumber}}.",
+      "paymentReference": "Payment reference",
+      "notes": "Notes"
+    }
+  },
   "pageTitle": {
     "stageDesigner": "Stage Layout Designer",
     "concertStageSetup": "Concert Stage Setup"
