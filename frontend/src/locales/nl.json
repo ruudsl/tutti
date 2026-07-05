@@ -1110,7 +1110,13 @@
     "newList": "Nieuwe lijst",
     "newListPlaceholder": "Naam van de nieuwe lijst...",
     "filesFailed": "bestand(en) mislukt",
+    "zipBulkDescription": "Upload een ZIP bestand met meerdere PDF's in één keer.",
     "filesUploaded": "bestand(en) succesvol geüpload"
+  },
+  "publicCalendar": {
+    "upcomingEvents": "Aankomende evenementen",
+    "noUpcomingEvents": "Geen aankomende evenementen",
+    "lastUpdated": "Laatst bijgewerkt"
   },
   "instruments": {
     "title": "Instrumenten",

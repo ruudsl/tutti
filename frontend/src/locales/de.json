@@ -1154,9 +1154,15 @@
     "tip": "Tipp",
     "instrumentTip": "Das Instrument wird automatisch über die Instrumentenliste und Aliasse erkannt.",
     "filesFailed": "Datei(en) fehlgeschlagen",
+    "zipBulkDescription": "Laden Sie eine ZIP-Datei mit mehreren PDFs auf einmal hoch.",
     "filesUploaded": "Datei(en) erfolgreich hochgeladen",
     "newList": "Neue Liste",
     "newListPlaceholder": "Name der neuen Liste..."
+  },
+  "publicCalendar": {
+    "upcomingEvents": "Kommende Veranstaltungen",
+    "noUpcomingEvents": "Keine kommenden Veranstaltungen",
+    "lastUpdated": "Zuletzt aktualisiert"
   },
   "instruments": {
     "title": "Instrumente",

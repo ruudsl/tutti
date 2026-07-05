@@ -2,6 +2,7 @@ import { formatCurrency } from '../utils/format';
 import { currentLocale } from '../utils/locale';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 
 interface PublicEvent {
@@ -162,6 +163,7 @@ export default function PublicCalendar() {
 }
 
 function CalendarEmbed({ data }: { data: CalendarData }) {
+  const { t } = useTranslation();
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
@@ -188,13 +190,13 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">{data.association.name}</h1>
-          <p className="text-base-content/70">Upcoming Events</p>
+          <p className="text-base-content/70">{t('publicCalendar.upcomingEvents')}</p>
         </header>
 
         {data.events.length === 0 ? (
           <div className="card bg-base-100 p-8 text-center">
             <Icon name="calendar" size={48} className="mx-auto mb-4 opacity-50" />
-            <p className="text-base-content/70">No upcoming events</p>
+            <p className="text-base-content/70">{t('publicCalendar.noUpcomingEvents')}</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -255,7 +257,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
         )}
 
         <footer className="text-center mt-8 text-sm text-base-content/50">
-          Last updated: {new Date(data.generatedAt).toLocaleString(currentLocale())}
+          {t('publicCalendar.lastUpdated')}: {new Date(data.generatedAt).toLocaleString(currentLocale())}
         </footer>
       </div>
     </div>
@@ -263,6 +265,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
 }
 
 function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: Date }) {
+  const { t } = useTranslation();
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
@@ -398,7 +401,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
       {!data.nextConcert && !data.nextRehearsal && data.upcomingConcerts.length === 0 && (
         <div className="text-center py-20">
           <Icon name="calendar" size={64} className="mx-auto mb-4 opacity-30" />
-          <p className="text-xl text-base-content/50">No upcoming events</p>
+          <p className="text-xl text-base-content/50">{t('publicCalendar.noUpcomingEvents')}</p>
         </div>
       )}
     </div>
