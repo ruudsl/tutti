@@ -52,11 +52,12 @@ export default function Posts() {
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts', filterStatus, filterCategory, searchTerm],
-    queryFn: () => getPosts({
-      status: filterStatus || undefined,
-      category: filterCategory || undefined,
-      search: searchTerm || undefined,
-    }),
+    queryFn: () =>
+      getPosts({
+        status: filterStatus || undefined,
+        category: filterCategory || undefined,
+        search: searchTerm || undefined,
+      }),
   });
 
   const { data: categories = [] } = useQuery({
@@ -66,7 +67,7 @@ export default function Posts() {
 
   const { data: postDetail } = useQuery({
     queryKey: ['post', selectedPost?.id],
-    queryFn: () => selectedPost ? getPost(selectedPost.id) : null,
+    queryFn: () => (selectedPost ? getPost(selectedPost.id) : null),
     enabled: !!selectedPost,
   });
 
@@ -83,9 +84,7 @@ export default function Posts() {
   });
 
   const getStatusBadge = (status: PostStatus) => (
-    <span className={`badge ${STATUS_COLORS[status]}`}>
-      {t(`posts.status.${status}`)}
-    </span>
+    <span className={`badge ${STATUS_COLORS[status]}`}>{t(`posts.status.${status}`)}</span>
   );
 
   return (
@@ -102,10 +101,7 @@ export default function Posts() {
               <Icon name="folder" size={16} />
               {t('posts.categories.title')}
             </button>
-            <button
-              className="btn btn-primary gap-2"
-              onClick={() => setShowCreateModal(true)}
-            >
+            <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
               <Icon name="plus" size={16} />
               {t('posts.createPost')}
             </button>
@@ -146,7 +142,9 @@ export default function Posts() {
             >
               <option value="">{t('common.all')}</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
               ))}
             </select>
           </div>
@@ -187,31 +185,19 @@ export default function Posts() {
                   {/* Featured image thumbnail */}
                   {post.featuredImage && (
                     <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0">
-                      <img
-                        src={post.featuredImage}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={post.featuredImage} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {post.isPinned && (
-                        <Icon name="bookmark" size={14} className="text-warning" />
-                      )}
-                      {post.isFeatured && (
-                        <Icon name="heart" size={14} className="text-warning" />
-                      )}
-                      <h3 className={`font-semibold ${!post.isRead ? 'text-primary' : ''}`}>
-                        {post.title}
-                      </h3>
+                      {post.isPinned && <Icon name="bookmark" size={14} className="text-warning" />}
+                      {post.isFeatured && <Icon name="heart" size={14} className="text-warning" />}
+                      <h3 className={`font-semibold ${!post.isRead ? 'text-primary' : ''}`}>{post.title}</h3>
                       {canCreate && getStatusBadge(post.status)}
                     </div>
 
-                    {post.excerpt && (
-                      <p className="text-sm text-base-content/70 line-clamp-2">{post.excerpt}</p>
-                    )}
+                    {post.excerpt && <p className="text-sm text-base-content/70 line-clamp-2">{post.excerpt}</p>}
 
                     <div className="flex flex-wrap gap-2 mt-2">
                       {post.categories.map((cat) => (
@@ -298,9 +284,7 @@ export default function Posts() {
       )}
 
       {/* Categories Manager Modal */}
-      {showCategoriesManager && (
-        <PostCategoriesManager onClose={() => setShowCategoriesManager(false)} />
-      )}
+      {showCategoriesManager && <PostCategoriesManager onClose={() => setShowCategoriesManager(false)} />}
     </div>
   );
 }
@@ -370,11 +354,7 @@ function PostDetailModal({
         {post.categories.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {post.categories.map((cat) => (
-              <span
-                key={cat.id}
-                className="badge"
-                style={{ backgroundColor: cat.color || undefined }}
-              >
+              <span key={cat.id} className="badge" style={{ backgroundColor: cat.color || undefined }}>
                 {cat.name}
               </span>
             ))}
@@ -384,7 +364,13 @@ function PostDetailModal({
         {/* Featured image */}
         {post.featuredImage && (
           <div className="rounded-lg overflow-hidden">
-            <img src={post.featuredImage} alt="" className="w-full max-h-64 object-cover" />
+            <img
+              src={post.featuredImage}
+              alt=""
+              className="w-full max-h-64 object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         )}
 
@@ -411,9 +397,7 @@ function PostDetailModal({
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="font-medium">{comment.authorName}</span>
-                        <span className="text-xs text-base-content/50 ml-2">
-                          {formatDateTime(comment.createdAt)}
-                        </span>
+                        <span className="text-xs text-base-content/50 ml-2">{formatDateTime(comment.createdAt)}</span>
                       </div>
                       {(comment.authorId === user?.id || canEdit) && (
                         <button
@@ -616,10 +600,12 @@ function CreatePostModal({
                 type="datetime-local"
                 className="input input-bordered"
                 value={formData.scheduledAt ? formData.scheduledAt.slice(0, 16) : ''}
-                onChange={(e) => setFormData((prev) => ({
-                  ...prev,
-                  scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : undefined
-                }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                  }))
+                }
                 min={new Date().toISOString().slice(0, 16)}
               />
             </div>

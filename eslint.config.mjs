@@ -53,6 +53,16 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // The v7 compiler-powered diagnostics flag long-standing patterns
+      // (setState-in-effect, purity, memoization preservation) across the
+      // existing codebase. Keep them visible as warnings until the codebase
+      // is migrated; the classic rules-of-hooks stays an error.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/static-components': 'warn',
     },
   },
 );

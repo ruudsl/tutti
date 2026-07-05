@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useMemo, useCallback, useRef, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -108,9 +109,7 @@ export default function SeatSelector({
 
   // Get navigable seats (available or selected)
   const navigableSeats = useMemo(() => {
-    return layout.seats.filter(
-      (seat) => seat.status === 'available' || seat.status === 'selected'
-    );
+    return layout.seats.filter((seat) => seat.status === 'available' || seat.status === 'selected');
   }, [layout.seats]);
 
   // Memoize seat lookup for performance
@@ -128,7 +127,7 @@ export default function SeatSelector({
       }
       return SEAT_STATUS_COLORS[seat.status] || SEAT_STATUS_COLORS.available;
     },
-    [selectedSeats]
+    [selectedSeats],
   );
 
   // Get seat type color for legend
@@ -157,7 +156,7 @@ export default function SeatSelector({
         onSeatSelect([...selectedSeats, seat.id]);
       }
     },
-    [selectedSeats, maxSeats, onSeatSelect]
+    [selectedSeats, maxSeats, onSeatSelect],
   );
 
   // Handle keyboard navigation
@@ -165,7 +164,7 @@ export default function SeatSelector({
     (e: React.KeyboardEvent) => {
       if (navigableSeats.length === 0) return;
 
-      let newIndex = focusedSeatIndex;
+      let newIndex: number;
 
       switch (e.key) {
         case 'ArrowRight':
@@ -200,21 +199,18 @@ export default function SeatSelector({
       setFocusedSeatIndex(newIndex);
       setHoveredSeat(navigableSeats[newIndex]);
     },
-    [focusedSeatIndex, navigableSeats, handleSeatClick]
+    [focusedSeatIndex, navigableSeats, handleSeatClick],
   );
 
   // Handle mouse enter on seat
-  const handleSeatMouseEnter = useCallback(
-    (seat: VenueSeat, e: React.MouseEvent<SVGElement>) => {
-      setHoveredSeat(seat);
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltipPos({
-        x: rect.left + rect.width / 2,
-        y: rect.top,
-      });
-    },
-    []
-  );
+  const handleSeatMouseEnter = useCallback((seat: VenueSeat, e: React.MouseEvent<SVGElement>) => {
+    setHoveredSeat(seat);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPos({
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  }, []);
 
   // Handle mouse leave
   const handleSeatMouseLeave = useCallback(() => {
@@ -255,7 +251,7 @@ export default function SeatSelector({
         e.preventDefault();
       }
     },
-    [pan]
+    [pan],
   );
 
   const handleMouseMove = useCallback(
@@ -269,7 +265,7 @@ export default function SeatSelector({
         });
       }
     },
-    [isPanning, panStart, lastPan]
+    [isPanning, panStart, lastPan],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -285,7 +281,7 @@ export default function SeatSelector({
         setLastPan(pan);
       }
     },
-    [pan]
+    [pan],
   );
 
   const handleTouchMove = useCallback(
@@ -299,7 +295,7 @@ export default function SeatSelector({
         });
       }
     },
-    [isPanning, panStart, lastPan]
+    [isPanning, panStart, lastPan],
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -362,7 +358,7 @@ export default function SeatSelector({
 
   // Format price for display
   const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('nl-NL', {
+    return new Intl.NumberFormat(currentLocale(), {
       style: 'currency',
       currency: 'EUR',
     }).format(price);
@@ -440,9 +436,7 @@ export default function SeatSelector({
             fontSize: '0.875rem',
           }}
         >
-          <span>
-            {t('seatSelector.selectedCount', { count: selectedSeats.length, max: maxSeats })}
-          </span>
+          <span>{t('seatSelector.selectedCount', { count: selectedSeats.length, max: maxSeats })}</span>
           {totalPrice > 0 && (
             <span style={{ fontWeight: 600 }}>
               {t('seatSelector.total')}: {formatPrice(totalPrice)}
@@ -489,13 +483,7 @@ export default function SeatSelector({
           onKeyDown={handleKeyDown}
         >
           {/* Background */}
-          <rect
-            x={-40}
-            y={-40}
-            width={layout.width + 80}
-            height={layout.height + 80}
-            fill="var(--bg-color, #f5f5f5)"
-          />
+          <rect x={-40} y={-40} width={layout.width + 80} height={layout.height + 80} fill="var(--bg-color, #f5f5f5)" />
 
           {/* Stage area */}
           {layout.stageArea && (
@@ -529,11 +517,7 @@ export default function SeatSelector({
               x={section.labelX ?? 0}
               y={section.labelY ?? 0}
               textAnchor="middle"
-              fill={
-                highlightSection === section.id
-                  ? 'var(--primary-color, #3498db)'
-                  : 'var(--text-color, #333)'
-              }
+              fill={highlightSection === section.id ? 'var(--primary-color, #3498db)' : 'var(--text-color, #333)'}
               fontSize="14"
               fontWeight={highlightSection === section.id ? 700 : 600}
               style={{
@@ -575,9 +559,7 @@ export default function SeatSelector({
                   number: seat.number,
                   type: t(`seatSelector.seatTypes.${seat.type}`),
                   price: formatPrice(seat.price),
-                  status: isSelected
-                    ? t('seatSelector.statusSelected')
-                    : t(`seatSelector.status.${seat.status}`),
+                  status: isSelected ? t('seatSelector.statusSelected') : t(`seatSelector.status.${seat.status}`),
                 })}
                 aria-pressed={isSelected}
                 aria-disabled={!isSelectable}
@@ -699,7 +681,8 @@ export default function SeatSelector({
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-            {t('seatSelector.rowLabel', { row: hoveredSeat.row })} - {t('seatSelector.seatLabel', { number: hoveredSeat.number })}
+            {t('seatSelector.rowLabel', { row: hoveredSeat.row })} -{' '}
+            {t('seatSelector.seatLabel', { number: hoveredSeat.number })}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
             {t(`seatSelector.seatTypes.${hoveredSeat.type}`)}
@@ -907,9 +890,7 @@ export default function SeatSelector({
                   <span>
                     {t('seatSelector.rowLabel', { row: seat.row })}-{seat.number}
                   </span>
-                  <span style={{ color: 'var(--text-light-color, #666)' }}>
-                    {formatPrice(seat.price)}
-                  </span>
+                  <span style={{ color: 'var(--text-light-color, #666)' }}>{formatPrice(seat.price)}</span>
                   <button
                     type="button"
                     onClick={() => handleSeatClick(seat)}

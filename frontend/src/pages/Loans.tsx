@@ -1,7 +1,17 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLoans, createLoan, returnLoan, deleteLoan, getTitleLoanHistory, type Loan, type TitleLoanHistory, type LoanHistoryEntry } from '../api';
+import {
+  getLoans,
+  createLoan,
+  returnLoan,
+  deleteLoan,
+  getTitleLoanHistory,
+  type Loan,
+  type TitleLoanHistory,
+  type LoanHistoryEntry,
+} from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -161,7 +171,7 @@ export default function Loans() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -205,9 +215,7 @@ export default function Loans() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('loans.title')}
-          <span className="badge badge-primary badge-title-count">
-            {loans.length}
-          </span>
+          <span className="badge badge-primary badge-title-count">{loans.length}</span>
         </h1>
         <button className="btn btn-primary" onClick={() => setShowNewLoanModal(true)}>
           + {t('loans.newLoan')}
@@ -218,19 +226,25 @@ export default function Loans() {
         <div className="stat-card-grid">
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--info)' }}>{stats.active}</div>
+              <div className="stat-number" style={{ color: 'var(--info)' }}>
+                {stats.active}
+              </div>
               <div className="stat-label">{t('loans.status.active')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--danger)' }}>{stats.overdue}</div>
+              <div className="stat-number" style={{ color: 'var(--danger)' }}>
+                {stats.overdue}
+              </div>
               <div className="stat-label">{t('loans.status.overdue')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--success)' }}>{stats.returned}</div>
+              <div className="stat-number" style={{ color: 'var(--success)' }}>
+                {stats.returned}
+              </div>
               <div className="stat-label">{t('loans.status.returned')}</div>
             </div>
           </div>
@@ -273,7 +287,9 @@ export default function Loans() {
                   <th scope="col">{t('loans.dateOut')}</th>
                   <th scope="col">{t('loans.expectedReturn')}</th>
                   <th scope="col">{t('common.status')}</th>
-                  <th scope="col" style={{ width: '120px' }}><span className="sr-only">{t('common.actions')}</span></th>
+                  <th scope="col" style={{ width: '120px' }}>
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -302,9 +318,7 @@ export default function Loans() {
                     <td>
                       <div>{loan.borrower_name}</div>
                       {loan.borrower_email && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                          {loan.borrower_email}
-                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{loan.borrower_email}</div>
                       )}
                     </td>
                     <td>{loan.borrower_organization || '-'}</td>
@@ -313,9 +327,7 @@ export default function Loans() {
                       {formatDate(loan.expected_return)}
                     </td>
                     <td>
-                      <span className={`badge ${STATUS_COLORS[loan.status]}`}>
-                        {t(`loans.status.${loan.status}`)}
-                      </span>
+                      <span className={`badge ${STATUS_COLORS[loan.status]}`}>{t(`loans.status.${loan.status}`)}</span>
                     </td>
                     <td>
                       <div className="flex gap-1">
@@ -343,7 +355,9 @@ export default function Loans() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon"><Icon name="package" size={48} /></div>
+              <div className="empty-icon">
+                <Icon name="package" size={48} />
+              </div>
               <p>{t('loans.noLoans')}</p>
             </div>
           )}
@@ -361,7 +375,12 @@ export default function Loans() {
               <button type="button" className="btn btn-outline" onClick={resetForm}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" form="new-loan-form" className="btn btn-primary" disabled={createMutation.isPending}>
+              <button
+                type="submit"
+                form="new-loan-form"
+                className="btn btn-primary"
+                disabled={createMutation.isPending}
+              >
                 {createMutation.isPending ? t('loans.creating') : t('loans.createLoan')}
               </button>
             </>
@@ -371,14 +390,16 @@ export default function Loans() {
             <div className="form-group">
               <label className="form-label">{t('loans.musicPiece')} *</label>
               {selectedTitle ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0.75rem',
-                  background: 'var(--background)',
-                  borderRadius: '0.25rem'
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem',
+                    background: 'var(--background)',
+                    borderRadius: '0.25rem',
+                  }}
+                >
                   <div>
                     <strong>{selectedTitle.title}</strong>
                     {selectedTitle.arranger && (
@@ -387,11 +408,7 @@ export default function Loans() {
                       </span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => setSelectedTitle(null)}
-                  >
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setSelectedTitle(null)}>
                     {t('loans.change')}
                   </button>
                 </div>
@@ -405,30 +422,30 @@ export default function Loans() {
                     placeholder={t('loans.searchTitle')}
                   />
                   {titleOptions.length > 0 && (
-                    <div style={{
-                      maxHeight: '200px',
-                      overflow: 'auto',
-                      border: '1px solid var(--border)',
-                      borderRadius: '0.25rem',
-                      marginTop: '0.5rem'
-                    }}>
+                    <div
+                      style={{
+                        maxHeight: '200px',
+                        overflow: 'auto',
+                        border: '1px solid var(--border)',
+                        borderRadius: '0.25rem',
+                        marginTop: '0.5rem',
+                      }}
+                    >
                       {titleOptions.map((title) => (
                         <div
                           key={title.id}
                           style={{
                             padding: '0.5rem 0.75rem',
                             cursor: 'pointer',
-                            borderBottom: '1px solid var(--border)'
+                            borderBottom: '1px solid var(--border)',
                           }}
                           onClick={() => setSelectedTitle(title)}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--background)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
                         >
                           <strong>{title.title}</strong>
                           {title.arranger && (
-                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>
-                              - {title.arranger}
-                            </span>
+                            <span style={{ marginLeft: '0.5rem', color: 'var(--text-light)' }}>- {title.arranger}</span>
                           )}
                           {title.active_loans > 0 && (
                             <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
@@ -505,11 +522,7 @@ export default function Loans() {
 
       {/* Loan History Modal */}
       {historyTitleId && (
-        <Modal
-          title={t('loans.loanHistory')}
-          onClose={closeHistory}
-          size="large"
-        >
+        <Modal title={t('loans.loanHistory')} onClose={closeHistory} size="large">
           {loadingHistory ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
               <span className="loading loading-spinner loading-lg" />
@@ -517,33 +530,50 @@ export default function Loans() {
           ) : loanHistory ? (
             <div>
               {/* Title info */}
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
+              <div
+                style={{
+                  marginBottom: '1.5rem',
+                  padding: '1rem',
+                  background: 'var(--background)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
                 <h3 style={{ margin: '0 0 0.25rem 0' }}>{loanHistory.title.title}</h3>
                 {loanHistory.title.arranger && (
-                  <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                    {loanHistory.title.arranger}
-                  </div>
+                  <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{loanHistory.title.arranger}</div>
                 )}
               </div>
 
               {/* Statistics */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}
+              >
                 <div className="card">
                   <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{loanHistory.statistics.totalLoans}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('loans.history.totalLoans')}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('loans.history.totalLoans')}
+                    </div>
                   </div>
                 </div>
                 <div className="card">
                   <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)' }}>{loanHistory.statistics.activeLoans}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('loans.history.activeLoans')}</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--info)' }}>
+                      {loanHistory.statistics.activeLoans}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('loans.history.activeLoans')}
+                    </div>
                   </div>
                 </div>
                 <div className="card">
                   <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{loanHistory.statistics.avgLoanDurationDays} {t('loans.history.days')}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('loans.history.avgDuration')}</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                      {loanHistory.statistics.avgLoanDurationDays} {t('loans.history.days')}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('loans.history.avgDuration')}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -67,7 +68,7 @@ export default function HolidaySettings() {
       custom: [],
     };
 
-    holidays.forEach(h => {
+    holidays.forEach((h) => {
       if (h.isCustom) {
         grouped.custom.push(h);
       } else if (grouped[h.holidayType]) {
@@ -116,8 +117,8 @@ export default function HolidaySettings() {
   const formatDateRange = (start: string, end: string): string => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    const startStr = startDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
-    const endStr = endDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+    const startStr = startDate.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short' });
+    const endStr = endDate.toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short' });
 
     if (start === end) {
       return startStr;
@@ -167,11 +168,7 @@ export default function HolidaySettings() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1>{t('holidays.title')}</h1>
         {isAdmin && (
-          <button
-            className="btn btn-outline"
-            onClick={handleSync}
-            disabled={syncHolidays.isPending}
-          >
+          <button className="btn btn-outline" onClick={handleSync} disabled={syncHolidays.isPending}>
             {syncHolidays.isPending ? t('common.loading') : t('holidays.sync')}
           </button>
         )}
@@ -193,13 +190,13 @@ export default function HolidaySettings() {
                 onChange={(e) => handleRegionChange(e.target.value)}
                 disabled={!isAdmin}
               >
-                {regions.map(r => (
-                  <option key={r.value} value={r.value}>{r.labelDutch}</option>
+                {regions.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.labelDutch}
+                  </option>
                 ))}
               </select>
-              <small style={{ color: 'var(--text-light)' }}>
-                {t('holidays.regionDescription')}
-              </small>
+              <small style={{ color: 'var(--text-light)' }}>{t('holidays.regionDescription')}</small>
             </div>
 
             {/* Toggle Options */}
@@ -207,7 +204,14 @@ export default function HolidaySettings() {
               <label className="form-label">{t('holidays.displayOptions')}</label>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isAdmin ? 'pointer' : 'default' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: isAdmin ? 'pointer' : 'default',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={settings.showHolidaysInCalendar}
@@ -217,7 +221,14 @@ export default function HolidaySettings() {
                   <span>{t('holidays.showInCalendar')}</span>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isAdmin ? 'pointer' : 'default' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: isAdmin ? 'pointer' : 'default',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={settings.autoBlockRehearsals}
@@ -236,23 +247,24 @@ export default function HolidaySettings() {
       <div className="card">
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h2 className="card-title" style={{ margin: 0 }}>{t('holidays.holidayList')}</h2>
+            <h2 className="card-title" style={{ margin: 0 }}>
+              {t('holidays.holidayList')}
+            </h2>
             <select
               className="form-control form-select"
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               style={{ width: 'auto' }}
             >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
               ))}
             </select>
           </div>
           {isAdmin && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowAddForm(!showAddForm)}
-            >
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAddForm(!showAddForm)}>
               + {t('holidays.addCustom')}
             </button>
           )}
@@ -261,13 +273,15 @@ export default function HolidaySettings() {
         <div className="card-body">
           {/* Add Holiday Form */}
           {showAddForm && isAdmin && (
-            <div style={{
-              padding: '1rem',
-              marginBottom: '1rem',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              background: 'var(--background)',
-            }}>
+            <div
+              style={{
+                padding: '1rem',
+                marginBottom: '1rem',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                background: 'var(--background)',
+              }}
+            >
               <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>{t('holidays.addCustomHoliday')}</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '1rem', alignItems: 'end' }}>
                 <div className="form-group">
@@ -302,14 +316,13 @@ export default function HolidaySettings() {
                   <button
                     className="btn btn-primary"
                     onClick={handleAddHoliday}
-                    disabled={!newHoliday.name || !newHoliday.startDate || !newHoliday.endDate || createHoliday.isPending}
+                    disabled={
+                      !newHoliday.name || !newHoliday.startDate || !newHoliday.endDate || createHoliday.isPending
+                    }
                   >
                     {createHoliday.isPending ? t('common.loading') : t('common.add')}
                   </button>
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => setShowAddForm(false)}
-                  >
+                  <button className="btn btn-outline" onClick={() => setShowAddForm(false)}>
                     {t('common.cancel')}
                   </button>
                 </div>
@@ -323,28 +336,30 @@ export default function HolidaySettings() {
 
             return (
               <div key={type} style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  marginBottom: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}>
-                  <span style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: getHolidayTypeColor(type),
-                  }} />
+                <h3
+                  style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      backgroundColor: getHolidayTypeColor(type),
+                    }}
+                  />
                   {getHolidayTypeLabel(type)}
-                  <span style={{ color: 'var(--text-light)', fontWeight: 'normal' }}>
-                    ({typeHolidays.length})
-                  </span>
+                  <span style={{ color: 'var(--text-light)', fontWeight: 'normal' }}>({typeHolidays.length})</span>
                 </h3>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {typeHolidays.map(holiday => (
+                  {typeHolidays.map((holiday) => (
                     <div
                       key={holiday.id}
                       style={{
@@ -359,9 +374,7 @@ export default function HolidaySettings() {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
-                          {holiday.name}
-                        </div>
+                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{holiday.name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                           {formatDateRange(holiday.startDate, holiday.endDate)}
                         </div>

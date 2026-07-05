@@ -153,7 +153,10 @@ export default function Wiki() {
   };
 
   const generateSlug = (title: string) => {
-    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
   };
 
   const renderPageTree = (pageList: WikiPage[], level = 0) => {
@@ -217,7 +220,10 @@ export default function Wiki() {
                       <button
                         key={result.id}
                         className="w-full text-left px-3 py-2 rounded hover:bg-base-200"
-                        onClick={() => { setSearchParams({ page: result.slug }); setSearchTerm(''); }}
+                        onClick={() => {
+                          setSearchParams({ page: result.slug });
+                          setSearchTerm('');
+                        }}
                       >
                         <div className="font-medium text-sm">{result.title}</div>
                         <div className="text-xs text-base-content/60 line-clamp-1">{result.excerpt}</div>
@@ -269,7 +275,10 @@ export default function Wiki() {
                         {currentPage.title}
                       </h2>
                       <div className="text-sm text-base-content/60 mt-1">
-                        {t('wiki.lastUpdated', { date: formatDateTime(currentPage.updatedAt), user: currentPage.updatedByName || currentPage.createdByName })}
+                        {t('wiki.lastUpdated', {
+                          date: formatDateTime(currentPage.updatedAt),
+                          user: currentPage.updatedByName || currentPage.createdByName,
+                        })}
                         {' · '}
                         <span className="badge badge-sm">{t(VISIBILITY_LABELS[currentPage.visibility])}</span>
                         {' · '}
@@ -282,10 +291,30 @@ export default function Wiki() {
                           <Icon name="menu" className="w-4 h-4" />
                         </label>
                         <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
-                          <li><button onClick={openEditModal}><Icon name="pencil" className="w-4 h-4" />{t('common.edit')}</button></li>
-                          <li><button onClick={() => setShowVersionsModal(true)}><Icon name="clock" className="w-4 h-4" />{t('wiki.history')}</button></li>
+                          <li>
+                            <button onClick={openEditModal}>
+                              <Icon name="pencil" className="w-4 h-4" />
+                              {t('common.edit')}
+                            </button>
+                          </li>
+                          <li>
+                            <button onClick={() => setShowVersionsModal(true)}>
+                              <Icon name="clock" className="w-4 h-4" />
+                              {t('wiki.history')}
+                            </button>
+                          </li>
                           {canDelete && (
-                            <li><button className="text-error" onClick={() => { if (confirm(t('wiki.confirmDelete'))) deleteMutation.mutate(currentSlug); }}><Icon name="trash" className="w-4 h-4" />{t('common.delete')}</button></li>
+                            <li>
+                              <button
+                                className="text-error"
+                                onClick={() => {
+                                  if (confirm(t('wiki.confirmDelete'))) deleteMutation.mutate(currentSlug);
+                                }}
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                                {t('common.delete')}
+                              </button>
+                            </li>
                           )}
                         </ul>
                       </div>
@@ -332,53 +361,72 @@ export default function Wiki() {
       </div>
 
       {/* Create Modal */}
-      {showCreateModal && <CreateEditWikiModal
-        mode="create"
-        formData={formData}
-        setFormData={setFormData}
-        onClose={() => { setShowCreateModal(false); resetForm(); }}
-        onSubmit={() => createMutation.mutate(formData)}
-        isPending={createMutation.isPending}
-        generateSlug={generateSlug}
-      />}
+      {showCreateModal && (
+        <CreateEditWikiModal
+          mode="create"
+          formData={formData}
+          setFormData={setFormData}
+          onClose={() => {
+            setShowCreateModal(false);
+            resetForm();
+          }}
+          onSubmit={() => createMutation.mutate(formData)}
+          isPending={createMutation.isPending}
+          generateSlug={generateSlug}
+        />
+      )}
 
       {/* Edit Modal */}
-      {showEditModal && <CreateEditWikiModal
-        mode="edit"
-        formData={formData}
-        setFormData={setFormData}
-        onClose={() => setShowEditModal(false)}
-        onSubmit={() => updateMutation.mutate({ slug: currentSlug, data: { title: formData.title, content: formData.content, visibility: formData.visibility, isPinned: formData.isPinned } })}
-        isPending={updateMutation.isPending}
-      />}
+      {showEditModal && (
+        <CreateEditWikiModal
+          mode="edit"
+          formData={formData}
+          setFormData={setFormData}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={() =>
+            updateMutation.mutate({
+              slug: currentSlug,
+              data: {
+                title: formData.title,
+                content: formData.content,
+                visibility: formData.visibility,
+                isPinned: formData.isPinned,
+              },
+            })
+          }
+          isPending={updateMutation.isPending}
+        />
+      )}
 
       {/* Versions Modal */}
-      {showVersionsModal && <Modal onClose={() => setShowVersionsModal(false)} title={t('wiki.history')} size="large">
-        <div className="space-y-2">
-          {versions.length === 0 ? (
-            <p className="text-base-content/60">{t('wiki.noVersions')}</p>
-          ) : (
-            versions.map((version) => (
-              <div key={version.id} className="flex justify-between items-center p-3 rounded bg-base-200">
-                <div>
-                  <div className="font-medium">{t('wiki.version', { number: version.versionNumber })}</div>
-                  <div className="text-sm text-base-content/60">
-                    {formatDateTime(version.createdAt)} - {version.createdByName}
-                    {version.changeSummary && <> · {version.changeSummary}</>}
+      {showVersionsModal && (
+        <Modal onClose={() => setShowVersionsModal(false)} title={t('wiki.history')} size="large">
+          <div className="space-y-2">
+            {versions.length === 0 ? (
+              <p className="text-base-content/60">{t('wiki.noVersions')}</p>
+            ) : (
+              versions.map((version) => (
+                <div key={version.id} className="flex justify-between items-center p-3 rounded bg-base-200">
+                  <div>
+                    <div className="font-medium">{t('wiki.version', { number: version.versionNumber })}</div>
+                    <div className="text-sm text-base-content/60">
+                      {formatDateTime(version.createdAt)} - {version.createdByName}
+                      {version.changeSummary && <> · {version.changeSummary}</>}
+                    </div>
                   </div>
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => restoreMutation.mutate({ slug: currentSlug, versionId: version.id })}
+                    disabled={restoreMutation.isPending}
+                  >
+                    {t('wiki.restore')}
+                  </button>
                 </div>
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => restoreMutation.mutate({ slug: currentSlug, versionId: version.id })}
-                  disabled={restoreMutation.isPending}
-                >
-                  {t('wiki.restore')}
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </Modal>}
+              ))
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -393,7 +441,15 @@ interface CreateEditWikiModalProps {
   generateSlug?: (title: string) => string;
 }
 
-function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, isPending, generateSlug }: CreateEditWikiModalProps) {
+function CreateEditWikiModal({
+  mode,
+  formData,
+  setFormData,
+  onClose,
+  onSubmit,
+  isPending,
+  generateSlug,
+}: CreateEditWikiModalProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
 
@@ -406,38 +462,48 @@ function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, i
     <Modal onClose={onClose} title={mode === 'create' ? t('wiki.addPage') : t('wiki.editPage')} size="large">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
-          <label className="label"><span className="label-text">{t('wiki.pageTitle')} *</span></label>
+          <label className="label">
+            <span className="label-text">{t('wiki.pageTitle')} *</span>
+          </label>
           <input
             type="text"
             className="input input-bordered"
             value={formData.title}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              title: e.target.value,
-              ...(mode === 'create' && generateSlug ? { slug: generateSlug(e.target.value) } : {})
-            }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                title: e.target.value,
+                ...(mode === 'create' && generateSlug ? { slug: generateSlug(e.target.value) } : {}),
+              }))
+            }
             required
           />
         </div>
 
         {mode === 'create' && (
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.slug')} *</span></label>
+            <label className="label">
+              <span className="label-text">{t('wiki.slug')} *</span>
+            </label>
             <input
               type="text"
               className="input input-bordered"
               value={formData.slug}
-              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
               pattern="^[a-z0-9-]+$"
               required
             />
-            <label className="label"><span className="label-text-alt">{t('wiki.slugHelp')}</span></label>
+            <label className="label">
+              <span className="label-text-alt">{t('wiki.slugHelp')}</span>
+            </label>
           </div>
         )}
 
         <div className="form-control">
           <div className="flex justify-between items-center mb-2">
-            <label className="label py-0"><span className="label-text">{t('wiki.content')} *</span></label>
+            <label className="label py-0">
+              <span className="label-text">{t('wiki.content')} *</span>
+            </label>
             <div className="tabs tabs-boxed tabs-sm">
               <button
                 type="button"
@@ -462,7 +528,7 @@ function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, i
             <textarea
               className="textarea textarea-bordered h-64 font-mono text-sm"
               value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
               required
               placeholder={t('wiki.contentPlaceholder')}
             />
@@ -482,11 +548,13 @@ function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, i
 
         <div className="grid grid-cols-2 gap-4">
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('wiki.visibility')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('wiki.visibility')}</span>
+            </label>
             <select
               className="select select-bordered"
               value={formData.visibility}
-              onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as any }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value as any }))}
             >
               <option value="public">{t('wiki.visibilityPublic')}</option>
               <option value="members">{t('wiki.visibilityMembers')}</option>
@@ -501,7 +569,7 @@ function CreateEditWikiModal({ mode, formData, setFormData, onClose, onSubmit, i
                 type="checkbox"
                 className="checkbox"
                 checked={formData.isPinned}
-                onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isPinned: e.target.checked }))}
               />
               <span className="label-text">{t('wiki.pinPage')}</span>
             </label>
@@ -571,13 +639,7 @@ function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: bool
         <h3 className="font-semibold">{t('wiki.attachments')}</h3>
         {canEdit && (
           <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleUpload}
-            />
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
             <button
               className="btn btn-sm btn-outline"
               onClick={() => fileInputRef.current?.click()}
@@ -602,7 +664,13 @@ function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: bool
             <div key={att.id} className="card bg-base-200 overflow-hidden">
               {isImage(att.filename) ? (
                 <a href={att.url} target="_blank" rel="noopener noreferrer">
-                  <img src={att.url} alt={att.filename} className="h-24 w-full object-cover" />
+                  <img
+                    src={att.url}
+                    alt={att.filename}
+                    className="h-24 w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </a>
               ) : (
                 <div className="h-24 flex items-center justify-center bg-base-300">
@@ -619,9 +687,7 @@ function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: bool
                   {att.filename}
                 </a>
                 <div className="flex justify-between items-center mt-1">
-                  <span className="text-xs text-base-content/60">
-                    {(att.fileSize / 1024).toFixed(1)} KB
-                  </span>
+                  <span className="text-xs text-base-content/60">{(att.fileSize / 1024).toFixed(1)} KB</span>
                   {canEdit && (
                     <button
                       className="btn btn-ghost btn-xs text-error"

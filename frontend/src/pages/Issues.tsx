@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -31,9 +32,7 @@ export default function Issues() {
   // Fetch issues based on user role
   const { data: issues = [], isLoading: issuesLoading } = useQuery({
     queryKey: ['issues', filterStatus, isMusicCommittee],
-    queryFn: () => isMusicCommittee
-      ? getIssues({ status: filterStatus || undefined })
-      : getMyIssues(),
+    queryFn: () => (isMusicCommittee ? getIssues({ status: filterStatus || undefined }) : getMyIssues()),
   });
 
   // Fetch stats for music committee
@@ -88,7 +87,7 @@ export default function Issues() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -111,9 +110,7 @@ export default function Issues() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('issues.title')}
-          <span className="badge badge-primary badge-title-count">
-            {issues.length}
-          </span>
+          <span className="badge badge-primary badge-title-count">{issues.length}</span>
         </h1>
       </div>
 
@@ -121,25 +118,33 @@ export default function Issues() {
         <div className="stat-card-grid">
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--warning)' }}>{stats.open}</div>
+              <div className="stat-number" style={{ color: 'var(--warning)' }}>
+                {stats.open}
+              </div>
               <div className="stat-label">{t('issues.status.open')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--info)' }}>{stats.in_review}</div>
+              <div className="stat-number" style={{ color: 'var(--info)' }}>
+                {stats.in_review}
+              </div>
               <div className="stat-label">{t('issues.status.in_review')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--success)' }}>{stats.resolved}</div>
+              <div className="stat-number" style={{ color: 'var(--success)' }}>
+                {stats.resolved}
+              </div>
               <div className="stat-label">{t('issues.status.resolved')}</div>
             </div>
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number" style={{ color: 'var(--danger)' }}>{stats.rejected}</div>
+              <div className="stat-number" style={{ color: 'var(--danger)' }}>
+                {stats.rejected}
+              </div>
               <div className="stat-label">{t('issues.status.rejected')}</div>
             </div>
           </div>
@@ -179,7 +184,9 @@ export default function Issues() {
                   {isMusicCommittee && <th scope="col">{t('issues.table.reporter')}</th>}
                   <th scope="col">{t('issues.table.date')}</th>
                   <th scope="col">{t('issues.table.status')}</th>
-                  <th scope="col" style={{ width: '100px' }}><span className="sr-only">{t('common.actions')}</span></th>
+                  <th scope="col" style={{ width: '100px' }}>
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -188,31 +195,37 @@ export default function Issues() {
                     <td>
                       <strong>{issue.piece_title}</strong>
                       {issue.piece_arranger && (
-                        <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                          {issue.piece_arranger}
-                        </div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{issue.piece_arranger}</div>
                       )}
                       {issue.instrument_name && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                          {issue.instrument_name}
-                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{issue.instrument_name}</div>
                       )}
                     </td>
                     <td>
-                      {issue.page_number && <div>{t('issues.page')} {issue.page_number}</div>}
-                      {issue.measure_number && <div>{t('issues.measure')} {issue.measure_number}</div>}
+                      {issue.page_number && (
+                        <div>
+                          {t('issues.page')} {issue.page_number}
+                        </div>
+                      )}
+                      {issue.measure_number && (
+                        <div>
+                          {t('issues.measure')} {issue.measure_number}
+                        </div>
+                      )}
                       {!issue.page_number && !issue.measure_number && '-'}
                     </td>
                     <td style={{ maxWidth: '300px' }}>
                       <div style={{ whiteSpace: 'pre-wrap' }}>{issue.description}</div>
                       {issue.resolution_notes && (
-                        <div style={{
-                          marginTop: '0.5rem',
-                          padding: '0.5rem',
-                          background: 'var(--background)',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.875rem'
-                        }}>
+                        <div
+                          style={{
+                            marginTop: '0.5rem',
+                            padding: '0.5rem',
+                            background: 'var(--background)',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.875rem',
+                          }}
+                        >
                           <strong>{t('issues.response')}:</strong> {issue.resolution_notes}
                         </div>
                       )}
@@ -227,9 +240,7 @@ export default function Issues() {
                         )}
                       </td>
                     )}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {formatDate(issue.created_at)}
-                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatDate(issue.created_at)}</td>
                     <td>
                       {isMusicCommittee && issue.status !== 'resolved' && issue.status !== 'rejected' ? (
                         <select
@@ -250,7 +261,7 @@ export default function Issues() {
                       )}
                     </td>
                     <td>
-                      {(user?.role === ROLES.ADMIN || (issue.status === 'open')) && (
+                      {(user?.role === ROLES.ADMIN || issue.status === 'open') && (
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(issue)}
@@ -266,7 +277,9 @@ export default function Issues() {
             </table>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
+              <div className="empty-icon">
+                <Icon name="clipboard" size={48} />
+              </div>
               <p>{t('issues.noIssuesDescription')}</p>
             </div>
           )}
@@ -314,14 +327,18 @@ export default function Issues() {
         >
           <div className="form-group">
             <label className="form-label">{t('issues.table.piece')}</label>
-            <p><strong>{selectedIssue.piece_title}</strong></p>
+            <p>
+              <strong>{selectedIssue.piece_title}</strong>
+            </p>
           </div>
           <div className="form-group">
             <label className="form-label">{t('issues.originalIssue')}</label>
             <p style={{ whiteSpace: 'pre-wrap' }}>{selectedIssue.description}</p>
           </div>
           <div className="form-group">
-            <label className="form-label">{t('issues.responseNotes')} ({t('common.optional')})</label>
+            <label className="form-label">
+              {t('issues.responseNotes')} ({t('common.optional')})
+            </label>
             <textarea
               className="form-control"
               value={resolutionNotes}

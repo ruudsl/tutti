@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import type { Query } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
 /**
@@ -79,35 +80,77 @@ export const queryClient = new QueryClient({
   },
 });
 
+const PERSIST_STORAGE_KEY = 'harmonie-query-cache';
+
 // Check if we need to clear cache (e.g., after association switch)
 if (typeof window !== 'undefined' && window.localStorage.getItem('harmonie-clear-cache')) {
   window.localStorage.removeItem('harmonie-clear-cache');
-  window.localStorage.removeItem('harmonie-query-cache');
+  window.localStorage.removeItem(PERSIST_STORAGE_KEY);
 }
 
 // Create persister for offline support (used by PersistQueryClientProvider in App.tsx)
 // Wrapped in try-catch to handle corrupted localStorage data
-export const queryPersister = typeof window !== 'undefined'
-  ? createSyncStoragePersister({
-      storage: window.localStorage,
-      key: 'harmonie-query-cache',
-      // Handle corrupted data by returning null (will clear cache)
-      deserialize: (cachedString: string) => {
-        try {
-          return JSON.parse(cachedString);
-        } catch {
-          // Clear corrupted cache
-          window.localStorage.removeItem('harmonie-query-cache');
-          return undefined;
-        }
-      },
-    })
-  : null;
+export const queryPersister =
+  typeof window !== 'undefined'
+    ? createSyncStoragePersister({
+        storage: window.localStorage,
+        key: PERSIST_STORAGE_KEY,
+        // Handle corrupted data by returning null (will clear cache)
+        deserialize: (cachedString: string) => {
+          try {
+            return JSON.parse(cachedString);
+          } catch {
+            // Clear corrupted cache
+            window.localStorage.removeItem(PERSIST_STORAGE_KEY);
+            return undefined;
+          }
+        },
+      })
+    : null;
+
+/**
+ * Whitelist of queryKey prefixes that may be persisted to localStorage.
+ * Only stable, non-sensitive reference data is persisted for offline support.
+ * Personal data (users, invoices, contacts, tickets, etc.) is deliberately
+ * excluded so it never lingers in localStorage after logout.
+ */
+const PERSISTED_QUERY_KEY_PREFIXES: readonly string[] = [
+  'instruments',
+  'genres',
+  'orchestras',
+  'vocabularies',
+  'holidays',
+  'concertTypes',
+  'equipment-types',
+  'packingTemplates',
+];
 
 export const persistOptions = {
   maxAge: 1000 * 60 * 60 * 24, // 24 hours
-  buster: 'v4', // Bumped to invalidate stale association cache
+  buster: 'v5', // Bumped: persisted cache is now filtered to reference data only
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query: Query) =>
+      query.state.status === 'success' &&
+      typeof query.queryKey[0] === 'string' &&
+      PERSISTED_QUERY_KEY_PREFIXES.includes(query.queryKey[0]),
+  },
 };
+
+/**
+ * Clears the persisted React Query cache from localStorage and empties the
+ * in-memory query cache. Call this on logout so no cached (personal) data
+ * remains behind.
+ */
+export function clearPersistedCache(): void {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(PERSIST_STORAGE_KEY);
+    } catch {
+      // Ignore localStorage errors (e.g. privacy mode)
+    }
+  }
+  queryClient.clear();
+}
 
 /**
  * Query keys for consistent cache management
@@ -179,8 +222,7 @@ export const queryKeys = {
   recentViews: (type?: string, limit?: number) => ['recent', type, limit] as const,
 
   // Annotations
-  annotations: (musicPieceId: string, pageNumber?: number) =>
-    ['annotations', musicPieceId, pageNumber] as const,
+  annotations: (musicPieceId: string, pageNumber?: number) => ['annotations', musicPieceId, pageNumber] as const,
 
   // Sessions
   sessions: ['sessions'] as const,

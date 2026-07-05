@@ -2,10 +2,39 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSettings, updateSettings, uploadLogo, removeLogo, getMicrosoftConfig, saveMicrosoftConfig, removeMicrosoftConfig, getSmtpConfig, saveSmtpConfig, removeSmtpConfig, testSmtpConfig, getTelegramConfig, saveTelegramConfig, deleteTelegramConfig, getWhatsAppConfig, saveWhatsAppConfig, deleteWhatsAppConfig, getM365GroupMappings, createM365GroupMapping, updateM365GroupMapping, deleteM365GroupMapping, type M365GroupMapping } from '../api';
+import {
+  getSettings,
+  updateSettings,
+  uploadLogo,
+  removeLogo,
+  getMicrosoftConfig,
+  saveMicrosoftConfig,
+  removeMicrosoftConfig,
+  getSmtpConfig,
+  saveSmtpConfig,
+  removeSmtpConfig,
+  testSmtpConfig,
+  getTelegramConfig,
+  saveTelegramConfig,
+  deleteTelegramConfig,
+  getWhatsAppConfig,
+  saveWhatsAppConfig,
+  deleteWhatsAppConfig,
+  getM365GroupMappings,
+  createM365GroupMapping,
+  updateM365GroupMapping,
+  deleteM365GroupMapping,
+  type M365GroupMapping,
+} from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useAdminConcertTypes, useCreateConcertType, useUpdateConcertType, useDeleteConcertType, useInitDefaultConcertTypes } from '../hooks/useConcerts';
+import {
+  useAdminConcertTypes,
+  useCreateConcertType,
+  useUpdateConcertType,
+  useDeleteConcertType,
+  useInitDefaultConcertTypes,
+} from '../hooks/useConcerts';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -146,7 +175,12 @@ export default function Settings() {
 
   // Concert types state
   const [showAddConcertTypeModal, setShowAddConcertTypeModal] = useState(false);
-  const [editingConcertType, setEditingConcertType] = useState<{ id: string; value: string; label: string; sortOrder: number } | null>(null);
+  const [editingConcertType, setEditingConcertType] = useState<{
+    id: string;
+    value: string;
+    label: string;
+    sortOrder: number;
+  } | null>(null);
   const [deletingConcertType, setDeletingConcertType] = useState<{ id: string; label: string } | null>(null);
   const [concertTypeFormData, setConcertTypeFormData] = useState({ value: '', label: '', sortOrder: 0 });
 
@@ -157,7 +191,11 @@ export default function Settings() {
   const [showOfflineManager, setShowOfflineManager] = useState(false);
   const [editingGroupMapping, setEditingGroupMapping] = useState<M365GroupMapping | null>(null);
   const [deletingGroupMapping, setDeletingGroupMapping] = useState<M365GroupMapping | null>(null);
-  const [groupMappingFormData, setGroupMappingFormData] = useState({ orchestraId: '', groupName: '', groupType: 'orchestra' as 'orchestra' | 'percussion' | 'special' });
+  const [groupMappingFormData, setGroupMappingFormData] = useState({
+    orchestraId: '',
+    groupName: '',
+    groupType: 'orchestra' as 'orchestra' | 'percussion' | 'special',
+  });
   const [groupMappingSaving, setGroupMappingSaving] = useState(false);
 
   // Concert types hooks
@@ -373,15 +411,21 @@ export default function Settings() {
       const result = await saveWhatsAppConfig({
         provider: whatsappProvider,
         enabled: whatsappEnabled,
-        meta: whatsappProvider === 'meta' ? {
-          phoneNumberId: whatsappMetaPhoneNumberId.trim() || undefined,
-          accessToken: whatsappMetaAccessToken.trim() || undefined,
-        } : undefined,
-        twilio: whatsappProvider === 'twilio' ? {
-          accountSid: whatsappTwilioAccountSid.trim() || undefined,
-          authToken: whatsappTwilioAuthToken.trim() || undefined,
-          whatsappFrom: whatsappTwilioFrom.trim() || undefined,
-        } : undefined,
+        meta:
+          whatsappProvider === 'meta'
+            ? {
+                phoneNumberId: whatsappMetaPhoneNumberId.trim() || undefined,
+                accessToken: whatsappMetaAccessToken.trim() || undefined,
+              }
+            : undefined,
+        twilio:
+          whatsappProvider === 'twilio'
+            ? {
+                accountSid: whatsappTwilioAccountSid.trim() || undefined,
+                authToken: whatsappTwilioAuthToken.trim() || undefined,
+                whatsappFrom: whatsappTwilioFrom.trim() || undefined,
+              }
+            : undefined,
       });
       showSuccess(result.message || t('settings.whatsapp.saved'));
       setWhatsappMetaAccessToken('');
@@ -521,11 +565,11 @@ export default function Settings() {
 
   // Get orchestras that don't have a mapping yet (for the dropdown)
   const availableOrchestras = orchestras.filter(
-    o => !m365GroupMappings.some(m => m.orchestraId === o.id && m.groupType === 'orchestra')
+    (o) => !m365GroupMappings.some((m) => m.orchestraId === o.id && m.groupType === 'orchestra'),
   );
 
   // Check if percussion group already exists
-  const hasPercussionGroup = m365GroupMappings.some(m => m.groupType === 'percussion');
+  const hasPercussionGroup = m365GroupMappings.some((m) => m.groupType === 'percussion');
 
   if (isLoading) {
     return (
@@ -560,11 +604,7 @@ export default function Settings() {
                 maxLength={100}
               />
             </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSaving}
-            >
+            <button type="submit" className="btn btn-primary" disabled={isSaving}>
               {isSaving ? t('common.loading') : t('common.save')}
             </button>
           </form>
@@ -596,11 +636,7 @@ export default function Settings() {
                   background: 'white',
                 }}
               />
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={handleRemoveLogo}
-              >
+              <button type="button" className="btn btn-outline btn-sm" onClick={handleRemoveLogo}>
                 {t('settings.removeLogo')}
               </button>
             </div>
@@ -677,7 +713,11 @@ export default function Settings() {
                 className="form-control"
                 value={msClientSecret}
                 onChange={(e) => setMsClientSecret(e.target.value)}
-                placeholder={msConfig?.configured ? t('settings.microsoft.secretUnchanged') : t('settings.microsoft.clientSecretPlaceholder')}
+                placeholder={
+                  msConfig?.configured
+                    ? t('settings.microsoft.secretUnchanged')
+                    : t('settings.microsoft.clientSecretPlaceholder')
+                }
               />
             </div>
 
@@ -699,29 +739,17 @@ export default function Settings() {
 
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={msEnabled}
-                  onChange={(e) => setMsEnabled(e.target.checked)}
-                />
+                <input type="checkbox" checked={msEnabled} onChange={(e) => setMsEnabled(e.target.checked)} />
                 {t('settings.microsoft.enabled')}
               </label>
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={msSaving}
-              >
+              <button type="submit" className="btn btn-primary" disabled={msSaving}>
                 {msSaving ? t('common.loading') : t('common.save')}
               </button>
               {msConfig?.configured && (
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleMicrosoftRemove}
-                >
+                <button type="button" className="btn btn-outline" onClick={handleMicrosoftRemove}>
                   {t('settings.microsoft.remove')}
                 </button>
               )}
@@ -769,14 +797,20 @@ export default function Settings() {
                       {m365GroupMappings.map((mapping) => (
                         <tr key={mapping.id}>
                           <td>
-                            <span className={`badge ${mapping.groupType === 'percussion' ? 'badge-warning' : mapping.groupType === 'special' ? 'badge-info' : 'badge-success'}`}>
-                              {mapping.groupType === 'orchestra' ? t('settings.m365Groups.typeOrchestra') :
-                               mapping.groupType === 'percussion' ? t('settings.m365Groups.typePercussion') :
-                               t('settings.m365Groups.typeSpecial')}
+                            <span
+                              className={`badge ${mapping.groupType === 'percussion' ? 'badge-warning' : mapping.groupType === 'special' ? 'badge-info' : 'badge-success'}`}
+                            >
+                              {mapping.groupType === 'orchestra'
+                                ? t('settings.m365Groups.typeOrchestra')
+                                : mapping.groupType === 'percussion'
+                                  ? t('settings.m365Groups.typePercussion')
+                                  : t('settings.m365Groups.typeSpecial')}
                             </span>
                           </td>
                           <td>{mapping.orchestraName || '-'}</td>
-                          <td><strong>{mapping.groupName}</strong></td>
+                          <td>
+                            <strong>{mapping.groupName}</strong>
+                          </td>
                           <td>
                             <div className="flex gap-1">
                               <button
@@ -798,9 +832,7 @@ export default function Settings() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#666' }}>
-                    {t('settings.m365Groups.noMappings')}
-                  </p>
+                  <p style={{ color: 'var(--text-muted)' }}>{t('settings.m365Groups.noMappings')}</p>
                 )}
               </>
             )}
@@ -845,13 +877,12 @@ export default function Settings() {
                   max={65535}
                 />
               </div>
-              <div className="form-group" style={{ flex: 1, display: 'flex', alignItems: 'flex-end', paddingBottom: '1rem' }}>
+              <div
+                className="form-group"
+                style={{ flex: 1, display: 'flex', alignItems: 'flex-end', paddingBottom: '1rem' }}
+              >
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={smtpSecure}
-                    onChange={(e) => setSmtpSecure(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={smtpSecure} onChange={(e) => setSmtpSecure(e.target.checked)} />
                   {t('settings.smtp.secure')}
                 </label>
               </div>
@@ -881,7 +912,9 @@ export default function Settings() {
                 className="form-control"
                 value={smtpPassword}
                 onChange={(e) => setSmtpPassword(e.target.value)}
-                placeholder={smtpConfig?.configured ? t('settings.smtp.passwordUnchanged') : t('settings.smtp.passwordPlaceholder')}
+                placeholder={
+                  smtpConfig?.configured ? t('settings.smtp.passwordUnchanged') : t('settings.smtp.passwordPlaceholder')
+                }
               />
             </div>
 
@@ -904,38 +937,21 @@ export default function Settings() {
 
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={smtpEnabled}
-                  onChange={(e) => setSmtpEnabled(e.target.checked)}
-                />
+                <input type="checkbox" checked={smtpEnabled} onChange={(e) => setSmtpEnabled(e.target.checked)} />
                 {t('settings.smtp.enabled')}
               </label>
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={smtpSaving}
-              >
+              <button type="submit" className="btn btn-primary" disabled={smtpSaving}>
                 {smtpSaving ? t('common.loading') : t('common.save')}
               </button>
               {smtpConfig?.configured && (
                 <>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={handleSmtpTest}
-                    disabled={smtpTesting}
-                  >
+                  <button type="button" className="btn btn-outline" onClick={handleSmtpTest} disabled={smtpTesting}>
                     {smtpTesting ? t('common.loading') : t('settings.smtp.test')}
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={handleSmtpRemove}
-                  >
+                  <button type="button" className="btn btn-outline" onClick={handleSmtpRemove}>
                     {t('settings.smtp.remove')}
                   </button>
                 </>
@@ -964,9 +980,11 @@ export default function Settings() {
                 className="form-control"
                 value={telegramBotToken}
                 onChange={(e) => setTelegramBotToken(e.target.value)}
-                placeholder={telegramConfig?.configured && telegramConfig.tokenPreview
-                  ? telegramConfig.tokenPreview
-                  : t('settings.telegram.botTokenPlaceholder')}
+                placeholder={
+                  telegramConfig?.configured && telegramConfig.tokenPreview
+                    ? telegramConfig.tokenPreview
+                    : t('settings.telegram.botTokenPlaceholder')
+                }
               />
               <p className="piece-meta" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
                 {t('settings.telegram.botTokenHelp')}{' '}
@@ -988,19 +1006,11 @@ export default function Settings() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={telegramSaving}
-              >
+              <button type="submit" className="btn btn-primary" disabled={telegramSaving}>
                 {telegramSaving ? t('common.loading') : t('common.save')}
               </button>
               {telegramConfig?.configured && (
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleTelegramDelete}
-                >
+                <button type="button" className="btn btn-outline" onClick={handleTelegramDelete}>
                   {t('settings.telegram.remove')}
                 </button>
               )}
@@ -1069,9 +1079,11 @@ export default function Settings() {
                     className="form-control"
                     value={whatsappMetaAccessToken}
                     onChange={(e) => setWhatsappMetaAccessToken(e.target.value)}
-                    placeholder={whatsappConfig?.meta?.configured && whatsappConfig.meta.accessTokenPreview
-                      ? whatsappConfig.meta.accessTokenPreview
-                      : t('settings.whatsapp.accessTokenPlaceholder')}
+                    placeholder={
+                      whatsappConfig?.meta?.configured && whatsappConfig.meta.accessTokenPreview
+                        ? whatsappConfig.meta.accessTokenPreview
+                        : t('settings.whatsapp.accessTokenPlaceholder')
+                    }
                   />
                 </div>
               </>
@@ -1102,9 +1114,11 @@ export default function Settings() {
                     className="form-control"
                     value={whatsappTwilioAuthToken}
                     onChange={(e) => setWhatsappTwilioAuthToken(e.target.value)}
-                    placeholder={whatsappConfig?.twilio?.configured && whatsappConfig.twilio.authTokenPreview
-                      ? whatsappConfig.twilio.authTokenPreview
-                      : t('settings.whatsapp.authTokenPlaceholder')}
+                    placeholder={
+                      whatsappConfig?.twilio?.configured && whatsappConfig.twilio.authTokenPreview
+                        ? whatsappConfig.twilio.authTokenPreview
+                        : t('settings.whatsapp.authTokenPlaceholder')
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -1138,19 +1152,11 @@ export default function Settings() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={whatsappSaving}
-              >
+              <button type="submit" className="btn btn-primary" disabled={whatsappSaving}>
                 {whatsappSaving ? t('common.loading') : t('common.save')}
               </button>
               {whatsappConfig?.configured && (
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleWhatsAppDelete}
-                >
+                <button type="button" className="btn btn-outline" onClick={handleWhatsAppDelete}>
                   {t('settings.whatsapp.remove')}
                 </button>
               )}
@@ -1167,12 +1173,10 @@ export default function Settings() {
           <h2 className="card-title">{t('offline.manager', 'Offline Opslag')}</h2>
         </div>
         <div className="card-body">
-          <p className="piece-meta mb-3">{t('offline.description', 'Beheer de partituren en audio die offline beschikbaar zijn.')}</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setShowOfflineManager(true)}
-          >
+          <p className="piece-meta mb-3">
+            {t('offline.description', 'Beheer de partituren en audio die offline beschikbaar zijn.')}
+          </p>
+          <button type="button" className="btn btn-primary" onClick={() => setShowOfflineManager(true)}>
             {t('offline.manage', 'Beheer Offline Opslag')}
           </button>
         </div>
@@ -1193,10 +1197,7 @@ export default function Settings() {
             <>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setShowAddConcertTypeModal(true)}
-                  >
+                  <button className="btn btn-primary" onClick={() => setShowAddConcertTypeModal(true)}>
                     + {t('settings.concertTypes.add')}
                   </button>
                   {(!concertTypesData?.types || concertTypesData.types.length === 0) && (
@@ -1224,15 +1225,16 @@ export default function Settings() {
                   <tbody>
                     {concertTypesData.types.map((type) => (
                       <tr key={type.id}>
-                        <td><code>{type.value}</code></td>
-                        <td><strong>{type.label}</strong></td>
+                        <td>
+                          <code>{type.value}</code>
+                        </td>
+                        <td>
+                          <strong>{type.label}</strong>
+                        </td>
                         <td>{type.sortOrder}</td>
                         <td>
                           <div className="flex gap-1">
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => openEditConcertTypeModal(type)}
-                            >
+                            <button className="btn btn-outline btn-sm" onClick={() => openEditConcertTypeModal(type)}>
                               {t('common.edit')}
                             </button>
                             <button
@@ -1248,9 +1250,7 @@ export default function Settings() {
                   </tbody>
                 </table>
               ) : (
-                <p style={{ color: '#666' }}>
-                  {t('settings.concertTypes.noTypes')}
-                </p>
+                <p style={{ color: 'var(--text-muted)' }}>{t('settings.concertTypes.noTypes')}</p>
               )}
             </>
           )}
@@ -1275,11 +1275,16 @@ export default function Settings() {
               type="text"
               className="form-control"
               value={concertTypeFormData.value}
-              onChange={(e) => setConcertTypeFormData({ ...concertTypeFormData, value: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+              onChange={(e) =>
+                setConcertTypeFormData({
+                  ...concertTypeFormData,
+                  value: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+                })
+              }
               placeholder="bijv. christmas, summer, concert"
               required
             />
-            <small style={{ color: '#666' }}>{t('settings.concertTypes.valueHelp')}</small>
+            <small style={{ color: 'var(--text-muted)' }}>{t('settings.concertTypes.valueHelp')}</small>
           </div>
           <div className="form-group">
             <label className="form-label">{t('settings.concertTypes.label')} *</label>
@@ -1298,7 +1303,9 @@ export default function Settings() {
               type="number"
               className="form-control"
               value={concertTypeFormData.sortOrder}
-              onChange={(e) => setConcertTypeFormData({ ...concertTypeFormData, sortOrder: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setConcertTypeFormData({ ...concertTypeFormData, sortOrder: parseInt(e.target.value) || 0 })
+              }
               min="0"
             />
           </div>
@@ -1336,15 +1343,19 @@ export default function Settings() {
               <select
                 className="form-control"
                 value={groupMappingFormData.groupType}
-                onChange={(e) => setGroupMappingFormData({
-                  ...groupMappingFormData,
-                  groupType: e.target.value as 'orchestra' | 'percussion' | 'special',
-                  orchestraId: e.target.value !== 'orchestra' ? '' : groupMappingFormData.orchestraId,
-                })}
+                onChange={(e) =>
+                  setGroupMappingFormData({
+                    ...groupMappingFormData,
+                    groupType: e.target.value as 'orchestra' | 'percussion' | 'special',
+                    orchestraId: e.target.value !== 'orchestra' ? '' : groupMappingFormData.orchestraId,
+                  })
+                }
                 required
               >
                 <option value="orchestra">{t('settings.m365Groups.typeOrchestra')}</option>
-                <option value="percussion" disabled={hasPercussionGroup}>{t('settings.m365Groups.typePercussion')}</option>
+                <option value="percussion" disabled={hasPercussionGroup}>
+                  {t('settings.m365Groups.typePercussion')}
+                </option>
               </select>
             </div>
           )}
@@ -1360,7 +1371,9 @@ export default function Settings() {
               >
                 <option value="">{t('settings.m365Groups.selectOrchestra')}</option>
                 {availableOrchestras.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -1376,7 +1389,7 @@ export default function Settings() {
               placeholder={t('settings.m365Groups.groupNamePlaceholder')}
               required
             />
-            <small style={{ color: '#666' }}>{t('settings.m365Groups.groupNameHelp')}</small>
+            <small style={{ color: 'var(--text-muted)' }}>{t('settings.m365Groups.groupNameHelp')}</small>
           </div>
         </FormModal>
       )}
@@ -1399,29 +1412,51 @@ export default function Settings() {
           <h2 className="card-title">{t('settings.support.title', 'Support & Help')}</h2>
         </div>
         <div className="card-body">
-          <p className="piece-meta mb-3">{t('settings.support.description', 'Access help resources and report issues.')}</p>
+          <p className="piece-meta mb-3">
+            {t('settings.support.description', 'Access help resources and report issues.')}
+          </p>
 
           <div className="grid grid-3" style={{ gap: '1rem' }}>
-            <Link to="/issues" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+            <Link
+              to="/issues"
+              className="card"
+              style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}
+            >
               <div className="card-body" style={{ textAlign: 'center' }}>
                 <Icon name="pencil" size={32} />
-                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.reportIssue', 'Report Issue')}</h3>
-                <p className="piece-meta">{t('settings.support.reportIssueDesc', 'Report problems with sheet music')}</p>
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                  {t('settings.support.reportIssue', 'Report Issue')}
+                </h3>
+                <p className="piece-meta">
+                  {t('settings.support.reportIssueDesc', 'Report problems with sheet music')}
+                </p>
               </div>
             </Link>
 
-            <Link to="/user-guide" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+            <Link
+              to="/user-guide"
+              className="card"
+              style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}
+            >
               <div className="card-body" style={{ textAlign: 'center' }}>
                 <Icon name="info" size={32} />
-                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.userGuide', 'User Guide')}</h3>
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                  {t('settings.support.userGuide', 'User Guide')}
+                </h3>
                 <p className="piece-meta">{t('settings.support.userGuideDesc', 'Learn how to use the app')}</p>
               </div>
             </Link>
 
-            <Link to="/accessibility" className="card" style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+            <Link
+              to="/accessibility"
+              className="card"
+              style={{ textDecoration: 'none', border: '1px solid var(--border-color)' }}
+            >
               <div className="card-body" style={{ textAlign: 'center' }}>
                 <Icon name="eye" size={32} />
-                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>{t('settings.support.accessibility', 'Accessibility')}</h3>
+                <h3 style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                  {t('settings.support.accessibility', 'Accessibility')}
+                </h3>
                 <p className="piece-meta">{t('settings.support.accessibilityDesc', 'Accessibility information')}</p>
               </div>
             </Link>

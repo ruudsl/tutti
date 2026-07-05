@@ -33,7 +33,13 @@ import AccessibilityInfo, { AccessibilityIndicator } from '../components/Accessi
 import SetlistBuilder, { SetlistPiece, Setlist } from '../components/SetlistBuilder';
 import ConcertPosterGenerator from '../components/ConcertPosterGenerator';
 import { SetlistMode } from '../components/SetlistMode';
-import { getConcertTickets, createTicketType, updateTicketType, deleteTicketType, getAttendancePrediction } from '../api';
+import {
+  getConcertTickets,
+  createTicketType,
+  updateTicketType,
+  deleteTicketType,
+  getAttendancePrediction,
+} from '../api';
 import type { AttendancePrediction } from '../api/concerts';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
@@ -148,8 +154,17 @@ export default function Concerts() {
 
   // Ticket mutations
   const createTicketTypeMutation = useMutation({
-    mutationFn: (data: { name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string; serviceFee?: number; showServiceFeeSeparate?: boolean }) =>
-      createTicketType(viewingConcert!, data),
+    mutationFn: (data: {
+      name: string;
+      price: number;
+      quantity: number;
+      description?: string;
+      maxPerOrder?: number;
+      saleStart?: string;
+      saleEnd?: string;
+      serviceFee?: number;
+      showServiceFeeSeparate?: boolean;
+    }) => createTicketType(viewingConcert!, data),
     onSuccess: () => {
       showSuccess(t('tickets.ticketTypeCreated'));
       refetchTickets();
@@ -160,8 +175,23 @@ export default function Concerts() {
   });
 
   const updateTicketTypeMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<{ name: string; price: number; quantity: number; description?: string; maxPerOrder?: number; saleStart?: string; saleEnd?: string; serviceFee?: number; showServiceFeeSeparate?: boolean }> }) =>
-      updateTicketType(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<{
+        name: string;
+        price: number;
+        quantity: number;
+        description?: string;
+        maxPerOrder?: number;
+        saleStart?: string;
+        saleEnd?: string;
+        serviceFee?: number;
+        showServiceFeeSeparate?: boolean;
+      }>;
+    }) => updateTicketType(id, data),
     onSuccess: () => {
       showSuccess(t('tickets.ticketTypeUpdated'));
       refetchTickets();
@@ -435,7 +465,6 @@ export default function Concerts() {
     setPredictionData(null);
   };
 
-  
   if (isLoading) {
     return (
       <div>
@@ -519,7 +548,9 @@ export default function Concerts() {
                 >
                   <option value="">{t('concerts.allYears')}</option>
                   {years.map((year) => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
                   ))}
                 </select>
                 <select
@@ -530,7 +561,9 @@ export default function Concerts() {
                 >
                   <option value="">{t('concerts.allTypes')}</option>
                   {concertTypes.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -562,26 +595,19 @@ export default function Concerts() {
                       <td>{concert.location || '-'}</td>
                       <td>{concert.concertType ? getConcertTypeLabel(concert.concertType) : '-'}</td>
                       <td>
-                        <span className="badge badge-outline">{concert.programCount} {t('concerts.programCount')}</span>
+                        <span className="badge badge-outline">
+                          {concert.programCount} {t('concerts.programCount')}
+                        </span>
                       </td>
                       <td>
                         <div className="flex gap-1">
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => setViewingConcert(concert.id)}
-                          >
+                          <button className="btn btn-outline btn-sm" onClick={() => setViewingConcert(concert.id)}>
                             <Icon name="eye" size={16} />
                           </button>
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => openEditModal(concert)}
-                          >
+                          <button className="btn btn-outline btn-sm" onClick={() => openEditModal(concert)}>
                             <Icon name="pencil" size={16} />
                           </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => setDeletingConcert(concert)}
-                          >
+                          <button className="btn btn-danger btn-sm" onClick={() => setDeletingConcert(concert)}>
                             <Icon name="trash" size={16} />
                           </button>
                         </div>
@@ -590,7 +616,7 @@ export default function Concerts() {
                   ))}
                   {concerts.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: '#666' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                         {t('concerts.noConcerts')}
                       </td>
                     </tr>
@@ -607,10 +633,7 @@ export default function Concerts() {
           <div className="card-body">
             <div className="flex justify-between items-center mb-3">
               <h3 style={{ margin: 0 }}>{t('concerts.statistics')}</h3>
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowBumaStemraModal(true)}
-              >
+              <button className="btn btn-outline" onClick={() => setShowBumaStemraModal(true)}>
                 {t('concerts.bumaStemraExport')}
               </button>
             </div>
@@ -634,15 +657,19 @@ export default function Concerts() {
                 <tbody>
                   {statistics.mostPlayedPieces.slice(0, 10).map((piece, i) => (
                     <tr key={i}>
-                      <td><strong>{piece.title}</strong></td>
-                      <td><span className="badge badge-primary">{piece.playCount}x</span></td>
+                      <td>
+                        <strong>{piece.title}</strong>
+                      </td>
+                      <td>
+                        <span className="badge badge-primary">{piece.playCount}x</span>
+                      </td>
                       <td>{piece.lastPlayed}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p style={{ color: '#666' }}>Geen data.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Geen data.</p>
             )}
           </div>
         </div>
@@ -669,8 +696,8 @@ export default function Concerts() {
                 <p>
                   {pieceHistoryData.playCount > 0 ? (
                     <>
-                      {t('concerts.timesPlayed', { count: pieceHistoryData.playCount })} -
-                      {t('concerts.lastPlayed')}: {pieceHistoryData.lastPlayed}
+                      {t('concerts.timesPlayed', { count: pieceHistoryData.playCount })} -{t('concerts.lastPlayed')}:{' '}
+                      {pieceHistoryData.lastPlayed}
                     </>
                   ) : (
                     t('concerts.neverPlayed')
@@ -707,12 +734,15 @@ export default function Concerts() {
         <div className="card">
           <div className="card-body" style={{ padding: 0 }}>
             <SetlistBuilder
-              availablePieces={musicTitles.map((title, index) => ({
-                id: title.id || `temp-${index}`,
-                title: title.title,
-                arranger: title.arranger || undefined,
-                durationSeconds: title.durationSeconds || undefined,
-              } as SetlistPiece))}
+              availablePieces={musicTitles.map(
+                (title, index) =>
+                  ({
+                    id: title.id || `temp-${index}`,
+                    title: title.title,
+                    arranger: title.arranger || undefined,
+                    durationSeconds: title.durationSeconds || undefined,
+                  }) as SetlistPiece,
+              )}
               onSave={(setlist: Setlist) => {
                 showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
               }}
@@ -726,7 +756,9 @@ export default function Concerts() {
           <div className="card-body" style={{ padding: 0 }}>
             <ConcertPosterGenerator
               onDownload={(format, data) => {
-                showSuccess(t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`));
+                showSuccess(
+                  t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`),
+                );
               }}
             />
           </div>
@@ -794,7 +826,9 @@ export default function Concerts() {
             >
               <option value="">--</option>
               {concertTypes.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
               ))}
             </select>
           </div>
@@ -810,11 +844,7 @@ export default function Concerts() {
           {editingConcert && (
             <>
               <div className="divider my-4">{t('customFields.additionalFields')}</div>
-              <CustomFieldFormSection
-                entityType="concert"
-                entityId={editingConcert.id}
-                autoSave={true}
-              />
+              <CustomFieldFormSection entityType="concert" entityId={editingConcert.id} autoSave={true} />
             </>
           )}
         </FormModal>
@@ -822,18 +852,20 @@ export default function Concerts() {
 
       {/* View Concert Detail Modal */}
       {viewingConcert && concertDetail && (
-        <Modal
-          title={concertDetail.name}
-          onClose={() => setViewingConcert(null)}
-          size="large"
-        >
+        <Modal title={concertDetail.name} onClose={() => setViewingConcert(null)} size="large">
           <div className="mb-3">
             <div className="flex justify-between items-start">
               <div>
-                <p><strong>{t('common.date')}:</strong> {concertDetail.date}</p>
-                <p><strong>{t('concerts.location')}:</strong> {concertDetail.location || '-'}</p>
+                <p>
+                  <strong>{t('common.date')}:</strong> {concertDetail.date}
+                </p>
+                <p>
+                  <strong>{t('concerts.location')}:</strong> {concertDetail.location || '-'}
+                </p>
                 {concertDetail.concertType && (
-                  <p><strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}</p>
+                  <p>
+                    <strong>{t('concerts.concertType')}:</strong> {getConcertTypeLabel(concertDetail.concertType)}
+                  </p>
                 )}
               </div>
               <div className="flex gap-2">
@@ -870,8 +902,10 @@ export default function Concerts() {
           </div>
 
           {/* Accessibility Info Section */}
-          {(concertDetail.wheelchairSpaces || concertDetail.companionSpaces ||
-            concertDetail.hearingLoopAvailable || concertDetail.accessibleParkingInfo ||
+          {(concertDetail.wheelchairSpaces ||
+            concertDetail.companionSpaces ||
+            concertDetail.hearingLoopAvailable ||
+            concertDetail.accessibleParkingInfo ||
             concertDetail.accessibilityInfo) && (
             <AccessibilityInfo
               wheelchairSpaces={concertDetail.wheelchairSpaces || 0}
@@ -918,7 +952,9 @@ export default function Concerts() {
                 {concertDetail.program.map((item, i) => (
                   <tr key={item.id}>
                     <td>{i + 1}</td>
-                    <td><strong>{item.title}</strong></td>
+                    <td>
+                      <strong>{item.title}</strong>
+                    </td>
                     <td>{item.arranger || '-'}</td>
                     <td>
                       <button
@@ -933,7 +969,7 @@ export default function Concerts() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#666' }}>{t('concerts.noProgramItems')}</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('concerts.noProgramItems')}</p>
           )}
 
           {/* Media Section */}
@@ -947,7 +983,9 @@ export default function Concerts() {
             <div className="flex gap-2 flex-wrap mb-3">
               {concertDetail.media.map((m) => (
                 <div key={m.id} className="card" style={{ padding: '0.5rem', minWidth: '150px' }}>
-                  <div><strong>{getMediaTypeLabel(m.mediaType)}</strong></div>
+                  <div>
+                    <strong>{getMediaTypeLabel(m.mediaType)}</strong>
+                  </div>
                   {m.url && (
                     <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.875rem' }}>
                       {m.description || 'Link'}
@@ -963,17 +1001,14 @@ export default function Concerts() {
               ))}
             </div>
           ) : (
-            <p style={{ color: '#666' }}>{t('concerts.noMedia')}</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('concerts.noMedia')}</p>
           )}
 
           {/* Tickets Section */}
           <div className="flex justify-between items-center mb-2">
             <h4 style={{ margin: 0 }}>{t('tickets.title')}</h4>
             <div className="flex gap-2">
-              <Link
-                to={`/concerts/${viewingConcert}/guest-list`}
-                className="btn btn-outline btn-sm"
-              >
+              <Link to={`/concerts/${viewingConcert}/guest-list`} className="btn btn-outline btn-sm">
                 {t('guestList.title')}
               </Link>
               {ticketData?.ticketTypes && ticketData.ticketTypes.length > 0 && (
@@ -1014,10 +1049,14 @@ export default function Concerts() {
                   <tr key={tt.id}>
                     <td>
                       <strong>{tt.name}</strong>
-                      {tt.description && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{tt.description}</div>}
+                      {tt.description && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{tt.description}</div>
+                      )}
                     </td>
                     <td>EUR {tt.price.toFixed(2)}</td>
-                    <td>{tt.available} / {tt.quantity}</td>
+                    <td>
+                      {tt.available} / {tt.quantity}
+                    </td>
                     <td>
                       {tt.available === 0 ? (
                         <span className="badge badge-danger">{t('tickets.soldOut')}</span>
@@ -1029,16 +1068,10 @@ export default function Concerts() {
                     </td>
                     <td>
                       <div className="flex gap-1">
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => openEditTicketTypeModal(tt)}
-                        >
+                        <button className="btn btn-outline btn-sm" onClick={() => openEditTicketTypeModal(tt)}>
                           <Icon name="pencil" size={16} />
                         </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => setDeletingTicketType(tt)}
-                        >
+                        <button className="btn btn-danger btn-sm" onClick={() => setDeletingTicketType(tt)}>
                           <Icon name="trash" size={16} />
                         </button>
                       </div>
@@ -1048,7 +1081,7 @@ export default function Concerts() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#666', marginBottom: '1rem' }}>{t('tickets.noTicketTypes')}</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{t('tickets.noTicketTypes')}</p>
           )}
 
           {/* Attendance Section */}
@@ -1080,7 +1113,9 @@ export default function Concerts() {
                     <td>
                       <button
                         className="btn btn-danger btn-sm"
-                        onClick={() => deleteAttendanceMutation.mutate({ concertId: viewingConcert, attendanceId: a.id })}
+                        onClick={() =>
+                          deleteAttendanceMutation.mutate({ concertId: viewingConcert, attendanceId: a.id })
+                        }
                       >
                         <Icon name="trash" size={16} />
                       </button>
@@ -1090,7 +1125,7 @@ export default function Concerts() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#666' }}>{t('concerts.noAttendance')}</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('concerts.noAttendance')}</p>
           )}
         </Modal>
       )}
@@ -1183,7 +1218,9 @@ export default function Concerts() {
               required
             >
               {mediaTypes.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
               ))}
             </select>
           </div>
@@ -1213,15 +1250,29 @@ export default function Concerts() {
       {showAddAttendanceModal && viewingConcert && (
         <FormModal
           title={t('concerts.bulkAddAttendance')}
-          onClose={() => { setShowAddAttendanceModal(false); setSelectedUserIds([]); }}
+          onClose={() => {
+            setShowAddAttendanceModal(false);
+            setSelectedUserIds([]);
+          }}
           onSubmit={handleAddAttendance}
           isSubmitting={addAttendanceMutation.isPending}
         >
           <div className="form-group">
             <label className="form-label">{t('users.title')}</label>
-            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.5rem' }}>
+            <div
+              style={{
+                maxHeight: '300px',
+                overflow: 'auto',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                padding: '0.5rem',
+              }}
+            >
               {users.map((user) => (
-                <label key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0' }}>
+                <label
+                  key={user.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0' }}
+                >
                   <input
                     type="checkbox"
                     checked={selectedUserIds.includes(user.id)}
@@ -1229,7 +1280,7 @@ export default function Concerts() {
                       if (e.target.checked) {
                         setSelectedUserIds([...selectedUserIds, user.id]);
                       } else {
-                        setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                        setSelectedUserIds(selectedUserIds.filter((id) => id !== user.id));
                       }
                     }}
                   />
@@ -1237,7 +1288,7 @@ export default function Concerts() {
                 </label>
               ))}
             </div>
-            <small style={{ color: '#666' }}>{selectedUserIds.length} geselecteerd</small>
+            <small style={{ color: 'var(--text-muted)' }}>{selectedUserIds.length} geselecteerd</small>
           </div>
         </FormModal>
       )}
@@ -1251,9 +1302,7 @@ export default function Concerts() {
           isSubmitting={exportBumaStemraMutation.isPending}
           submitLabel={t('concerts.downloadExport')}
         >
-          <p style={{ marginBottom: '1rem', color: '#666' }}>
-            {t('concerts.bumaStemraDescription')}
-          </p>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>{t('concerts.bumaStemraDescription')}</p>
           <div className="flex gap-2">
             <div className="form-group" style={{ flex: 1 }}>
               <label className="form-label">{t('concerts.startDate')}</label>
@@ -1393,16 +1442,16 @@ export default function Concerts() {
               onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, serviceFee: e.target.value })}
               placeholder="0.00"
             />
-            <small style={{ color: 'var(--text-light)' }}>
-              {t('tickets.ticketTypeServiceFeeHelp')}
-            </small>
+            <small style={{ color: 'var(--text-light)' }}>{t('tickets.ticketTypeServiceFeeHelp')}</small>
           </div>
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={ticketTypeFormData.showServiceFeeSeparate}
-                onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, showServiceFeeSeparate: e.target.checked })}
+                onChange={(e) =>
+                  setTicketTypeFormData({ ...ticketTypeFormData, showServiceFeeSeparate: e.target.checked })
+                }
               />
               {t('tickets.showServiceFeeSeparate')}
             </label>
@@ -1428,11 +1477,7 @@ export default function Concerts() {
 
       {/* Attendance Prediction Modal */}
       {showPredictionModal && (
-        <Modal
-          title={t('concerts.prediction.title')}
-          onClose={closePredictionModal}
-          size="large"
-        >
+        <Modal title={t('concerts.prediction.title')} onClose={closePredictionModal} size="large">
           {loadingPrediction ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
               <span className="loading loading-spinner loading-lg" />
@@ -1440,13 +1485,17 @@ export default function Concerts() {
           ) : predictionData ? (
             <div>
               {/* Summary stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}
+              >
                 <div className="card">
                   <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                       {predictionData.prediction.expectedAttendance}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.expected')}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('concerts.prediction.expected')}
+                    </div>
                   </div>
                 </div>
                 <div className="card">
@@ -1454,7 +1503,9 @@ export default function Concerts() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--success)' }}>
                       {predictionData.prediction.confidenceBreakdown.highConfidenceYes}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.likelyYes')}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('concerts.prediction.likelyYes')}
+                    </div>
                   </div>
                 </div>
                 <div className="card">
@@ -1462,7 +1513,9 @@ export default function Concerts() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--warning, orange)' }}>
                       {predictionData.prediction.confidenceBreakdown.uncertain}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.uncertain')}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('concerts.prediction.uncertain')}
+                    </div>
                   </div>
                 </div>
                 <div className="card">
@@ -1470,16 +1523,28 @@ export default function Concerts() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--danger)' }}>
                       {predictionData.prediction.confidenceBreakdown.highConfidenceNo}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{t('concerts.prediction.likelyNo')}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                      {t('concerts.prediction.likelyNo')}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* By instrument */}
               <h4 style={{ marginBottom: '0.75rem' }}>{t('concerts.prediction.byInstrument')}</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                {predictionData.prediction.byInstrument.map(inst => (
-                  <div key={inst.instrument} style={{ padding: '0.5rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                  gap: '0.5rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                {predictionData.prediction.byInstrument.map((inst) => (
+                  <div
+                    key={inst.instrument}
+                    style={{ padding: '0.5rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}
+                  >
                     <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>{inst.instrument}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                       {inst.expected.toFixed(1)} / {inst.total} {t('concerts.prediction.expected').toLowerCase()}
@@ -1501,19 +1566,38 @@ export default function Concerts() {
                     </tr>
                   </thead>
                   <tbody>
-                    {predictionData.members.map(member => {
+                    {predictionData.members.map((member) => {
                       const probability = Math.round(member.attendanceProbability * 100);
-                      const probabilityColor = probability >= 80 ? 'var(--success)' : probability <= 20 ? 'var(--danger)' : 'var(--warning, orange)';
+                      const probabilityColor =
+                        probability >= 80
+                          ? 'var(--success)'
+                          : probability <= 20
+                            ? 'var(--danger)'
+                            : 'var(--warning, orange)';
                       return (
                         <tr key={member.memberId}>
                           <td>{member.memberName}</td>
                           <td>{member.instrument || '-'}</td>
                           <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                              <div style={{ width: '50px', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ width: `${probability}%`, height: '100%', background: probabilityColor }} />
+                            <div
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                            >
+                              <div
+                                style={{
+                                  width: '50px',
+                                  height: '6px',
+                                  background: 'var(--border)',
+                                  borderRadius: '3px',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <div
+                                  style={{ width: `${probability}%`, height: '100%', background: probabilityColor }}
+                                />
                               </div>
-                              <span style={{ fontSize: '0.875rem', fontWeight: '500', color: probabilityColor }}>{probability}%</span>
+                              <span style={{ fontSize: '0.875rem', fontWeight: '500', color: probabilityColor }}>
+                                {probability}%
+                              </span>
                             </div>
                           </td>
                           <td style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-light)' }}>
@@ -1526,7 +1610,16 @@ export default function Concerts() {
                 </table>
               </div>
 
-              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  background: 'var(--background)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-light)',
+                }}
+              >
                 <Icon name="info" size={14} style={{ marginRight: '0.5rem' }} />
                 {t('concerts.prediction.disclaimer')}
               </div>

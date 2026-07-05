@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { loadPdfjs } from '../lib/pdfjs';
 import { useLazyLoadMultiple } from '../hooks/useLazyLoad';
-
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PdfPagePreviewProps {
   file: File;
@@ -41,7 +38,7 @@ export default function PdfPagePreview({
   const [loadedCount, setLoadedCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const pdfRef = useRef<PDFDocumentProxy | null>(null);
 
   // Use lazy loading for thumbnails - only render when visible
   const { getRef, visibilityStates } = useLazyLoadMultiple({
@@ -50,11 +47,7 @@ export default function PdfPagePreview({
     triggerOnce: true,
   });
 
-  const renderPage = useCallback(async (
-    pdf: pdfjsLib.PDFDocumentProxy,
-    pageNum: number,
-    width: number
-  ): Promise<string> => {
+  const renderPage = useCallback(async (pdf: PDFDocumentProxy, pageNum: number, width: number): Promise<string> => {
     const page = await pdf.getPage(pageNum);
     const viewport = page.getViewport({ scale: 1 });
     const scale = width / viewport.width;
@@ -84,6 +77,9 @@ export default function PdfPagePreview({
       setLoadedCount(0);
 
       try {
+        // Load pdf.js lazily on first use (kept out of the initial bundle)
+        const pdfjsLib = await loadPdfjs();
+
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
@@ -216,9 +212,7 @@ export default function PdfPagePreview({
             >
               <div
                 style={{
-                  border: rangeInfo
-                    ? `3px solid ${rangeInfo.color}`
-                    : '1px solid var(--border)',
+                  border: rangeInfo ? `3px solid ${rangeInfo.color}` : '1px solid var(--border)',
                   borderRadius: '0.25rem',
                   overflow: 'hidden',
                   background: 'white',

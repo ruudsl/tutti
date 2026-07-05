@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -86,7 +87,11 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
   const [viewMode, setViewMode] = useState<'seats' | 'sections'>('sections');
 
   // Fetch heatmap data
-  const { data: heatmapData, isLoading, error } = useQuery({
+  const {
+    data: heatmapData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['seatHeatmap', concertId],
     queryFn: () => getSeatHeatmapData(concertId),
     enabled: !!concertId,
@@ -119,12 +124,12 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
     // Calculate section positions
     let currentY = PADDING;
     const sectionPositions: {
-      section: typeof layout.sections[0];
+      section: (typeof layout.sections)[0];
       x: number;
       y: number;
       width: number;
       height: number;
-      seats: { seat: typeof layout.seats[0]; x: number; y: number }[];
+      seats: { seat: (typeof layout.seats)[0]; x: number; y: number }[];
     }[] = [];
 
     // Group sections by row
@@ -148,12 +153,8 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
         const seatsPerRow = Math.ceil(Math.sqrt(seats.length));
         const numRows = Math.ceil(seats.length / seatsPerRow);
 
-        const sectionWidth = viewMode === 'seats'
-          ? seatsPerRow * (SEAT_SIZE + SEAT_GAP) - SEAT_GAP + 20
-          : 120;
-        const sectionHeight = viewMode === 'seats'
-          ? numRows * (SEAT_SIZE + SEAT_GAP) - SEAT_GAP + 40
-          : 80;
+        const sectionWidth = viewMode === 'seats' ? seatsPerRow * (SEAT_SIZE + SEAT_GAP) - SEAT_GAP + 20 : 120;
+        const sectionHeight = viewMode === 'seats' ? numRows * (SEAT_SIZE + SEAT_GAP) - SEAT_GAP + 40 : 80;
 
         maxRowHeight = Math.max(maxRowHeight, sectionHeight);
 
@@ -183,9 +184,7 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
       currentY += maxRowHeight + SECTION_GAP;
     }
 
-    const totalWidth = Math.max(
-      ...sectionPositions.map(s => s.x + s.width)
-    ) + PADDING;
+    const totalWidth = Math.max(...sectionPositions.map((s) => s.x + s.width)) + PADDING;
     const totalHeight = currentY + PADDING;
 
     return {
@@ -228,20 +227,15 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
     }
   };
 
-  const handleSeatMouseEnter = (
-    seatData: SeatSalesData,
-    sectionName: string,
-    e: React.MouseEvent
-  ) => {
+  const handleSeatMouseEnter = (seatData: SeatSalesData, sectionName: string, e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const value = getSeatValue(seatData);
 
     let valueLabel = '';
     switch (mode) {
       case 'sales_speed':
-        valueLabel = seatData.timeToSell !== null
-          ? `${Math.round(seatData.timeToSell / 3600)}h to sell`
-          : t('heatmap.notSold');
+        valueLabel =
+          seatData.timeToSell !== null ? `${Math.round(seatData.timeToSell / 3600)}h to sell` : t('heatmap.notSold');
         break;
       case 'popularity':
         valueLabel = `${Math.round(value)}% ${t('heatmap.popularityScore')}`;
@@ -311,16 +305,19 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
   return (
     <div className="seat-heatmap-container">
       {/* Header with stats */}
-      <div className="heatmap-header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        padding: '1rem',
-        background: 'var(--surface-color, white)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color, #eee)',
-      }}>
+      <div
+        className="heatmap-header"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem',
+          padding: '1rem',
+          background: 'var(--surface-color, white)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color, #eee)',
+        }}
+      >
         <div>
           <h3 style={{ margin: 0, marginBottom: '0.25rem' }}>{heatmapData.concertName}</h3>
           <p style={{ margin: 0, color: 'var(--text-light-color, #666)', fontSize: '0.875rem' }}>
@@ -347,13 +344,15 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
       </div>
 
       {/* SVG Heatmap */}
-      <div style={{
-        background: 'var(--surface-color, white)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color, #eee)',
-        padding: '1rem',
-        overflow: 'auto',
-      }}>
+      <div
+        style={{
+          background: 'var(--surface-color, white)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color, #eee)',
+          padding: '1rem',
+          overflow: 'auto',
+        }}
+      >
         <svg
           width="100%"
           height={chartLayout.height}
@@ -371,22 +370,13 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
             </filter>
             <linearGradient id={`legendGradient-${mode}`} x1="0%" y1="0%" x2="100%" y2="0%">
               {gradient.colors.map((color, i) => (
-                <stop
-                  key={i}
-                  offset={`${(i / (gradient.colors.length - 1)) * 100}%`}
-                  stopColor={color}
-                />
+                <stop key={i} offset={`${(i / (gradient.colors.length - 1)) * 100}%`} stopColor={color} />
               ))}
             </linearGradient>
           </defs>
 
           {/* Background */}
-          <rect
-            width={chartLayout.width}
-            height={chartLayout.height}
-            fill="var(--bg-color, #f5f5f5)"
-            rx="8"
-          />
+          <rect width={chartLayout.width} height={chartLayout.height} fill="var(--bg-color, #f5f5f5)" rx="8" />
 
           {/* Stage indicator */}
           <g transform={`translate(${chartLayout.width / 2}, 25)`}>
@@ -400,9 +390,7 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
           {chartLayout.sections.map(({ section, x, y, width, height, seats }) => {
             const sectionData = sectionDataMap.get(section.id);
             const sectionValue = sectionData ? getSectionValue(sectionData) : 0;
-            const sectionColor = sectionData
-              ? getHeatmapColor(sectionValue, mode)
-              : UNSOLD_COLOR;
+            const sectionColor = sectionData ? getHeatmapColor(sectionValue, mode) : UNSOLD_COLOR;
 
             return (
               <g key={section.id}>
@@ -456,31 +444,31 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
                 )}
 
                 {/* Individual seats in seat view */}
-                {viewMode === 'seats' && seats.map(({ seat, x: seatX, y: seatY }) => {
-                  const seatData = seatDataMap.get(seat.id);
-                  const seatValue = seatData ? getSeatValue(seatData) : 0;
-                  const seatColor = seatData && seatData.status === 'sold'
-                    ? getHeatmapColor(seatValue, mode)
-                    : UNSOLD_COLOR;
+                {viewMode === 'seats' &&
+                  seats.map(({ seat, x: seatX, y: seatY }) => {
+                    const seatData = seatDataMap.get(seat.id);
+                    const seatValue = seatData ? getSeatValue(seatData) : 0;
+                    const seatColor =
+                      seatData && seatData.status === 'sold' ? getHeatmapColor(seatValue, mode) : UNSOLD_COLOR;
 
-                  return (
-                    <rect
-                      key={seat.id}
-                      x={seatX}
-                      y={seatY}
-                      width={chartLayout.SEAT_SIZE}
-                      height={chartLayout.SEAT_SIZE}
-                      rx={2}
-                      fill={seatColor}
-                      stroke={seatData?.status === 'sold' ? 'rgba(0,0,0,0.1)' : 'transparent'}
-                      strokeWidth={1}
-                      style={{ cursor: 'pointer' }}
-                      filter={seatValue > 80 ? 'url(#heatmapGlow)' : undefined}
-                      onMouseEnter={(e) => seatData && handleSeatMouseEnter(seatData, section.name, e)}
-                      onMouseLeave={handleMouseLeave}
-                    />
-                  );
-                })}
+                    return (
+                      <rect
+                        key={seat.id}
+                        x={seatX}
+                        y={seatY}
+                        width={chartLayout.SEAT_SIZE}
+                        height={chartLayout.SEAT_SIZE}
+                        rx={2}
+                        fill={seatColor}
+                        stroke={seatData?.status === 'sold' ? 'rgba(0,0,0,0.1)' : 'transparent'}
+                        strokeWidth={1}
+                        style={{ cursor: 'pointer' }}
+                        filter={seatValue > 80 ? 'url(#heatmapGlow)' : undefined}
+                        onMouseEnter={(e) => seatData && handleSeatMouseEnter(seatData, section.name, e)}
+                        onMouseLeave={handleMouseLeave}
+                      />
+                    );
+                  })}
               </g>
             );
           })}
@@ -488,93 +476,97 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
       </div>
 
       {/* Legend */}
-      <div className="heatmap-legend" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '1rem',
-        marginTop: '1rem',
-        padding: '1rem',
-        background: 'var(--surface-color, white)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color, #eee)',
-      }}>
-        <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>
-          {gradient.labels[0]}
-        </span>
-        <div style={{
-          width: '200px',
-          height: '16px',
-          background: `linear-gradient(to right, ${gradient.colors.join(', ')})`,
-          borderRadius: '8px',
-        }} />
-        <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>
-          {gradient.labels[gradient.labels.length - 1]}
-        </span>
-
-        <div style={{
-          marginLeft: '1.5rem',
+      <div
+        className="heatmap-legend"
+        style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            background: UNSOLD_COLOR,
-            borderRadius: '4px',
-          }} />
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>
-            {t('heatmap.unsold')}
-          </span>
-        </div>
-      </div>
-
-      {/* Section Stats Table */}
-      {heatmapData.sections.length > 0 && (
-        <div className="heatmap-stats" style={{
+          justifyContent: 'center',
+          gap: '1rem',
           marginTop: '1rem',
           padding: '1rem',
           background: 'var(--surface-color, white)',
           borderRadius: '8px',
           border: '1px solid var(--border-color, #eee)',
-        }}>
+        }}
+      >
+        <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>{gradient.labels[0]}</span>
+        <div
+          style={{
+            width: '200px',
+            height: '16px',
+            background: `linear-gradient(to right, ${gradient.colors.join(', ')})`,
+            borderRadius: '8px',
+          }}
+        />
+        <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>
+          {gradient.labels[gradient.labels.length - 1]}
+        </span>
+
+        <div
+          style={{
+            marginLeft: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <div
+            style={{
+              width: '16px',
+              height: '16px',
+              background: UNSOLD_COLOR,
+              borderRadius: '4px',
+            }}
+          />
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-light-color, #666)' }}>{t('heatmap.unsold')}</span>
+        </div>
+      </div>
+
+      {/* Section Stats Table */}
+      {heatmapData.sections.length > 0 && (
+        <div
+          className="heatmap-stats"
+          style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: 'var(--surface-color, white)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color, #eee)',
+          }}
+        >
           <h4 style={{ marginTop: 0, marginBottom: '0.75rem' }}>{t('heatmap.sectionStats')}</h4>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color, #eee)' }}>
-                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.875rem' }}>
-                  {t('heatmap.section')}
-                </th>
+                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.875rem' }}>{t('heatmap.section')}</th>
+                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>{t('heatmap.sold')}</th>
+                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>{t('heatmap.revenue')}</th>
+                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>{t('heatmap.avgPrice')}</th>
                 <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
-                  {t('heatmap.sold')}
-                </th>
-                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
-                  {t('heatmap.revenue')}
-                </th>
-                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
-                  {t('heatmap.avgPrice')}
-                </th>
-                <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
-                  {mode === 'sales_speed' ? t('heatmap.salesVelocity') :
-                   mode === 'popularity' ? t('heatmap.popularityScore') :
-                   t('heatmap.pricePerformance')}
+                  {mode === 'sales_speed'
+                    ? t('heatmap.salesVelocity')
+                    : mode === 'popularity'
+                      ? t('heatmap.popularityScore')
+                      : t('heatmap.pricePerformance')}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {heatmapData.sections.map(section => {
+              {heatmapData.sections.map((section) => {
                 const value = getSectionValue(section);
                 return (
                   <tr key={section.sectionId} style={{ borderBottom: '1px solid var(--border-color, #f0f0f0)' }}>
                     <td style={{ padding: '0.5rem', fontSize: '0.875rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '3px',
-                          background: getHeatmapColor(value, mode),
-                        }} />
+                        <div
+                          style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '3px',
+                            background: getHeatmapColor(value, mode),
+                          }}
+                        />
                         {section.sectionName}
                       </div>
                     </td>
@@ -591,18 +583,19 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
                       {formatCurrency(section.averagePrice)}
                     </td>
                     <td style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        background: getHeatmapColor(value, mode),
-                        color: value > 50 ? 'white' : 'var(--text-color)',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                      }}>
-                        {mode === 'sales_speed' ? `${section.salesVelocity.toFixed(1)}/day` :
-                         `${Math.round(value)}%`}
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          background: getHeatmapColor(value, mode),
+                          color: value > 50 ? 'white' : 'var(--text-color)',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {mode === 'sales_speed' ? `${section.salesVelocity.toFixed(1)}/day` : `${Math.round(value)}%`}
                       </div>
                     </td>
                   </tr>
@@ -633,21 +626,28 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-            {hoveredSeat.sectionName} - {t('heatmap.row')} {hoveredSeat.rowLabel}, {t('heatmap.seat')} {hoveredSeat.seatLabel}
+            {hoveredSeat.sectionName} - {t('heatmap.row')} {hoveredSeat.rowLabel}, {t('heatmap.seat')}{' '}
+            {hoveredSeat.seatLabel}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
             {hoveredSeat.status === 'sold' ? (
               <>
-                <div>{t('heatmap.status')}: {t(`heatmap.${hoveredSeat.status}`)}</div>
+                <div>
+                  {t('heatmap.status')}: {t(`heatmap.${hoveredSeat.status}`)}
+                </div>
                 {hoveredSeat.price !== null && (
-                  <div>{t('heatmap.price')}: {formatCurrency(hoveredSeat.price)}</div>
+                  <div>
+                    {t('heatmap.price')}: {formatCurrency(hoveredSeat.price)}
+                  </div>
                 )}
                 <div style={{ marginTop: '4px', fontWeight: 500, color: getHeatmapColor(hoveredSeat.value, mode) }}>
                   {hoveredSeat.valueLabel}
                 </div>
               </>
             ) : (
-              <div>{t('heatmap.status')}: {t('heatmap.available')}</div>
+              <div>
+                {t('heatmap.status')}: {t('heatmap.available')}
+              </div>
             )}
           </div>
         </div>
@@ -658,7 +658,7 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
 
 // Currency formatter
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('nl-NL', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency: 'EUR',
   }).format(amount);

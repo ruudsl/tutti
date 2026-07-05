@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -66,7 +67,7 @@ export default function ConcertStageSetup() {
       (u) =>
         u.firstName.toLowerCase().includes(term) ||
         u.lastName.toLowerCase().includes(term) ||
-        u.instruments?.some((i) => i.name.toLowerCase().includes(term))
+        u.instruments?.some((i) => i.name.toLowerCase().includes(term)),
     );
   }, [users, searchTerm]);
 
@@ -75,7 +76,7 @@ export default function ConcertStageSetup() {
     return new Set(
       Object.values(assignments)
         .filter((a) => a.userId)
-        .map((a) => a.userId!)
+        .map((a) => a.userId!),
     );
   }, [assignments]);
 
@@ -182,7 +183,7 @@ export default function ConcertStageSetup() {
         <div>
           <h1>{t('concertStageSetup.title', 'Concert Podiumindeling')}</h1>
           <p className="subtitle">
-            {concert.name} - {new Date(concert.date).toLocaleDateString('nl-NL')}
+            {concert.name} - {new Date(concert.date).toLocaleDateString(currentLocale())}
             {concert.location && ` - ${concert.location}`}
           </p>
         </div>
@@ -200,19 +201,14 @@ export default function ConcertStageSetup() {
             onClick={handleSave}
             disabled={saveConcertStage.isPending || !selectedLayoutId || !hasChanges}
           >
-            {saveConcertStage.isPending
-              ? t('common.saving', 'Opslaan...')
-              : t('common.save', 'Opslaan')}
+            {saveConcertStage.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
           </button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: '1rem' }}>
-        <button
-          className={`tab ${activeTab === 'assign' ? 'active' : ''}`}
-          onClick={() => setActiveTab('assign')}
-        >
+        <button className={`tab ${activeTab === 'assign' ? 'active' : ''}`} onClick={() => setActiveTab('assign')}>
           {t('concertStageSetup.tabs.assign', 'Toewijzen')}
         </button>
         <button
@@ -228,7 +224,10 @@ export default function ConcertStageSetup() {
       {activeTab === 'assign' && (
         <div className="stage-setup-content" style={{ display: 'flex', gap: '1rem', minHeight: '500px' }}>
           {/* Left: Layout selection + Members */}
-          <div className="setup-sidebar" style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div
+            className="setup-sidebar"
+            style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          >
             {/* Layout Selection */}
             <div className="card">
               <div className="card-header">
@@ -265,7 +264,10 @@ export default function ConcertStageSetup() {
                 <div className="card-header">
                   <h3>{t('concertStageSetup.members', 'Leden')}</h3>
                 </div>
-                <div className="card-body" style={{ padding: '0.5rem', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div
+                  className="card-body"
+                  style={{ padding: '0.5rem', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                >
                   <input
                     type="text"
                     placeholder={t('common.search', 'Zoeken...')}
@@ -295,9 +297,10 @@ export default function ConcertStageSetup() {
                           borderRadius: '4px',
                           cursor: assignedUserIds.has(user.id) ? 'default' : 'grab',
                           opacity: assignedUserIds.has(user.id) ? 0.5 : 1,
-                          border: selectedPositionId && !assignedUserIds.has(user.id)
-                            ? '2px dashed var(--primary)'
-                            : '1px solid var(--border-color)',
+                          border:
+                            selectedPositionId && !assignedUserIds.has(user.id)
+                              ? '2px dashed var(--primary)'
+                              : '1px solid var(--border-color)',
                         }}
                       >
                         <div style={{ fontWeight: 500 }}>
@@ -360,7 +363,10 @@ export default function ConcertStageSetup() {
                 })}
               </div>
             ) : (
-              <div className="empty-state" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                className="empty-state"
+                style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 <p>{t('concertStageSetup.selectLayoutFirst', 'Selecteer eerst een podiumindeling')}</p>
               </div>
             )}
@@ -381,23 +387,17 @@ export default function ConcertStageSetup() {
                   {selectedPositionId ? (
                     <>
                       {(() => {
-                        const pos = selectedLayout?.layoutData?.positions.find(
-                          (p) => p.id === selectedPositionId
-                        );
+                        const pos = selectedLayout?.layoutData?.positions.find((p) => p.id === selectedPositionId);
                         const assignment = getAssignment(selectedPositionId);
-                        const section = selectedLayout?.layoutData?.sections.find(
-                          (s) => s.id === pos?.section
-                        );
+                        const section = selectedLayout?.layoutData?.sections.find((s) => s.id === pos?.section);
 
                         return (
                           <div>
                             <p>
-                              <strong>{t('stageDesigner.label', 'Label')}:</strong>{' '}
-                              {pos?.label || '-'}
+                              <strong>{t('stageDesigner.label', 'Label')}:</strong> {pos?.label || '-'}
                             </p>
                             <p>
-                              <strong>{t('stageDesigner.section', 'Sectie')}:</strong>{' '}
-                              {section?.name || '-'}
+                              <strong>{t('stageDesigner.section', 'Sectie')}:</strong> {section?.name || '-'}
                             </p>
                             <hr style={{ margin: '1rem 0' }} />
                             <p>
@@ -432,7 +432,10 @@ export default function ConcertStageSetup() {
                     </>
                   ) : (
                     <p style={{ color: 'var(--text-light)' }}>
-                      {t('concertStageSetup.clickPosition', 'Klik op een positie op het podium om details te zien en een lid toe te wijzen.')}
+                      {t(
+                        'concertStageSetup.clickPosition',
+                        'Klik op een positie op het podium om details te zien en een lid toe te wijzen.',
+                      )}
                     </p>
                   )}
                 </div>
@@ -445,11 +448,10 @@ export default function ConcertStageSetup() {
                 </div>
                 <div className="card-body">
                   <p>
-                    <strong>{t('concertStageSetup.assigned', 'Toegewezen')}:</strong>{' '}
-                    {Object.keys(assignments).length} /{' '}
-                    {selectedLayout?.layoutData?.positions.filter(
-                      (p) => p.type === 'chair' || p.type === 'stand'
-                    ).length || 0}{' '}
+                    <strong>{t('concertStageSetup.assigned', 'Toegewezen')}:</strong> {Object.keys(assignments).length}{' '}
+                    /{' '}
+                    {selectedLayout?.layoutData?.positions.filter((p) => p.type === 'chair' || p.type === 'stand')
+                      .length || 0}{' '}
                     {t('concertStageSetup.positions', 'posities')}
                   </p>
                 </div>
@@ -474,7 +476,9 @@ export default function ConcertStageSetup() {
             />
           ) : (
             <div className="empty-state">
-              <p>{t('concertStageSetup.noPrintData', 'Geen afdrukgegevens beschikbaar. Sla eerst de podiumindeling op.')}</p>
+              <p>
+                {t('concertStageSetup.noPrintData', 'Geen afdrukgegevens beschikbaar. Sla eerst de podiumindeling op.')}
+              </p>
             </div>
           )}
         </div>

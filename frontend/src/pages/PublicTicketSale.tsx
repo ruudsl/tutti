@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -11,7 +12,11 @@ export default function PublicTicketSale() {
   const navigate = useNavigate();
   useDocumentTitle('tickets.buyTickets');
 
-  const { data: ticketInfo, isLoading, error } = useQuery({
+  const {
+    data: ticketInfo,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['public-tickets', concertId],
     queryFn: () => getConcertTickets(concertId!),
     enabled: !!concertId,
@@ -58,26 +63,23 @@ export default function PublicTicketSale() {
           <h1>{concert.name}</h1>
           <div className="concert-meta">
             <span className="concert-date">
-              {concertDate.toLocaleDateString('nl-NL', {
+              {concertDate.toLocaleDateString(currentLocale(), {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
               })}
-              {concert.endDate && ` - ${new Date(concert.endDate).toLocaleDateString('nl-NL', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}`}
+              {concert.endDate &&
+                ` - ${new Date(concert.endDate).toLocaleDateString(currentLocale(), {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}`}
             </span>
-            {concert.location && (
-              <span className="concert-location">{concert.location}</span>
-            )}
+            {concert.location && <span className="concert-location">{concert.location}</span>}
           </div>
-          {concert.description && (
-            <p className="concert-description">{concert.description}</p>
-          )}
+          {concert.description && <p className="concert-description">{concert.description}</p>}
         </div>
 
         {/* Ticket Purchase Section */}

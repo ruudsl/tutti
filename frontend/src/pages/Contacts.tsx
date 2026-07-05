@@ -26,6 +26,7 @@ import {
   CreateContactData,
 } from '../api/contacts';
 import { showSuccess, showError } from '../utils/toast';
+import { useDebounce } from '../hooks/useDebounce';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
@@ -67,14 +68,18 @@ export default function Contacts() {
   const isAdmin = user?.role === ROLES.ADMIN;
   const canEdit = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
+  // Debounce search input so we don't fire an API request per keystroke
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts', filterType, filterCategory, filterActive, searchTerm],
-    queryFn: () => getContacts({
-      type: filterType || undefined,
-      category: filterCategory || undefined,
-      active: filterActive,
-      search: searchTerm || undefined,
-    }),
+    queryKey: ['contacts', filterType, filterCategory, filterActive, debouncedSearchTerm],
+    queryFn: () =>
+      getContacts({
+        type: filterType || undefined,
+        category: filterCategory || undefined,
+        active: filterActive,
+        search: debouncedSearchTerm || undefined,
+      }),
   });
 
   const { data: categories = [] } = useQuery({
@@ -84,7 +89,7 @@ export default function Contacts() {
 
   const { data: contactDetail } = useQuery({
     queryKey: ['contact', selectedContact?.id],
-    queryFn: () => selectedContact ? getContact(selectedContact.id) : null,
+    queryFn: () => (selectedContact ? getContact(selectedContact.id) : null),
     enabled: !!selectedContact,
   });
 
@@ -199,7 +204,9 @@ export default function Contacts() {
               >
                 <option value="">{t('common.all')}</option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -257,15 +264,10 @@ export default function Contacts() {
                 contacts.map((contact) => (
                   <tr key={contact.id} className={!contact.isActive ? 'row-inactive' : ''}>
                     <td>
-                      <button
-                        className="btn-link"
-                        onClick={() => setSelectedContact(contact)}
-                      >
+                      <button className="btn-link" onClick={() => setSelectedContact(contact)}>
                         {contact.name}
                       </button>
-                      {contact.contactPerson && (
-                        <div className="text-muted small">{contact.contactPerson}</div>
-                      )}
+                      {contact.contactPerson && <div className="text-muted small">{contact.contactPerson}</div>}
                     </td>
                     <td>
                       <span className={`badge ${CONTACT_TYPE_COLORS[contact.contactType]}`}>
@@ -273,16 +275,8 @@ export default function Contacts() {
                         {t(`contacts.type.${contact.contactType}`)}
                       </span>
                     </td>
-                    <td>
-                      {contact.email && (
-                        <a href={`mailto:${contact.email}`}>{contact.email}</a>
-                      )}
-                    </td>
-                    <td>
-                      {contact.phone && (
-                        <a href={`tel:${contact.phone}`}>{contact.phone}</a>
-                      )}
-                    </td>
+                    <td>{contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}</td>
+                    <td>{contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}</td>
                     <td>{contact.city}</td>
                     <td>
                       {contact.categories.map((cat) => (
@@ -317,15 +311,18 @@ export default function Contacts() {
                           >
                             <Icon name={contact.isActive ? 'eye' : 'eyeOff'} />
                           </button>
-                          {isAdmin && contact.contactType === 'person' && !contact.promotedToUserId && contact.email && (
-                            <button
-                              className="btn btn-sm btn-outline"
-                              onClick={() => handlePromote(contact)}
-                              title={t('contacts.promoteToUser')}
-                            >
-                              <Icon name="user" />
-                            </button>
-                          )}
+                          {isAdmin &&
+                            contact.contactType === 'person' &&
+                            !contact.promotedToUserId &&
+                            contact.email && (
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => handlePromote(contact)}
+                                title={t('contacts.promoteToUser')}
+                              >
+                                <Icon name="user" />
+                              </button>
+                            )}
                           {isAdmin && (
                             <button
                               className="btn btn-sm btn-danger-outline"
@@ -346,12 +343,7 @@ export default function Contacts() {
         </div>
       </div>
 
-      {showCreateModal && (
-        <ContactFormModal
-          onClose={() => setShowCreateModal(false)}
-          categories={categories}
-        />
-      )}
+      {showCreateModal && <ContactFormModal onClose={() => setShowCreateModal(false)} categories={categories} />}
 
       {selectedContact && !showPromoteModal && (
         <ContactDetailModal
@@ -363,15 +355,18 @@ export default function Contacts() {
       )}
 
       {showCategoriesModal && (
-        <CategoriesModal
-          categories={categories}
-          onClose={() => setShowCategoriesModal(false)}
-          isAdmin={isAdmin}
-        />
+        <CategoriesModal categories={categories} onClose={() => setShowCategoriesModal(false)} isAdmin={isAdmin} />
       )}
 
       {showPromoteModal && selectedContact && (
-        <Modal onClose={() => { setShowPromoteModal(false); setPromoteResult(null); setSelectedContact(null); }} title={t('contacts.promoteToUser')}>
+        <Modal
+          onClose={() => {
+            setShowPromoteModal(false);
+            setPromoteResult(null);
+            setSelectedContact(null);
+          }}
+          title={t('contacts.promoteToUser')}
+        >
           {promoteResult ? (
             <div>
               <div className="alert alert-success mb-2">
@@ -387,7 +382,14 @@ export default function Contacts() {
               </div>
               <p className="text-muted small">{t('contacts.sendCredentials')}</p>
               <div className="modal-footer">
-                <button className="btn btn-primary" onClick={() => { setShowPromoteModal(false); setPromoteResult(null); setSelectedContact(null); }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowPromoteModal(false);
+                    setPromoteResult(null);
+                    setSelectedContact(null);
+                  }}
+                >
                   {t('common.close')}
                 </button>
               </div>
@@ -396,7 +398,13 @@ export default function Contacts() {
             <div>
               <p>{t('contacts.confirmPromote', { name: selectedContact.name, email: selectedContact.email })}</p>
               <div className="modal-footer">
-                <button className="btn btn-outline" onClick={() => { setShowPromoteModal(false); setSelectedContact(null); }}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setShowPromoteModal(false);
+                    setSelectedContact(null);
+                  }}
+                >
                   {t('common.cancel')}
                 </button>
                 <button className="btn btn-primary" onClick={confirmPromote} disabled={promoteMutation.isPending}>
@@ -805,7 +813,16 @@ function ContactDetailModal({
   });
 
   if (isEditing) {
-    return <ContactFormModal contact={contact} onClose={() => { setIsEditing(false); onClose(); }} categories={categories} />;
+    return (
+      <ContactFormModal
+        contact={contact}
+        onClose={() => {
+          setIsEditing(false);
+          onClose();
+        }}
+        categories={categories}
+      />
+    );
   }
 
   return (
@@ -843,7 +860,9 @@ function ContactDetailModal({
           {contact.website && (
             <div className="detail-group">
               <span className="detail-label">{t('contacts.website')}</span>
-              <a href={contact.website} target="_blank" rel="noopener noreferrer">{contact.website}</a>
+              <a href={contact.website} target="_blank" rel="noopener noreferrer">
+                {contact.website}
+              </a>
             </div>
           )}
         </div>
@@ -855,7 +874,9 @@ function ContactDetailModal({
               <div>
                 {contact.addressLine && <div>{contact.addressLine}</div>}
                 {(contact.postalCode || contact.city) && (
-                  <div>{contact.postalCode} {contact.city}</div>
+                  <div>
+                    {contact.postalCode} {contact.city}
+                  </div>
                 )}
                 {contact.country && contact.country !== 'NL' && <div>{contact.country}</div>}
               </div>
@@ -867,7 +888,11 @@ function ContactDetailModal({
               <span className="detail-label">{t('contacts.categories')}</span>
               <div>
                 {contact.categories.map((cat) => (
-                  <span key={cat.id} className="badge badge-outline mr-1" style={cat.color ? { borderColor: cat.color, color: cat.color } : {}}>
+                  <span
+                    key={cat.id}
+                    className="badge badge-outline mr-1"
+                    style={cat.color ? { borderColor: cat.color, color: cat.color } : {}}
+                  >
                     {cat.name}
                   </span>
                 ))}
@@ -1058,7 +1083,11 @@ function ContactDetailModal({
                         {person.isPrimary && <span className="badge badge-info ml-1">{t('contacts.primary')}</span>}
                         {person.role && <span className="text-muted ml-2">({person.role})</span>}
                         <div className="small">
-                          {person.email && <a href={`mailto:${person.email}`} className="mr-2">{person.email}</a>}
+                          {person.email && (
+                            <a href={`mailto:${person.email}`} className="mr-2">
+                              {person.email}
+                            </a>
+                          )}
                           {person.phone && <a href={`tel:${person.phone}`}>{person.phone}</a>}
                         </div>
                       </div>
@@ -1107,17 +1136,9 @@ function ContactDetailModal({
       {/* Custom Fields Section */}
       <div className="mt-3">
         {canEdit ? (
-          <CustomFieldFormSection
-            entityType="contact"
-            entityId={contact.id}
-            autoSave={true}
-          />
+          <CustomFieldFormSection entityType="contact" entityId={contact.id} autoSave={true} />
         ) : (
-          <CustomFieldRenderer
-            entityType="contact"
-            entityId={contact.id}
-            layout="horizontal"
-          />
+          <CustomFieldRenderer entityType="contact" entityId={contact.id} layout="horizontal" />
         )}
       </div>
 
@@ -1285,9 +1306,7 @@ function CategoriesModal({
             )}
           </div>
         ))}
-        {categories.length === 0 && (
-          <p className="text-muted text-center p-2">{t('contacts.noCategories')}</p>
-        )}
+        {categories.length === 0 && <p className="text-muted text-center p-2">{t('contacts.noCategories')}</p>}
       </div>
 
       <div className="modal-footer">

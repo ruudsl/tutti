@@ -1,14 +1,33 @@
 /**
- * Dutch Date Formatting Utilities
+ * Locale-aware Date Formatting Utilities
  *
  * Provides comprehensive date formatting functions using Intl.DateTimeFormat
- * with Dutch (nl-NL) locale. All functions handle invalid dates gracefully.
+ * with the locale of the active i18next language (nl-NL, en-GB or de-DE).
+ * All functions handle invalid dates gracefully.
  *
  * @module utils/dateFormat
  */
 
-/** Dutch locale code for date formatting */
-const LOCALE = 'nl-NL';
+import { currentLocale } from './locale';
+
+export { currentLocale } from './locale';
+
+/** Language-dependent word joining date and time (e.g. "4 mei 2026 om 14:30") */
+const DATE_TIME_JOINERS: Record<string, string> = {
+  'nl-NL': 'om',
+  'en-GB': 'at',
+  'de-DE': 'um',
+};
+
+/** Returns the date/time joiner word for the current locale */
+function dateTimeJoiner(): string {
+  return DATE_TIME_JOINERS[currentLocale()] ?? 'om';
+}
+
+/** Returns an Intl.RelativeTimeFormat for the current locale */
+function relativeFormatter(): Intl.RelativeTimeFormat {
+  return new Intl.RelativeTimeFormat(currentLocale(), { numeric: 'auto' });
+}
 
 /**
  * Formats a date to Dutch format.
@@ -24,7 +43,7 @@ export function formatDate(date: Date | string | number): string {
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(currentLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -44,19 +63,19 @@ export function formatDateTime(date: Date | string | number): string {
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  const dateStr = new Intl.DateTimeFormat(LOCALE, {
+  const dateStr = new Intl.DateTimeFormat(currentLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }).format(d);
 
-  const timeStr = new Intl.DateTimeFormat(LOCALE, {
+  const timeStr = new Intl.DateTimeFormat(currentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   }).format(d);
 
-  return `${dateStr} om ${timeStr}`;
+  return `${dateStr} ${dateTimeJoiner()} ${timeStr}`;
 }
 
 /**
@@ -72,12 +91,12 @@ export function formatDateTimeShort(date: Date | string | number): string {
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  const dateStr = new Intl.DateTimeFormat(LOCALE, {
+  const dateStr = new Intl.DateTimeFormat(currentLocale(), {
     day: 'numeric',
     month: 'short',
   }).format(d);
 
-  const timeStr = new Intl.DateTimeFormat(LOCALE, {
+  const timeStr = new Intl.DateTimeFormat(currentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -100,7 +119,7 @@ export function formatTime(date: Date | string | number): string {
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(currentLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -152,28 +171,23 @@ export function formatRelative(date: Date | string | number): string {
     const futureDiffDays = Math.abs(diffDays);
     const futureDiffWeeks = Math.abs(diffWeeks);
 
-    if (futureDiffMin < 1) return 'zo meteen';
-    if (futureDiffMin < 60) return `over ${futureDiffMin} ${futureDiffMin === 1 ? 'minuut' : 'minuten'}`;
-    if (futureDiffHours < 24) return `over ${futureDiffHours} ${futureDiffHours === 1 ? 'uur' : 'uur'}`;
-    if (futureDiffDays === 1) return 'morgen';
-    if (futureDiffDays === 2) return 'overmorgen';
-    if (futureDiffDays < 7) return `over ${futureDiffDays} dagen`;
-    if (futureDiffWeeks === 1) return 'volgende week';
-    if (futureDiffWeeks < 4) return `over ${futureDiffWeeks} weken`;
+    const rtf = relativeFormatter();
+    if (futureDiffMin < 1) return rtf.format(0, 'second');
+    if (futureDiffMin < 60) return rtf.format(futureDiffMin, 'minute');
+    if (futureDiffHours < 24) return rtf.format(futureDiffHours, 'hour');
+    if (futureDiffDays < 7) return rtf.format(futureDiffDays, 'day');
+    if (futureDiffWeeks < 4) return rtf.format(futureDiffWeeks, 'week');
     return formatDate(d);
   }
 
   // Past dates
-  if (diffSec < 60) return 'zojuist';
-  if (diffMin < 60) return `${diffMin} ${diffMin === 1 ? 'minuut' : 'minuten'} geleden`;
-  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'uur' : 'uur'} geleden`;
-  if (diffDays === 1) return 'gisteren';
-  if (diffDays === 2) return 'eergisteren';
-  if (diffDays < 7) return `${diffDays} dagen geleden`;
-  if (diffWeeks === 1) return 'vorige week';
-  if (diffWeeks < 4) return `${diffWeeks} weken geleden`;
-  if (diffMonths === 1) return 'vorige maand';
-  if (diffMonths < 12) return `${diffMonths} maanden geleden`;
+  const rtf = relativeFormatter();
+  if (diffSec < 60) return rtf.format(0, 'second');
+  if (diffMin < 60) return rtf.format(-diffMin, 'minute');
+  if (diffHours < 24) return rtf.format(-diffHours, 'hour');
+  if (diffDays < 7) return rtf.format(-diffDays, 'day');
+  if (diffWeeks < 4) return rtf.format(-diffWeeks, 'week');
+  if (diffMonths < 12) return rtf.format(-diffMonths, 'month');
 
   // Older than a year - show full date
   return formatDate(d);
@@ -247,7 +261,7 @@ export function formatDateRange(start: Date | string | number, end: Date | strin
     // Same month: "4 - 6 mei 2026"
     const day1 = startDate.getDate();
     const day2 = endDate.getDate();
-    const monthYear = new Intl.DateTimeFormat(LOCALE, {
+    const monthYear = new Intl.DateTimeFormat(currentLocale(), {
       month: 'long',
       year: 'numeric',
     }).format(endDate);
@@ -256,11 +270,11 @@ export function formatDateRange(start: Date | string | number, end: Date | strin
 
   if (sameYear) {
     // Same year, different month: "4 mei - 2 juni 2026"
-    const start1 = new Intl.DateTimeFormat(LOCALE, {
+    const start1 = new Intl.DateTimeFormat(currentLocale(), {
       day: 'numeric',
       month: 'long',
     }).format(startDate);
-    const end1 = new Intl.DateTimeFormat(LOCALE, {
+    const end1 = new Intl.DateTimeFormat(currentLocale(), {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -288,7 +302,7 @@ export function getDayName(date: Date | string | number, style: 'long' | 'short'
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  return new Intl.DateTimeFormat(LOCALE, { weekday: style }).format(d);
+  return new Intl.DateTimeFormat(currentLocale(), { weekday: style }).format(d);
 }
 
 /**
@@ -307,7 +321,7 @@ export function getMonthName(date: Date | string | number, style: 'long' | 'shor
   const d = toDate(date);
   if (!isValidDate(d)) return '-';
 
-  return new Intl.DateTimeFormat(LOCALE, { month: style }).format(d);
+  return new Intl.DateTimeFormat(currentLocale(), { month: style }).format(d);
 }
 
 /**
@@ -326,9 +340,7 @@ export function isToday(date: Date | string | number): boolean {
 
   const today = new Date();
   return (
-    d.getDate() === today.getDate() &&
-    d.getMonth() === today.getMonth() &&
-    d.getFullYear() === today.getFullYear()
+    d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
   );
 }
 

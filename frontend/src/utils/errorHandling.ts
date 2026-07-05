@@ -43,7 +43,7 @@ export class AppError extends Error {
     message: string,
     public readonly code: string = 'UNKNOWN_ERROR',
     public readonly statusCode: number = 500,
-    public readonly details?: string
+    public readonly details?: string,
   ) {
     super(message);
     this.name = 'AppError';
@@ -91,18 +91,23 @@ export function isAppError(error: unknown): error is AppError {
  * @description Handles Axios errors, AppErrors, standard Errors, and strings.
  * Returns Dutch error messages for common cases.
  * @param {unknown} error - Error to extract message from
+ * @param {string} [fallback] - Message to use when no user-friendly message
+ *   can be extracted (e.g. an API error without an `error` body)
  * @returns {string} Human-readable error message
  * @example
  * try {
  *   await api.get('/users');
  * } catch (error) {
- *   toast.error(getErrorMessage(error));
+ *   toast.error(getErrorMessage(error, t('users.errorLoading')));
  * }
  */
-export function getErrorMessage(error: unknown): string {
+export function getErrorMessage(error: unknown, fallback?: string): string {
   if (isAxiosError(error)) {
     if (error.response?.data?.error) {
       return error.response.data.error;
+    }
+    if (fallback) {
+      return fallback;
     }
     if (error.message) {
       return error.message;
@@ -115,14 +120,14 @@ export function getErrorMessage(error: unknown): string {
   }
 
   if (error instanceof Error) {
-    return error.message;
+    return error.message || fallback || 'Er is een onbekende fout opgetreden';
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === 'string' && error) {
     return error;
   }
 
-  return 'Er is een onbekende fout opgetreden';
+  return fallback || 'Er is een onbekende fout opgetreden';
 }
 
 /**

@@ -1,8 +1,18 @@
+import { formatCurrency } from '../utils/format';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getTours, getTour, createTour, registerForTour, cancelTourRegistration, TourStatus, CreateTourData, TourDetail } from '../api/tours';
+import {
+  getTours,
+  getTour,
+  createTour,
+  registerForTour,
+  cancelTourRegistration,
+  TourStatus,
+  CreateTourData,
+  TourDetail,
+} from '../api/tours';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -41,7 +51,7 @@ export default function Tours() {
     onError: () => showError(t('tours.errorRegister')),
   });
 
-  const upcomingTours = tours.filter(t => new Date(t.startDate) >= new Date());
+  const upcomingTours = tours.filter((t) => new Date(t.startDate) >= new Date());
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -78,7 +88,9 @@ export default function Tours() {
       {/* Tours Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map(i => <SkeletonCard key={i} />)}
+          {[1, 2].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : tours.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
@@ -87,7 +99,7 @@ export default function Tours() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {tours.map(tour => (
+          {tours.map((tour) => (
             <div
               key={tour.id}
               className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
@@ -96,15 +108,16 @@ export default function Tours() {
               <div className="card-body">
                 <div className="flex justify-between items-start">
                   <h3 className="card-title text-lg">{tour.name}</h3>
-                  <span className={`badge ${STATUS_COLORS[tour.status]}`}>
-                    {t(`tours.statuses.${tour.status}`)}
-                  </span>
+                  <span className={`badge ${STATUS_COLORS[tour.status]}`}>{t(`tours.statuses.${tour.status}`)}</span>
                 </div>
 
                 {tour.destination && (
                   <div className="flex items-center gap-2 text-base-content/70">
                     <Icon name="mapPin" size={16} />
-                    <span>{tour.destination}{tour.country ? `, ${tour.country}` : ''}</span>
+                    <span>
+                      {tour.destination}
+                      {tour.country ? `, ${tour.country}` : ''}
+                    </span>
                   </div>
                 )}
 
@@ -115,14 +128,15 @@ export default function Tours() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Icon name="users" size={14} />
-                    {tour.participantCount}{tour.maxParticipants ? ` / ${tour.maxParticipants}` : ''} {t('tours.participants')}
+                    {tour.participantCount}
+                    {tour.maxParticipants ? ` / ${tour.maxParticipants}` : ''} {t('tours.participants')}
                   </span>
                 </div>
 
                 {tour.costPerPerson && (
                   <div className="text-sm">
                     <span className="font-medium">{t('tours.costPerPerson')}:</span>{' '}
-                    €{tour.costPerPerson.toFixed(2)}
+                    {formatCurrency(tour.costPerPerson)}
                   </div>
                 )}
 
@@ -271,7 +285,9 @@ function TourModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => createMutation.mutate(formData)}
@@ -298,7 +314,7 @@ const PARTICIPANT_STATUS_COLORS: Record<string, string> = {
 function TourDetailModal({
   tourId,
   onClose,
-  onRefresh
+  onRefresh,
 }: {
   tourId: string;
   onClose: () => void;
@@ -307,7 +323,11 @@ function TourDetailModal({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'days' | 'accommodations' | 'transport' | 'participants'>('days');
 
-  const { data: tour, isLoading, refetch } = useQuery({
+  const {
+    data: tour,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['tour', tourId],
     queryFn: () => getTour(tourId),
   });
@@ -355,13 +375,12 @@ function TourDetailModal({
       <div className="space-y-6">
         {/* Header Info */}
         <div className="flex flex-wrap items-center gap-4">
-          <span className={`badge ${STATUS_COLORS[tour.status]} badge-lg`}>
-            {t(`tours.statuses.${tour.status}`)}
-          </span>
+          <span className={`badge ${STATUS_COLORS[tour.status]} badge-lg`}>{t(`tours.statuses.${tour.status}`)}</span>
           {tour.destination && (
             <span className="flex items-center gap-1 text-base-content/70">
               <Icon name="mapPin" size={16} />
-              {tour.destination}{tour.country ? `, ${tour.country}` : ''}
+              {tour.destination}
+              {tour.country ? `, ${tour.country}` : ''}
             </span>
           )}
           <span className="flex items-center gap-1 text-base-content/70">
@@ -370,9 +389,7 @@ function TourDetailModal({
           </span>
         </div>
 
-        {tour.description && (
-          <p className="text-base-content/80">{tour.description}</p>
-        )}
+        {tour.description && <p className="text-base-content/80">{tour.description}</p>}
 
         {/* Registration Section */}
         <div className="card bg-base-200 p-4">
@@ -380,12 +397,15 @@ function TourDetailModal({
             <div className="flex flex-wrap gap-6 text-sm">
               <div>
                 <span className="text-base-content/60">{t('tours.participants')}:</span>{' '}
-                <span className="font-medium">{tour.participantCount}{tour.maxParticipants ? ` / ${tour.maxParticipants}` : ''}</span>
+                <span className="font-medium">
+                  {tour.participantCount}
+                  {tour.maxParticipants ? ` / ${tour.maxParticipants}` : ''}
+                </span>
               </div>
               {tour.costPerPerson && (
                 <div>
                   <span className="text-base-content/60">{t('tours.costPerPerson')}:</span>{' '}
-                  <span className="font-medium">€{tour.costPerPerson.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(tour.costPerPerson)}</span>
                 </div>
               )}
               {tour.registrationDeadline && (
@@ -411,7 +431,7 @@ function TourDetailModal({
                     </button>
                   )}
                 </div>
-              ) : (tour.status === 'planning' || tour.status === 'confirmed') ? (
+              ) : tour.status === 'planning' || tour.status === 'confirmed' ? (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => registerMutation.mutate()}
@@ -427,10 +447,7 @@ function TourDetailModal({
 
         {/* Tabs */}
         <div className="tabs tabs-boxed">
-          <button
-            className={`tab ${activeTab === 'days' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('days')}
-          >
+          <button className={`tab ${activeTab === 'days' ? 'tab-active' : ''}`} onClick={() => setActiveTab('days')}>
             <Icon name="calendar" size={16} className="mr-1" />
             {t('tours.days')} ({tour.days.length})
           </button>
@@ -460,19 +477,11 @@ function TourDetailModal({
         {/* Tab Content */}
         <div className="min-h-[300px]">
           {activeTab === 'days' && (
-            <TourDayPlanningSection
-              tourId={tourId}
-              days={tour.days}
-              onRefresh={() => refetch()}
-            />
+            <TourDayPlanningSection tourId={tourId} days={tour.days} onRefresh={() => refetch()} />
           )}
           {activeTab === 'accommodations' && <TourAccommodationsTab accommodations={tour.accommodations} />}
           {activeTab === 'transport' && (
-            <TourTransportSection
-              tourId={tourId}
-              transport={tour.transport}
-              onRefresh={() => refetch()}
-            />
+            <TourTransportSection tourId={tourId} transport={tour.transport} onRefresh={() => refetch()} />
           )}
           {activeTab === 'participants' && <TourParticipantsTab participants={tour.participants} />}
         </div>
@@ -489,7 +498,6 @@ function TourDetailModal({
   );
 }
 
-
 function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail['accommodations'] }) {
   const { t } = useTranslation();
 
@@ -504,7 +512,7 @@ function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail[
 
   return (
     <div className="grid gap-4">
-      {accommodations.map(acc => (
+      {accommodations.map((acc) => (
         <div key={acc.id} className="card bg-base-200">
           <div className="card-body p-4">
             <div className="flex justify-between items-start">
@@ -512,13 +520,13 @@ function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail[
                 <h4 className="font-medium">{acc.name}</h4>
                 {acc.address && (
                   <p className="text-sm text-base-content/60">
-                    {acc.address}{acc.city ? `, ${acc.city}` : ''}{acc.country ? `, ${acc.country}` : ''}
+                    {acc.address}
+                    {acc.city ? `, ${acc.city}` : ''}
+                    {acc.country ? `, ${acc.country}` : ''}
                   </p>
                 )}
               </div>
-              {acc.totalCost && (
-                <span className="font-medium">€{acc.totalCost.toFixed(2)}</span>
-              )}
+              {acc.totalCost && <span className="font-medium">{formatCurrency(acc.totalCost)}</span>}
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
               {(acc.checkInDate || acc.checkOutDate) && (
@@ -530,7 +538,9 @@ function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail[
                 </span>
               )}
               {acc.roomCount && (
-                <span>{acc.roomCount} {t('tours.rooms')}</span>
+                <span>
+                  {acc.roomCount} {t('tours.rooms')}
+                </span>
               )}
               {acc.phone && (
                 <span className="flex items-center gap-1">
@@ -551,7 +561,6 @@ function TourAccommodationsTab({ accommodations }: { accommodations: TourDetail[
     </div>
   );
 }
-
 
 function TourParticipantsTab({ participants }: { participants: TourDetail['participants'] }) {
   const { t } = useTranslation();
@@ -577,9 +586,11 @@ function TourParticipantsTab({ participants }: { participants: TourDetail['parti
           </tr>
         </thead>
         <tbody>
-          {participants.map(p => (
+          {participants.map((p) => (
             <tr key={p.id}>
-              <td>{p.firstName} {p.lastName}</td>
+              <td>
+                {p.firstName} {p.lastName}
+              </td>
               <td className="text-base-content/70">{p.email}</td>
               <td>
                 <span className={`badge badge-sm ${PARTICIPANT_STATUS_COLORS[p.status]}`}>
@@ -588,7 +599,7 @@ function TourParticipantsTab({ participants }: { participants: TourDetail['parti
               </td>
               <td>
                 {p.paidAmount > 0 ? (
-                  <span>€{p.paidAmount.toFixed(2)}</span>
+                  <span>{formatCurrency(p.paidAmount)}</span>
                 ) : (
                   <span className="text-base-content/50">-</span>
                 )}

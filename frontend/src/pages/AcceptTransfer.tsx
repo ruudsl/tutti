@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -22,7 +23,11 @@ export default function AcceptTransfer() {
   const [isAccepting, setIsAccepting] = useState(false);
 
   // Fetch transfer details
-  const { data: transfer, isLoading, isError } = useQuery({
+  const {
+    data: transfer,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.transferByCode(code || ''),
     queryFn: () => getTransferByCode(code!),
     enabled: !!code,
@@ -52,7 +57,7 @@ export default function AcceptTransfer() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-NL', {
+    return new Date(dateString).toLocaleDateString(currentLocale(), {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -61,7 +66,7 @@ export default function AcceptTransfer() {
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('nl-NL', {
+    return new Date(dateString).toLocaleString(currentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -95,11 +100,11 @@ export default function AcceptTransfer() {
         <h1>{t('ticketTransfer.acceptTransfer')}</h1>
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center', padding: '3rem' }}>
-            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem', color: 'var(--danger)' }}>&#10060;</span>
+            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem', color: 'var(--danger)' }}>
+              &#10060;
+            </span>
             <h3>{t('ticketTransfer.transferNotFound')}</h3>
-            <p style={{ color: 'var(--text-light)' }}>
-              {t('ticketTransfer.transferNotFoundDescription')}
-            </p>
+            <p style={{ color: 'var(--text-light)' }}>{t('ticketTransfer.transferNotFoundDescription')}</p>
             {user ? (
               <Link to="/my-tickets" className="btn btn-primary" style={{ marginTop: '1rem' }}>
                 {t('ticketTransfer.goToMyTickets')}
@@ -122,20 +127,10 @@ export default function AcceptTransfer() {
       <div className="card">
         <div className="card-body">
           {/* Status Messages */}
-          {isExpired && (
-            <div className="alert alert-error mb-3">
-              {t('ticketTransfer.transferExpired')}
-            </div>
-          )}
-          {isCancelled && (
-            <div className="alert alert-error mb-3">
-              {t('ticketTransfer.transferCancelledByOwner')}
-            </div>
-          )}
+          {isExpired && <div className="alert alert-error mb-3">{t('ticketTransfer.transferExpired')}</div>}
+          {isCancelled && <div className="alert alert-error mb-3">{t('ticketTransfer.transferCancelledByOwner')}</div>}
           {isAlreadyAccepted && (
-            <div className="alert alert-success mb-3">
-              {t('ticketTransfer.transferAlreadyAccepted')}
-            </div>
+            <div className="alert alert-success mb-3">{t('ticketTransfer.transferAlreadyAccepted')}</div>
           )}
 
           {/* Transfer Details */}
@@ -153,9 +148,7 @@ export default function AcceptTransfer() {
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               <div>
                 <strong>{t('ticketTransfer.concert')}:</strong>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '1.125rem' }}>
-                  {transfer.ticket.concert.name}
-                </p>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '1.125rem' }}>{transfer.ticket.concert.name}</p>
               </div>
 
               <div>
@@ -194,20 +187,11 @@ export default function AcceptTransfer() {
           {/* Action Buttons */}
           {canAccept && (
             <>
-              {!user ? (
-                <div className="alert alert-warning mb-3">
-                  {t('ticketTransfer.loginRequired')}
-                </div>
-              ) : null}
+              {!user ? <div className="alert alert-warning mb-3">{t('ticketTransfer.loginRequired')}</div> : null}
 
               <div className="flex gap-2">
                 {user ? (
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleAccept}
-                    disabled={isAccepting}
-                    style={{ flex: 1 }}
-                  >
+                  <button className="btn btn-primary" onClick={handleAccept} disabled={isAccepting} style={{ flex: 1 }}>
                     {isAccepting ? t('accessibility.processing') : t('ticketTransfer.acceptTicket')}
                   </button>
                 ) : (

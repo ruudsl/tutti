@@ -17,6 +17,7 @@ import {
 } from '../hooks/useUniforms';
 import { useUsers } from '../hooks/useUsers';
 import { Icon } from '../components/Icon';
+import { FormField } from '../components/FormField';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -190,7 +191,12 @@ export default function Uniforms() {
       },
     });
     setShowAssignModal(null);
-    setAssignFormData({ userId: '', assignedDate: new Date().toISOString().split('T')[0], conditionAtAssignment: '', notes: '' });
+    setAssignFormData({
+      userId: '',
+      assignedDate: new Date().toISOString().split('T')[0],
+      conditionAtAssignment: '',
+      notes: '',
+    });
   };
 
   const handleReturn = async (e: React.FormEvent) => {
@@ -345,7 +351,9 @@ export default function Uniforms() {
                 >
                   <option value="">{t('uniforms.allTypes')}</option>
                   {itemTypes.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -369,49 +377,40 @@ export default function Uniforms() {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id}>
-                      <td><strong>{getItemTypeLabel(item.itemType)}</strong></td>
+                      <td>
+                        <strong>{getItemTypeLabel(item.itemType)}</strong>
+                      </td>
                       <td>{item.sizeStandard || '-'}</td>
                       <td>{getConditionBadge(item.condition)}</td>
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
                         {item.currentUser ? (
-                          <span>{item.currentUser.firstName} {item.currentUser.lastName}</span>
-                        ) : '-'}
+                          <span>
+                            {item.currentUser.firstName} {item.currentUser.lastName}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                       <td>
                         <div className="flex gap-1">
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => setViewingItem(item.id)}
-                          >
+                          <button className="btn btn-outline btn-sm" onClick={() => setViewingItem(item.id)}>
                             <Icon name="eye" size={16} />
                           </button>
                           {item.status === 'available' && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => setShowAssignModal(item.id)}
-                            >
+                            <button className="btn btn-primary btn-sm" onClick={() => setShowAssignModal(item.id)}>
                               {t('uniforms.assignItem')}
                             </button>
                           )}
                           {item.status === 'issued' && (
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => setReturningItem(item.id)}
-                            >
+                            <button className="btn btn-outline btn-sm" onClick={() => setReturningItem(item.id)}>
                               {t('uniforms.returnItem')}
                             </button>
                           )}
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => openEditModal(item)}
-                          >
+                          <button className="btn btn-outline btn-sm" onClick={() => openEditModal(item)}>
                             <Icon name="pencil" size={16} />
                           </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => setDeletingItem(item)}
-                          >
+                          <button className="btn btn-danger btn-sm" onClick={() => setDeletingItem(item)}>
                             <Icon name="trash" size={16} />
                           </button>
                         </div>
@@ -420,7 +419,7 @@ export default function Uniforms() {
                   ))}
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: '#666' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                         {t('uniforms.noItems')}
                       </td>
                     </tr>
@@ -454,7 +453,9 @@ export default function Uniforms() {
                 <tbody>
                   {sets.map((set) => (
                     <tr key={set.id}>
-                      <td><strong>{set.name}</strong></td>
+                      <td>
+                        <strong>{set.name}</strong>
+                      </td>
                       <td>{set.description || '-'}</td>
                       <td>
                         <div className="flex gap-1 flex-wrap">
@@ -466,10 +467,7 @@ export default function Uniforms() {
                         </div>
                       </td>
                       <td>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => deleteSetMutation.mutate(set.id)}
-                        >
+                        <button className="btn btn-danger btn-sm" onClick={() => deleteSetMutation.mutate(set.id)}>
                           <Icon name="trash" size={16} />
                         </button>
                       </td>
@@ -478,7 +476,7 @@ export default function Uniforms() {
                 </tbody>
               </table>
             ) : (
-              <p style={{ color: '#666' }}>{t('uniforms.noSets')}</p>
+              <p style={{ color: 'var(--text-muted)' }}>{t('uniforms.noSets')}</p>
             )}
           </div>
         </div>
@@ -488,7 +486,7 @@ export default function Uniforms() {
         <div className="card">
           <div className="card-body">
             <h3 style={{ marginTop: 0 }}>{t('uniforms.availableBySize')}</h3>
-            <p style={{ color: '#666' }}>{t('uniforms.sizeSearchDescription')}</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('uniforms.sizeSearchDescription')}</p>
             {availability.length > 0 ? (
               <table className="table">
                 <thead>
@@ -503,7 +501,9 @@ export default function Uniforms() {
                     <tr key={i}>
                       <td>{getItemTypeLabel(item.itemType)}</td>
                       <td>{item.sizeStandard}</td>
-                      <td><span className="badge badge-success">{item.count}</span></td>
+                      <td>
+                        <span className="badge badge-success">{item.count}</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -527,8 +527,7 @@ export default function Uniforms() {
           onSubmit={editingItem ? handleUpdate : handleCreate}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.itemType')} *</label>
+          <FormField label={<>{t('uniforms.itemType')} *</>}>
             <select
               className="form-control"
               value={formData.itemType}
@@ -537,12 +536,13 @@ export default function Uniforms() {
             >
               <option value="">-- {t('common.select')} --</option>
               {itemTypes.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.sizeStandard')}</label>
+          </FormField>
+          <FormField label={t('uniforms.sizeStandard')}>
             <input
               type="text"
               className="form-control"
@@ -550,10 +550,9 @@ export default function Uniforms() {
               onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
               placeholder="M, L, 52..."
             />
-          </div>
+          </FormField>
           <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('uniforms.condition')}</label>
+            <FormField label={t('uniforms.condition')} style={{ flex: 1 }}>
               <select
                 className="form-control"
                 value={formData.condition}
@@ -563,9 +562,8 @@ export default function Uniforms() {
                 <option value="fair">{t('uniforms.conditions.fair')}</option>
                 <option value="poor">{t('uniforms.conditions.poor')}</option>
               </select>
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('common.status')}</label>
+            </FormField>
+            <FormField label={t('common.status')} style={{ flex: 1 }}>
               <select
                 className="form-control"
                 value={formData.status}
@@ -576,17 +574,16 @@ export default function Uniforms() {
                 <option value="in_repair">{t('uniforms.status.in_repair')}</option>
                 <option value="written_off">{t('uniforms.status.written_off')}</option>
               </select>
-            </div>
+            </FormField>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.notes')}</label>
+          <FormField label={t('uniforms.notes')}>
             <textarea
               className="form-control"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={2}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -602,8 +599,7 @@ export default function Uniforms() {
           onSubmit={handleBulkCreate}
           isSubmitting={createBulkMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.quantity')} *</label>
+          <FormField label={<>{t('uniforms.quantity')} *</>}>
             <input
               type="number"
               className="form-control"
@@ -613,9 +609,8 @@ export default function Uniforms() {
               max="100"
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.itemType')} *</label>
+          </FormField>
+          <FormField label={<>{t('uniforms.itemType')} *</>}>
             <select
               className="form-control"
               value={formData.itemType}
@@ -624,19 +619,20 @@ export default function Uniforms() {
             >
               <option value="">-- {t('common.select')} --</option>
               {itemTypes.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.sizeStandard')}</label>
+          </FormField>
+          <FormField label={t('uniforms.sizeStandard')}>
             <input
               type="text"
               className="form-control"
               value={formData.sizeStandard}
               onChange={(e) => setFormData({ ...formData, sizeStandard: e.target.value })}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -648,8 +644,7 @@ export default function Uniforms() {
           onSubmit={handleAssign}
           isSubmitting={assignMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.selectUser')} *</label>
+          <FormField label={<>{t('uniforms.selectUser')} *</>}>
             <select
               className="form-control"
               value={assignFormData.userId}
@@ -658,12 +653,13 @@ export default function Uniforms() {
             >
               <option value="">-- {t('common.select')} --</option>
               {users.map((user) => (
-                <option key={user.id} value={user.id}>{user.firstName} {user.lastName}</option>
+                <option key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName}
+                </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.assignedDate')} *</label>
+          </FormField>
+          <FormField label={<>{t('uniforms.assignedDate')} *</>}>
             <input
               type="date"
               className="form-control"
@@ -671,16 +667,15 @@ export default function Uniforms() {
               onChange={(e) => setAssignFormData({ ...assignFormData, assignedDate: e.target.value })}
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.conditionAtAssignment')}</label>
+          </FormField>
+          <FormField label={t('uniforms.conditionAtAssignment')}>
             <textarea
               className="form-control"
               value={assignFormData.conditionAtAssignment}
               onChange={(e) => setAssignFormData({ ...assignFormData, conditionAtAssignment: e.target.value })}
               rows={2}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -692,8 +687,7 @@ export default function Uniforms() {
           onSubmit={handleReturn}
           isSubmitting={returnMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.returnedDate')} *</label>
+          <FormField label={<>{t('uniforms.returnedDate')} *</>}>
             <input
               type="date"
               className="form-control"
@@ -701,9 +695,8 @@ export default function Uniforms() {
               onChange={(e) => setReturnFormData({ ...returnFormData, returnedDate: e.target.value })}
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.conditionAtReturn')}</label>
+          </FormField>
+          <FormField label={t('uniforms.conditionAtReturn')}>
             <select
               className="form-control"
               value={returnFormData.conditionAtReturn}
@@ -714,7 +707,7 @@ export default function Uniforms() {
               <option value="fair">{t('uniforms.conditions.fair')}</option>
               <option value="poor">{t('uniforms.conditions.poor')}</option>
             </select>
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -726,8 +719,7 @@ export default function Uniforms() {
           onSubmit={handleCreateSet}
           isSubmitting={createSetMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.setName')} *</label>
+          <FormField label={<>{t('uniforms.setName')} *</>}>
             <input
               type="text"
               className="form-control"
@@ -736,16 +728,15 @@ export default function Uniforms() {
               placeholder={t('uniforms.setNamePlaceholder')}
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('uniforms.setDescription')}</label>
+          </FormField>
+          <FormField label={t('uniforms.setDescription')}>
             <textarea
               className="form-control"
               value={uniformSetFormData.description}
               onChange={(e) => setUniformSetFormData({ ...uniformSetFormData, description: e.target.value })}
               rows={2}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -755,10 +746,16 @@ export default function Uniforms() {
           title={`${getItemTypeLabel(itemDetail.itemType)} - ${itemDetail.sizeStandard || ''}`}
           onClose={() => setViewingItem(null)}
         >
-          <p><strong>{t('uniforms.condition')}:</strong> {getConditionBadge(itemDetail.condition)}</p>
-          <p><strong>{t('common.status')}:</strong> {getStatusBadge(itemDetail.status)}</p>
+          <p>
+            <strong>{t('uniforms.condition')}:</strong> {getConditionBadge(itemDetail.condition)}
+          </p>
+          <p>
+            <strong>{t('common.status')}:</strong> {getStatusBadge(itemDetail.status)}
+          </p>
           {itemDetail.currentUser && (
-            <p><strong>{t('users.title')}:</strong> {itemDetail.currentUser.firstName} {itemDetail.currentUser.lastName}</p>
+            <p>
+              <strong>{t('users.title')}:</strong> {itemDetail.currentUser.firstName} {itemDetail.currentUser.lastName}
+            </p>
           )}
 
           <h4>{t('uniforms.assignmentHistory')}</h4>
@@ -774,7 +771,9 @@ export default function Uniforms() {
               <tbody>
                 {itemDetail.assignmentHistory.map((a) => (
                   <tr key={a.id}>
-                    <td>{a.user.firstName} {a.user.lastName}</td>
+                    <td>
+                      {a.user.firstName} {a.user.lastName}
+                    </td>
                     <td>{a.assignedDate}</td>
                     <td>{a.returnedDate || <span className="badge badge-primary">Actief</span>}</td>
                   </tr>
@@ -782,7 +781,7 @@ export default function Uniforms() {
               </tbody>
             </table>
           ) : (
-            <p style={{ color: '#666' }}>Geen uitgifte historie.</p>
+            <p style={{ color: 'var(--text-muted)' }}>Geen uitgifte historie.</p>
           )}
         </Modal>
       )}

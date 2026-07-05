@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
+import { loadPdfjs } from '../lib/pdfjs';
 import { useSwipeGesture, SwipeDirection } from '../hooks/useSwipeGesture';
 import { useTranslation } from 'react-i18next';
 import { getAnnotations, createAnnotation, deleteAnnotation } from '../api';
 import { Icon } from './Icon';
 import { PdfAnnotator } from './PdfAnnotation';
 import { BluetoothPedalIndicator } from './BluetoothPedalIndicator';
-
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface PdfAnnotation {
   id: string;
@@ -86,7 +83,7 @@ export function PdfViewer({
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -140,7 +137,7 @@ export function PdfViewer({
 
   // Toggle dark mode function
   const toggleDarkMode = useCallback(() => {
-    setIsDarkModeActive(prev => !prev);
+    setIsDarkModeActive((prev) => !prev);
   }, []);
 
   // Load annotations when musicPieceId changes or when using external annotations
@@ -179,14 +176,11 @@ export function PdfViewer({
   // Annotations for the current page
   const currentPageAnnotations = useMemo(
     () => annotations.filter((a) => a.pageNumber === currentPage),
-    [annotations, currentPage]
+    [annotations, currentPage],
   );
 
   // Pages that have at least one annotation (for dot indicators)
-  const pagesWithAnnotations = useMemo(
-    () => new Set(annotations.map((a) => a.pageNumber)),
-    [annotations]
-  );
+  const pagesWithAnnotations = useMemo(() => new Set(annotations.map((a) => a.pageNumber)), [annotations]);
 
   const handleAddAnnotation = useCallback(async () => {
     if (!newAnnotationText.trim()) return;
@@ -220,15 +214,18 @@ export function PdfViewer({
     }
   }, [musicPieceId, currentPage, newAnnotationText, newAnnotationColor, t, onAnnotationAdd, showFeedback]);
 
-  const handleDeleteAnnotation = useCallback(async (id: string) => {
-    try {
-      await deleteAnnotation(id);
-      setAnnotations((prev) => prev.filter((a) => a.id !== id));
-      showFeedback(t('annotations.deleted'));
-    } catch {
-      // Silently fail
-    }
-  }, [t, showFeedback]);
+  const handleDeleteAnnotation = useCallback(
+    async (id: string) => {
+      try {
+        await deleteAnnotation(id);
+        setAnnotations((prev) => prev.filter((a) => a.id !== id));
+        showFeedback(t('annotations.deleted'));
+      } catch {
+        // Silently fail
+      }
+    },
+    [t, showFeedback],
+  );
 
   // Load PDF document
   useEffect(() => {
@@ -239,7 +236,10 @@ export function PdfViewer({
       setError(null);
 
       try {
-        let loadingTask: pdfjsLib.PDFDocumentLoadingTask;
+        // Load pdf.js lazily on first use (kept out of the initial bundle)
+        const pdfjsLib = await loadPdfjs();
+
+        let loadingTask: PDFDocumentLoadingTask;
 
         if (file) {
           const data = await file.arrayBuffer();
@@ -273,95 +273,99 @@ export function PdfViewer({
   }, [file, url, initialPage]);
 
   // Render current page
-  const renderPage = useCallback(async (pageNum: number, targetZoom?: number) => {
-    if (!pdfDoc || !canvasRef.current || !containerRef.current || renderingRef.current) return;
+  const renderPage = useCallback(
+    async (pageNum: number, targetZoom?: number) => {
+      if (!pdfDoc || !canvasRef.current || !containerRef.current || renderingRef.current) return;
 
-    const effectiveZoom = targetZoom ?? zoom;
-    const cacheKey = pageNum;
-    const cached = pageCacheRef.current.get(cacheKey);
+      const effectiveZoom = targetZoom ?? zoom;
+      const cacheKey = pageNum;
+      const cached = pageCacheRef.current.get(cacheKey);
 
-    // Use cached canvas if available and zoom matches
-    if (cached && cached.scale === effectiveZoom) {
-      const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        canvasRef.current.width = cached.canvas.width;
-        canvasRef.current.height = cached.canvas.height;
-        ctx.drawImage(cached.canvas, 0, 0);
-      }
-      return;
-    }
-
-    renderingRef.current = true;
-
-    try {
-      const page = await pdfDoc.getPage(pageNum);
-      const container = containerRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) return;
-
-      // Calculate viewport
-      const viewport = page.getViewport({ scale: 1 });
-      let scale: number;
-
-      switch (fitMode) {
-        case 'width':
-          scale = (container.clientWidth / viewport.width) * effectiveZoom;
-          break;
-        case 'height':
-          scale = (container.clientHeight / viewport.height) * effectiveZoom;
-          break;
-        case 'contain':
-        default:
-          const scaleX = container.clientWidth / viewport.width;
-          const scaleY = container.clientHeight / viewport.height;
-          scale = Math.min(scaleX, scaleY) * effectiveZoom;
-          break;
-      }
-
-      const scaledViewport = page.getViewport({ scale });
-
-      // Set canvas dimensions
-      canvas.width = scaledViewport.width;
-      canvas.height = scaledViewport.height;
-
-      // Track dimensions for annotation overlay
-      setCanvasDimensions({ width: scaledViewport.width, height: scaledViewport.height });
-
-      // Render page
-      await page.render({
-        canvasContext: ctx,
-        viewport: scaledViewport,
-      }).promise;
-
-      // Cache the rendered page
-      const cacheCanvas = document.createElement('canvas');
-      cacheCanvas.width = canvas.width;
-      cacheCanvas.height = canvas.height;
-      const cacheCtx = cacheCanvas.getContext('2d');
-      if (cacheCtx) {
-        cacheCtx.drawImage(canvas, 0, 0);
-        pageCacheRef.current.set(cacheKey, {
-          pageNumber: pageNum,
-          canvas: cacheCanvas,
-          scale: effectiveZoom,
-        });
-      }
-
-      // Limit cache size
-      if (pageCacheRef.current.size > 5) {
-        const firstKey = pageCacheRef.current.keys().next().value;
-        if (firstKey !== undefined) {
-          pageCacheRef.current.delete(firstKey);
+      // Use cached canvas if available and zoom matches
+      if (cached && cached.scale === effectiveZoom) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          canvasRef.current.width = cached.canvas.width;
+          canvasRef.current.height = cached.canvas.height;
+          ctx.drawImage(cached.canvas, 0, 0);
         }
+        return;
       }
-    } catch (err) {
-      console.error('Error rendering page:', err);
-    } finally {
-      renderingRef.current = false;
-    }
-  }, [pdfDoc, zoom, fitMode]);
+
+      renderingRef.current = true;
+
+      try {
+        const page = await pdfDoc.getPage(pageNum);
+        const container = containerRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) return;
+
+        // Calculate viewport
+        const viewport = page.getViewport({ scale: 1 });
+        let scale: number;
+
+        switch (fitMode) {
+          case 'width':
+            scale = (container.clientWidth / viewport.width) * effectiveZoom;
+            break;
+          case 'height':
+            scale = (container.clientHeight / viewport.height) * effectiveZoom;
+            break;
+          case 'contain':
+          default: {
+            const scaleX = container.clientWidth / viewport.width;
+            const scaleY = container.clientHeight / viewport.height;
+            scale = Math.min(scaleX, scaleY) * effectiveZoom;
+            break;
+          }
+        }
+
+        const scaledViewport = page.getViewport({ scale });
+
+        // Set canvas dimensions
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+
+        // Track dimensions for annotation overlay
+        setCanvasDimensions({ width: scaledViewport.width, height: scaledViewport.height });
+
+        // Render page
+        await page.render({
+          canvasContext: ctx,
+          viewport: scaledViewport,
+        }).promise;
+
+        // Cache the rendered page
+        const cacheCanvas = document.createElement('canvas');
+        cacheCanvas.width = canvas.width;
+        cacheCanvas.height = canvas.height;
+        const cacheCtx = cacheCanvas.getContext('2d');
+        if (cacheCtx) {
+          cacheCtx.drawImage(canvas, 0, 0);
+          pageCacheRef.current.set(cacheKey, {
+            pageNumber: pageNum,
+            canvas: cacheCanvas,
+            scale: effectiveZoom,
+          });
+        }
+
+        // Limit cache size
+        if (pageCacheRef.current.size > 5) {
+          const firstKey = pageCacheRef.current.keys().next().value;
+          if (firstKey !== undefined) {
+            pageCacheRef.current.delete(firstKey);
+          }
+        }
+      } catch (err) {
+        console.error('Error rendering page:', err);
+      } finally {
+        renderingRef.current = false;
+      }
+    },
+    [pdfDoc, zoom, fitMode],
+  );
 
   // Re-render on page or zoom change
   useEffect(() => {
@@ -378,13 +382,16 @@ export function PdfViewer({
   }, [currentPage, totalPages, onPageChange]);
 
   // Navigation functions
-  const goToPage = useCallback((page: number) => {
-    const newPage = Math.max(1, Math.min(page, totalPages));
-    if (newPage !== currentPage) {
-      setCurrentPage(newPage);
-      showPageIndicatorTemporarily();
-    }
-  }, [currentPage, totalPages]);
+  const goToPage = useCallback(
+    (page: number) => {
+      const newPage = Math.max(1, Math.min(page, totalPages));
+      if (newPage !== currentPage) {
+        setCurrentPage(newPage);
+        showPageIndicatorTemporarily();
+      }
+    },
+    [currentPage, totalPages],
+  );
 
   const nextPage = useCallback(() => {
     if (currentPage < totalPages) {
@@ -415,7 +422,7 @@ export function PdfViewer({
 
   // Zoom functions
   const handleZoomIn = useCallback(() => {
-    setZoom(prev => {
+    setZoom((prev) => {
       const newZoom = Math.min(prev * 1.25, maxZoom);
       setIsZoomed(newZoom > 1);
       return newZoom;
@@ -423,7 +430,7 @@ export function PdfViewer({
   }, [maxZoom]);
 
   const handleZoomOut = useCallback(() => {
-    setZoom(prev => {
+    setZoom((prev) => {
       const newZoom = Math.max(prev / 1.25, minZoom);
       setIsZoomed(newZoom > 1);
       return newZoom;
@@ -436,19 +443,25 @@ export function PdfViewer({
   }, []);
 
   // Swipe gesture handling
-  const handleSwipeStart = useCallback((_direction: SwipeDirection | null) => {
-    if (isZoomed) return;
-    setIsSwipeActive(true);
-  }, [isZoomed]);
+  const handleSwipeStart = useCallback(
+    (_direction: SwipeDirection | null) => {
+      if (isZoomed) return;
+      setIsSwipeActive(true);
+    },
+    [isZoomed],
+  );
 
-  const handleSwipeMove = useCallback((deltaX: number, _deltaY: number, _velocity: number) => {
-    if (isZoomed) return;
-    // Limit swipe offset
-    const maxOffset = 150;
-    const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, deltaX));
-    setSwipeOffset(clampedOffset);
-    showPageIndicatorTemporarily();
-  }, [isZoomed, showPageIndicatorTemporarily]);
+  const handleSwipeMove = useCallback(
+    (deltaX: number, _deltaY: number, _velocity: number) => {
+      if (isZoomed) return;
+      // Limit swipe offset
+      const maxOffset = 150;
+      const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, deltaX));
+      setSwipeOffset(clampedOffset);
+      showPageIndicatorTemporarily();
+    },
+    [isZoomed, showPageIndicatorTemporarily],
+  );
 
   const handleSwipeEnd = useCallback(() => {
     setIsSwipeActive(false);
@@ -479,7 +492,7 @@ export function PdfViewer({
       threshold: 50,
       disabled: !enableSwipe || isZoomed,
       preventScrollOnHorizontalSwipe: true,
-    }
+    },
   );
 
   // Combine refs
@@ -490,26 +503,32 @@ export function PdfViewer({
   }, [swipeRef]);
 
   // Mouse drag-to-pan when zoomed
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!isZoomed || !containerRef.current) return;
-    e.preventDefault();
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      scrollLeft: containerRef.current.scrollLeft,
-      scrollTop: containerRef.current.scrollTop,
-    };
-  }, [isZoomed]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isZoomed || !containerRef.current) return;
+      e.preventDefault();
+      setIsDragging(true);
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: containerRef.current.scrollLeft,
+        scrollTop: containerRef.current.scrollTop,
+      };
+    },
+    [isZoomed],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !containerRef.current) return;
-    e.preventDefault();
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
-    containerRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
-    containerRef.current.scrollTop = dragStartRef.current.scrollTop - dy;
-  }, [isDragging]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging || !dragStartRef.current || !containerRef.current) return;
+      e.preventDefault();
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      containerRef.current.scrollLeft = dragStartRef.current.scrollLeft - dx;
+      containerRef.current.scrollTop = dragStartRef.current.scrollTop - dy;
+    },
+    [isDragging],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -578,7 +597,7 @@ export function PdfViewer({
         case 'd':
         case 'D':
           if (!e.ctrlKey && !e.metaKey && musicPieceId) {
-            setDrawingMode(prev => !prev);
+            setDrawingMode((prev) => !prev);
           }
           break;
 
@@ -594,7 +613,18 @@ export function PdfViewer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previousPage, nextPage, handleZoomIn, handleZoomOut, handleZoomReset, goToPage, totalPages, drawingMode, toggleDarkMode, musicPieceId]);
+  }, [
+    previousPage,
+    nextPage,
+    handleZoomIn,
+    handleZoomOut,
+    handleZoomReset,
+    goToPage,
+    totalPages,
+    drawingMode,
+    toggleDarkMode,
+    musicPieceId,
+  ]);
 
   // Calculate transform for page transition animation
   const getTransformStyle = useMemo(() => {
@@ -643,11 +673,7 @@ export function PdfViewer({
   const hasAnnotationsSupport = !!musicPieceId;
 
   return (
-    <div
-      ref={swipeRef}
-      className={`pdf-viewer ${className}`}
-      style={{ ...styles.container, flexDirection: 'row' }}
-    >
+    <div ref={swipeRef} className={`pdf-viewer ${className}`} style={{ ...styles.container, flexDirection: 'row' }}>
       {/* Main viewer area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {/* PDF Canvas Container */}
@@ -658,18 +684,21 @@ export function PdfViewer({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           style={{
-          ...styles.canvasContainer,
-          backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
-          ...(isZoomed ? {
-            // When zoomed: scrollable in all directions, content at top-left
-            overflow: 'scroll',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start',
-            touchAction: 'pan-x pan-y',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            userSelect: 'none',
-          } : {}),
-        }}>
+            ...styles.canvasContainer,
+            backgroundColor: isDarkModeActive ? '#1a1a1a' : '#525659',
+            ...(isZoomed
+              ? {
+                  // When zoomed: scrollable in all directions, content at top-left
+                  overflow: 'scroll',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start',
+                  touchAction: 'pan-x pan-y',
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                  userSelect: 'none',
+                }
+              : {}),
+          }}
+        >
           <div style={{ position: 'relative', display: 'inline-block' }}>
             <canvas
               ref={canvasRef}
@@ -715,11 +744,7 @@ export function PdfViewer({
         {/* Navigation Controls */}
         <div style={styles.controls}>
           {showPedalIndicator && (
-            <BluetoothPedalIndicator
-              onPageNext={nextPage}
-              onPagePrevious={previousPage}
-              showBattery={true}
-            />
+            <BluetoothPedalIndicator onPageNext={nextPage} onPagePrevious={previousPage} showBattery={true} />
           )}
           <button
             onClick={previousPage}
@@ -766,7 +791,7 @@ export function PdfViewer({
             {/* Annotations toggle */}
             {hasAnnotationsSupport && (
               <button
-                onClick={() => setShowAnnotationsPanel(prev => !prev)}
+                onClick={() => setShowAnnotationsPanel((prev) => !prev)}
                 style={{
                   ...styles.zoomButton,
                   marginLeft: '0.25rem',
@@ -780,21 +805,23 @@ export function PdfViewer({
               >
                 <Icon name="MessageSquare" size={16} />
                 {annotations.length > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-4px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    borderRadius: '50%',
-                    fontSize: '0.6rem',
-                    width: '14px',
-                    height: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                  }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      fontSize: '0.6rem',
+                      width: '14px',
+                      height: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                    }}
+                  >
                     {annotations.length > 9 ? '9+' : annotations.length}
                   </span>
                 )}
@@ -803,7 +830,7 @@ export function PdfViewer({
             {/* Drawing mode toggle */}
             {hasAnnotationsSupport && (
               <button
-                onClick={() => setDrawingMode(prev => !prev)}
+                onClick={() => setDrawingMode((prev) => !prev)}
                 style={{
                   ...styles.zoomButton,
                   marginLeft: '0.25rem',
@@ -835,24 +862,16 @@ export function PdfViewer({
         {isSwipeActive && (
           <div style={styles.swipeHintOverlay}>
             {swipeOffset < -30 && currentPage < totalPages && (
-              <div style={{ ...styles.swipeHint, right: '1rem' }}>
-                Next &rarr;
-              </div>
+              <div style={{ ...styles.swipeHint, right: '1rem' }}>Next &rarr;</div>
             )}
             {swipeOffset > 30 && currentPage > 1 && (
-              <div style={{ ...styles.swipeHint, left: '1rem' }}>
-                &larr; Previous
-              </div>
+              <div style={{ ...styles.swipeHint, left: '1rem' }}>&larr; Previous</div>
             )}
           </div>
         )}
 
         {/* Annotation feedback toast */}
-        {annotationFeedback && (
-          <div style={styles.feedbackToast}>
-            {annotationFeedback}
-          </div>
-        )}
+        {annotationFeedback && <div style={styles.feedbackToast}>{annotationFeedback}</div>}
       </div>
 
       {/* Annotations Sidebar */}
@@ -860,9 +879,7 @@ export function PdfViewer({
         <div style={styles.annotationsSidebar}>
           <div style={styles.annotationsHeader}>
             <span style={styles.annotationsTitle}>{t('annotations.title')}</span>
-            <span style={styles.annotationsPageLabel}>
-              {t('annotations.pageLabel', { page: currentPage })}
-            </span>
+            <span style={styles.annotationsPageLabel}>{t('annotations.pageLabel', { page: currentPage })}</span>
           </div>
 
           {/* Add annotation form */}

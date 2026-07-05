@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -15,7 +16,11 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Fetch ticket if code provided but not ticket object
-  const { data: fetchedTicket, isLoading, error } = useQuery({
+  const {
+    data: fetchedTicket,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['ticket', ticketCode],
     queryFn: () => getTicketByCode(ticketCode!),
     enabled: !!ticketCode && !propTicket,
@@ -127,7 +132,7 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
           <div class="ticket">
             <div class="header">
               <h1>${ticket.concert.name}</h1>
-              <p>${new Date(ticket.concert.date).toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p>${new Date(ticket.concert.date).toLocaleDateString(currentLocale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
               <p>${ticket.concert.location || t('tickets.locationTba')}</p>
             </div>
 
@@ -146,12 +151,16 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
                 <span class="detail-label">${t('tickets.buyerName')}</span>
                 <span>${ticket.buyerName}</span>
               </div>
-              ${ticket.seatInfo ? `
+              ${
+                ticket.seatInfo
+                  ? `
               <div class="detail-row">
                 <span class="detail-label">${t('tickets.seatInfo')}</span>
                 <span>${ticket.seatInfo}</span>
               </div>
-              ` : ''}
+              `
+                  : ''
+              }
               <div class="detail-row">
                 <span class="detail-label">${t('common.status')}</span>
                 <span class="status status-${ticket.status}">${t(`tickets.status.${ticket.status}`)}</span>
@@ -238,7 +247,7 @@ export default function TicketDisplay({ ticket: propTicket, ticketCode, showDown
         >
           <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>{ticket.concert.name}</h3>
           <p style={{ margin: 0, opacity: 0.9 }}>
-            {new Date(ticket.concert.date).toLocaleDateString('nl-NL', {
+            {new Date(ticket.concert.date).toLocaleDateString(currentLocale(), {
               weekday: 'long',
               year: 'numeric',
               month: 'long',

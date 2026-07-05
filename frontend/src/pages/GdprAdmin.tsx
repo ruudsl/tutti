@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -52,11 +53,7 @@ async function fetchDeletionRequests(): Promise<DeletionRequest[]> {
   }));
 }
 
-async function processDeletionRequest(
-  requestId: string,
-  action: 'approve' | 'reject',
-  notes?: string
-): Promise<void> {
+async function processDeletionRequest(requestId: string, action: 'approve' | 'reject', notes?: string): Promise<void> {
   const token = localStorage.getItem('token');
   const res = await fetch(`${API_BASE}/gdpr/deletion-requests/${requestId}/process`, {
     method: 'POST',
@@ -94,7 +91,7 @@ async function updateRetentionSettings(settings: RetentionSetting[]): Promise<vo
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      settings: settings.map(s => ({
+      settings: settings.map((s) => ({
         data_type: s.dataType,
         retention_days: s.retentionDays,
         auto_delete: s.retentionDays > 0,
@@ -142,11 +139,7 @@ export default function GdprAdmin() {
       return processDeletionRequest(selectedRequest.id, processAction, processNotes);
     },
     onSuccess: () => {
-      showSuccess(
-        processAction === 'approve'
-          ? t('gdprAdmin.requestApproved')
-          : t('gdprAdmin.requestRejected')
-      );
+      showSuccess(processAction === 'approve' ? t('gdprAdmin.requestApproved') : t('gdprAdmin.requestRejected'));
       queryClient.invalidateQueries({ queryKey: ['gdpr-deletion-requests'] });
       setSelectedRequest(null);
       setProcessAction(null);
@@ -184,8 +177,8 @@ export default function GdprAdmin() {
     },
   });
 
-  const pendingRequests = requests?.filter(r => r.status === 'pending') || [];
-  const processedRequests = requests?.filter(r => r.status !== 'pending') || [];
+  const pendingRequests = requests?.filter((r) => r.status === 'pending') || [];
+  const processedRequests = requests?.filter((r) => r.status !== 'pending') || [];
 
   const getStatusBadge = (status: DeletionRequest['status']) => {
     const styles: Record<string, string> = {
@@ -198,7 +191,7 @@ export default function GdprAdmin() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -214,15 +207,10 @@ export default function GdprAdmin() {
       </div>
 
       <div className="tabs mb-4">
-        <button
-          className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
-          onClick={() => setActiveTab('requests')}
-        >
+        <button className={`tab ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')}>
           <Icon name="user" size={16} />
           {t('gdprAdmin.deletionRequests', 'Verwijderingsverzoeken')}
-          {pendingRequests.length > 0 && (
-            <span className="badge badge-warning ml-2">{pendingRequests.length}</span>
-          )}
+          {pendingRequests.length > 0 && <span className="badge badge-warning ml-2">{pendingRequests.length}</span>}
         </button>
         <button
           className={`tab ${activeTab === 'retention' ? 'active' : ''}`}
@@ -236,15 +224,15 @@ export default function GdprAdmin() {
       {activeTab === 'requests' && (
         <div>
           {loadingRequests ? (
-            <div className="loading"><div className="spinner" /></div>
+            <div className="loading">
+              <div className="spinner" />
+            </div>
           ) : (
             <>
               {pendingRequests.length > 0 && (
                 <div className="card mb-4">
                   <div className="card-header">
-                    <h2 className="card-title">
-                      {t('gdprAdmin.pendingRequests', 'Openstaande verzoeken')}
-                    </h2>
+                    <h2 className="card-title">{t('gdprAdmin.pendingRequests', 'Openstaande verzoeken')}</h2>
                   </div>
                   <div className="card-body p-0">
                     <table className="table">
@@ -258,7 +246,7 @@ export default function GdprAdmin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {pendingRequests.map(request => (
+                        {pendingRequests.map((request) => (
                           <tr key={request.id}>
                             <td>{request.name}</td>
                             <td>{request.email}</td>
@@ -298,9 +286,7 @@ export default function GdprAdmin() {
 
               <div className="card">
                 <div className="card-header">
-                  <h2 className="card-title">
-                    {t('gdprAdmin.processedRequests', 'Verwerkte verzoeken')}
-                  </h2>
+                  <h2 className="card-title">{t('gdprAdmin.processedRequests', 'Verwerkte verzoeken')}</h2>
                 </div>
                 <div className="card-body p-0">
                   {processedRequests.length === 0 ? (
@@ -318,7 +304,7 @@ export default function GdprAdmin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {processedRequests.map(request => (
+                        {processedRequests.map((request) => (
                           <tr key={request.id}>
                             <td>{request.name}</td>
                             <td>{request.email}</td>
@@ -343,14 +329,14 @@ export default function GdprAdmin() {
       {activeTab === 'retention' && (
         <div>
           {loadingRetention ? (
-            <div className="loading"><div className="spinner" /></div>
+            <div className="loading">
+              <div className="spinner" />
+            </div>
           ) : (
             <>
               <div className="card mb-4">
                 <div className="card-header flex justify-between items-center">
-                  <h2 className="card-title">
-                    {t('gdprAdmin.dataRetention', 'Gegevensretentie')}
-                  </h2>
+                  <h2 className="card-title">{t('gdprAdmin.dataRetention', 'Gegevensretentie')}</h2>
                   {!editingSettings && (
                     <button
                       className="btn btn-sm btn-outline"
@@ -399,14 +385,9 @@ export default function GdprAdmin() {
                           onClick={() => updateSettingsMutation.mutate()}
                           disabled={updateSettingsMutation.isPending}
                         >
-                          {updateSettingsMutation.isPending
-                            ? t('common.saving')
-                            : t('common.save')}
+                          {updateSettingsMutation.isPending ? t('common.saving') : t('common.save')}
                         </button>
-                        <button
-                          className="btn btn-outline"
-                          onClick={() => setEditingSettings(null)}
-                        >
+                        <button className="btn btn-outline" onClick={() => setEditingSettings(null)}>
                           {t('common.cancel')}
                         </button>
                       </div>
@@ -420,13 +401,11 @@ export default function GdprAdmin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {retentionData?.settings.map(setting => (
+                        {retentionData?.settings.map((setting) => (
                           <tr key={setting.dataType}>
                             <td>
                               <div>
-                                <strong>
-                                  {t(`gdprAdmin.dataTypes.${setting.dataType}`, setting.dataType)}
-                                </strong>
+                                <strong>{t(`gdprAdmin.dataTypes.${setting.dataType}`, setting.dataType)}</strong>
                                 <p className="text-muted text-sm mb-0">{setting.description}</p>
                               </div>
                             </td>
@@ -445,20 +424,18 @@ export default function GdprAdmin() {
 
               <div className="card">
                 <div className="card-header">
-                  <h2 className="card-title">
-                    {t('gdprAdmin.cleanup', 'Opschonen')}
-                  </h2>
+                  <h2 className="card-title">{t('gdprAdmin.cleanup', 'Opschonen')}</h2>
                 </div>
                 <div className="card-body">
                   <p className="mb-3">
-                    {t('gdprAdmin.cleanupDescription',
-                      'Verwijder verlopen gegevens op basis van de hierboven geconfigureerde bewaartermijnen.'
+                    {t(
+                      'gdprAdmin.cleanupDescription',
+                      'Verwijder verlopen gegevens op basis van de hierboven geconfigureerde bewaartermijnen.',
                     )}
                   </p>
                   {retentionData?.lastCleanup && (
                     <p className="text-muted text-sm mb-3">
-                      {t('gdprAdmin.lastCleanup', 'Laatste opschoning')}:{' '}
-                      {formatDate(retentionData.lastCleanup)}
+                      {t('gdprAdmin.lastCleanup', 'Laatste opschoning')}: {formatDate(retentionData.lastCleanup)}
                     </p>
                   )}
                   <button
@@ -489,12 +466,11 @@ export default function GdprAdmin() {
             <div>
               <p className="mb-3">
                 {processAction === 'approve'
-                  ? t('gdprAdmin.approveWarning',
-                      'Dit zal alle gegevens van deze gebruiker permanent verwijderen. Dit kan niet ongedaan worden gemaakt.'
+                  ? t(
+                      'gdprAdmin.approveWarning',
+                      'Dit zal alle gegevens van deze gebruiker permanent verwijderen. Dit kan niet ongedaan worden gemaakt.',
                     )
-                  : t('gdprAdmin.rejectInfo',
-                      'De gebruiker wordt geïnformeerd dat hun verzoek is afgewezen.'
-                    )}
+                  : t('gdprAdmin.rejectInfo', 'De gebruiker wordt geïnformeerd dat hun verzoek is afgewezen.')}
               </p>
               <div className="alert alert-info mb-3">
                 <strong>{selectedRequest.name}</strong> ({selectedRequest.email})

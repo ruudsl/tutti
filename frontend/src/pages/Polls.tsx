@@ -24,6 +24,7 @@ import {
   UpdatePollData,
 } from '../api/polls';
 import { showSuccess, showError } from '../utils/toast';
+import { getErrorMessage } from '../utils/errorHandling';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
@@ -67,15 +68,16 @@ export default function Polls() {
 
   const { data: polls = [], isLoading } = useQuery({
     queryKey: ['polls', filterStatus, searchTerm],
-    queryFn: () => getPolls({
-      status: filterStatus || undefined,
-      search: searchTerm || undefined,
-    }),
+    queryFn: () =>
+      getPolls({
+        status: filterStatus || undefined,
+        search: searchTerm || undefined,
+      }),
   });
 
   const { data: pollDetail } = useQuery({
     queryKey: ['poll', selectedPoll?.id],
-    queryFn: () => selectedPoll ? getPoll(selectedPoll.id) : null,
+    queryFn: () => (selectedPoll ? getPoll(selectedPoll.id) : null),
     enabled: !!selectedPoll,
   });
 
@@ -86,8 +88,8 @@ export default function Polls() {
       showSuccess(t('polls.deleted'));
       setSelectedPoll(null);
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorDelete'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorDelete')));
     },
   });
 
@@ -98,8 +100,8 @@ export default function Polls() {
       queryClient.invalidateQueries({ queryKey: ['poll', selectedPoll?.id] });
       showSuccess(t('polls.statusChanged'));
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorStatus'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorStatus')));
     },
   });
 
@@ -119,10 +121,7 @@ export default function Polls() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('polls.title')}</h1>
         {canCreate && (
-          <button
-            className="btn btn-primary gap-2"
-            onClick={() => setShowCreateModal(true)}
-          >
+          <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
             <Icon name="plus" size={16} />
             {t('polls.createPoll')}
           </button>
@@ -186,14 +185,10 @@ export default function Polls() {
                   {getStatusBadge(poll.status)}
                 </div>
 
-                {poll.description && (
-                  <p className="text-sm text-base-content/70 line-clamp-2">{poll.description}</p>
-                )}
+                {poll.description && <p className="text-sm text-base-content/70 line-clamp-2">{poll.description}</p>}
 
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="badge badge-outline badge-sm">
-                    {getPollTypeLabel(poll.pollType)}
-                  </span>
+                  <span className="badge badge-outline badge-sm">{getPollTypeLabel(poll.pollType)}</span>
                   {poll.isAnonymous && (
                     <span className="badge badge-ghost badge-sm gap-1">
                       <Icon name="eyeOff" size={12} />
@@ -326,8 +321,8 @@ function PollDetailModal({
       setNewComment('');
       showSuccess(t('polls.commentAdded'));
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorComment'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorComment')));
     },
   });
 
@@ -346,8 +341,8 @@ function PollDetailModal({
       queryClient.invalidateQueries({ queryKey: ['polls'] });
       showSuccess(t('polls.voteRetracted'));
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorRetract'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorRetract')));
     },
   });
 
@@ -356,8 +351,8 @@ function PollDetailModal({
     onSuccess: (data) => {
       showSuccess(t('polls.reminderSent', { count: data.sent }));
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorReminder'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorReminder')));
     },
   });
 
@@ -367,8 +362,8 @@ function PollDetailModal({
       queryClient.invalidateQueries({ queryKey: ['rehearsals'] });
       showSuccess(t('polls.rehearsalCreated', { date: new Date(data.date).toLocaleDateString() }));
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorCreateRehearsal'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorCreateRehearsal')));
     },
   });
 
@@ -393,25 +388,21 @@ function PollDetailModal({
           )}
         </div>
 
-        {poll.description && (
-          <p className="text-base-content/80">{poll.description}</p>
-        )}
+        {poll.description && <p className="text-base-content/80">{poll.description}</p>}
 
         {/* Poll options with results */}
         <div className="space-y-3">
           <h4 className="font-semibold">{t('polls.optionsTitle')}</h4>
           {poll.options.map((option) => {
-            const percentage = totalVotes > 0 ? Math.round((option.voteCount || 0) / totalVotes * 100) : 0;
-            const isUserVote = poll.userVotes.some(v => v.optionId === option.id);
+            const percentage = totalVotes > 0 ? Math.round(((option.voteCount || 0) / totalVotes) * 100) : 0;
+            const isUserVote = poll.userVotes.some((v) => v.optionId === option.id);
 
             return (
               <div key={option.id} className="space-y-1">
                 <div className="flex justify-between items-center">
                   <span className={`flex-1 ${isUserVote ? 'font-semibold' : ''}`}>
                     {option.text}
-                    {isUserVote && (
-                      <Icon name="checkCircle" size={14} className="inline ml-2 text-success" />
-                    )}
+                    {isUserVote && <Icon name="checkCircle" size={14} className="inline ml-2 text-success" />}
                   </span>
                   {poll.canSeeResults && (
                     <span className="text-sm text-base-content/60">
@@ -427,9 +418,7 @@ function PollDetailModal({
                     />
                   </div>
                 )}
-                {option.description && (
-                  <p className="text-sm text-base-content/60">{option.description}</p>
-                )}
+                {option.description && <p className="text-sm text-base-content/60">{option.description}</p>}
               </div>
             );
           })}
@@ -456,9 +445,7 @@ function PollDetailModal({
         </div>
 
         {/* Total voters */}
-        <div className="text-sm text-base-content/60">
-          {t('polls.totalVoters', { count: poll.totalVoters })}
-        </div>
+        <div className="text-sm text-base-content/60">{t('polls.totalVoters', { count: poll.totalVoters })}</div>
 
         {/* Comments section */}
         {poll.allowComments && (
@@ -474,9 +461,7 @@ function PollDetailModal({
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="font-medium">{comment.authorName}</span>
-                        <span className="text-xs text-base-content/50 ml-2">
-                          {formatDateTime(comment.createdAt)}
-                        </span>
+                        <span className="text-xs text-base-content/50 ml-2">{formatDateTime(comment.createdAt)}</span>
                       </div>
                       {(comment.authorId === user?.id || canEdit) && (
                         <button
@@ -530,29 +515,20 @@ function PollDetailModal({
         {canEdit && (
           <div className="border-t pt-4 flex flex-wrap gap-2">
             {(poll.status === 'draft' || poll.status === 'active') && (
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={onEdit}
-              >
+              <button className="btn btn-primary btn-sm" onClick={onEdit}>
                 <Icon name="pencil" size={14} className="mr-1" />
                 {t('common.edit')}
               </button>
             )}
             {poll.status === 'draft' && (
-              <button
-                className="btn btn-success btn-sm"
-                onClick={() => onStatusChange('active')}
-              >
+              <button className="btn btn-success btn-sm" onClick={() => onStatusChange('active')}>
                 <Icon name="play" size={14} className="mr-1" />
                 {t('polls.activate')}
               </button>
             )}
             {poll.status === 'active' && (
               <>
-                <button
-                  className="btn btn-warning btn-sm"
-                  onClick={() => onStatusChange('closed')}
-                >
+                <button className="btn btn-warning btn-sm" onClick={() => onStatusChange('closed')}>
                   <Icon name="lock" size={14} className="mr-1" />
                   {t('polls.close')}
                 </button>
@@ -572,10 +548,7 @@ function PollDetailModal({
             )}
             {poll.status === 'closed' && (
               <>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => onStatusChange('archived')}
-                >
+                <button className="btn btn-secondary btn-sm" onClick={() => onStatusChange('archived')}>
                   <Icon name="archive" size={14} className="mr-1" />
                   {t('polls.archive')}
                 </button>
@@ -616,15 +589,7 @@ function PollDetailModal({
 }
 
 // Vote Modal Component
-function VoteModal({
-  poll,
-  onClose,
-  onSuccess,
-}: {
-  poll: PollDetail;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
+function VoteModal({ poll, onClose, onSuccess }: { poll: PollDetail; onClose: () => void; onSuccess: () => void }) {
   const { t } = useTranslation();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 
@@ -634,8 +599,8 @@ function VoteModal({
       showSuccess(t('polls.voteSubmitted'));
       onSuccess();
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorVote'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorVote')));
     },
   });
 
@@ -647,8 +612,8 @@ function VoteModal({
         prev.includes(optionId)
           ? prev.filter((id) => id !== optionId)
           : poll.maxSelections && prev.length >= poll.maxSelections
-          ? prev
-          : [...prev, optionId]
+            ? prev
+            : [...prev, optionId],
       );
     }
   };
@@ -662,8 +627,8 @@ function VoteModal({
           {poll.pollType === 'single'
             ? t('polls.selectOneOption')
             : poll.maxSelections
-            ? t('polls.selectUpToOptions', { count: poll.maxSelections })
-            : t('polls.selectMultipleOptions')}
+              ? t('polls.selectUpToOptions', { count: poll.maxSelections })
+              : t('polls.selectMultipleOptions')}
         </p>
 
         <div className="space-y-2">
@@ -685,9 +650,7 @@ function VoteModal({
               />
               <div>
                 <span className="font-medium">{option.text}</span>
-                {option.description && (
-                  <p className="text-sm text-base-content/60 mt-1">{option.description}</p>
-                )}
+                {option.description && <p className="text-sm text-base-content/60 mt-1">{option.description}</p>}
               </div>
             </label>
           ))}
@@ -732,13 +695,7 @@ interface CreatePollFormData extends Omit<CreatePollData, 'options'> {
 }
 
 // Create Poll Modal Component
-function CreatePollModal({
-  onClose,
-  onSuccess,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
+function CreatePollModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<CreatePollFormData>({
     title: '',
@@ -747,7 +704,10 @@ function CreatePollModal({
     isAnonymous: false,
     showResultsBeforeClose: false,
     allowComments: true,
-    options: [{ text: '', _id: generateOptionId() }, { text: '', _id: generateOptionId() }],
+    options: [
+      { text: '', _id: generateOptionId() },
+      { text: '', _id: generateOptionId() },
+    ],
   });
 
   const createMutation = useMutation({
@@ -756,8 +716,8 @@ function CreatePollModal({
       showSuccess(t('polls.created'));
       onSuccess();
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorCreate'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorCreate')));
     },
   });
 
@@ -784,16 +744,12 @@ function CreatePollModal({
     }));
   };
 
-  const canSubmit =
-    formData.title.trim() &&
-    formData.options.filter((o) => o.text.trim()).length >= 2;
+  const canSubmit = formData.title.trim() && formData.options.filter((o) => o.text.trim()).length >= 2;
 
   const handleSubmit = () => {
     const data: CreatePollData = {
       ...formData,
-      options: formData.options
-        .filter((o) => o.text.trim())
-        .map(({ text }) => ({ text })),
+      options: formData.options.filter((o) => o.text.trim()).map(({ text }) => ({ text })),
     };
     createMutation.mutate(data);
   };
@@ -877,11 +833,7 @@ function CreatePollModal({
                 placeholder={`${t('polls.option')} ${index + 1}`}
               />
               {formData.options.length > 2 && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-square"
-                  onClick={() => removeOption(index)}
-                >
+                <button type="button" className="btn btn-ghost btn-square" onClick={() => removeOption(index)}>
                   <Icon name="close" size={16} />
                 </button>
               )}
@@ -911,9 +863,7 @@ function CreatePollModal({
               type="checkbox"
               className="checkbox checkbox-sm"
               checked={formData.showResultsBeforeClose}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, showResultsBeforeClose: e.target.checked }))
-              }
+              onChange={(e) => setFormData((prev) => ({ ...prev, showResultsBeforeClose: e.target.checked }))}
             />
             <span className="text-sm">{t('polls.showResultsBeforeClose')}</span>
           </label>
@@ -933,11 +883,7 @@ function CreatePollModal({
           <button className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || createMutation.isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || createMutation.isPending}>
             {createMutation.isPending ? (
               <span className="loading loading-spinner loading-sm" />
             ) : (
@@ -954,15 +900,7 @@ function CreatePollModal({
 }
 
 // Edit Poll Modal Component
-function EditPollModal({
-  poll,
-  onClose,
-  onSuccess,
-}: {
-  poll: PollDetail;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
+function EditPollModal({ poll, onClose, onSuccess }: { poll: PollDetail; onClose: () => void; onSuccess: () => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<UpdatePollData>({
     title: poll.title,
@@ -982,8 +920,8 @@ function EditPollModal({
       showSuccess(t('polls.updated'));
       onSuccess();
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.error || t('polls.errorUpdate'));
+    onError: (error: unknown) => {
+      showError(getErrorMessage(error, t('polls.errorUpdate')));
     },
   });
 
@@ -1048,9 +986,7 @@ function EditPollModal({
           </select>
           {hasVotes && (
             <label className="label">
-              <span className="label-text-alt text-warning">
-                {t('polls.cannotChangeTypeWithVotes')}
-              </span>
+              <span className="label-text-alt text-warning">{t('polls.cannotChangeTypeWithVotes')}</span>
             </label>
           )}
         </div>
@@ -1132,9 +1068,7 @@ function EditPollModal({
               type="checkbox"
               className="checkbox checkbox-sm"
               checked={formData.showResultsBeforeClose}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, showResultsBeforeClose: e.target.checked }))
-              }
+              onChange={(e) => setFormData((prev) => ({ ...prev, showResultsBeforeClose: e.target.checked }))}
             />
             <span className="text-sm">{t('polls.showResultsBeforeClose')}</span>
           </label>
@@ -1154,11 +1088,7 @@ function EditPollModal({
           <button className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || updateMutation.isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || updateMutation.isPending}>
             {updateMutation.isPending ? (
               <span className="loading loading-spinner loading-sm" />
             ) : (

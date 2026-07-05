@@ -6,6 +6,8 @@
  * @module utils/format
  */
 
+import { currentLocale } from './locale';
+
 /**
  * Formats a duration from seconds to a human-readable string.
  *
@@ -64,7 +66,7 @@ export function parseDuration(str: string): number {
  * formatDate('2026-12-25');           // "25 december 2026"
  */
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString('nl-NL', {
+  return new Date(date).toLocaleDateString(currentLocale(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -90,10 +92,11 @@ export function formatRelativeTime(date: string | Date): string {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'zojuist';
-  if (diffMins < 60) return `${diffMins} minuten geleden`;
-  if (diffHours < 24) return `${diffHours} uur geleden`;
-  if (diffDays < 7) return `${diffDays} dagen geleden`;
+  const rtf = new Intl.RelativeTimeFormat(currentLocale(), { numeric: 'auto' });
+  if (diffMins < 1) return rtf.format(0, 'second');
+  if (diffMins < 60) return rtf.format(-diffMins, 'minute');
+  if (diffHours < 24) return rtf.format(-diffHours, 'hour');
+  if (diffDays < 7) return rtf.format(-diffDays, 'day');
   return formatDate(date);
 }
 
@@ -151,7 +154,7 @@ export function formatFileSize(bytes: number): string {
  */
 export function formatCurrency(amount: number | null | undefined, currency = 'EUR'): string {
   if (amount == null) return '-';
-  return new Intl.NumberFormat('nl-NL', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,

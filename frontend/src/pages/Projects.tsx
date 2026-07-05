@@ -1,8 +1,18 @@
+import { formatCurrency } from '../utils/format';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getProjects, getProject, createProject, updateProjectStatus, deleteProject, ProjectStatus, CreateProjectData, ProjectDetail } from '../api/projects';
+import {
+  getProjects,
+  getProject,
+  createProject,
+  updateProjectStatus,
+  deleteProject,
+  ProjectStatus,
+  CreateProjectData,
+  ProjectDetail,
+} from '../api/projects';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -51,8 +61,8 @@ export default function Projects() {
     onError: () => showError(t('projects.errorUpdate')),
   });
 
-  const activeProjects = projects.filter(p => p.status === 'active');
-  const planningProjects = projects.filter(p => p.status === 'planning');
+  const activeProjects = projects.filter((p) => p.status === 'active');
+  const planningProjects = projects.filter((p) => p.status === 'planning');
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -87,7 +97,7 @@ export default function Projects() {
         <div className="card bg-base-100 shadow-sm">
           <div className="card-body p-4">
             <div className="text-sm text-base-content/60">{t('projects.completed')}</div>
-            <div className="text-2xl font-bold">{projects.filter(p => p.status === 'completed').length}</div>
+            <div className="text-2xl font-bold">{projects.filter((p) => p.status === 'completed').length}</div>
           </div>
         </div>
       </div>
@@ -111,7 +121,9 @@ export default function Projects() {
       {/* Projects Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : projects.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
@@ -120,7 +132,7 @@ export default function Projects() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map(project => (
+          {projects.map((project) => (
             <div
               key={project.id}
               className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
@@ -171,17 +183,35 @@ export default function Projects() {
                     </label>
                     <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
                       {project.status === 'planning' && (
-                        <li><button onClick={() => statusMutation.mutate({ id: project.id, status: 'active' })}>{t('projects.markActive')}</button></li>
+                        <li>
+                          <button onClick={() => statusMutation.mutate({ id: project.id, status: 'active' })}>
+                            {t('projects.markActive')}
+                          </button>
+                        </li>
                       )}
                       {project.status === 'active' && (
-                        <li><button onClick={() => statusMutation.mutate({ id: project.id, status: 'completed' })}>{t('projects.markCompleted')}</button></li>
+                        <li>
+                          <button onClick={() => statusMutation.mutate({ id: project.id, status: 'completed' })}>
+                            {t('projects.markCompleted')}
+                          </button>
+                        </li>
                       )}
-                      <li><button onClick={() => statusMutation.mutate({ id: project.id, status: 'archived' })}>{t('projects.archive')}</button></li>
-                      <li className="text-error"><button onClick={() => {
-                        if (confirm(t('projects.confirmDelete'))) {
-                          deleteMutation.mutate(project.id);
-                        }
-                      }}>{t('common.delete')}</button></li>
+                      <li>
+                        <button onClick={() => statusMutation.mutate({ id: project.id, status: 'archived' })}>
+                          {t('projects.archive')}
+                        </button>
+                      </li>
+                      <li className="text-error">
+                        <button
+                          onClick={() => {
+                            if (confirm(t('projects.confirmDelete'))) {
+                              deleteMutation.mutate(project.id);
+                            }
+                          }}
+                        >
+                          {t('common.delete')}
+                        </button>
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -304,7 +334,9 @@ function ProjectModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => createMutation.mutate(formData)}
@@ -325,14 +357,7 @@ const MEMBER_STATUS_COLORS: Record<string, string> = {
   declined: 'badge-error',
 };
 
-function ProjectDetailModal({
-  projectId,
-  onClose,
-}: {
-  projectId: string;
-  onClose: () => void;
-  onRefresh: () => void;
-}) {
+function ProjectDetailModal({ projectId, onClose }: { projectId: string; onClose: () => void; onRefresh: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'setlist' | 'events' | 'schedule'>('overview');
@@ -373,9 +398,7 @@ function ProjectDetailModal({
           <span className={`badge ${STATUS_COLORS[project.status]} badge-lg`}>
             {t(`projects.statuses.${project.status}`)}
           </span>
-          <span className="badge badge-outline">
-            {t(`projects.types.${project.projectType}`)}
-          </span>
+          <span className="badge badge-outline">{t(`projects.types.${project.projectType}`)}</span>
           {project.orchestraName && (
             <span className="flex items-center gap-1 text-base-content/70">
               <Icon name="music" size={16} />
@@ -391,28 +414,32 @@ function ProjectDetailModal({
           )}
         </div>
 
-        {project.description && (
-          <p className="text-base-content/80">{project.description}</p>
-        )}
+        {project.description && <p className="text-base-content/80">{project.description}</p>}
 
         {/* Stats */}
         <div className="flex flex-wrap gap-6 text-sm">
           <div className="flex items-center gap-2">
             <Icon name="users" size={16} className="text-primary" />
-            <span>{project.members.length} {t('projects.members')}</span>
+            <span>
+              {project.members.length} {t('projects.members')}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Icon name="music2" size={16} className="text-primary" />
-            <span>{project.concerts.length} {t('projects.concerts')}</span>
+            <span>
+              {project.concerts.length} {t('projects.concerts')}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Icon name="calendar" size={16} className="text-primary" />
-            <span>{project.rehearsals.length} {t('projects.rehearsals')}</span>
+            <span>
+              {project.rehearsals.length} {t('projects.rehearsals')}
+            </span>
           </div>
           {project.budget && (
             <div className="flex items-center gap-2">
               <Icon name="creditCard" size={16} className="text-primary" />
-              <span>€{project.budget.toFixed(2)}</span>
+              <span>{formatCurrency(project.budget)}</span>
             </div>
           )}
         </div>
@@ -462,7 +489,9 @@ function ProjectDetailModal({
           {activeTab === 'members' && <ProjectMembersTab members={project.members} />}
           {activeTab === 'setlist' && <ProjectSetlistSection project={project} onUpdate={handleProjectUpdate} />}
           {activeTab === 'events' && <ProjectEventsSection project={project} onUpdate={handleProjectUpdate} />}
-          {activeTab === 'schedule' && <ProjectScheduleTab concerts={project.concerts} rehearsals={project.rehearsals} />}
+          {activeTab === 'schedule' && (
+            <ProjectScheduleTab concerts={project.concerts} rehearsals={project.rehearsals} />
+          )}
         </div>
       </div>
     </Modal>
@@ -497,7 +526,7 @@ function ProjectOverviewTab({ project }: { project: ProjectDetail }) {
         <div className="card bg-base-200 p-4">
           <h4 className="font-medium mb-2">{t('projects.upcomingConcerts')}</h4>
           <div className="space-y-2">
-            {project.concerts.slice(0, 3).map(concert => (
+            {project.concerts.slice(0, 3).map((concert) => (
               <div key={concert.id} className="flex justify-between items-center p-2 bg-base-100 rounded">
                 <span className="font-medium">{concert.name}</span>
                 <div className="flex items-center gap-2 text-sm text-base-content/70">
@@ -543,9 +572,11 @@ function ProjectMembersTab({ members }: { members: ProjectDetail['members'] }) {
           </tr>
         </thead>
         <tbody>
-          {members.map(m => (
+          {members.map((m) => (
             <tr key={m.id}>
-              <td className="font-medium">{m.firstName} {m.lastName}</td>
+              <td className="font-medium">
+                {m.firstName} {m.lastName}
+              </td>
               <td className="text-base-content/70">{m.email}</td>
               <td>{m.role}</td>
               <td>
@@ -563,7 +594,7 @@ function ProjectMembersTab({ members }: { members: ProjectDetail['members'] }) {
 
 function ProjectScheduleTab({
   concerts,
-  rehearsals
+  rehearsals,
 }: {
   concerts: ProjectDetail['concerts'];
   rehearsals: ProjectDetail['rehearsals'];
@@ -571,8 +602,8 @@ function ProjectScheduleTab({
   const { t } = useTranslation();
 
   const allEvents = [
-    ...concerts.map(c => ({ ...c, type: 'concert' as const })),
-    ...rehearsals.map(r => ({ ...r, type: 'rehearsal' as const, name: t('projects.rehearsal') })),
+    ...concerts.map((c) => ({ ...c, type: 'concert' as const })),
+    ...rehearsals.map((r) => ({ ...r, type: 'rehearsal' as const, name: t('projects.rehearsal') })),
   ].sort((a, b) => {
     const dateA = 'date' in a ? a.date : '';
     const dateB = 'date' in b ? b.date : '';
@@ -590,7 +621,7 @@ function ProjectScheduleTab({
 
   return (
     <div className="space-y-3">
-      {allEvents.map(event => (
+      {allEvents.map((event) => (
         <div
           key={`${event.type}-${event.id}`}
           className={`flex items-center gap-4 p-3 rounded-lg ${
@@ -603,9 +634,7 @@ function ProjectScheduleTab({
             className={event.type === 'concert' ? 'text-primary' : 'text-base-content/60'}
           />
           <div className="flex-1">
-            <div className="font-medium">
-              {'name' in event ? event.name : t('projects.rehearsal')}
-            </div>
+            <div className="font-medium">{'name' in event ? event.name : t('projects.rehearsal')}</div>
             <div className="text-sm text-base-content/60 flex items-center gap-2">
               <Icon name="calendar" size={12} />
               {formatDate('date' in event ? event.date : '')}
@@ -616,7 +645,7 @@ function ProjectScheduleTab({
                 </>
               )}
               {(event.type === 'concert' && 'venue' in event && event.venue) ||
-               (event.type === 'rehearsal' && 'location' in event && event.location) ? (
+              (event.type === 'rehearsal' && 'location' in event && event.location) ? (
                 <>
                   <Icon name="mapPin" size={12} />
                   {event.type === 'concert' ? event.venue : event.location}

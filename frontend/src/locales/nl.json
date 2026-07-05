@@ -1,5 +1,16 @@
 {
   "common": {
+    "sort": {
+      "sortBy": "Sorteer op",
+      "placeholder": "Sorteer op...",
+      "options": "Sorteeropties",
+      "nameAsc": "Naam (A-Z)",
+      "nameDesc": "Naam (Z-A)",
+      "dateNewest": "Datum (nieuwste eerst)",
+      "dateOldest": "Datum (oudste eerst)",
+      "composer": "Componist",
+      "lastViewed": "Laatst bekeken"
+    },
     "loading": "Laden...",
     "save": "Opslaan",
     "cancel": "Annuleren",
@@ -3060,6 +3071,9 @@
     "autoAssign": "Automatisch indelen",
     "unsavedChanges": "Niet-opgeslagen wijzigingen",
     "dragDropHint": "Sleep leden naar de gewenste positie",
+    "memberAria": "{{name}}, {{section}}. Gebruik de pijltjestoetsen om te verplaatsen",
+    "movedAnnouncement": "{{name}} verplaatst naar {{section}}, positie {{position}}",
+    "movedToUnassigned": "{{name}} verplaatst naar niet-ingedeelde leden",
     "dropHere": "Sleep hier een lid naartoe",
     "unassignedMembers": "Niet-ingedeelde leden",
     "allMembersAssigned": "Alle leden zijn ingedeeld",
@@ -4172,6 +4186,10 @@
     "yourAssociations": "Jouw verenigingen",
     "switchedSuccess": "Gewisseld naar vereniging",
     "switchError": "Kon niet wisselen van vereniging",
+    "checkingAccess": "Toegang controleren...",
+    "accessRequiredTitle": "Super Admin Rechten Vereist",
+    "accessRequiredMessage": "Je hebt super admin rechten nodig om verenigingen te beheren. Neem contact op met een bestaande super admin om toegang te krijgen.",
+    "roleLabel": "Rol",
     "roles": {
       "member": "Lid",
       "board": "Bestuur",
@@ -4208,6 +4226,7 @@
       "maxMembers": "Max Leden",
       "maxOrchestras": "Max Orkesten",
       "maxStorage": "Max Opslag (MB)",
+      "isActive": "Vereniging is actief",
       "tiers": {
         "free": "Gratis",
         "basic": "Basis",
@@ -4218,6 +4237,7 @@
     "invitations": {
       "title": "Uitnodigingen",
       "invite": "Uitnodigen",
+      "emailPlaceholder": "E-mailadres",
       "noInvitations": "Geen uitnodigingen",
       "invitedBy": "Uitgenodigd door",
       "status": {
@@ -4246,6 +4266,7 @@
     "members": {
       "title": "Leden",
       "noMembers": "Geen leden gevonden",
+      "removeTitle": "Lid verwijderen",
       "removeConfirm": "Weet je zeker dat je dit lid wilt verwijderen uit de vereniging?",
       "roles": {
         "member": "Lid",
@@ -4255,13 +4276,16 @@
     },
     "superAdmins": {
       "title": "Super Administrators",
+      "warningLabel": "Let op:",
       "warning": "Super admins hebben volledige toegang tot alle verenigingen en hun data. Wees voorzichtig met wie je deze rechten geeft.",
       "noAdmins": "Geen super admins gevonden",
+      "removeTitle": "Super Admin verwijderen",
       "removeConfirm": "Weet je zeker dat je deze super admin wilt verwijderen?"
     },
     "activity": {
       "title": "Activiteitenlog",
       "noActivity": "Geen activiteiten gevonden",
+      "by": "Door: {{name}}",
       "actions": {
         "association_created": "Vereniging aangemaakt",
         "subscription_updated": "Abonnement bijgewerkt",
@@ -4278,6 +4302,7 @@
       "name": "Naam",
       "displayName": "Weergavenaam",
       "slug": "Slug",
+      "slugPlaceholder": "mijn-vereniging",
       "website": "Website",
       "phone": "Telefoon",
       "email": "E-mail",
@@ -4684,6 +4709,8 @@
     "capacity": "Capaciteit",
     "costPerHour": "Kosten per uur",
     "costPerDay": "Kosten per dag",
+    "perHour": "{{amount}}/uur",
+    "perDay": "{{amount}}/dag",
     "requiresApproval": "Goedkeuring vereist",
     "book": "Reserveren",
     "created": "Middel aangemaakt",
@@ -4871,6 +4898,8 @@
     "color": "Kleur",
     "items": "Onderdelen",
     "itemPlaceholder": "Voeg onderdeel toe (bijv. zwarte broek)",
+    "addItem": "Onderdeel toevoegen",
+    "removeItem": "{{item}} verwijderen",
     "default": "Standaard",
     "setAsDefault": "Als standaard instellen",
     "usedIn": "Gebruikt in {{count}} concerten",

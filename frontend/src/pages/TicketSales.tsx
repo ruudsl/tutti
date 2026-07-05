@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -37,19 +38,26 @@ export default function TicketSales() {
   // Fetch ticket sales
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['ticketSales', concertFilter, statusFilter, startDate, endDate, page],
-    queryFn: () => getTicketSales({
-      concertId: concertFilter || undefined,
-      status: statusFilter || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      page,
-      limit: 25,
-    }),
+    queryFn: () =>
+      getTicketSales({
+        concertId: concertFilter || undefined,
+        status: statusFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        page,
+        limit: 25,
+      }),
   });
 
   const orders = data?.orders || [];
   const pagination = data?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
-  const summary = data?.summary || { totalOrders: 0, paidOrders: 0, totalRevenue: 0, pendingOrders: 0, refundedOrders: 0 };
+  const summary = data?.summary || {
+    totalOrders: 0,
+    paidOrders: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+    refundedOrders: 0,
+  };
 
   const handleExportCsv = async () => {
     try {
@@ -121,14 +129,14 @@ export default function TicketSales() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('nl-NL', {
+    return new Intl.NumberFormat(currentLocale(), {
       style: 'currency',
       currency: 'EUR',
     }).format(amount);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -178,13 +186,17 @@ export default function TicketSales() {
         <div className="card">
           <div className="card-body" style={{ padding: '1rem' }}>
             <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('tickets.totalRevenue')}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>{formatCurrency(summary.totalRevenue)}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
+              {formatCurrency(summary.totalRevenue)}
+            </div>
           </div>
         </div>
         <div className="card">
           <div className="card-body" style={{ padding: '1rem' }}>
             <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('tickets.pendingOrders')}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>{summary.pendingOrders}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>
+              {summary.pendingOrders}
+            </div>
           </div>
         </div>
       </div>
@@ -198,11 +210,16 @@ export default function TicketSales() {
               <select
                 className="form-control"
                 value={concertFilter}
-                onChange={(e) => { setConcertFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setConcertFilter(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('common.all')}</option>
                 {concerts.map((c: Concert) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -211,7 +228,10 @@ export default function TicketSales() {
               <select
                 className="form-control"
                 value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('common.all')}</option>
                 <option value="paid">{t('tickets.status.paid')}</option>
@@ -227,7 +247,10 @@ export default function TicketSales() {
                 type="date"
                 className="form-control"
                 value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
             <div>
@@ -236,7 +259,10 @@ export default function TicketSales() {
                 type="date"
                 className="form-control"
                 value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
           </div>
@@ -275,7 +301,7 @@ export default function TicketSales() {
                     <td>
                       <div style={{ fontWeight: 500 }}>{order.concertName}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                        {new Date(order.concertDate).toLocaleDateString('nl-NL')}
+                        {new Date(order.concertDate).toLocaleDateString(currentLocale())}
                       </div>
                     </td>
                     <td>
@@ -304,7 +330,10 @@ export default function TicketSales() {
                         {order.status === 'paid' && (
                           <button
                             className="btn btn-outline btn-sm"
-                            onClick={() => { setSelectedOrder(order); setShowRefundConfirm(true); }}
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowRefundConfirm(true);
+                            }}
                             title={t('tickets.refund')}
                             style={{ color: 'var(--danger)' }}
                           >
@@ -322,16 +351,24 @@ export default function TicketSales() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="card-body" style={{ borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            className="card-body"
+            style={{
+              borderTop: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <span style={{ color: 'var(--text-light)' }}>
-              {t('common.showingOf', { from: (page - 1) * pagination.limit + 1, to: Math.min(page * pagination.limit, pagination.total), total: pagination.total })}
+              {t('common.showingOf', {
+                from: (page - 1) * pagination.limit + 1,
+                to: Math.min(page * pagination.limit, pagination.total),
+                total: pagination.total,
+              })}
             </span>
             <div className="flex gap-1">
-              <button
-                className="btn btn-outline btn-sm"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
+              <button className="btn btn-outline btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
                 &laquo;
               </button>
               {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -371,7 +408,11 @@ export default function TicketSales() {
       {showPaymentDetails && selectedOrder && (
         <Modal
           title={t('tickets.orderDetails')}
-          onClose={() => { setShowPaymentDetails(false); setSelectedOrder(null); setPaymentDetails(null); }}
+          onClose={() => {
+            setShowPaymentDetails(false);
+            setSelectedOrder(null);
+            setPaymentDetails(null);
+          }}
           size="large"
         >
           <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -381,7 +422,9 @@ export default function TicketSales() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-light)' }}>{t('tickets.orderId')}:</span>
-                  <div><code style={{ fontSize: '0.75rem' }}>{selectedOrder.id}</code></div>
+                  <div>
+                    <code style={{ fontSize: '0.75rem' }}>{selectedOrder.id}</code>
+                  </div>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-light)' }}>{t('common.status')}:</span>
@@ -441,7 +484,9 @@ export default function TicketSales() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>{t('tickets.total')}:</td>
+                    <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                      {t('tickets.total')}:
+                    </td>
                     <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(selectedOrder.total)}</td>
                   </tr>
                 </tfoot>
@@ -463,7 +508,9 @@ export default function TicketSales() {
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-light)' }}>{t('tickets.paymentId')}:</span>
-                    <div><code style={{ fontSize: '0.75rem' }}>{paymentDetails.paymentId || '-'}</code></div>
+                    <div>
+                      <code style={{ fontSize: '0.75rem' }}>{paymentDetails.paymentId || '-'}</code>
+                    </div>
                   </div>
                   {paymentDetails.details && (
                     <>
@@ -500,10 +547,18 @@ export default function TicketSales() {
       {showRefundConfirm && selectedOrder && (
         <Modal
           title={t('tickets.confirmRefund')}
-          onClose={() => { setShowRefundConfirm(false); setRefundReason(''); }}
+          onClose={() => {
+            setShowRefundConfirm(false);
+            setRefundReason('');
+          }}
           size="medium"
         >
-          <p>{t('tickets.refundWarning', { amount: formatCurrency(selectedOrder.total), buyer: selectedOrder.buyerName })}</p>
+          <p>
+            {t('tickets.refundWarning', {
+              amount: formatCurrency(selectedOrder.total),
+              buyer: selectedOrder.buyerName,
+            })}
+          </p>
           <div className="form-group">
             <label className="form-label">{t('tickets.refundReason')}</label>
             <textarea
@@ -517,16 +572,15 @@ export default function TicketSales() {
           <div className="flex justify-end gap-2 mt-3">
             <button
               className="btn btn-outline"
-              onClick={() => { setShowRefundConfirm(false); setRefundReason(''); }}
+              onClick={() => {
+                setShowRefundConfirm(false);
+                setRefundReason('');
+              }}
               disabled={isRefunding}
             >
               {t('common.cancel')}
             </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleRefund}
-              disabled={isRefunding}
-            >
+            <button className="btn btn-danger" onClick={handleRefund} disabled={isRefunding}>
               {isRefunding ? t('common.processing') : t('tickets.refund')}
             </button>
           </div>

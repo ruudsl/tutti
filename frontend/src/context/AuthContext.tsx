@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User, LoginResponse } from '../types';
 import { login as apiLogin, getProfile } from '../api';
+import { clearPersistedCache } from '../lib/queryClient';
 
 interface AuthContextType {
   user: User | null;
@@ -89,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Remove the persisted React Query cache so no cached data lingers after logout
+    clearPersistedCache();
     setUser(null);
   };
 

@@ -6,14 +6,11 @@
  */
 
 import { useState, useEffect, useRef, useCallback, memo, CSSProperties } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { loadPdfjs } from '../lib/pdfjs';
 import { useLazyLoad } from '../hooks/useLazyLoad';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon } from './Icon';
-
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // Simple in-memory cache for thumbnails
 const thumbnailCache = new Map<string, string>();
@@ -80,7 +77,7 @@ export const PdfThumbnail = memo(function PdfThumbnail({
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
-  const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const pdfRef = useRef<PDFDocumentProxy | null>(null);
 
   // Render first page of PDF as thumbnail
   const renderThumbnail = useCallback(async () => {
@@ -97,6 +94,9 @@ export const PdfThumbnail = memo(function PdfThumbnail({
     setLoadState('loading');
 
     try {
+      // Load pdf.js lazily on first use (kept out of the initial bundle)
+      const pdfjsLib = await loadPdfjs();
+
       let data: ArrayBuffer | string;
 
       if (typeof src === 'string') {
@@ -187,12 +187,13 @@ export const PdfThumbnail = memo(function PdfThumbnail({
     ...style,
   };
 
-  const hoverStyles: CSSProperties = isHovered && onClick
-    ? {
-        transform: 'scale(1.02)',
-        boxShadow: 'var(--shadow-md)',
-      }
-    : {};
+  const hoverStyles: CSSProperties =
+    isHovered && onClick
+      ? {
+          transform: 'scale(1.02)',
+          boxShadow: 'var(--shadow-md)',
+        }
+      : {};
 
   const imageStyles: CSSProperties = {
     display: 'block',
@@ -276,39 +277,31 @@ export const PdfThumbnail = memo(function PdfThumbnail({
         onMouseLeave={() => setIsHovered(false)}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
-        onKeyDown={onClick ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick();
-          }
-        } : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onClick();
+                }
+              }
+            : undefined
+        }
         aria-label={onClick ? `${alt} - Klik om te openen` : alt}
       >
         {/* Placeholder icon */}
         {(loadState === 'idle' || loadState === 'loading') && (
           <div style={placeholderStyles} aria-hidden="true">
             <Icon name="fileText" size={32} />
-            <span style={{ fontSize: 'var(--font-size-xs)', marginTop: '0.25rem' }}>
-              PDF
-            </span>
+            <span style={{ fontSize: 'var(--font-size-xs)', marginTop: '0.25rem' }}>PDF</span>
           </div>
         )}
 
         {/* Loading spinner */}
-        {showSpinner && loadState === 'loading' && (
-          <div style={spinnerStyles} aria-hidden="true" />
-        )}
+        {showSpinner && loadState === 'loading' && <div style={spinnerStyles} aria-hidden="true" />}
 
         {/* Thumbnail image */}
-        {thumbnailUrl && (
-          <img
-            src={thumbnailUrl}
-            alt={alt}
-            style={imageStyles}
-            loading="lazy"
-            decoding="async"
-          />
-        )}
+        {thumbnailUrl && <img src={thumbnailUrl} alt={alt} style={imageStyles} loading="lazy" decoding="async" />}
 
         {/* Hover overlay */}
         {showHoverOverlay && onClick && (
@@ -321,9 +314,7 @@ export const PdfThumbnail = memo(function PdfThumbnail({
         {loadState === 'error' && (
           <div style={errorStyles}>
             <Icon name="warning" size={24} />
-            <span style={{ marginTop: '0.25rem' }}>
-              Laden mislukt
-            </span>
+            <span style={{ marginTop: '0.25rem' }}>Laden mislukt</span>
           </div>
         )}
       </div>

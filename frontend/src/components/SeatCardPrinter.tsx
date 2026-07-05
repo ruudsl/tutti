@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SeatCard } from '../types';
@@ -34,7 +35,7 @@ export default function SeatCardPrinter({
   // Format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('nl-NL', {
+    return date.toLocaleDateString(currentLocale(), {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

@@ -1,5 +1,16 @@
 {
   "common": {
+    "sort": {
+      "sortBy": "Sort by",
+      "placeholder": "Sort by...",
+      "options": "Sort options",
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)",
+      "dateNewest": "Date (newest first)",
+      "dateOldest": "Date (oldest first)",
+      "composer": "Composer",
+      "lastViewed": "Last viewed"
+    },
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -3124,6 +3135,9 @@
     "autoAssign": "Auto-assign",
     "unsavedChanges": "Unsaved changes",
     "dragDropHint": "Drag members to the desired position",
+    "memberAria": "{{name}}, {{section}}. Use the arrow keys to move",
+    "movedAnnouncement": "{{name}} moved to {{section}}, position {{position}}",
+    "movedToUnassigned": "{{name}} moved to unassigned members",
     "dropHere": "Drop a member here",
     "unassignedMembers": "Unassigned members",
     "allMembersAssigned": "All members are assigned",
@@ -4172,6 +4186,10 @@
     "yourAssociations": "Your associations",
     "switchedSuccess": "Switched to association",
     "switchError": "Could not switch association",
+    "checkingAccess": "Checking access...",
+    "accessRequiredTitle": "Super Admin Rights Required",
+    "accessRequiredMessage": "You need super admin rights to manage associations. Contact an existing super admin to get access.",
+    "roleLabel": "Role",
     "roles": {
       "member": "Member",
       "board": "Board",
@@ -4208,6 +4226,7 @@
       "maxMembers": "Max Members",
       "maxOrchestras": "Max Orchestras",
       "maxStorage": "Max Storage (MB)",
+      "isActive": "Association is active",
       "tiers": {
         "free": "Free",
         "basic": "Basic",
@@ -4218,6 +4237,7 @@
     "invitations": {
       "title": "Invitations",
       "invite": "Invite",
+      "emailPlaceholder": "Email address",
       "noInvitations": "No invitations",
       "invitedBy": "Invited by",
       "status": {
@@ -4246,6 +4266,7 @@
     "members": {
       "title": "Members",
       "noMembers": "No members found",
+      "removeTitle": "Remove member",
       "removeConfirm": "Are you sure you want to remove this member from the association?",
       "roles": {
         "member": "Member",
@@ -4255,13 +4276,16 @@
     },
     "superAdmins": {
       "title": "Super Administrators",
+      "warningLabel": "Note:",
       "warning": "Super admins have full access to all associations and their data. Be careful who you grant these permissions to.",
       "noAdmins": "No super admins found",
+      "removeTitle": "Remove super admin",
       "removeConfirm": "Are you sure you want to remove this super admin?"
     },
     "activity": {
       "title": "Activity log",
       "noActivity": "No activities found",
+      "by": "By: {{name}}",
       "actions": {
         "association_created": "Association created",
         "subscription_updated": "Subscription updated",
@@ -4278,6 +4302,7 @@
       "name": "Name",
       "displayName": "Display name",
       "slug": "Slug",
+      "slugPlaceholder": "my-association",
       "website": "Website",
       "phone": "Phone",
       "email": "Email",
@@ -4684,6 +4709,8 @@
     "capacity": "Capacity",
     "costPerHour": "Cost per hour",
     "costPerDay": "Cost per day",
+    "perHour": "{{amount}}/hour",
+    "perDay": "{{amount}}/day",
     "requiresApproval": "Requires approval",
     "book": "Book",
     "created": "Resource created",
@@ -4871,6 +4898,8 @@
     "color": "Color",
     "items": "Items",
     "itemPlaceholder": "Add item (e.g. black trousers)",
+    "addItem": "Add item",
+    "removeItem": "Remove {{item}}",
     "default": "Default",
     "setAsDefault": "Set as default",
     "usedIn": "Used in {{count}} concerts",
