@@ -196,13 +196,13 @@ router.post(
 
     // Try to find existing user by microsoft_id first, then by email
     let user = db
-      .prepare('SELECT * FROM users WHERE microsoft_id = ? AND association_id = ?')
+      .prepare('SELECT * FROM users WHERE microsoft_id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(msProfile.id, storedState.associationId) as any;
 
     if (!user) {
       // Try to match by email
       user = db
-        .prepare('SELECT * FROM users WHERE LOWER(email) = ? AND association_id = ?')
+        .prepare('SELECT * FROM users WHERE LOWER(email) = ? AND association_id = ? AND deleted_at IS NULL')
         .get(msEmail, storedState.associationId) as any;
 
       if (user) {

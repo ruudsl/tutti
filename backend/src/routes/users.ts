@@ -11,6 +11,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import { isImage, validateUploadedFile } from '../utils/fileValidation';
+import { revokeUserSessions } from '../utils/sessionStore';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
@@ -60,7 +61,7 @@ router.get(
     const instrumentId = req.query.instrumentId as string | undefined;
     const search = req.query.search as string | undefined;
 
-    let whereClause = 'WHERE u.association_id = ?';
+    let whereClause = 'WHERE u.association_id = ? AND u.deleted_at IS NULL';
     const params: any[] = [req.user!.associationId];
 
     if (search) {
@@ -226,7 +227,7 @@ router.get(
     const offset = (page - 1) * limit;
     const search = req.query.search as string | undefined;
 
-    let whereClause = 'WHERE u.association_id = ?';
+    let whereClause = 'WHERE u.association_id = ? AND u.deleted_at IS NULL';
     const params: any[] = [req.user!.associationId];
 
     if (search) {
@@ -358,7 +359,7 @@ router.get(
                u.profile_photo_path, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
-        WHERE u.id = ? AND u.association_id = ?
+        WHERE u.id = ? AND u.association_id = ? AND u.deleted_at IS NULL
     `,
       )
       .get(req.params.id, req.user!.associationId) as any;
@@ -567,7 +568,7 @@ router.put(
 
     // Check if user exists and belongs to same association
     const user = db
-      .prepare('SELECT * FROM users WHERE id = ? AND association_id = ?')
+      .prepare('SELECT * FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!user) {
@@ -681,7 +682,9 @@ router.delete(
 
     // Get user info before deletion for audit log
     const userToDelete = db
-      .prepare('SELECT first_name, last_name, email FROM users WHERE id = ? AND association_id = ?')
+      .prepare(
+        'SELECT first_name, last_name, email FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL',
+      )
       .get(req.params.id, req.user!.associationId) as
       | { first_name: string; last_name: string; email: string }
       | undefined;
@@ -690,15 +693,32 @@ router.delete(
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
+    // Soft delete: mark as deleted instead of removing the row. The email
+    // is mutated to free up the (unique) address; the original is kept in
+    // email_before_delete so it can be restored. Rows are hard-deleted
+    // later by the GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
+    const deletedAt = new Date().toISOString();
+    const mutatedEmail = `deleted-${Date.now()}-${userToDelete.email}`;
     const result = db
-      .prepare('DELETE FROM users WHERE id = ? AND association_id = ?')
-      .run(req.params.id, req.user!.associationId);
+      .prepare(
+        `UPDATE users
+         SET deleted_at = ?, status = 'inactive', email = ?, email_before_delete = ?
+         WHERE id = ? AND association_id = ? AND deleted_at IS NULL`,
+      )
+      .run(deletedAt, mutatedEmail, userToDelete.email, req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
-    logger.info(`User deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    // Revoke all active sessions so the deleted user is logged out immediately
+    try {
+      revokeUserSessions(req.params.id);
+    } catch (error) {
+      logger.warn(`Failed to revoke sessions for soft-deleted user ${req.params.id}`, { error });
+    }
+
+    logger.info(`User soft-deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
     // Log audit event
     logAuditEvent(
@@ -713,6 +733,82 @@ router.delete(
     );
 
     res.json({ message: 'Gebruiker succesvol verwijderd.' });
+  }),
+);
+
+/**
+ * @swagger
+ * /users/{id}/restore:
+ *   post:
+ *     summary: Restore a soft-deleted user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User restored successfully
+ *       404:
+ *         description: User not found or not deleted
+ */
+router.post(
+  '/:id/restore',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userToRestore = db
+      .prepare(
+        `SELECT id, first_name, last_name, email, email_before_delete
+         FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NOT NULL`,
+      )
+      .get(req.params.id, req.user!.associationId) as
+      | { id: string; first_name: string; last_name: string; email: string; email_before_delete: string | null }
+      | undefined;
+
+    if (!userToRestore) {
+      throw new ApiError(404, 'Verwijderde gebruiker niet gevonden.');
+    }
+
+    // Restore the original email address only if it is still available
+    let restoredEmail = userToRestore.email;
+    if (userToRestore.email_before_delete) {
+      const emailTaken = db
+        .prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+        .get(userToRestore.email_before_delete, userToRestore.id);
+      if (!emailTaken) {
+        restoredEmail = userToRestore.email_before_delete;
+      }
+    }
+
+    db.prepare(
+      `UPDATE users
+       SET deleted_at = NULL, status = 'active', email = ?, email_before_delete = NULL
+       WHERE id = ?`,
+    ).run(restoredEmail, userToRestore.id);
+
+    logger.info(`User restored: ${req.params.id}`, { restoredBy: req.user!.id });
+
+    logAuditEvent(
+      req.user!.id,
+      'restore',
+      'user',
+      req.params.id,
+      `${userToRestore.first_name} ${userToRestore.last_name}`,
+      { email: restoredEmail },
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: 'Gebruiker succesvol hersteld.',
+      email: restoredEmail,
+      emailRestored: restoredEmail === userToRestore.email_before_delete,
+    });
   }),
 );
 

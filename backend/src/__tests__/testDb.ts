@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_changed_at TEXT,
     failed_login_attempts INTEGER NOT NULL DEFAULT 0,
     locked_until TEXT,
+    deleted_at DATETIME DEFAULT NULL,
+    email_before_delete TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
@@ -125,6 +127,7 @@ CREATE TABLE IF NOT EXISTS music_lists (
     list_type TEXT NOT NULL DEFAULT 'regular',
     concert_date TEXT,
     concert_location TEXT,
+    deleted_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );
@@ -144,6 +147,7 @@ CREATE TABLE IF NOT EXISTS music_pieces (
     association_id TEXT NOT NULL,
     is_shared BOOLEAN DEFAULT 0,
     uploaded_by TEXT,
+    deleted_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE SET NULL,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -175,6 +179,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     is_shared BOOLEAN DEFAULT 0,
     internal_notes TEXT,
     association_id TEXT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
     UNIQUE(title, arranger, association_id)
@@ -409,6 +414,7 @@ CREATE TABLE IF NOT EXISTS concerts (
     accessibility_contact_email TEXT,
     accessibility_contact_phone TEXT,
     created_by TEXT,
+    deleted_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,

@@ -1,33 +1,24 @@
 import db from '../database/connection';
 import logger from '../utils/logger';
 
+// Fresh installs create these columns via schema.ts; only add them when
+// they are still missing (existing databases).
+const columnExists = (table: string, column: string): boolean => {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return columns.some((c) => c.name === column);
+};
+
 export const up = (): void => {
   logger.info('Running migration: add_soft_delete (up)');
 
-  // Add deleted_at column to users table for soft delete
-  db.exec(`
-    ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL
-  `);
-
-  // Add deleted_at column to music_pieces table
-  db.exec(`
-    ALTER TABLE music_pieces ADD COLUMN deleted_at DATETIME DEFAULT NULL
-  `);
-
-  // Add deleted_at column to music_titles table
-  db.exec(`
-    ALTER TABLE music_titles ADD COLUMN deleted_at DATETIME DEFAULT NULL
-  `);
-
-  // Add deleted_at column to music_lists table
-  db.exec(`
-    ALTER TABLE music_lists ADD COLUMN deleted_at DATETIME DEFAULT NULL
-  `);
-
-  // Add deleted_at column to concerts table
-  db.exec(`
-    ALTER TABLE concerts ADD COLUMN deleted_at DATETIME DEFAULT NULL
-  `);
+  // Add deleted_at column for soft delete to each table (when missing)
+  for (const table of ['users', 'music_pieces', 'music_titles', 'music_lists', 'concerts']) {
+    if (!columnExists(table, 'deleted_at')) {
+      db.exec(`
+        ALTER TABLE ${table} ADD COLUMN deleted_at DATETIME DEFAULT NULL
+      `);
+    }
+  }
 
   // Add indexes for soft-delete queries
   db.exec(`

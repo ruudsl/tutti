@@ -331,7 +331,7 @@ router.get(
     const totalConcerts = db
       .prepare(
         `
-        SELECT COUNT(*) as count FROM concerts WHERE association_id = ?
+        SELECT COUNT(*) as count FROM concerts WHERE association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(req.user!.associationId) as { count: number };
@@ -342,7 +342,7 @@ router.get(
         `
         SELECT strftime('%Y', date) as year, COUNT(*) as count
         FROM concerts
-        WHERE association_id = ?
+        WHERE association_id = ? AND deleted_at IS NULL
         GROUP BY strftime('%Y', date)
         ORDER BY year DESC
         LIMIT 10
@@ -358,7 +358,7 @@ router.get(
                MAX(c.date) as last_played
         FROM concert_program cp
         JOIN concerts c ON cp.concert_id = c.id
-        WHERE c.association_id = ?
+        WHERE c.association_id = ? AND c.deleted_at IS NULL
         GROUP BY LOWER(cp.title)
         ORDER BY play_count DESC
         LIMIT 20
@@ -372,7 +372,7 @@ router.get(
         `
         SELECT concert_type, COUNT(*) as count
         FROM concerts
-        WHERE association_id = ? AND concert_type IS NOT NULL
+        WHERE association_id = ? AND deleted_at IS NULL AND concert_type IS NOT NULL
         GROUP BY concert_type
         ORDER BY count DESC
     `,
@@ -426,7 +426,7 @@ router.get(
       .prepare(
         `
         SELECT id, name, date, concert_type, location
-        FROM concerts WHERE id = ? AND association_id = ?
+        FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(id, req.user!.associationId) as any;
@@ -720,7 +720,7 @@ router.get(
         FROM concerts c
         JOIN concert_program cp ON c.id = cp.concert_id
         LEFT JOIN music_titles mt ON cp.music_title_id = mt.id
-        WHERE c.association_id = ?
+        WHERE c.association_id = ? AND c.deleted_at IS NULL
           AND c.date >= ?
           AND c.date <= ?
         ORDER BY c.date ASC, cp.sort_order ASC
@@ -791,7 +791,7 @@ router.get(
     const year = req.query.year as string | undefined;
     const concertType = req.query.concertType as string | undefined;
 
-    let whereClause = 'WHERE c.association_id = ?';
+    let whereClause = 'WHERE c.association_id = ? AND c.deleted_at IS NULL';
     const params: any[] = [req.user!.associationId];
 
     if (search) {
@@ -890,7 +890,7 @@ router.get(
         `
         SELECT DISTINCT strftime('%Y', date) as year
         FROM concerts
-        WHERE association_id = ?
+        WHERE association_id = ? AND deleted_at IS NULL
         ORDER BY year DESC
     `,
       )
@@ -917,7 +917,7 @@ router.get(
         SELECT c.*, u.first_name as created_by_first_name, u.last_name as created_by_last_name
         FROM concerts c
         LEFT JOIN users u ON c.created_by = u.id
-        WHERE c.id = ? AND c.association_id = ?
+        WHERE c.id = ? AND c.association_id = ? AND c.deleted_at IS NULL
     `,
       )
       .get(req.params.id, req.user!.associationId) as any;
@@ -1113,7 +1113,7 @@ router.put(
     const data = req.body as z.infer<typeof updateConcertSchema>;
 
     const existing = db
-      .prepare('SELECT * FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT * FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!existing) {
@@ -1178,15 +1178,17 @@ router.delete(
   authenticateToken,
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Soft delete: the row is purged later by the GDPR cleanup scheduler
+    // (SOFT_DELETE_RETENTION_DAYS).
     const result = db
-      .prepare('DELETE FROM concerts WHERE id = ? AND association_id = ?')
-      .run(req.params.id, req.user!.associationId);
+      .prepare('UPDATE concerts SET deleted_at = ? WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .run(new Date().toISOString(), req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Concert niet gevonden.');
     }
 
-    logger.info(`Concert deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    logger.info(`Concert soft-deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Concert succesvol verwijderd.' });
   }),
@@ -1209,7 +1211,7 @@ router.post(
     const data = createProgramItemSchema.parse(req.body);
 
     const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
@@ -1324,7 +1326,7 @@ router.delete(
         `
         DELETE FROM concert_program
         WHERE id = ? AND concert_id IN (
-            SELECT id FROM concerts WHERE association_id = ?
+            SELECT id FROM concerts WHERE association_id = ? AND deleted_at IS NULL
         )
     `,
       )
@@ -1357,7 +1359,7 @@ router.put(
     }
 
     const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
@@ -1389,7 +1391,7 @@ router.get(
     const concert = db
       .prepare(
         `
-        SELECT * FROM concerts WHERE id = ? AND association_id = ?
+        SELECT * FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(req.params.id, req.user!.associationId) as any;
@@ -1451,7 +1453,7 @@ router.post(
     const data = createMediaSchema.parse(req.body);
 
     const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
@@ -1490,7 +1492,7 @@ router.delete(
         `
         DELETE FROM concert_media
         WHERE id = ? AND concert_id IN (
-            SELECT id FROM concerts WHERE association_id = ?
+            SELECT id FROM concerts WHERE association_id = ? AND deleted_at IS NULL
         )
     `,
       )
@@ -1521,7 +1523,7 @@ router.post(
     const data = createAttendanceSchema.parse(req.body);
 
     const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
@@ -1577,7 +1579,7 @@ router.post(
     }
 
     const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
@@ -1685,7 +1687,7 @@ router.delete(
         `
         DELETE FROM concert_attendance
         WHERE id = ? AND concert_id IN (
-            SELECT id FROM concerts WHERE association_id = ?
+            SELECT id FROM concerts WHERE association_id = ? AND deleted_at IS NULL
         )
     `,
       )
@@ -1726,7 +1728,7 @@ router.get(
       .prepare(
         `
         SELECT id, name, date FROM concerts
-        WHERE id = ? AND association_id = ?
+        WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(req.params.id, req.user!.associationId) as { id: string; name: string; date: string } | undefined;

@@ -177,7 +177,9 @@ router.post(
     // Validate basic login credentials
     loginSchema.parse({ email, password });
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+    const user = db.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').get(email) as
+      | User
+      | undefined;
 
     if (!user) {
       throw new ApiError(401, 'Ongeldige inloggegevens.');
@@ -866,7 +868,7 @@ router.post(
       'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
 
     const user = db
-      .prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ?')
+      .prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ? AND deleted_at IS NULL')
       .get(email) as { id: string; first_name: string; last_name: string; association_id: string | null } | undefined;
 
     if (!user) {

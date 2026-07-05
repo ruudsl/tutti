@@ -295,7 +295,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, instrumentId, listId, page, pageSize } = req.query;
 
-    let whereClause = ' WHERE mp.association_id = ?';
+    let whereClause = ' WHERE mp.association_id = ? AND mp.deleted_at IS NULL';
     const params: any[] = [req.user!.associationId];
 
     // Filter by instrument for regular members
@@ -470,6 +470,7 @@ router.get(
         JOIN orchestras o ON ml.orchestra_id = o.id
         WHERE mp.instrument_id IN (${instrumentIds.map(() => '?').join(',')})
         AND o.id IN (${orchestraIds.map(() => '?').join(',')})
+        AND mp.deleted_at IS NULL
         ORDER BY o.name, ml.name, mp.title
     `,
       )
@@ -545,7 +546,7 @@ router.get(
         LEFT JOIN music_titles mt ON mp.title = mt.title
             AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
             AND mt.association_id = mp.association_id
-        WHERE mp.association_id = ?
+        WHERE mp.association_id = ? AND mp.deleted_at IS NULL
     `;
     const params: any[] = [req.user!.associationId];
 
@@ -576,7 +577,7 @@ router.get(
             SELECT DISTINCT mp.title
             FROM music_pieces mp
             JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-            WHERE mlp.music_list_id = ?
+            WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL
         `,
         )
         .all(listId) as { title: string }[];
@@ -609,7 +610,7 @@ router.get(
             JOIN music_list_pieces mlp ON ml.id = mlp.music_list_id
             JOIN music_pieces mp ON mlp.music_piece_id = mp.id
             JOIN orchestras o ON ml.orchestra_id = o.id
-            WHERE mp.title = ? AND mp.association_id = ?
+            WHERE mp.title = ? AND mp.association_id = ? AND mp.deleted_at IS NULL
             ORDER BY o.name, ml.name
         `,
         )
@@ -1816,7 +1817,7 @@ router.post(
         `
         SELECT id, original_filename, instrument_id
         FROM music_pieces
-        WHERE association_id = ?
+        WHERE association_id = ? AND deleted_at IS NULL
     `,
       )
       .all(req.user!.associationId) as { id: string; original_filename: string; instrument_id: string | null }[];
@@ -1897,7 +1898,7 @@ router.get(
         LEFT JOIN instruments i ON mp.instrument_id = i.id
         JOIN shared_music_access sma ON mp.id = sma.music_piece_id
         JOIN associations a ON mp.association_id = a.id
-        WHERE sma.association_id = ? AND mp.association_id != ?
+        WHERE sma.association_id = ? AND mp.association_id != ? AND mp.deleted_at IS NULL
         ORDER BY mp.title
         LIMIT ?
     `,
@@ -2332,29 +2333,25 @@ router.post(
       throw new ApiError(400, 'Maximaal 500 muziekstukken tegelijk verwijderen.');
     }
 
-    // Get file paths for all pieces to delete
+    // Get all pieces to delete
     const placeholders = ids.map(() => '?').join(', ');
     const pieces = db
-      .prepare(`SELECT id, file_path FROM music_pieces WHERE id IN (${placeholders}) AND association_id = ?`)
+      .prepare(
+        `SELECT id, file_path FROM music_pieces WHERE id IN (${placeholders}) AND association_id = ? AND deleted_at IS NULL`,
+      )
       .all(...ids, req.user!.associationId) as { id: string; file_path: string }[];
 
     if (pieces.length === 0) {
       throw new ApiError(404, 'Geen muziekstukken gevonden.');
     }
 
-    // Delete from database
-    db.prepare(`DELETE FROM music_pieces WHERE id IN (${placeholders}) AND association_id = ?`).run(
-      ...ids,
-      req.user!.associationId,
-    );
+    // Soft delete: keep rows and PDF files; both are purged later by the
+    // GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
+    db.prepare(
+      `UPDATE music_pieces SET deleted_at = ? WHERE id IN (${placeholders}) AND association_id = ? AND deleted_at IS NULL`,
+    ).run(new Date().toISOString(), ...ids, req.user!.associationId);
 
-    // Delete files asynchronously
-    for (const piece of pieces) {
-      const filePath = path.join(UPLOAD_DIR, piece.file_path);
-      deleteFile(filePath);
-    }
-
-    logger.info(`Bulk deleted ${pieces.length} music pieces`, { deletedBy: req.user!.id, count: pieces.length });
+    logger.info(`Bulk soft-deleted ${pieces.length} music pieces`, { deletedBy: req.user!.id, count: pieces.length });
 
     // Log audit event
     logAuditEvent(
@@ -2404,7 +2401,7 @@ router.put(
     const data = updateMusicPieceSchema.parse(req.body);
 
     const piece = db
-      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!piece) {
@@ -2475,7 +2472,9 @@ router.delete(
   requireRole('admin', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const piece = db
-      .prepare('SELECT file_path, title, original_filename FROM music_pieces WHERE id = ? AND association_id = ?')
+      .prepare(
+        'SELECT file_path, title, original_filename FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL',
+      )
       .get(req.params.id, req.user!.associationId) as
       | { file_path: string; title: string; original_filename: string }
       | undefined;
@@ -2484,14 +2483,11 @@ router.delete(
       throw new ApiError(404, 'Muziekstuk niet gevonden.');
     }
 
-    // Delete from database first
-    db.prepare('DELETE FROM music_pieces WHERE id = ?').run(req.params.id);
+    // Soft delete: keep the row and PDF file; both are purged later by the
+    // GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
+    db.prepare('UPDATE music_pieces SET deleted_at = ? WHERE id = ?').run(new Date().toISOString(), req.params.id);
 
-    // Delete file asynchronously (don't wait for it)
-    const filePath = path.join(UPLOAD_DIR, piece.file_path);
-    deleteFile(filePath);
-
-    logger.info(`Music piece deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    logger.info(`Music piece soft-deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
     // Log audit event
     logAuditEvent(
@@ -2506,6 +2502,58 @@ router.delete(
     );
 
     res.json({ message: 'Muziekstuk succesvol verwijderd.' });
+  }),
+);
+
+/**
+ * @swagger
+ * /music-pieces/{id}/restore:
+ *   post:
+ *     summary: Restore a soft-deleted music piece
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Music piece restored
+ *       404:
+ *         description: Music piece not found or not deleted
+ */
+router.post(
+  '/:id/restore',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const piece = db
+      .prepare('SELECT id, title FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NOT NULL')
+      .get(req.params.id, req.user!.associationId) as { id: string; title: string } | undefined;
+
+    if (!piece) {
+      throw new ApiError(404, 'Verwijderd muziekstuk niet gevonden.');
+    }
+
+    db.prepare('UPDATE music_pieces SET deleted_at = NULL WHERE id = ?').run(piece.id);
+
+    logger.info(`Music piece restored: ${req.params.id}`, { restoredBy: req.user!.id });
+
+    logAuditEvent(
+      req.user!.id,
+      'restore',
+      'music_piece',
+      req.params.id,
+      piece.title,
+      undefined,
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({ message: 'Muziekstuk succesvol hersteld.' });
   }),
 );
 
@@ -2536,7 +2584,7 @@ router.get(
         `
         SELECT mp.file_path, mp.original_filename, mp.instrument_id
         FROM music_pieces mp
-        WHERE mp.id = ? AND mp.association_id = ?
+        WHERE mp.id = ? AND mp.association_id = ? AND mp.deleted_at IS NULL
     `,
       )
       .get(req.params.id, req.user!.associationId) as any;
@@ -2603,7 +2651,7 @@ router.post(
     const data = shareMusicPieceSchema.parse(req.body);
 
     const piece = db
-      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(req.params.id, req.user!.associationId);
 
     if (!piece) {
@@ -2803,34 +2851,24 @@ router.delete(
     }
 
     let deleted = 0;
-    const filesToDelete: string[] = [];
+    const deletedAt = new Date().toISOString();
 
     withTransaction(() => {
       for (const pieceId of data.pieceIds) {
-        // Get piece info for file deletion
         const piece = db
-          .prepare('SELECT id, file_path FROM music_pieces WHERE id = ? AND association_id = ?')
-          .get(pieceId, req.user!.associationId) as { id: string; file_path: string } | undefined;
+          .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+          .get(pieceId, req.user!.associationId) as { id: string } | undefined;
 
         if (!piece) continue;
 
-        filesToDelete.push(piece.file_path);
-
-        // Delete from database
-        db.prepare('DELETE FROM music_pieces WHERE id = ?').run(pieceId);
+        // Soft delete: keep the row and PDF file; both are purged later by
+        // the GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
+        db.prepare('UPDATE music_pieces SET deleted_at = ? WHERE id = ?').run(deletedAt, pieceId);
         deleted++;
       }
     });
 
-    // Delete files after transaction commits
-    for (const filePath of filesToDelete) {
-      const fullPath = path.join(UPLOAD_DIR, filePath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    }
-
-    logger.info(`Bulk deleted ${deleted} music pieces`, { deletedBy: req.user!.id });
+    logger.info(`Bulk soft-deleted ${deleted} music pieces`, { deletedBy: req.user!.id });
 
     // Log audit event
     logAuditEvent(
@@ -2909,7 +2947,7 @@ router.post(
                i.name as instrument_name
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
-        WHERE mp.id IN (${placeholders}) AND mp.association_id = ?
+        WHERE mp.id IN (${placeholders}) AND mp.association_id = ? AND mp.deleted_at IS NULL
     `,
       )
       .all(...pieceIds, req.user!.associationId) as any[];
@@ -3035,7 +3073,7 @@ router.post(
                i.name as instrument_name
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
-        WHERE mp.title = ? AND mp.association_id = ?
+        WHERE mp.title = ? AND mp.association_id = ? AND mp.deleted_at IS NULL
     `;
     const params: any[] = [title, req.user!.associationId];
 

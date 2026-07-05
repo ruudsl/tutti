@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_changed_at TEXT, -- Laatste wachtwoordwijziging (invalideert oudere JWT's)
     failed_login_attempts INTEGER NOT NULL DEFAULT 0, -- Mislukte inlogpogingen (brute-force lockout)
     locked_until TEXT, -- Account gelockt tot dit tijdstip (NULL = niet gelockt)
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
+    email_before_delete TEXT DEFAULT NULL, -- Origineel e-mailadres vóór soft delete (voor herstel)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
@@ -107,6 +109,7 @@ CREATE TABLE IF NOT EXISTS music_lists (
     list_type TEXT NOT NULL DEFAULT 'regular', -- 'regular' of 'concert'
     concert_date TEXT, -- Datum van het concert (ISO 8601)
     concert_location TEXT, -- Locatie van het concert
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );
@@ -127,6 +130,7 @@ CREATE TABLE IF NOT EXISTS music_pieces (
     is_shared BOOLEAN DEFAULT 0, -- Toegankelijk voor andere verenigingen
     uploaded_by TEXT,
     imslp_source TEXT, -- IMSLP download URL if imported from IMSLP
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE SET NULL,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -238,6 +242,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     imslp_work_id TEXT, -- IMSLP work/page ID
     imslp_permalink TEXT, -- IMSLP permanent link to work
     association_id TEXT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
     UNIQUE(title, arranger, association_id)
@@ -641,6 +646,7 @@ CREATE TABLE IF NOT EXISTS concerts (
     -- Venue layout (for seated events)
     venue_layout_id TEXT,
     is_seated_event BOOLEAN DEFAULT 0,
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,

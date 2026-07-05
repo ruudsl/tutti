@@ -53,9 +53,9 @@ function validateSession(req: AuthRequest, token: string, decoded: DecodedToken)
   }
 
   // Legacy/unknown token: no session record exists
-  const user = db.prepare('SELECT id, password_changed_at FROM users WHERE id = ?').get(decoded.id) as
-    | { id: string; password_changed_at: string | null }
-    | undefined;
+  const user = db
+    .prepare('SELECT id, password_changed_at FROM users WHERE id = ? AND deleted_at IS NULL')
+    .get(decoded.id) as { id: string; password_changed_at: string | null } | undefined;
 
   if (!user) {
     return 'Token verlopen of ongeldig.';
