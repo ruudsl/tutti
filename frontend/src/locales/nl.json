@@ -1129,6 +1129,7 @@
     "aliasPlaceholder": "Bijv. Altsax",
     "removeAlias": "Verwijder alias",
     "noInstruments": "Geen instrumenten gevonden",
+    "noMaintenanceDue": "Geen instrumenten met gepland onderhoud",
     "deleteConfirm": "Weet je zeker dat je \"{{name}}\" wilt verwijderen?",
     "clefOptions": {
       "sol": "Sol (vioolsleutel)",

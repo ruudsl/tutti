@@ -1,5 +1,6 @@
 import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
   useEvents,
@@ -60,6 +61,7 @@ const ATTENDANCE_STATUS = [
 ];
 
 export default function Events() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -322,11 +324,13 @@ export default function Events() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500">Laden...</div>
+        <div role="status" className="text-center py-12 text-gray-500">
+          {t('common.loading')}
+        </div>
       ) : events.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <Icon name="calendar" className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Geen evenementen gevonden</p>
+          <p>{t('events.noEvents')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -793,6 +797,7 @@ function EventScheduleTab({
   onCreateItem: (args: { eventId: string; data: any }) => Promise<any>;
   onDeleteItem: (args: { eventId: string; itemId: string }) => Promise<any>;
 }) {
+  const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', startTime: '', itemType: 'general' });
 
@@ -855,7 +860,7 @@ function EventScheduleTab({
       )}
 
       {schedule.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">Nog geen programma-items</p>
+        <p className="text-gray-500 text-center py-8">{t('events.schedule.noItems')}</p>
       ) : (
         <div className="space-y-2">
           {schedule.map((item) => (
@@ -896,6 +901,7 @@ function EventTransportTab({
   onDeleteTransport: (args: { eventId: string; transportId: string }) => Promise<any>;
   onDeleteMeetingPoint: (args: { eventId: string; pointId: string }) => Promise<any>;
 }) {
+  const { t } = useTranslation();
   void eventId; // Used for delete callbacks
 
   return (
@@ -912,7 +918,7 @@ function EventTransportTab({
         </div>
 
         {transport.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">Nog geen vervoer geregeld</p>
+          <p className="text-gray-500 text-center py-4">{t('events.transport.noTransport')}</p>
         ) : (
           <div className="grid gap-4">
             {transport.map((t) => (
@@ -982,7 +988,7 @@ function EventTransportTab({
         </div>
 
         {meetingPoints.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">Nog geen verzamelpunten</p>
+          <p className="text-gray-500 text-center py-4">{t('events.meetingPoints.noPoints')}</p>
         ) : (
           <div className="space-y-2">
             {meetingPoints.map((point) => (
@@ -1026,6 +1032,7 @@ function EventPackingTab({
   templates: any[];
   onCreateList: (args: { eventId: string; data: any }) => Promise<any>;
 }) {
+  const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newList, setNewList] = useState({ name: '', templateId: '' });
 
@@ -1092,7 +1099,7 @@ function EventPackingTab({
       )}
 
       {packingLists.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">Nog geen paklijsten</p>
+        <p className="text-gray-500 text-center py-8">{t('events.packing.noLists')}</p>
       ) : (
         <div className="grid gap-4">
           {packingLists.map((list) => (
@@ -1118,6 +1125,7 @@ function EventPackingTab({
 }
 
 function EventWeatherTab({ event, weather }: { event: Event; weather: any }) {
+  const { t } = useTranslation();
   if (!event.weatherSensitive) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -1132,8 +1140,8 @@ function EventWeatherTab({ event, weather }: { event: Event; weather: any }) {
     return (
       <div className="text-center py-8 text-gray-500">
         <Icon name="cloud" className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Geen weersvoorspelling beschikbaar.</p>
-        <p className="text-sm mt-2">Zorg dat het evenement coördinaten heeft ingesteld.</p>
+        <p>{t('events.weather.noForecast')}</p>
+        <p className="text-sm mt-2">{t('events.weather.coordinatesHint')}</p>
       </div>
     );
   }

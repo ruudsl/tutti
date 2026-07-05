@@ -1175,6 +1175,7 @@
     "aliasPlaceholder": "Z.B. Altsax",
     "removeAlias": "Alias entfernen",
     "noInstruments": "Keine Instrumente gefunden",
+    "noMaintenanceDue": "Keine Instrumente mit geplanter Wartung",
     "deleteConfirm": "Sind Sie sicher, dass Sie \"{{name}}\" löschen möchten?",
     "clefOptions": {
       "sol": "Violinschlüssel (G)",
@@ -4187,6 +4188,10 @@
     "yourAssociations": "Ihre Vereine",
     "switchedSuccess": "Zu Verein gewechselt",
     "switchError": "Konnte nicht zum Verein wechseln",
+    "checkingAccess": "Zugriff wird überprüft...",
+    "accessRequiredTitle": "Super-Admin-Rechte erforderlich",
+    "accessRequiredMessage": "Sie benötigen Super-Admin-Rechte, um Vereine zu verwalten. Wenden Sie sich an einen bestehenden Super-Admin, um Zugriff zu erhalten.",
+    "roleLabel": "Rolle",
     "roles": {
       "member": "Mitglied",
       "board": "Vorstand",
@@ -4223,6 +4228,7 @@
       "maxMembers": "Max. Mitglieder",
       "maxOrchestras": "Max. Orchester",
       "maxStorage": "Max. Speicher (MB)",
+      "isActive": "Verein ist aktiv",
       "tiers": {
         "free": "Kostenlos",
         "basic": "Basis",
@@ -4233,6 +4239,7 @@
     "invitations": {
       "title": "Einladungen",
       "invite": "Einladen",
+      "emailPlaceholder": "E-Mail-Adresse",
       "noInvitations": "Keine Einladungen",
       "invitedBy": "Eingeladen von",
       "status": {
@@ -4261,6 +4268,7 @@
     "members": {
       "title": "Mitglieder",
       "noMembers": "Keine Mitglieder gefunden",
+      "removeTitle": "Mitglied entfernen",
       "removeConfirm": "Sind Sie sicher, dass Sie dieses Mitglied aus dem Verein entfernen möchten?",
       "roles": {
         "member": "Mitglied",
@@ -4270,13 +4278,16 @@
     },
     "superAdmins": {
       "title": "Super-Administratoren",
+      "warningLabel": "Achtung:",
       "warning": "Super-Admins haben vollen Zugriff auf alle Vereine und deren Daten. Seien Sie vorsichtig, wem Sie diese Rechte geben.",
       "noAdmins": "Keine Super-Admins gefunden",
+      "removeTitle": "Super-Admin entfernen",
       "removeConfirm": "Sind Sie sicher, dass Sie diesen Super-Admin entfernen möchten?"
     },
     "activity": {
       "title": "Aktivitätsprotokoll",
       "noActivity": "Keine Aktivitäten gefunden",
+      "by": "Von: {{name}}",
       "actions": {
         "association_created": "Verein erstellt",
         "subscription_updated": "Abonnement aktualisiert",
@@ -4293,6 +4304,7 @@
       "name": "Name",
       "displayName": "Anzeigename",
       "slug": "Slug",
+      "slugPlaceholder": "mein-verein",
       "website": "Website",
       "phone": "Telefon",
       "email": "E-Mail",

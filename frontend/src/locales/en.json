@@ -1157,6 +1157,7 @@
     "aliasPlaceholder": "E.g. Altsax",
     "removeAlias": "Remove alias",
     "noInstruments": "No instruments found",
+    "noMaintenanceDue": "No instruments with scheduled maintenance",
     "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?",
     "clefOptions": {
       "sol": "Treble (G clef)",
