@@ -70,11 +70,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors - only logout on 401 (token expired/invalid), not 403 (insufficient permissions)
+// Handle auth errors - only logout on 401 (token expired/invalid), not 403 (insufficient permissions).
+// A 401 from the login endpoint itself means "wrong credentials" and must NOT
+// trigger the logout redirect, otherwise the error message is never shown.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

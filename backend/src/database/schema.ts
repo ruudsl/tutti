@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- MFA recovery codes (alleen SHA-256 hashes; plaintext wordt eenmalig getoond)
+-- MFA recovery codes (alleen SHA-256 hashes, plaintext wordt eenmalig getoond)
 CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

@@ -349,7 +349,6 @@ app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/holidays', holidaysRoutes);
 app.use('/api/stage-layouts', stageLayoutsRoutes);
-app.use('/api', stageLayoutsRoutes); // Also mount for /concerts/:id/stage routes
 
 // External Musicians Network
 app.use('/api/external-musicians', externalMusiciansRoutes);
@@ -360,6 +359,9 @@ app.use('/api/failed-imports', failedImportsRoutes);
 
 // Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
+// Root-level mount for /concerts/:id/stage routes; must come after the
+// specific /api/* mounts above or it shadows them (e.g. /api/health)
+app.use('/api', stageLayoutsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/vocabularies', vocabulariesRoutes);

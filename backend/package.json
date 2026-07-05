@@ -12,6 +12,7 @@
     "migrate:down": "tsx src/migrations/cli.ts down",
     "migrate:status": "tsx src/migrations/cli.ts status",
     "migrate:create": "tsx src/migrations/cli.ts create",
+    "seed:e2e": "tsx src/scripts/seed-e2e.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

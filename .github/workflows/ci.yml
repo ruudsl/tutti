@@ -67,6 +67,42 @@ jobs:
       - name: Build
         run: npm run build --workspace=frontend
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    env:
+      # Dedicated E2E database, separate from any dev/prod database.
+      # The same path is used for seeding and for the servers that
+      # Playwright's webServer config starts (they inherit the env).
+      DB_PATH: ${{ github.workspace }}/e2e-data/harmonie-e2e.db
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Seed E2E database
+        run: npm run seed:e2e --workspace=backend
+
+      # CI=true limits the project matrix to chromium (see playwright.config.ts)
+      - name: Run Playwright tests
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
