@@ -13,6 +13,13 @@ import { loginSchema, changePasswordSchema } from '../validation/schemas';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import {
+  protectMfaSecret,
+  revealMfaSecret,
+  issueRecoveryCodes,
+  deleteRecoveryCodes,
+  consumeRecoveryCode,
+} from '../utils/mfa';
 
 // Rate limiter for login: 5 attempts per 15 minutes per IP
 const loginRateLimiter = rateLimit({
@@ -75,6 +82,23 @@ const LOCKOUT_BASE_MINUTES = 15;
 const LOCKOUT_MAX_MINUTES = 24 * 60; // 24 hours
 
 const GENERIC_LOCKOUT_MESSAGE = 'Te veel mislukte pogingen, probeer later opnieuw.';
+
+/**
+ * Verify a TOTP code. verifySync can throw on malformed input (e.g. a
+ * recovery code instead of a 6-digit token), which should count as invalid.
+ */
+function isTotpCodeValid(token: string, secret: string): boolean {
+  try {
+    return verifySync({ token, secret }).valid;
+  } catch {
+    return false;
+  }
+}
+
+/** Hash a password reset token for storage/lookup (tokens are never stored in plaintext). */
+function hashResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 function isAccountLocked(user: User): boolean {
   if (!user.locked_until) return false;

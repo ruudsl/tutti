@@ -143,15 +143,18 @@ app.use(requestLoggerMiddleware);
 // Content Security Policy configuration for production
 const getContentSecurityPolicy = (): false | { directives: Record<string, string[]> } => {
   if (!config.isProduction) {
-    return false; // Disable CSP in development for hot reload
+    // Disable CSP entirely in development: Vite dev tooling (HMR, React refresh)
+    // needs eval/inline scripts. Production gets the strict policy below.
+    return false;
   }
 
   const directives: Record<string, string[]> = {
     defaultSrc: ["'self'"],
     scriptSrc: [
       "'self'",
-      "'unsafe-inline'", // Required for inline event handlers
-      "'unsafe-eval'", // Required for some libraries in development
+      // NOTE: no 'unsafe-inline' / 'unsafe-eval' here. Vite production builds
+      // load only external module scripts and need neither directive; dev
+      // tooling that requires eval is covered by the early return above.
       'https://www.youtube.com',
       'https://s.ytimg.com',
       'https://alcdn.msauth.net',
@@ -185,6 +188,9 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
     objectSrc: ["'none'"],
     baseUri: ["'self'"],
     formAction: ["'self'"],
+    // Kept at 'self' (not 'none'): the app has a public calendar embed feature
+    // (frontend route /calendar/:slug and /api/calendar, meant for embedding on
+    // external websites), so frames must not be blocked outright.
     frameAncestors: ["'self'"],
     workerSrc: ["'self'", 'blob:'], // Service workers and web workers
     childSrc: ["'self'", 'blob:'], // Web workers (legacy)

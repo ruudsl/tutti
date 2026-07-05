@@ -232,13 +232,23 @@ CREATE TABLE IF NOT EXISTS pdf_annotations (
     FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
 );
 
--- Password reset tokens
+-- Password reset tokens (token column stores a SHA-256 hash)
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     token TEXT NOT NULL UNIQUE,
     expires_at DATETIME NOT NULL,
     used BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- MFA recovery codes (SHA-256 hashes only)
+CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    used_at TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

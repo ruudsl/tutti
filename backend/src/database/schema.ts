@@ -331,9 +331,19 @@ CREATE TABLE IF NOT EXISTS activity_log (
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    token TEXT NOT NULL UNIQUE,
+    token TEXT NOT NULL UNIQUE, -- SHA-256 hash van het reset token
     expires_at DATETIME NOT NULL,
     used BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- MFA recovery codes (alleen SHA-256 hashes; plaintext wordt eenmalig getoond)
+CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    used_at TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -359,6 +369,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, 
 CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user ON mfa_recovery_codes(user_id);
 
 -- Standaard repetitiedagen (wekelijks terugkerend)
 CREATE TABLE IF NOT EXISTS rehearsal_default_days (
