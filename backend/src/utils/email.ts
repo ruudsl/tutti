@@ -1,12 +1,16 @@
 import nodemailer from 'nodemailer';
 import logger from './logger';
 import db from '../database/connection';
+import { getPasswordResetEmail } from '../templates/emails';
 
 const sanitizeForLog = (value: unknown): string => {
-  return String(value ?? '')
-    .replace(/[\r\n]+/g, ' ')
-    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
-    .trim();
+  return (
+    String(value ?? '')
+      .replace(/[\r\n]+/g, ' ')
+      // eslint-disable-next-line no-control-regex -- strip control chars from log output
+      .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+      .trim()
+  );
 };
 
 interface SmtpConfig {
@@ -29,16 +33,20 @@ const getSmtpTransporter = (associationId?: string | null): nodemailer.Transport
     let smtpConfig: SmtpConfig | undefined;
 
     if (associationId) {
-      smtpConfig = db.prepare(
-        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL'
-      ).get(associationId) as SmtpConfig | undefined;
+      smtpConfig = db
+        .prepare(
+          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL',
+        )
+        .get(associationId) as SmtpConfig | undefined;
     }
 
     // Fallback: try any association with SMTP enabled
     if (!smtpConfig) {
-      smtpConfig = db.prepare(
-        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1'
-      ).get() as SmtpConfig | undefined;
+      smtpConfig = db
+        .prepare(
+          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, smtp_enabled FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1',
+        )
+        .get() as SmtpConfig | undefined;
     }
 
     if (smtpConfig?.smtp_host) {
@@ -46,10 +54,12 @@ const getSmtpTransporter = (associationId?: string | null): nodemailer.Transport
         host: smtpConfig.smtp_host,
         port: smtpConfig.smtp_port || 587,
         secure: !!smtpConfig.smtp_secure,
-        auth: smtpConfig.smtp_user ? {
-          user: smtpConfig.smtp_user,
-          pass: smtpConfig.smtp_pass || '',
-        } : undefined,
+        auth: smtpConfig.smtp_user
+          ? {
+              user: smtpConfig.smtp_user,
+              pass: smtpConfig.smtp_pass || '',
+            }
+          : undefined,
       });
     }
   } catch {
@@ -80,15 +90,15 @@ const getFromAddress = (associationId?: string | null): string => {
     let smtpConfig: SmtpConfig | undefined;
 
     if (associationId) {
-      smtpConfig = db.prepare(
-        'SELECT smtp_from FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL'
-      ).get(associationId) as SmtpConfig | undefined;
+      smtpConfig = db
+        .prepare('SELECT smtp_from FROM associations WHERE id = ? AND smtp_enabled = 1 AND smtp_host IS NOT NULL')
+        .get(associationId) as SmtpConfig | undefined;
     }
 
     if (!smtpConfig) {
-      smtpConfig = db.prepare(
-        'SELECT smtp_from FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1'
-      ).get() as SmtpConfig | undefined;
+      smtpConfig = db
+        .prepare('SELECT smtp_from FROM associations WHERE smtp_enabled = 1 AND smtp_host IS NOT NULL LIMIT 1')
+        .get() as SmtpConfig | undefined;
     }
 
     if (smtpConfig?.smtp_from) {
@@ -122,10 +132,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   const safeTo = sanitizeForLog(to);
   const safeSubject = sanitizeForLog(subject);
   const safeText = sanitizeForLog(text);
-  const safeAttachmentNames = attachments?.map(a => sanitizeForLog(a.filename)).join(', ');
+  const safeAttachmentNames = attachments?.map((a) => sanitizeForLog(a.filename)).join(', ');
 
   // Log email for development/debugging
-  logger.info(`Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`);
+  logger.info(
+    `Sending email to ${sanitizeForLog(to)}: ${sanitizeForLog(subject)}${attachments?.length ? ` (${attachments.length} attachments)` : ''}`,
+  );
 
   const transporter = getSmtpTransporter(associationId);
 
@@ -150,7 +162,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       subject,
       text,
       html: html || text,
-      attachments: attachments?.map(a => ({
+      attachments: attachments?.map((a) => ({
         filename: a.filename,
         path: a.path,
         content: a.content,
@@ -170,60 +182,15 @@ export const sendPasswordResetEmail = async (
   email: string,
   resetToken: string,
   userName: string,
-  associationId?: string | null
+  associationId?: string | null,
+  language?: string | null,
 ): Promise<boolean> => {
   // Get the frontend URL from environment or use default
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-  const subject = 'Wachtwoord herstellen - Harmonie App';
-
-  const text = `
-Hallo ${userName},
-
-Je hebt een verzoek ingediend om je wachtwoord te herstellen voor de Harmonie App.
-
-Klik op de volgende link om een nieuw wachtwoord in te stellen:
-${resetUrl}
-
-Deze link is 1 uur geldig.
-
-Als je geen wachtwoord reset hebt aangevraagd, kun je deze email negeren.
-
-Met vriendelijke groet,
-Het Harmonie Team
-`;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h2>Wachtwoord herstellen</h2>
-    <p>Hallo ${userName},</p>
-    <p>Je hebt een verzoek ingediend om je wachtwoord te herstellen voor de Harmonie App.</p>
-    <p>Klik op de onderstaande knop om een nieuw wachtwoord in te stellen:</p>
-    <a href="${resetUrl}" class="button">Wachtwoord herstellen</a>
-    <p>Of kopieer deze link in je browser:<br>
-    <a href="${resetUrl}">${resetUrl}</a></p>
-    <p><strong>Deze link is 1 uur geldig.</strong></p>
-    <div class="footer">
-      <p>Als je geen wachtwoord reset hebt aangevraagd, kun je deze email negeren.</p>
-      <p>Met vriendelijke groet,<br>Het Harmonie Team</p>
-    </div>
-  </div>
-</body>
-</html>
-`;
+  // Users have no stored language preference; getPasswordResetEmail defaults to Dutch.
+  const { subject, text, html } = getPasswordResetEmail({ userName, resetUrl }, language);
 
   return sendEmail({ to: email, subject, text, html, associationId });
 };

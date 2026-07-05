@@ -12,6 +12,8 @@ import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import { isImage, validateUploadedFile } from '../utils/fileValidation';
 import { revokeUserSessions } from '../utils/sessionStore';
+import { sendEmail } from '../utils/email';
+import { getWelcomeEmail } from '../templates/emails';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
@@ -504,6 +506,30 @@ router.post(
       req.ip,
       req.get('user-agent'),
     );
+
+    // Send a welcome email (best effort: account creation must not fail on email issues)
+    try {
+      const association = db.prepare('SELECT name FROM associations WHERE id = ?').get(req.user!.associationId) as
+        | { name: string }
+        | undefined;
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const { subject, text, html } = getWelcomeEmail({
+        userName: data.firstName,
+        associationName: association?.name || 'Harmonie App',
+        loginUrl: `${frontendUrl}/login`,
+      });
+
+      await sendEmail({
+        to: data.email,
+        subject,
+        text,
+        html,
+        associationId: req.user!.associationId,
+      });
+    } catch (err) {
+      logger.warn(`Failed to send welcome email to new user ${userId}`, { error: (err as Error).message });
+    }
 
     res.status(201).json({
       id: userId,
