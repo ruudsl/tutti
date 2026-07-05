@@ -3,7 +3,8 @@
  * Mimics the production DatabaseWrapper API using sql.js
  */
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// sql.js has no ESM build that works under vitest's CJS interop
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const initSqlJs = require('sql.js');
 
 const testSchema = `
@@ -75,8 +76,25 @@ CREATE TABLE IF NOT EXISTS users (
     last_login DATETIME,
     onboarded_at DATETIME,
     offboarded_at DATETIME,
+    password_changed_at TEXT,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
+);
+
+-- User sessions
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    revoked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- User instruments
@@ -430,158 +448,158 @@ CREATE TABLE IF NOT EXISTS concert_attendance (
 `;
 
 class PreparedStatement {
-    private wrapper: TestDatabaseWrapper;
-    private sql: string;
+  private wrapper: TestDatabaseWrapper;
+  private sql: string;
 
-    constructor(wrapper: TestDatabaseWrapper, sql: string) {
-        this.wrapper = wrapper;
-        this.sql = sql;
-    }
+  constructor(wrapper: TestDatabaseWrapper, sql: string) {
+    this.wrapper = wrapper;
+    this.sql = sql;
+  }
 
-    run(...params: any[]): { changes: number; lastInsertRowid: number } {
-        return this.wrapper.runStatement(this.sql, params);
-    }
+  run(...params: any[]): { changes: number; lastInsertRowid: number } {
+    return this.wrapper.runStatement(this.sql, params);
+  }
 
-    get(...params: any[]): any {
-        return this.wrapper.getStatement(this.sql, params);
-    }
+  get(...params: any[]): any {
+    return this.wrapper.getStatement(this.sql, params);
+  }
 
-    all(...params: any[]): any[] {
-        return this.wrapper.allStatement(this.sql, params);
-    }
+  all(...params: any[]): any[] {
+    return this.wrapper.allStatement(this.sql, params);
+  }
 }
 
 class TestDatabaseWrapper {
-    private db: any = null;
-    private initialized: boolean = false;
-    private initPromise: Promise<void> | null = null;
-    private inTransaction: boolean = false;
+  private db: any = null;
+  private initialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
+  private inTransaction: boolean = false;
 
-    async init(): Promise<void> {
-        if (this.initialized) return;
-        if (this.initPromise) return this.initPromise;
+  async init(): Promise<void> {
+    if (this.initialized) return;
+    if (this.initPromise) return this.initPromise;
 
-        this.initPromise = (async () => {
-            const SQL = await initSqlJs();
-            this.db = new SQL.Database();
-            this.db.run('PRAGMA foreign_keys = ON');
-            this.db.run(testSchema);
-            this.initialized = true;
-        })();
+    this.initPromise = (async () => {
+      const SQL = await initSqlJs();
+      this.db = new SQL.Database();
+      this.db.run('PRAGMA foreign_keys = ON');
+      this.db.run(testSchema);
+      this.initialized = true;
+    })();
 
-        return this.initPromise;
+    return this.initPromise;
+  }
+
+  async reset(): Promise<void> {
+    if (!this.db) return;
+
+    // Drop and recreate all tables
+    const SQL = await initSqlJs();
+    this.db = new SQL.Database();
+    this.db.run('PRAGMA foreign_keys = ON');
+    this.db.run(testSchema);
+  }
+
+  private ensureInit(): any {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+    return this.db;
+  }
+
+  save(): void {
+    // No-op for in-memory test database
+  }
+
+  prepare(sql: string): PreparedStatement {
+    return new PreparedStatement(this, sql);
+  }
+
+  exec(sql: string): void {
+    this.ensureInit().run(sql);
+  }
+
+  runStatement(sql: string, params: any[] = []): { changes: number; lastInsertRowid: number } {
+    const db = this.ensureInit();
+    db.run(sql, params);
+
+    let changes = 0;
+    let lastInsertRowid = 0;
+
+    const changesStmt = db.prepare('SELECT changes() as changes');
+    if (changesStmt.step()) {
+      changes = Number(changesStmt.get()[0]) || 0;
+    }
+    changesStmt.free();
+
+    const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
+    if (lastIdStmt.step()) {
+      lastInsertRowid = Number(lastIdStmt.get()[0]) || 0;
+    }
+    lastIdStmt.free();
+
+    return { changes, lastInsertRowid };
+  }
+
+  getStatement(sql: string, params: any[] = []): any {
+    const db = this.ensureInit();
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+
+    if (stmt.step()) {
+      const columns = stmt.getColumnNames();
+      const values = stmt.get();
+      stmt.free();
+
+      const result: any = {};
+      columns.forEach((col: string, i: number) => {
+        result[col] = values[i];
+      });
+      return result;
     }
 
-    async reset(): Promise<void> {
-        if (!this.db) return;
+    stmt.free();
+    return undefined;
+  }
 
-        // Drop and recreate all tables
-        const SQL = await initSqlJs();
-        this.db = new SQL.Database();
-        this.db.run('PRAGMA foreign_keys = ON');
-        this.db.run(testSchema);
+  allStatement(sql: string, params: any[] = []): any[] {
+    const db = this.ensureInit();
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+
+    const results: any[] = [];
+    const columns = stmt.getColumnNames();
+
+    while (stmt.step()) {
+      const values = stmt.get();
+      const row: any = {};
+      columns.forEach((col: string, i: number) => {
+        row[col] = values[i];
+      });
+      results.push(row);
     }
 
-    private ensureInit(): any {
-        if (!this.db) {
-            throw new Error('Database not initialized. Call init() first.');
-        }
-        return this.db;
-    }
+    stmt.free();
+    return results;
+  }
 
-    save(): void {
-        // No-op for in-memory test database
-    }
-
-    prepare(sql: string): PreparedStatement {
-        return new PreparedStatement(this, sql);
-    }
-
-    exec(sql: string): void {
-        this.ensureInit().run(sql);
-    }
-
-    runStatement(sql: string, params: any[] = []): { changes: number; lastInsertRowid: number } {
-        const db = this.ensureInit();
-        db.run(sql, params);
-
-        let changes = 0;
-        let lastInsertRowid = 0;
-
-        const changesStmt = db.prepare('SELECT changes() as changes');
-        if (changesStmt.step()) {
-            changes = Number(changesStmt.get()[0]) || 0;
-        }
-        changesStmt.free();
-
-        const lastIdStmt = db.prepare('SELECT last_insert_rowid() as id');
-        if (lastIdStmt.step()) {
-            lastInsertRowid = Number(lastIdStmt.get()[0]) || 0;
-        }
-        lastIdStmt.free();
-
-        return { changes, lastInsertRowid };
-    }
-
-    getStatement(sql: string, params: any[] = []): any {
-        const db = this.ensureInit();
-        const stmt = db.prepare(sql);
-        stmt.bind(params);
-
-        if (stmt.step()) {
-            const columns = stmt.getColumnNames();
-            const values = stmt.get();
-            stmt.free();
-
-            const result: any = {};
-            columns.forEach((col: string, i: number) => {
-                result[col] = values[i];
-            });
-            return result;
-        }
-
-        stmt.free();
-        return undefined;
-    }
-
-    allStatement(sql: string, params: any[] = []): any[] {
-        const db = this.ensureInit();
-        const stmt = db.prepare(sql);
-        stmt.bind(params);
-
-        const results: any[] = [];
-        const columns = stmt.getColumnNames();
-
-        while (stmt.step()) {
-            const values = stmt.get();
-            const row: any = {};
-            columns.forEach((col: string, i: number) => {
-                row[col] = values[i];
-            });
-            results.push(row);
-        }
-
-        stmt.free();
-        return results;
-    }
-
-    transaction<T>(fn: () => T): () => T {
-        return () => {
-            const db = this.ensureInit();
-            this.inTransaction = true;
-            db.run('BEGIN TRANSACTION');
-            try {
-                const result = fn();
-                db.run('COMMIT');
-                this.inTransaction = false;
-                return result;
-            } catch (error) {
-                db.run('ROLLBACK');
-                this.inTransaction = false;
-                throw error;
-            }
-        };
-    }
+  transaction<T>(fn: () => T): () => T {
+    return () => {
+      const db = this.ensureInit();
+      this.inTransaction = true;
+      db.run('BEGIN TRANSACTION');
+      try {
+        const result = fn();
+        db.run('COMMIT');
+        this.inTransaction = false;
+        return result;
+      } catch (error) {
+        db.run('ROLLBACK');
+        this.inTransaction = false;
+        throw error;
+      }
+    };
+  }
 }
 
 const testDb = new TestDatabaseWrapper();

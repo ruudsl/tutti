@@ -3,7 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { validate } from '../middleware/validate';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
+import { createConcertSchema, updateConcertSchema } from '../validation/schemas';
 import logger from '../utils/logger';
 import { z } from 'zod';
 
@@ -11,72 +13,53 @@ const router = Router();
 
 // Default concert types (used when association has no custom types)
 const DEFAULT_CONCERT_TYPES = [
-    { value: 'concert', label: 'Concert' },
-    { value: 'christmas', label: 'Kerstconcert' },
-    { value: 'summer', label: 'Zomerconcert' },
-    { value: 'spring', label: 'Voorjaarsconcert' },
-    { value: 'new_year', label: 'Nieuwjaarsconcert' },
-    { value: 'march', label: 'Mars/Parade' },
-    { value: 'competition', label: 'Concours' },
-    { value: 'festival', label: 'Festival' },
-    { value: 'serenade', label: 'Serenade' },
-    { value: 'ceremony', label: 'Ceremonie' },
-    { value: 'other', label: 'Overig' },
+  { value: 'concert', label: 'Concert' },
+  { value: 'christmas', label: 'Kerstconcert' },
+  { value: 'summer', label: 'Zomerconcert' },
+  { value: 'spring', label: 'Voorjaarsconcert' },
+  { value: 'new_year', label: 'Nieuwjaarsconcert' },
+  { value: 'march', label: 'Mars/Parade' },
+  { value: 'competition', label: 'Concours' },
+  { value: 'festival', label: 'Festival' },
+  { value: 'serenade', label: 'Serenade' },
+  { value: 'ceremony', label: 'Ceremonie' },
+  { value: 'other', label: 'Overig' },
 ];
 
 const MEDIA_TYPES = [
-    { value: 'photo', label: 'Foto' },
-    { value: 'video', label: 'Video' },
-    { value: 'audio', label: 'Audio' },
-    { value: 'poster', label: 'Poster' },
-    { value: 'program', label: 'Programmaboekje' },
+  { value: 'photo', label: 'Foto' },
+  { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'poster', label: 'Poster' },
+  { value: 'program', label: 'Programmaboekje' },
 ];
 
 // Validation schemas
-const createConcertSchema = z.object({
-    name: z.string().min(1, 'Naam is verplicht'),
-    date: z.string().min(1, 'Datum is verplicht'),
-    endDate: z.string().optional(),
-    location: z.string().optional(),
-    venueType: z.string().optional(),
-    concertType: z.string().optional(),
-    description: z.string().optional(),
-    notes: z.string().optional(),
-    // Accessibility fields
-    wheelchairSpaces: z.number().int().min(0).optional(),
-    companionSpaces: z.number().int().min(0).optional(),
-    hearingLoopAvailable: z.boolean().optional(),
-    accessibleParkingInfo: z.string().optional(),
-    accessibilityInfo: z.string().optional(),
-    accessibilityContactEmail: z.string().email().optional().or(z.literal('')),
-    accessibilityContactPhone: z.string().optional(),
-});
-
-const updateConcertSchema = createConcertSchema.partial();
+// createConcertSchema / updateConcertSchema are defined centrally in ../validation/schemas.ts
 
 const createProgramItemSchema = z.object({
-    musicTitleId: z.string().uuid().optional().nullable(),
-    title: z.string().min(1, 'Titel is verplicht'),
-    composer: z.string().optional(),
-    arranger: z.string().optional(),
-    sortOrder: z.number().int().min(0).default(0),
-    notes: z.string().optional(),
-    partOfSet: z.string().optional(),
+  musicTitleId: z.string().uuid().optional().nullable(),
+  title: z.string().min(1, 'Titel is verplicht'),
+  composer: z.string().optional(),
+  arranger: z.string().optional(),
+  sortOrder: z.number().int().min(0).default(0),
+  notes: z.string().optional(),
+  partOfSet: z.string().optional(),
 });
 
 const updateProgramItemSchema = createProgramItemSchema.partial();
 
 const createMediaSchema = z.object({
-    mediaType: z.string().min(1, 'Type is verplicht'),
-    url: z.string().url().optional(),
-    description: z.string().optional(),
+  mediaType: z.string().min(1, 'Type is verplicht'),
+  url: z.string().url().optional(),
+  description: z.string().optional(),
 });
 
 const createAttendanceSchema = z.object({
-    userId: z.string().uuid().optional().nullable(),
-    memberName: z.string().min(1, 'Naam is verplicht'),
-    instrumentPlayed: z.string().optional(),
-    notes: z.string().optional(),
+  userId: z.string().uuid().optional().nullable(),
+  memberName: z.string().min(1, 'Naam is verplicht'),
+  instrumentPlayed: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 /**
@@ -86,25 +69,32 @@ const createAttendanceSchema = z.object({
  *     summary: Get concert types and media types
  *     tags: [Concerts]
  */
-router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/types',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Get custom concert types for this association
-    const customTypes = db.prepare(`
+    const customTypes = db
+      .prepare(
+        `
         SELECT id, value, label, sort_order
         FROM concert_types
         WHERE association_id = ?
         ORDER BY sort_order, label
-    `).all(req.user!.associationId) as { id: string; value: string; label: string; sort_order: number }[];
+    `,
+      )
+      .all(req.user!.associationId) as { id: string; value: string; label: string; sort_order: number }[];
 
     // Use custom types if available, otherwise use defaults
-    const concertTypes = customTypes.length > 0
-        ? customTypes.map(t => ({ value: t.value, label: t.label }))
-        : DEFAULT_CONCERT_TYPES;
+    const concertTypes =
+      customTypes.length > 0 ? customTypes.map((t) => ({ value: t.value, label: t.label })) : DEFAULT_CONCERT_TYPES;
 
     res.json({
-        concertTypes,
-        mediaTypes: MEDIA_TYPES,
+      concertTypes,
+      mediaTypes: MEDIA_TYPES,
     });
-}));
+  }),
+);
 
 // ==================== CONCERT TYPES CRUD ====================
 
@@ -115,24 +105,33 @@ router.get('/types', authenticateToken, asyncHandler(async (req: AuthRequest, re
  *     summary: Get all concert types for this association (for admin)
  *     tags: [Concerts]
  */
-router.get('/concert-types', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const types = db.prepare(`
+router.get(
+  '/concert-types',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const types = db
+      .prepare(
+        `
         SELECT id, value, label, sort_order
         FROM concert_types
         WHERE association_id = ?
         ORDER BY sort_order, label
-    `).all(req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId);
 
     res.json({
-        types: types.map((t: any) => ({
-            id: t.id,
-            value: t.value,
-            label: t.label,
-            sortOrder: t.sort_order,
-        })),
-        defaults: DEFAULT_CONCERT_TYPES,
+      types: types.map((t: any) => ({
+        id: t.id,
+        value: t.value,
+        label: t.label,
+        sortOrder: t.sort_order,
+      })),
+      defaults: DEFAULT_CONCERT_TYPES,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -141,40 +140,51 @@ router.get('/concert-types', authenticateToken, requireRole('admin'), asyncHandl
  *     summary: Create a new concert type
  *     tags: [Concerts]
  */
-router.post('/concert-types', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/concert-types',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { value, label, sortOrder } = req.body;
 
     if (!value || !label) {
-        throw new ApiError(400, 'Value en label zijn verplicht.');
+      throw new ApiError(400, 'Value en label zijn verplicht.');
     }
 
     // Check for duplicate value
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT id FROM concert_types WHERE association_id = ? AND value = ?
-    `).get(req.user!.associationId, value);
+    `,
+      )
+      .get(req.user!.associationId, value);
 
     if (existing) {
-        throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
+      throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
     }
 
     const id = uuidv4();
     const order = sortOrder ?? 0;
 
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO concert_types (id, association_id, value, label, sort_order)
         VALUES (?, ?, ?, ?, ?)
-    `).run(id, req.user!.associationId, value, label, order);
+    `,
+    ).run(id, req.user!.associationId, value, label, order);
 
     logger.info(`Concert type created: ${label}`, { id, createdBy: req.user!.id });
 
     res.status(201).json({
-        id,
-        value,
-        label,
-        sortOrder: order,
-        message: 'Concert type aangemaakt.',
+      id,
+      value,
+      label,
+      sortOrder: order,
+      message: 'Concert type aangemaakt.',
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -183,40 +193,55 @@ router.post('/concert-types', authenticateToken, requireRole('admin'), asyncHand
  *     summary: Update a concert type
  *     tags: [Concerts]
  */
-router.put('/concert-types/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/concert-types/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { value, label, sortOrder } = req.body;
 
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT * FROM concert_types WHERE id = ? AND association_id = ?
-    `).get(req.params.id, req.user!.associationId);
+    `,
+      )
+      .get(req.params.id, req.user!.associationId);
 
     if (!existing) {
-        throw new ApiError(404, 'Concert type niet gevonden.');
+      throw new ApiError(404, 'Concert type niet gevonden.');
     }
 
     // Check for duplicate value (if changing)
     if (value && value !== (existing as any).value) {
-        const duplicate = db.prepare(`
+      const duplicate = db
+        .prepare(
+          `
             SELECT id FROM concert_types WHERE association_id = ? AND value = ? AND id != ?
-        `).get(req.user!.associationId, value, req.params.id);
+        `,
+        )
+        .get(req.user!.associationId, value, req.params.id);
 
-        if (duplicate) {
-            throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
-        }
+      if (duplicate) {
+        throw new ApiError(409, 'Een concert type met deze waarde bestaat al.');
+      }
     }
 
-    db.prepare(`
+    db.prepare(
+      `
         UPDATE concert_types SET
             value = COALESCE(?, value),
             label = COALESCE(?, label),
             sort_order = COALESCE(?, sort_order)
         WHERE id = ?
-    `).run(value, label, sortOrder, req.params.id);
+    `,
+    ).run(value, label, sortOrder, req.params.id);
 
     logger.info(`Concert type updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Concert type bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -225,19 +250,28 @@ router.put('/concert-types/:id', authenticateToken, requireRole('admin'), asyncH
  *     summary: Delete a concert type
  *     tags: [Concerts]
  */
-router.delete('/concert-types/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(`
+router.delete(
+  '/concert-types/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare(
+        `
         DELETE FROM concert_types WHERE id = ? AND association_id = ?
-    `).run(req.params.id, req.user!.associationId);
+    `,
+      )
+      .run(req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Concert type niet gevonden.');
+      throw new ApiError(404, 'Concert type niet gevonden.');
     }
 
     logger.info(`Concert type deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Concert type verwijderd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -246,32 +280,41 @@ router.delete('/concert-types/:id', authenticateToken, requireRole('admin'), asy
  *     summary: Initialize concert types with defaults
  *     tags: [Concerts]
  */
-router.post('/concert-types/init-defaults', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/concert-types/init-defaults',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Check if already has custom types
-    const existingCount = db.prepare(`
+    const existingCount = db
+      .prepare(
+        `
         SELECT COUNT(*) as count FROM concert_types WHERE association_id = ?
-    `).get(req.user!.associationId) as { count: number };
+    `,
+      )
+      .get(req.user!.associationId) as { count: number };
 
     if (existingCount.count > 0) {
-        throw new ApiError(400, 'Er bestaan al concert types. Verwijder deze eerst.');
+      throw new ApiError(400, 'Er bestaan al concert types. Verwijder deze eerst.');
     }
 
     // Insert defaults
     withTransaction(() => {
-        const stmt = db.prepare(`
+      const stmt = db.prepare(`
             INSERT INTO concert_types (id, association_id, value, label, sort_order)
             VALUES (?, ?, ?, ?, ?)
         `);
 
-        DEFAULT_CONCERT_TYPES.forEach((type, index) => {
-            stmt.run(uuidv4(), req.user!.associationId, type.value, type.label, index);
-        });
+      DEFAULT_CONCERT_TYPES.forEach((type, index) => {
+        stmt.run(uuidv4(), req.user!.associationId, type.value, type.label, index);
+      });
     });
 
     logger.info('Concert types initialized with defaults', { associationId: req.user!.associationId });
 
     res.status(201).json({ message: 'Standaard concert types aangemaakt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -280,24 +323,37 @@ router.post('/concert-types/init-defaults', authenticateToken, requireRole('admi
  *     summary: Get concert statistics
  *     tags: [Concerts]
  */
-router.get('/statistics', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/statistics',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Total concerts
-    const totalConcerts = db.prepare(`
+    const totalConcerts = db
+      .prepare(
+        `
         SELECT COUNT(*) as count FROM concerts WHERE association_id = ?
-    `).get(req.user!.associationId) as { count: number };
+    `,
+      )
+      .get(req.user!.associationId) as { count: number };
 
     // Concerts per year
-    const concertsPerYear = db.prepare(`
+    const concertsPerYear = db
+      .prepare(
+        `
         SELECT strftime('%Y', date) as year, COUNT(*) as count
         FROM concerts
         WHERE association_id = ?
         GROUP BY strftime('%Y', date)
         ORDER BY year DESC
         LIMIT 10
-    `).all(req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId);
 
     // Most played pieces
-    const mostPlayedPieces = db.prepare(`
+    const mostPlayedPieces = db
+      .prepare(
+        `
         SELECT cp.title, COUNT(*) as play_count,
                MAX(c.date) as last_played
         FROM concert_program cp
@@ -306,34 +362,41 @@ router.get('/statistics', authenticateToken, asyncHandler(async (req: AuthReques
         GROUP BY LOWER(cp.title)
         ORDER BY play_count DESC
         LIMIT 20
-    `).all(req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId);
 
     // Concerts per type
-    const concertsPerType = db.prepare(`
+    const concertsPerType = db
+      .prepare(
+        `
         SELECT concert_type, COUNT(*) as count
         FROM concerts
         WHERE association_id = ? AND concert_type IS NOT NULL
         GROUP BY concert_type
         ORDER BY count DESC
-    `).all(req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId);
 
     res.json({
-        totalConcerts: totalConcerts.count,
-        concertsPerYear: concertsPerYear.map((r: any) => ({
-            year: r.year,
-            count: r.count,
-        })),
-        mostPlayedPieces: mostPlayedPieces.map((r: any) => ({
-            title: r.title,
-            playCount: r.play_count,
-            lastPlayed: r.last_played,
-        })),
-        concertsPerType: concertsPerType.map((r: any) => ({
-            type: r.concert_type,
-            count: r.count,
-        })),
+      totalConcerts: totalConcerts.count,
+      concertsPerYear: concertsPerYear.map((r: any) => ({
+        year: r.year,
+        count: r.count,
+      })),
+      mostPlayedPieces: mostPlayedPieces.map((r: any) => ({
+        title: r.title,
+        playCount: r.play_count,
+        lastPlayed: r.last_played,
+      })),
+      concertsPerType: concertsPerType.map((r: any) => ({
+        type: r.concert_type,
+        count: r.count,
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -351,17 +414,25 @@ router.get('/statistics', authenticateToken, asyncHandler(async (req: AuthReques
  *       200:
  *         description: Attendance prediction with member-level probabilities
  */
-router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/:id/attendance-prediction',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Get concert details
-    const concert = db.prepare(`
+    const concert = db
+      .prepare(
+        `
         SELECT id, name, date, concert_type, location
         FROM concerts WHERE id = ? AND association_id = ?
-    `).get(id, req.user!.associationId) as any;
+    `,
+      )
+      .get(id, req.user!.associationId) as any;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     const concertDate = new Date(concert.date);
@@ -369,25 +440,31 @@ router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin',
     const month = concertDate.getMonth() + 1;
 
     // Get all active members
-    const members = db.prepare(`
+    const members = db
+      .prepare(
+        `
         SELECT id, first_name, last_name, instrument
         FROM users
         WHERE association_id = ? AND role != 'inactive'
-    `).all(req.user!.associationId) as { id: string; first_name: string; last_name: string; instrument: string }[];
+    `,
+      )
+      .all(req.user!.associationId) as { id: string; first_name: string; last_name: string; instrument: string }[];
 
     // Get historical attendance for each member
     const memberPredictions: {
-        memberId: string;
-        memberName: string;
-        instrument: string | null;
-        attendanceProbability: number;
-        totalConcerts: number;
-        attendedConcerts: number;
-        factors: { name: string; impact: number }[];
+      memberId: string;
+      memberName: string;
+      instrument: string | null;
+      attendanceProbability: number;
+      totalConcerts: number;
+      attendedConcerts: number;
+      factors: { name: string; impact: number }[];
     }[] = [];
 
     // Get overall stats by concert type
-    const typeStats = db.prepare(`
+    const typeStats = db
+      .prepare(
+        `
         SELECT
             COUNT(DISTINCT c.id) as total_concerts,
             COUNT(DISTINCT ca.id) as total_attendances,
@@ -395,21 +472,29 @@ router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin',
         FROM concerts c
         LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
         WHERE c.association_id = ? AND c.concert_type = ? AND c.date < date('now')
-    `).get(req.user!.associationId, req.user!.associationId, concert.concert_type) as any;
+    `,
+      )
+      .get(req.user!.associationId, req.user!.associationId, concert.concert_type) as any;
 
     // Get stats by day of week
-    const dayStats = db.prepare(`
+    const dayStats = db
+      .prepare(
+        `
         SELECT
             COUNT(DISTINCT c.id) as total_concerts,
             COUNT(DISTINCT ca.id) as total_attendances
         FROM concerts c
         LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
         WHERE c.association_id = ? AND strftime('%w', c.date) = ? AND c.date < date('now')
-    `).get(req.user!.associationId, String(dayOfWeek)) as any;
+    `,
+      )
+      .get(req.user!.associationId, String(dayOfWeek)) as any;
 
     // Get stats by season (Q1-Q4)
     const quarter = Math.ceil(month / 3);
-    const seasonStats = db.prepare(`
+    const seasonStats = db
+      .prepare(
+        `
         SELECT
             COUNT(DISTINCT c.id) as total_concerts,
             COUNT(DISTINCT ca.id) as total_attendances
@@ -418,71 +503,84 @@ router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin',
         WHERE c.association_id = ?
           AND CAST((CAST(strftime('%m', c.date) AS INTEGER) + 2) / 3 AS INTEGER) = ?
           AND c.date < date('now')
-    `).get(req.user!.associationId, quarter) as any;
+    `,
+      )
+      .get(req.user!.associationId, quarter) as any;
 
     for (const member of members) {
-        // Get member's historical attendance
-        const memberStats = db.prepare(`
+      // Get member's historical attendance
+      const memberStats = db
+        .prepare(
+          `
             SELECT
                 (SELECT COUNT(DISTINCT c.id) FROM concerts c WHERE c.association_id = ? AND c.date < date('now')) as total_concerts,
                 COUNT(DISTINCT ca.concert_id) as attended_concerts
             FROM concert_attendance ca
             JOIN concerts c ON ca.concert_id = c.id
             WHERE c.association_id = ? AND (ca.user_id = ? OR ca.member_name = ?)
-        `).get(req.user!.associationId, req.user!.associationId, member.id, `${member.first_name} ${member.last_name}`) as any;
+        `,
+        )
+        .get(
+          req.user!.associationId,
+          req.user!.associationId,
+          member.id,
+          `${member.first_name} ${member.last_name}`,
+        ) as any;
 
-        // Base probability from personal history
-        const personalRate = memberStats.total_concerts > 0
-            ? memberStats.attended_concerts / memberStats.total_concerts
-            : 0.7; // Default assumption for new members
+      // Base probability from personal history
+      const personalRate =
+        memberStats.total_concerts > 0 ? memberStats.attended_concerts / memberStats.total_concerts : 0.7; // Default assumption for new members
 
-        // Adjust for concert type (if we have data)
-        let typeAdjustment = 0;
-        if (typeStats && typeStats.total_concerts > 0 && typeStats.member_count > 0) {
-            const expectedPerConcert = typeStats.total_attendances / typeStats.total_concerts / typeStats.member_count;
-            typeAdjustment = (expectedPerConcert - 0.7) * 0.2;
-        }
+      // Adjust for concert type (if we have data)
+      let typeAdjustment = 0;
+      if (typeStats && typeStats.total_concerts > 0 && typeStats.member_count > 0) {
+        const expectedPerConcert = typeStats.total_attendances / typeStats.total_concerts / typeStats.member_count;
+        typeAdjustment = (expectedPerConcert - 0.7) * 0.2;
+      }
 
-        // Adjust for day of week
-        let dayAdjustment = 0;
-        if (dayStats && dayStats.total_concerts > 0) {
-            const dayRate = dayStats.total_attendances / dayStats.total_concerts / members.length;
-            dayAdjustment = (dayRate - 0.7) * 0.1;
-        }
+      // Adjust for day of week
+      let dayAdjustment = 0;
+      if (dayStats && dayStats.total_concerts > 0) {
+        const dayRate = dayStats.total_attendances / dayStats.total_concerts / members.length;
+        dayAdjustment = (dayRate - 0.7) * 0.1;
+      }
 
-        // Adjust for season
-        let seasonAdjustment = 0;
-        if (seasonStats && seasonStats.total_concerts > 0) {
-            const seasonRate = seasonStats.total_attendances / seasonStats.total_concerts / members.length;
-            seasonAdjustment = (seasonRate - 0.7) * 0.1;
-        }
+      // Adjust for season
+      let seasonAdjustment = 0;
+      if (seasonStats && seasonStats.total_concerts > 0) {
+        const seasonRate = seasonStats.total_attendances / seasonStats.total_concerts / members.length;
+        seasonAdjustment = (seasonRate - 0.7) * 0.1;
+      }
 
-        // Calculate final probability (clamped between 0.05 and 0.99)
-        const rawProbability = personalRate + typeAdjustment + dayAdjustment + seasonAdjustment;
-        const probability = Math.max(0.05, Math.min(0.99, rawProbability));
+      // Calculate final probability (clamped between 0.05 and 0.99)
+      const rawProbability = personalRate + typeAdjustment + dayAdjustment + seasonAdjustment;
+      const probability = Math.max(0.05, Math.min(0.99, rawProbability));
 
-        const factors: { name: string; impact: number }[] = [];
-        if (Math.abs(typeAdjustment) > 0.01) {
-            factors.push({ name: `Concert type: ${concert.concert_type || 'onbekend'}`, impact: Math.round(typeAdjustment * 100) });
-        }
-        if (Math.abs(dayAdjustment) > 0.01) {
-            const dayNames = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
-            factors.push({ name: `Dag: ${dayNames[dayOfWeek]}`, impact: Math.round(dayAdjustment * 100) });
-        }
-        if (Math.abs(seasonAdjustment) > 0.01) {
-            const seasonNames = ['Q1 (jan-mrt)', 'Q2 (apr-jun)', 'Q3 (jul-sep)', 'Q4 (okt-dec)'];
-            factors.push({ name: `Seizoen: ${seasonNames[quarter - 1]}`, impact: Math.round(seasonAdjustment * 100) });
-        }
-
-        memberPredictions.push({
-            memberId: member.id,
-            memberName: `${member.first_name} ${member.last_name}`,
-            instrument: member.instrument,
-            attendanceProbability: Math.round(probability * 100) / 100,
-            totalConcerts: memberStats.total_concerts,
-            attendedConcerts: memberStats.attended_concerts,
-            factors,
+      const factors: { name: string; impact: number }[] = [];
+      if (Math.abs(typeAdjustment) > 0.01) {
+        factors.push({
+          name: `Concert type: ${concert.concert_type || 'onbekend'}`,
+          impact: Math.round(typeAdjustment * 100),
         });
+      }
+      if (Math.abs(dayAdjustment) > 0.01) {
+        const dayNames = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+        factors.push({ name: `Dag: ${dayNames[dayOfWeek]}`, impact: Math.round(dayAdjustment * 100) });
+      }
+      if (Math.abs(seasonAdjustment) > 0.01) {
+        const seasonNames = ['Q1 (jan-mrt)', 'Q2 (apr-jun)', 'Q3 (jul-sep)', 'Q4 (okt-dec)'];
+        factors.push({ name: `Seizoen: ${seasonNames[quarter - 1]}`, impact: Math.round(seasonAdjustment * 100) });
+      }
+
+      memberPredictions.push({
+        memberId: member.id,
+        memberName: `${member.first_name} ${member.last_name}`,
+        instrument: member.instrument,
+        attendanceProbability: Math.round(probability * 100) / 100,
+        totalConcerts: memberStats.total_concerts,
+        attendedConcerts: memberStats.attended_concerts,
+        factors,
+      });
     }
 
     // Sort by probability descending
@@ -490,46 +588,51 @@ router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin',
 
     // Calculate aggregate predictions
     const expectedAttendance = memberPredictions.reduce((sum, m) => sum + m.attendanceProbability, 0);
-    const highConfidenceYes = memberPredictions.filter(m => m.attendanceProbability >= 0.8).length;
-    const highConfidenceNo = memberPredictions.filter(m => m.attendanceProbability <= 0.2).length;
-    const uncertain = memberPredictions.filter(m => m.attendanceProbability > 0.2 && m.attendanceProbability < 0.8).length;
+    const highConfidenceYes = memberPredictions.filter((m) => m.attendanceProbability >= 0.8).length;
+    const highConfidenceNo = memberPredictions.filter((m) => m.attendanceProbability <= 0.2).length;
+    const uncertain = memberPredictions.filter(
+      (m) => m.attendanceProbability > 0.2 && m.attendanceProbability < 0.8,
+    ).length;
 
     // Group by instrument
     const byInstrument: Record<string, { expected: number; total: number }> = {};
     for (const m of memberPredictions) {
-        const inst = m.instrument || 'Onbekend';
-        if (!byInstrument[inst]) {
-            byInstrument[inst] = { expected: 0, total: 0 };
-        }
-        byInstrument[inst].expected += m.attendanceProbability;
-        byInstrument[inst].total += 1;
+      const inst = m.instrument || 'Onbekend';
+      if (!byInstrument[inst]) {
+        byInstrument[inst] = { expected: 0, total: 0 };
+      }
+      byInstrument[inst].expected += m.attendanceProbability;
+      byInstrument[inst].total += 1;
     }
 
     res.json({
-        concert: {
-            id: concert.id,
-            name: concert.name,
-            date: concert.date,
-            concertType: concert.concert_type,
-            location: concert.location,
+      concert: {
+        id: concert.id,
+        name: concert.name,
+        date: concert.date,
+        concertType: concert.concert_type,
+        location: concert.location,
+      },
+      prediction: {
+        expectedAttendance: Math.round(expectedAttendance),
+        totalMembers: members.length,
+        confidenceBreakdown: {
+          highConfidenceYes,
+          highConfidenceNo,
+          uncertain,
         },
-        prediction: {
-            expectedAttendance: Math.round(expectedAttendance),
-            totalMembers: members.length,
-            confidenceBreakdown: {
-                highConfidenceYes,
-                highConfidenceNo,
-                uncertain,
-            },
-            byInstrument: Object.entries(byInstrument).map(([instrument, stats]) => ({
-                instrument,
-                expected: Math.round(stats.expected * 10) / 10,
-                total: stats.total,
-            })).sort((a, b) => b.expected - a.expected),
-        },
-        members: memberPredictions,
+        byInstrument: Object.entries(byInstrument)
+          .map(([instrument, stats]) => ({
+            instrument,
+            expected: Math.round(stats.expected * 10) / 10,
+            total: stats.total,
+          }))
+          .sort((a, b) => b.expected - a.expected),
+      },
+      members: memberPredictions,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -538,30 +641,38 @@ router.get('/:id/attendance-prediction', authenticateToken, requireRole('admin',
  *     summary: Get when a specific piece was last played
  *     tags: [Concerts]
  */
-router.get('/piece-history/:title', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/piece-history/:title',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const title = decodeURIComponent(req.params.title);
 
-    const history = db.prepare(`
+    const history = db
+      .prepare(
+        `
         SELECT c.id, c.name as concert_name, c.date, c.location, cp.notes
         FROM concert_program cp
         JOIN concerts c ON cp.concert_id = c.id
         WHERE c.association_id = ? AND LOWER(cp.title) = LOWER(?)
         ORDER BY c.date DESC
-    `).all(req.user!.associationId, title);
+    `,
+      )
+      .all(req.user!.associationId, title);
 
     res.json({
-        title,
-        playCount: history.length,
-        lastPlayed: history.length > 0 ? (history[0] as any).date : null,
-        history: history.map((h: any) => ({
-            concertId: h.id,
-            concertName: h.concert_name,
-            date: h.date,
-            location: h.location,
-            notes: h.notes,
-        })),
+      title,
+      playCount: history.length,
+      lastPlayed: history.length > 0 ? (history[0] as any).date : null,
+      history: history.map((h: any) => ({
+        concertId: h.id,
+        concertName: h.concert_name,
+        date: h.date,
+        location: h.location,
+        notes: h.notes,
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -583,7 +694,10 @@ router.get('/piece-history/:title', authenticateToken, asyncHandler(async (req: 
  *           format: date
  *         description: End date of the period (YYYY-MM-DD)
  */
-router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/buma-stemra-export',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Default to last year if no dates provided
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
@@ -592,7 +706,9 @@ router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: Au
     const endDate = (req.query.endDate as string) || today.toISOString().split('T')[0];
 
     // Get all concerts and their program items within the date range
-    const pieces = db.prepare(`
+    const pieces = db
+      .prepare(
+        `
         SELECT
             c.name as concert_name,
             c.date as concert_date,
@@ -608,35 +724,37 @@ router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: Au
           AND c.date >= ?
           AND c.date <= ?
         ORDER BY c.date ASC, cp.sort_order ASC
-    `).all(req.user!.associationId, startDate, endDate) as any[];
+    `,
+      )
+      .all(req.user!.associationId, startDate, endDate) as any[];
 
     // Format duration as MM:SS
     const formatDuration = (seconds: number): string => {
-        if (!seconds || seconds <= 0) return '';
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      if (!seconds || seconds <= 0) return '';
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
     // Generate CSV content
     let csv = 'Concert,Datum,Locatie,Titel,Componist,Arrangeur,Duur\n';
 
     for (const piece of pieces) {
-        const row = [
-            `"${(piece.concert_name || '').replace(/"/g, '""')}"`,
-            piece.concert_date || '',
-            `"${(piece.concert_location || '').replace(/"/g, '""')}"`,
-            `"${(piece.title || '').replace(/"/g, '""')}"`,
-            `"${(piece.composer || '').replace(/"/g, '""')}"`,
-            `"${(piece.arranger || '').replace(/"/g, '""')}"`,
-            formatDuration(piece.duration_seconds),
-        ];
-        csv += row.join(',') + '\n';
+      const row = [
+        `"${(piece.concert_name || '').replace(/"/g, '""')}"`,
+        piece.concert_date || '',
+        `"${(piece.concert_location || '').replace(/"/g, '""')}"`,
+        `"${(piece.title || '').replace(/"/g, '""')}"`,
+        `"${(piece.composer || '').replace(/"/g, '""')}"`,
+        `"${(piece.arranger || '').replace(/"/g, '""')}"`,
+        formatDuration(piece.duration_seconds),
+      ];
+      csv += row.join(',') + '\n';
     }
 
     // Add summary at the end
     const totalPieces = pieces.length;
-    const uniqueConcerts = new Set(pieces.map(p => p.concert_date + p.concert_name)).size;
+    const uniqueConcerts = new Set(pieces.map((p) => p.concert_date + p.concert_name)).size;
     const totalDuration = pieces.reduce((sum, p) => sum + (p.duration_seconds || 0), 0);
 
     csv += '\n';
@@ -652,7 +770,8 @@ router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: Au
 
     // Add BOM for Excel UTF-8 compatibility
     res.send('\ufeff' + csv);
-}));
+  }),
+);
 
 // ==================== CONCERTS ====================
 
@@ -663,7 +782,10 @@ router.get('/buma-stemra-export', authenticateToken, asyncHandler(async (req: Au
  *     summary: Get all concerts
  *     tags: [Concerts]
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const search = req.query.search as string | undefined;
     const year = req.query.year as string | undefined;
@@ -673,26 +795,32 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     const params: any[] = [req.user!.associationId];
 
     if (search) {
-        whereClause += ` AND (LOWER(c.name) LIKE ? OR LOWER(c.location) LIKE ?)`;
-        const searchTerm = `%${search.toLowerCase()}%`;
-        params.push(searchTerm, searchTerm);
+      whereClause += ` AND (LOWER(c.name) LIKE ? OR LOWER(c.location) LIKE ?)`;
+      const searchTerm = `%${search.toLowerCase()}%`;
+      params.push(searchTerm, searchTerm);
     }
 
     if (year) {
-        whereClause += ` AND strftime('%Y', c.date) = ?`;
-        params.push(year);
+      whereClause += ` AND strftime('%Y', c.date) = ?`;
+      params.push(year);
     }
 
     if (concertType) {
-        whereClause += ' AND c.concert_type = ?';
-        params.push(concertType);
+      whereClause += ' AND c.concert_type = ?';
+      params.push(concertType);
     }
 
-    const countResult = db.prepare(`
+    const countResult = db
+      .prepare(
+        `
         SELECT COUNT(*) as total FROM concerts c ${whereClause}
-    `).get(...params) as { total: number };
+    `,
+      )
+      .get(...params) as { total: number };
 
-    const concerts = db.prepare(`
+    const concerts = db
+      .prepare(
+        `
         SELECT c.*,
                (SELECT COUNT(*) FROM concert_program WHERE concert_id = c.id) as program_count,
                (SELECT COUNT(*) FROM concert_attendance WHERE concert_id = c.id) as attendance_count,
@@ -703,38 +831,48 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         ${whereClause}
         ORDER BY c.date DESC
         LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    `,
+      )
+      .all(...params, limit, offset);
 
     const result = concerts.map((concert: any) => ({
-        id: concert.id,
-        name: concert.name,
-        date: concert.date,
-        endDate: concert.end_date,
-        location: concert.location,
-        venueType: concert.venue_type,
-        concertType: concert.concert_type,
-        description: concert.description,
-        notes: concert.notes,
-        programCount: concert.program_count,
-        attendanceCount: concert.attendance_count,
-        mediaCount: concert.media_count,
-        // Accessibility fields for list view (summary)
-        wheelchairSpaces: concert.wheelchair_spaces,
-        companionSpaces: concert.companion_spaces,
-        hearingLoopAvailable: concert.hearing_loop_available === 1,
-        hasAccessibilityInfo: !!(concert.wheelchair_spaces || concert.companion_spaces ||
-            concert.hearing_loop_available || concert.accessible_parking_info || concert.accessibility_info),
-        createdBy: concert.created_by ? {
+      id: concert.id,
+      name: concert.name,
+      date: concert.date,
+      endDate: concert.end_date,
+      location: concert.location,
+      venueType: concert.venue_type,
+      concertType: concert.concert_type,
+      description: concert.description,
+      notes: concert.notes,
+      programCount: concert.program_count,
+      attendanceCount: concert.attendance_count,
+      mediaCount: concert.media_count,
+      // Accessibility fields for list view (summary)
+      wheelchairSpaces: concert.wheelchair_spaces,
+      companionSpaces: concert.companion_spaces,
+      hearingLoopAvailable: concert.hearing_loop_available === 1,
+      hasAccessibilityInfo: !!(
+        concert.wheelchair_spaces ||
+        concert.companion_spaces ||
+        concert.hearing_loop_available ||
+        concert.accessible_parking_info ||
+        concert.accessibility_info
+      ),
+      createdBy: concert.created_by
+        ? {
             id: concert.created_by,
             firstName: concert.created_by_first_name,
             lastName: concert.created_by_last_name,
-        } : null,
-        createdAt: concert.created_at,
-        updatedAt: concert.updated_at,
+          }
+        : null,
+      createdAt: concert.created_at,
+      updatedAt: concert.updated_at,
     }));
 
     res.json(createPaginatedResult(result, countResult.total, page, limit));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -743,16 +881,24 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *     summary: Get list of years with concerts
  *     tags: [Concerts]
  */
-router.get('/years', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const years = db.prepare(`
+router.get(
+  '/years',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const years = db
+      .prepare(
+        `
         SELECT DISTINCT strftime('%Y', date) as year
         FROM concerts
         WHERE association_id = ?
         ORDER BY year DESC
-    `).all(req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId);
 
     res.json(years.map((y: any) => y.year));
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -761,20 +907,29 @@ router.get('/years', authenticateToken, asyncHandler(async (req: AuthRequest, re
  *     summary: Get single concert with full details
  *     tags: [Concerts]
  */
-router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const concert = db.prepare(`
+router.get(
+  '/:id',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const concert = db
+      .prepare(
+        `
         SELECT c.*, u.first_name as created_by_first_name, u.last_name as created_by_last_name
         FROM concerts c
         LEFT JOIN users u ON c.created_by = u.id
         WHERE c.id = ? AND c.association_id = ?
-    `).get(req.params.id, req.user!.associationId) as any;
+    `,
+      )
+      .get(req.params.id, req.user!.associationId) as any;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     // Get program
-    const program = db.prepare(`
+    const program = db
+      .prepare(
+        `
         SELECT cp.*,
                mt.youtube_url,
                mt.duration_seconds,
@@ -783,90 +938,107 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
         LEFT JOIN music_titles mt ON cp.music_title_id = mt.id
         WHERE cp.concert_id = ?
         ORDER BY cp.sort_order
-    `).all(req.params.id);
+    `,
+      )
+      .all(req.params.id);
 
     // Get media
-    const media = db.prepare(`
+    const media = db
+      .prepare(
+        `
         SELECT cm.*, u.first_name, u.last_name
         FROM concert_media cm
         LEFT JOIN users u ON cm.uploaded_by = u.id
         WHERE cm.concert_id = ?
         ORDER BY cm.created_at DESC
-    `).all(req.params.id);
+    `,
+      )
+      .all(req.params.id);
 
     // Get attendance
-    const attendance = db.prepare(`
+    const attendance = db
+      .prepare(
+        `
         SELECT ca.*, u.first_name, u.last_name, u.email
         FROM concert_attendance ca
         LEFT JOIN users u ON ca.user_id = u.id
         WHERE ca.concert_id = ?
         ORDER BY ca.member_name
-    `).all(req.params.id);
+    `,
+      )
+      .all(req.params.id);
 
     res.json({
-        id: concert.id,
-        name: concert.name,
-        date: concert.date,
-        endDate: concert.end_date,
-        location: concert.location,
-        venueType: concert.venue_type,
-        concertType: concert.concert_type,
-        description: concert.description,
-        notes: concert.notes,
-        // Accessibility fields
-        wheelchairSpaces: concert.wheelchair_spaces,
-        companionSpaces: concert.companion_spaces,
-        hearingLoopAvailable: concert.hearing_loop_available === 1,
-        accessibleParkingInfo: concert.accessible_parking_info,
-        accessibilityInfo: concert.accessibility_info,
-        accessibilityContactEmail: concert.accessibility_contact_email,
-        accessibilityContactPhone: concert.accessibility_contact_phone,
-        createdBy: concert.created_by ? {
+      id: concert.id,
+      name: concert.name,
+      date: concert.date,
+      endDate: concert.end_date,
+      location: concert.location,
+      venueType: concert.venue_type,
+      concertType: concert.concert_type,
+      description: concert.description,
+      notes: concert.notes,
+      // Accessibility fields
+      wheelchairSpaces: concert.wheelchair_spaces,
+      companionSpaces: concert.companion_spaces,
+      hearingLoopAvailable: concert.hearing_loop_available === 1,
+      accessibleParkingInfo: concert.accessible_parking_info,
+      accessibilityInfo: concert.accessibility_info,
+      accessibilityContactEmail: concert.accessibility_contact_email,
+      accessibilityContactPhone: concert.accessibility_contact_phone,
+      createdBy: concert.created_by
+        ? {
             id: concert.created_by,
             firstName: concert.created_by_first_name,
             lastName: concert.created_by_last_name,
-        } : null,
-        createdAt: concert.created_at,
-        updatedAt: concert.updated_at,
-        program: program.map((p: any) => ({
-            id: p.id,
-            musicTitleId: p.music_title_id,
-            title: p.title,
-            composer: p.resolved_composer || p.composer,
-            arranger: p.arranger,
-            sortOrder: p.sort_order,
-            notes: p.notes,
-            partOfSet: p.part_of_set,
-            youtubeUrl: p.youtube_url,
-            durationSeconds: p.duration_seconds,
-        })),
-        media: media.map((m: any) => ({
-            id: m.id,
-            mediaType: m.media_type,
-            url: m.url,
-            filePath: m.file_path,
-            description: m.description,
-            uploadedBy: m.uploaded_by ? {
-                id: m.uploaded_by,
-                firstName: m.first_name,
-                lastName: m.last_name,
-            } : null,
-            createdAt: m.created_at,
-        })),
-        attendance: attendance.map((a: any) => ({
-            id: a.id,
-            user: a.user_id ? {
-                id: a.user_id,
-                firstName: a.first_name,
-                lastName: a.last_name,
-                email: a.email,
-            } : null,
-            memberName: a.member_name,
-            instrumentPlayed: a.instrument_played,
-            notes: a.notes,
-        })),
+          }
+        : null,
+      createdAt: concert.created_at,
+      updatedAt: concert.updated_at,
+      program: program.map((p: any) => ({
+        id: p.id,
+        musicTitleId: p.music_title_id,
+        title: p.title,
+        composer: p.resolved_composer || p.composer,
+        arranger: p.arranger,
+        sortOrder: p.sort_order,
+        notes: p.notes,
+        partOfSet: p.part_of_set,
+        youtubeUrl: p.youtube_url,
+        durationSeconds: p.duration_seconds,
+      })),
+      media: media.map((m: any) => ({
+        id: m.id,
+        mediaType: m.media_type,
+        url: m.url,
+        filePath: m.file_path,
+        description: m.description,
+        uploadedBy: m.uploaded_by
+          ? {
+              id: m.uploaded_by,
+              firstName: m.first_name,
+              lastName: m.last_name,
+            }
+          : null,
+        createdAt: m.created_at,
+      })),
+      attendance: attendance.map((a: any) => ({
+        id: a.id,
+        user: a.user_id
+          ? {
+              id: a.user_id,
+              firstName: a.first_name,
+              lastName: a.last_name,
+              email: a.email,
+            }
+          : null,
+        memberName: a.member_name,
+        instrumentPlayed: a.instrument_played,
+        notes: a.notes,
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -875,12 +1047,18 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  *     summary: Create new concert
  *     tags: [Concerts]
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = createConcertSchema.parse(req.body);
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  validate(createConcertSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = req.body as z.infer<typeof createConcertSchema>;
 
     const id = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO concerts (
             id, association_id, name, date, end_date, location,
             venue_type, concert_type, description, notes, created_by,
@@ -888,23 +1066,36 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
             accessible_parking_info, accessibility_info,
             accessibility_contact_email, accessibility_contact_phone
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-        id, req.user!.associationId, data.name, data.date, data.endDate || null,
-        data.location || null, data.venueType || null, data.concertType || null,
-        data.description || null, data.notes || null, req.user!.id,
-        data.wheelchairSpaces ?? null, data.companionSpaces ?? null,
-        data.hearingLoopAvailable ?? null, data.accessibleParkingInfo || null,
-        data.accessibilityInfo || null, data.accessibilityContactEmail || null,
-        data.accessibilityContactPhone || null
+    `,
+    ).run(
+      id,
+      req.user!.associationId,
+      data.name,
+      data.date,
+      data.endDate || null,
+      data.location || null,
+      data.venueType || null,
+      data.concertType || null,
+      data.description || null,
+      data.notes || null,
+      req.user!.id,
+      data.wheelchairSpaces ?? null,
+      data.companionSpaces ?? null,
+      data.hearingLoopAvailable ?? null,
+      data.accessibleParkingInfo || null,
+      data.accessibilityInfo || null,
+      data.accessibilityContactEmail || null,
+      data.accessibilityContactPhone || null,
     );
 
     logger.info(`Concert created: ${data.name}`, { id, createdBy: req.user!.id });
 
     res.status(201).json({
-        id,
-        message: 'Concert succesvol aangemaakt.',
+      id,
+      message: 'Concert succesvol aangemaakt.',
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -913,17 +1104,24 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
  *     summary: Update concert
  *     tags: [Concerts]
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = updateConcertSchema.parse(req.body);
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  validate(updateConcertSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = req.body as z.infer<typeof updateConcertSchema>;
 
-    const existing = db.prepare('SELECT * FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const existing = db
+      .prepare('SELECT * FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!existing) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
-    db.prepare(`
+    db.prepare(
+      `
         UPDATE concerts SET
             name = COALESCE(?, name),
             date = COALESCE(?, date),
@@ -942,19 +1140,31 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
             accessibility_contact_phone = COALESCE(?, accessibility_contact_phone),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    `).run(
-        data.name, data.date, data.endDate, data.location,
-        data.venueType, data.concertType, data.description, data.notes,
-        data.wheelchairSpaces, data.companionSpaces, data.hearingLoopAvailable,
-        data.accessibleParkingInfo, data.accessibilityInfo,
-        data.accessibilityContactEmail, data.accessibilityContactPhone,
-        req.params.id
+    `,
+    ).run(
+      data.name,
+      data.date,
+      data.endDate,
+      data.location,
+      data.venueType,
+      data.concertType,
+      data.description,
+      data.notes,
+      data.wheelchairSpaces,
+      data.companionSpaces,
+      data.hearingLoopAvailable,
+      data.accessibleParkingInfo,
+      data.accessibilityInfo,
+      data.accessibilityContactEmail,
+      data.accessibilityContactPhone,
+      req.params.id,
     );
 
     logger.info(`Concert updated: ${req.params.id}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Concert succesvol bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -963,18 +1173,24 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  *     summary: Delete concert
  *     tags: [Concerts]
  */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare('DELETE FROM concerts WHERE id = ? AND association_id = ?')
-        .run(req.params.id, req.user!.associationId);
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare('DELETE FROM concerts WHERE id = ? AND association_id = ?')
+      .run(req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     logger.info(`Concert deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Concert succesvol verwijderd.' });
-}));
+  }),
+);
 
 // ==================== CONCERT PROGRAM ====================
 
@@ -985,34 +1201,56 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
  *     summary: Add item to concert program
  *     tags: [Concerts]
  */
-router.post('/:id/program', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/program',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createProgramItemSchema.parse(req.body);
 
-    const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     const id = uuidv4();
 
     // Get max sort order
-    const maxOrder = db.prepare(`
+    const maxOrder = db
+      .prepare(
+        `
         SELECT MAX(sort_order) as max_order FROM concert_program WHERE concert_id = ?
-    `).get(req.params.id) as { max_order: number | null };
+    `,
+      )
+      .get(req.params.id) as { max_order: number | null };
 
-    const sortOrder = data.sortOrder ?? ((maxOrder.max_order ?? -1) + 1);
+    const sortOrder = data.sortOrder ?? (maxOrder.max_order ?? -1) + 1;
 
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO concert_program (id, concert_id, music_title_id, title, composer, arranger, sort_order, notes, part_of_set)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, data.musicTitleId || null, data.title, data.composer || null, data.arranger || null, sortOrder, data.notes || null, data.partOfSet || null);
+    `,
+    ).run(
+      id,
+      req.params.id,
+      data.musicTitleId || null,
+      data.title,
+      data.composer || null,
+      data.arranger || null,
+      sortOrder,
+      data.notes || null,
+      data.partOfSet || null,
+    );
 
     logger.info(`Program item added to concert: ${req.params.id}`, { programId: id, title: data.title });
 
     res.status(201).json({ id, message: 'Programma item toegevoegd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1021,20 +1259,29 @@ router.post('/:id/program', authenticateToken, requireRole('admin', 'music_commi
  *     summary: Update program item
  *     tags: [Concerts]
  */
-router.put('/:id/program/:programId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/:id/program/:programId',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateProgramItemSchema.parse(req.body);
 
-    const item = db.prepare(`
+    const item = db
+      .prepare(
+        `
         SELECT cp.* FROM concert_program cp
         JOIN concerts c ON cp.concert_id = c.id
         WHERE cp.id = ? AND c.association_id = ?
-    `).get(req.params.programId, req.user!.associationId);
+    `,
+      )
+      .get(req.params.programId, req.user!.associationId);
 
     if (!item) {
-        throw new ApiError(404, 'Programma item niet gevonden.');
+      throw new ApiError(404, 'Programma item niet gevonden.');
     }
 
-    db.prepare(`
+    db.prepare(
+      `
         UPDATE concert_program SET
             music_title_id = COALESCE(?, music_title_id),
             title = COALESCE(?, title),
@@ -1044,10 +1291,21 @@ router.put('/:id/program/:programId', authenticateToken, requireRole('admin', 'm
             notes = COALESCE(?, notes),
             part_of_set = COALESCE(?, part_of_set)
         WHERE id = ?
-    `).run(data.musicTitleId, data.title, data.composer, data.arranger, data.sortOrder, data.notes, data.partOfSet, req.params.programId);
+    `,
+    ).run(
+      data.musicTitleId,
+      data.title,
+      data.composer,
+      data.arranger,
+      data.sortOrder,
+      data.notes,
+      data.partOfSet,
+      req.params.programId,
+    );
 
     res.json({ message: 'Programma item bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1056,20 +1314,29 @@ router.put('/:id/program/:programId', authenticateToken, requireRole('admin', 'm
  *     summary: Remove program item
  *     tags: [Concerts]
  */
-router.delete('/:id/program/:programId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(`
+router.delete(
+  '/:id/program/:programId',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare(
+        `
         DELETE FROM concert_program
         WHERE id = ? AND concert_id IN (
             SELECT id FROM concerts WHERE association_id = ?
         )
-    `).run(req.params.programId, req.user!.associationId);
+    `,
+      )
+      .run(req.params.programId, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Programma item niet gevonden.');
+      throw new ApiError(404, 'Programma item niet gevonden.');
     }
 
     res.json({ message: 'Programma item verwijderd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1078,29 +1345,35 @@ router.delete('/:id/program/:programId', authenticateToken, requireRole('admin',
  *     summary: Reorder program items
  *     tags: [Concerts]
  */
-router.put('/:id/program/reorder', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/:id/program/reorder',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { items } = req.body; // Array of { id, sortOrder }
 
     if (!Array.isArray(items)) {
-        throw new ApiError(400, 'Items array is verplicht.');
+      throw new ApiError(400, 'Items array is verplicht.');
     }
 
-    const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     withTransaction(() => {
-        const stmt = db.prepare('UPDATE concert_program SET sort_order = ? WHERE id = ? AND concert_id = ?');
-        for (const item of items) {
-            stmt.run(item.sortOrder, item.id, req.params.id);
-        }
+      const stmt = db.prepare('UPDATE concert_program SET sort_order = ? WHERE id = ? AND concert_id = ?');
+      for (const item of items) {
+        stmt.run(item.sortOrder, item.id, req.params.id);
+      }
     });
 
     res.json({ message: 'Volgorde bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1109,18 +1382,29 @@ router.put('/:id/program/reorder', authenticateToken, requireRole('admin', 'musi
  *     summary: Export program as text
  *     tags: [Concerts]
  */
-router.get('/:id/program/export', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const concert = db.prepare(`
+router.get(
+  '/:id/program/export',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const concert = db
+      .prepare(
+        `
         SELECT * FROM concerts WHERE id = ? AND association_id = ?
-    `).get(req.params.id, req.user!.associationId) as any;
+    `,
+      )
+      .get(req.params.id, req.user!.associationId) as any;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
-    const program = db.prepare(`
+    const program = db
+      .prepare(
+        `
         SELECT * FROM concert_program WHERE concert_id = ? ORDER BY sort_order
-    `).all(req.params.id);
+    `,
+      )
+      .all(req.params.id);
 
     let text = `${concert.name}\n`;
     text += `${concert.date}${concert.location ? ` - ${concert.location}` : ''}\n\n`;
@@ -1129,22 +1413,26 @@ router.get('/:id/program/export', authenticateToken, asyncHandler(async (req: Au
 
     let currentSet = '';
     program.forEach((item: any, index: number) => {
-        if (item.part_of_set && item.part_of_set !== currentSet) {
-            currentSet = item.part_of_set;
-            text += `\n${currentSet}\n`;
-        }
+      if (item.part_of_set && item.part_of_set !== currentSet) {
+        currentSet = item.part_of_set;
+        text += `\n${currentSet}\n`;
+      }
 
-        text += `${index + 1}. ${item.title}`;
-        if (item.arranger) {
-            text += ` (arr. ${item.arranger})`;
-        }
-        text += `\n`;
+      text += `${index + 1}. ${item.title}`;
+      if (item.arranger) {
+        text += ` (arr. ${item.arranger})`;
+      }
+      text += `\n`;
     });
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${concert.name.replace(/[^a-zA-Z0-9]/g, '_')}_programma.txt"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${concert.name.replace(/[^a-zA-Z0-9]/g, '_')}_programma.txt"`,
+    );
     res.send(text);
-}));
+  }),
+);
 
 // ==================== CONCERT MEDIA ====================
 
@@ -1155,27 +1443,35 @@ router.get('/:id/program/export', authenticateToken, asyncHandler(async (req: Au
  *     summary: Add media to concert
  *     tags: [Concerts]
  */
-router.post('/:id/media', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/media',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createMediaSchema.parse(req.body);
 
-    const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     const id = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO concert_media (id, concert_id, media_type, url, description, uploaded_by)
         VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, data.mediaType, data.url || null, data.description || null, req.user!.id);
+    `,
+    ).run(id, req.params.id, data.mediaType, data.url || null, data.description || null, req.user!.id);
 
     logger.info(`Media added to concert: ${req.params.id}`, { mediaId: id, type: data.mediaType });
 
     res.status(201).json({ id, message: 'Media toegevoegd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1184,20 +1480,29 @@ router.post('/:id/media', authenticateToken, requireRole('admin', 'music_committ
  *     summary: Remove media from concert
  *     tags: [Concerts]
  */
-router.delete('/:id/media/:mediaId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(`
+router.delete(
+  '/:id/media/:mediaId',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare(
+        `
         DELETE FROM concert_media
         WHERE id = ? AND concert_id IN (
             SELECT id FROM concerts WHERE association_id = ?
         )
-    `).run(req.params.mediaId, req.user!.associationId);
+    `,
+      )
+      .run(req.params.mediaId, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Media niet gevonden.');
+      throw new ApiError(404, 'Media niet gevonden.');
     }
 
     res.json({ message: 'Media verwijderd.' });
-}));
+  }),
+);
 
 // ==================== CONCERT ATTENDANCE ====================
 
@@ -1208,38 +1513,50 @@ router.delete('/:id/media/:mediaId', authenticateToken, requireRole('admin', 'mu
  *     summary: Add attendance record
  *     tags: [Concerts]
  */
-router.post('/:id/attendance', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/attendance',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAttendanceSchema.parse(req.body);
 
-    const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     // Check for duplicate user attendance
     if (data.userId) {
-        const existing = db.prepare(`
+      const existing = db
+        .prepare(
+          `
             SELECT id FROM concert_attendance WHERE concert_id = ? AND user_id = ?
-        `).get(req.params.id, data.userId);
+        `,
+        )
+        .get(req.params.id, data.userId);
 
-        if (existing) {
-            throw new ApiError(409, 'Dit lid is al geregistreerd voor dit concert.');
-        }
+      if (existing) {
+        throw new ApiError(409, 'Dit lid is al geregistreerd voor dit concert.');
+      }
     }
 
     const id = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO concert_attendance (id, concert_id, user_id, member_name, instrument_played, notes)
         VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, req.params.id, data.userId || null, data.memberName, data.instrumentPlayed || null, data.notes || null);
+    `,
+    ).run(id, req.params.id, data.userId || null, data.memberName, data.instrumentPlayed || null, data.notes || null);
 
     logger.info(`Attendance added to concert: ${req.params.id}`, { attendanceId: id, memberName: data.memberName });
 
     res.status(201).json({ id, message: 'Bezetting toegevoegd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1248,23 +1565,30 @@ router.post('/:id/attendance', authenticateToken, requireRole('admin', 'music_co
  *     summary: Add multiple attendance records at once
  *     tags: [Concerts]
  */
-router.post('/:id/attendance/bulk', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/attendance/bulk',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { userIds } = req.body;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
-        throw new ApiError(400, 'userIds array is verplicht.');
+      throw new ApiError(400, 'userIds array is verplicht.');
     }
 
-    const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
-        .get(req.params.id, req.user!.associationId);
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     // Get user details
     const placeholders = userIds.map(() => '?').join(',');
-    const users = db.prepare(`
+    const users = db
+      .prepare(
+        `
         SELECT u.id, u.first_name, u.last_name,
                GROUP_CONCAT(i.name) as instruments
         FROM users u
@@ -1272,32 +1596,35 @@ router.post('/:id/attendance/bulk', authenticateToken, requireRole('admin', 'mus
         LEFT JOIN instruments i ON ui.instrument_id = i.id
         WHERE u.id IN (${placeholders}) AND u.association_id = ?
         GROUP BY u.id
-    `).all(...userIds, req.user!.associationId);
+    `,
+      )
+      .all(...userIds, req.user!.associationId);
 
     const ids: string[] = [];
 
     withTransaction(() => {
-        const stmt = db.prepare(`
+      const stmt = db.prepare(`
             INSERT OR IGNORE INTO concert_attendance (id, concert_id, user_id, member_name, instrument_played)
             VALUES (?, ?, ?, ?, ?)
         `);
 
-        for (const user of users as any[]) {
-            const id = uuidv4();
-            const memberName = `${user.first_name} ${user.last_name}`;
-            stmt.run(id, req.params.id, user.id, memberName, user.instruments);
-            ids.push(id);
-        }
+      for (const user of users as any[]) {
+        const id = uuidv4();
+        const memberName = `${user.first_name} ${user.last_name}`;
+        stmt.run(id, req.params.id, user.id, memberName, user.instruments);
+        ids.push(id);
+      }
     });
 
     logger.info(`Bulk attendance added to concert: ${req.params.id}`, { count: ids.length });
 
     res.status(201).json({
-        ids,
-        count: ids.length,
-        message: `${ids.length} leden toegevoegd aan bezetting.`,
+      ids,
+      count: ids.length,
+      message: `${ids.length} leden toegevoegd aan bezetting.`,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1306,29 +1633,40 @@ router.post('/:id/attendance/bulk', authenticateToken, requireRole('admin', 'mus
  *     summary: Update attendance record
  *     tags: [Concerts]
  */
-router.put('/:id/attendance/:attendanceId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/:id/attendance/:attendanceId',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAttendanceSchema.partial().parse(req.body);
 
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT ca.* FROM concert_attendance ca
         JOIN concerts c ON ca.concert_id = c.id
         WHERE ca.id = ? AND c.association_id = ?
-    `).get(req.params.attendanceId, req.user!.associationId);
+    `,
+      )
+      .get(req.params.attendanceId, req.user!.associationId);
 
     if (!existing) {
-        throw new ApiError(404, 'Bezetting record niet gevonden.');
+      throw new ApiError(404, 'Bezetting record niet gevonden.');
     }
 
-    db.prepare(`
+    db.prepare(
+      `
         UPDATE concert_attendance SET
             member_name = COALESCE(?, member_name),
             instrument_played = COALESCE(?, instrument_played),
             notes = COALESCE(?, notes)
         WHERE id = ?
-    `).run(data.memberName, data.instrumentPlayed, data.notes, req.params.attendanceId);
+    `,
+    ).run(data.memberName, data.instrumentPlayed, data.notes, req.params.attendanceId);
 
     res.json({ message: 'Bezetting bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1337,20 +1675,29 @@ router.put('/:id/attendance/:attendanceId', authenticateToken, requireRole('admi
  *     summary: Remove attendance record
  *     tags: [Concerts]
  */
-router.delete('/:id/attendance/:attendanceId', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(`
+router.delete(
+  '/:id/attendance/:attendanceId',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare(
+        `
         DELETE FROM concert_attendance
         WHERE id = ? AND concert_id IN (
             SELECT id FROM concerts WHERE association_id = ?
         )
-    `).run(req.params.attendanceId, req.user!.associationId);
+    `,
+      )
+      .run(req.params.attendanceId, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Bezetting record niet gevonden.');
+      throw new ApiError(404, 'Bezetting record niet gevonden.');
     }
 
     res.json({ message: 'Bezetting verwijderd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -1369,19 +1716,29 @@ router.delete('/:id/attendance/:attendanceId', authenticateToken, requireRole('a
  *       200:
  *         description: List of scanned tickets with attendee information
  */
-router.get('/:id/scanned-tickets', authenticateToken, requireRole('admin', 'board', 'ticket_scanner'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/:id/scanned-tickets',
+  authenticateToken,
+  requireRole('admin', 'board', 'ticket_scanner'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Verify concert belongs to association
-    const concert = db.prepare(`
+    const concert = db
+      .prepare(
+        `
         SELECT id, name, date FROM concerts
         WHERE id = ? AND association_id = ?
-    `).get(req.params.id, req.user!.associationId) as { id: string; name: string; date: string } | undefined;
+    `,
+      )
+      .get(req.params.id, req.user!.associationId) as { id: string; name: string; date: string } | undefined;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert niet gevonden.');
+      throw new ApiError(404, 'Concert niet gevonden.');
     }
 
     // Get all scanned tickets for this concert
-    const scannedTickets = db.prepare(`
+    const scannedTickets = db
+      .prepare(
+        `
         SELECT
             t.id,
             t.buyer_name,
@@ -1398,56 +1755,62 @@ router.get('/:id/scanned-tickets', authenticateToken, requireRole('admin', 'boar
         LEFT JOIN users u ON t.validated_by = u.id
         WHERE tt.concert_id = ? AND t.used_at IS NOT NULL
         ORDER BY t.used_at DESC
-    `).all(req.params.id) as {
-        id: string;
-        buyer_name: string;
-        buyer_email: string;
-        scanned_at: string;
-        seat_info: string | null;
-        status: string;
-        ticket_type_name: string;
-        ticket_price: number;
-        validator_first_name: string | null;
-        validator_last_name: string | null;
+    `,
+      )
+      .all(req.params.id) as {
+      id: string;
+      buyer_name: string;
+      buyer_email: string;
+      scanned_at: string;
+      seat_info: string | null;
+      status: string;
+      ticket_type_name: string;
+      ticket_price: number;
+      validator_first_name: string | null;
+      validator_last_name: string | null;
     }[];
 
     // Get summary stats
-    const totalTickets = db.prepare(`
+    const totalTickets = db
+      .prepare(
+        `
         SELECT COUNT(*) as count
         FROM tickets t
         JOIN ticket_types tt ON t.ticket_type_id = tt.id
         WHERE tt.concert_id = ?
-    `).get(req.params.id) as { count: number };
+    `,
+      )
+      .get(req.params.id) as { count: number };
 
     const scannedCount = scannedTickets.length;
 
     res.json({
-        concert: {
-            id: concert.id,
-            name: concert.name,
-            date: concert.date,
-        },
-        summary: {
-            totalTickets: totalTickets.count,
-            scannedCount,
-            scanPercentage: totalTickets.count > 0
-                ? Math.round((scannedCount / totalTickets.count) * 100)
-                : 0,
-        },
-        scannedTickets: scannedTickets.map(ticket => ({
-            id: ticket.id,
-            buyerName: ticket.buyer_name,
-            buyerEmail: ticket.buyer_email,
-            scannedAt: ticket.scanned_at,
-            seatInfo: ticket.seat_info,
-            status: ticket.status,
-            ticketTypeName: ticket.ticket_type_name,
-            ticketPrice: ticket.ticket_price,
-            validatedBy: ticket.validator_first_name && ticket.validator_last_name
-                ? `${ticket.validator_first_name} ${ticket.validator_last_name}`
-                : null,
-        })),
+      concert: {
+        id: concert.id,
+        name: concert.name,
+        date: concert.date,
+      },
+      summary: {
+        totalTickets: totalTickets.count,
+        scannedCount,
+        scanPercentage: totalTickets.count > 0 ? Math.round((scannedCount / totalTickets.count) * 100) : 0,
+      },
+      scannedTickets: scannedTickets.map((ticket) => ({
+        id: ticket.id,
+        buyerName: ticket.buyer_name,
+        buyerEmail: ticket.buyer_email,
+        scannedAt: ticket.scanned_at,
+        seatInfo: ticket.seat_info,
+        status: ticket.status,
+        ticketTypeName: ticket.ticket_type_name,
+        ticketPrice: ticket.ticket_price,
+        validatedBy:
+          ticket.validator_first_name && ticket.validator_last_name
+            ? `${ticket.validator_first_name} ${ticket.validator_last_name}`
+            : null,
+      })),
     });
-}));
+  }),
+);
 
 export default router;

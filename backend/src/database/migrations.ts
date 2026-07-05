@@ -13,9 +13,7 @@ export const migrations: Migration[] = [
   {
     version: 1,
     name: 'add_posts_scheduled_at',
-    up: [
-      `ALTER TABLE posts ADD COLUMN scheduled_at DATETIME`,
-    ],
+    up: [`ALTER TABLE posts ADD COLUMN scheduled_at DATETIME`],
   },
   {
     version: 2,
@@ -44,9 +42,7 @@ export const migrations: Migration[] = [
   {
     version: 3,
     name: 'add_workflow_executions_status',
-    up: [
-      `ALTER TABLE workflow_executions ADD COLUMN status TEXT DEFAULT 'pending'`,
-    ],
+    up: [`ALTER TABLE workflow_executions ADD COLUMN status TEXT DEFAULT 'pending'`],
   },
   {
     version: 4,
@@ -357,6 +353,20 @@ export const migrations: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_season_events_type ON season_events(event_type)`,
     ],
   },
+  {
+    version: 14,
+    name: 'add_session_and_login_security',
+    up: [
+      // Invalidate JWTs issued before the last password change (jwt.iat check)
+      `ALTER TABLE users ADD COLUMN password_changed_at TEXT`,
+      // Account lockout against brute-force login attempts
+      `ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER NOT NULL DEFAULT 0`,
+      `ALTER TABLE users ADD COLUMN locked_until TEXT`,
+      // Soft revocation marker for sessions (revoked sessions give 401)
+      `ALTER TABLE user_sessions ADD COLUMN revoked_at TEXT`,
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash)`,
+    ],
+  },
 ];
 
 /**
@@ -376,9 +386,7 @@ export function columnExists(db: any, table: string, column: string): boolean {
  */
 export function tableExists(db: any, table: string): boolean {
   try {
-    const result = db.prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name=?`
-    ).get(table);
+    const result = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(table);
     return !!result;
   } catch {
     return false;
@@ -400,7 +408,10 @@ export function runMigrations(db: any): void {
 
   // Get applied migrations
   const applied = new Set(
-    db.prepare('SELECT version FROM schema_migrations').all().map((r: any) => r.version)
+    db
+      .prepare('SELECT version FROM schema_migrations')
+      .all()
+      .map((r: any) => r.version),
   );
 
   // Run pending migrations
@@ -450,10 +461,7 @@ export function runMigrations(db: any): void {
     }
 
     // Record migration
-    db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(
-      migration.version,
-      migration.name
-    );
+    db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)').run(migration.version, migration.name);
 
     console.log(`  Migration ${migration.version} complete`);
   }

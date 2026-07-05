@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS users (
     last_login DATETIME, -- Laatste keer ingelogd
     onboarded_at DATETIME, -- Wanneer onboarding is voltooid
     offboarded_at DATETIME, -- Wanneer offboarding is voltooid
+    password_changed_at TEXT, -- Laatste wachtwoordwijziging (invalideert oudere JWT's)
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0, -- Mislukte inlogpogingen (brute-force lockout)
+    locked_until TEXT, -- Account gelockt tot dit tijdstip (NULL = niet gelockt)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
@@ -214,6 +217,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL,
+    revoked_at TEXT, -- Soft revocation: ingetrokken sessies geven 401
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -337,6 +341,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 -- Indexen voor betere performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_association ON users(association_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_orchestras_association ON orchestras(association_id);
 CREATE INDEX IF NOT EXISTS idx_music_pieces_instrument ON music_pieces(instrument_id);
 CREATE INDEX IF NOT EXISTS idx_music_pieces_association ON music_pieces(association_id);

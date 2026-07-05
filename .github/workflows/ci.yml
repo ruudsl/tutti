@@ -23,6 +23,8 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit --project backend/tsconfig.json
 
+      # Coverage thresholds are enforced by vitest itself (see backend/vitest.config.ts);
+      # this step fails when coverage drops below the configured thresholds.
       - name: Run tests with coverage
         run: npm test --workspace=backend -- --coverage --reporter=json --outputFile=coverage/test-results.json
 
@@ -33,14 +35,6 @@ jobs:
           directory: ./backend/coverage
           flags: backend
           fail_ci_if_error: false
-
-      - name: Check coverage threshold
-        run: |
-          COVERAGE=$(cat backend/coverage/coverage-summary.json | jq '.total.statements.pct')
-          echo "Backend coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
-            echo "::warning::Coverage is below 50%"
-          fi
 
   frontend:
     name: Frontend
@@ -58,6 +52,7 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit --project frontend/tsconfig.json
 
+      # Coverage thresholds are enforced by vitest itself (see frontend/vitest.config.ts).
       - name: Run tests with coverage
         run: npm test --workspace=frontend -- --coverage
 
@@ -85,11 +80,15 @@ jobs:
 
       - run: npm ci
 
-      - name: Lint backend
-        run: npm run lint --workspace=backend --if-present
+      # The lint script lives in the workspace root and covers backend/src and frontend/src.
+      - name: Lint (ESLint)
+        run: npm run lint
 
-      - name: Lint frontend
-        run: npm run lint --workspace=frontend --if-present
+      # NOTE: a repo-wide `npx prettier --check .` currently fails on ~550 files
+      # (the codebase has never been prettier-formatted). Run `npx prettier --write .`
+      # once and then enable this step:
+      # - name: Format check (Prettier)
+      #   run: npx prettier --check .
 
   security:
     name: Security Audit
@@ -103,8 +102,7 @@ jobs:
           cache: npm
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        run: npm audit --audit-level=critical
 
   docker:
     name: Docker Build
@@ -118,8 +116,28 @@ jobs:
       - name: Build backend image
         uses: docker/build-push-action@v7
         with:
-          context: ./backend
+          context: .
+          file: backend/Dockerfile
           push: false
           tags: tutti-backend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: tutti-frontend:test
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Validate compose files
+        env:
+          JWT_SECRET: ci-dummy-secret
+          ADMIN_INIT_PASSWORD: ci-dummy-password
+          ACME_EMAIL: ci@example.com
+          DOMAIN: example.com
+          TRAEFIK_DASHBOARD_AUTH: 'admin:dummy'
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
