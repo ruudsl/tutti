@@ -53,17 +53,13 @@ async function checkDatabase(): Promise<ServiceStatus> {
         const latency = Date.now() - startTime;
 
         if (result && result.test === 1) {
-            // Get some database stats
-            const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
-            const pieceCount = db.prepare('SELECT COUNT(*) as count FROM music_pieces').get();
+            // Lightweight existence checks on core tables (no COUNT(*) table scans)
+            db.prepare('SELECT 1 FROM users LIMIT 1').get();
+            db.prepare('SELECT 1 FROM music_pieces LIMIT 1').get();
 
             return {
                 status: 'healthy',
                 latency,
-                details: {
-                    userCount: userCount?.count || 0,
-                    pieceCount: pieceCount?.count || 0,
-                },
             };
         }
 
@@ -231,6 +227,28 @@ router.get('/', (req: Request, res: Response) => {
     };
 
     res.status(200).json(response);
+});
+
+/**
+ * @swagger
+ * /api/health/ready:
+ *   get:
+ *     summary: Lightweight readiness probe (public, no auth)
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is ready to accept traffic
+ *       503:
+ *         description: Service is not ready (database unavailable)
+ */
+router.get('/ready', (req: Request, res: Response) => {
+    try {
+        db.prepare('SELECT 1').get();
+        res.status(200).json({ status: 'ready' });
+    } catch (error) {
+        logger.error('Readiness probe failed', { error: (error as Error).message });
+        res.status(503).json({ status: 'unavailable' });
+    }
 });
 
 /**

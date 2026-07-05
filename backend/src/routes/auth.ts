@@ -7,6 +7,7 @@ import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
 import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
+import { registerSession, revokeUserSessions, hashToken } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { loginSchema, changePasswordSchema } from '../validation/schemas';
 import { sendPasswordResetEmail } from '../utils/email';
@@ -57,6 +58,53 @@ interface User {
     association_id: string | null;
     mfa_secret: string | null;
     mfa_enabled: boolean;
+    failed_login_attempts: number | null;
+    locked_until: string | null;
+}
+
+// Account lockout: from this many failed attempts on, the account is locked
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_BASE_MINUTES = 15;
+const LOCKOUT_MAX_MINUTES = 24 * 60; // 24 hours
+
+const GENERIC_LOCKOUT_MESSAGE = 'Te veel mislukte pogingen, probeer later opnieuw.';
+
+function isAccountLocked(user: User): boolean {
+    if (!user.locked_until) return false;
+    const lockedUntil = new Date(user.locked_until).getTime();
+    return !isNaN(lockedUntil) && lockedUntil > Date.now();
+}
+
+/**
+ * Record a failed login attempt. From LOCKOUT_THRESHOLD attempts on, the
+ * account is locked exponentially: 5 attempts -> 15 min, each subsequent
+ * failed attempt doubles the lock, capped at 24 hours.
+ */
+function recordFailedLoginAttempt(user: User, ipAddress?: string, userAgent?: string): void {
+    const attempts = (user.failed_login_attempts || 0) + 1;
+
+    let lockedUntil: string | null = null;
+    if (attempts >= LOCKOUT_THRESHOLD) {
+        const lockMinutes = Math.min(
+            LOCKOUT_BASE_MINUTES * Math.pow(2, attempts - LOCKOUT_THRESHOLD),
+            LOCKOUT_MAX_MINUTES
+        );
+        lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000).toISOString();
+    }
+
+    db.prepare('UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?')
+        .run(attempts, lockedUntil, user.id);
+
+    logAuditEvent(
+        user.id,
+        'login_failed',
+        'user',
+        user.id,
+        `${user.first_name} ${user.last_name}`,
+        { failedAttempts: attempts, lockedUntil },
+        ipAddress,
+        userAgent
+    );
 }
 
 /**
@@ -101,8 +149,25 @@ router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
         throw new ApiError(401, 'Ongeldige inloggegevens.');
     }
 
+    // Account lockout check BEFORE password verification, with a generic
+    // message that doesn't reveal whether the password was correct.
+    if (isAccountLocked(user)) {
+        logAuditEvent(
+            user.id,
+            'login_blocked',
+            'user',
+            user.id,
+            `${user.first_name} ${user.last_name}`,
+            { reason: 'account_locked', lockedUntil: user.locked_until },
+            req.ip,
+            req.get('user-agent')
+        );
+        throw new ApiError(429, GENERIC_LOCKOUT_MESSAGE);
+    }
+
     const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
+        recordFailedLoginAttempt(user, req.ip, req.get('user-agent'));
         throw new ApiError(401, 'Ongeldige inloggegevens.');
     }
 
@@ -125,11 +190,16 @@ router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
         }
     }
 
-    // Update last login timestamp
-    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
+    // Successful login (password + optional MFA verified):
+    // update last login timestamp and reset the failed-attempts counter
+    db.prepare('UPDATE users SET last_login = ?, failed_login_attempts = 0, locked_until = NULL WHERE id = ?')
+        .run(new Date().toISOString(), user.id);
 
     // Generate token and return user data
     const token = generateToken(user);
+
+    // Register the session so it shows up in session management and can be revoked
+    registerSession(user.id, token, req.ip, req.get('user-agent'));
 
     // Log audit event for successful login
     logAuditEvent(

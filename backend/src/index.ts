@@ -83,6 +83,7 @@ import { initWebSocket } from './websocket';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
+import { startScheduler as startBackupScheduler } from './scheduler/backup';
 import healthRoutes from './routes/health';
 import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
@@ -486,6 +487,7 @@ async function startServer() {
             startSeatingScheduler();
             startEmailForwardingScheduler();
             startGdprCleanupScheduler();
+            startBackupScheduler();
         });
     } catch (error) {
         logger.error('Failed to start server:', error);
@@ -499,12 +501,22 @@ setupGlobalErrorHandlers();
 // Graceful shutdown handler
 process.on('SIGTERM', async () => {
     logger.info('SIGTERM received, shutting down gracefully');
+    try {
+        db.flush();
+    } catch (err) {
+        logger.error('Failed to flush database on shutdown', { error: err });
+    }
     await flushSentry();
     process.exit(0);
 });
 
 process.on('SIGINT', async () => {
     logger.info('SIGINT received, shutting down gracefully');
+    try {
+        db.flush();
+    } catch (err) {
+        logger.error('Failed to flush database on shutdown', { error: err });
+    }
     await flushSentry();
     process.exit(0);
 });

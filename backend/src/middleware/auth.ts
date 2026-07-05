@@ -1,6 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '../config';
+import db from '../database/connection';
+import logger from '../utils/logger';
+import {
+    hashToken,
+    findSessionByTokenHash,
+    registerSession,
+    updateSessionActivityByHash,
+} from '../utils/sessionStore';
 
 export interface UserPayload {
     id: string;
@@ -9,8 +17,72 @@ export interface UserPayload {
     associationId: string | null;
 }
 
+type DecodedToken = UserPayload & { iat?: number; exp?: number };
+
 export interface AuthRequest extends Request {
     user?: UserPayload;
+}
+
+/**
+ * Validate the token against the user_sessions table and the user's
+ * password_changed_at timestamp.
+ *
+ * Rules:
+ * - A session that was explicitly revoked -> invalid (401).
+ * - A known, non-revoked session -> valid (its last_active is updated, throttled).
+ * - No session record at all (token issued before session tracking existed):
+ *   the token is only accepted if it was issued after the user's last password
+ *   change, and is then lazily registered (upsert) so it becomes revocable.
+ *
+ * Note: password_changed_at is only checked on the lazy path. Sessions kept
+ * intentionally across a password change (the current session during
+ * change-password) remain valid via their session record; all other sessions
+ * are revoked explicitly at password change/reset time.
+ *
+ * @returns null when valid, otherwise a 401 error message.
+ */
+function validateSession(req: AuthRequest, token: string, decoded: DecodedToken): string | null {
+    const tokenHash = hashToken(token);
+    const session = findSessionByTokenHash(tokenHash);
+
+    if (session) {
+        if (session.revoked_at) {
+            return 'Sessie is beëindigd. Log opnieuw in.';
+        }
+        if (session.user_id !== decoded.id) {
+            return 'Token verlopen of ongeldig.';
+        }
+        updateSessionActivityByHash(tokenHash);
+        return null;
+    }
+
+    // Legacy/unknown token: no session record exists
+    const user = db.prepare('SELECT id, password_changed_at FROM users WHERE id = ?')
+        .get(decoded.id) as { id: string; password_changed_at: string | null } | undefined;
+
+    if (!user) {
+        return 'Token verlopen of ongeldig.';
+    }
+
+    if (user.password_changed_at && decoded.iat !== undefined) {
+        const passwordChangedAt = new Date(user.password_changed_at).getTime();
+        if (!isNaN(passwordChangedAt) && decoded.iat * 1000 < passwordChangedAt) {
+            return 'Token verlopen of ongeldig.';
+        }
+    }
+
+    // Lazily register the session so it shows up in session management
+    // and becomes revocable. Align expiry with the JWT's own expiry.
+    registerSession(
+        decoded.id,
+        token,
+        req.ip,
+        req.get('user-agent'),
+        7,
+        decoded.exp !== undefined ? new Date(decoded.exp * 1000) : undefined
+    );
+
+    return null;
 }
 
 export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
@@ -22,13 +94,31 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
         return res.status(401).json({ error: 'Toegang geweigerd. Geen token opgegeven.' });
     }
 
+    let decoded: DecodedToken;
     try {
-        const decoded = jwt.verify(token, config.jwtSecret) as UserPayload;
-        req.user = decoded;
-        next();
+        decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
     } catch (error) {
         return res.status(401).json({ error: 'Token verlopen of ongeldig.' });
     }
+
+    try {
+        const sessionError = validateSession(req, token, decoded);
+        if (sessionError) {
+            return res.status(401).json({ error: sessionError });
+        }
+    } catch (error) {
+        // Infrastructure error (e.g. database not initialized yet): don't lock
+        // everyone out, but log it. Explicit revocations are handled above.
+        logger.warn('Session validation skipped due to error:', error);
+    }
+
+    req.user = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+        associationId: decoded.associationId,
+    };
+    next();
 }
 
 export function requireRole(...roles: string[]) {
@@ -136,8 +226,24 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
     }
 
     try {
-        const decoded = jwt.verify(token, config.jwtSecret) as UserPayload;
-        req.user = decoded;
+        const decoded = jwt.verify(token, config.jwtSecret) as DecodedToken;
+
+        // Don't attach a user for an explicitly revoked session
+        try {
+            const session = findSessionByTokenHash(hashToken(token));
+            if (session?.revoked_at) {
+                return next();
+            }
+        } catch (error) {
+            logger.warn('Optional auth session check skipped due to error:', error);
+        }
+
+        req.user = {
+            id: decoded.id,
+            email: decoded.email,
+            role: decoded.role,
+            associationId: decoded.associationId,
+        };
     } catch {
         // Ignore invalid tokens in optional auth
     }

@@ -7,6 +7,7 @@ import AdmZip from 'adm-zip';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { FileValidationError } from '../utils/errors';
 import { updateMusicPieceSchema, updateTitleMetaSchema, shareMusicPieceSchema, bulkUpdatePiecesSchema, bulkDeletePiecesSchema } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
@@ -52,7 +53,7 @@ const upload = multer({
         if (file.mimetype === 'application/pdf') {
             cb(null, true);
         } else {
-            cb(new Error('Alleen PDF bestanden zijn toegestaan.'));
+            cb(new FileValidationError());
         }
     },
 });

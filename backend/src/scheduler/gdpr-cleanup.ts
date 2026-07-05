@@ -15,6 +15,7 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const DEFAULT_CLEANUP_HOUR = 3;
 
 let schedulerRunning = false;
+let timeoutHandle: NodeJS.Timeout | null = null;
 let lastCleanupDate: string | null = null;
 
 interface RetentionSetting {
@@ -283,7 +284,7 @@ async function checkAndRunCleanup(): Promise<void> {
 
   // Schedule next check
   if (schedulerRunning) {
-    setTimeout(checkAndRunCleanup, CHECK_INTERVAL_MS);
+    timeoutHandle = setTimeout(checkAndRunCleanup, CHECK_INTERVAL_MS);
   }
 }
 
@@ -302,7 +303,7 @@ export function startScheduler(): void {
   });
 
   // Start checking after a short delay
-  setTimeout(checkAndRunCleanup, 10000);
+  timeoutHandle = setTimeout(checkAndRunCleanup, 10000);
 }
 
 /**
@@ -310,6 +311,10 @@ export function startScheduler(): void {
  */
 export function stopScheduler(): void {
   schedulerRunning = false;
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = null;
+  }
   logger.info('GDPR cleanup scheduler stopped');
 }
 

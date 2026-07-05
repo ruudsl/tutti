@@ -10,6 +10,8 @@ import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import logger from '../utils/logger';
 import config from '../config';
 import db from '../database/connection';
+import { logAuditEvent } from './audit-logs';
+import { getBackupDir } from '../scheduler/backup';
 
 const router = Router();
 
@@ -58,6 +60,9 @@ router.get('/', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, 
 
     // Pipe to response
     archive.pipe(res);
+
+    // Flush pending in-memory changes so the on-disk database file is up-to-date
+    db.flush();
 
     // Add database file
     if (fs.existsSync(DB_PATH)) {
@@ -143,6 +148,21 @@ router.get('/', authenticateToken, requireRole('admin'), ipWhitelistMiddleware, 
 
     // Finalize archive
     await archive.finalize();
+
+    // Audit log the backup download
+    logAuditEvent(
+        req.user!.id,
+        'download',
+        'backup',
+        filename,
+        'Backup download',
+        {
+            pdfFiles: manifest.pdfs.length,
+            mp3Files: manifest.mp3s.length,
+        },
+        req.ip,
+        req.get('user-agent')
+    );
 
     logger.info(`Backup completed: ${filename}`);
 }));
@@ -267,6 +287,22 @@ router.post('/restore', authenticateToken, requireRole('admin'), ipWhitelistMidd
         let restoredDb = false;
         let restoredPdfs = 0;
         let restoredMp3s = 0;
+        let preRestoreSnapshot: string | null = null;
+
+        // Flush pending in-memory changes so the pre-restore snapshot is up-to-date
+        db.flush();
+
+        // Create a pre-restore snapshot of the current database so the restore can be undone
+        if (fs.existsSync(DB_PATH)) {
+            const preRestoreDir = path.join(getBackupDir(), 'pre-restore');
+            if (!fs.existsSync(preRestoreDir)) {
+                fs.mkdirSync(preRestoreDir, { recursive: true });
+            }
+            const snapshotTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            preRestoreSnapshot = path.join(preRestoreDir, `pre-restore-${snapshotTimestamp}.sqlite`);
+            fs.copyFileSync(DB_PATH, preRestoreSnapshot);
+            logger.info(`Created pre-restore snapshot: ${preRestoreSnapshot}`);
+        }
 
         // Ensure directories exist
         if (!fs.existsSync(UPLOAD_DIR)) {
@@ -346,7 +382,32 @@ router.post('/restore', authenticateToken, requireRole('admin'), ipWhitelistMidd
             }
         }
 
+        // Reload the in-memory database from the restored file, otherwise the running
+        // sql.js instance keeps its old copy and the next save() would overwrite
+        // the restored database again.
+        if (restoredDb) {
+            await db.reload();
+            logger.info('In-memory database reloaded from restored file');
+        }
+
         logger.info(`Backup restore completed: db=${restoredDb}, pdfs=${restoredPdfs}, mp3s=${restoredMp3s}`);
+
+        // Audit log the restore (written to the restored database)
+        logAuditEvent(
+            req.user!.id,
+            'restore',
+            'backup',
+            req.file.originalname || 'backup.zip',
+            'Backup restore',
+            {
+                database: restoredDb,
+                pdfFiles: restoredPdfs,
+                mp3Files: restoredMp3s,
+                preRestoreSnapshot,
+            },
+            req.ip,
+            req.get('user-agent')
+        );
 
         res.json({
             success: true,
