@@ -605,26 +605,61 @@ router.post('/tickets/webhooks/payment', asyncHandler(async (req: Request, res: 
     let result;
 
     if (provider === 'mollie') {
-        // Mollie sends payment ID in form body
-        const paymentId = req.body.id;
-        if (!paymentId) {
+        // Mollie sends the payment ID in a form-encoded body. Verification happens
+        // by fetching the payment status back from the Mollie API (fetch-back pattern),
+        // so the ID itself does not need to be trusted.
+        const paymentId = req.body?.id;
+        if (!paymentId || typeof paymentId !== 'string') {
             throw new ApiError(400, 'Missing payment ID');
         }
         result = await handleMollieWebhook(paymentId);
     } else if (provider === 'stripe') {
-        // Stripe sends signed JSON
-        const signature = req.headers['stripe-signature'] as string;
-        const rawBody = JSON.stringify(req.body);
+        // Stripe sends signed JSON. The signature is computed over the exact raw
+        // request bytes, so we MUST verify against the raw body (Buffer) provided
+        // by the express.raw() middleware mounted on this path in index.ts.
+        const signature = req.headers['stripe-signature'];
+        if (!signature || typeof signature !== 'string') {
+            throw new ApiError(400, 'Missing Stripe signature');
+        }
 
-        const verification = verifyStripeWebhook(rawBody, signature);
+        if (!Buffer.isBuffer(req.body)) {
+            // Raw body middleware is not active for this route; verifying against a
+            // re-serialized parsed body would be insecure, so refuse instead.
+            logger.error('Stripe webhook received a parsed body instead of raw bytes - check express.raw() mounting for /api/tickets/webhooks/payment');
+            throw new ApiError(500, 'Webhook misconfigured');
+        }
+
+        const verification = verifyStripeWebhook(req.body, signature);
         if (!verification.valid) {
             throw new ApiError(400, 'Invalid signature');
         }
 
         result = await handleStripeWebhook(verification.event as Record<string, unknown>);
     } else {
-        // Mock payment - check query param or body
-        const orderId = req.body.orderId || req.query.orderId;
+        // Mock payment (no provider configured) - development/testing only.
+        // This branch accepts an unauthenticated orderId and marks it as paid,
+        // so it must never be reachable in production.
+        if (process.env.NODE_ENV === 'production') {
+            logger.warn('Mock payment webhook called in production without a configured payment provider - rejecting', {
+                ip: req.ip,
+            });
+            res.status(403).json({ error: 'Payment webhooks are disabled: no payment provider configured' });
+            return;
+        }
+
+        // express.raw() on this path leaves JSON bodies as a Buffer; parse for dev convenience
+        let body: Record<string, unknown> = {};
+        if (Buffer.isBuffer(req.body)) {
+            try {
+                body = JSON.parse(req.body.toString('utf8'));
+            } catch {
+                body = {};
+            }
+        } else if (req.body && typeof req.body === 'object') {
+            body = req.body;
+        }
+
+        const orderId = body.orderId || req.query.orderId;
         if (orderId) {
             result = { success: true, orderId: orderId as string, status: 'paid' };
         } else {

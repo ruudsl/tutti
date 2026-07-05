@@ -237,6 +237,12 @@ app.use(cors({
     credentials: true,
 }));
 
+// Payment webhook needs the RAW request body for signature verification (Stripe
+// computes the signature over the exact bytes). Mount raw parser for this path
+// BEFORE express.json() so req.body is a Buffer there. Non-JSON content types
+// (e.g. Mollie's form-encoded webhook) fall through to express.urlencoded below.
+app.use('/api/tickets/webhooks/payment', express.raw({ type: 'application/json', limit: '1mb' }));
+
 // Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

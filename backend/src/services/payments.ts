@@ -394,8 +394,12 @@ export async function handleMollieWebhook(paymentId: string): Promise<WebhookRes
 /**
  * Verify and parse Stripe webhook
  */
+// Maximum allowed age of a webhook signature timestamp (replay protection).
+// Matches Stripe's default tolerance of 5 minutes.
+const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+
 export function verifyStripeWebhook(
-    payload: string,
+    payload: Buffer | string,
     signature: string
 ): { valid: boolean; event?: unknown } {
     if (!STRIPE_WEBHOOK_SECRET) {
@@ -404,25 +408,48 @@ export function verifyStripeWebhook(
     }
 
     try {
-        // Compute expected signature
-        const timestamp = signature.split(',').find(s => s.startsWith('t='))?.slice(2);
-        const receivedSig = signature.split(',').find(s => s.startsWith('v1='))?.slice(3);
+        // Signature must be computed over the exact raw request bytes,
+        // NOT a re-serialized (JSON.stringify) version of a parsed body.
+        const payloadBuffer = Buffer.isBuffer(payload)
+            ? payload
+            : Buffer.from(payload, 'utf8');
+
+        const parts = signature.split(',');
+        const timestamp = parts.find(s => s.startsWith('t='))?.slice(2);
+        const receivedSig = parts.find(s => s.startsWith('v1='))?.slice(3);
 
         if (!timestamp || !receivedSig) {
             return { valid: false };
         }
 
-        const signedPayload = `${timestamp}.${payload}`;
-        const expectedSig = crypto
-            .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
-            .update(signedPayload)
-            .digest('hex');
-
-        if (receivedSig !== expectedSig) {
+        // Reject stale timestamps to prevent replay attacks
+        const timestampSeconds = parseInt(timestamp, 10);
+        if (
+            !Number.isFinite(timestampSeconds) ||
+            Math.abs(Math.floor(Date.now() / 1000) - timestampSeconds) > STRIPE_WEBHOOK_TOLERANCE_SECONDS
+        ) {
+            logger.warn('Stripe webhook timestamp outside tolerance window');
             return { valid: false };
         }
 
-        const event = JSON.parse(payload);
+        const expectedSig = crypto
+            .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
+            .update(`${timestamp}.`)
+            .update(payloadBuffer)
+            .digest('hex');
+
+        // Constant-time comparison to prevent timing attacks
+        const expectedBuffer = Buffer.from(expectedSig, 'hex');
+        const receivedBuffer = Buffer.from(receivedSig, 'hex');
+        if (
+            expectedBuffer.length !== receivedBuffer.length ||
+            !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+        ) {
+            return { valid: false };
+        }
+
+        // Only parse the payload AFTER the signature has been verified
+        const event = JSON.parse(payloadBuffer.toString('utf8'));
         return { valid: true, event };
     } catch (error) {
         logger.error('Stripe webhook verification failed:', error);
