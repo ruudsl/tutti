@@ -25,21 +25,28 @@ export const getMusicList = async (id: string): Promise<MusicList & { pieces: Mu
   return data;
 };
 
-export const createMusicList = async (name: string, orchestraId: string, options?: {
-  listType?: 'regular' | 'concert';
-  concertDate?: string | null;
-  concertLocation?: string | null;
-}): Promise<{ id: string }> => {
+export const createMusicList = async (
+  name: string,
+  orchestraId: string,
+  options?: {
+    listType?: 'regular' | 'concert';
+    concertDate?: string | null;
+    concertLocation?: string | null;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post('/music-lists', { name, orchestraId, ...options });
   return data;
 };
 
-export const updateMusicList = async (id: string, listData: {
-  name: string;
-  listType?: 'regular' | 'concert';
-  concertDate?: string | null;
-  concertLocation?: string | null;
-}): Promise<void> => {
+export const updateMusicList = async (
+  id: string,
+  listData: {
+    name: string;
+    listType?: 'regular' | 'concert';
+    concertDate?: string | null;
+    concertLocation?: string | null;
+  },
+): Promise<void> => {
   await api.put(`/music-lists/${id}`, listData);
 };
 
@@ -122,7 +129,7 @@ export const getMusicTitles = async (filters?: {
 export const uploadMusicPieces = async (
   files: File[],
   listId?: string,
-  youtubeUrls?: Record<string, string>
+  youtubeUrls?: Record<string, string>,
 ): Promise<{ uploaded: any[]; errors?: any[] }> => {
   const formData = new FormData();
   files.forEach((file) => formData.append('files', file));
@@ -137,7 +144,7 @@ export const uploadMusicPieces = async (
 
 export const uploadMusicPiecesZip = async (
   zipFile: File,
-  listId?: string
+  listId?: string,
 ): Promise<{ uploaded: any[]; errors?: any[]; skipped?: string[] }> => {
   const formData = new FormData();
   formData.append('zip', zipFile);
@@ -159,16 +166,19 @@ export const refreshInstrumentLinks = async (): Promise<{
   return data;
 };
 
-export const updateMusicPiece = async (id: string, pieceData: {
-  title?: string;
-  arranger?: string;
-  instrumentId?: string;
-  tuning?: string;
-  groupNumber?: string;
-  clef?: string;
-  youtubeUrl?: string;
-  isShared?: boolean;
-}): Promise<void> => {
+export const updateMusicPiece = async (
+  id: string,
+  pieceData: {
+    title?: string;
+    arranger?: string;
+    instrumentId?: string;
+    tuning?: string;
+    groupNumber?: string;
+    clef?: string;
+    youtubeUrl?: string;
+    isShared?: boolean;
+  },
+): Promise<void> => {
   await api.put(`/music-pieces/${id}`, pieceData);
 };
 
@@ -212,7 +222,9 @@ export const getSharedMusicPieces = async (): Promise<MusicPiece[]> => {
   return data;
 };
 
-export const getYouTubeMeta = async (url: string): Promise<{
+export const getYouTubeMeta = async (
+  url: string,
+): Promise<{
   title: string;
   author: string;
   thumbnailUrl: string;
@@ -222,7 +234,10 @@ export const getYouTubeMeta = async (url: string): Promise<{
   return data;
 };
 
-export const getTitleMeta = async (title: string, arranger?: string | null): Promise<{
+export const getTitleMeta = async (
+  title: string,
+  arranger?: string | null,
+): Promise<{
   title: string;
   arranger: string | null;
   youtubeUrl: string | null;
@@ -257,7 +272,7 @@ export const bulkUpdatePieces = async (
     instrumentId?: string | null;
     addToListId?: string;
     removeFromListId?: string;
-  }
+  },
 ): Promise<{ message: string; updated: number }> => {
   const { data } = await api.put('/music-pieces/bulk', { pieceIds, updates });
   return data;
@@ -269,7 +284,10 @@ export const bulkDeletePieces = async (pieceIds: string[]): Promise<{ message: s
 };
 
 // MP3 upload for titles
-export const uploadTitleMp3 = async (titleId: string, file: File): Promise<{ message: string; mp3FilePath: string }> => {
+export const uploadTitleMp3 = async (
+  titleId: string,
+  file: File,
+): Promise<{ message: string; mp3FilePath: string }> => {
   const formData = new FormData();
   formData.append('mp3', file);
   const { data } = await api.post(`/music-pieces/title-mp3/${titleId}`, formData, {
@@ -283,10 +301,13 @@ export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
 };
 
 // PDF Thumbnails
-export const getPdfThumbnailUrl = (filename: string, options?: {
-  page?: number;
-  size?: 'small' | 'medium' | 'large';
-}): string => {
+export const getPdfThumbnailUrl = (
+  filename: string,
+  options?: {
+    page?: number;
+    size?: 'small' | 'medium' | 'large';
+  },
+): string => {
   const baseUrl = api.defaults.baseURL || '/api';
   const params = new URLSearchParams();
   if (options?.page) params.set('page', String(options.page));
@@ -301,9 +322,11 @@ export const getPdfInfo = async (filename: string): Promise<{ filename: string; 
 };
 
 /**
- * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs.
+ * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs,
+ * or a short-lived download token via withDownloadToken() from utils/downloadUrl.
  * Tokens in URLs can be logged by servers, proxies, and browser history.
- * This function is kept for backward compatibility with existing audio elements.
+ * This function is kept for backward compatibility with existing audio elements;
+ * the backend logs a warning whenever this legacy full-JWT query path is used.
  */
 export const getMp3Url = (filename: string): string => {
   const baseUrl = api.defaults.baseURL || '';

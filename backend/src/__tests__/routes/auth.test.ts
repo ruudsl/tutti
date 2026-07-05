@@ -6,6 +6,8 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { generateSecret, generateSync } from 'otplib';
 import '../setup';
 import app from '../testApp';
 import testDb from '../testDb';
@@ -18,6 +20,16 @@ import {
   TestUser,
   TestAssociation,
 } from '../testUtils';
+
+// Reset tokens are stored as SHA-256 hashes; tests insert the hash and send the plaintext
+const hashResetToken = (token: string): string => crypto.createHash('sha256').update(token).digest('hex');
+
+// Recovery codes are stored as SHA-256 hashes of the normalized code (uppercase, no separators)
+const hashRecoveryCode = (code: string): string =>
+  crypto
+    .createHash('sha256')
+    .update(code.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    .digest('hex');
 
 describe('Auth Routes', () => {
   let association: TestAssociation;
@@ -300,7 +312,7 @@ describe('Auth Routes', () => {
           `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`,
         )
-        .run('token-id-1', memberUser.id, resetToken, expiresAt.toISOString());
+        .run('token-id-1', memberUser.id, hashResetToken(resetToken), expiresAt.toISOString());
     });
 
     it('should reset password with valid token', async () => {
@@ -343,7 +355,7 @@ describe('Auth Routes', () => {
           `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`,
         )
-        .run('token-id-2', memberUser.id, expiredToken, expiredAt);
+        .run('token-id-2', memberUser.id, hashResetToken(expiredToken), expiredAt);
 
       const response = await request(app).post('/api/auth/reset-password').send({
         token: expiredToken,
@@ -355,7 +367,7 @@ describe('Auth Routes', () => {
 
     it('should fail with already used token', async () => {
       // Mark token as used
-      testDb.prepare('UPDATE password_reset_tokens SET used = 1 WHERE token = ?').run(resetToken);
+      testDb.prepare('UPDATE password_reset_tokens SET used = 1 WHERE token = ?').run(hashResetToken(resetToken));
 
       const response = await request(app).post('/api/auth/reset-password').send({
         token: resetToken,
@@ -380,9 +392,48 @@ describe('Auth Routes', () => {
         newPassword: 'newSecurePassword123',
       });
 
-      const token = testDb.prepare('SELECT used FROM password_reset_tokens WHERE token = ?').get(resetToken) as any;
+      const token = testDb
+        .prepare('SELECT used FROM password_reset_tokens WHERE token = ?')
+        .get(hashResetToken(resetToken)) as any;
 
       expect(token.used).toBe(1);
+    });
+
+    it('should store only a hash of the reset token, never the plaintext', async () => {
+      await request(app).post('/api/auth/forgot-password').send({
+        email: memberUser.email,
+      });
+
+      const tokens = testDb
+        .prepare('SELECT token FROM password_reset_tokens WHERE user_id = ?')
+        .all(memberUser.id) as any[];
+
+      expect(tokens.length).toBeGreaterThan(0);
+      // SHA-256 hex digest is 64 characters
+      for (const row of tokens) {
+        expect(row.token).toMatch(/^[0-9a-f]{64}$/);
+      }
+    });
+
+    it('should reject an outstanding plaintext (legacy) token without crashing', async () => {
+      const legacyToken = 'legacy-plaintext-token';
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1);
+
+      // Simulate a token stored in plaintext by an older version
+      testDb
+        .prepare(
+          `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
+                 VALUES (?, ?, ?, ?, 0)`,
+        )
+        .run('legacy-token-id', memberUser.id, legacyToken, expiresAt.toISOString());
+
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: legacyToken,
+        newPassword: 'newSecurePassword123',
+      });
+
+      expect(response.status).toBe(400);
     });
   });
 
@@ -399,7 +450,7 @@ describe('Auth Routes', () => {
           `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`,
         )
-        .run('validate-token-id', memberUser.id, resetToken, expiresAt.toISOString());
+        .run('validate-token-id', memberUser.id, hashResetToken(resetToken), expiresAt.toISOString());
     });
 
     it('should return valid for valid token', async () => {
@@ -425,7 +476,7 @@ describe('Auth Routes', () => {
           `INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used)
                  VALUES (?, ?, ?, ?, 0)`,
         )
-        .run('expired-validate-id', memberUser.id, expiredToken, expiredAt);
+        .run('expired-validate-id', memberUser.id, hashResetToken(expiredToken), expiredAt);
 
       const response = await request(app).get('/api/auth/reset-password/validate').query({ token: expiredToken });
 
@@ -590,6 +641,220 @@ describe('Auth Routes', () => {
 
       it('should require authentication', async () => {
         const response = await request(app).post('/api/auth/mfa/disable').send({ password: 'somepassword' });
+
+        expect(response.status).toBe(401);
+      });
+
+      it('should delete recovery codes when MFA is disabled', async () => {
+        const mfaUser = createTestUser(association.id, {
+          email: 'mfa-disable-codes@test.com',
+          mfaEnabled: true,
+          mfaSecret: 'JBSWY3DPEHPK3PXP',
+        });
+        const mfaToken = generateTestToken(mfaUser);
+
+        testDb
+          .prepare('INSERT INTO mfa_recovery_codes (id, user_id, code_hash) VALUES (?, ?, ?)')
+          .run('rc-disable-1', mfaUser.id, hashRecoveryCode('ABCD-EFGH-JKMN'));
+
+        const response = await request(app)
+          .post('/api/auth/mfa/disable')
+          .set('Authorization', `Bearer ${mfaToken}`)
+          .send({ password: mfaUser.password });
+
+        expect(response.status).toBe(200);
+
+        const codes = testDb.prepare('SELECT * FROM mfa_recovery_codes WHERE user_id = ?').all(mfaUser.id);
+        expect(codes.length).toBe(0);
+      });
+    });
+
+    describe('MFA enable flow with recovery codes and encrypted secret', () => {
+      it('should return 10 one-time recovery codes and store the secret encrypted', async () => {
+        // Start setup to obtain the plaintext secret
+        const setupResponse = await request(app)
+          .post('/api/auth/mfa/setup')
+          .set('Authorization', `Bearer ${memberToken}`);
+
+        expect(setupResponse.status).toBe(200);
+        const secret = setupResponse.body.secret;
+
+        // The stored secret must be encrypted, not the plaintext
+        const storedAfterSetup = testDb.prepare('SELECT mfa_secret FROM users WHERE id = ?').get(memberUser.id) as any;
+        expect(storedAfterSetup.mfa_secret).not.toBe(secret);
+
+        // Enable with a valid TOTP code
+        const code = generateSync({ secret });
+        const enableResponse = await request(app)
+          .post('/api/auth/mfa/enable')
+          .set('Authorization', `Bearer ${memberToken}`)
+          .send({ code });
+
+        expect(enableResponse.status).toBe(200);
+        expect(enableResponse.body).toHaveProperty('mfaEnabled', true);
+        expect(enableResponse.body.recoveryCodes).toHaveLength(10);
+        for (const recoveryCode of enableResponse.body.recoveryCodes) {
+          expect(recoveryCode).toMatch(/^[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}$/);
+        }
+
+        // Only hashes are stored in the database
+        const rows = testDb
+          .prepare('SELECT code_hash, used_at FROM mfa_recovery_codes WHERE user_id = ?')
+          .all(memberUser.id) as any[];
+        expect(rows.length).toBe(10);
+        for (const row of rows) {
+          expect(row.code_hash).toMatch(/^[0-9a-f]{64}$/);
+          expect(row.used_at).toBeNull();
+        }
+
+        // Login with TOTP still works against the encrypted secret
+        const loginResponse = await request(app)
+          .post('/api/auth/login')
+          .send({
+            email: memberUser.email,
+            password: memberUser.password,
+            mfaCode: generateSync({ secret }),
+          });
+        expect(loginResponse.status).toBe(200);
+        expect(loginResponse.body).toHaveProperty('token');
+      });
+    });
+
+    describe('Login with recovery code', () => {
+      const recoveryCode = 'ABCD-EFGH-JKMN';
+      let mfaUser: TestUser;
+
+      beforeEach(() => {
+        mfaUser = createTestUser(association.id, {
+          email: 'mfa-recovery@test.com',
+          mfaEnabled: true,
+          mfaSecret: 'JBSWY3DPEHPK3PXP',
+        });
+
+        testDb
+          .prepare('INSERT INTO mfa_recovery_codes (id, user_id, code_hash) VALUES (?, ?, ?)')
+          .run('rc-login-1', mfaUser.id, hashRecoveryCode(recoveryCode));
+      });
+
+      it('should allow login with an unused recovery code and mark it as used', async () => {
+        const response = await request(app).post('/api/auth/login').send({
+          email: mfaUser.email,
+          password: mfaUser.password,
+          mfaCode: recoveryCode,
+        });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('token');
+
+        const row = testDb.prepare('SELECT used_at FROM mfa_recovery_codes WHERE id = ?').get('rc-login-1') as any;
+        expect(row.used_at).not.toBeNull();
+      });
+
+      it('should reject a recovery code that was already used', async () => {
+        // First use succeeds
+        await request(app).post('/api/auth/login').send({
+          email: mfaUser.email,
+          password: mfaUser.password,
+          mfaCode: recoveryCode,
+        });
+
+        // Second use fails
+        const response = await request(app).post('/api/auth/login').send({
+          email: mfaUser.email,
+          password: mfaUser.password,
+          mfaCode: recoveryCode,
+        });
+
+        expect(response.status).toBe(401);
+      });
+
+      it('should reject an unknown recovery code', async () => {
+        const response = await request(app).post('/api/auth/login').send({
+          email: mfaUser.email,
+          password: mfaUser.password,
+          mfaCode: 'ZZZZ-ZZZZ-ZZZZ',
+        });
+
+        expect(response.status).toBe(401);
+      });
+
+      it('should re-encrypt a legacy plaintext MFA secret after successful login', async () => {
+        await request(app).post('/api/auth/login').send({
+          email: mfaUser.email,
+          password: mfaUser.password,
+          mfaCode: recoveryCode,
+        });
+
+        const user = testDb.prepare('SELECT mfa_secret FROM users WHERE id = ?').get(mfaUser.id) as any;
+        expect(user.mfa_secret).not.toBe('JBSWY3DPEHPK3PXP');
+      });
+    });
+
+    describe('POST /api/auth/mfa/recovery-codes/regenerate', () => {
+      // generateSync requires a full-length secret (>= 16 bytes)
+      const mfaSecret = generateSecret();
+      let mfaUser: TestUser;
+      let mfaToken: string;
+
+      beforeEach(() => {
+        mfaUser = createTestUser(association.id, {
+          email: 'mfa-regenerate@test.com',
+          mfaEnabled: true,
+          mfaSecret,
+        });
+        mfaToken = generateTestToken(mfaUser);
+
+        testDb
+          .prepare('INSERT INTO mfa_recovery_codes (id, user_id, code_hash) VALUES (?, ?, ?)')
+          .run('rc-old-1', mfaUser.id, hashRecoveryCode('ABCD-EFGH-JKMN'));
+      });
+
+      it('should replace old codes with 10 new codes given a valid TOTP code', async () => {
+        const response = await request(app)
+          .post('/api/auth/mfa/recovery-codes/regenerate')
+          .set('Authorization', `Bearer ${mfaToken}`)
+          .send({ code: generateSync({ secret: mfaSecret }) });
+
+        expect(response.status).toBe(200);
+        expect(response.body.recoveryCodes).toHaveLength(10);
+
+        // Old code is gone
+        const oldRow = testDb.prepare('SELECT * FROM mfa_recovery_codes WHERE id = ?').get('rc-old-1');
+        expect(oldRow).toBeUndefined();
+
+        const rows = testDb.prepare('SELECT * FROM mfa_recovery_codes WHERE user_id = ?').all(mfaUser.id);
+        expect(rows.length).toBe(10);
+      });
+
+      it('should fail without a code', async () => {
+        const response = await request(app)
+          .post('/api/auth/mfa/recovery-codes/regenerate')
+          .set('Authorization', `Bearer ${mfaToken}`)
+          .send({});
+
+        expect(response.status).toBe(400);
+      });
+
+      it('should fail with an invalid TOTP code', async () => {
+        const response = await request(app)
+          .post('/api/auth/mfa/recovery-codes/regenerate')
+          .set('Authorization', `Bearer ${mfaToken}`)
+          .send({ code: '000000' });
+
+        expect(response.status).toBe(401);
+      });
+
+      it('should fail when MFA is not enabled', async () => {
+        const response = await request(app)
+          .post('/api/auth/mfa/recovery-codes/regenerate')
+          .set('Authorization', `Bearer ${memberToken}`)
+          .send({ code: '123456' });
+
+        expect(response.status).toBe(400);
+      });
+
+      it('should require authentication', async () => {
+        const response = await request(app).post('/api/auth/mfa/recovery-codes/regenerate').send({ code: '123456' });
 
         expect(response.status).toBe(401);
       });

@@ -13,9 +13,19 @@ interface CacheOptions {
    */
   ttlSeconds?: number;
   /**
-   * Whether to vary cache by user's association ID. Default: false
+   * Whether to vary cache by user's association ID. Default: true.
+   * Keep this enabled for any endpoint that returns association-scoped data,
+   * otherwise cached responses leak between associations (multi-tenancy).
+   * Only set to false for truly global, tenant-independent data.
    */
   varyByAssociation?: boolean;
+  /**
+   * Whether to vary cache by user ID. Default: false.
+   * REQUIRED for any endpoint that returns per-user data (e.g. /my-*
+   * routes), otherwise responses leak between users of the same
+   * association.
+   */
+  varyByUser?: boolean;
   /**
    * Additional cache key suffix. Default: undefined
    */
@@ -38,6 +48,10 @@ function generateCacheKey(req: Request, options: CacheOptions): string {
     parts.push(`assoc:${(req as any).user.associationId}`);
   }
 
+  if (options.varyByUser && (req as any).user?.id) {
+    parts.push(`user:${(req as any).user.id}`);
+  }
+
   if (options.keySuffix) {
     parts.push(options.keySuffix);
   }
@@ -53,7 +67,7 @@ function generateETag(data: unknown): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return `"${Math.abs(hash).toString(16)}"`;
@@ -64,7 +78,7 @@ function generateETag(data: unknown): string {
  */
 function isValid(entry: CacheEntry, ttlSeconds: number): boolean {
   const now = Date.now();
-  return (now - entry.timestamp) < (ttlSeconds * 1000);
+  return now - entry.timestamp < ttlSeconds * 1000;
 }
 
 /**
@@ -76,11 +90,11 @@ function isValid(entry: CacheEntry, ttlSeconds: number): boolean {
  * router.get('/', authenticateToken, cacheMiddleware(), handler);
  *
  * @example
- * // Cache for 10 minutes, vary by association
- * router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 600, varyByAssociation: true }), handler);
+ * // Cache for 10 minutes; global data that is identical for every association
+ * router.get('/', authenticateToken, cacheMiddleware({ ttlSeconds: 600, varyByAssociation: false }), handler);
  */
 export function cacheMiddleware(options: CacheOptions = {}) {
-  const { ttlSeconds = 300, varyByAssociation = false, keySuffix } = options;
+  const { ttlSeconds = 300, varyByAssociation = true, varyByUser = false, keySuffix } = options;
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Only cache GET requests
@@ -88,7 +102,7 @@ export function cacheMiddleware(options: CacheOptions = {}) {
       return next();
     }
 
-    const cacheKey = generateCacheKey(req, { ttlSeconds, varyByAssociation, keySuffix });
+    const cacheKey = generateCacheKey(req, { ttlSeconds, varyByAssociation, varyByUser, keySuffix });
 
     // Register this path for invalidation tracking
     cachedPaths.add(req.baseUrl + req.path);
@@ -227,7 +241,7 @@ export function cleanupExpiredCache(maxAge: number = 600): void {
   let cleaned = 0;
 
   for (const [key, entry] of cache.entries()) {
-    if ((now - entry.timestamp) > (maxAge * 1000)) {
+    if (now - entry.timestamp > maxAge * 1000) {
       cache.delete(key);
       cleaned++;
     }

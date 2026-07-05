@@ -7,6 +7,7 @@ import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicLists } from '../hooks/useMusicLists';
 import { useInstruments } from '../hooks/useInstruments';
 import { savePdfAsMusicPiece } from '../api';
+import { withDownloadToken } from '../utils/downloadUrl';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -66,13 +67,22 @@ export default function PdfTools() {
   const [pdfInfo, setPdfInfo] = useState<PdfInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([{ start: 1, end: 1, name: '', instrumentId: '', number: 1 }]);
+  const [splitRanges, setSplitRanges] = useState<SplitRange[]>([
+    { start: 1, end: 1, name: '', instrumentId: '', number: 1 },
+  ]);
   const [splitTitle, setSplitTitle] = useState('');
   const [splitArranger, setSplitArranger] = useState('');
   const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
-  const [a3Result, setA3Result] = useState<{ filepath: string; filename: string; splitCount: number; newPageCount: number } | null>(null);
+  const [a3Result, setA3Result] = useState<{
+    filepath: string;
+    filename: string;
+    splitCount: number;
+    newPageCount: number;
+  } | null>(null);
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
-  const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(null);
+  const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(
+    null,
+  );
   const [thumbnailSize, setThumbnailSize] = useState(100);
   const [savingAsMusicPiece, setSavingAsMusicPiece] = useState<string | null>(null);
   const [savingAll, setSavingAll] = useState(false);
@@ -90,7 +100,7 @@ export default function PdfTools() {
 
   // Create instrument options with tuning and clef combinations
   const instrumentOptions = useMemo((): InstrumentOption[] => {
-    return instruments.map(inst => ({
+    return instruments.map((inst) => ({
       id: inst.id,
       label: `${inst.name}${inst.tuning ? ` (${inst.tuning})` : ''}${inst.clef ? ` - ${inst.clef}` : ''}`,
       name: inst.name,
@@ -109,7 +119,7 @@ export default function PdfTools() {
     // Remove .pdf extension
     let base = filename.replace(/\.pdf$/i, '');
     // Replace underscores and hyphens with spaces
-    base = base.replace(/[_\-]+/g, ' ');
+    base = base.replace(/[_-]+/g, ' ');
     // Remove multiple spaces
     base = base.replace(/\s+/g, ' ');
     // Remove leading/trailing spaces
@@ -166,8 +176,8 @@ export default function PdfTools() {
 
     try {
       // Transform ranges to include generated filenames and display names
-      const displayNames = splitRanges.map(range => generateDisplayName(range));
-      const rangesWithNames = splitRanges.map(range => ({
+      const displayNames = splitRanges.map((range) => generateDisplayName(range));
+      const rangesWithNames = splitRanges.map((range) => ({
         start: range.start,
         end: range.end,
         name: generateFilename(range),
@@ -191,7 +201,7 @@ export default function PdfTools() {
       // Enrich results with display names and metadata
       const enrichedResults = data.results.map((result: SplitResult, index: number) => {
         const range = splitRanges[index];
-        const instrument = range ? instrumentOptions.find(i => i.id === range.instrumentId) : null;
+        const instrument = range ? instrumentOptions.find((i) => i.id === range.instrumentId) : null;
         return {
           ...result,
           displayName: displayNames[index] || result.name,
@@ -281,13 +291,21 @@ export default function PdfTools() {
     }
   };
 
-  const downloadFile = (filepath: string, _filename: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+  const downloadFile = async (filepath: string, _filename: string) => {
+    // Open the window synchronously so popup blockers don't interfere,
+    // then navigate it once the short-lived download token is available.
+    const downloadWindow = window.open('', '_blank');
+    try {
+      const url = await withDownloadToken(`${API_BASE}/pdf-tools/download/${filepath}`);
+      if (downloadWindow) {
+        downloadWindow.location.href = url;
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch {
+      downloadWindow?.close();
       showError(t('common.sessionExpired'));
-      return;
     }
-    window.open(`${API_BASE}/pdf-tools/download/${filepath}?token=${encodeURIComponent(token)}`, '_blank');
   };
 
   const handleSaveAsMusicPiece = async (filepath: string, filename: string, resultItem?: SplitResult) => {
@@ -298,20 +316,22 @@ export default function PdfTools() {
 
     setSavingAsMusicPiece(filepath);
     try {
-      const metadata = resultItem ? {
-        title: resultItem.title,
-        arranger: resultItem.arranger,
-        instrumentId: resultItem.instrumentId,
-        tuning: resultItem.tuning,
-        groupNumber: resultItem.groupNumber,
-        clef: resultItem.clef,
-      } : undefined;
+      const metadata = resultItem
+        ? {
+            title: resultItem.title,
+            arranger: resultItem.arranger,
+            instrumentId: resultItem.instrumentId,
+            tuning: resultItem.tuning,
+            groupNumber: resultItem.groupNumber,
+            clef: resultItem.clef,
+          }
+        : undefined;
 
       const result = await savePdfAsMusicPiece(filepath, filename, selectedList || undefined, metadata);
       if (result.success) {
         showSuccess(t('pdfTools.savedAsMusicPiece', { title: result.title }));
         // Mark as saved instead of removing
-        setSplitResults(prev => prev.map(r => r.filepath === filepath ? { ...r, saved: true } : r));
+        setSplitResults((prev) => prev.map((r) => (r.filepath === filepath ? { ...r, saved: true } : r)));
       }
     } catch (error: any) {
       showError(error.response?.data?.error || t('pdfTools.errorSavingAsMusicPiece'));
@@ -326,7 +346,7 @@ export default function PdfTools() {
   };
 
   const handleDownloadAll = async () => {
-    const filepaths = splitResults.filter(r => r.filepath).map(r => r.filepath!);
+    const filepaths = splitResults.filter((r) => r.filepath).map((r) => r.filepath!);
     if (filepaths.length === 0) return;
 
     setDownloadingAll(true);
@@ -372,7 +392,7 @@ export default function PdfTools() {
       return;
     }
 
-    const toSave = splitResults.filter(r => r.filepath && !r.saved);
+    const toSave = splitResults.filter((r) => r.filepath && !r.saved);
     if (toSave.length === 0) return;
 
     setSavingAll(true);
@@ -389,7 +409,12 @@ export default function PdfTools() {
           groupNumber: result.groupNumber,
           clef: result.clef,
         };
-        const saveResult = await savePdfAsMusicPiece(result.filepath!, result.filename!, selectedList || undefined, metadata);
+        const saveResult = await savePdfAsMusicPiece(
+          result.filepath!,
+          result.filename!,
+          selectedList || undefined,
+          metadata,
+        );
         if (saveResult.success) {
           savedCount++;
           savedFilepaths.push(result.filepath!);
@@ -402,7 +427,7 @@ export default function PdfTools() {
     if (savedCount > 0) {
       showSuccess(t('pdfTools.allSavedAsMusicPieces', { count: savedCount }));
       // Mark as saved instead of removing
-      setSplitResults(prev => prev.map(r => savedFilepaths.includes(r.filepath!) ? { ...r, saved: true } : r));
+      setSplitResults((prev) => prev.map((r) => (savedFilepaths.includes(r.filepath!) ? { ...r, saved: true } : r)));
     }
     setSavingAll(false);
   };
@@ -411,13 +436,16 @@ export default function PdfTools() {
     const lastRange = splitRanges[splitRanges.length - 1];
     const newStart = lastRange ? lastRange.end + 1 : 1;
     const newEnd = pdfInfo ? Math.min(newStart, pdfInfo.pageCount) : newStart;
-    setSplitRanges([...splitRanges, {
-      start: newStart,
-      end: newEnd,
-      name: '',
-      instrumentId: '',
-      number: 1,
-    }]);
+    setSplitRanges([
+      ...splitRanges,
+      {
+        start: newStart,
+        end: newEnd,
+        name: '',
+        instrumentId: '',
+        number: 1,
+      },
+    ]);
   };
 
   // Calculate the next number for an instrument based on previous selections
@@ -449,7 +477,7 @@ export default function PdfTools() {
 
   // Generate filename (underscores only as separator between fields, spaces preserved within)
   const generateFilename = (range: SplitRange): string => {
-    const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
+    const instrument = instrumentOptions.find((i) => i.id === range.instrumentId);
     if (!instrument) {
       return range.name || 'Deel';
     }
@@ -468,7 +496,7 @@ export default function PdfTools() {
 
   // Generate display name (human-readable with spaces)
   const generateDisplayName = (range: SplitRange): string => {
-    const instrument = instrumentOptions.find(i => i.id === range.instrumentId);
+    const instrument = instrumentOptions.find((i) => i.id === range.instrumentId);
     if (!instrument) {
       return range.name || 'Deel';
     }
@@ -567,26 +595,36 @@ export default function PdfTools() {
 
               {pdfInfo && pdfFile && (
                 <>
-                  <div style={{
-                    padding: '1rem',
-                    background: 'var(--background)',
-                    borderRadius: '0.5rem',
-                    marginBottom: '1rem'
-                  }}>
+                  <div
+                    style={{
+                      padding: '1rem',
+                      background: 'var(--background)',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                    }}
+                  >
                     <strong>{pdfInfo.filename}</strong>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
                       {pdfInfo.pageCount} {t('pdfTools.pages')} |{' '}
-                      {pdfInfo.pages.map(p => p.paperSize).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
+                      {pdfInfo.pages
+                        .map((p) => p.paperSize)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .join(', ')}
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '0.75rem',
+                      }}
+                    >
                       <h4 style={{ margin: 0 }}>{t('pdfTools.preview')}</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                          {t('pdfTools.size')}:
-                        </span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('pdfTools.size')}:</span>
                         <input
                           type="range"
                           min="60"
@@ -602,7 +640,7 @@ export default function PdfTools() {
                     </div>
                     <PdfPagePreview
                       file={pdfFile}
-                      selectedRanges={splitRanges.map(range => ({
+                      selectedRanges={splitRanges.map((range) => ({
                         start: range.start,
                         end: range.end,
                         name: generateFilename(range),
@@ -614,12 +652,14 @@ export default function PdfTools() {
                   <h4 style={{ marginBottom: '1rem' }}>{t('pdfTools.splitIntoParts')}</h4>
 
                   {/* General title and arranger fields */}
-                  <div style={{
-                    padding: '1rem',
-                    background: 'var(--background)',
-                    borderRadius: '0.5rem',
-                    marginBottom: '1rem'
-                  }}>
+                  <div
+                    style={{
+                      padding: '1rem',
+                      background: 'var(--background)',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                    }}
+                  >
                     <div className="grid grid-2" style={{ gap: '1rem' }}>
                       <div className="form-group mb-0">
                         <label className="form-label">{t('pdfTools.musicTitle')}</label>
@@ -708,11 +748,7 @@ export default function PdfTools() {
                     <button className="btn btn-outline" onClick={addSplitRange}>
                       {t('pdfTools.addPart')}
                     </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleSplit}
-                      disabled={processing}
-                    >
+                    <button className="btn btn-primary" onClick={handleSplit} disabled={processing}>
                       {processing ? t('pdfTools.splitting') : t('pdfTools.splitPdf')}
                     </button>
                   </div>
@@ -722,13 +758,15 @@ export default function PdfTools() {
                       <h4>{t('pdfTools.results')}</h4>
 
                       {/* Orchestra/List selection for saving as music piece */}
-                      <div style={{
-                        padding: '1rem',
-                        background: 'var(--background)',
-                        borderRadius: '0.5rem',
-                        marginBottom: '1rem',
-                        marginTop: '0.5rem'
-                      }}>
+                      <div
+                        style={{
+                          padding: '1rem',
+                          background: 'var(--background)',
+                          borderRadius: '0.5rem',
+                          marginBottom: '1rem',
+                          marginTop: '0.5rem',
+                        }}
+                      >
                         <div style={{ marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.875rem' }}>
                           {t('pdfTools.saveAsMusicPieceDescription')}
                         </div>
@@ -762,19 +800,15 @@ export default function PdfTools() {
                       </div>
 
                       {/* Bulk action buttons */}
-                      {splitResults.filter(r => r.filepath).length > 1 && (
+                      {splitResults.filter((r) => r.filepath).length > 1 && (
                         <div className="flex gap-2 mb-2">
-                          <button
-                            className="btn btn-outline"
-                            onClick={handleDownloadAll}
-                            disabled={downloadingAll}
-                          >
+                          <button className="btn btn-outline" onClick={handleDownloadAll} disabled={downloadingAll}>
                             {downloadingAll ? t('pdfTools.downloading') : t('pdfTools.downloadAll')}
                           </button>
                           <button
                             className="btn btn-primary"
                             onClick={handleSaveAllAsMusicPieces}
-                            disabled={!selectedOrchestra || savingAll || splitResults.every(r => r.saved)}
+                            disabled={!selectedOrchestra || savingAll || splitResults.every((r) => r.saved)}
                             title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
                           >
                             {savingAll ? t('pdfTools.saving') : t('pdfTools.saveAllAsMusicPieces')}
@@ -791,10 +825,14 @@ export default function PdfTools() {
                               justifyContent: 'space-between',
                               alignItems: 'center',
                               padding: '0.75rem',
-                              background: result.error ? 'var(--danger-light)' : result.saved ? 'var(--info-light, #d1ecf1)' : 'var(--success-light)',
+                              background: result.error
+                                ? 'var(--danger-light)'
+                                : result.saved
+                                  ? 'var(--info-light, #d1ecf1)'
+                                  : 'var(--success-light)',
                               borderRadius: '0.25rem',
                               flexWrap: 'wrap',
-                              gap: '0.5rem'
+                              gap: '0.5rem',
                             }}
                           >
                             <div style={{ flex: 1, minWidth: '200px' }}>
@@ -805,13 +843,13 @@ export default function PdfTools() {
                                 </span>
                               )}
                               {result.saved && (
-                                <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: 'var(--success, green)' }}>
+                                <span
+                                  style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: 'var(--success, green)' }}
+                                >
                                   — {t('pdfTools.saved')}
                                 </span>
                               )}
-                              {result.error && (
-                                <span style={{ color: 'var(--danger)' }}> - {result.error}</span>
-                              )}
+                              {result.error && <span style={{ color: 'var(--danger)' }}> - {result.error}</span>}
                             </div>
                             {result.filepath && (
                               <div className="flex gap-1">
@@ -824,10 +862,16 @@ export default function PdfTools() {
                                 <button
                                   className="btn btn-sm btn-primary"
                                   onClick={() => handleSaveAsMusicPiece(result.filepath!, result.filename!, result)}
-                                  disabled={result.saved || !selectedOrchestra || savingAsMusicPiece === result.filepath}
+                                  disabled={
+                                    result.saved || !selectedOrchestra || savingAsMusicPiece === result.filepath
+                                  }
                                   title={!selectedOrchestra ? t('pdfTools.selectOrchestraFirst') : ''}
                                 >
-                                  {savingAsMusicPiece === result.filepath ? '...' : result.saved ? t('pdfTools.saved') : t('pdfTools.saveAsMusicPiece')}
+                                  {savingAsMusicPiece === result.filepath
+                                    ? '...'
+                                    : result.saved
+                                      ? t('pdfTools.saved')
+                                      : t('pdfTools.saveAsMusicPiece')}
                                 </button>
                               </div>
                             )}
@@ -844,9 +888,7 @@ export default function PdfTools() {
           {/* A3 to A4 Tab */}
           {activeTab === 'a3' && (
             <>
-              <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-                {t('pdfTools.a3Description')}
-              </p>
+              <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>{t('pdfTools.a3Description')}</p>
 
               <div className="form-group">
                 <label className="form-label">{t('pdfTools.pdfFile')}</label>
@@ -868,12 +910,14 @@ export default function PdfTools() {
 
               {pdfInfo && (
                 <>
-                  <div style={{
-                    padding: '1rem',
-                    background: 'var(--background)',
-                    borderRadius: '0.5rem',
-                    marginBottom: '1rem'
-                  }}>
+                  <div
+                    style={{
+                      padding: '1rem',
+                      background: 'var(--background)',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1rem',
+                    }}
+                  >
                     <strong>{pdfInfo.filename}</strong>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>
                       {pdfInfo.pageCount} {t('pdfTools.pages')}
@@ -891,21 +935,19 @@ export default function PdfTools() {
                     </div>
                   </div>
 
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleA3Split}
-                    disabled={processing}
-                  >
+                  <button className="btn btn-primary" onClick={handleA3Split} disabled={processing}>
                     {processing ? t('pdfTools.processing') : t('pdfTools.splitA3ToA4')}
                   </button>
 
                   {a3Result && (
-                    <div style={{
-                      marginTop: '1.5rem',
-                      padding: '1rem',
-                      background: 'var(--success-light)',
-                      borderRadius: '0.5rem'
-                    }}>
+                    <div
+                      style={{
+                        marginTop: '1.5rem',
+                        padding: '1rem',
+                        background: 'var(--success-light)',
+                        borderRadius: '0.5rem',
+                      }}
+                    >
                       <strong>{t('pdfTools.done')}</strong>
                       <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
                         {t('pdfTools.a3PagesSplit', { count: a3Result.splitCount })}
@@ -928,9 +970,7 @@ export default function PdfTools() {
           {/* Merge Tab */}
           {activeTab === 'merge' && (
             <>
-              <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-                {t('pdfTools.mergeDescription')}
-              </p>
+              <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>{t('pdfTools.mergeDescription')}</p>
 
               <div className="form-group">
                 <label className="form-label">{t('pdfTools.pdfFiles')}</label>
@@ -949,36 +989,38 @@ export default function PdfTools() {
               </div>
 
               {mergeFiles.length > 0 && (
-                <div style={{
-                  padding: '1rem',
-                  background: 'var(--background)',
-                  borderRadius: '0.5rem',
-                  marginBottom: '1rem'
-                }}>
+                <div
+                  style={{
+                    padding: '1rem',
+                    background: 'var(--background)',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1rem',
+                  }}
+                >
                   <strong>{t('pdfTools.filesSelected', { count: mergeFiles.length })}</strong>
                   <ol style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
                     {mergeFiles.map((file, i) => (
-                      <li key={i} style={{ fontSize: '0.875rem' }}>{file.name}</li>
+                      <li key={i} style={{ fontSize: '0.875rem' }}>
+                        {file.name}
+                      </li>
                     ))}
                   </ol>
                 </div>
               )}
 
-              <button
-                className="btn btn-primary"
-                onClick={handleMerge}
-                disabled={processing || mergeFiles.length < 2}
-              >
+              <button className="btn btn-primary" onClick={handleMerge} disabled={processing || mergeFiles.length < 2}>
                 {processing ? t('pdfTools.merging') : t('pdfTools.mergeFiles')}
               </button>
 
               {mergeResult && (
-                <div style={{
-                  marginTop: '1.5rem',
-                  padding: '1rem',
-                  background: 'var(--success-light)',
-                  borderRadius: '0.5rem'
-                }}>
+                <div
+                  style={{
+                    marginTop: '1.5rem',
+                    padding: '1rem',
+                    background: 'var(--success-light)',
+                    borderRadius: '0.5rem',
+                  }}
+                >
                   <strong>{t('pdfTools.done')}</strong>
                   <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
                     {t('pdfTools.mergedDocument', { count: mergeResult.pageCount })}

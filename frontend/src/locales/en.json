@@ -1513,7 +1513,13 @@
     "disableSuccess": "MFA has been disabled",
     "errorSetup": "Error starting MFA setup",
     "errorEnable": "Error enabling MFA",
-    "errorDisable": "Error disabling MFA"
+    "errorDisable": "Error disabling MFA",
+    "recoveryCodesTitle": "Recovery codes",
+    "recoveryCodesDescription": "Store these recovery codes in a safe place. A recovery code lets you sign in if you lose access to your authenticator app. Each code can be used only once.",
+    "recoveryCodesWarning": "These codes are shown only once. Copy them now.",
+    "recoveryCodesCopy": "Copy codes",
+    "recoveryCodesCopied": "Recovery codes copied",
+    "recoveryCodesDone": "I have saved them"
   },
   "backup": {
     "title": "Backup",

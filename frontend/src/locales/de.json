@@ -1531,7 +1531,13 @@
     "disableSuccess": "MFA wurde deaktiviert",
     "errorSetup": "Fehler beim Starten der MFA-Einrichtung",
     "errorEnable": "Fehler beim Aktivieren von MFA",
-    "errorDisable": "Fehler beim Deaktivieren von MFA"
+    "errorDisable": "Fehler beim Deaktivieren von MFA",
+    "recoveryCodesTitle": "Wiederherstellungscodes",
+    "recoveryCodesDescription": "Bewahre diese Wiederherstellungscodes an einem sicheren Ort auf. Mit einem Wiederherstellungscode kannst du dich anmelden, wenn du keinen Zugriff mehr auf deine Authenticator-App hast. Jeder Code ist nur einmal verwendbar.",
+    "recoveryCodesWarning": "Diese Codes werden nur einmal angezeigt. Kopiere sie jetzt.",
+    "recoveryCodesCopy": "Codes kopieren",
+    "recoveryCodesCopied": "Wiederherstellungscodes kopiert",
+    "recoveryCodesDone": "Ich habe sie gespeichert"
   },
   "backup": {
     "title": "Backup",

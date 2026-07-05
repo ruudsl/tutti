@@ -35,12 +35,17 @@ export const setupMfa = async (): Promise<MfaSetupResponse> => {
   return data;
 };
 
-export const enableMfa = async (code: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+export const enableMfa = async (
+  code: string,
+): Promise<{ message: string; mfaEnabled: boolean; recoveryCodes?: string[] }> => {
   const { data } = await api.post('/auth/mfa/enable', { code });
   return data;
 };
 
-export const disableMfa = async (password: string, code?: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+export const disableMfa = async (
+  password: string,
+  code?: string,
+): Promise<{ message: string; mfaEnabled: boolean }> => {
   const { data } = await api.post('/auth/mfa/disable', { password, code });
   return data;
 };

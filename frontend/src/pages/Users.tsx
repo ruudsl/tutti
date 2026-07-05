@@ -11,13 +11,13 @@ import { SkeletonTable } from '../components/Skeleton';
 import { CustomFieldFormSection } from '../components/CustomFields';
 import type { User } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { ROLES, STORAGE_KEYS } from '../utils/constants';
+import { ROLES } from '../utils/constants';
+import { useDownloadToken } from '../utils/downloadUrl';
 
-// Helper to get photo URL with auth token for img src
-const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
-  if (!photoUrl) return null;
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  return token ? `${photoUrl}?token=${token}` : null;
+// Helper to get photo URL with a short-lived download token for img src
+const getPhotoUrl = (photoUrl: string | null | undefined, downloadToken: string | null): string | null => {
+  if (!photoUrl || !downloadToken) return null;
+  return `${photoUrl}?token=${encodeURIComponent(downloadToken)}`;
 };
 
 interface UserFormData {
@@ -43,6 +43,7 @@ const defaultValues: UserFormData = {
 export default function Users() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.users');
+  const downloadToken = useDownloadToken();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -68,42 +69,48 @@ export default function Users() {
   const isLoading = usersLoading || instrumentsLoading || orchestrasLoading;
 
   const handleCreate = (data: UserFormData) => {
-    createMutation.mutate({
-      email: data.email,
-      password: data.password,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role,
-      instrumentIds: data.instrumentIds,
-      orchestraIds: data.orchestraIds,
-    }, {
-      onSuccess: () => {
-        setShowAddModal(false);
-        form.reset(defaultValues);
+    createMutation.mutate(
+      {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        instrumentIds: data.instrumentIds,
+        orchestraIds: data.orchestraIds,
       },
-    });
+      {
+        onSuccess: () => {
+          setShowAddModal(false);
+          form.reset(defaultValues);
+        },
+      },
+    );
   };
 
   const handleUpdate = (data: UserFormData) => {
     if (!editingUser) return;
 
-    updateMutation.mutate({
-      id: editingUser.id,
-      data: {
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: data.role,
-        password: data.password || undefined,
-        instrumentIds: data.instrumentIds,
-        orchestraIds: data.orchestraIds,
+    updateMutation.mutate(
+      {
+        id: editingUser.id,
+        data: {
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+          password: data.password || undefined,
+          instrumentIds: data.instrumentIds,
+          orchestraIds: data.orchestraIds,
+        },
       },
-    }, {
-      onSuccess: () => {
-        setEditingUser(null);
-        form.reset(defaultValues);
+      {
+        onSuccess: () => {
+          setEditingUser(null);
+          form.reset(defaultValues);
+        },
       },
-    });
+    );
   };
 
   const handleDelete = () => {
@@ -216,9 +223,7 @@ export default function Users() {
         <h1>
           {t('users.title')}
           <span className="badge badge-primary badge-title-count">
-            {filteredUsers.length === users.length
-              ? users.length
-              : `${filteredUsers.length} / ${users.length}`}
+            {filteredUsers.length === users.length ? users.length : `${filteredUsers.length} / ${users.length}`}
           </span>
         </h1>
         <div className="flex gap-1">
@@ -258,7 +263,9 @@ export default function Users() {
               >
                 <option value="">{t('users.allOrchestras')}</option>
                 {orchestras.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -271,10 +278,13 @@ export default function Users() {
               >
                 <option value="">{t('users.allInstruments')}</option>
                 {instruments.map((i) => {
-                  const details = [i.tuning, i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol'].filter(Boolean).join(', ');
+                  const details = [i.tuning, i.clef === 'fa' ? 'fa' : i.clef === 'ut' ? 'ut' : 'sol']
+                    .filter(Boolean)
+                    .join(', ');
                   return (
                     <option key={i.id} value={i.id}>
-                      {i.name}{details ? ` (${details})` : ''}
+                      {i.name}
+                      {details ? ` (${details})` : ''}
                     </option>
                   );
                 })}
@@ -309,7 +319,9 @@ export default function Users() {
                   <th scope="col">{t('users.table.instruments')}</th>
                   <th scope="col">{t('users.table.orchestras')}</th>
                   <th scope="col">{t('users.table.lastLogin')}</th>
-                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
+                  <th scope="col">
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -330,19 +342,22 @@ export default function Users() {
                             flexShrink: 0,
                           }}
                         >
-                          {getPhotoUrl(user.photoUrl) ? (
+                          {getPhotoUrl(user.photoUrl, downloadToken) ? (
                             <img
-                              src={getPhotoUrl(user.photoUrl)!}
+                              src={getPhotoUrl(user.photoUrl, downloadToken)!}
                               alt=""
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                           ) : (
                             <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                              {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                              {user.firstName.charAt(0)}
+                              {user.lastName.charAt(0)}
                             </span>
                           )}
                         </div>
-                        <strong>{user.firstName} {user.lastName}</strong>
+                        <strong>
+                          {user.firstName} {user.lastName}
+                        </strong>
                       </div>
                     </td>
                     <td>{user.email}</td>
@@ -354,7 +369,8 @@ export default function Users() {
                           const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
                           return (
                             <span key={i.id} className="tag">
-                              {i.name}{details && ` (${details})`}
+                              {i.name}
+                              {details && ` (${details})`}
                             </span>
                           );
                         }) || '-'}
@@ -363,13 +379,19 @@ export default function Users() {
                     <td>
                       <div className="tags">
                         {user.orchestras?.map((o) => (
-                          <span key={o.id} className="tag">{o.name}</span>
+                          <span key={o.id} className="tag">
+                            {o.name}
+                          </span>
                         )) || '-'}
                       </div>
                     </td>
                     <td className="text-light text-sm text-nowrap">
                       {user.lastLogin
-                        ? new Date(user.lastLogin).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                        ? new Date(user.lastLogin).toLocaleDateString(undefined, {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
                         : '-'}
                     </td>
                     <td>
@@ -438,11 +460,14 @@ export default function Users() {
                                 />
                               ) : (
                                 <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                  {user.firstName.charAt(0)}
+                                  {user.lastName.charAt(0)}
                                 </span>
                               )}
                             </div>
-                            <strong>{user.firstName} {user.lastName}</strong>
+                            <strong>
+                              {user.firstName} {user.lastName}
+                            </strong>
                           </div>
                         </td>
                         <td>{user.email}</td>
@@ -454,7 +479,8 @@ export default function Users() {
                               const details = [i.tuning, clefLabel].filter(Boolean).join(', ');
                               return (
                                 <span key={i.id} className="tag">
-                                  {i.name}{details && ` (${details})`}
+                                  {i.name}
+                                  {details && ` (${details})`}
                                 </span>
                               );
                             }) || '-'}
@@ -463,22 +489,18 @@ export default function Users() {
                         <td>
                           <div className="tags">
                             {user.orchestras?.map((o) => (
-                              <span key={o.id} className="tag">{o.name}</span>
+                              <span key={o.id} className="tag">
+                                {o.name}
+                              </span>
                             )) || '-'}
                           </div>
                         </td>
                         <td>
                           <div className="flex gap-1">
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => openEditModal(user)}
-                            >
+                            <button className="btn btn-outline btn-sm" onClick={() => openEditModal(user)}>
                               <Icon name="pencil" size={16} />
                             </button>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => setDeletingUser(user)}
-                            >
+                            <button className="btn btn-danger btn-sm" onClick={() => setDeletingUser(user)}>
                               <Icon name="trash" size={16} />
                             </button>
                           </div>
@@ -505,12 +527,7 @@ export default function Users() {
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
-          <UserForm
-            form={form}
-            instruments={instruments}
-            orchestras={orchestras}
-            isEditing={false}
-          />
+          <UserForm form={form} instruments={instruments} orchestras={orchestras} isEditing={false} />
         </FormModal>
       )}
 
@@ -527,18 +544,9 @@ export default function Users() {
           isSubmitting={updateMutation.isPending}
           size="large"
         >
-          <UserForm
-            form={form}
-            instruments={instruments}
-            orchestras={orchestras}
-            isEditing={true}
-          />
+          <UserForm form={form} instruments={instruments} orchestras={orchestras} isEditing={true} />
           <div className="divider my-4">{t('customFields.additionalFields')}</div>
-          <CustomFieldFormSection
-            entityType="user"
-            entityId={editingUser.id}
-            autoSave={true}
-          />
+          <CustomFieldFormSection entityType="user" entityId={editingUser.id} autoSave={true} />
         </FormModal>
       )}
 
@@ -567,7 +575,11 @@ interface UserFormProps {
 
 function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
   const { t } = useTranslation();
-  const { register, control, formState: { errors } } = form;
+  const {
+    register,
+    control,
+    formState: { errors },
+  } = form;
 
   return (
     <>
@@ -583,9 +595,7 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
               maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
             })}
           />
-          {errors.firstName && (
-            <span className="form-error">{errors.firstName.message}</span>
-          )}
+          {errors.firstName && <span className="form-error">{errors.firstName.message}</span>}
         </div>
         <div className="form-group">
           <label className="form-label">{t('users.lastName')} *</label>
@@ -598,9 +608,7 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
               maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
             })}
           />
-          {errors.lastName && (
-            <span className="form-error">{errors.lastName.message}</span>
-          )}
+          {errors.lastName && <span className="form-error">{errors.lastName.message}</span>}
         </div>
       </div>
 
@@ -617,15 +625,11 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
             },
           })}
         />
-        {errors.email && (
-          <span className="form-error">{errors.email.message}</span>
-        )}
+        {errors.email && <span className="form-error">{errors.email.message}</span>}
       </div>
 
       <div className="form-group">
-        <label className="form-label">
-          {isEditing ? t('users.passwordHint') : `${t('users.password')} *`}
-        </label>
+        <label className="form-label">{isEditing ? t('users.passwordHint') : `${t('users.password')} *`}</label>
         <input
           type="password"
           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
@@ -634,9 +638,7 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
             minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,
           })}
         />
-        {errors.password && (
-          <span className="form-error">{errors.password.message}</span>
-        )}
+        {errors.password && <span className="form-error">{errors.password.message}</span>}
         {!isEditing && !errors.password && (
           <span className="form-hint">{t('errors.passwordTooShort', { min: 8 })}</span>
         )}
@@ -644,10 +646,7 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
 
       <div className="form-group">
         <label className="form-label">{t('users.role')}</label>
-        <select
-          className="form-control form-select"
-          {...register('role')}
-        >
+        <select className="form-control form-select" {...register('role')}>
           <option value="member">{t('roles.member')}</option>
           <option value="conductor">{t('roles.conductor')}</option>
           <option value="music_committee">{t('roles.music_committee')}</option>
@@ -666,10 +665,7 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
             <div className="checkbox-group">
               {instruments.map((instrument) => {
                 const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
-                const details = [
-                  instrument.tuning,
-                  clefLabel
-                ].filter(Boolean).join(', ');
+                const details = [instrument.tuning, clefLabel].filter(Boolean).join(', ');
                 return (
                   <label key={instrument.id} className="checkbox-item">
                     <input

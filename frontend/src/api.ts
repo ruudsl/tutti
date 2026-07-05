@@ -1,5 +1,57 @@
 import axios from 'axios';
-import type { User, Instrument, Orchestra, MusicList, MusicPiece, MusicTitle, Association, AssociationSettings, ThemeSettings, Genre, MfaSetupResponse, LoginResponse, Rehearsal, RehearsalDetail, RehearsalDefaultDay, SpondConfig, SpondGroup, SpondSyncResult, SpondOrchestraGroup, SpondMemberLink, MicrosoftConfig, SmtpConfig, TelegramConfig, WhatsAppConfig, Equipment, EquipmentDetail, MaintenanceAlert, UniformItem, UniformItemDetail, UniformSet, UniformItemType, UniformSizeAvailability, Concert, ConcertDetail, ConcertStatistics, PieceHistory, ConcertType, MediaType, SeatingSection, SeatingAssignment, SeatingNeighbor, RehearsalSeat, SeatingChart, ConcertTicketInfo, TicketOrder, Ticket, TicketValidationResult, TicketStats, AttendeeExport, TicketType, SeatHeatmapData } from './types';
+import type {
+  User,
+  Instrument,
+  Orchestra,
+  MusicList,
+  MusicPiece,
+  MusicTitle,
+  Association,
+  AssociationSettings,
+  ThemeSettings,
+  Genre,
+  MfaSetupResponse,
+  LoginResponse,
+  Rehearsal,
+  RehearsalDetail,
+  RehearsalDefaultDay,
+  SpondConfig,
+  SpondGroup,
+  SpondSyncResult,
+  SpondOrchestraGroup,
+  SpondMemberLink,
+  MicrosoftConfig,
+  SmtpConfig,
+  TelegramConfig,
+  WhatsAppConfig,
+  Equipment,
+  EquipmentDetail,
+  MaintenanceAlert,
+  UniformItem,
+  UniformItemDetail,
+  UniformSet,
+  UniformItemType,
+  UniformSizeAvailability,
+  Concert,
+  ConcertDetail,
+  ConcertStatistics,
+  PieceHistory,
+  ConcertType,
+  MediaType,
+  SeatingSection,
+  SeatingAssignment,
+  SeatingNeighbor,
+  RehearsalSeat,
+  SeatingChart,
+  ConcertTicketInfo,
+  TicketOrder,
+  Ticket,
+  TicketValidationResult,
+  TicketStats,
+  AttendeeExport,
+  TicketType,
+  SeatHeatmapData,
+} from './types';
 
 // Use environment variable for API URL in production, fallback to /api for development proxy
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -28,7 +80,7 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Auth
@@ -68,12 +120,17 @@ export const setupMfa = async (): Promise<MfaSetupResponse> => {
   return data;
 };
 
-export const enableMfa = async (code: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+export const enableMfa = async (
+  code: string,
+): Promise<{ message: string; mfaEnabled: boolean; recoveryCodes?: string[] }> => {
   const { data } = await api.post('/auth/mfa/enable', { code });
   return data;
 };
 
-export const disableMfa = async (password: string, code?: string): Promise<{ message: string; mfaEnabled: boolean }> => {
+export const disableMfa = async (
+  password: string,
+  code?: string,
+): Promise<{ message: string; mfaEnabled: boolean }> => {
   const { data } = await api.post('/auth/mfa/disable', { password, code });
   return data;
 };
@@ -145,15 +202,18 @@ export const createUser = async (userData: {
   return data;
 };
 
-export const updateUser = async (id: string, userData: {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
-  password?: string;
-  instrumentIds?: string[];
-  orchestraIds?: string[];
-}): Promise<void> => {
+export const updateUser = async (
+  id: string,
+  userData: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    password?: string;
+    instrumentIds?: string[];
+    orchestraIds?: string[];
+  },
+): Promise<void> => {
   await api.put(`/users/${id}`, userData);
 };
 
@@ -167,7 +227,12 @@ export const getInstruments = async (): Promise<Instrument[]> => {
   return data;
 };
 
-export const createInstrument = async (name: string, tuning?: string, clef?: string, aliases?: string[]): Promise<{ id: string }> => {
+export const createInstrument = async (
+  name: string,
+  tuning?: string,
+  clef?: string,
+  aliases?: string[],
+): Promise<{ id: string }> => {
   const { data } = await api.post('/instruments', { name, tuning, clef, aliases });
   return data;
 };
@@ -229,21 +294,28 @@ export const getMusicList = async (id: string): Promise<MusicList & { pieces: Mu
   return data;
 };
 
-export const createMusicList = async (name: string, orchestraId: string, options?: {
-  listType?: 'regular' | 'concert';
-  concertDate?: string | null;
-  concertLocation?: string | null;
-}): Promise<{ id: string }> => {
+export const createMusicList = async (
+  name: string,
+  orchestraId: string,
+  options?: {
+    listType?: 'regular' | 'concert';
+    concertDate?: string | null;
+    concertLocation?: string | null;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post('/music-lists', { name, orchestraId, ...options });
   return data;
 };
 
-export const updateMusicList = async (id: string, data: {
-  name: string;
-  listType?: 'regular' | 'concert';
-  concertDate?: string | null;
-  concertLocation?: string | null;
-}): Promise<void> => {
+export const updateMusicList = async (
+  id: string,
+  data: {
+    name: string;
+    listType?: 'regular' | 'concert';
+    concertDate?: string | null;
+    concertLocation?: string | null;
+  },
+): Promise<void> => {
   await api.put(`/music-lists/${id}`, data);
 };
 
@@ -329,7 +401,7 @@ export const getMusicTitles = async (filters?: {
 export const uploadMusicPieces = async (
   files: File[],
   listId?: string,
-  youtubeUrls?: Record<string, string>
+  youtubeUrls?: Record<string, string>,
 ): Promise<{ uploaded: any[]; errors?: any[] }> => {
   const formData = new FormData();
   files.forEach((file) => formData.append('files', file));
@@ -351,7 +423,7 @@ export const uploadMusicPiecesWithProgress = async (
     onProgress?: (progress: number) => void;
     onUploadStart?: () => void;
     onUploadComplete?: () => void;
-  } = {}
+  } = {},
 ): Promise<{ uploaded: any[]; errors?: any[] }> => {
   const { listId, youtubeUrls, onProgress, onUploadStart, onUploadComplete } = options;
 
@@ -387,16 +459,19 @@ export const refreshInstrumentLinks = async (): Promise<{
   return data;
 };
 
-export const updateMusicPiece = async (id: string, pieceData: {
-  title?: string;
-  arranger?: string;
-  instrumentId?: string;
-  tuning?: string;
-  groupNumber?: string;
-  clef?: string;
-  youtubeUrl?: string;
-  isShared?: boolean;
-}): Promise<void> => {
+export const updateMusicPiece = async (
+  id: string,
+  pieceData: {
+    title?: string;
+    arranger?: string;
+    instrumentId?: string;
+    tuning?: string;
+    groupNumber?: string;
+    clef?: string;
+    youtubeUrl?: string;
+    isShared?: boolean;
+  },
+): Promise<void> => {
   await api.put(`/music-pieces/${id}`, pieceData);
 };
 
@@ -410,16 +485,17 @@ export const deleteMusicPiecesBulk = async (ids: string[]): Promise<{ count: num
 };
 
 // Batch export music pieces as ZIP
-export const batchExportMusicPieces = async (
-  pieceIds: string[],
-  includeMetadata = true
-): Promise<void> => {
-  const response = await api.post('/music-pieces/batch-export', {
-    pieceIds,
-    includeMetadata,
-  }, {
-    responseType: 'blob',
-  });
+export const batchExportMusicPieces = async (pieceIds: string[], includeMetadata = true): Promise<void> => {
+  const response = await api.post(
+    '/music-pieces/batch-export',
+    {
+      pieceIds,
+      includeMetadata,
+    },
+    {
+      responseType: 'blob',
+    },
+  );
 
   // Get filename from Content-Disposition header or use default
   const contentDisposition = response.headers['content-disposition'];
@@ -441,16 +517,17 @@ export const batchExportMusicPieces = async (
 };
 
 // Batch export all pieces for a specific title as ZIP
-export const batchExportByTitle = async (
-  title: string,
-  arranger?: string
-): Promise<void> => {
-  const response = await api.post('/music-pieces/batch-export-by-title', {
-    title,
-    arranger,
-  }, {
-    responseType: 'blob',
-  });
+export const batchExportByTitle = async (title: string, arranger?: string): Promise<void> => {
+  const response = await api.post(
+    '/music-pieces/batch-export-by-title',
+    {
+      title,
+      arranger,
+    },
+    {
+      responseType: 'blob',
+    },
+  );
 
   // Get filename from Content-Disposition header or use default
   const contentDisposition = response.headers['content-disposition'];
@@ -505,7 +582,9 @@ export const getSharedMusicPieces = async (): Promise<MusicPiece[]> => {
   return data;
 };
 
-export const getYouTubeMeta = async (url: string): Promise<{
+export const getYouTubeMeta = async (
+  url: string,
+): Promise<{
   title: string;
   author: string;
   thumbnailUrl: string;
@@ -515,7 +594,10 @@ export const getYouTubeMeta = async (url: string): Promise<{
   return data;
 };
 
-export const getTitleMeta = async (title: string, arranger?: string | null): Promise<{
+export const getTitleMeta = async (
+  title: string,
+  arranger?: string | null,
+): Promise<{
   title: string;
   arranger: string | null;
   youtubeUrl: string | null;
@@ -545,7 +627,10 @@ export const updateTitleMeta = async (titleData: {
 };
 
 // MP3 upload for titles
-export const uploadTitleMp3 = async (titleId: string, file: File): Promise<{ message: string; mp3FilePath: string }> => {
+export const uploadTitleMp3 = async (
+  titleId: string,
+  file: File,
+): Promise<{ message: string; mp3FilePath: string }> => {
   const formData = new FormData();
   formData.append('mp3', file);
   const { data } = await api.post(`/music-pieces/title-mp3/${titleId}`, formData, {
@@ -559,9 +644,11 @@ export const deleteTitleMp3 = async (titleId: string): Promise<void> => {
 };
 
 /**
- * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs.
+ * @deprecated Use createMp3BlobUrl() instead to avoid exposing JWT tokens in URLs,
+ * or a short-lived download token via withDownloadToken() from utils/downloadUrl.
  * Tokens in URLs can be logged by servers, proxies, and browser history.
- * This function is kept for backward compatibility with existing audio elements.
+ * This function is kept for backward compatibility with existing audio elements;
+ * the backend logs a warning whenever this legacy full-JWT query path is used.
  */
 export const getMp3Url = (filename: string): string => {
   const baseUrl = api.defaults.baseURL || '';
@@ -732,11 +819,7 @@ export const createIssue = async (issue: {
   return data;
 };
 
-export const updateIssueStatus = async (
-  id: string,
-  status: string,
-  resolutionNotes?: string
-): Promise<PieceIssue> => {
+export const updateIssueStatus = async (id: string, status: string, resolutionNotes?: string): Promise<PieceIssue> => {
   const { data } = await api.patch(`/issues/${id}/status`, { status, resolutionNotes });
   return data;
 };
@@ -780,13 +863,16 @@ export const createLoan = async (loan: {
   return data;
 };
 
-export const updateLoan = async (id: string, updates: {
-  borrowerName?: string;
-  borrowerEmail?: string;
-  borrowerOrganization?: string;
-  notes?: string;
-  expectedReturn?: string;
-}): Promise<Loan> => {
+export const updateLoan = async (
+  id: string,
+  updates: {
+    borrowerName?: string;
+    borrowerEmail?: string;
+    borrowerOrganization?: string;
+    notes?: string;
+    expectedReturn?: string;
+  },
+): Promise<Loan> => {
   const { data } = await api.put(`/loans/${id}`, updates);
   return data;
 };
@@ -859,15 +945,30 @@ export const getRehearsal = async (id: string): Promise<RehearsalDetail> => {
 };
 
 export const createRehearsal = async (rehearsal: {
-  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string; orchestraId?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  type?: string;
+  notes?: string;
+  orchestraId?: string;
 }): Promise<any> => {
   const { data } = await api.post('/rehearsals', rehearsal);
   return data;
 };
 
-export const updateRehearsal = async (id: string, rehearsal: {
-  date: string; startTime: string; endTime: string; location?: string; type?: string; notes?: string; orchestraId?: string;
-}): Promise<void> => {
+export const updateRehearsal = async (
+  id: string,
+  rehearsal: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    location?: string;
+    type?: string;
+    notes?: string;
+    orchestraId?: string;
+  },
+): Promise<void> => {
   await api.put(`/rehearsals/${id}`, rehearsal);
 };
 
@@ -886,15 +987,25 @@ export const getDefaultDays = async (): Promise<RehearsalDefaultDay[]> => {
 };
 
 export const addDefaultDay = async (day: {
-  dayOfWeek: number; startTime: string; endTime: string; location?: string; orchestraId?: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  orchestraId?: string;
 }): Promise<RehearsalDefaultDay> => {
   const { data } = await api.post('/rehearsals/default-days', day);
   return data;
 };
 
-export const updateDefaultDay = async (id: string, day: {
-  dayOfWeek: number; startTime: string; endTime: string; location?: string;
-}): Promise<void> => {
+export const updateDefaultDay = async (
+  id: string,
+  day: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    location?: string;
+  },
+): Promise<void> => {
   await api.put(`/rehearsals/default-days/${id}`, day);
 };
 
@@ -918,7 +1029,11 @@ export interface AttendanceMember {
   total: number;
 }
 
-export const getAttendanceSummary = async (from: string, to: string, orchestraId?: string): Promise<{
+export const getAttendanceSummary = async (
+  from: string,
+  to: string,
+  orchestraId?: string,
+): Promise<{
   members: AttendanceMember[];
   rehearsalCount: number;
   from: string;
@@ -937,7 +1052,10 @@ export const getSpondConfig = async (): Promise<SpondConfig> => {
 };
 
 export const saveSpondConfig = async (config: {
-  username: string; password: string; groupId?: string; syncEnabled?: boolean;
+  username: string;
+  password: string;
+  groupId?: string;
+  syncEnabled?: boolean;
 }): Promise<void> => {
   await api.put('/spond/config', config);
 };
@@ -956,7 +1074,9 @@ export const syncSpond = async (): Promise<SpondSyncResult> => {
   return data;
 };
 
-export const syncSpondRehearsal = async (rehearsalId: string): Promise<{ message: string; attendanceCount: number }> => {
+export const syncSpondRehearsal = async (
+  rehearsalId: string,
+): Promise<{ message: string; attendanceCount: number }> => {
   const { data } = await api.post(`/spond/sync/${rehearsalId}`);
   return data;
 };
@@ -967,7 +1087,11 @@ export const getSpondOrchestraGroups = async (): Promise<SpondOrchestraGroup[]> 
   return data;
 };
 
-export const setSpondOrchestraGroup = async (orchestraId: string, spondGroupId: string | null, spondGroupName?: string): Promise<void> => {
+export const setSpondOrchestraGroup = async (
+  orchestraId: string,
+  spondGroupId: string | null,
+  spondGroupName?: string,
+): Promise<void> => {
   await api.put(`/spond/orchestra-groups/${orchestraId}`, { spondGroupId, spondGroupName });
 };
 
@@ -977,7 +1101,11 @@ export const getSpondMemberLinks = async (): Promise<SpondMemberLink[]> => {
   return data;
 };
 
-export const createSpondMemberLink = async (spondMemberId: string, userId: string, spondMemberName?: string): Promise<void> => {
+export const createSpondMemberLink = async (
+  spondMemberId: string,
+  userId: string,
+  spondMemberName?: string,
+): Promise<void> => {
   await api.post('/spond/member-links', { spondMemberId, userId, spondMemberName });
 };
 
@@ -986,7 +1114,10 @@ export const deleteSpondMemberLink = async (id: string): Promise<void> => {
 };
 
 // Spond Attendance (bidirectional sync)
-export const updateMyAttendance = async (rehearsalId: string, accepted: boolean): Promise<{
+export const updateMyAttendance = async (
+  rehearsalId: string,
+  accepted: boolean,
+): Promise<{
   message: string;
   status: string;
   spondSynced: boolean;
@@ -995,7 +1126,9 @@ export const updateMyAttendance = async (rehearsalId: string, accepted: boolean)
   return data;
 };
 
-export const getMyAttendanceStatus = async (rehearsalId: string): Promise<{
+export const getMyAttendanceStatus = async (
+  rehearsalId: string,
+): Promise<{
   status: string;
   canSyncToSpond: boolean;
 }> => {
@@ -1025,7 +1158,10 @@ export const getMicrosoftConfig = async (): Promise<MicrosoftConfig> => {
 };
 
 export const saveMicrosoftConfig = async (config: {
-  clientId: string; clientSecret?: string; tenantId: string; enabled: boolean;
+  clientId: string;
+  clientSecret?: string;
+  tenantId: string;
+  enabled: boolean;
 }): Promise<void> => {
   await api.put('/auth/microsoft/config', config);
 };
@@ -1041,7 +1177,13 @@ export const getSmtpConfig = async (): Promise<SmtpConfig> => {
 };
 
 export const saveSmtpConfig = async (config: {
-  host: string; port: number; secure: boolean; user: string; password?: string; from: string; enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password?: string;
+  from: string;
+  enabled: boolean;
 }): Promise<void> => {
   await api.put('/settings/smtp', config);
 };
@@ -1063,7 +1205,10 @@ export const getTelegramConfig = async (): Promise<TelegramConfig> => {
   return data;
 };
 
-export const saveTelegramConfig = async (config: { botToken?: string; enabled: boolean }): Promise<{ message: string }> => {
+export const saveTelegramConfig = async (config: {
+  botToken?: string;
+  enabled: boolean;
+}): Promise<{ message: string }> => {
   const { data } = await api.put('/settings/telegram', config);
   return data;
 };
@@ -1112,7 +1257,7 @@ export const savePdfAsMusicPiece = async (
     tuning?: string;
     groupNumber?: string;
     clef?: string;
-  }
+  },
 ): Promise<{ success: boolean; id: string; title: string; instrumentFound: boolean }> => {
   const { data } = await api.post('/pdf-tools/save-as-music-piece', {
     filepath,
@@ -1150,7 +1295,9 @@ export interface MusicaInfoDetail {
   articleNumber: string;
 }
 
-export const searchMusicaInfo = async (query: string): Promise<{
+export const searchMusicaInfo = async (
+  query: string,
+): Promise<{
   query: string;
   resultCount: number;
   results: MusicaInfoSearchResult[];
@@ -1367,19 +1514,22 @@ export const createEquipment = async (equipment: {
   return data;
 };
 
-export const updateEquipment = async (id: string, equipment: {
-  instrumentType?: string;
-  brandModel?: string;
-  serialNumber?: string;
-  yearOfManufacture?: number;
-  status?: string;
-  currentUserId?: string | null;
-  notes?: string;
-  maintenanceIntervalMonths?: number;
-  lastMaintenanceDate?: string;
-  purchasePrice?: number;
-  currentValue?: number;
-}): Promise<void> => {
+export const updateEquipment = async (
+  id: string,
+  equipment: {
+    instrumentType?: string;
+    brandModel?: string;
+    serialNumber?: string;
+    yearOfManufacture?: number;
+    status?: string;
+    currentUserId?: string | null;
+    notes?: string;
+    maintenanceIntervalMonths?: number;
+    lastMaintenanceDate?: string;
+    purchasePrice?: number;
+    currentValue?: number;
+  },
+): Promise<void> => {
   await api.put(`/equipment/${id}`, equipment);
 };
 
@@ -1387,24 +1537,31 @@ export const deleteEquipment = async (id: string): Promise<void> => {
   await api.delete(`/equipment/${id}`);
 };
 
-export const addEquipmentDamageLog = async (equipmentId: string, log: {
-  date: string;
-  description: string;
-  repairCost?: number;
-  repairedBy?: string;
-  status?: string;
-}): Promise<{ id: string }> => {
+export const addEquipmentDamageLog = async (
+  equipmentId: string,
+  log: {
+    date: string;
+    description: string;
+    repairCost?: number;
+    repairedBy?: string;
+    status?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/equipment/${equipmentId}/damage-logs`, log);
   return data;
 };
 
-export const updateEquipmentDamageLog = async (equipmentId: string, logId: string, log: {
-  date?: string;
-  description?: string;
-  repairCost?: number;
-  repairedBy?: string;
-  status?: string;
-}): Promise<void> => {
+export const updateEquipmentDamageLog = async (
+  equipmentId: string,
+  logId: string,
+  log: {
+    date?: string;
+    description?: string;
+    repairCost?: number;
+    repairedBy?: string;
+    status?: string;
+  },
+): Promise<void> => {
   await api.put(`/equipment/${equipmentId}/damage-logs/${logId}`, log);
 };
 
@@ -1412,27 +1569,37 @@ export const deleteEquipmentDamageLog = async (equipmentId: string, logId: strin
   await api.delete(`/equipment/${equipmentId}/damage-logs/${logId}`);
 };
 
-export const createEquipmentLoan = async (equipmentId: string, loan: {
-  userId: string;
-  loanDate: string;
-  conditionAtLoan?: string;
-  notes?: string;
-}): Promise<{ id: string }> => {
+export const createEquipmentLoan = async (
+  equipmentId: string,
+  loan: {
+    userId: string;
+    loanDate: string;
+    conditionAtLoan?: string;
+    notes?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/equipment/${equipmentId}/loans`, loan);
   return data;
 };
 
-export const returnEquipmentLoan = async (equipmentId: string, loanId: string, returnData: {
-  returnDate: string;
-  conditionAtReturn?: string;
-}): Promise<void> => {
+export const returnEquipmentLoan = async (
+  equipmentId: string,
+  loanId: string,
+  returnData: {
+    returnDate: string;
+    conditionAtReturn?: string;
+  },
+): Promise<void> => {
   await api.post(`/equipment/${equipmentId}/loans/${loanId}/return`, returnData);
 };
 
-export const recordEquipmentMaintenance = async (equipmentId: string, maintenance: {
-  date?: string;
-  notes?: string;
-}): Promise<{ nextMaintenanceDate: string }> => {
+export const recordEquipmentMaintenance = async (
+  equipmentId: string,
+  maintenance: {
+    date?: string;
+    notes?: string;
+  },
+): Promise<{ nextMaintenanceDate: string }> => {
   const { data } = await api.post(`/equipment/${equipmentId}/record-maintenance`, maintenance);
   return data;
 };
@@ -1503,19 +1670,22 @@ export const createUniformItemsBulk = async (item: {
   return data;
 };
 
-export const updateUniformItem = async (id: string, item: {
-  itemType?: string;
-  sizeStandard?: string;
-  sizeLength?: number;
-  sizeWidth?: number;
-  color?: string;
-  condition?: string;
-  status?: string;
-  currentUserId?: string | null;
-  notes?: string;
-  purchaseDate?: string;
-  purchasePrice?: number;
-}): Promise<void> => {
+export const updateUniformItem = async (
+  id: string,
+  item: {
+    itemType?: string;
+    sizeStandard?: string;
+    sizeLength?: number;
+    sizeWidth?: number;
+    color?: string;
+    condition?: string;
+    status?: string;
+    currentUserId?: string | null;
+    notes?: string;
+    purchaseDate?: string;
+    purchasePrice?: number;
+  },
+): Promise<void> => {
   await api.put(`/uniforms/items/${id}`, item);
 };
 
@@ -1523,20 +1693,26 @@ export const deleteUniformItem = async (id: string): Promise<void> => {
   await api.delete(`/uniforms/items/${id}`);
 };
 
-export const assignUniformItem = async (itemId: string, assignment: {
-  userId: string;
-  assignedDate: string;
-  conditionAtAssignment?: string;
-  notes?: string;
-}): Promise<{ id: string }> => {
+export const assignUniformItem = async (
+  itemId: string,
+  assignment: {
+    userId: string;
+    assignedDate: string;
+    conditionAtAssignment?: string;
+    notes?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/uniforms/items/${itemId}/assign`, assignment);
   return data;
 };
 
-export const returnUniformItem = async (itemId: string, returnData: {
-  returnedDate: string;
-  conditionAtReturn?: string;
-}): Promise<void> => {
+export const returnUniformItem = async (
+  itemId: string,
+  returnData: {
+    returnedDate: string;
+    conditionAtReturn?: string;
+  },
+): Promise<void> => {
   await api.post(`/uniforms/items/${itemId}/return`, returnData);
 };
 
@@ -1559,11 +1735,14 @@ export const createUniformSet = async (set: {
   return data;
 };
 
-export const updateUniformSet = async (id: string, set: {
-  name?: string;
-  description?: string;
-  requirements?: { itemType: string; quantity: number }[];
-}): Promise<void> => {
+export const updateUniformSet = async (
+  id: string,
+  set: {
+    name?: string;
+    description?: string;
+    requirements?: { itemType: string; quantity: number }[];
+  },
+): Promise<void> => {
   await api.put(`/uniforms/sets/${id}`, set);
 };
 
@@ -1595,12 +1774,19 @@ export const getAdminConcertTypes = async (): Promise<{
   return data;
 };
 
-export const createConcertType = async (value: string, label: string, sortOrder?: number): Promise<{ id: string; message: string }> => {
+export const createConcertType = async (
+  value: string,
+  label: string,
+  sortOrder?: number,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/concerts/concert-types', { value, label, sortOrder });
   return data;
 };
 
-export const updateConcertType = async (id: string, updates: { value?: string; label?: string; sortOrder?: number }): Promise<{ message: string }> => {
+export const updateConcertType = async (
+  id: string,
+  updates: { value?: string; label?: string; sortOrder?: number },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/concerts/concert-types/${id}`, updates);
   return data;
 };
@@ -1658,16 +1844,19 @@ export const createConcert = async (concert: {
   return data;
 };
 
-export const updateConcert = async (id: string, concert: {
-  name?: string;
-  date?: string;
-  endDate?: string;
-  location?: string;
-  venueType?: string;
-  concertType?: string;
-  description?: string;
-  notes?: string;
-}): Promise<void> => {
+export const updateConcert = async (
+  id: string,
+  concert: {
+    name?: string;
+    date?: string;
+    endDate?: string;
+    location?: string;
+    venueType?: string;
+    concertType?: string;
+    description?: string;
+    notes?: string;
+  },
+): Promise<void> => {
   await api.put(`/concerts/${id}`, concert);
 };
 
@@ -1675,27 +1864,34 @@ export const deleteConcert = async (id: string): Promise<void> => {
   await api.delete(`/concerts/${id}`);
 };
 
-export const addConcertProgramItem = async (concertId: string, item: {
-  musicTitleId?: string | null;
-  title: string;
-  composer?: string;
-  arranger?: string;
-  sortOrder?: number;
-  notes?: string;
-  partOfSet?: string;
-}): Promise<{ id: string }> => {
+export const addConcertProgramItem = async (
+  concertId: string,
+  item: {
+    musicTitleId?: string | null;
+    title: string;
+    composer?: string;
+    arranger?: string;
+    sortOrder?: number;
+    notes?: string;
+    partOfSet?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/concerts/${concertId}/program`, item);
   return data;
 };
 
-export const updateConcertProgramItem = async (concertId: string, programId: string, item: {
-  musicTitleId?: string | null;
-  title?: string;
-  arranger?: string;
-  sortOrder?: number;
-  notes?: string;
-  partOfSet?: string;
-}): Promise<void> => {
+export const updateConcertProgramItem = async (
+  concertId: string,
+  programId: string,
+  item: {
+    musicTitleId?: string | null;
+    title?: string;
+    arranger?: string;
+    sortOrder?: number;
+    notes?: string;
+    partOfSet?: string;
+  },
+): Promise<void> => {
   await api.put(`/concerts/${concertId}/program/${programId}`, item);
 };
 
@@ -1703,7 +1899,10 @@ export const deleteConcertProgramItem = async (concertId: string, programId: str
   await api.delete(`/concerts/${concertId}/program/${programId}`);
 };
 
-export const reorderConcertProgram = async (concertId: string, items: { id: string; sortOrder: number }[]): Promise<void> => {
+export const reorderConcertProgram = async (
+  concertId: string,
+  items: { id: string; sortOrder: number }[],
+): Promise<void> => {
   await api.put(`/concerts/${concertId}/program/reorder`, { items });
 };
 
@@ -1712,10 +1911,7 @@ export const exportConcertProgram = async (concertId: string): Promise<string> =
   return data;
 };
 
-export const exportBumaStemra = async (params: {
-  startDate: string;
-  endDate: string;
-}): Promise<string> => {
+export const exportBumaStemra = async (params: { startDate: string; endDate: string }): Promise<string> => {
   const { data } = await api.get('/concerts/buma-stemra-export', {
     params,
     responseType: 'text',
@@ -1723,11 +1919,14 @@ export const exportBumaStemra = async (params: {
   return data;
 };
 
-export const addConcertMedia = async (concertId: string, media: {
-  mediaType: string;
-  url?: string;
-  description?: string;
-}): Promise<{ id: string }> => {
+export const addConcertMedia = async (
+  concertId: string,
+  media: {
+    mediaType: string;
+    url?: string;
+    description?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/concerts/${concertId}/media`, media);
   return data;
 };
@@ -1736,26 +1935,36 @@ export const deleteConcertMedia = async (concertId: string, mediaId: string): Pr
   await api.delete(`/concerts/${concertId}/media/${mediaId}`);
 };
 
-export const addConcertAttendance = async (concertId: string, attendance: {
-  userId?: string | null;
-  memberName: string;
-  instrumentPlayed?: string;
-  notes?: string;
-}): Promise<{ id: string }> => {
+export const addConcertAttendance = async (
+  concertId: string,
+  attendance: {
+    userId?: string | null;
+    memberName: string;
+    instrumentPlayed?: string;
+    notes?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/concerts/${concertId}/attendance`, attendance);
   return data;
 };
 
-export const addConcertAttendanceBulk = async (concertId: string, userIds: string[]): Promise<{ ids: string[]; count: number }> => {
+export const addConcertAttendanceBulk = async (
+  concertId: string,
+  userIds: string[],
+): Promise<{ ids: string[]; count: number }> => {
   const { data } = await api.post(`/concerts/${concertId}/attendance/bulk`, { userIds });
   return data;
 };
 
-export const updateConcertAttendance = async (concertId: string, attendanceId: string, attendance: {
-  memberName?: string;
-  instrumentPlayed?: string;
-  notes?: string;
-}): Promise<void> => {
+export const updateConcertAttendance = async (
+  concertId: string,
+  attendanceId: string,
+  attendance: {
+    memberName?: string;
+    instrumentPlayed?: string;
+    notes?: string;
+  },
+): Promise<void> => {
   await api.put(`/concerts/${concertId}/attendance/${attendanceId}`, attendance);
 };
 
@@ -1848,7 +2057,12 @@ export const syncEntraUsers = async (createNew: boolean = false): Promise<EntraS
   return data;
 };
 
-export const syncEntraPhotos = async (): Promise<{ message: string; synced: number; skipped: number; failed: number }> => {
+export const syncEntraPhotos = async (): Promise<{
+  message: string;
+  synced: number;
+  skipped: number;
+  failed: number;
+}> => {
   const { data } = await api.post('/entra/sync-photos');
   return data;
 };
@@ -1916,13 +2130,17 @@ export const getUpcomingRehearsals = async (limit: number = 3): Promise<Rehearsa
   return data;
 };
 
-export const getRecentActivity = async (limit: number = 5): Promise<{
-  id: string;
-  actionType: string;
-  entityType: string;
-  entityName?: string;
-  createdAt: string;
-}[]> => {
+export const getRecentActivity = async (
+  limit: number = 5,
+): Promise<
+  {
+    id: string;
+    actionType: string;
+    entityType: string;
+    entityName?: string;
+    createdAt: string;
+  }[]
+> => {
   const { data } = await api.get('/activity/recent', { params: { limit } });
   return data;
 };
@@ -1950,11 +2168,14 @@ export const createSeatingSection = async (section: {
   return data;
 };
 
-export const updateSeatingSection = async (id: string, section: {
-  name?: string;
-  rowNumber?: number;
-  instrumentIds?: string[];
-}): Promise<{ message: string }> => {
+export const updateSeatingSection = async (
+  id: string,
+  section: {
+    name?: string;
+    rowNumber?: number;
+    instrumentIds?: string[];
+  },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seating/sections/${id}`, section);
   return data;
 };
@@ -1987,12 +2208,15 @@ export const createSeatingAssignment = async (assignment: {
   return data;
 };
 
-export const updateSeatingAssignment = async (id: string, assignment: {
-  sectionId?: string;
-  positionInSection?: number;
-  seatLabel?: string;
-  notes?: string;
-}): Promise<{ message: string }> => {
+export const updateSeatingAssignment = async (
+  id: string,
+  assignment: {
+    sectionId?: string;
+    positionInSection?: number;
+    seatLabel?: string;
+    notes?: string;
+  },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seating/assignments/${id}`, assignment);
   return data;
 };
@@ -2002,11 +2226,14 @@ export const deleteSeatingAssignment = async (id: string): Promise<{ message: st
   return data;
 };
 
-export const bulkUpdateSeatingAssignments = async (orchestraId: string, assignments: {
-  userId: string;
-  sectionId: string;
-  positionInSection: number;
-}[]): Promise<{ message: string }> => {
+export const bulkUpdateSeatingAssignments = async (
+  orchestraId: string,
+  assignments: {
+    userId: string;
+    sectionId: string;
+    positionInSection: number;
+  }[],
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seating/assignments/bulk/${orchestraId}`, { assignments });
   return data;
 };
@@ -2038,15 +2265,21 @@ export const getRehearsalSeating = async (rehearsalId: string): Promise<Rehearsa
   return data;
 };
 
-export const generateRehearsalSeating = async (rehearsalId: string): Promise<{ message: string; memberCount: number }> => {
+export const generateRehearsalSeating = async (
+  rehearsalId: string,
+): Promise<{ message: string; memberCount: number }> => {
   const { data } = await api.post(`/seating/rehearsal/${rehearsalId}/generate`);
   return data;
 };
 
-export const updateRehearsalSeat = async (rehearsalId: string, seatId: string, seat: {
-  rowNumber: number;
-  positionInRow: number;
-}): Promise<{ message: string }> => {
+export const updateRehearsalSeat = async (
+  rehearsalId: string,
+  seatId: string,
+  seat: {
+    rowNumber: number;
+    positionInRow: number;
+  },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seating/rehearsal/${rehearsalId}/seat/${seatId}`, seat);
   return data;
 };
@@ -2086,23 +2319,28 @@ export interface SeatingNotificationLog {
   webhook_response: string | null;
 }
 
-export const getSeatingNotificationSettings = async (orchestraId: string): Promise<SeatingNotificationSettings | null> => {
+export const getSeatingNotificationSettings = async (
+  orchestraId: string,
+): Promise<SeatingNotificationSettings | null> => {
   const { data } = await api.get(`/seating-notifications/settings/${orchestraId}`);
   return data;
 };
 
-export const saveSeatingNotificationSettings = async (orchestraId: string, settings: {
-  notification_type: 'webhook' | 'whatsapp';
-  webhook_url?: string;
-  twilio_account_sid?: string;
-  twilio_auth_token?: string;
-  twilio_whatsapp_from?: string;
-  twilio_whatsapp_to?: string;
-  minutes_before: number;
-  enabled: boolean;
-  include_image: boolean;
-  message_template?: string;
-}): Promise<SeatingNotificationSettings> => {
+export const saveSeatingNotificationSettings = async (
+  orchestraId: string,
+  settings: {
+    notification_type: 'webhook' | 'whatsapp';
+    webhook_url?: string;
+    twilio_account_sid?: string;
+    twilio_auth_token?: string;
+    twilio_whatsapp_from?: string;
+    twilio_whatsapp_to?: string;
+    minutes_before: number;
+    enabled: boolean;
+    include_image: boolean;
+    message_template?: string;
+  },
+): Promise<SeatingNotificationSettings> => {
   const { data } = await api.put(`/seating-notifications/settings/${orchestraId}`, settings);
   return data;
 };
@@ -2117,7 +2355,10 @@ export const getSeatingNotificationLogs = async (rehearsalId: string): Promise<S
   return data;
 };
 
-export const sendSeatingNotification = async (rehearsalId: string, imageBase64?: string): Promise<{ success: boolean; message: string }> => {
+export const sendSeatingNotification = async (
+  rehearsalId: string,
+  imageBase64?: string,
+): Promise<{ success: boolean; message: string }> => {
   const { data } = await api.post(`/seating-notifications/send/${rehearsalId}`, { imageBase64 });
   return data;
 };
@@ -2253,7 +2494,11 @@ export const getM365GroupMappings = async (): Promise<M365GroupMapping[]> => {
   return data;
 };
 
-export const createM365GroupMapping = async (data: { orchestraId?: string; groupName: string; groupType?: string }): Promise<{ id: string; message: string }> => {
+export const createM365GroupMapping = async (data: {
+  orchestraId?: string;
+  groupName: string;
+  groupType?: string;
+}): Promise<{ id: string; message: string }> => {
   const { data: response } = await api.post('/onboarding/m365-groups', data);
   return response;
 };
@@ -2274,7 +2519,10 @@ export const getInstrumentJobTitleMappings = async (): Promise<InstrumentJobTitl
   return data;
 };
 
-export const createInstrumentJobTitleMapping = async (data: { instrumentId: string; jobTitle: string }): Promise<{ id: string; message: string }> => {
+export const createInstrumentJobTitleMapping = async (data: {
+  instrumentId: string;
+  jobTitle: string;
+}): Promise<{ id: string; message: string }> => {
   const { data: response } = await api.post('/onboarding/job-titles', data);
   return response;
 };
@@ -2398,7 +2646,7 @@ export const getPracticeStats = async (): Promise<PracticeStats> => {
 export const logPractice = async (
   musicTitleId: string,
   durationMinutes: number,
-  notes?: string
+  notes?: string,
 ): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/practice', { musicTitleId, durationMinutes, notes });
   return data;
@@ -2424,11 +2672,7 @@ export const getRecentViews = async (type?: string, limit?: number): Promise<Rec
   return data;
 };
 
-export const recordView = async (
-  itemType: string,
-  itemId: string,
-  itemTitle: string
-): Promise<{ message: string }> => {
+export const recordView = async (itemType: string, itemId: string, itemTitle: string): Promise<{ message: string }> => {
   const { data } = await api.post('/recent', { itemType, itemId, itemTitle });
   return data;
 };
@@ -2454,10 +2698,7 @@ export interface Annotation {
   updatedAt: string;
 }
 
-export const getAnnotations = async (
-  musicPieceId: string,
-  pageNumber?: number
-): Promise<Annotation[]> => {
+export const getAnnotations = async (musicPieceId: string, pageNumber?: number): Promise<Annotation[]> => {
   const { data } = await api.get(`/annotations/piece/${musicPieceId}`, {
     params: { pageNumber },
   });
@@ -2488,7 +2729,7 @@ export const updateAnnotation = async (
     height?: number;
     content?: string;
     color?: string;
-  }
+  },
 ): Promise<{ message: string }> => {
   const { data } = await api.put(`/annotations/${id}`, updates);
   return data;
@@ -2499,9 +2740,7 @@ export const deleteAnnotation = async (id: string): Promise<{ message: string }>
   return data;
 };
 
-export const deleteAllAnnotations = async (
-  musicPieceId: string
-): Promise<{ message: string; deleted: number }> => {
+export const deleteAllAnnotations = async (musicPieceId: string): Promise<{ message: string; deleted: number }> => {
   const { data } = await api.delete(`/annotations/piece/${musicPieceId}`);
   return data;
 };
@@ -2535,10 +2774,7 @@ export const revokeAllSessions = async (): Promise<{ message: string; revokedCou
 
 // ==================== REORDER TITLES IN LIST ====================
 
-export const reorderTitlesInList = async (
-  listId: string,
-  titleOrder: string[]
-): Promise<{ message: string }> => {
+export const reorderTitlesInList = async (listId: string, titleOrder: string[]): Promise<{ message: string }> => {
   const { data } = await api.put(`/music-lists/${listId}/reorder-titles`, { titleOrder });
   return data;
 };
@@ -2551,7 +2787,7 @@ export const bulkUpdatePieces = async (
     instrumentId?: string | null;
     addToListId?: string;
     removeFromListId?: string;
-  }
+  },
 ): Promise<{ message: string; updated: number }> => {
   const { data } = await api.put('/music-pieces/bulk', { pieceIds, updates });
   return data;
@@ -2607,7 +2843,12 @@ export const disconnectGoogle = async (): Promise<void> => {
   await api.post('/calendar/google/disconnect');
 };
 
-export const syncGoogleCalendar = async (): Promise<{ message: string; synced: number; failed: number; total: number }> => {
+export const syncGoogleCalendar = async (): Promise<{
+  message: string;
+  synced: number;
+  failed: number;
+  total: number;
+}> => {
   const { data } = await api.post('/calendar/google/sync');
   return data;
 };
@@ -2681,7 +2922,9 @@ export const unlinkTelegram = async (): Promise<void> => {
 };
 
 // WhatsApp
-export const linkWhatsApp = async (phoneNumber: string): Promise<{ message: string; phoneNumber: string; expiresIn: number }> => {
+export const linkWhatsApp = async (
+  phoneNumber: string,
+): Promise<{ message: string; phoneNumber: string; expiresIn: number }> => {
   const { data } = await api.post('/notification-channels/whatsapp/link', { phoneNumber });
   return data;
 };
@@ -2690,7 +2933,12 @@ export const verifyWhatsApp = async (code: string): Promise<void> => {
   await api.post('/notification-channels/whatsapp/verify', { code });
 };
 
-export const getWhatsAppStatus = async (): Promise<{ linked: boolean; verified: boolean; phoneNumber: string | null; linkedAt: string | null }> => {
+export const getWhatsAppStatus = async (): Promise<{
+  linked: boolean;
+  verified: boolean;
+  phoneNumber: string | null;
+  linkedAt: string | null;
+}> => {
   const { data } = await api.get('/notification-channels/whatsapp/status');
   return data;
 };
@@ -2726,7 +2974,7 @@ export const searchStreamingTracks = async (
   query: string,
   platform: 'spotify' | 'apple',
   composer?: string,
-  limit?: number
+  limit?: number,
 ): Promise<{ results: StreamingSearchResult[] }> => {
   const { data } = await api.get('/streaming/search', {
     params: { q: query, platform, composer, limit },
@@ -2734,7 +2982,9 @@ export const searchStreamingTracks = async (
   return data;
 };
 
-export const getStreamingLinks = async (titleId: string): Promise<{
+export const getStreamingLinks = async (
+  titleId: string,
+): Promise<{
   spotify_url?: string | null;
   apple_music_url?: string | null;
   youtube_music_url?: string | null;
@@ -2753,7 +3003,7 @@ export const updateStreamingLinks = async (
     youtube_music_url?: string | null;
     spotify_preview_url?: string | null;
     apple_music_preview_url?: string | null;
-  }
+  },
 ): Promise<{ message: string; links: typeof links }> => {
   const { data } = await api.post(`/streaming/music-titles/${titleId}/links`, links);
   return data;
@@ -2761,7 +3011,7 @@ export const updateStreamingLinks = async (
 
 export const deleteStreamingLink = async (
   titleId: string,
-  platform: 'spotify' | 'apple' | 'youtube'
+  platform: 'spotify' | 'apple' | 'youtube',
 ): Promise<void> => {
   await api.delete(`/streaming/music-titles/${titleId}/links/${platform}`);
 };
@@ -2784,8 +3034,13 @@ export const createTicketOrder = async (
     buyerPhone?: string;
     notes?: string;
     captchaToken?: string;
-  }
-): Promise<{ orderId: string; total: number; expiresAt: string; items: { ticketTypeId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[] }> => {
+  },
+): Promise<{
+  orderId: string;
+  total: number;
+  expiresAt: string;
+  items: { ticketTypeId: string; name: string; quantity: number; unitPrice: number; subtotal: number }[];
+}> => {
   const { data } = await api.post(`/concerts/${concertId}/tickets/order`, order);
   return data;
 };
@@ -2799,7 +3054,7 @@ export const getTicketOrder = async (orderId: string): Promise<TicketOrder> => {
 // Initialize payment for an order
 export const payTicketOrder = async (
   orderId: string,
-  payment: { method?: string; returnUrl?: string }
+  payment: { method?: string; returnUrl?: string },
 ): Promise<{ paymentId: string; checkoutUrl: string }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/pay`, payment);
   return data;
@@ -2812,10 +3067,7 @@ export const getTicketByCode = async (code: string): Promise<Ticket> => {
 };
 
 // Validate and scan a ticket
-export const validateTicket = async (
-  code: string,
-  concertId?: string
-): Promise<TicketValidationResult> => {
+export const validateTicket = async (code: string, concertId?: string): Promise<TicketValidationResult> => {
   const { data } = await api.post(`/tickets/${code}/validate`, { concertId });
   return data;
 };
@@ -2837,7 +3089,7 @@ export const createTicketType = async (
     saleStart?: string;
     saleEnd?: string;
     maxPerOrder?: number;
-  }
+  },
 ): Promise<TicketType> => {
   const { data } = await api.post(`/concerts/${concertId}/ticket-types`, ticketType);
   return data;
@@ -2854,7 +3106,7 @@ export const updateTicketType = async (
     saleStart?: string;
     saleEnd?: string;
     maxPerOrder?: number;
-  }
+  },
 ): Promise<{ success: boolean }> => {
   const { data } = await api.put(`/ticket-types/${ticketTypeId}`, updates);
   return data;
@@ -2905,7 +3157,10 @@ export const cancelTicket = async (ticketId: string): Promise<{ success: boolean
 };
 
 // Admin: Refund an order
-export const refundOrder = async (orderId: string, reason?: string): Promise<{ success: boolean; refundId?: string; message: string }> => {
+export const refundOrder = async (
+  orderId: string,
+  reason?: string,
+): Promise<{ success: boolean; refundId?: string; message: string }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/refund`, { reason });
   return data;
 };
@@ -2988,38 +3243,47 @@ export const exportTicketSalesCsv = async (params?: {
 import type { GuestListResponse, GuestListEntry } from './types';
 
 // Get guest list for a concert
-export const getGuestList = async (concertId: string, params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  ticketsSent?: boolean;
-}): Promise<GuestListResponse> => {
+export const getGuestList = async (
+  concertId: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    ticketsSent?: boolean;
+  },
+): Promise<GuestListResponse> => {
   const { data } = await api.get(`/concerts/${concertId}/guest-list`, { params });
   return data;
 };
 
 // Add a guest to the guest list
-export const addGuest = async (concertId: string, guest: {
-  name: string;
-  email: string;
-  ticketCount: number;
-  ticketTypeId?: string | null;
-  notes?: string | null;
-  organisation?: string | null;
-}): Promise<GuestListEntry> => {
+export const addGuest = async (
+  concertId: string,
+  guest: {
+    name: string;
+    email: string;
+    ticketCount: number;
+    ticketTypeId?: string | null;
+    notes?: string | null;
+    organisation?: string | null;
+  },
+): Promise<GuestListEntry> => {
   const { data } = await api.post(`/concerts/${concertId}/guest-list`, guest);
   return data;
 };
 
 // Update a guest list entry
-export const updateGuest = async (guestId: string, guest: Partial<{
-  name: string;
-  email: string;
-  ticketCount: number;
-  ticketTypeId: string | null;
-  notes: string | null;
-  organisation: string | null;
-}>): Promise<GuestListEntry> => {
+export const updateGuest = async (
+  guestId: string,
+  guest: Partial<{
+    name: string;
+    email: string;
+    ticketCount: number;
+    ticketTypeId: string | null;
+    notes: string | null;
+    organisation: string | null;
+  }>,
+): Promise<GuestListEntry> => {
   const { data } = await api.put(`/guest-list/${guestId}`, guest);
   return data;
 };
@@ -3030,7 +3294,9 @@ export const deleteGuest = async (guestId: string): Promise<void> => {
 };
 
 // Send tickets to a guest
-export const sendGuestTickets = async (guestId: string): Promise<{
+export const sendGuestTickets = async (
+  guestId: string,
+): Promise<{
   success: boolean;
   orderId: string;
   ticketCount: number;
@@ -3041,7 +3307,9 @@ export const sendGuestTickets = async (guestId: string): Promise<{
 };
 
 // Send tickets to all guests who haven't received them yet
-export const sendAllGuestTickets = async (concertId: string): Promise<{
+export const sendAllGuestTickets = async (
+  concertId: string,
+): Promise<{
   success: boolean;
   sent: number;
   failed: number;
@@ -3072,10 +3340,13 @@ export const updatePaymentSettings = async (settings: {
 };
 
 // Update payment method fee
-export const updatePaymentMethodFee = async (method: string, fee: {
-  customerFee: number;
-  isEnabled?: boolean;
-}): Promise<{ success: boolean }> => {
+export const updatePaymentMethodFee = async (
+  method: string,
+  fee: {
+    customerFee: number;
+    isEnabled?: boolean;
+  },
+): Promise<{ success: boolean }> => {
   const { data } = await api.put(`/payment-settings/fees/${method}`, fee);
   return data;
 };
@@ -3083,7 +3354,7 @@ export const updatePaymentMethodFee = async (method: string, fee: {
 // Connect Mollie account
 export const connectMollie = async (
   apiKey: string,
-  mode?: 'live' | 'test'
+  mode?: 'live' | 'test',
 ): Promise<{
   success: boolean;
   profileId: string;
@@ -3145,7 +3416,7 @@ export const getTransferableTickets = async (): Promise<TransferableTicket[]> =>
 // Initiate a ticket transfer
 export const initiateTicketTransfer = async (
   ticketId: string,
-  transfer: { recipientEmail: string; recipientName: string }
+  transfer: { recipientEmail: string; recipientName: string },
 ): Promise<{ transfer: TicketTransfer; message: string }> => {
   const { data } = await api.post(`/tickets/${ticketId}/transfer`, transfer);
   return data;
@@ -3165,7 +3436,7 @@ export const cancelTicketTransfer = async (transferId: string): Promise<{ succes
 
 // Accept a ticket transfer (for recipient)
 export const acceptTicketTransfer = async (
-  transferCode: string
+  transferCode: string,
 ): Promise<{ success: boolean; ticket: Ticket; message: string }> => {
   const { data } = await api.post(`/tickets/transfers/${transferCode}/accept`);
   return data;
@@ -3203,25 +3474,13 @@ export {
   type PracticeGoalsResponse,
 } from './api/practice';
 
-export {
-  getTitleLoanHistory,
-  type TitleLoanHistory,
-  type LoanHistoryEntry,
-} from './api/loans';
+export { getTitleLoanHistory, type TitleLoanHistory, type LoanHistoryEntry } from './api/loans';
 
-export {
-  getAttendancePrediction,
-  type AttendancePrediction,
-} from './api/concerts';
+export { getAttendancePrediction, type AttendancePrediction } from './api/concerts';
 
-export {
-  createRecurringRehearsals,
-  deleteRehearsalSeries,
-} from './api/rehearsals';
+export { createRecurringRehearsals, deleteRehearsalSeries } from './api/rehearsals';
 
-export {
-  uploadMusicPiecesZip,
-} from './api/music';
+export { uploadMusicPiecesZip } from './api/music';
 
 // =============================================
 // FAILED IMPORTS API
@@ -3387,16 +3646,19 @@ export const createSeasonTemplate = async (template: {
   return data;
 };
 
-export const updateSeasonTemplate = async (id: string, template: {
-  name?: string;
-  description?: string;
-  defaultRehearsalDay?: number;
-  defaultRehearsalTime?: string;
-  defaultRehearsalDuration?: number;
-  defaultRehearsalLocation?: string;
-  typicalConcertsCount?: number;
-  templateData?: Record<string, unknown>;
-}): Promise<{ message: string }> => {
+export const updateSeasonTemplate = async (
+  id: string,
+  template: {
+    name?: string;
+    description?: string;
+    defaultRehearsalDay?: number;
+    defaultRehearsalTime?: string;
+    defaultRehearsalDuration?: number;
+    defaultRehearsalLocation?: string;
+    typicalConcertsCount?: number;
+    templateData?: Record<string, unknown>;
+  },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seasons/templates/${id}`, template);
   return data;
 };
@@ -3430,16 +3692,19 @@ export const createSeason = async (season: {
   return data;
 };
 
-export const updateSeason = async (id: string, season: {
-  name?: string;
-  startDate?: string;
-  endDate?: string;
-  templateId?: string;
-  status?: 'draft' | 'active' | 'completed';
-  budgetTotal?: number;
-  budgetAllocated?: number;
-  notes?: string;
-}): Promise<{ message: string }> => {
+export const updateSeason = async (
+  id: string,
+  season: {
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    templateId?: string;
+    status?: 'draft' | 'active' | 'completed';
+    budgetTotal?: number;
+    budgetAllocated?: number;
+    notes?: string;
+  },
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/seasons/${id}`, season);
   return data;
 };
@@ -3450,13 +3715,16 @@ export const deleteSeason = async (id: string): Promise<{ message: string }> => 
 };
 
 // Season Events
-export const addSeasonEvent = async (seasonId: string, event: {
-  eventType: 'concert' | 'rehearsal' | 'other';
-  eventId?: string;
-  plannedDate: string;
-  budgetAmount?: number;
-  notes?: string;
-}): Promise<{ id: string; message: string }> => {
+export const addSeasonEvent = async (
+  seasonId: string,
+  event: {
+    eventType: 'concert' | 'rehearsal' | 'other';
+    eventId?: string;
+    plannedDate: string;
+    budgetAmount?: number;
+    notes?: string;
+  },
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/seasons/${seasonId}/events`, event);
   return data;
 };
@@ -3469,7 +3737,7 @@ export const removeSeasonEvent = async (seasonId: string, eventId: string): Prom
 // Generate season events (rehearsals and concerts)
 export const generateSeasonEvents = async (
   seasonId: string,
-  params: GenerateSeasonEventsParams
+  params: GenerateSeasonEventsParams,
 ): Promise<GenerateSeasonEventsResult> => {
   const { data } = await api.post(`/seasons/${seasonId}/generate`, params);
   return data;
@@ -3526,7 +3794,9 @@ export const getUpcomingHolidays = async (limit?: number): Promise<Holiday[]> =>
   return data;
 };
 
-export const checkHolidayDate = async (date: string): Promise<{
+export const checkHolidayDate = async (
+  date: string,
+): Promise<{
   isHoliday: boolean;
   holiday: {
     name: string;
@@ -3540,7 +3810,9 @@ export const checkHolidayDate = async (date: string): Promise<{
   return data;
 };
 
-export const syncHolidays = async (year?: number): Promise<{
+export const syncHolidays = async (
+  year?: number,
+): Promise<{
   message: string;
   count: number;
   year: number;
@@ -3568,7 +3840,7 @@ export const updateCustomHoliday = async (
     endDate?: string;
     region?: string;
     holidayType?: string;
-  }
+  },
 ): Promise<{ message: string }> => {
   const { data } = await api.put(`/holidays/${id}`, holiday);
   return data;
@@ -3642,7 +3914,7 @@ export const updateStageLayout = async (
     isDefault?: boolean;
     layoutData?: StageLayoutData;
     thumbnailUrl?: string;
-  }
+  },
 ): Promise<{ message: string }> => {
   const { data } = await api.put(`/stage-layouts/${id}`, layout);
   return data;
@@ -3653,10 +3925,7 @@ export const deleteStageLayout = async (id: string): Promise<{ message: string }
   return data;
 };
 
-export const duplicateStageLayout = async (
-  id: string,
-  name?: string
-): Promise<{ id: string; message: string }> => {
+export const duplicateStageLayout = async (id: string, name?: string): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/stage-layouts/${id}/duplicate`, { name });
   return data;
 };
@@ -3669,7 +3938,7 @@ export const getConcertStage = async (concertId: string): Promise<ConcertStageRe
 export const saveConcertStage = async (
   concertId: string,
   layoutId: string,
-  assignments: Record<string, StageAssignment>
+  assignments: Record<string, StageAssignment>,
 ): Promise<{ message: string }> => {
   const { data } = await api.put(`/concerts/${concertId}/stage`, {
     layoutId,
@@ -3683,9 +3952,7 @@ export const deleteConcertStage = async (concertId: string): Promise<{ message: 
   return data;
 };
 
-export const getPrintableSeatCards = async (
-  concertId: string
-): Promise<PrintableSeatCardsResponse> => {
+export const getPrintableSeatCards = async (concertId: string): Promise<PrintableSeatCardsResponse> => {
   const { data } = await api.get(`/concerts/${concertId}/stage/print`);
   return data;
 };

@@ -216,11 +216,38 @@ router.post(
         });
       }
 
-      // Verify MFA code
-      const verifyResult = verifySync({ token: mfaCode, secret: user.mfa_secret });
+      // The secret is stored encrypted; legacy installs may still hold plaintext
+      const { secret: mfaSecret, wasPlaintext } = revealMfaSecret(user.mfa_secret);
 
-      if (!verifyResult.valid) {
-        throw new ApiError(401, 'Ongeldige MFA code.');
+      // Verify as TOTP code first; fall back to a one-time recovery code
+      const totpValid = isTotpCodeValid(mfaCode, mfaSecret);
+
+      if (!totpValid) {
+        const recoveryCodeUsed = consumeRecoveryCode(user.id, mfaCode);
+        if (!recoveryCodeUsed) {
+          throw new ApiError(401, 'Ongeldige MFA code.');
+        }
+
+        logAuditEvent(
+          user.id,
+          'mfa_recovery_code_used',
+          'user',
+          user.id,
+          `${user.first_name} ${user.last_name}`,
+          undefined,
+          req.ip,
+          req.get('user-agent'),
+        );
+      }
+
+      // Legacy plaintext secret: re-encrypt now that the login succeeded.
+      // protectMfaSecret degrades to plaintext when no key is configured,
+      // in which case the stored value simply stays as-is.
+      if (wasPlaintext) {
+        const protectedSecret = protectMfaSecret(mfaSecret);
+        if (protectedSecret !== user.mfa_secret) {
+          db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(protectedSecret, user.id);
+        }
       }
     }
 
@@ -462,8 +489,8 @@ router.post(
     // Generate new secret
     const secret = generateSecret();
 
-    // Store secret temporarily (not enabled yet)
-    db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(secret, req.user!.id);
+    // Store secret temporarily (not enabled yet), encrypted at rest
+    db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(protectMfaSecret(secret), req.user!.id);
 
     // Generate OTP Auth URL for QR code
     const otpauthUrl = `otpauth://totp/${encodeURIComponent('Harmonie Muziek')}:${encodeURIComponent(user.email)}?secret=${secret}&issuer=${encodeURIComponent('Harmonie Muziek')}`;
@@ -541,15 +568,17 @@ router.post(
       throw new ApiError(400, 'Start eerst de MFA setup.');
     }
 
-    // Verify the code
-    const verifyResult = verifySync({ token: code, secret: user.mfa_secret });
-
-    if (!verifyResult.valid) {
+    // Verify the code (secret is stored encrypted)
+    const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+    if (!isTotpCodeValid(code, mfaSecret)) {
       throw new ApiError(401, 'Ongeldige verificatie code. Probeer opnieuw.');
     }
 
     // Enable MFA
     db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(req.user!.id);
+
+    // Generate one-time recovery codes; the plaintext is only returned here
+    const recoveryCodes = issueRecoveryCodes(req.user!.id);
 
     // Log audit event
     logAuditEvent(
@@ -566,6 +595,7 @@ router.post(
     res.json({
       message: 'MFA is succesvol ingeschakeld.',
       mfaEnabled: true,
+      recoveryCodes,
     });
   }),
 );
@@ -638,15 +668,15 @@ router.post(
 
     // Optionally verify MFA code if provided
     if (code && user.mfa_secret) {
-      const verifyResult = verifySync({ token: code, secret: user.mfa_secret });
-
-      if (!verifyResult.valid) {
+      const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+      if (!isTotpCodeValid(code, mfaSecret)) {
         throw new ApiError(401, 'Ongeldige MFA code.');
       }
     }
 
-    // Disable MFA and clear secret
+    // Disable MFA, clear secret and remove recovery codes
     db.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?').run(req.user!.id);
+    deleteRecoveryCodes(req.user!.id);
 
     // Log audit event
     logAuditEvent(
@@ -700,6 +730,93 @@ router.get(
 
     res.json({
       mfaEnabled: Boolean(user.mfa_enabled),
+    });
+  }),
+);
+
+/**
+ * @swagger
+ * /auth/mfa/recovery-codes/regenerate:
+ *   post:
+ *     summary: Regenerate MFA recovery codes (requires a valid TOTP code)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: 6-digit verification code from authenticator app
+ *     responses:
+ *       200:
+ *         description: New recovery codes (shown only once, old codes are invalidated)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 recoveryCodes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         description: MFA not enabled or code missing
+ *       401:
+ *         description: Invalid verification code
+ */
+router.post(
+  '/mfa/recovery-codes/regenerate',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { code } = req.body;
+
+    if (!code) {
+      throw new ApiError(400, 'Verificatie code is verplicht.');
+    }
+
+    const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
+      | { mfa_secret: string | null; mfa_enabled: boolean }
+      | undefined;
+
+    if (!user) {
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
+    }
+
+    if (!user.mfa_enabled || !user.mfa_secret) {
+      throw new ApiError(400, 'MFA is niet ingeschakeld.');
+    }
+
+    // Require a valid TOTP code (recovery codes cannot regenerate themselves)
+    const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+    if (!isTotpCodeValid(code, mfaSecret)) {
+      throw new ApiError(401, 'Ongeldige MFA code.');
+    }
+
+    // Replace all existing codes with a fresh set
+    const recoveryCodes = issueRecoveryCodes(req.user!.id);
+
+    logAuditEvent(
+      req.user!.id,
+      'mfa_recovery_codes_regenerated',
+      'user',
+      req.user!.id,
+      'MFA recovery codes opnieuw gegenereerd',
+      undefined,
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: 'Nieuwe recovery codes gegenereerd. Bewaar ze op een veilige plek; ze worden eenmalig getoond.',
+      recoveryCodes,
     });
   }),
 );
@@ -769,13 +886,14 @@ router.post(
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
 
-    // Store token
+    // Store only the SHA-256 hash of the token; the plaintext token exists
+    // solely in the e-mail sent to the user.
     db.prepare(
       `
         INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
         VALUES (?, ?, ?, ?)
     `,
-    ).run(tokenId, user.id, token, expiresAt.toISOString());
+    ).run(tokenId, user.id, hashResetToken(token), expiresAt.toISOString());
 
     // Send email
     const userName = `${user.first_name} ${user.last_name}`;
@@ -836,7 +954,8 @@ router.post(
       throw new ApiError(400, 'Wachtwoord moet minimaal 8 tekens bevatten.');
     }
 
-    // Find valid token
+    // Find valid token. Only hashes are stored, so the supplied token is
+    // hashed for the lookup; legacy plaintext rows simply never match.
     const resetToken = db
       .prepare(
         `
@@ -846,7 +965,7 @@ router.post(
         WHERE prt.token = ? AND prt.used = 0 AND prt.expires_at > datetime('now')
     `,
       )
-      .get(token) as { id: string; user_id: string; email: string } | undefined;
+      .get(hashResetToken(String(token))) as { id: string; user_id: string; email: string } | undefined;
 
     if (!resetToken) {
       throw new ApiError(400, 'Ongeldige of verlopen reset link. Vraag een nieuwe aan.');
@@ -932,7 +1051,7 @@ router.get(
         WHERE token = ? AND used = 0 AND expires_at > datetime('now')
     `,
       )
-      .get(token);
+      .get(hashResetToken(String(token)));
 
     if (!resetToken) {
       throw new ApiError(400, 'Ongeldige of verlopen reset link.');

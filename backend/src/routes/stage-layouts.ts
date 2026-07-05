@@ -3,10 +3,20 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
+
+// Stage layouts change rarely; responses are association-scoped, so the cache
+// varies by association (default). This router is mounted at both
+// /api/stage-layouts and /api (for /concerts/:id/stage), and concert stage
+// responses embed layout_data, so mutations invalidate with the shared
+// '/stage' pattern that matches cache keys from both mounts.
+const CACHE_PATTERN = '/stage';
+const layoutsCache = cacheMiddleware({ ttlSeconds: 600 });
+const concertStageCache = cacheMiddleware({ ttlSeconds: 300 });
 
 // Position types allowed in layouts
 const POSITION_TYPES = ['chair', 'stand', 'conductor', 'piano', 'percussion', 'other'] as const;
@@ -65,11 +75,14 @@ const createLayoutSchema = z.object({
 
 const updateLayoutSchema = createLayoutSchema.partial();
 
-const assignmentSchema = z.record(z.string(), z.object({
-  userId: z.string().optional(),
-  instrumentId: z.string().optional(),
-  name: z.string().optional(),
-}));
+const assignmentSchema = z.record(
+  z.string(),
+  z.object({
+    userId: z.string().optional(),
+    instrumentId: z.string().optional(),
+    name: z.string().optional(),
+  }),
+);
 
 const saveConcertStageSchema = z.object({
   layoutId: z.string().uuid(),
@@ -85,17 +98,23 @@ const saveConcertStageSchema = z.object({
  *     summary: Get all stage layouts for this association
  *     tags: [Stage Layouts]
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const includeTemplates = req.query.includeTemplates === 'true';
+router.get(
+  '/',
+  authenticateToken,
+  layoutsCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const includeTemplates = req.query.includeTemplates === 'true';
 
-  let whereClause = 'WHERE sl.association_id = ?';
-  const params: any[] = [req.user!.associationId];
+    let whereClause = 'WHERE sl.association_id = ?';
+    const params: any[] = [req.user!.associationId];
 
-  if (!includeTemplates) {
-    whereClause += ' AND sl.is_template = 0';
-  }
+    if (!includeTemplates) {
+      whereClause += ' AND sl.is_template = 0';
+    }
 
-  const layouts = db.prepare(`
+    const layouts = db
+      .prepare(
+        `
     SELECT sl.*,
            u.first_name as created_by_first_name,
            u.last_name as created_by_last_name,
@@ -104,28 +123,35 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     LEFT JOIN users u ON sl.created_by = u.id
     ${whereClause}
     ORDER BY sl.is_default DESC, sl.name ASC
-  `).all(...params);
+  `,
+      )
+      .all(...params);
 
-  res.json(layouts.map((layout: any) => ({
-    id: layout.id,
-    name: layout.name,
-    description: layout.description,
-    venueName: layout.venue_name,
-    stageWidth: layout.stage_width,
-    stageDepth: layout.stage_depth,
-    isTemplate: layout.is_template === 1,
-    isDefault: layout.is_default === 1,
-    thumbnailUrl: layout.thumbnail_url,
-    usageCount: layout.usage_count,
-    createdBy: layout.created_by ? {
-      id: layout.created_by,
-      firstName: layout.created_by_first_name,
-      lastName: layout.created_by_last_name,
-    } : null,
-    createdAt: layout.created_at,
-    updatedAt: layout.updated_at,
-  })));
-}));
+    res.json(
+      layouts.map((layout: any) => ({
+        id: layout.id,
+        name: layout.name,
+        description: layout.description,
+        venueName: layout.venue_name,
+        stageWidth: layout.stage_width,
+        stageDepth: layout.stage_depth,
+        isTemplate: layout.is_template === 1,
+        isDefault: layout.is_default === 1,
+        thumbnailUrl: layout.thumbnail_url,
+        usageCount: layout.usage_count,
+        createdBy: layout.created_by
+          ? {
+              id: layout.created_by,
+              firstName: layout.created_by_first_name,
+              lastName: layout.created_by_last_name,
+            }
+          : null,
+        createdAt: layout.created_at,
+        updatedAt: layout.updated_at,
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -134,45 +160,56 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *     summary: Get single stage layout with full data
  *     tags: [Stage Layouts]
  */
-router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const layout = db.prepare(`
+router.get(
+  '/:id',
+  authenticateToken,
+  layoutsCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const layout = db
+      .prepare(
+        `
     SELECT sl.*, u.first_name as created_by_first_name, u.last_name as created_by_last_name
     FROM stage_layouts sl
     LEFT JOIN users u ON sl.created_by = u.id
     WHERE sl.id = ? AND sl.association_id = ?
-  `).get(req.params.id, req.user!.associationId) as any;
+  `,
+      )
+      .get(req.params.id, req.user!.associationId) as any;
 
-  if (!layout) {
-    throw new ApiError(404, 'Podiumindeling niet gevonden.');
-  }
+    if (!layout) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
 
-  let layoutData;
-  try {
-    layoutData = JSON.parse(layout.layout_data || '{}');
-  } catch {
-    layoutData = { positions: [], shapes: [], sections: [] };
-  }
+    let layoutData;
+    try {
+      layoutData = JSON.parse(layout.layout_data || '{}');
+    } catch {
+      layoutData = { positions: [], shapes: [], sections: [] };
+    }
 
-  res.json({
-    id: layout.id,
-    name: layout.name,
-    description: layout.description,
-    venueName: layout.venue_name,
-    stageWidth: layout.stage_width,
-    stageDepth: layout.stage_depth,
-    isTemplate: layout.is_template === 1,
-    isDefault: layout.is_default === 1,
-    layoutData,
-    thumbnailUrl: layout.thumbnail_url,
-    createdBy: layout.created_by ? {
-      id: layout.created_by,
-      firstName: layout.created_by_first_name,
-      lastName: layout.created_by_last_name,
-    } : null,
-    createdAt: layout.created_at,
-    updatedAt: layout.updated_at,
-  });
-}));
+    res.json({
+      id: layout.id,
+      name: layout.name,
+      description: layout.description,
+      venueName: layout.venue_name,
+      stageWidth: layout.stage_width,
+      stageDepth: layout.stage_depth,
+      isTemplate: layout.is_template === 1,
+      isDefault: layout.is_default === 1,
+      layoutData,
+      thumbnailUrl: layout.thumbnail_url,
+      createdBy: layout.created_by
+        ? {
+            id: layout.created_by,
+            firstName: layout.created_by_first_name,
+            lastName: layout.created_by_last_name,
+          }
+        : null,
+      createdAt: layout.created_at,
+      updatedAt: layout.updated_at,
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -181,46 +218,56 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  *     summary: Create new stage layout
  *     tags: [Stage Layouts]
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const data = createLayoutSchema.parse(req.body);
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = createLayoutSchema.parse(req.body);
 
-  const id = uuidv4();
+    const id = uuidv4();
 
-  // If this is set as default, unset other defaults
-  if (data.isDefault) {
-    db.prepare(`
+    // If this is set as default, unset other defaults
+    if (data.isDefault) {
+      db.prepare(
+        `
       UPDATE stage_layouts SET is_default = 0 WHERE association_id = ?
-    `).run(req.user!.associationId);
-  }
+    `,
+      ).run(req.user!.associationId);
+    }
 
-  db.prepare(`
+    db.prepare(
+      `
     INSERT INTO stage_layouts (
       id, association_id, name, description, venue_name,
       stage_width, stage_depth, is_template, is_default,
       layout_data, thumbnail_url, created_by
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    req.user!.associationId,
-    data.name,
-    data.description || null,
-    data.venueName || null,
-    data.stageWidth,
-    data.stageDepth,
-    data.isTemplate ? 1 : 0,
-    data.isDefault ? 1 : 0,
-    JSON.stringify(data.layoutData),
-    data.thumbnailUrl || null,
-    req.user!.id
-  );
+  `,
+    ).run(
+      id,
+      req.user!.associationId,
+      data.name,
+      data.description || null,
+      data.venueName || null,
+      data.stageWidth,
+      data.stageDepth,
+      data.isTemplate ? 1 : 0,
+      data.isDefault ? 1 : 0,
+      JSON.stringify(data.layoutData),
+      data.thumbnailUrl || null,
+      req.user!.id,
+    );
 
-  logger.info(`Stage layout created: ${data.name}`, { id, createdBy: req.user!.id });
+    logger.info(`Stage layout created: ${data.name}`, { id, createdBy: req.user!.id });
 
-  res.status(201).json({
-    id,
-    message: 'Podiumindeling aangemaakt.',
-  });
-}));
+    res.status(201).json({
+      id,
+      message: 'Podiumindeling aangemaakt.',
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -229,26 +276,35 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee', 'con
  *     summary: Update stage layout
  *     tags: [Stage Layouts]
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const data = updateLayoutSchema.parse(req.body);
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = updateLayoutSchema.parse(req.body);
 
-  const existing = db.prepare('SELECT * FROM stage_layouts WHERE id = ? AND association_id = ?')
-    .get(req.params.id, req.user!.associationId);
+    const existing = db
+      .prepare('SELECT * FROM stage_layouts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
 
-  if (!existing) {
-    throw new ApiError(404, 'Podiumindeling niet gevonden.');
-  }
+    if (!existing) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
 
-  // If this is set as default, unset other defaults
-  if (data.isDefault) {
-    db.prepare(`
+    // If this is set as default, unset other defaults
+    if (data.isDefault) {
+      db.prepare(
+        `
       UPDATE stage_layouts SET is_default = 0 WHERE association_id = ? AND id != ?
-    `).run(req.user!.associationId, req.params.id);
-  }
+    `,
+      ).run(req.user!.associationId, req.params.id);
+    }
 
-  const layoutDataJson = data.layoutData ? JSON.stringify(data.layoutData) : null;
+    const layoutDataJson = data.layoutData ? JSON.stringify(data.layoutData) : null;
 
-  db.prepare(`
+    db.prepare(
+      `
     UPDATE stage_layouts SET
       name = COALESCE(?, name),
       description = COALESCE(?, description),
@@ -261,24 +317,26 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'c
       thumbnail_url = COALESCE(?, thumbnail_url),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(
-    data.name ?? null,
-    data.description ?? null,
-    data.venueName ?? null,
-    data.stageWidth ?? null,
-    data.stageDepth ?? null,
-    data.isTemplate !== undefined ? (data.isTemplate ? 1 : 0) : null,
-    data.isDefault !== undefined ? (data.isDefault ? 1 : 0) : null,
-    layoutDataJson,
-    data.thumbnailUrl ?? null,
-    req.params.id
-  );
+  `,
+    ).run(
+      data.name ?? null,
+      data.description ?? null,
+      data.venueName ?? null,
+      data.stageWidth ?? null,
+      data.stageDepth ?? null,
+      data.isTemplate !== undefined ? (data.isTemplate ? 1 : 0) : null,
+      data.isDefault !== undefined ? (data.isDefault ? 1 : 0) : null,
+      layoutDataJson,
+      data.thumbnailUrl ?? null,
+      req.params.id,
+    );
 
-  const safeLayoutIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
-  logger.info(`Stage layout updated: ${safeLayoutIdForLog}`, { updatedBy: req.user!.id });
+    const safeLayoutIdForLog = String(req.params.id).replace(/[\r\n]/g, '');
+    logger.info(`Stage layout updated: ${safeLayoutIdForLog}`, { updatedBy: req.user!.id });
 
-  res.json({ message: 'Podiumindeling bijgewerkt.' });
-}));
+    res.json({ message: 'Podiumindeling bijgewerkt.' });
+  }),
+);
 
 /**
  * @swagger
@@ -287,27 +345,41 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee', 'c
  *     summary: Delete stage layout
  *     tags: [Stage Layouts]
  */
-router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Check if layout is in use
-  const usageCount = db.prepare(`
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Check if layout is in use
+    const usageCount = db
+      .prepare(
+        `
     SELECT COUNT(*) as count FROM concert_stage_assignments WHERE layout_id = ?
-  `).get(req.params.id) as { count: number };
+  `,
+      )
+      .get(req.params.id) as { count: number };
 
-  if (usageCount.count > 0) {
-    throw new ApiError(400, `Deze podiumindeling wordt gebruikt door ${usageCount.count} concert(en). Verwijder eerst de toewijzingen.`);
-  }
+    if (usageCount.count > 0) {
+      throw new ApiError(
+        400,
+        `Deze podiumindeling wordt gebruikt door ${usageCount.count} concert(en). Verwijder eerst de toewijzingen.`,
+      );
+    }
 
-  const result = db.prepare('DELETE FROM stage_layouts WHERE id = ? AND association_id = ?')
-    .run(req.params.id, req.user!.associationId);
+    const result = db
+      .prepare('DELETE FROM stage_layouts WHERE id = ? AND association_id = ?')
+      .run(req.params.id, req.user!.associationId);
 
-  if (result.changes === 0) {
-    throw new ApiError(404, 'Podiumindeling niet gevonden.');
-  }
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
 
-  logger.info(`Stage layout deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    logger.info(`Stage layout deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 
-  res.json({ message: 'Podiumindeling verwijderd.' });
-}));
+    res.json({ message: 'Podiumindeling verwijderd.' });
+  }),
+);
 
 /**
  * @swagger
@@ -316,44 +388,53 @@ router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee',
  *     summary: Duplicate a stage layout
  *     tags: [Stage Layouts]
  */
-router.post('/:id/duplicate', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const original = db.prepare('SELECT * FROM stage_layouts WHERE id = ? AND association_id = ?')
-    .get(req.params.id, req.user!.associationId) as any;
+router.post(
+  '/:id/duplicate',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const original = db
+      .prepare('SELECT * FROM stage_layouts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId) as any;
 
-  if (!original) {
-    throw new ApiError(404, 'Podiumindeling niet gevonden.');
-  }
+    if (!original) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
 
-  const newName = req.body.name || `${original.name} (kopie)`;
-  const id = uuidv4();
+    const newName = req.body.name || `${original.name} (kopie)`;
+    const id = uuidv4();
 
-  db.prepare(`
+    db.prepare(
+      `
     INSERT INTO stage_layouts (
       id, association_id, name, description, venue_name,
       stage_width, stage_depth, is_template, is_default,
       layout_data, thumbnail_url, created_by
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-  `).run(
-    id,
-    req.user!.associationId,
-    newName,
-    original.description,
-    original.venue_name,
-    original.stage_width,
-    original.stage_depth,
-    original.is_template,
-    original.layout_data,
-    original.thumbnail_url,
-    req.user!.id
-  );
+  `,
+    ).run(
+      id,
+      req.user!.associationId,
+      newName,
+      original.description,
+      original.venue_name,
+      original.stage_width,
+      original.stage_depth,
+      original.is_template,
+      original.layout_data,
+      original.thumbnail_url,
+      req.user!.id,
+    );
 
-  logger.info(`Stage layout duplicated: ${original.name} -> ${newName}`, { originalId: req.params.id, newId: id });
+    logger.info(`Stage layout duplicated: ${original.name} -> ${newName}`, { originalId: req.params.id, newId: id });
 
-  res.status(201).json({
-    id,
-    message: 'Podiumindeling gedupliceerd.',
-  });
-}));
+    res.status(201).json({
+      id,
+      message: 'Podiumindeling gedupliceerd.',
+    });
+  }),
+);
 
 // ==================== CONCERT STAGE ASSIGNMENTS ====================
 
@@ -364,64 +445,77 @@ router.post('/:id/duplicate', authenticateToken, requireRole('admin', 'music_com
  *     summary: Get stage assignment for a concert
  *     tags: [Stage Layouts]
  */
-router.get('/concerts/:id/stage', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Verify concert belongs to association
-  const concert = db.prepare(`
+router.get(
+  '/concerts/:id/stage',
+  authenticateToken,
+  concertStageCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify concert belongs to association
+    const concert = db
+      .prepare(
+        `
     SELECT id, name, date FROM concerts WHERE id = ? AND association_id = ?
-  `).get(req.params.id, req.user!.associationId) as any;
+  `,
+      )
+      .get(req.params.id, req.user!.associationId) as any;
 
-  if (!concert) {
-    throw new ApiError(404, 'Concert niet gevonden.');
-  }
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden.');
+    }
 
-  const assignment = db.prepare(`
+    const assignment = db
+      .prepare(
+        `
     SELECT csa.*, sl.name as layout_name, sl.layout_data, sl.stage_width, sl.stage_depth
     FROM concert_stage_assignments csa
     JOIN stage_layouts sl ON csa.layout_id = sl.id
     WHERE csa.concert_id = ?
-  `).get(req.params.id) as any;
+  `,
+      )
+      .get(req.params.id) as any;
 
-  if (!assignment) {
+    if (!assignment) {
+      res.json({
+        concert: {
+          id: concert.id,
+          name: concert.name,
+          date: concert.date,
+        },
+        assignment: null,
+      });
+      return;
+    }
+
+    let layoutData;
+    let assignments;
+    try {
+      layoutData = JSON.parse(assignment.layout_data || '{}');
+      assignments = JSON.parse(assignment.assignments || '{}');
+    } catch {
+      layoutData = { positions: [], shapes: [], sections: [] };
+      assignments = {};
+    }
+
     res.json({
       concert: {
         id: concert.id,
         name: concert.name,
         date: concert.date,
       },
-      assignment: null,
+      assignment: {
+        id: assignment.id,
+        layoutId: assignment.layout_id,
+        layoutName: assignment.layout_name,
+        stageWidth: assignment.stage_width,
+        stageDepth: assignment.stage_depth,
+        layoutData,
+        assignments,
+        createdAt: assignment.created_at,
+        updatedAt: assignment.updated_at,
+      },
     });
-    return;
-  }
-
-  let layoutData;
-  let assignments;
-  try {
-    layoutData = JSON.parse(assignment.layout_data || '{}');
-    assignments = JSON.parse(assignment.assignments || '{}');
-  } catch {
-    layoutData = { positions: [], shapes: [], sections: [] };
-    assignments = {};
-  }
-
-  res.json({
-    concert: {
-      id: concert.id,
-      name: concert.name,
-      date: concert.date,
-    },
-    assignment: {
-      id: assignment.id,
-      layoutId: assignment.layout_id,
-      layoutName: assignment.layout_name,
-      stageWidth: assignment.stage_width,
-      stageDepth: assignment.stage_depth,
-      layoutData,
-      assignments,
-      createdAt: assignment.created_at,
-      updatedAt: assignment.updated_at,
-    },
-  });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -430,57 +524,79 @@ router.get('/concerts/:id/stage', authenticateToken, asyncHandler(async (req: Au
  *     summary: Save stage assignment for a concert
  *     tags: [Stage Layouts]
  */
-router.put('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const data = saveConcertStageSchema.parse(req.body);
+router.put(
+  '/concerts/:id/stage',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = saveConcertStageSchema.parse(req.body);
 
-  // Verify concert belongs to association
-  const concert = db.prepare(`
+    // Verify concert belongs to association
+    const concert = db
+      .prepare(
+        `
     SELECT id FROM concerts WHERE id = ? AND association_id = ?
-  `).get(req.params.id, req.user!.associationId);
+  `,
+      )
+      .get(req.params.id, req.user!.associationId);
 
-  if (!concert) {
-    throw new ApiError(404, 'Concert niet gevonden.');
-  }
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden.');
+    }
 
-  // Verify layout exists and belongs to association
-  const layout = db.prepare(`
+    // Verify layout exists and belongs to association
+    const layout = db
+      .prepare(
+        `
     SELECT id FROM stage_layouts WHERE id = ? AND association_id = ?
-  `).get(data.layoutId, req.user!.associationId);
+  `,
+      )
+      .get(data.layoutId, req.user!.associationId);
 
-  if (!layout) {
-    throw new ApiError(404, 'Podiumindeling niet gevonden.');
-  }
+    if (!layout) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
 
-  // Check for existing assignment
-  const existing = db.prepare(`
+    // Check for existing assignment
+    const existing = db
+      .prepare(
+        `
     SELECT id FROM concert_stage_assignments WHERE concert_id = ?
-  `).get(req.params.id) as any;
+  `,
+      )
+      .get(req.params.id) as any;
 
-  const assignmentsJson = JSON.stringify(data.assignments);
-  const safeConcertId = req.params.id.replace(/[\r\n]/g, '');
+    const assignmentsJson = JSON.stringify(data.assignments);
+    const safeConcertId = req.params.id.replace(/[\r\n]/g, '');
 
-  if (existing) {
-    db.prepare(`
+    if (existing) {
+      db.prepare(
+        `
       UPDATE concert_stage_assignments SET
         layout_id = ?,
         assignments = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(data.layoutId, assignmentsJson, existing.id);
+    `,
+      ).run(data.layoutId, assignmentsJson, existing.id);
 
-    logger.info(`Concert stage assignment updated: concert ${safeConcertId}`, { updatedBy: req.user!.id });
-  } else {
-    const id = uuidv4();
-    db.prepare(`
+      logger.info(`Concert stage assignment updated: concert ${safeConcertId}`, { updatedBy: req.user!.id });
+    } else {
+      const id = uuidv4();
+      db.prepare(
+        `
       INSERT INTO concert_stage_assignments (id, concert_id, layout_id, assignments)
       VALUES (?, ?, ?, ?)
-    `).run(id, req.params.id, data.layoutId, assignmentsJson);
+    `,
+      ).run(id, req.params.id, data.layoutId, assignmentsJson);
 
-    logger.info(`Concert stage assignment created: concert ${safeConcertId}`, { id, createdBy: req.user!.id });
-  }
+      logger.info(`Concert stage assignment created: concert ${safeConcertId}`, { id, createdBy: req.user!.id });
+    }
 
-  res.json({ message: 'Podiumindeling voor concert opgeslagen.' });
-}));
+    res.json({ message: 'Podiumindeling voor concert opgeslagen.' });
+  }),
+);
 
 /**
  * @swagger
@@ -489,28 +605,42 @@ router.put('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music
  *     summary: Remove stage assignment from a concert
  *     tags: [Stage Layouts]
  */
-router.delete('/concerts/:id/stage', authenticateToken, requireRole('admin', 'music_committee', 'conductor'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Verify concert belongs to association
-  const concert = db.prepare(`
+router.delete(
+  '/concerts/:id/stage',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  cacheInvalidator(CACHE_PATTERN),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify concert belongs to association
+    const concert = db
+      .prepare(
+        `
     SELECT id FROM concerts WHERE id = ? AND association_id = ?
-  `).get(req.params.id, req.user!.associationId);
+  `,
+      )
+      .get(req.params.id, req.user!.associationId);
 
-  if (!concert) {
-    throw new ApiError(404, 'Concert niet gevonden.');
-  }
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden.');
+    }
 
-  const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
     DELETE FROM concert_stage_assignments WHERE concert_id = ?
-  `).run(req.params.id);
+  `,
+      )
+      .run(req.params.id);
 
-  if (result.changes === 0) {
-    throw new ApiError(404, 'Geen podiumindeling gevonden voor dit concert.');
-  }
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Geen podiumindeling gevonden voor dit concert.');
+    }
 
-  logger.info(`Concert stage assignment deleted: concert ${req.params.id}`, { deletedBy: req.user!.id });
+    logger.info(`Concert stage assignment deleted: concert ${req.params.id}`, { deletedBy: req.user!.id });
 
-  res.json({ message: 'Podiumindeling van concert verwijderd.' });
-}));
+    res.json({ message: 'Podiumindeling van concert verwijderd.' });
+  }),
+);
 
 /**
  * @swagger
@@ -519,121 +649,142 @@ router.delete('/concerts/:id/stage', authenticateToken, requireRole('admin', 'mu
  *     summary: Get printable seat cards data for a concert
  *     tags: [Stage Layouts]
  */
-router.get('/concerts/:id/stage/print', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Verify concert belongs to association
-  const concert = db.prepare(`
+router.get(
+  '/concerts/:id/stage/print',
+  authenticateToken,
+  concertStageCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Verify concert belongs to association
+    const concert = db
+      .prepare(
+        `
     SELECT id, name, date, location FROM concerts WHERE id = ? AND association_id = ?
-  `).get(req.params.id, req.user!.associationId) as any;
+  `,
+      )
+      .get(req.params.id, req.user!.associationId) as any;
 
-  if (!concert) {
-    throw new ApiError(404, 'Concert niet gevonden.');
-  }
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden.');
+    }
 
-  const assignment = db.prepare(`
+    const assignment = db
+      .prepare(
+        `
     SELECT csa.*, sl.name as layout_name, sl.layout_data
     FROM concert_stage_assignments csa
     JOIN stage_layouts sl ON csa.layout_id = sl.id
     WHERE csa.concert_id = ?
-  `).get(req.params.id) as any;
+  `,
+      )
+      .get(req.params.id) as any;
 
-  if (!assignment) {
-    throw new ApiError(404, 'Geen podiumindeling gevonden voor dit concert.');
-  }
+    if (!assignment) {
+      throw new ApiError(404, 'Geen podiumindeling gevonden voor dit concert.');
+    }
 
-  let layoutData;
-  let assignments;
-  try {
-    layoutData = JSON.parse(assignment.layout_data || '{}');
-    assignments = JSON.parse(assignment.assignments || '{}');
-  } catch {
-    layoutData = { positions: [], shapes: [], sections: [] };
-    assignments = {};
-  }
+    let layoutData;
+    let assignments;
+    try {
+      layoutData = JSON.parse(assignment.layout_data || '{}');
+      assignments = JSON.parse(assignment.assignments || '{}');
+    } catch {
+      layoutData = { positions: [], shapes: [], sections: [] };
+      assignments = {};
+    }
 
-  // Build seat cards from positions and assignments
-  const seatCards: {
-    positionId: string;
-    label: string;
-    section: string;
-    sectionColor: string;
-    musicianName: string;
-    instrument: string;
-    standNumber: number;
-  }[] = [];
+    // Build seat cards from positions and assignments
+    const seatCards: {
+      positionId: string;
+      label: string;
+      section: string;
+      sectionColor: string;
+      musicianName: string;
+      instrument: string;
+      standNumber: number;
+    }[] = [];
 
-  const positions = layoutData.positions || [];
-  const sections = layoutData.sections || [];
+    const positions = layoutData.positions || [];
+    const sections = layoutData.sections || [];
 
-  // Get section colors map
-  const sectionColors: Record<string, string> = {};
-  for (const section of sections) {
-    sectionColors[section.id] = section.color;
-  }
+    // Get section colors map
+    const sectionColors: Record<string, string> = {};
+    for (const section of sections) {
+      sectionColors[section.id] = section.color;
+    }
 
-  // Get instruments for lookup
-  const instrumentRows = db.prepare(`
+    // Get instruments for lookup
+    const instrumentRows = db
+      .prepare(
+        `
     SELECT id, name FROM instruments WHERE association_id = ?
-  `).all(req.user!.associationId) as { id: string; name: string }[];
+  `,
+      )
+      .all(req.user!.associationId) as { id: string; name: string }[];
 
-  const instrumentMap: Record<string, string> = {};
-  for (const inst of instrumentRows) {
-    instrumentMap[inst.id] = inst.name;
-  }
+    const instrumentMap: Record<string, string> = {};
+    for (const inst of instrumentRows) {
+      instrumentMap[inst.id] = inst.name;
+    }
 
-  // Get users for lookup
-  const userRows = db.prepare(`
+    // Get users for lookup
+    const userRows = db
+      .prepare(
+        `
     SELECT id, first_name, last_name FROM users WHERE association_id = ?
-  `).all(req.user!.associationId) as { id: string; first_name: string; last_name: string }[];
+  `,
+      )
+      .all(req.user!.associationId) as { id: string; first_name: string; last_name: string }[];
 
-  const userMap: Record<string, string> = {};
-  for (const user of userRows) {
-    userMap[user.id] = `${user.first_name} ${user.last_name}`;
-  }
+    const userMap: Record<string, string> = {};
+    for (const user of userRows) {
+      userMap[user.id] = `${user.first_name} ${user.last_name}`;
+    }
 
-  // Counter for stand numbers per section
-  const standCounters: Record<string, number> = {};
+    // Counter for stand numbers per section
+    const standCounters: Record<string, number> = {};
 
-  for (const pos of positions) {
-    if (pos.type !== 'chair' && pos.type !== 'stand') continue;
+    for (const pos of positions) {
+      if (pos.type !== 'chair' && pos.type !== 'stand') continue;
 
-    const section = pos.section || 'unknown';
-    if (!standCounters[section]) standCounters[section] = 0;
-    standCounters[section]++;
+      const section = pos.section || 'unknown';
+      if (!standCounters[section]) standCounters[section] = 0;
+      standCounters[section]++;
 
-    const assignment = assignments[pos.id];
-    const musicianName = assignment?.userId
-      ? userMap[assignment.userId] || assignment.name || ''
-      : assignment?.name || '';
+      const assignment = assignments[pos.id];
+      const musicianName = assignment?.userId
+        ? userMap[assignment.userId] || assignment.name || ''
+        : assignment?.name || '';
 
-    const instrument = assignment?.instrumentId
-      ? instrumentMap[assignment.instrumentId] || ''
-      : pos.instrumentId
-        ? instrumentMap[pos.instrumentId] || ''
-        : '';
+      const instrument = assignment?.instrumentId
+        ? instrumentMap[assignment.instrumentId] || ''
+        : pos.instrumentId
+          ? instrumentMap[pos.instrumentId] || ''
+          : '';
 
-    const sectionData = sections.find((s: any) => s.id === section);
+      const sectionData = sections.find((s: any) => s.id === section);
 
-    seatCards.push({
-      positionId: pos.id,
-      label: pos.label || `${section}-${standCounters[section]}`,
-      section: sectionData?.name || section,
-      sectionColor: sectionColors[section] || '#cccccc',
-      musicianName,
-      instrument,
-      standNumber: standCounters[section],
+      seatCards.push({
+        positionId: pos.id,
+        label: pos.label || `${section}-${standCounters[section]}`,
+        section: sectionData?.name || section,
+        sectionColor: sectionColors[section] || '#cccccc',
+        musicianName,
+        instrument,
+        standNumber: standCounters[section],
+      });
+    }
+
+    res.json({
+      concert: {
+        id: concert.id,
+        name: concert.name,
+        date: concert.date,
+        location: concert.location,
+      },
+      layoutName: assignment.layout_name,
+      seatCards,
     });
-  }
-
-  res.json({
-    concert: {
-      id: concert.id,
-      name: concert.name,
-      date: concert.date,
-      location: concert.location,
-    },
-    layoutName: assignment.layout_name,
-    seatCards,
-  });
-}));
+  }),
+);
 
 export default router;

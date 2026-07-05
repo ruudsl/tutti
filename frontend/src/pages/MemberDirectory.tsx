@@ -2,21 +2,21 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getMemberDirectory, getOrchestras, getInstruments } from '../api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { useDownloadToken } from '../utils/downloadUrl';
 import { Avatar } from '../components/Avatar';
 import { SectionChat } from '../components/SectionChat';
 import { VirtualizedList, VirtualizedListItem } from '../components/VirtualizedList';
 import './MemberDirectory.css';
 
-// Helper to get photo URL with auth token for img src
-const getPhotoUrl = (photoUrl: string | null | undefined): string | null => {
-  if (!photoUrl) return null;
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  return token ? `${photoUrl}?token=${token}` : null;
+// Helper to get photo URL with a short-lived download token for img src
+const getPhotoUrl = (photoUrl: string | null | undefined, downloadToken: string | null): string | null => {
+  if (!photoUrl || !downloadToken) return null;
+  return `${photoUrl}?token=${encodeURIComponent(downloadToken)}`;
 };
 
 export default function MemberDirectory() {
   const { t } = useTranslation();
+  const downloadToken = useDownloadToken();
   const [search, setSearch] = useState('');
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedInstrument, setSelectedInstrument] = useState('');
@@ -25,11 +25,12 @@ export default function MemberDirectory() {
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['memberDirectory', selectedOrchestra, selectedInstrument, search],
-    queryFn: () => getMemberDirectory({
-      orchestraId: selectedOrchestra || undefined,
-      instrumentId: selectedInstrument || undefined,
-      search: search || undefined,
-    }),
+    queryFn: () =>
+      getMemberDirectory({
+        orchestraId: selectedOrchestra || undefined,
+        instrumentId: selectedInstrument || undefined,
+        search: search || undefined,
+      }),
   });
 
   const { data: orchestras = [] } = useQuery({
@@ -42,14 +43,11 @@ export default function MemberDirectory() {
     queryFn: getInstruments,
   });
 
-
   return (
     <div className="member-directory-page">
       <div className="page-header">
         <h1>{t('memberDirectory.title')}</h1>
-        <p className="page-subtitle">
-          {t('memberDirectory.subtitle', { count: members.length })}
-        </p>
+        <p className="page-subtitle">{t('memberDirectory.subtitle', { count: members.length })}</p>
       </div>
 
       <div className="directory-filters">
@@ -71,8 +69,10 @@ export default function MemberDirectory() {
               onChange={(e) => setSelectedOrchestra(e.target.value)}
             >
               <option value="">{t('memberDirectory.allOrchestras')}</option>
-              {orchestras.map(o => (
-                <option key={o.id} value={o.id}>{o.name}</option>
+              {orchestras.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
               ))}
             </select>
           </div>
@@ -84,8 +84,11 @@ export default function MemberDirectory() {
               onChange={(e) => setSelectedInstrument(e.target.value)}
             >
               <option value="">{t('memberDirectory.allInstruments')}</option>
-              {instruments.map(i => (
-                <option key={i.id} value={i.id}>{i.name}{i.tuning ? ` (${i.tuning})` : ''}</option>
+              {instruments.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                  {i.tuning ? ` (${i.tuning})` : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -93,7 +96,11 @@ export default function MemberDirectory() {
           {(search || selectedOrchestra || selectedInstrument) && (
             <button
               className="btn btn-outline btn-sm"
-              onClick={() => { setSearch(''); setSelectedOrchestra(''); setSelectedInstrument(''); }}
+              onClick={() => {
+                setSearch('');
+                setSelectedOrchestra('');
+                setSelectedInstrument('');
+              }}
             >
               {t('memberDirectory.clearFilters')}
             </button>
@@ -137,26 +144,28 @@ export default function MemberDirectory() {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="directory-grid">
-              {members.map(member => (
+              {members.map((member) => (
                 <div key={member.id} className="member-card">
                   <div className="member-avatar">
                     <Avatar
                       name={`${member.firstName} ${member.lastName}`}
-                      src={getPhotoUrl(member.photoUrl)}
+                      src={getPhotoUrl(member.photoUrl, downloadToken)}
                       size="xl"
                     />
                   </div>
                   <div className="member-info">
-                    <h3 className="member-name">{member.firstName} {member.lastName}</h3>
+                    <h3 className="member-name">
+                      {member.firstName} {member.lastName}
+                    </h3>
                     {member.instruments.length > 0 && (
-                      <p className="member-instrument">
-                        {member.instruments.map(i => i.name).join(', ')}
-                      </p>
+                      <p className="member-instrument">{member.instruments.map((i) => i.name).join(', ')}</p>
                     )}
                     {member.orchestras.length > 0 && (
                       <div className="member-orchestras">
-                        {member.orchestras.map(o => (
-                          <span key={o.id} className="orchestra-badge">{o.name}</span>
+                        {member.orchestras.map((o) => (
+                          <span key={o.id} className="orchestra-badge">
+                            {o.name}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -177,21 +186,25 @@ export default function MemberDirectory() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
                     <Avatar
                       name={`${member.firstName} ${member.lastName}`}
-                      src={getPhotoUrl(member.photoUrl)}
+                      src={getPhotoUrl(member.photoUrl, downloadToken)}
                       size="md"
                     />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{member.firstName} {member.lastName}</div>
+                      <div style={{ fontWeight: 600 }}>
+                        {member.firstName} {member.lastName}
+                      </div>
                       {member.instruments.length > 0 && (
                         <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                          {member.instruments.map(i => i.name).join(', ')}
+                          {member.instruments.map((i) => i.name).join(', ')}
                         </div>
                       )}
                     </div>
                     {member.orchestras.length > 0 && (
                       <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                        {member.orchestras.map(o => (
-                          <span key={o.id} className="orchestra-badge" style={{ fontSize: '0.75rem' }}>{o.name}</span>
+                        {member.orchestras.map((o) => (
+                          <span key={o.id} className="orchestra-badge" style={{ fontSize: '0.75rem' }}>
+                            {o.name}
+                          </span>
                         ))}
                       </div>
                     )}

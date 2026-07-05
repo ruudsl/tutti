@@ -1485,7 +1485,13 @@
     "disableSuccess": "MFA is uitgeschakeld",
     "errorSetup": "Fout bij starten MFA setup",
     "errorEnable": "Fout bij inschakelen MFA",
-    "errorDisable": "Fout bij uitschakelen MFA"
+    "errorDisable": "Fout bij uitschakelen MFA",
+    "recoveryCodesTitle": "Recovery codes",
+    "recoveryCodesDescription": "Bewaar deze recovery codes op een veilige plek. Met een recovery code kun je inloggen als je geen toegang meer hebt tot je authenticator app. Elke code is eenmalig bruikbaar.",
+    "recoveryCodesWarning": "Deze codes worden maar één keer getoond. Kopieer ze nu.",
+    "recoveryCodesCopy": "Codes kopiëren",
+    "recoveryCodesCopied": "Recovery codes gekopieerd",
+    "recoveryCodesDone": "Ik heb ze opgeslagen"
   },
   "backup": {
     "title": "Backup",
