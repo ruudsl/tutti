@@ -902,7 +902,7 @@ router.post(
     const emailSent = await sendPasswordResetEmail(email, token, userName, user.association_id);
 
     if (!emailSent) {
-      logger.error(`Failed to send password reset email to ${sanitizeForLog(email)}`);
+      logger.error(`Failed to send password reset email for user ${user.id}`);
     }
 
     logger.info(`Password reset token generated for user ${user.id}`);
