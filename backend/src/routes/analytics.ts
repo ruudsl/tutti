@@ -783,8 +783,16 @@ router.get(
   authenticateToken,
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { dateFrom, dateTo, reportType = 'member_activity', anonymize } = req.query;
+    const { dateFrom, dateTo, reportType: rawReportType = 'member_activity', anonymize } = req.query;
     const associationId = req.user!.associationId!;
+
+    const allowedReportTypes = ['member_activity', 'content_activity', 'detailed_log'] as const;
+    const reportType =
+      typeof rawReportType === 'string' &&
+      (allowedReportTypes as readonly string[]).includes(rawReportType)
+        ? rawReportType
+        : 'member_activity';
+    const reportTypeForLog = reportType.replace(/[\r\n]/g, '');
 
     const endDate = dateTo ? String(dateTo) : new Date().toISOString().split('T')[0];
     const startDate = dateFrom
@@ -932,7 +940,7 @@ router.get(
       }
     }
 
-    logger.info(`Activity report exported by user ${req.user!.id}: ${reportType}`);
+    logger.info(`Activity report exported by user ${req.user!.id}: ${reportTypeForLog}`);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
