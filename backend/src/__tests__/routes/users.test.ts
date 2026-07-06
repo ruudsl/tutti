@@ -731,7 +731,7 @@ describe('Users Routes', () => {
     });
 
     it('should filter by search query', async () => {
-      const searchUser = createTestUser(association.id, {
+      createTestUser(association.id, {
         email: 'searchable@test.com',
         firstName: 'Searchable',
         lastName: 'User',
