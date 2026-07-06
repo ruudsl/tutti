@@ -115,9 +115,7 @@ describe('Users Routes', () => {
 
     it('should only return users from the same association', async () => {
       // Create another association with a user
-      const otherAssociation = testDb
-        .prepare('INSERT INTO associations (id, name) VALUES (?, ?)')
-        .run('other-assoc-id', 'Other Association');
+      testDb.prepare('INSERT INTO associations (id, name) VALUES (?, ?)').run('other-assoc-id', 'Other Association');
 
       createTestUser('other-assoc-id', {
         email: 'other@test.com',
