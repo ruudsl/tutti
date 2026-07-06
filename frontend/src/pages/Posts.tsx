@@ -26,6 +26,7 @@ import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
 import { PostCategoriesManager } from '../components/PostCategoriesManager';
+import { useConfirm } from '../hooks/useConfirm';
 
 const STATUS_COLORS: Record<PostStatus, string> = {
   draft: 'badge-secondary',
@@ -39,6 +40,7 @@ export default function Posts() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.posts');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const [filterStatus, setFilterStatus] = useState<PostStatus | ''>('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -249,8 +251,8 @@ export default function Posts() {
           canEdit={canCreate}
           onClose={() => setSelectedPost(null)}
           onEdit={() => setShowEditModal(true)}
-          onDelete={() => {
-            if (confirm(t('posts.confirmDelete'))) {
+          onDelete={async () => {
+            if (await confirmDialog(t('posts.confirmDelete'))) {
               deleteMutation.mutate(selectedPost.id);
             }
           }}
@@ -307,6 +309,7 @@ function PostDetailModal({
   const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
   const [newComment, setNewComment] = useState('');
 
   const commentMutation = useMutation({
@@ -402,8 +405,8 @@ function PostDetailModal({
                       {(comment.authorId === user?.id || canEdit) && (
                         <button
                           className="btn btn-ghost btn-xs"
-                          onClick={() => {
-                            if (confirm(t('posts.confirmDeleteComment'))) {
+                          onClick={async () => {
+                            if (await confirmDialog(t('posts.confirmDeleteComment'))) {
                               deleteCommentMutation.mutate(comment.id);
                             }
                           }}

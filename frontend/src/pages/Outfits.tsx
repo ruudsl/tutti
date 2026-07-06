@@ -19,12 +19,14 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { SortableList } from '../components/SortableList';
+import { useConfirm } from '../hooks/useConfirm';
 
 export default function Outfits() {
   const { user } = useAuth();
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.outfits');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -292,8 +294,8 @@ export default function Outfits() {
                 </button>
                 <button
                   className="btn btn-error btn-outline btn-sm"
-                  onClick={() => {
-                    if (confirm(t('outfits.confirmDelete'))) {
+                  onClick={async () => {
+                    if (await confirmDialog(t('outfits.confirmDelete'))) {
                       deleteMutation.mutate(selectedOutfit.id);
                     }
                   }}

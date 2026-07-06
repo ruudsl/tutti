@@ -24,6 +24,7 @@ import {
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
 
@@ -54,6 +55,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Workflows() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.workflows');
   const queryClient = useQueryClient();
 
@@ -77,13 +79,13 @@ export default function Workflows() {
 
   const { data: workflowDetail } = useQuery({
     queryKey: ['workflow', selectedWorkflow?.id],
-    queryFn: () => selectedWorkflow ? getWorkflow(selectedWorkflow.id) : null,
+    queryFn: () => (selectedWorkflow ? getWorkflow(selectedWorkflow.id) : null),
     enabled: !!selectedWorkflow,
   });
 
   const { data: executions } = useQuery({
     queryKey: ['workflow-executions', selectedWorkflow?.id],
-    queryFn: () => selectedWorkflow ? getWorkflowExecutions(selectedWorkflow.id) : null,
+    queryFn: () => (selectedWorkflow ? getWorkflowExecutions(selectedWorkflow.id) : null),
     enabled: !!selectedWorkflow && showExecutionsModal,
   });
 
@@ -201,10 +203,7 @@ export default function Workflows() {
                     )}
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="btn btn-sm btn-outline"
-                      onClick={() => toggleActive(workflow)}
-                    >
+                    <button className="btn btn-sm btn-outline" onClick={() => toggleActive(workflow)}>
                       <Icon name={workflow.isActive ? 'pause' : 'play'} className="w-4 h-4" />
                     </button>
                     <button
@@ -250,8 +249,8 @@ export default function Workflows() {
           workflow={workflowDetail}
           onClose={() => setSelectedWorkflow(null)}
           onRun={() => runMutation.mutate(selectedWorkflow.id)}
-          onDelete={() => {
-            if (confirm(t('workflows.confirmDelete'))) {
+          onDelete={async () => {
+            if (await confirmDialog(t('workflows.confirmDelete'))) {
               deleteMutation.mutate(selectedWorkflow.id);
             }
           }}
@@ -261,115 +260,149 @@ export default function Workflows() {
       )}
 
       {/* Executions Modal */}
-      {showExecutionsModal && <Modal onClose={() => setShowExecutionsModal(false)} title={t('workflows.executionHistory')} size="large">
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {!executions?.executions.length ? (
-            <p className="text-base-content/60 text-center py-4">{t('workflows.noExecutions')}</p>
-          ) : (
-            executions.executions.map((execution) => (
-              <div key={execution.id} className="flex justify-between items-center p-3 rounded bg-base-200">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`badge badge-sm ${STATUS_COLORS[execution.status]}`}>
-                      {t(`workflows.status.${execution.status}`)}
-                    </span>
-                    <span className="text-sm">
-                      {t(`workflows.triggeredBy.${execution.triggeredBy}`)}
-                      {execution.triggeredByName && ` (${execution.triggeredByName})`}
-                    </span>
-                  </div>
-                  <div className="text-xs text-base-content/60 mt-1">
-                    {formatDateTime(execution.createdAt)}
-                    {execution.errorMessage && (
-                      <span className="text-error ml-2">{execution.errorMessage}</span>
-                    )}
+      {showExecutionsModal && (
+        <Modal onClose={() => setShowExecutionsModal(false)} title={t('workflows.executionHistory')} size="large">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {!executions?.executions.length ? (
+              <p className="text-base-content/60 text-center py-4">{t('workflows.noExecutions')}</p>
+            ) : (
+              executions.executions.map((execution) => (
+                <div key={execution.id} className="flex justify-between items-center p-3 rounded bg-base-200">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`badge badge-sm ${STATUS_COLORS[execution.status]}`}>
+                        {t(`workflows.status.${execution.status}`)}
+                      </span>
+                      <span className="text-sm">
+                        {t(`workflows.triggeredBy.${execution.triggeredBy}`)}
+                        {execution.triggeredByName && ` (${execution.triggeredByName})`}
+                      </span>
+                    </div>
+                    <div className="text-xs text-base-content/60 mt-1">
+                      {formatDateTime(execution.createdAt)}
+                      {execution.errorMessage && <span className="text-error ml-2">{execution.errorMessage}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </Modal>}
+              ))
+            )}
+          </div>
+        </Modal>
+      )}
 
       {/* Create Modal */}
-      {showCreateModal && <Modal onClose={() => { setShowCreateModal(false); resetForm(); }} title={t('workflows.add')} size="large">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4">
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.name')} *</span></label>
-            <input
-              type="text"
-              className="input input-bordered"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.descriptionLabel')}</span></label>
-            <textarea
-              className="textarea textarea-bordered"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={2}
-            />
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.trigger')}</span></label>
-            <select
-              className="select select-bordered"
-              value={formData.triggers[0]?.triggerType || 'manual'}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                triggers: [{ triggerType: e.target.value as any }]
-              }))}
-            >
-              <option value="manual">{t('workflows.triggerType.manual')}</option>
-              <option value="event">{t('workflows.triggerType.event')}</option>
-              <option value="schedule">{t('workflows.triggerType.schedule')}</option>
-              <option value="date_field">{t('workflows.triggerType.date_field')}</option>
-            </select>
-          </div>
-
-          <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.action')}</span></label>
-            <select
-              className="select select-bordered"
-              value={formData.actions[0]?.actionType || 'send_notification'}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                actions: [{ actionType: e.target.value as any, actionOrder: 0, config: {} }]
-              }))}
-            >
-              <option value="send_notification">{t('workflows.actionType.send_notification')}</option>
-              <option value="send_email">{t('workflows.actionType.send_email')}</option>
-              <option value="create_task">{t('workflows.actionType.create_task')}</option>
-            </select>
-          </div>
-
-          <div className="flex gap-4">
-            <label className="label cursor-pointer gap-2">
+      {showCreateModal && (
+        <Modal
+          onClose={() => {
+            setShowCreateModal(false);
+            resetForm();
+          }}
+          title={t('workflows.add')}
+          size="large"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate(formData);
+            }}
+            className="space-y-4"
+          >
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">{t('workflows.name')} *</span>
+              </label>
               <input
-                type="checkbox"
-                className="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                type="text"
+                className="input input-bordered"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                required
               />
-              <span className="label-text">{t('workflows.activateImmediately')}</span>
-            </label>
-          </div>
+            </div>
 
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" className="btn btn-ghost" onClick={() => { setShowCreateModal(false); resetForm(); }}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-              {createMutation.isPending ? t('common.saving') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </Modal>}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">{t('workflows.descriptionLabel')}</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                rows={2}
+              />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">{t('workflows.trigger')}</span>
+              </label>
+              <select
+                className="select select-bordered"
+                value={formData.triggers[0]?.triggerType || 'manual'}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    triggers: [{ triggerType: e.target.value as any }],
+                  }))
+                }
+              >
+                <option value="manual">{t('workflows.triggerType.manual')}</option>
+                <option value="event">{t('workflows.triggerType.event')}</option>
+                <option value="schedule">{t('workflows.triggerType.schedule')}</option>
+                <option value="date_field">{t('workflows.triggerType.date_field')}</option>
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">{t('workflows.action')}</span>
+              </label>
+              <select
+                className="select select-bordered"
+                value={formData.actions[0]?.actionType || 'send_notification'}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    actions: [{ actionType: e.target.value as any, actionOrder: 0, config: {} }],
+                  }))
+                }
+              >
+                <option value="send_notification">{t('workflows.actionType.send_notification')}</option>
+                <option value="send_email">{t('workflows.actionType.send_email')}</option>
+                <option value="create_task">{t('workflows.actionType.create_task')}</option>
+              </select>
+            </div>
+
+            <div className="flex gap-4">
+              <label className="label cursor-pointer gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                />
+                <span className="label-text">{t('workflows.activateImmediately')}</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetForm();
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+                {createMutation.isPending ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -400,6 +433,7 @@ function WorkflowDetailModal({
 }: WorkflowDetailModalProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
@@ -423,8 +457,13 @@ function WorkflowDetailModal({
   });
 
   const updateTriggerMutation = useMutation({
-    mutationFn: ({ triggerId, updates }: { triggerId: string; updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>> }) =>
-      updateWorkflowTrigger(workflow.id, triggerId, updates),
+    mutationFn: ({
+      triggerId,
+      updates,
+    }: {
+      triggerId: string;
+      updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>>;
+    }) => updateWorkflowTrigger(workflow.id, triggerId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
       showSuccess(t('workflows.triggerUpdated'));
@@ -461,8 +500,13 @@ function WorkflowDetailModal({
   });
 
   const updateActionMutation = useMutation({
-    mutationFn: ({ actionId, updates }: { actionId: string; updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>> }) =>
-      updateWorkflowAction(workflow.id, actionId, updates),
+    mutationFn: ({
+      actionId,
+      updates,
+    }: {
+      actionId: string;
+      updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>>;
+    }) => updateWorkflowAction(workflow.id, actionId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
       showSuccess(t('workflows.actionUpdated'));
@@ -513,11 +557,15 @@ function WorkflowDetailModal({
   const renderTriggerForm = (isNew: boolean) => (
     <div className="p-3 rounded bg-base-200 space-y-3">
       <div className="form-control">
-        <label className="label"><span className="label-text">{t('workflows.triggerTypeLabel')}</span></label>
+        <label className="label">
+          <span className="label-text">{t('workflows.triggerTypeLabel')}</span>
+        </label>
         <select
           className="select select-bordered select-sm"
           value={triggerFormData.triggerType || 'manual'}
-          onChange={(e) => setTriggerFormData({ ...triggerFormData, triggerType: e.target.value as WorkflowTrigger['triggerType'] })}
+          onChange={(e) =>
+            setTriggerFormData({ ...triggerFormData, triggerType: e.target.value as WorkflowTrigger['triggerType'] })
+          }
         >
           <option value="manual">{t('workflows.triggerType.manual')}</option>
           <option value="event">{t('workflows.triggerType.event')}</option>
@@ -528,7 +576,9 @@ function WorkflowDetailModal({
 
       {triggerFormData.triggerType === 'event' && (
         <div className="form-control">
-          <label className="label"><span className="label-text">{t('workflows.eventName')}</span></label>
+          <label className="label">
+            <span className="label-text">{t('workflows.eventName')}</span>
+          </label>
           <input
             type="text"
             className="input input-bordered input-sm"
@@ -541,7 +591,9 @@ function WorkflowDetailModal({
 
       {triggerFormData.triggerType === 'schedule' && (
         <div className="form-control">
-          <label className="label"><span className="label-text">{t('workflows.cronExpression')}</span></label>
+          <label className="label">
+            <span className="label-text">{t('workflows.cronExpression')}</span>
+          </label>
           <input
             type="text"
             className="input input-bordered input-sm"
@@ -555,7 +607,9 @@ function WorkflowDetailModal({
       {triggerFormData.triggerType === 'date_field' && (
         <>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.dateFieldEntity')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.dateFieldEntity')}</span>
+            </label>
             <input
               type="text"
               className="input input-bordered input-sm"
@@ -565,7 +619,9 @@ function WorkflowDetailModal({
             />
           </div>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.dateFieldName')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.dateFieldName')}</span>
+            </label>
             <input
               type="text"
               className="input input-bordered input-sm"
@@ -576,21 +632,35 @@ function WorkflowDetailModal({
           </div>
           <div className="flex gap-2">
             <div className="form-control flex-1">
-              <label className="label"><span className="label-text">{t('workflows.daysBefore')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('workflows.daysBefore')}</span>
+              </label>
               <input
                 type="number"
                 className="input input-bordered input-sm"
                 value={triggerFormData.daysBefore ?? ''}
-                onChange={(e) => setTriggerFormData({ ...triggerFormData, daysBefore: e.target.value ? parseInt(e.target.value) : undefined })}
+                onChange={(e) =>
+                  setTriggerFormData({
+                    ...triggerFormData,
+                    daysBefore: e.target.value ? parseInt(e.target.value) : undefined,
+                  })
+                }
               />
             </div>
             <div className="form-control flex-1">
-              <label className="label"><span className="label-text">{t('workflows.daysAfter')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('workflows.daysAfter')}</span>
+              </label>
               <input
                 type="number"
                 className="input input-bordered input-sm"
                 value={triggerFormData.daysAfter ?? ''}
-                onChange={(e) => setTriggerFormData({ ...triggerFormData, daysAfter: e.target.value ? parseInt(e.target.value) : undefined })}
+                onChange={(e) =>
+                  setTriggerFormData({
+                    ...triggerFormData,
+                    daysAfter: e.target.value ? parseInt(e.target.value) : undefined,
+                  })
+                }
               />
             </div>
           </div>
@@ -645,7 +715,7 @@ function WorkflowDetailModal({
           }}
           disabled={addTriggerMutation.isPending || updateTriggerMutation.isPending}
         >
-          {(addTriggerMutation.isPending || updateTriggerMutation.isPending) ? t('common.saving') : t('common.save')}
+          {addTriggerMutation.isPending || updateTriggerMutation.isPending ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </div>
@@ -654,11 +724,15 @@ function WorkflowDetailModal({
   const renderActionForm = (isNew: boolean) => (
     <div className="p-3 rounded bg-base-200 space-y-3">
       <div className="form-control">
-        <label className="label"><span className="label-text">{t('workflows.actionTypeLabel')}</span></label>
+        <label className="label">
+          <span className="label-text">{t('workflows.actionTypeLabel')}</span>
+        </label>
         <select
           className="select select-bordered select-sm"
           value={actionFormData.actionType || 'send_notification'}
-          onChange={(e) => setActionFormData({ ...actionFormData, actionType: e.target.value as WorkflowAction['actionType'] })}
+          onChange={(e) =>
+            setActionFormData({ ...actionFormData, actionType: e.target.value as WorkflowAction['actionType'] })
+          }
         >
           <option value="send_notification">{t('workflows.actionType.send_notification')}</option>
           <option value="send_email">{t('workflows.actionType.send_email')}</option>
@@ -674,27 +748,35 @@ function WorkflowDetailModal({
       {actionFormData.actionType === 'send_email' && (
         <>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.emailSubject')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.emailSubject')}</span>
+            </label>
             <input
               type="text"
               className="input input-bordered input-sm"
-              value={(actionFormData.config as Record<string, unknown>)?.subject as string || ''}
-              onChange={(e) => setActionFormData({
-                ...actionFormData,
-                config: { ...(actionFormData.config || {}), subject: e.target.value },
-              })}
+              value={((actionFormData.config as Record<string, unknown>)?.subject as string) || ''}
+              onChange={(e) =>
+                setActionFormData({
+                  ...actionFormData,
+                  config: { ...(actionFormData.config || {}), subject: e.target.value },
+                })
+              }
             />
           </div>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.emailTemplate')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.emailTemplate')}</span>
+            </label>
             <textarea
               className="textarea textarea-bordered textarea-sm"
               rows={3}
-              value={(actionFormData.config as Record<string, unknown>)?.template as string || ''}
-              onChange={(e) => setActionFormData({
-                ...actionFormData,
-                config: { ...(actionFormData.config || {}), template: e.target.value },
-              })}
+              value={((actionFormData.config as Record<string, unknown>)?.template as string) || ''}
+              onChange={(e) =>
+                setActionFormData({
+                  ...actionFormData,
+                  config: { ...(actionFormData.config || {}), template: e.target.value },
+                })
+              }
             />
           </div>
         </>
@@ -702,15 +784,19 @@ function WorkflowDetailModal({
 
       {actionFormData.actionType === 'send_notification' && (
         <div className="form-control">
-          <label className="label"><span className="label-text">{t('workflows.notificationMessage')}</span></label>
+          <label className="label">
+            <span className="label-text">{t('workflows.notificationMessage')}</span>
+          </label>
           <textarea
             className="textarea textarea-bordered textarea-sm"
             rows={2}
-            value={(actionFormData.config as Record<string, unknown>)?.message as string || ''}
-            onChange={(e) => setActionFormData({
-              ...actionFormData,
-              config: { ...(actionFormData.config || {}), message: e.target.value },
-            })}
+            value={((actionFormData.config as Record<string, unknown>)?.message as string) || ''}
+            onChange={(e) =>
+              setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), message: e.target.value },
+              })
+            }
           />
         </div>
       )}
@@ -718,26 +804,34 @@ function WorkflowDetailModal({
       {actionFormData.actionType === 'webhook' && (
         <>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.webhookUrl')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.webhookUrl')}</span>
+            </label>
             <input
               type="url"
               className="input input-bordered input-sm"
-              value={(actionFormData.config as Record<string, unknown>)?.url as string || ''}
-              onChange={(e) => setActionFormData({
-                ...actionFormData,
-                config: { ...(actionFormData.config || {}), url: e.target.value },
-              })}
+              value={((actionFormData.config as Record<string, unknown>)?.url as string) || ''}
+              onChange={(e) =>
+                setActionFormData({
+                  ...actionFormData,
+                  config: { ...(actionFormData.config || {}), url: e.target.value },
+                })
+              }
             />
           </div>
           <div className="form-control">
-            <label className="label"><span className="label-text">{t('workflows.webhookMethod')}</span></label>
+            <label className="label">
+              <span className="label-text">{t('workflows.webhookMethod')}</span>
+            </label>
             <select
               className="select select-bordered select-sm"
-              value={(actionFormData.config as Record<string, unknown>)?.method as string || 'POST'}
-              onChange={(e) => setActionFormData({
-                ...actionFormData,
-                config: { ...(actionFormData.config || {}), method: e.target.value },
-              })}
+              value={((actionFormData.config as Record<string, unknown>)?.method as string) || 'POST'}
+              onChange={(e) =>
+                setActionFormData({
+                  ...actionFormData,
+                  config: { ...(actionFormData.config || {}), method: e.target.value },
+                })
+              }
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
@@ -750,16 +844,20 @@ function WorkflowDetailModal({
 
       {actionFormData.actionType === 'delay' && (
         <div className="form-control">
-          <label className="label"><span className="label-text">{t('workflows.delayMinutes')}</span></label>
+          <label className="label">
+            <span className="label-text">{t('workflows.delayMinutes')}</span>
+          </label>
           <input
             type="number"
             className="input input-bordered input-sm"
             min="1"
-            value={(actionFormData.config as Record<string, unknown>)?.minutes as number || ''}
-            onChange={(e) => setActionFormData({
-              ...actionFormData,
-              config: { ...(actionFormData.config || {}), minutes: parseInt(e.target.value) || 0 },
-            })}
+            value={((actionFormData.config as Record<string, unknown>)?.minutes as number) || ''}
+            onChange={(e) =>
+              setActionFormData({
+                ...actionFormData,
+                config: { ...(actionFormData.config || {}), minutes: parseInt(e.target.value) || 0 },
+              })
+            }
           />
         </div>
       )}
@@ -802,7 +900,7 @@ function WorkflowDetailModal({
           }}
           disabled={addActionMutation.isPending || updateActionMutation.isPending}
         >
-          {(addActionMutation.isPending || updateActionMutation.isPending) ? t('common.saving') : t('common.save')}
+          {addActionMutation.isPending || updateActionMutation.isPending ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </div>
@@ -845,7 +943,9 @@ function WorkflowDetailModal({
                       <Icon name={TRIGGER_TYPE_ICONS[trigger.triggerType] || 'circle'} className="w-4 h-4" />
                       <span>{t(`workflows.triggerType.${trigger.triggerType}`)}</span>
                       {trigger.eventName && <span className="badge badge-sm">{trigger.eventName}</span>}
-                      {trigger.scheduleCron && <code className="text-xs bg-base-300 px-1 rounded">{trigger.scheduleCron}</code>}
+                      {trigger.scheduleCron && (
+                        <code className="text-xs bg-base-300 px-1 rounded">{trigger.scheduleCron}</code>
+                      )}
                     </div>
                     <div className="flex gap-1">
                       <button
@@ -857,8 +957,8 @@ function WorkflowDetailModal({
                       </button>
                       <button
                         className="btn btn-ghost btn-xs text-error"
-                        onClick={() => {
-                          if (confirm(t('workflows.confirmRemoveTrigger'))) {
+                        onClick={async () => {
+                          if (await confirmDialog(t('workflows.confirmRemoveTrigger'))) {
                             removeTriggerMutation.mutate(trigger.id);
                           }
                         }}
@@ -920,8 +1020,8 @@ function WorkflowDetailModal({
                       </button>
                       <button
                         className="btn btn-ghost btn-xs text-error"
-                        onClick={() => {
-                          if (confirm(t('workflows.confirmRemoveAction'))) {
+                        onClick={async () => {
+                          if (await confirmDialog(t('workflows.confirmRemoveAction'))) {
                             removeActionMutation.mutate(action.id);
                           }
                         }}
@@ -941,25 +1041,15 @@ function WorkflowDetailModal({
         </div>
 
         <div className="flex gap-2 pt-4 border-t">
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={onRun}
-            disabled={!workflow.isActive || isRunning}
-          >
+          <button className="btn btn-primary btn-sm" onClick={onRun} disabled={!workflow.isActive || isRunning}>
             <Icon name="play" className="w-4 h-4 mr-1" />
             {t('workflows.run')}
           </button>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={onViewExecutions}
-          >
+          <button className="btn btn-outline btn-sm" onClick={onViewExecutions}>
             <Icon name="clipboard" className="w-4 h-4 mr-1" />
             {t('workflows.viewExecutions')}
           </button>
-          <button
-            className="btn btn-error btn-outline btn-sm"
-            onClick={onDelete}
-          >
+          <button className="btn btn-error btn-outline btn-sm" onClick={onDelete}>
             <Icon name="trash" className="w-4 h-4 mr-1" />
             {t('common.delete')}
           </button>

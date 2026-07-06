@@ -19,6 +19,7 @@ import { useMusicTitles } from '../hooks/useMusicTitles';
 import { useAuth } from '../context/AuthContext';
 import { FormModal, Modal } from '../components/Modal';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 
 export default function PracticeSchedules() {
   const { t, i18n } = useTranslation();
@@ -61,7 +62,9 @@ export default function PracticeSchedules() {
           >
             <option value="">{t('common.allOrchestras')}</option>
             {orchestras?.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
           {canManage && (
@@ -77,9 +80,7 @@ export default function PracticeSchedules() {
           <span className="loading loading-spinner loading-lg" />
         </div>
       ) : schedules?.length === 0 ? (
-        <div className="text-center p-8 text-base-content/60">
-          {t('practiceSchedules.empty')}
-        </div>
+        <div className="text-center p-8 text-base-content/60">{t('practiceSchedules.empty')}</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {schedules?.map((schedule) => (
@@ -96,9 +97,7 @@ export default function PracticeSchedules() {
                 {schedule.musicTitle.composer && (
                   <p className="text-sm text-base-content/70">{schedule.musicTitle.composer}</p>
                 )}
-                <div className="text-sm text-base-content/60">
-                  {schedule.orchestra.name}
-                </div>
+                <div className="text-sm text-base-content/60">{schedule.orchestra.name}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <Icon name="calendar" size={16} />
                   <span className="text-sm">
@@ -110,11 +109,7 @@ export default function PracticeSchedules() {
                     <span>{t('practiceSchedules.progress')}</span>
                     <span>{schedule.progress}%</span>
                   </div>
-                  <progress
-                    className="progress progress-primary w-full"
-                    value={schedule.progress}
-                    max={100}
-                  />
+                  <progress className="progress progress-primary w-full" value={schedule.progress} max={100} />
                   <div className="text-xs text-base-content/60 mt-1">
                     {schedule.completedMilestones}/{schedule.milestoneCount} {t('practiceSchedules.milestones')}
                   </div>
@@ -125,15 +120,10 @@ export default function PracticeSchedules() {
         </div>
       )}
 
-      {showCreateModal && (
-        <CreateScheduleModal onClose={() => setShowCreateModal(false)} />
-      )}
+      {showCreateModal && <CreateScheduleModal onClose={() => setShowCreateModal(false)} />}
 
       {selectedScheduleId && (
-        <ScheduleDetailModal
-          scheduleId={selectedScheduleId}
-          onClose={() => setSelectedScheduleId(null)}
-        />
+        <ScheduleDetailModal scheduleId={selectedScheduleId} onClose={() => setSelectedScheduleId(null)} />
       )}
     </div>
   );
@@ -182,7 +172,9 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
           >
             <option value="">{t('common.select')}</option>
             {musicTitles?.map((mt) => (
-              <option key={mt.id} value={mt.id}>{mt.title}</option>
+              <option key={mt.id} value={mt.id}>
+                {mt.title}
+              </option>
             ))}
           </select>
         </div>
@@ -196,7 +188,9 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
           >
             <option value="">{t('common.select')}</option>
             {orchestras?.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
         </div>
@@ -212,11 +206,7 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="form-group">
           <label className="form-label">{t('practiceSchedules.priority')}</label>
-          <select
-            className="form-control"
-            value={priority}
-            onChange={(e) => setPriority(parseInt(e.target.value))}
-          >
+          <select className="form-control" value={priority} onChange={(e) => setPriority(parseInt(e.target.value))}>
             <option value={1}>{t('practiceSchedules.priorityLow')}</option>
             <option value={2}>{t('practiceSchedules.priorityNormal')}</option>
             <option value={3}>{t('practiceSchedules.priorityHigh')}</option>
@@ -224,12 +214,7 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="form-group">
           <label className="form-label">{t('common.notes')}</label>
-          <textarea
-            className="form-control"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-          />
+          <textarea className="form-control" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </div>
       </div>
     </FormModal>
@@ -240,6 +225,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const locale = i18n.language === 'nl' ? nl : enUS;
+  const confirmDialog = useConfirm();
   const [showAddMilestone, setShowAddMilestone] = useState(false);
 
   const { data: schedule, isLoading } = usePracticeSchedule(scheduleId);
@@ -252,7 +238,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
   const canManage = user?.role && ['admin', 'conductor', 'music_committee'].includes(user.role);
 
   const handleDelete = async () => {
-    if (confirm(t('practiceSchedules.confirmDelete'))) {
+    if (await confirmDialog(t('practiceSchedules.confirmDelete'))) {
       await deleteSchedule.mutateAsync(scheduleId);
       onClose();
     }
@@ -265,7 +251,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
   const handleSectionProgress = async (
     milestoneId: string,
     instrumentId: string,
-    status: 'pending' | 'in_progress' | 'completed'
+    status: 'pending' | 'in_progress' | 'completed',
   ) => {
     await updateProgress.mutateAsync({ milestoneId, instrumentId, status });
   };
@@ -283,17 +269,12 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
   if (!schedule) return null;
 
   return (
-    <Modal
-      title={schedule.musicTitle.title}
-      onClose={onClose}
-      className="max-w-4xl"
-    >
+    <Modal title={schedule.musicTitle.title} onClose={onClose} className="max-w-4xl">
       <div className="space-y-6">
         {/* Header Info */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-base-content/60">{t('common.orchestra')}:</span>{' '}
-            {schedule.orchestra.name}
+            <span className="text-base-content/60">{t('common.orchestra')}:</span> {schedule.orchestra.name}
           </div>
           <div>
             <span className="text-base-content/60">{t('practiceSchedules.targetDate')}:</span>{' '}
@@ -301,14 +282,12 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
           </div>
           {schedule.musicTitle.composer && (
             <div>
-              <span className="text-base-content/60">{t('music.composer')}:</span>{' '}
-              {schedule.musicTitle.composer}
+              <span className="text-base-content/60">{t('music.composer')}:</span> {schedule.musicTitle.composer}
             </div>
           )}
           {schedule.notes && (
             <div className="col-span-2">
-              <span className="text-base-content/60">{t('common.notes')}:</span>{' '}
-              {schedule.notes}
+              <span className="text-base-content/60">{t('common.notes')}:</span> {schedule.notes}
             </div>
           )}
         </div>
@@ -317,11 +296,16 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
         <div>
           <div className="flex justify-between mb-2">
             <span className="font-semibold">{t('practiceSchedules.overallProgress')}</span>
-            <span>{Math.round((schedule.milestones.filter(m => m.isCompleted).length / schedule.milestones.length) * 100) || 0}%</span>
+            <span>
+              {Math.round(
+                (schedule.milestones.filter((m) => m.isCompleted).length / schedule.milestones.length) * 100,
+              ) || 0}
+              %
+            </span>
           </div>
           <progress
             className="progress progress-primary w-full h-3"
-            value={schedule.milestones.filter(m => m.isCompleted).length}
+            value={schedule.milestones.filter((m) => m.isCompleted).length}
             max={schedule.milestones.length || 1}
           />
         </div>
@@ -391,25 +375,25 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
                   {milestone.sectionProgress.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mt-3 pt-3 border-t border-base-300">
                       {milestone.sectionProgress.map((sp) => (
-                        <div
-                          key={sp.id}
-                          className="flex items-center justify-between bg-base-100 rounded px-2 py-1"
-                        >
+                        <div key={sp.id} className="flex items-center justify-between bg-base-100 rounded px-2 py-1">
                           <span className="text-sm truncate">
                             {sp.instrument.name}
                             {sp.instrument.tuning && ` (${sp.instrument.tuning})`}
                           </span>
                           <select
                             className={`select select-xs ${
-                              sp.status === 'completed' ? 'select-success' :
-                              sp.status === 'in_progress' ? 'select-warning' : ''
+                              sp.status === 'completed'
+                                ? 'select-success'
+                                : sp.status === 'in_progress'
+                                  ? 'select-warning'
+                                  : ''
                             }`}
                             value={sp.status}
                             onChange={(e) =>
                               handleSectionProgress(
                                 milestone.id,
                                 sp.instrument.id,
-                                e.target.value as 'pending' | 'in_progress' | 'completed'
+                                e.target.value as 'pending' | 'in_progress' | 'completed',
                               )
                             }
                           >
@@ -437,12 +421,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
         )}
       </div>
 
-      {showAddMilestone && (
-        <AddMilestoneModal
-          scheduleId={scheduleId}
-          onClose={() => setShowAddMilestone(false)}
-        />
-      )}
+      {showAddMilestone && <AddMilestoneModal scheduleId={scheduleId} onClose={() => setShowAddMilestone(false)} />}
     </Modal>
   );
 }

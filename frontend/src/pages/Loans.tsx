@@ -1,6 +1,7 @@
 import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getLoans,
@@ -43,6 +44,7 @@ interface TitleOption {
 
 export default function Loans() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.loans');
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -161,14 +163,14 @@ export default function Loans() {
     });
   };
 
-  const handleReturn = (loan: Loan) => {
-    if (confirm(t('loans.confirmReturn', { title: loan.title_name, borrower: loan.borrower_name }))) {
+  const handleReturn = async (loan: Loan) => {
+    if (await confirmDialog(t('loans.confirmReturn', { title: loan.title_name, borrower: loan.borrower_name }))) {
       returnMutation.mutate(loan.id);
     }
   };
 
-  const handleDelete = (loan: Loan) => {
-    if (confirm(t('loans.confirmDelete'))) {
+  const handleDelete = async (loan: Loan) => {
+    if (await confirmDialog(t('loans.confirmDelete'))) {
       deleteMutation.mutate(loan.id);
     }
   };

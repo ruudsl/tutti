@@ -14,6 +14,12 @@
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
+    "unsavedChanges": {
+      "title": "Unsaved changes",
+      "message": "You have unsaved changes. Are you sure you want to close? Your changes will be lost.",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing"
+    },
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
@@ -25,6 +31,8 @@
     "yes": "Yes",
     "no": "No",
     "confirm": "Confirm",
+    "confirmDeleteTitle": "Confirm deletion",
+    "undo": "Undo",
     "close": "Close",
     "submit": "Submit",
     "download": "Download",
@@ -995,6 +1003,10 @@
   },
   "musicPieces": {
     "title": "Music Pieces",
+    "deleted": "Music piece deleted",
+    "deletedBulk": "{{count}} music pieces deleted",
+    "restored": "Music piece restored",
+    "restoredBulk": "{{count}} music pieces restored",
     "searchPlaceholder": "Search by title or arranger...",
     "allInstruments": "All instruments",
     "noInstrument": "Without instrument",

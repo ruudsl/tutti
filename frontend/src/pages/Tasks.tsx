@@ -29,6 +29,7 @@ import {
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
@@ -70,6 +71,7 @@ export default function Tasks() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.tasks');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   // Filters live in the URL so filtered views can be linked/bookmarked;
   // default values are omitted from the URL to keep it clean.
@@ -404,8 +406,8 @@ export default function Tasks() {
           task={taskDetail}
           taskLists={taskLists}
           onClose={() => setSelectedTask(null)}
-          onDelete={() => {
-            if (confirm(t('tasks.confirmDelete'))) {
+          onDelete={async () => {
+            if (await confirmDialog(t('tasks.confirmDelete'))) {
               deleteMutation.mutate(selectedTask.id);
             }
           }}
@@ -866,6 +868,7 @@ function ManageListsModal({
   onUpdate: () => void;
 }) {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   const [newListName, setNewListName] = useState('');
   const [newListColor, setNewListColor] = useState('#3b82f6');
   const [editingList, setEditingList] = useState<TaskList | null>(null);
@@ -1009,8 +1012,8 @@ function ManageListsModal({
                       </button>
                       <button
                         className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          if (confirm(t('tasks.confirmDeleteList'))) {
+                        onClick={async () => {
+                          if (await confirmDialog(t('tasks.confirmDeleteList'))) {
                             deleteMutation.mutate(list.id);
                           }
                         }}

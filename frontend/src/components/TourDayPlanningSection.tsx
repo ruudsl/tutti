@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { Modal } from './Modal';
+import { ConfirmDialog } from './ConfirmDialog';
 import { formatDate } from '../utils/dateFormat';
 import { showSuccess, showError } from '../utils/toast';
 import {
@@ -27,6 +28,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
   const [showAddDayModal, setShowAddDayModal] = useState(false);
   const [addActivityForDay, setAddActivityForDay] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TourDay | null>(null);
 
   const addDayMutation = useMutation({
     mutationFn: (data: AddTourDayData) => addTourDay(tourId, data),
@@ -47,11 +49,11 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
       onRefresh();
     },
     onError: () => showError(t('tours.errorDeleteDay')),
+    onSettled: () => setDeleteTarget(null),
   });
 
   const addActivityMutation = useMutation({
-    mutationFn: ({ dayId, data }: { dayId: string; data: AddDayActivityData }) =>
-      addDayActivity(tourId, dayId, data),
+    mutationFn: ({ dayId, data }: { dayId: string; data: AddDayActivityData }) => addDayActivity(tourId, dayId, data),
     onSuccess: (result) => {
       showSuccess(result.message || t('tours.activityAdded'));
       queryClient.invalidateQueries({ queryKey: ['tour', tourId] });
@@ -78,10 +80,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h4 className="font-medium text-lg">{t('tours.itinerary')}</h4>
-        <button
-          className="btn btn-primary btn-sm gap-1"
-          onClick={() => setShowAddDayModal(true)}
-        >
+        <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowAddDayModal(true)}>
           <Icon name="plus" size={16} aria-hidden={true} />
           {t('tours.addDay')}
         </button>
@@ -112,9 +111,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                         {t('tours.day')} {day.dayNumber}
                       </span>
                       <span className="font-medium">{formatDate(day.dayDate)}</span>
-                      {day.title && (
-                        <span className="text-base-content/70">- {day.title}</span>
-                      )}
+                      {day.title && <span className="text-base-content/70">- {day.title}</span>}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="badge badge-ghost badge-sm">
@@ -130,39 +127,26 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
 
                   {isExpanded && (
                     <div id={`day-details-${day.id}`} className="mt-4 space-y-3">
-                      {day.description && (
-                        <p className="text-sm text-base-content/70">{day.description}</p>
-                      )}
+                      {day.description && <p className="text-sm text-base-content/70">{day.description}</p>}
 
                       {/* Activities List */}
                       {day.activities.length > 0 && (
                         <div className="space-y-2">
                           {day.activities.map((activity) => (
-                            <div
-                              key={activity.id}
-                              className="flex items-start gap-3 p-3 bg-base-100 rounded-lg"
-                            >
+                            <div key={activity.id} className="flex items-start gap-3 p-3 bg-base-100 rounded-lg">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {activity.startTime && (
-                                    <span className="text-sm font-mono text-primary">
-                                      {activity.startTime}
-                                    </span>
+                                    <span className="text-sm font-mono text-primary">{activity.startTime}</span>
                                   )}
                                   <span className="font-medium">{activity.title}</span>
-                                  <span className="badge badge-sm badge-ghost">
-                                    {activity.activityType}
-                                  </span>
+                                  <span className="badge badge-sm badge-ghost">{activity.activityType}</span>
                                   {activity.isMandatory && (
-                                    <span className="badge badge-sm badge-warning">
-                                      {t('tours.mandatory')}
-                                    </span>
+                                    <span className="badge badge-sm badge-warning">{t('tours.mandatory')}</span>
                                   )}
                                 </div>
                                 {activity.description && (
-                                  <p className="text-sm text-base-content/60 mt-1">
-                                    {activity.description}
-                                  </p>
+                                  <p className="text-sm text-base-content/60 mt-1">{activity.description}</p>
                                 )}
                                 {activity.location && (
                                   <div className="text-sm text-base-content/60 flex items-center gap-1 mt-1">
@@ -173,9 +157,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
                               </div>
                               <div className="flex items-center gap-2">
                                 {activity.cost && (
-                                  <span className="text-sm font-medium">
-                                    {activity.cost.toFixed(2)}
-                                  </span>
+                                  <span className="text-sm font-medium">{activity.cost.toFixed(2)}</span>
                                 )}
                                 <button
                                   className="btn btn-ghost btn-xs btn-square text-error"
@@ -198,20 +180,13 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
 
                       {/* Day Actions */}
                       <div className="flex gap-2 pt-2 border-t border-base-300">
-                        <button
-                          className="btn btn-sm btn-ghost gap-1"
-                          onClick={() => setAddActivityForDay(day.id)}
-                        >
+                        <button className="btn btn-sm btn-ghost gap-1" onClick={() => setAddActivityForDay(day.id)}>
                           <Icon name="plus" size={14} aria-hidden={true} />
                           {t('tours.addActivity')}
                         </button>
                         <button
                           className="btn btn-sm btn-ghost text-error gap-1"
-                          onClick={() => {
-                            if (confirm(t('tours.confirmDeleteDay'))) {
-                              deleteDayMutation.mutate(day.id);
-                            }
-                          }}
+                          onClick={() => setDeleteTarget(day)}
                           disabled={deleteDayMutation.isPending}
                         >
                           <Icon name="trash" size={14} aria-hidden={true} />
@@ -227,6 +202,19 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
         </div>
       )}
 
+      {/* Delete Day Confirmation */}
+      {deleteTarget && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('tours.confirmDeleteDay')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteDayMutation.isPending}
+          onConfirm={() => deleteDayMutation.mutate(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
       {/* Add Day Modal */}
       {showAddDayModal && (
         <AddDayModal
@@ -240,9 +228,7 @@ export function TourDayPlanningSection({ tourId, days, onRefresh }: TourDayPlann
       {addActivityForDay && (
         <AddActivityModal
           onClose={() => setAddActivityForDay(null)}
-          onSubmit={(data) =>
-            addActivityMutation.mutate({ dayId: addActivityForDay, data })
-          }
+          onSubmit={(data) => addActivityMutation.mutate({ dayId: addActivityForDay, data })}
           isPending={addActivityMutation.isPending}
         />
       )}
@@ -306,11 +292,7 @@ function AddDayModal({
           <button className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || isPending}>
             {isPending && <span className="loading loading-spinner loading-sm" />}
             {t('common.add')}
           </button>
@@ -404,11 +386,7 @@ function AddActivityModal({
           <button className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || isPending}>
             {isPending && <span className="loading loading-spinner loading-sm" />}
             {t('common.add')}
           </button>

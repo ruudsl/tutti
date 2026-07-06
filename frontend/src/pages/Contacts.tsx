@@ -774,6 +774,7 @@ function ContactDetailModal({
   const [newPerson, setNewPerson] = useState({ name: '', role: '', email: '', phone: '', isPrimary: false });
   const [editingPerson, setEditingPerson] = useState<ContactPerson | null>(null);
   const [editPersonData, setEditPersonData] = useState({ name: '', role: '', email: '', phone: '', isPrimary: false });
+  const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
 
   const addPersonMutation = useMutation({
     mutationFn: (data: typeof newPerson) => addContactPerson(contact.id, data),
@@ -1111,11 +1112,7 @@ function ContactDetailModal({
                           </button>
                           <button
                             className="btn btn-sm btn-danger-outline"
-                            onClick={() => {
-                              if (confirm(t('contacts.confirmDeletePerson'))) {
-                                deletePersonMutation.mutate(person.id);
-                              }
-                            }}
+                            onClick={() => setDeletingPersonId(person.id)}
                             title={t('common.delete')}
                           >
                             <Icon name="trash" />
@@ -1152,6 +1149,23 @@ function ContactDetailModal({
           {t('common.close')}
         </button>
       </div>
+
+      {/* Delete Contact Person Confirmation */}
+      {deletingPersonId && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('contacts.confirmDeletePerson')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deletePersonMutation.isPending}
+          onConfirm={() => {
+            deletePersonMutation.mutate(deletingPersonId, {
+              onSuccess: () => setDeletingPersonId(null),
+            });
+          }}
+          onCancel={() => setDeletingPersonId(null)}
+        />
+      )}
     </Modal>
   );
 }
@@ -1170,6 +1184,7 @@ function CategoriesModal({
   const [newCategory, setNewCategory] = useState({ name: '', color: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: '', color: '' });
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: createContactCategory,
@@ -1290,14 +1305,7 @@ function CategoriesModal({
                     <Icon name="pencil" />
                   </button>
                   {isAdmin && (
-                    <button
-                      className="btn btn-sm btn-danger-outline"
-                      onClick={() => {
-                        if (confirm(t('contacts.confirmDeleteCategory'))) {
-                          deleteMutation.mutate(cat.id);
-                        }
-                      }}
-                    >
+                    <button className="btn btn-sm btn-danger-outline" onClick={() => setDeletingCategoryId(cat.id)}>
                       <Icon name="trash" />
                     </button>
                   )}
@@ -1314,6 +1322,23 @@ function CategoriesModal({
           {t('common.close')}
         </button>
       </div>
+
+      {/* Delete Category Confirmation */}
+      {deletingCategoryId && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('contacts.confirmDeleteCategory')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingCategoryId, {
+              onSuccess: () => setDeletingCategoryId(null),
+            });
+          }}
+          onCancel={() => setDeletingCategoryId(null)}
+        />
+      )}
     </Modal>
   );
 }

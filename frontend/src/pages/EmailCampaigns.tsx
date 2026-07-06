@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { Icon, IconName } from '../components/Icon';
 import {
   getEmailCampaigns,
@@ -51,6 +52,7 @@ const STATUS_COLORS: Record<CampaignStatus, string> = {
 
 export default function EmailCampaigns() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.emailCampaigns');
   const queryClient = useQueryClient();
 
@@ -66,7 +68,7 @@ export default function EmailCampaigns() {
 
   const { data: campaignDetail } = useQuery({
     queryKey: ['email-campaign', selectedCampaign?.id],
-    queryFn: () => selectedCampaign ? getEmailCampaign(selectedCampaign.id) : null,
+    queryFn: () => (selectedCampaign ? getEmailCampaign(selectedCampaign.id) : null),
     enabled: !!selectedCampaign,
   });
 
@@ -91,7 +93,7 @@ export default function EmailCampaigns() {
     searchTerm
       ? campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         campaign.subject.toLowerCase().includes(searchTerm.toLowerCase())
-      : true
+      : true,
   );
 
   const getStatusBadge = (status: CampaignStatus) => (
@@ -105,10 +107,7 @@ export default function EmailCampaigns() {
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('emailCampaigns.title')}</h1>
-        <button
-          className="btn btn-primary gap-2"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
           <Icon name="plus" size={16} />
           {t('emailCampaigns.createCampaign')}
         </button>
@@ -200,14 +199,12 @@ export default function EmailCampaigns() {
                     {campaign.sentAt
                       ? formatDateTime(campaign.sentAt)
                       : campaign.scheduledAt
-                      ? formatDateTime(campaign.scheduledAt)
-                      : formatDateTime(campaign.createdAt)}
+                        ? formatDateTime(campaign.scheduledAt)
+                        : formatDateTime(campaign.createdAt)}
                   </span>
                 </div>
 
-                <div className="mt-2 text-xs text-base-content/50">
-                  {campaign.createdByName}
-                </div>
+                <div className="mt-2 text-xs text-base-content/50">{campaign.createdByName}</div>
               </div>
             </div>
           ))}
@@ -219,8 +216,8 @@ export default function EmailCampaigns() {
         <CampaignDetailModal
           campaign={campaignDetail}
           onClose={() => setSelectedCampaign(null)}
-          onDelete={() => {
-            if (confirm(t('emailCampaigns.confirmDelete'))) {
+          onDelete={async () => {
+            if (await confirmDialog(t('emailCampaigns.confirmDelete'))) {
               deleteMutation.mutate(selectedCampaign.id);
             }
           }}
@@ -328,7 +325,10 @@ function CampaignDetailModal({
               {t(`emailCampaigns.status.${campaign.status}`)}
             </span>
             <span className="text-sm text-base-content/60">
-              {t('emailCampaigns.createdBy', { name: campaign.createdByName, date: formatDateTime(campaign.createdAt) })}
+              {t('emailCampaigns.createdBy', {
+                name: campaign.createdByName,
+                date: formatDateTime(campaign.createdAt),
+              })}
             </span>
           </div>
 
@@ -379,10 +379,7 @@ function CampaignDetailModal({
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-semibold text-base-content/70">{t('emailCampaigns.stats.total')}</h4>
-                <button
-                  className="btn btn-sm btn-outline gap-1"
-                  onClick={() => setShowRecipientsDialog(true)}
-                >
+                <button className="btn btn-sm btn-outline gap-1" onClick={() => setShowRecipientsDialog(true)}>
                   <Icon name="users" size={14} />
                   {t('emailCampaigns.viewRecipients')}
                 </button>
@@ -408,119 +405,116 @@ function CampaignDetailModal({
             </div>
           )}
 
-        {/* Test Email Section */}
-        {campaign.status === 'draft' && (
-          <div className="border-t border-base-300 pt-4">
-            <h4 className="text-sm font-semibold text-base-content/70 mb-2">{t('emailCampaigns.testEmail')}</h4>
-            {showTestInput ? (
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  className="input input-bordered flex-1"
-                  placeholder={t('emailCampaigns.testEmailPlaceholder')}
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                />
+          {/* Test Email Section */}
+          {campaign.status === 'draft' && (
+            <div className="border-t border-base-300 pt-4">
+              <h4 className="text-sm font-semibold text-base-content/70 mb-2">{t('emailCampaigns.testEmail')}</h4>
+              {showTestInput ? (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    className="input input-bordered flex-1"
+                    placeholder={t('emailCampaigns.testEmailPlaceholder')}
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => testMutation.mutate(testEmail)}
+                    disabled={!testEmail || testMutation.isPending}
+                  >
+                    {testMutation.isPending ? (
+                      <span className="loading loading-spinner loading-sm" />
+                    ) : (
+                      t('emailCampaigns.sendTest')
+                    )}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setShowTestInput(false)}>
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              ) : (
+                <button className="btn btn-outline btn-sm gap-2" onClick={() => setShowTestInput(true)}>
+                  <Icon name="envelope" size={14} />
+                  {t('emailCampaigns.sendTestEmail')}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="border-t border-base-300 pt-4 flex flex-wrap gap-2">
+            {campaign.status === 'draft' && (
+              <>
                 <button
-                  className="btn btn-outline"
-                  onClick={() => testMutation.mutate(testEmail)}
-                  disabled={!testEmail || testMutation.isPending}
+                  className="btn btn-primary gap-2"
+                  onClick={() => sendMutation.mutate()}
+                  disabled={sendMutation.isPending || scheduleMutation.isPending}
                 >
-                  {testMutation.isPending ? (
+                  {sendMutation.isPending ? (
                     <span className="loading loading-spinner loading-sm" />
                   ) : (
-                    t('emailCampaigns.sendTest')
+                    <Icon name="send" size={16} />
                   )}
+                  {t('emailCampaigns.sendNow')}
                 </button>
-                <button className="btn btn-ghost" onClick={() => setShowTestInput(false)}>
-                  {t('common.cancel')}
+                <button
+                  className="btn btn-outline gap-2"
+                  onClick={() => scheduleMutation.mutate()}
+                  disabled={scheduleMutation.isPending || sendMutation.isPending}
+                >
+                  {scheduleMutation.isPending ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    <Icon name="clock" size={16} />
+                  )}
+                  {t('emailCampaigns.schedule')}
                 </button>
-              </div>
-            ) : (
-              <button className="btn btn-outline btn-sm gap-2" onClick={() => setShowTestInput(true)}>
-                <Icon name="envelope" size={14} />
-                {t('emailCampaigns.sendTestEmail')}
-              </button>
+                <button className="btn btn-error btn-outline gap-2" onClick={onDelete}>
+                  <Icon name="trash" size={16} />
+                  {t('common.delete')}
+                </button>
+              </>
             )}
+            {campaign.status === 'scheduled' && (
+              <>
+                <button
+                  className="btn btn-primary gap-2"
+                  onClick={() => sendMutation.mutate()}
+                  disabled={sendMutation.isPending}
+                >
+                  {sendMutation.isPending ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    <Icon name="send" size={16} />
+                  )}
+                  {t('emailCampaigns.sendNow')}
+                </button>
+                <button
+                  className="btn btn-warning gap-2"
+                  onClick={() => cancelMutation.mutate()}
+                  disabled={cancelMutation.isPending}
+                >
+                  {cancelMutation.isPending ? (
+                    <span className="loading loading-spinner loading-sm" />
+                  ) : (
+                    <Icon name="close" size={16} />
+                  )}
+                  {t('emailCampaigns.cancel')}
+                </button>
+              </>
+            )}
+            <button className="btn btn-ghost ml-auto" onClick={onClose}>
+              {t('common.close')}
+            </button>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="border-t border-base-300 pt-4 flex flex-wrap gap-2">
-          {campaign.status === 'draft' && (
-            <>
-              <button
-                className="btn btn-primary gap-2"
-                onClick={() => sendMutation.mutate()}
-                disabled={sendMutation.isPending || scheduleMutation.isPending}
-              >
-                {sendMutation.isPending ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  <Icon name="send" size={16} />
-                )}
-                {t('emailCampaigns.sendNow')}
-              </button>
-              <button
-                className="btn btn-outline gap-2"
-                onClick={() => scheduleMutation.mutate()}
-                disabled={scheduleMutation.isPending || sendMutation.isPending}
-              >
-                {scheduleMutation.isPending ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  <Icon name="clock" size={16} />
-                )}
-                {t('emailCampaigns.schedule')}
-              </button>
-              <button className="btn btn-error btn-outline gap-2" onClick={onDelete}>
-                <Icon name="trash" size={16} />
-                {t('common.delete')}
-              </button>
-            </>
-          )}
-          {campaign.status === 'scheduled' && (
-            <>
-              <button
-                className="btn btn-primary gap-2"
-                onClick={() => sendMutation.mutate()}
-                disabled={sendMutation.isPending}
-              >
-                {sendMutation.isPending ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  <Icon name="send" size={16} />
-                )}
-                {t('emailCampaigns.sendNow')}
-              </button>
-              <button
-                className="btn btn-warning gap-2"
-                onClick={() => cancelMutation.mutate()}
-                disabled={cancelMutation.isPending}
-              >
-                {cancelMutation.isPending ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  <Icon name="close" size={16} />
-                )}
-                {t('emailCampaigns.cancel')}
-              </button>
-            </>
-          )}
-          <button className="btn btn-ghost ml-auto" onClick={onClose}>
-            {t('common.close')}
-          </button>
         </div>
-      </div>
-    </Modal>
+      </Modal>
 
-    {/* Recipients Dialog */}
-    {showRecipientsDialog && (
-      <CampaignRecipientsDialog
-        campaignId={campaign.id}
-        onClose={() => setShowRecipientsDialog(false)}
-      />
-    )}
+      {/* Recipients Dialog */}
+      {showRecipientsDialog && (
+        <CampaignRecipientsDialog campaignId={campaign.id} onClose={() => setShowRecipientsDialog(false)} />
+      )}
     </>
   );
 }
@@ -677,14 +671,9 @@ function CreateCampaignModal({
 }
 
 // Email Attachments Section
-function EmailAttachmentsSection({
-  campaignId,
-  canEdit,
-}: {
-  campaignId: string;
-  canEdit: boolean;
-}) {
+function EmailAttachmentsSection({ campaignId, canEdit }: { campaignId: string; canEdit: boolean }) {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -739,23 +728,13 @@ function EmailAttachmentsSection({
         </h4>
         {canEdit && (
           <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleUpload}
-            />
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
             <button
               className="btn btn-sm btn-outline gap-1"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
-              {uploading ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Icon name="upload" size={14} />
-              )}
+              {uploading ? <span className="loading loading-spinner loading-xs" /> : <Icon name="upload" size={14} />}
               {t('emailCampaigns.addAttachment')}
             </button>
           </>
@@ -767,22 +746,17 @@ function EmailAttachmentsSection({
       ) : (
         <div className="space-y-2">
           {attachments.map((att: CampaignAttachment) => (
-            <div
-              key={att.id}
-              className="flex items-center justify-between p-2 bg-base-200 rounded-lg"
-            >
+            <div key={att.id} className="flex items-center justify-between p-2 bg-base-200 rounded-lg">
               <div className="flex items-center gap-2 min-w-0">
                 <Icon name="paperclip" size={16} className="flex-shrink-0 text-base-content/60" />
                 <span className="text-sm truncate">{att.originalFilename}</span>
-                <span className="text-xs text-base-content/50">
-                  ({formatFileSize(att.fileSize)})
-                </span>
+                <span className="text-xs text-base-content/50">({formatFileSize(att.fileSize)})</span>
               </div>
               {canEdit && (
                 <button
                   className="btn btn-ghost btn-xs text-error"
-                  onClick={() => {
-                    if (confirm(t('emailCampaigns.confirmDeleteAttachment'))) {
+                  onClick={async () => {
+                    if (await confirmDialog(t('emailCampaigns.confirmDeleteAttachment'))) {
                       deleteMutation.mutate(att.id);
                     }
                   }}
@@ -820,13 +794,7 @@ const RECIPIENT_STATUS_COLORS: Record<RecipientDeliveryStatus, string> = {
   failed: 'text-error',
 };
 
-function CampaignRecipientsDialog({
-  campaignId,
-  onClose,
-}: {
-  campaignId: string;
-  onClose: () => void;
-}) {
+function CampaignRecipientsDialog({ campaignId, onClose }: { campaignId: string; onClose: () => void }) {
   const { t } = useTranslation();
   const [filterStatus, setFilterStatus] = useState<RecipientDeliveryStatus | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -838,7 +806,7 @@ function CampaignRecipientsDialog({
   });
 
   const recipients = data?.recipients ?? [];
-  const byStatus = data?.byStatus ?? {} as Record<RecipientDeliveryStatus, number>;
+  const byStatus = data?.byStatus ?? ({} as Record<RecipientDeliveryStatus, number>);
 
   const filteredRecipients = recipients.filter((r) => {
     const matchesStatus = !filterStatus || r.status === filterStatus;
@@ -849,7 +817,15 @@ function CampaignRecipientsDialog({
     return matchesStatus && matchesSearch;
   });
 
-  const allStatuses: RecipientDeliveryStatus[] = ['pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed'];
+  const allStatuses: RecipientDeliveryStatus[] = [
+    'pending',
+    'sent',
+    'delivered',
+    'opened',
+    'clicked',
+    'bounced',
+    'failed',
+  ];
   const statusCounts = allStatuses
     .map((status) => ({ status, count: byStatus[status] || 0 }))
     .filter((s) => s.count > 0);
@@ -872,11 +848,7 @@ function CampaignRecipientsDialog({
                 className={`badge gap-1 cursor-pointer ${filterStatus === status ? 'badge-primary' : 'badge-ghost'}`}
                 onClick={() => setFilterStatus(filterStatus === status ? '' : status)}
               >
-                <Icon
-                  name={RECIPIENT_STATUS_ICONS[status]}
-                  size={12}
-                  className={RECIPIENT_STATUS_COLORS[status]}
-                />
+                <Icon name={RECIPIENT_STATUS_ICONS[status]} size={12} className={RECIPIENT_STATUS_COLORS[status]} />
                 {t(`emailCampaigns.recipientStatus.${status}`)} ({count})
               </button>
             ))}

@@ -487,6 +487,10 @@ export const deleteMusicPiecesBulk = async (ids: string[]): Promise<{ count: num
   return data;
 };
 
+export const restoreMusicPiece = async (id: string): Promise<void> => {
+  await api.post(`/music-pieces/${id}/restore`);
+};
+
 // Batch export music pieces as ZIP
 export const batchExportMusicPieces = async (pieceIds: string[], includeMetadata = true): Promise<void> => {
   const response = await api.post(

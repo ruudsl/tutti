@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 import { showSuccess, showError } from '../utils/toast';
 import {
   getOrchestras,
@@ -34,6 +35,7 @@ export default function Seating() {
   const { user } = useAuth();
   useDocumentTitle('pageTitle.seating');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const isManager = user && MANAGER_ROLES.includes(user.role);
 
@@ -103,7 +105,13 @@ export default function Seating() {
   const [sectionForm, setSectionForm] = useState({ name: '', rowNumber: 1, instrumentIds: [] as string[] });
 
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
-  const [assignmentForm, setAssignmentForm] = useState({ userId: '', sectionId: '', positionInSection: 0, seatLabel: '', notes: '' });
+  const [assignmentForm, setAssignmentForm] = useState({
+    userId: '',
+    sectionId: '',
+    positionInSection: 0,
+    seatLabel: '',
+    notes: '',
+  });
 
   const handleCreateDefaultLayout = async () => {
     if (!selectedOrchestraId) return;
@@ -118,7 +126,7 @@ export default function Seating() {
 
   const handleDeleteAllSections = async () => {
     if (!selectedOrchestraId) return;
-    if (!confirm(t('seating.confirmDeleteAllSections'))) return;
+    if (!(await confirmDialog(t('seating.confirmDeleteAllSections')))) return;
     try {
       await deleteAllSeatingSections(selectedOrchestraId);
       showSuccess(t('seating.allSectionsDeleted'));
@@ -161,14 +169,14 @@ export default function Seating() {
     setSectionForm({
       name: section.name,
       rowNumber: section.rowNumber,
-      instrumentIds: section.instruments.map(i => i.id),
+      instrumentIds: section.instruments.map((i) => i.id),
     });
     setEditingSectionId(section.id);
     setShowSectionForm(true);
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (!confirm(t('seating.confirmDeleteSection'))) return;
+    if (!(await confirmDialog(t('seating.confirmDeleteSection')))) return;
     try {
       await deleteSeatingSection(id);
       showSuccess(t('seating.sectionDeleted'));
@@ -200,7 +208,7 @@ export default function Seating() {
   };
 
   const handleDeleteAssignment = async (id: string) => {
-    if (!confirm(t('seating.confirmDeleteAssignment'))) return;
+    if (!(await confirmDialog(t('seating.confirmDeleteAssignment')))) return;
     try {
       await deleteSeatingAssignment(id);
       showSuccess(t('seating.assignmentDeleted'));
@@ -210,7 +218,9 @@ export default function Seating() {
     }
   };
 
-  const handleBulkSaveAssignments = async (newAssignments: { userId: string; sectionId: string; positionInSection: number }[]) => {
+  const handleBulkSaveAssignments = async (
+    newAssignments: { userId: string; sectionId: string; positionInSection: number }[],
+  ) => {
     if (!selectedOrchestraId) return;
     try {
       await bulkUpdateSeatingAssignments(selectedOrchestraId, newAssignments);
@@ -223,12 +233,9 @@ export default function Seating() {
 
   // Get users not yet assigned
   const unassignedUsers = useMemo(() => {
-    const assignedUserIds = new Set(assignments.map(a => a.userId));
+    const assignedUserIds = new Set(assignments.map((a) => a.userId));
     // Filter users who are in the selected orchestra
-    return users.filter(u =>
-      !assignedUserIds.has(u.id) &&
-      u.orchestras?.some(o => o.id === selectedOrchestraId)
-    );
+    return users.filter((u) => !assignedUserIds.has(u.id) && u.orchestras?.some((o) => o.id === selectedOrchestraId));
   }, [users, assignments, selectedOrchestraId]);
 
   if (isLoading) {
@@ -250,13 +257,11 @@ export default function Seating() {
       <div className="form-row" style={{ marginBottom: '1.5rem' }}>
         <div className="form-group" style={{ maxWidth: '300px' }}>
           <label htmlFor="orchestra">{t('seating.selectOrchestra')}</label>
-          <select
-            id="orchestra"
-            value={selectedOrchestraId}
-            onChange={(e) => setSelectedOrchestraId(e.target.value)}
-          >
-            {orchestras.map(o => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+          <select id="orchestra" value={selectedOrchestraId} onChange={(e) => setSelectedOrchestraId(e.target.value)}>
+            {orchestras.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
         </div>
@@ -264,24 +269,15 @@ export default function Seating() {
 
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-        <button
-          className={`tab ${activeTab === 'chart' ? 'active' : ''}`}
-          onClick={() => setActiveTab('chart')}
-        >
+        <button className={`tab ${activeTab === 'chart' ? 'active' : ''}`} onClick={() => setActiveTab('chart')}>
           {t('seating.tabs.chart')}
         </button>
         {isManager && (
           <>
-            <button
-              className={`tab ${activeTab === 'editor' ? 'active' : ''}`}
-              onClick={() => setActiveTab('editor')}
-            >
+            <button className={`tab ${activeTab === 'editor' ? 'active' : ''}`} onClick={() => setActiveTab('editor')}>
               {t('seating.tabs.editor')}
             </button>
-            <button
-              className={`tab ${activeTab === 'config' ? 'active' : ''}`}
-              onClick={() => setActiveTab('config')}
-            >
+            <button className={`tab ${activeTab === 'config' ? 'active' : ''}`} onClick={() => setActiveTab('config')}>
               {t('seating.tabs.config')}
             </button>
             <button
@@ -370,11 +366,14 @@ export default function Seating() {
                   {t('seating.createDefaultLayout')}
                 </button>
               )}
-              <button className="btn btn-primary btn-sm" onClick={() => {
-                setSectionForm({ name: '', rowNumber: sections.length + 1, instrumentIds: [] });
-                setEditingSectionId(null);
-                setShowSectionForm(true);
-              }}>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setSectionForm({ name: '', rowNumber: sections.length + 1, instrumentIds: [] });
+                  setEditingSectionId(null);
+                  setShowSectionForm(true);
+                }}
+              >
                 {t('seating.addSection')}
               </button>
             </div>
@@ -395,13 +394,11 @@ export default function Seating() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sections.map(section => (
+                  {sections.map((section) => (
                     <tr key={section.id}>
                       <td>{section.rowNumber}</td>
                       <td>{section.name}</td>
-                      <td>
-                        {section.instruments.map(i => i.name).join(', ') || '-'}
-                      </td>
+                      <td>{section.instruments.map((i) => i.name).join(', ') || '-'}</td>
                       <td>
                         <div className="btn-group">
                           <button className="btn btn-secondary btn-sm" onClick={() => handleEditSection(section)}>
@@ -422,10 +419,12 @@ export default function Seating() {
           {/* Section Form Modal */}
           {showSectionForm && (
             <div className="modal-overlay" onClick={() => setShowSectionForm(false)}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3>{editingSectionId ? t('seating.editSection') : t('seating.addSection')}</h3>
-                  <button className="modal-close" onClick={() => setShowSectionForm(false)}>&times;</button>
+                  <button className="modal-close" onClick={() => setShowSectionForm(false)}>
+                    &times;
+                  </button>
                 </div>
                 <form onSubmit={handleSaveSection}>
                   <div className="modal-body">
@@ -453,20 +452,29 @@ export default function Seating() {
                     <div className="form-group">
                       <label>{t('seating.instruments')}</label>
                       <div className="checkbox-list" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {instruments.map(instr => (
+                        {instruments.map((instr) => (
                           <label key={instr.id} className="checkbox-item">
                             <input
                               type="checkbox"
                               checked={sectionForm.instrumentIds.includes(instr.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  setSectionForm({ ...sectionForm, instrumentIds: [...sectionForm.instrumentIds, instr.id] });
+                                  setSectionForm({
+                                    ...sectionForm,
+                                    instrumentIds: [...sectionForm.instrumentIds, instr.id],
+                                  });
                                 } else {
-                                  setSectionForm({ ...sectionForm, instrumentIds: sectionForm.instrumentIds.filter(id => id !== instr.id) });
+                                  setSectionForm({
+                                    ...sectionForm,
+                                    instrumentIds: sectionForm.instrumentIds.filter((id) => id !== instr.id),
+                                  });
                                 }
                               }}
                             />
-                            <span>{instr.name}{instr.tuning ? ` (${instr.tuning})` : ''}</span>
+                            <span>
+                              {instr.name}
+                              {instr.tuning ? ` (${instr.tuning})` : ''}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -493,10 +501,14 @@ export default function Seating() {
           <div className="card-header">
             <h2>{t('seating.assignmentsTitle')}</h2>
             <div className="card-actions">
-              <button className="btn btn-primary btn-sm" onClick={() => {
-                setAssignmentForm({ userId: '', sectionId: '', positionInSection: 0, seatLabel: '', notes: '' });
-                setShowAssignmentForm(true);
-              }} disabled={sections.length === 0 || unassignedUsers.length === 0}>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setAssignmentForm({ userId: '', sectionId: '', positionInSection: 0, seatLabel: '', notes: '' });
+                  setShowAssignmentForm(true);
+                }}
+                disabled={sections.length === 0 || unassignedUsers.length === 0}
+              >
                 {t('seating.addAssignment')}
               </button>
             </div>
@@ -523,7 +535,7 @@ export default function Seating() {
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.map(assignment => (
+                  {assignments.map((assignment) => (
                     <tr key={assignment.id}>
                       <td>{assignment.userName}</td>
                       <td>{assignment.sectionName}</td>
@@ -545,10 +557,12 @@ export default function Seating() {
           {/* Assignment Form Modal */}
           {showAssignmentForm && (
             <div className="modal-overlay" onClick={() => setShowAssignmentForm(false)}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3>{t('seating.addAssignment')}</h3>
-                  <button className="modal-close" onClick={() => setShowAssignmentForm(false)}>&times;</button>
+                  <button className="modal-close" onClick={() => setShowAssignmentForm(false)}>
+                    &times;
+                  </button>
                 </div>
                 <form onSubmit={handleSaveAssignment}>
                   <div className="modal-body">
@@ -561,9 +575,10 @@ export default function Seating() {
                         required
                       >
                         <option value="">{t('common.select')}</option>
-                        {unassignedUsers.map(u => (
+                        {unassignedUsers.map((u) => (
                           <option key={u.id} value={u.id}>
-                            {u.firstName} {u.lastName} {u.instruments?.length ? `(${u.instruments.map(i => i.name).join(', ')})` : ''}
+                            {u.firstName} {u.lastName}{' '}
+                            {u.instruments?.length ? `(${u.instruments.map((i) => i.name).join(', ')})` : ''}
                           </option>
                         ))}
                       </select>
@@ -577,7 +592,7 @@ export default function Seating() {
                         required
                       >
                         <option value="">{t('common.select')}</option>
-                        {sections.map(s => (
+                        {sections.map((s) => (
                           <option key={s.id} value={s.id}>
                             {t('seating.row')} {s.rowNumber}: {s.name}
                           </option>
@@ -591,7 +606,9 @@ export default function Seating() {
                         id="positionInSection"
                         min="0"
                         value={assignmentForm.positionInSection}
-                        onChange={(e) => setAssignmentForm({ ...assignmentForm, positionInSection: parseInt(e.target.value) })}
+                        onChange={(e) =>
+                          setAssignmentForm({ ...assignmentForm, positionInSection: parseInt(e.target.value) })
+                        }
                         required
                       />
                       <small className="form-hint">{t('seating.positionHint')}</small>
@@ -638,9 +655,7 @@ export default function Seating() {
             <h2>{t('seating.notifications.title')}</h2>
           </div>
           <div className="card-body">
-            <SeatingNotificationSettings
-              orchestraId={selectedOrchestraId}
-            />
+            <SeatingNotificationSettings orchestraId={selectedOrchestraId} />
           </div>
         </div>
       )}

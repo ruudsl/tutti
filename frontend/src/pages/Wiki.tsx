@@ -24,6 +24,7 @@ import {
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
@@ -41,6 +42,7 @@ export default function Wiki() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.wiki');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentSlug = searchParams.get('page') || '';
@@ -307,8 +309,8 @@ export default function Wiki() {
                             <li>
                               <button
                                 className="text-error"
-                                onClick={() => {
-                                  if (confirm(t('wiki.confirmDelete'))) deleteMutation.mutate(currentSlug);
+                                onClick={async () => {
+                                  if (await confirmDialog(t('wiki.confirmDelete'))) deleteMutation.mutate(currentSlug);
                                 }}
                               >
                                 <Icon name="trash" className="w-4 h-4" />
@@ -592,6 +594,7 @@ function CreateEditWikiModal({
 function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -691,8 +694,8 @@ function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: bool
                   {canEdit && (
                     <button
                       className="btn btn-ghost btn-xs text-error"
-                      onClick={() => {
-                        if (confirm(t('wiki.confirmDeleteAttachment'))) {
+                      onClick={async () => {
+                        if (await confirmDialog(t('wiki.confirmDeleteAttachment'))) {
                           deleteMutation.mutate(att.id);
                         }
                       }}

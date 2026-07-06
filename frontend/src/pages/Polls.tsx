@@ -30,6 +30,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
 import { formatDateTime } from '../utils/dateFormat';
+import { useConfirm } from '../hooks/useConfirm';
 
 const STATUS_ICONS: Record<PollStatus, IconName> = {
   draft: 'fileText',
@@ -56,6 +57,7 @@ export default function Polls() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.polls');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const [filterStatus, setFilterStatus] = useState<PollStatus | ''>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -237,8 +239,8 @@ export default function Polls() {
           canEdit={canCreate}
           onClose={() => setSelectedPoll(null)}
           onEdit={() => setShowEditModal(true)}
-          onDelete={() => {
-            if (confirm(t('polls.confirmDelete'))) {
+          onDelete={async () => {
+            if (await confirmDialog(t('polls.confirmDelete'))) {
               deleteMutation.mutate(selectedPoll.id);
             }
           }}
@@ -310,6 +312,7 @@ function PollDetailModal({
   const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
   const [newComment, setNewComment] = useState('');
 
   const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
@@ -466,8 +469,8 @@ function PollDetailModal({
                       {(comment.authorId === user?.id || canEdit) && (
                         <button
                           className="btn btn-ghost btn-xs"
-                          onClick={() => {
-                            if (confirm(t('polls.confirmDeleteComment'))) {
+                          onClick={async () => {
+                            if (await confirmDialog(t('polls.confirmDeleteComment'))) {
                               deleteCommentMutation.mutate(comment.id);
                             }
                           }}
@@ -554,8 +557,8 @@ function PollDetailModal({
                 </button>
                 <button
                   className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    if (confirm(t('polls.confirmCreateRehearsal'))) {
+                  onClick={async () => {
+                    if (await confirmDialog(t('polls.confirmCreateRehearsal'))) {
                       createRehearsalMutation.mutate();
                     }
                   }}

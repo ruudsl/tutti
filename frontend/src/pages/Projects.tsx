@@ -20,6 +20,7 @@ import { Modal } from '../components/Modal';
 import { formatDate } from '../utils/dateFormat';
 import { ProjectEventsSection } from '../components/ProjectEventsSection';
 import { ProjectSetlistSection } from '../components/ProjectSetlistSection';
+import { useConfirm } from '../hooks/useConfirm';
 
 const STATUS_COLORS: Record<ProjectStatus, string> = {
   planning: 'badge-info',
@@ -33,6 +34,7 @@ export default function Projects() {
   const { t } = useTranslation();
   useDocumentTitle('projects.title');
   const queryClient = useQueryClient();
+  const confirmDialog = useConfirm();
 
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -203,8 +205,8 @@ export default function Projects() {
                       </li>
                       <li className="text-error">
                         <button
-                          onClick={() => {
-                            if (confirm(t('projects.confirmDelete'))) {
+                          onClick={async () => {
+                            if (await confirmDialog(t('projects.confirmDelete'))) {
                               deleteMutation.mutate(project.id);
                             }
                           }}

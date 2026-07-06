@@ -17,6 +17,7 @@ import StageCanvas from '../components/StageCanvas';
 import SeatCardPrinter from '../components/SeatCardPrinter';
 import type { StageAssignment } from '../types';
 import { SkeletonTable } from '../components/Skeleton';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function ConcertStageSetup() {
   const { t } = useTranslation();
@@ -46,6 +47,7 @@ export default function ConcertStageSetup() {
   const [activeTab, setActiveTab] = useState<'assign' | 'print'>('assign');
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
 
   // Load selected layout
   const { data: selectedLayout } = useStageLayout(selectedLayoutId);
@@ -82,12 +84,16 @@ export default function ConcertStageSetup() {
 
   // Handle layout selection
   const handleLayoutSelect = (layoutId: string) => {
-    if (hasChanges && !confirm(t('concertStageSetup.discardChanges', 'Wijzigingen negeren?'))) {
+    const applyLayout = () => {
+      setSelectedLayoutId(layoutId);
+      setAssignments({});
+      setHasChanges(true);
+    };
+    if (hasChanges) {
+      setPendingDiscardAction(() => applyLayout);
       return;
     }
-    setSelectedLayoutId(layoutId);
-    setAssignments({});
-    setHasChanges(true);
+    applyLayout();
   };
 
   // Handle position click in canvas
@@ -482,6 +488,21 @@ export default function ConcertStageSetup() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Discard Changes Confirmation */}
+      {pendingDiscardAction && (
+        <ConfirmDialog
+          title={t('common.warning')}
+          message={t('concertStageSetup.discardChanges', 'Wijzigingen negeren?')}
+          confirmLabel={t('common.confirm')}
+          variant="warning"
+          onConfirm={() => {
+            pendingDiscardAction();
+            setPendingDiscardAction(null);
+          }}
+          onCancel={() => setPendingDiscardAction(null)}
+        />
       )}
     </div>
   );

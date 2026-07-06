@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { Icon, IconName } from '../components/Icon';
 import {
   getFiscalYears,
@@ -45,7 +46,9 @@ import InvoicePrinter from '../components/InvoicePrinter';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import { Modal } from '../components/Modal';
+import { currentLocale } from '../utils/locale';
 
 type TabType = 'overview' | 'chart' | 'transactions' | 'invoices' | 'relations' | 'costcenters' | 'budgets' | 'reports';
 
@@ -67,6 +70,7 @@ const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
 
 export default function Accounting() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.accounting');
   const queryClient = useQueryClient();
 
@@ -180,7 +184,7 @@ export default function Accounting() {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+    return new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
   const handleExport = async (type: string) => {
@@ -452,7 +456,7 @@ export default function Accounting() {
                       {transactions.slice(0, 5).map((tx) => (
                         <tr key={tx.id}>
                           <td className="font-mono text-sm">{tx.transactionNumber}</td>
-                          <td>{new Date(tx.transactionDate).toLocaleDateString('nl-NL')}</td>
+                          <td>{new Date(tx.transactionDate).toLocaleDateString(currentLocale())}</td>
                           <td className="max-w-xs truncate">{tx.description}</td>
                           <td className="text-right font-mono">{formatCurrency(tx.totalAmount)}</td>
                         </tr>
@@ -603,8 +607,8 @@ export default function Accounting() {
                                       {!account.isSystem && (
                                         <button
                                           className="btn btn-ghost btn-xs text-error"
-                                          onClick={() => {
-                                            if (confirm(t('accounting.confirmDeleteAccount'))) {
+                                          onClick={async () => {
+                                            if (await confirmDialog(t('accounting.confirmDeleteAccount'))) {
                                               deleteAccountMutation.mutate(account.id);
                                             }
                                           }}
@@ -665,7 +669,7 @@ export default function Accounting() {
                       {transactions.map((tx) => (
                         <tr key={tx.id}>
                           <td className="font-mono">{tx.transactionNumber}</td>
-                          <td>{new Date(tx.transactionDate).toLocaleDateString('nl-NL')}</td>
+                          <td>{new Date(tx.transactionDate).toLocaleDateString(currentLocale())}</td>
                           <td>
                             <span className="badge badge-ghost badge-sm">
                               {t(`accounting.transactionTypes.${tx.transactionType}`)}
@@ -730,8 +734,8 @@ export default function Accounting() {
                         <tr key={invoice.id}>
                           <td className="font-mono">{invoice.invoiceNumber}</td>
                           <td>{invoice.relationName}</td>
-                          <td>{new Date(invoice.invoiceDate).toLocaleDateString('nl-NL')}</td>
-                          <td>{new Date(invoice.dueDate).toLocaleDateString('nl-NL')}</td>
+                          <td>{new Date(invoice.invoiceDate).toLocaleDateString(currentLocale())}</td>
+                          <td>{new Date(invoice.dueDate).toLocaleDateString(currentLocale())}</td>
                           <td className="text-right font-mono">{formatCurrency(invoice.total)}</td>
                           <td>
                             <span
@@ -1683,6 +1687,15 @@ function InvoiceModal({
     lines: [{ description: '', quantity: 1, unitPrice: 0 }],
   });
 
+  // Dirty detection: compare current form state against the initial snapshot
+  const initialFormRef = useRef<string | null>(null);
+  if (initialFormRef.current === null) {
+    initialFormRef.current = JSON.stringify(formData);
+  }
+  const isDirty = JSON.stringify(formData) !== initialFormRef.current;
+  const { confirmClose, dialog: unsavedDialog } = useUnsavedChanges(isDirty);
+  const handleClose = () => confirmClose(onClose);
+
   const createMutation = useMutation({
     mutationFn: (data: CreateInvoiceData) => createInvoice(data),
     onSuccess: () => {
@@ -1732,7 +1745,7 @@ function InvoiceModal({
   const subtotal = formData.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
 
   return (
-    <Modal title={t('accounting.newInvoice')} onClose={onClose} size="large">
+    <Modal title={t('accounting.newInvoice')} onClose={handleClose} size="large">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
@@ -1924,7 +1937,7 @@ function InvoiceModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={handleClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
@@ -1932,6 +1945,7 @@ function InvoiceModal({
           </button>
         </div>
       </form>
+      {unsavedDialog}
     </Modal>
   );
 }

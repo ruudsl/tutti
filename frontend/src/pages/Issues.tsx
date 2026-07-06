@@ -2,6 +2,7 @@ import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { getIssues, getMyIssues, getIssueStats, updateIssueStatus, deleteIssue, type PieceIssue } from '../api';
@@ -21,6 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Issues() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.issues');
   const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -80,8 +82,8 @@ export default function Issues() {
     }
   };
 
-  const handleDelete = (issue: PieceIssue) => {
-    if (confirm(t('issues.confirmDelete'))) {
+  const handleDelete = async (issue: PieceIssue) => {
+    if (await confirmDialog(t('issues.confirmDelete'))) {
       deleteMutation.mutate(issue.id);
     }
   };

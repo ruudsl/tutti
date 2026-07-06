@@ -3,13 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { Modal } from './Modal';
+import { ConfirmDialog } from './ConfirmDialog';
 import { showSuccess, showError } from '../utils/toast';
-import {
-  TourDetail,
-  addTourTransport,
-  deleteTourTransport,
-  AddTourTransportData,
-} from '../api/tours';
+import { TourDetail, addTourTransport, deleteTourTransport, AddTourTransportData } from '../api/tours';
 
 type Transport = TourDetail['transport'][number];
 
@@ -19,14 +15,7 @@ interface TourTransportSectionProps {
   onRefresh: () => void;
 }
 
-const TRANSPORT_TYPES = [
-  'bus',
-  'train',
-  'plane',
-  'ferry',
-  'car',
-  'other',
-] as const;
+const TRANSPORT_TYPES = ['bus', 'train', 'plane', 'ferry', 'car', 'other'] as const;
 
 const TRANSPORT_ICONS: Record<string, 'truck' | 'globe'> = {
   bus: 'truck',
@@ -37,14 +26,11 @@ const TRANSPORT_ICONS: Record<string, 'truck' | 'globe'> = {
   other: 'truck',
 };
 
-export function TourTransportSection({
-  tourId,
-  transport,
-  onRefresh,
-}: TourTransportSectionProps) {
+export function TourTransportSection({ tourId, transport, onRefresh }: TourTransportSectionProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Transport | null>(null);
 
   const addMutation = useMutation({
     mutationFn: (data: AddTourTransportData) => addTourTransport(tourId, data),
@@ -65,16 +51,14 @@ export function TourTransportSection({
       onRefresh();
     },
     onError: () => showError(t('tours.errorDeleteTransport')),
+    onSettled: () => setDeleteTarget(null),
   });
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h4 className="font-medium text-lg">{t('tours.transport')}</h4>
-        <button
-          className="btn btn-primary btn-sm gap-1"
-          onClick={() => setShowAddModal(true)}
-        >
+        <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowAddModal(true)}>
           <Icon name="plus" size={16} aria-hidden={true} />
           {t('tours.addTransport')}
         </button>
@@ -100,46 +84,38 @@ export function TourTransportSection({
                         className="text-primary"
                         aria-hidden={true}
                       />
-                      <span className="badge badge-primary">{t(`tours.transportTypes.${tr.transportType}`) || tr.transportType}</span>
-                      {tr.provider && (
-                        <span className="text-base-content/70">{tr.provider}</span>
-                      )}
+                      <span className="badge badge-primary">
+                        {t(`tours.transportTypes.${tr.transportType}`) || tr.transportType}
+                      </span>
+                      {tr.provider && <span className="text-base-content/70">{tr.provider}</span>}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Departure */}
                       <div className="flex items-start gap-2">
-                        <div className="w-3 h-3 rounded-full bg-success mt-1.5 flex-shrink-0" role="img" aria-label={t('tours.departure')} />
+                        <div
+                          className="w-3 h-3 rounded-full bg-success mt-1.5 flex-shrink-0"
+                          role="img"
+                          aria-label={t('tours.departure')}
+                        />
                         <div>
-                          <div className="text-xs text-base-content/60 uppercase">
-                            {t('tours.departure')}
-                          </div>
-                          <div className="font-medium">
-                            {tr.departureLocation || '-'}
-                          </div>
-                          {tr.departureTime && (
-                            <div className="text-sm text-base-content/70">
-                              {tr.departureTime}
-                            </div>
-                          )}
+                          <div className="text-xs text-base-content/60 uppercase">{t('tours.departure')}</div>
+                          <div className="font-medium">{tr.departureLocation || '-'}</div>
+                          {tr.departureTime && <div className="text-sm text-base-content/70">{tr.departureTime}</div>}
                         </div>
                       </div>
 
                       {/* Arrival */}
                       <div className="flex items-start gap-2">
-                        <div className="w-3 h-3 rounded-full bg-error mt-1.5 flex-shrink-0" role="img" aria-label={t('tours.arrival')} />
+                        <div
+                          className="w-3 h-3 rounded-full bg-error mt-1.5 flex-shrink-0"
+                          role="img"
+                          aria-label={t('tours.arrival')}
+                        />
                         <div>
-                          <div className="text-xs text-base-content/60 uppercase">
-                            {t('tours.arrival')}
-                          </div>
-                          <div className="font-medium">
-                            {tr.arrivalLocation || '-'}
-                          </div>
-                          {tr.arrivalTime && (
-                            <div className="text-sm text-base-content/70">
-                              {tr.arrivalTime}
-                            </div>
-                          )}
+                          <div className="text-xs text-base-content/60 uppercase">{t('tours.arrival')}</div>
+                          <div className="font-medium">{tr.arrivalLocation || '-'}</div>
+                          {tr.arrivalTime && <div className="text-sm text-base-content/70">{tr.arrivalTime}</div>}
                         </div>
                       </div>
                     </div>
@@ -147,11 +123,7 @@ export function TourTransportSection({
 
                   <button
                     className="btn btn-ghost btn-sm btn-square text-error"
-                    onClick={() => {
-                      if (confirm(t('tours.confirmDeleteTransport'))) {
-                        deleteMutation.mutate(tr.id);
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(tr)}
                     disabled={deleteMutation.isPending}
                     aria-label={t('common.delete')}
                   >
@@ -162,6 +134,19 @@ export function TourTransportSection({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Delete Transport Confirmation */}
+      {deleteTarget && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('tours.confirmDeleteTransport')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
 
       {/* Add Transport Modal */}
@@ -265,9 +250,7 @@ function AddTransportModal({
               type="datetime-local"
               className="input input-bordered"
               value={formData.departureTime}
-              onChange={(e) =>
-                setFormData({ ...formData, departureTime: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, departureTime: e.target.value })}
             />
           </div>
 
@@ -279,9 +262,7 @@ function AddTransportModal({
               type="datetime-local"
               className="input input-bordered"
               value={formData.arrivalTime}
-              onChange={(e) =>
-                setFormData({ ...formData, arrivalTime: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, arrivalTime: e.target.value })}
             />
           </div>
         </div>
@@ -303,11 +284,7 @@ function AddTransportModal({
           <button className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || isPending}>
             {isPending && <span className="loading loading-spinner loading-sm" />}
             {t('common.add')}
           </button>
