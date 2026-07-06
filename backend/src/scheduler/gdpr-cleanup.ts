@@ -5,6 +5,8 @@
  * Runs daily at a configured time (default: 3:00 AM).
  */
 
+import path from 'path';
+import fs from 'fs';
 import db from '../database/connection';
 import logger from '../utils/logger';
 
@@ -14,7 +16,14 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 // Default cleanup hour (3 AM)
 const DEFAULT_CLEANUP_HOUR = 3;
 
+// Days a soft-deleted row (users, music_pieces, music_titles, music_lists,
+// concerts) is kept before it is hard-deleted, incl. associated files.
+const DEFAULT_SOFT_DELETE_RETENTION_DAYS = 30;
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
+
 let schedulerRunning = false;
+let timeoutHandle: NodeJS.Timeout | null = null;
 let lastCleanupDate: string | null = null;
 
 interface RetentionSetting {
@@ -33,11 +42,7 @@ interface CleanupResult {
 /**
  * Perform cleanup for a specific data type and association
  */
-function cleanupDataType(
-  associationId: string,
-  dataType: string,
-  retentionDays: number
-): number {
+function cleanupDataType(associationId: string, dataType: string, retentionDays: number): number {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
   const cutoff = cutoffDate.toISOString();
@@ -47,82 +52,114 @@ function cleanupDataType(
   try {
     switch (dataType) {
       case 'sessions': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM user_sessions
           WHERE expires_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'activity_log': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM activity_log
           WHERE created_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'audit_logs': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM audit_logs
           WHERE created_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'practice_logs': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM practice_logs
           WHERE ended_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'audio_recordings': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM audio_recordings
           WHERE created_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'deleted_users': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM users
           WHERE status = 'deleted'
           AND updated_at < ?
           AND association_id = ?
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'password_reset_tokens': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM password_reset_tokens
           WHERE expires_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
 
       case 'recent_views': {
-        const result = db.prepare(`
+        const result = db
+          .prepare(
+            `
           DELETE FROM user_recent_views
           WHERE viewed_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
-        `).run(cutoff, associationId);
+        `,
+          )
+          .run(cutoff, associationId);
         deletedCount = result.changes;
         break;
       }
@@ -134,11 +171,99 @@ function cleanupDataType(
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     logger.error(`GDPR cleanup failed for ${dataType}`, {
       associationId,
-      error: errorMsg
+      error: errorMsg,
     });
   }
 
   return deletedCount;
+}
+
+/**
+ * Delete a file on disk, ignoring errors (file may already be gone)
+ */
+function removeFileSafely(filePath: string): void {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      logger.info(`Purged file: ${filePath}`);
+    }
+  } catch (error) {
+    logger.warn(`Failed to purge file: ${filePath}`, { error });
+  }
+}
+
+/**
+ * Purge (hard-delete) soft-deleted rows whose deleted_at is older than
+ * SOFT_DELETE_RETENTION_DAYS (env, default 30), including associated files
+ * such as music piece PDFs and user profile photos.
+ */
+export function purgeSoftDeleted(): CleanupResult[] {
+  const results: CleanupResult[] = [];
+
+  const retentionDays =
+    parseInt(process.env.SOFT_DELETE_RETENTION_DAYS || '', 10) || DEFAULT_SOFT_DELETE_RETENTION_DAYS;
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+  const cutoff = cutoffDate.toISOString();
+
+  // Music pieces: remove the PDF file along with the row
+  try {
+    const pieces = db
+      .prepare('SELECT id, file_path FROM music_pieces WHERE deleted_at IS NOT NULL AND deleted_at < ?')
+      .all(cutoff) as { id: string; file_path: string | null }[];
+
+    if (pieces.length > 0) {
+      db.prepare('DELETE FROM music_pieces WHERE deleted_at IS NOT NULL AND deleted_at < ?').run(cutoff);
+      for (const piece of pieces) {
+        if (piece.file_path) {
+          removeFileSafely(path.join(UPLOAD_DIR, piece.file_path));
+        }
+      }
+      results.push({ association_id: 'global', data_type: 'purged_music_pieces', deleted_count: pieces.length });
+    }
+  } catch (error) {
+    logger.error('Soft-delete purge failed for music_pieces', { error });
+  }
+
+  // Users: remove the profile photo along with the row
+  try {
+    const users = db
+      .prepare('SELECT id, profile_photo_path FROM users WHERE deleted_at IS NOT NULL AND deleted_at < ?')
+      .all(cutoff) as { id: string; profile_photo_path: string | null }[];
+
+    if (users.length > 0) {
+      db.prepare('DELETE FROM users WHERE deleted_at IS NOT NULL AND deleted_at < ?').run(cutoff);
+      for (const user of users) {
+        if (user.profile_photo_path) {
+          removeFileSafely(path.resolve(user.profile_photo_path));
+        }
+      }
+      results.push({ association_id: 'global', data_type: 'purged_users', deleted_count: users.length });
+    }
+  } catch (error) {
+    logger.error('Soft-delete purge failed for users', { error });
+  }
+
+  // Tables without associated files
+  for (const table of ['music_titles', 'music_lists', 'concerts']) {
+    try {
+      const result = db.prepare(`DELETE FROM ${table} WHERE deleted_at IS NOT NULL AND deleted_at < ?`).run(cutoff);
+      if (result.changes > 0) {
+        results.push({ association_id: 'global', data_type: `purged_${table}`, deleted_count: result.changes });
+      }
+    } catch (error) {
+      logger.error(`Soft-delete purge failed for ${table}`, { error });
+    }
+  }
+
+  if (results.length > 0) {
+    logger.info('Soft-delete purge completed', {
+      retentionDays,
+      details: results,
+    });
+  }
+
+  return results;
 }
 
 /**
@@ -163,17 +288,17 @@ async function runCleanup(): Promise<CleanupResult[]> {
     `);
 
     // Get all settings with auto_delete enabled
-    const settings = db.prepare(`
+    const settings = db
+      .prepare(
+        `
       SELECT * FROM data_retention_settings
       WHERE auto_delete = 1 AND retention_days > 0
-    `).all() as RetentionSetting[];
+    `,
+      )
+      .all() as RetentionSetting[];
 
     for (const setting of settings) {
-      const deletedCount = cleanupDataType(
-        setting.association_id,
-        setting.data_type,
-        setting.retention_days
-      );
+      const deletedCount = cleanupDataType(setting.association_id, setting.data_type, setting.retention_days);
 
       if (deletedCount > 0) {
         results.push({
@@ -184,12 +309,19 @@ async function runCleanup(): Promise<CleanupResult[]> {
       }
     }
 
+    // Purge soft-deleted rows past the retention window (incl. files)
+    results.push(...purgeSoftDeleted());
+
     // Also clean up global expired data (not association-specific)
     // Expired password reset tokens (older than 24 hours)
     try {
-      const expiredTokens = db.prepare(`
+      const expiredTokens = db
+        .prepare(
+          `
         DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')
-      `).run();
+      `,
+        )
+        .run();
       if (expiredTokens.changes > 0) {
         results.push({
           association_id: 'global',
@@ -203,9 +335,13 @@ async function runCleanup(): Promise<CleanupResult[]> {
 
     // Expired sessions
     try {
-      const expiredSessions = db.prepare(`
+      const expiredSessions = db
+        .prepare(
+          `
         DELETE FROM user_sessions WHERE expires_at < datetime('now')
-      `).run();
+      `,
+        )
+        .run();
       if (expiredSessions.changes > 0) {
         results.push({
           association_id: 'global',
@@ -222,7 +358,7 @@ async function runCleanup(): Promise<CleanupResult[]> {
       const totalDeleted = results.reduce((sum, r) => sum + r.deleted_count, 0);
       logger.info('GDPR cleanup completed', {
         totalDeleted,
-        details: results
+        details: results,
       });
     }
 
@@ -237,23 +373,26 @@ async function runCleanup(): Promise<CleanupResult[]> {
         )
       `);
 
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO gdpr_cleanup_log (records_deleted, details)
         VALUES (?, ?)
-      `).run(
+      `,
+      ).run(
         results.reduce((sum, r) => sum + r.deleted_count, 0),
-        JSON.stringify(results)
+        JSON.stringify(results),
       );
 
       // Keep only last 30 days of cleanup logs
-      db.prepare(`
+      db.prepare(
+        `
         DELETE FROM gdpr_cleanup_log
         WHERE run_at < datetime('now', '-30 days')
-      `).run();
+      `,
+      ).run();
     } catch (error) {
       logger.warn('Failed to log GDPR cleanup', { error });
     }
-
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     logger.error('GDPR cleanup scheduler error', { error: errorMsg });
@@ -283,7 +422,7 @@ async function checkAndRunCleanup(): Promise<void> {
 
   // Schedule next check
   if (schedulerRunning) {
-    setTimeout(checkAndRunCleanup, CHECK_INTERVAL_MS);
+    timeoutHandle = setTimeout(checkAndRunCleanup, CHECK_INTERVAL_MS);
   }
 }
 
@@ -298,11 +437,11 @@ export function startScheduler(): void {
 
   schedulerRunning = true;
   logger.info('GDPR cleanup scheduler started', {
-    cleanupHour: process.env.GDPR_CLEANUP_HOUR || DEFAULT_CLEANUP_HOUR
+    cleanupHour: process.env.GDPR_CLEANUP_HOUR || DEFAULT_CLEANUP_HOUR,
   });
 
   // Start checking after a short delay
-  setTimeout(checkAndRunCleanup, 10000);
+  timeoutHandle = setTimeout(checkAndRunCleanup, 10000);
 }
 
 /**
@@ -310,6 +449,10 @@ export function startScheduler(): void {
  */
 export function stopScheduler(): void {
   schedulerRunning = false;
+  if (timeoutHandle) {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = null;
+  }
   logger.info('GDPR cleanup scheduler stopped');
 }
 
@@ -330,12 +473,16 @@ export function getCleanupHistory(limit = 10): Array<{
   details: string;
 }> {
   try {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT run_at, records_deleted, details
       FROM gdpr_cleanup_log
       ORDER BY run_at DESC
       LIMIT ?
-    `).all(limit) as Array<{
+    `,
+      )
+      .all(limit) as Array<{
       run_at: string;
       records_deleted: number;
       details: string;

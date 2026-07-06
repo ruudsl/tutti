@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
@@ -18,8 +19,9 @@ export default function AccessibilityStatement() {
               {t('accessibility.commitment', 'Onze toewijding aan toegankelijkheid')}
             </h2>
             <p style={{ marginBottom: '1rem' }}>
-              {t('accessibility.commitmentText',
-                'Tutti streeft ernaar een toegankelijke applicatie te bieden voor alle gebruikers, ongeacht hun mogelijkheden. We volgen de Web Content Accessibility Guidelines (WCAG) 2.1 op niveau AA om een inclusieve ervaring te garanderen.'
+              {t(
+                'accessibility.commitmentText',
+                'Tutti streeft ernaar een toegankelijke applicatie te bieden voor alle gebruikers, ongeacht hun mogelijkheden. We volgen de Web Content Accessibility Guidelines (WCAG) 2.1 op niveau AA om een inclusieve ervaring te garanderen.',
               )}
             </p>
           </section>
@@ -29,37 +31,39 @@ export default function AccessibilityStatement() {
               {t('accessibility.standards', 'Toegankelijkheidsstandaarden')}
             </h2>
             <p style={{ marginBottom: '1rem' }}>
-              {t('accessibility.standardsText',
-                'Deze applicatie is ontworpen volgens WCAG 2.1 niveau AA. Dit omvat:'
-              )}
+              {t('accessibility.standardsText', 'Deze applicatie is ontworpen volgens WCAG 2.1 niveau AA. Dit omvat:')}
             </p>
             <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
               <li style={{ marginBottom: '0.5rem' }}>
                 <strong>{t('accessibility.perceivable', 'Waarneembaar')}</strong>
                 {' - '}
-                {t('accessibility.perceivableText',
-                  'Tekstalternatieven voor afbeeldingen, voldoende kleurcontrast (minimaal 4.5:1), en ondersteuning voor tekst vergroting.'
+                {t(
+                  'accessibility.perceivableText',
+                  'Tekstalternatieven voor afbeeldingen, voldoende kleurcontrast (minimaal 4.5:1), en ondersteuning voor tekst vergroting.',
                 )}
               </li>
               <li style={{ marginBottom: '0.5rem' }}>
                 <strong>{t('accessibility.operable', 'Bedienbaar')}</strong>
                 {' - '}
-                {t('accessibility.operableText',
-                  'Volledige toetsenbordnavigatie, zichtbare focusindicatoren, en skip links om direct naar de hoofdinhoud te gaan.'
+                {t(
+                  'accessibility.operableText',
+                  'Volledige toetsenbordnavigatie, zichtbare focusindicatoren, en skip links om direct naar de hoofdinhoud te gaan.',
                 )}
               </li>
               <li style={{ marginBottom: '0.5rem' }}>
                 <strong>{t('accessibility.understandable', 'Begrijpelijk')}</strong>
                 {' - '}
-                {t('accessibility.understandableText',
-                  'Duidelijke labels voor formuliervelden, foutmeldingen, en consistente navigatie.'
+                {t(
+                  'accessibility.understandableText',
+                  'Duidelijke labels voor formuliervelden, foutmeldingen, en consistente navigatie.',
                 )}
               </li>
               <li style={{ marginBottom: '0.5rem' }}>
                 <strong>{t('accessibility.robust', 'Robuust')}</strong>
                 {' - '}
-                {t('accessibility.robustText',
-                  'Compatibiliteit met hulptechnologieën zoals schermlezers (NVDA, VoiceOver, JAWS).'
+                {t(
+                  'accessibility.robustText',
+                  'Compatibiliteit met hulptechnologieën zoals schermlezers (NVDA, VoiceOver, JAWS).',
                 )}
               </li>
             </ul>
@@ -71,31 +75,45 @@ export default function AccessibilityStatement() {
             </h2>
             <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.skipLink', 'Skip-link om direct naar de hoofdinhoud te navigeren')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.keyboardNav', 'Volledige toetsenbordnavigatie (Tab, Enter, Escape, pijltjestoetsen)')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.focusIndicators', 'Duidelijke focusindicatoren voor interactieve elementen')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.ariaLabels', 'ARIA-labels en landmarks voor schermlezers')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.colorContrast', 'Kleurcontrast van minimaal 4.5:1 voor normale tekst')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.darkMode', 'Donkere modus voor verminderde oogbelasting')}
               </li>
               <li style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--success)', flexShrink: 0 }}><Icon name="check" size={16} /></span>
+                <span style={{ color: 'var(--success)', flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </span>
                 {t('accessibility.responsiveDesign', 'Responsief ontwerp voor alle schermformaten')}
               </li>
             </ul>
@@ -111,10 +129,16 @@ export default function AccessibilityStatement() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th scope="col" style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--border)' }}>
+                  <th
+                    scope="col"
+                    style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--border)' }}
+                  >
                     {t('accessibility.shortcut', 'Sneltoets')}
                   </th>
-                  <th scope="col" style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--border)' }}>
+                  <th
+                    scope="col"
+                    style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '2px solid var(--border)' }}
+                  >
                     {t('accessibility.action', 'Actie')}
                   </th>
                 </tr>
@@ -122,7 +146,16 @@ export default function AccessibilityStatement() {
               <tbody>
                 <tr>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
-                    <kbd style={{ background: 'var(--surface-hover)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>Cmd/Ctrl + K</kbd>
+                    <kbd
+                      style={{
+                        background: 'var(--surface-hover)',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      Cmd/Ctrl + K
+                    </kbd>
                   </td>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                     {t('accessibility.searchShortcut', 'Zoekfunctie openen')}
@@ -130,7 +163,16 @@ export default function AccessibilityStatement() {
                 </tr>
                 <tr>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
-                    <kbd style={{ background: 'var(--surface-hover)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>?</kbd>
+                    <kbd
+                      style={{
+                        background: 'var(--surface-hover)',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      ?
+                    </kbd>
                   </td>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                     {t('accessibility.helpShortcut', 'Sneltoetsen weergeven')}
@@ -138,7 +180,16 @@ export default function AccessibilityStatement() {
                 </tr>
                 <tr>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
-                    <kbd style={{ background: 'var(--surface-hover)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontFamily: 'var(--font-mono)' }}>Escape</kbd>
+                    <kbd
+                      style={{
+                        background: 'var(--surface-hover)',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      Escape
+                    </kbd>
                   </td>
                   <td style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                     {t('accessibility.escapeShortcut', 'Dialoog of menu sluiten')}
@@ -153,8 +204,9 @@ export default function AccessibilityStatement() {
               {t('accessibility.feedback', 'Feedback')}
             </h2>
             <p style={{ marginBottom: '1rem' }}>
-              {t('accessibility.feedbackText',
-                'We werken voortdurend aan het verbeteren van de toegankelijkheid van Tutti. Als je problemen ondervindt of suggesties hebt, neem dan contact met ons op:'
+              {t(
+                'accessibility.feedbackText',
+                'We werken voortdurend aan het verbeteren van de toegankelijkheid van Tutti. Als je problemen ondervindt of suggesties hebt, neem dan contact met ons op:',
               )}
             </p>
             <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem', listStyle: 'none' }}>
@@ -176,9 +228,7 @@ export default function AccessibilityStatement() {
               {t('accessibility.testing', 'Testen')}
             </h2>
             <p style={{ marginBottom: '1rem' }}>
-              {t('accessibility.testingText',
-                'Deze applicatie is getest met de volgende tools en hulptechnologieën:'
-              )}
+              {t('accessibility.testingText', 'Deze applicatie is getest met de volgende tools en hulptechnologieën:')}
             </p>
             <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
               <li>axe DevTools (geautomatiseerde toegankelijkheidstests)</li>
@@ -189,9 +239,13 @@ export default function AccessibilityStatement() {
             </ul>
           </section>
 
-          <section aria-labelledby="date-heading" style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+          <section
+            aria-labelledby="date-heading"
+            style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}
+          >
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              {t('accessibility.lastUpdated', 'Laatst bijgewerkt')}: {new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {t('accessibility.lastUpdated', 'Laatst bijgewerkt')}:{' '}
+              {new Date().toLocaleDateString(currentLocale(), { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </section>
         </div>
@@ -199,8 +253,7 @@ export default function AccessibilityStatement() {
 
       <div style={{ marginTop: '1.5rem' }}>
         <Link to="/" className="btn btn-outline">
-          <Icon name="home" size={16} />
-          {' '}{t('common.backToHome', 'Terug naar home')}
+          <Icon name="home" size={16} /> {t('common.backToHome', 'Terug naar home')}
         </Link>
       </div>
     </div>

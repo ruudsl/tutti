@@ -3,6 +3,7 @@
  * Comprehensive dashboard showing attendance trends, predictions, and at-risk members
  */
 
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -18,12 +19,7 @@ import {
 } from '../hooks/useAttendanceAnalytics';
 import { SkeletonTable } from '../components/Skeleton';
 import { Icon } from '../components/Icon';
-import {
-  AttendanceLineChart,
-  SectionBarChart,
-  AttendanceGauge,
-  DayOfWeekHeatmap,
-} from '../components/charts';
+import { AttendanceLineChart, SectionBarChart, AttendanceGauge, DayOfWeekHeatmap } from '../components/charts';
 
 export default function AttendanceAnalytics() {
   const { t } = useTranslation();
@@ -40,20 +36,27 @@ export default function AttendanceAnalytics() {
   const { data: trends = [], isLoading: trendsLoading } = useAttendanceTrends(12, orchestraId || undefined);
   const { data: sections = [], isLoading: sectionsLoading } = useAttendanceBySection(orchestraId || undefined);
   const { data: atRisk = [], isLoading: atRiskLoading } = useAtRiskMembers(orchestraId || undefined);
-  const { data: predictions = [], isLoading: predictionsLoading } = useAttendancePredictions(5, orchestraId || undefined);
+  const { data: predictions = [], isLoading: predictionsLoading } = useAttendancePredictions(
+    5,
+    orchestraId || undefined,
+  );
   const { data: dayStats = [], isLoading: dayStatsLoading } = useAttendanceByDayOfWeek(orchestraId || undefined);
-  const { data: leaderboard = [], isLoading: leaderboardLoading } = useAttendanceLeaderboard(10, orchestraId || undefined);
+  const { data: leaderboard = [], isLoading: leaderboardLoading } = useAttendanceLeaderboard(
+    10,
+    orchestraId || undefined,
+  );
 
   const isLoading = overviewLoading || trendsLoading;
 
   // Find best section
-  const bestSection = sections.length > 0
-    ? sections.reduce((best, current) => current.attendanceRate > best.attendanceRate ? current : best, sections[0])
-    : null;
+  const bestSection =
+    sections.length > 0
+      ? sections.reduce((best, current) => (current.attendanceRate > best.attendanceRate ? current : best), sections[0])
+      : null;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('nl-NL', {
+    return date.toLocaleDateString(currentLocale(), {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -75,9 +78,12 @@ export default function AttendanceAnalytics() {
 
   const getRiskBadgeClass = (level: 'high' | 'medium' | 'low') => {
     switch (level) {
-      case 'high': return 'badge badge-danger';
-      case 'medium': return 'badge badge-warning';
-      case 'low': return 'badge badge-info';
+      case 'high':
+        return 'badge badge-danger';
+      case 'medium':
+        return 'badge badge-warning';
+      case 'low':
+        return 'badge badge-info';
     }
   };
 
@@ -123,7 +129,12 @@ export default function AttendanceAnalytics() {
             <div
               className="stat-number"
               style={{
-                color: (overview?.avgAttendanceRate || 0) >= 80 ? 'var(--success)' : (overview?.avgAttendanceRate || 0) >= 60 ? 'var(--warning)' : 'var(--danger)',
+                color:
+                  (overview?.avgAttendanceRate || 0) >= 80
+                    ? 'var(--success)'
+                    : (overview?.avgAttendanceRate || 0) >= 60
+                      ? 'var(--warning)'
+                      : 'var(--danger)',
               }}
             >
               {overview?.avgAttendanceRate?.toFixed(1) || 0}%
@@ -135,7 +146,8 @@ export default function AttendanceAnalytics() {
                     color: overview.trend > 0 ? 'var(--success)' : 'var(--danger)',
                   }}
                 >
-                  {overview.trend > 0 ? '+' : ''}{overview.trend.toFixed(1)}%
+                  {overview.trend > 0 ? '+' : ''}
+                  {overview.trend.toFixed(1)}%
                 </span>
               )}
             </div>
@@ -230,11 +242,7 @@ export default function AttendanceAnalytics() {
               <Icon name="calendar" size={18} style={{ marginRight: '0.5rem' }} />
               {t('attendanceAnalytics.byDayOfWeek', 'Per weekdag')}
             </h4>
-            {dayStatsLoading ? (
-              <SkeletonTable rows={1} columns={7} />
-            ) : (
-              <DayOfWeekHeatmap data={dayStats} />
-            )}
+            {dayStatsLoading ? <SkeletonTable rows={1} columns={7} /> : <DayOfWeekHeatmap data={dayStats} />}
           </div>
         </div>
 
@@ -273,7 +281,8 @@ export default function AttendanceAnalytics() {
                       </div>
                     </div>
                     <span className={getRiskBadgeClass(member.riskLevel)}>
-                      {member.trend > 0 ? '+' : ''}{member.trend.toFixed(0)}%
+                      {member.trend > 0 ? '+' : ''}
+                      {member.trend.toFixed(0)}%
                     </span>
                   </div>
                 ))}
@@ -327,7 +336,9 @@ export default function AttendanceAnalytics() {
                           {pred.understaffedSections.length > 0 ? (
                             <span
                               className="badge badge-warning"
-                              title={pred.understaffedSections.map((s: { instrument: string }) => s.instrument).join(', ')}
+                              title={pred.understaffedSections
+                                .map((s: { instrument: string }) => s.instrument)
+                                .join(', ')}
                             >
                               {pred.understaffedSections.length} {t('attendanceAnalytics.understaffed', 'sectie(s)')}
                             </span>
@@ -350,20 +361,19 @@ export default function AttendanceAnalytics() {
         {/* Leaderboard */}
         <div className="card">
           <div className="card-body">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}
+            >
               <h4 style={{ margin: 0 }}>
                 <Icon name="trophy" size={18} style={{ marginRight: '0.5rem', color: 'var(--warning)' }} />
                 {t('attendanceAnalytics.leaderboard', 'Top leden')}
               </h4>
-              <button
-                className="btn btn-sm btn-outline"
-                onClick={() => setShowLeaderboard(!showLeaderboard)}
-              >
+              <button className="btn btn-sm btn-outline" onClick={() => setShowLeaderboard(!showLeaderboard)}>
                 {showLeaderboard ? t('common.hide', 'Verbergen') : t('common.show', 'Tonen')}
               </button>
             </div>
-            {showLeaderboard && (
-              leaderboardLoading ? (
+            {showLeaderboard &&
+              (leaderboardLoading ? (
                 <SkeletonTable rows={5} columns={3} />
               ) : leaderboard.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
@@ -404,9 +414,7 @@ export default function AttendanceAnalytics() {
                           {member.firstName} {member.lastName}
                         </div>
                         {member.instrument && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {member.instrument}
-                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.instrument}</div>
                         )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -420,8 +428,7 @@ export default function AttendanceAnalytics() {
                     </div>
                   ))}
                 </div>
-              )
-            )}
+              ))}
             {!showLeaderboard && (
               <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                 {t('attendanceAnalytics.leaderboardHidden', 'Klik op "Tonen" om de ranglijst te bekijken')}

@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -11,7 +12,11 @@ interface EquipmentStatsProps {
 export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
   const { t } = useTranslation();
 
-  const { data: stats, isLoading, error } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['equipment-stats'],
     queryFn: getEquipmentStats,
     staleTime: 30000, // 30 seconds
@@ -20,7 +25,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
   if (isLoading) {
     return (
       <div className={`grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 ${className}`}>
-        {[1, 2, 3, 4, 5, 6].map(i => (
+        {[1, 2, 3, 4, 5, 6].map((i) => (
           <SkeletonCard key={i} />
         ))}
       </div>
@@ -101,7 +106,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
             <span className="text-sm text-base-content/60">{t('equipment.stats.totalValue')}</span>
           </div>
           <div className="text-2xl font-bold">
-            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(stats.totalValue)}
+            {new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'EUR' }).format(stats.totalValue)}
           </div>
         </div>
       </div>

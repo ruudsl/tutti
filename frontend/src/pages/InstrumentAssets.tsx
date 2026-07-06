@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useInstrumentAssets,
   useInstrumentAssetsSummary,
@@ -58,6 +59,7 @@ const conditionLabels: Record<AssetCondition, string> = {
 };
 
 export default function InstrumentAssets() {
+  const { t } = useTranslation();
   useDocumentTitle('Instrumentenbeheer');
 
   // Tab state
@@ -242,30 +244,85 @@ export default function InstrumentAssets() {
   };
 
   const renderSummaryCards = () => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: '1rem',
+        marginBottom: '1.5rem',
+      }}
+    >
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>Totaal instrumenten</div>
         <div style={{ fontSize: '1.75rem', fontWeight: 600 }}>{summary?.total || 0}</div>
       </div>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>Beschikbaar</div>
         <div style={{ fontSize: '1.75rem', fontWeight: 600, color: 'var(--success)' }}>{summary?.available || 0}</div>
       </div>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>Uitgeleend</div>
         <div style={{ fontSize: '1.75rem', fontWeight: 600, color: 'var(--primary)' }}>{summary?.onLoan || 0}</div>
       </div>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>In reparatie</div>
         <div style={{ fontSize: '1.75rem', fontWeight: 600, color: 'var(--warning)' }}>{summary?.inRepair || 0}</div>
       </div>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>Totale waarde</div>
         <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatCurrency(summary?.totalValue || 0)}</div>
       </div>
-      <div style={{ padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          padding: '1rem',
+          backgroundColor: 'var(--surface)',
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+        }}
+      >
         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-light)' }}>Onderhoud gepland</div>
-        <div style={{ fontSize: '1.75rem', fontWeight: 600, color: maintenanceDue.length > 0 ? 'var(--warning)' : 'var(--text)' }}>
+        <div
+          style={{
+            fontSize: '1.75rem',
+            fontWeight: 600,
+            color: maintenanceDue.length > 0 ? 'var(--warning)' : 'var(--text)',
+          }}
+        >
           {summary?.maintenanceDueCount || 0}
         </div>
       </div>
@@ -350,7 +407,7 @@ export default function InstrumentAssets() {
       return (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>
           <Icon name="music" size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-          <p>Geen instrumenten gevonden</p>
+          <p>{t('instruments.noInstruments')}</p>
         </div>
       );
     }
@@ -458,7 +515,7 @@ export default function InstrumentAssets() {
       {maintenanceDue.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-light)' }}>
           <Icon name="check" size={32} style={{ color: 'var(--success)', marginBottom: '0.5rem' }} />
-          <p>Geen instrumenten met gepland onderhoud</p>
+          <p>{t('instruments.noMaintenanceDue')}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -506,7 +563,12 @@ export default function InstrumentAssets() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -517,7 +579,12 @@ export default function InstrumentAssets() {
             onChange={(e) => setFormData({ ...formData, instrumentType: e.target.value })}
             required
             placeholder="bijv. Altsaxofoon, Trompet"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -528,10 +595,17 @@ export default function InstrumentAssets() {
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value as AssetCategory })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           >
             {Object.entries(categoryLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
@@ -540,10 +614,17 @@ export default function InstrumentAssets() {
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value as AssetStatus })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           >
             {Object.entries(statusLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
@@ -556,7 +637,12 @@ export default function InstrumentAssets() {
             type="text"
             value={formData.brand}
             onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -565,7 +651,12 @@ export default function InstrumentAssets() {
             type="text"
             value={formData.model}
             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -577,7 +668,12 @@ export default function InstrumentAssets() {
             type="text"
             value={formData.serialNumber}
             onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -588,7 +684,12 @@ export default function InstrumentAssets() {
             onChange={(e) => setFormData({ ...formData, yearManufactured: e.target.value })}
             min="1800"
             max={new Date().getFullYear()}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -599,22 +700,36 @@ export default function InstrumentAssets() {
           <select
             value={formData.condition}
             onChange={(e) => setFormData({ ...formData, condition: e.target.value as AssetCondition })}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           >
             {Object.entries(conditionLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Onderhoudsinterval (maanden)</label>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
+            Onderhoudsinterval (maanden)
+          </label>
           <input
             type="number"
             value={formData.maintenanceIntervalMonths}
             onChange={(e) => setFormData({ ...formData, maintenanceIntervalMonths: e.target.value })}
             min="1"
             max="60"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -628,7 +743,12 @@ export default function InstrumentAssets() {
             onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
             min="0"
             step="0.01"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -639,7 +759,12 @@ export default function InstrumentAssets() {
             onChange={(e) => setFormData({ ...formData, currentValue: e.target.value })}
             min="0"
             step="0.01"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -650,7 +775,12 @@ export default function InstrumentAssets() {
             onChange={(e) => setFormData({ ...formData, replacementValue: e.target.value })}
             min="0"
             step="0.01"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -663,7 +793,12 @@ export default function InstrumentAssets() {
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder="bijv. Repetitielokaal"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
         <div>
@@ -673,7 +808,12 @@ export default function InstrumentAssets() {
             value={formData.storageLocation}
             onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
             placeholder="bijv. Kast A, plank 3"
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
           />
         </div>
       </div>
@@ -684,7 +824,13 @@ export default function InstrumentAssets() {
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           rows={3}
-          style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', resize: 'vertical' }}
+          style={{
+            width: '100%',
+            padding: '0.5rem',
+            borderRadius: 'var(--radius)',
+            border: '1px solid var(--border)',
+            resize: 'vertical',
+          }}
         />
       </div>
     </>
@@ -716,7 +862,15 @@ export default function InstrumentAssets() {
       {renderSummaryCards()}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+          borderBottom: '1px solid var(--border)',
+          paddingBottom: '0.5rem',
+        }}
+      >
         <button
           onClick={() => setActiveTab('assets')}
           style={{
@@ -745,14 +899,16 @@ export default function InstrumentAssets() {
           <Icon name="wrench" size={16} style={{ marginRight: '0.5rem' }} />
           Onderhoud
           {summary?.maintenanceDueCount ? (
-            <span style={{
-              marginLeft: '0.5rem',
-              padding: '0.125rem 0.375rem',
-              backgroundColor: 'var(--warning)',
-              color: 'white',
-              borderRadius: '9999px',
-              fontSize: 'var(--font-size-xs)',
-            }}>
+            <span
+              style={{
+                marginLeft: '0.5rem',
+                padding: '0.125rem 0.375rem',
+                backgroundColor: 'var(--warning)',
+                color: 'white',
+                borderRadius: '9999px',
+                fontSize: 'var(--font-size-xs)',
+              }}
+            >
               {summary.maintenanceDueCount}
             </span>
           ) : null}

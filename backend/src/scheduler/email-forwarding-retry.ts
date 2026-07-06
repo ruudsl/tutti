@@ -62,6 +62,7 @@ interface User {
 }
 
 let schedulerRunning = false;
+let timeoutHandle: NodeJS.Timeout | null = null;
 
 function getNextRetryDelay(retryCount: number): number {
     const index = Math.min(retryCount, RETRY_DELAYS_MS.length - 1);
@@ -281,7 +282,7 @@ async function checkAndProcessPendingTasks(): Promise<void> {
 
     // Schedule next check
     if (schedulerRunning) {
-        setTimeout(checkAndProcessPendingTasks, CHECK_INTERVAL_MS);
+        timeoutHandle = setTimeout(checkAndProcessPendingTasks, CHECK_INTERVAL_MS);
     }
 }
 
@@ -295,11 +296,15 @@ export function startScheduler(): void {
     logger.info('Email forwarding retry scheduler started');
 
     // Start checking after a short delay (30 seconds to let the system initialize)
-    setTimeout(checkAndProcessPendingTasks, 30 * 1000);
+    timeoutHandle = setTimeout(checkAndProcessPendingTasks, 30 * 1000);
 }
 
 export function stopScheduler(): void {
     schedulerRunning = false;
+    if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+    }
     logger.info('Email forwarding retry scheduler stopped');
 }
 

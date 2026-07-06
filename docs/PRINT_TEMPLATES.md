@@ -15,6 +15,7 @@ Generates printable seat cards for orchestra members at concerts.
 **Location:** `/frontend/src/components/SeatCardPrinter.tsx`
 
 **Features:**
+
 - Multiple card sizes (small: 65x40mm, medium: 85x54mm, large: 100x60mm)
 - Configurable cards per row
 - Concert information header
@@ -22,6 +23,7 @@ Generates printable seat cards for orchestra members at concerts.
 - Print-optimized CSS
 
 **Usage:**
+
 ```tsx
 import SeatCardPrinter from '../components/SeatCardPrinter';
 
@@ -34,10 +36,11 @@ import SeatCardPrinter from '../components/SeatCardPrinter';
   cardsPerRow={3}
   cardSize="medium"
   showConcertInfo={true}
-/>
+/>;
 ```
 
 **Card Data Structure:**
+
 ```typescript
 interface SeatCard {
   id: string;
@@ -55,6 +58,7 @@ Creates customizable concert posters for download and print.
 **Location:** `/frontend/src/components/ConcertPosterGenerator.tsx`
 
 **Features:**
+
 - Multiple templates (Classic, Modern, Minimal)
 - Custom color themes
 - Logo and background image support
@@ -64,13 +68,14 @@ Creates customizable concert posters for download and print.
 
 **Templates:**
 
-| Template | Style | Best For |
-|----------|-------|----------|
-| Classic | Traditional, formal | Symphonic concerts |
-| Modern | Bold, contemporary | Pop/jazz events |
-| Minimal | Clean, simple | Chamber music |
+| Template | Style               | Best For           |
+| -------- | ------------------- | ------------------ |
+| Classic  | Traditional, formal | Symphonic concerts |
+| Modern   | Bold, contemporary  | Pop/jazz events    |
+| Minimal  | Clean, simple       | Chamber music      |
 
 **Color Themes:**
+
 - Elegant (Navy/Gold)
 - Festive (Red/Green)
 - Spring (Soft greens)
@@ -79,6 +84,7 @@ Creates customizable concert posters for download and print.
 - Winter (Cool blues)
 
 **Poster Data Structure:**
+
 ```typescript
 interface PosterData {
   title: string;
@@ -102,18 +108,95 @@ Displays and prints ticket QR codes for concert admission.
 **Location:** `/frontend/src/components/TicketDisplay.tsx`
 
 **Features:**
+
 - QR code for scanning
 - Ticket details (event, seat, price)
 - Print-optimized layout
 - Mobile-friendly display
 
-### 4. Setlist / Concert Program
+### 4. Loan Receipt Printer (`LoanReceiptPrinter.tsx`)
+
+Generates a printable loan receipt ("uitleenbon") for music title loans, with signature lines for issue and return.
+
+**Location:** `/frontend/src/components/LoanReceiptPrinter.tsx`
+
+**Features:**
+
+- Association name header and receipt title
+- Borrower details (name, organization, email)
+- Item details (title, arranger) and reference number
+- Loan date and expected return date
+- Condition/notes box
+- Signature blocks for issue and return (signature + date lines)
+- A4 print layout; renders as an overlay, only the receipt is printed
+
+**Props:**
+
+```typescript
+interface LoanReceiptPrinterProps {
+  loan: Loan; // Loan from src/api (snake_case fields incl. title_name, borrower_name, ...)
+  onClose: () => void; // Closes the print overlay
+}
+```
+
+**Usage:** Integrated in the Loans page (`/frontend/src/pages/Loans.tsx`). Each loan row has a "Print bon" button that opens the overlay:
+
+```tsx
+import LoanReceiptPrinter from '../components/LoanReceiptPrinter';
+
+{
+  printLoan && <LoanReceiptPrinter loan={printLoan} onClose={() => setPrintLoan(null)} />;
+}
+```
+
+**Labels:** i18n keys under `printTemplates.loanReceipt.*` (nl/en/de).
+
+### 5. Invoice Printer (`InvoicePrinter.tsx`)
+
+Printable invoice view for the accounting module.
+
+**Location:** `/frontend/src/components/InvoicePrinter.tsx`
+
+**Features:**
+
+- Association name header, invoice/credit note title
+- Invoice number, invoice date, due date, reference
+- Addressee (relation name and email)
+- Line items table (description, quantity, unit price, VAT rate, line total)
+- Totals block: subtotal, VAT amount, total, and amount paid/due when partially paid
+- Payment instructions (with amount due, due date, invoice number, and payment reference) shown while an amount is outstanding
+- Fetches the invoice detail (including lines) on open via `getInvoice(id)`
+- A4 print layout; renders as an overlay, only the invoice is printed
+
+**Props:**
+
+```typescript
+interface InvoicePrinterProps {
+  invoice: Invoice; // Invoice from src/api/accounting (list item is enough; lines are fetched)
+  onClose: () => void; // Closes the print overlay
+}
+```
+
+**Usage:** Integrated in the Accounting page invoices tab (`/frontend/src/pages/Accounting.tsx`). Each invoice row has a small print button:
+
+```tsx
+import InvoicePrinter from '../components/InvoicePrinter';
+
+{
+  printInvoice && <InvoicePrinter invoice={printInvoice} onClose={() => setPrintInvoice(null)} />;
+}
+```
+
+**Labels:** i18n keys under `printTemplates.invoice.*` (nl/en/de).
+
+### 6. Setlist / Concert Program
 
 Printable concert program generated from music lists.
 
 **Location:** `/frontend/src/pages/MusicListManager.tsx`
 
 **Features:**
+
 - Program order with piece durations
 - Composer information
 - Intermission markers
@@ -124,6 +207,7 @@ Printable concert program generated from music lists.
 All print components use dedicated print stylesheets. Key patterns:
 
 ### Hide on Print
+
 ```css
 .no-print {
   display: none !important;
@@ -139,12 +223,13 @@ All print components use dedicated print stylesheets. Key patterns:
 ```
 
 ### Page Breaks
+
 ```css
 @media print {
   .page-break-before {
     page-break-before: always;
   }
-  
+
   .avoid-break {
     page-break-inside: avoid;
   }
@@ -152,13 +237,14 @@ All print components use dedicated print stylesheets. Key patterns:
 ```
 
 ### Print Sizing
+
 ```css
 @media print {
   @page {
     size: A4;
     margin: 10mm;
   }
-  
+
   body {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
@@ -176,15 +262,13 @@ import './MyPrintTemplate.css';
 
 export default function MyPrintTemplate({ data }) {
   const handlePrint = () => window.print();
-  
+
   return (
     <div className="my-print-template">
       <div className="no-print">
         <button onClick={handlePrint}>Print</button>
       </div>
-      <div className="print-content">
-        {/* Printable content */}
-      </div>
+      <div className="print-content">{/* Printable content */}</div>
     </div>
   );
 }
@@ -202,11 +286,11 @@ export default function MyPrintTemplate({ data }) {
   .my-print-template {
     width: 100%;
   }
-  
+
   .my-print-template .no-print {
     display: none;
   }
-  
+
   .my-print-template .print-content {
     /* Print-specific styles */
   }
@@ -227,6 +311,6 @@ export default function MyPrintTemplate({ data }) {
 - [ ] Member directory cards
 - [ ] Rehearsal schedule printout
 - [ ] Annual calendar overview
-- [ ] Equipment loan receipts
-- [ ] Invoice printouts
+- [x] Equipment loan receipts (`LoanReceiptPrinter.tsx`)
+- [x] Invoice printouts (`InvoicePrinter.tsx`)
 - [ ] Certificate templates (participation, awards)

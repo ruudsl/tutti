@@ -49,7 +49,7 @@ export default function Outfits() {
 
   const { data: outfitDetail } = useQuery({
     queryKey: ['outfit', selectedOutfit?.id],
-    queryFn: () => selectedOutfit ? getOutfit(selectedOutfit.id) : null,
+    queryFn: () => (selectedOutfit ? getOutfit(selectedOutfit.id) : null),
     enabled: !!selectedOutfit,
   });
 
@@ -104,7 +104,7 @@ export default function Outfits() {
   });
 
   const handleReorder = (reorderedOutfits: Outfit[]) => {
-    const outfitIds = reorderedOutfits.map(o => o.id);
+    const outfitIds = reorderedOutfits.map((o) => o.id);
     reorderMutation.mutate(outfitIds);
   };
 
@@ -115,13 +115,13 @@ export default function Outfits() {
 
   const handleAddItem = () => {
     if (itemInput.trim()) {
-      setFormData(prev => ({ ...prev, items: [...(prev.items || []), itemInput.trim()] }));
+      setFormData((prev) => ({ ...prev, items: [...(prev.items || []), itemInput.trim()] }));
       setItemInput('');
     }
   };
 
   const handleRemoveItem = (index: number) => {
-    setFormData(prev => ({ ...prev, items: prev.items?.filter((_, i) => i !== index) || [] }));
+    setFormData((prev) => ({ ...prev, items: prev.items?.filter((_, i) => i !== index) || [] }));
   };
 
   const openEditModal = (outfit: Outfit) => {
@@ -188,15 +188,10 @@ export default function Outfits() {
                   <Icon name="menu" className="w-5 h-5 text-base-content/50 cursor-grab" />
                   <div className="flex items-center gap-2 flex-1">
                     {outfit.colorCode && (
-                      <div
-                        className="w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: outfit.colorCode }}
-                      />
+                      <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: outfit.colorCode }} />
                     )}
                     <span className="font-medium">{outfit.name}</span>
-                    {outfit.isDefault && (
-                      <span className="badge badge-primary badge-sm">{t('outfits.default')}</span>
-                    )}
+                    {outfit.isDefault && <span className="badge badge-primary badge-sm">{t('outfits.default')}</span>}
                   </div>
                   <span className="text-sm text-base-content/50">
                     {t('outfits.usedIn', { count: outfit.usageCount })}
@@ -223,23 +218,20 @@ export default function Outfits() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     {outfit.colorCode && (
-                      <div
-                        className="w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: outfit.colorCode }}
-                      />
+                      <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: outfit.colorCode }} />
                     )}
                     <h3 className="card-title text-lg">{outfit.name}</h3>
                   </div>
-                  {outfit.isDefault && (
-                    <span className="badge badge-primary badge-sm">{t('outfits.default')}</span>
-                  )}
+                  {outfit.isDefault && <span className="badge badge-primary badge-sm">{t('outfits.default')}</span>}
                 </div>
                 {outfit.description && (
                   <p className="text-sm text-base-content/70 line-clamp-2">{outfit.description}</p>
                 )}
                 <div className="flex flex-wrap gap-1 mt-2">
                   {outfit.items.slice(0, 3).map((item, idx) => (
-                    <span key={idx} className="badge badge-outline badge-sm">{item}</span>
+                    <span key={idx} className="badge badge-outline badge-sm">
+                      {item}
+                    </span>
                   ))}
                   {outfit.items.length > 3 && (
                     <span className="badge badge-ghost badge-sm">+{outfit.items.length - 3}</span>
@@ -263,10 +255,7 @@ export default function Outfits() {
             {outfitDetail.colorCode && (
               <div className="flex items-center gap-2">
                 <span className="font-medium">{t('outfits.color')}:</span>
-                <div
-                  className="w-6 h-6 rounded border"
-                  style={{ backgroundColor: outfitDetail.colorCode }}
-                />
+                <div className="w-6 h-6 rounded border" style={{ backgroundColor: outfitDetail.colorCode }} />
                 <span className="text-sm">{outfitDetail.colorCode}</span>
               </div>
             )}
@@ -320,41 +309,62 @@ export default function Outfits() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <Modal onClose={() => { setShowCreateModal(false); resetForm(); }} title={t('outfits.add')} size="large">
-          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4">
+        <Modal
+          onClose={() => {
+            setShowCreateModal(false);
+            resetForm();
+          }}
+          title={t('outfits.add')}
+          size="large"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createMutation.mutate(formData);
+            }}
+            className="space-y-4"
+          >
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.name')} *</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.name')} *</span>
+              </label>
               <input
                 type="text"
                 className="input input-bordered"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 required
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.description')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.description')}</span>
+              </label>
               <textarea
                 className="textarea textarea-bordered"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 rows={3}
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.color')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.color')}</span>
+              </label>
               <input
                 type="color"
                 className="w-20 h-10"
                 value={formData.colorCode || '#000000'}
-                onChange={(e) => setFormData(prev => ({ ...prev, colorCode: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, colorCode: e.target.value }))}
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.items')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.items')}</span>
+              </label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -364,7 +374,12 @@ export default function Outfits() {
                   placeholder={t('outfits.itemPlaceholder')}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem())}
                 />
-                <button type="button" className="btn btn-outline" onClick={handleAddItem}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleAddItem}
+                  aria-label={t('outfits.addItem')}
+                >
                   <Icon name="plus" className="w-4 h-4" />
                 </button>
               </div>
@@ -372,7 +387,11 @@ export default function Outfits() {
                 {formData.items?.map((item, idx) => (
                   <span key={idx} className="badge badge-outline gap-1">
                     {item}
-                    <button type="button" onClick={() => handleRemoveItem(idx)}>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(idx)}
+                      aria-label={t('outfits.removeItem', { item })}
+                    >
                       <Icon name="close" className="w-3 h-3" />
                     </button>
                   </span>
@@ -386,14 +405,21 @@ export default function Outfits() {
                   type="checkbox"
                   className="checkbox"
                   checked={formData.isDefault}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
                 />
                 <span className="label-text">{t('outfits.setAsDefault')}</span>
               </label>
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-              <button type="button" className="btn btn-ghost" onClick={() => { setShowCreateModal(false); resetForm(); }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetForm();
+                }}
+              >
                 {t('common.cancel')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
@@ -406,41 +432,62 @@ export default function Outfits() {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <Modal onClose={() => { setShowEditModal(false); resetForm(); }} title={t('outfits.edit')} size="large">
-          <form onSubmit={(e) => { e.preventDefault(); selectedOutfit && updateMutation.mutate({ id: selectedOutfit.id, data: formData }); }} className="space-y-4">
+        <Modal
+          onClose={() => {
+            setShowEditModal(false);
+            resetForm();
+          }}
+          title={t('outfits.edit')}
+          size="large"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (selectedOutfit) updateMutation.mutate({ id: selectedOutfit.id, data: formData });
+            }}
+            className="space-y-4"
+          >
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.name')} *</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.name')} *</span>
+              </label>
               <input
                 type="text"
                 className="input input-bordered"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 required
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.description')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.description')}</span>
+              </label>
               <textarea
                 className="textarea textarea-bordered"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 rows={3}
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.color')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.color')}</span>
+              </label>
               <input
                 type="color"
                 className="w-20 h-10"
                 value={formData.colorCode || '#000000'}
-                onChange={(e) => setFormData(prev => ({ ...prev, colorCode: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, colorCode: e.target.value }))}
               />
             </div>
 
             <div className="form-control">
-              <label className="label"><span className="label-text">{t('outfits.items')}</span></label>
+              <label className="label">
+                <span className="label-text">{t('outfits.items')}</span>
+              </label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -450,7 +497,12 @@ export default function Outfits() {
                   placeholder={t('outfits.itemPlaceholder')}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem())}
                 />
-                <button type="button" className="btn btn-outline" onClick={handleAddItem}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleAddItem}
+                  aria-label={t('outfits.addItem')}
+                >
                   <Icon name="plus" className="w-4 h-4" />
                 </button>
               </div>
@@ -458,7 +510,11 @@ export default function Outfits() {
                 {formData.items?.map((item, idx) => (
                   <span key={idx} className="badge badge-outline gap-1">
                     {item}
-                    <button type="button" onClick={() => handleRemoveItem(idx)}>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(idx)}
+                      aria-label={t('outfits.removeItem', { item })}
+                    >
                       <Icon name="close" className="w-3 h-3" />
                     </button>
                   </span>
@@ -472,14 +528,21 @@ export default function Outfits() {
                   type="checkbox"
                   className="checkbox"
                   checked={formData.isDefault}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
                 />
                 <span className="label-text">{t('outfits.setAsDefault')}</span>
               </label>
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
-              <button type="button" className="btn btn-ghost" onClick={() => { setShowEditModal(false); resetForm(); }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setShowEditModal(false);
+                  resetForm();
+                }}
+              >
                 {t('common.cancel')}
               </button>
               <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>

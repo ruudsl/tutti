@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -84,7 +85,7 @@ export default function SeasonPlanner() {
   const { user } = useAuth();
   useDocumentTitle('pageTitle.seasonPlanner');
 
-  const isManager = user && MANAGER_ROLES.includes(user.role as typeof MANAGER_ROLES[number]);
+  const isManager = user && MANAGER_ROLES.includes(user.role as (typeof MANAGER_ROLES)[number]);
 
   // Data queries
   const { data: seasons = [], isLoading: seasonsLoading } = useSeasons();
@@ -140,7 +141,7 @@ export default function SeasonPlanner() {
     const excludeSet = new Set(wizardState.excludedDates);
 
     // Find first occurrence of selected day
-    let current = new Date(start);
+    const current = new Date(start);
     while (current.getDay() !== wizardState.rehearsalDay && current <= end) {
       current.setDate(current.getDate() + 1);
     }
@@ -155,7 +156,13 @@ export default function SeasonPlanner() {
     }
 
     return dates;
-  }, [wizardState.startDate, wizardState.endDate, wizardState.rehearsalDay, wizardState.excludedDates, wizardState.generateRehearsals]);
+  }, [
+    wizardState.startDate,
+    wizardState.endDate,
+    wizardState.rehearsalDay,
+    wizardState.excludedDates,
+    wizardState.generateRehearsals,
+  ]);
 
   // Calculate total budget from concerts
   const totalConcertBudget = useMemo(() => {
@@ -164,20 +171,25 @@ export default function SeasonPlanner() {
 
   // Apply template to wizard state
   const applyTemplate = (template: SeasonTemplate) => {
-    setWizardState(prev => ({
+    setWizardState((prev) => ({
       ...prev,
       templateId: template.id,
       rehearsalDay: template.defaultRehearsalDay ?? prev.rehearsalDay,
       rehearsalTime: template.defaultRehearsalTime || prev.rehearsalTime,
       rehearsalLocation: template.defaultRehearsalLocation || prev.rehearsalLocation,
       // Generate default concert slots based on template
-      concerts: prev.concerts.length === 0 ? Array(template.typicalConcertsCount).fill(null).map((_, i) => ({
-        name: `Concert ${i + 1}`,
-        date: '',
-        location: '',
-        type: '',
-        budgetAmount: 0,
-      })) : prev.concerts,
+      concerts:
+        prev.concerts.length === 0
+          ? Array(template.typicalConcertsCount)
+              .fill(null)
+              .map((_, i) => ({
+                name: `Concert ${i + 1}`,
+                date: '',
+                location: '',
+                type: '',
+                budgetAmount: 0,
+              }))
+          : prev.concerts,
     }));
   };
 
@@ -189,7 +201,7 @@ export default function SeasonPlanner() {
       case 'rehearsals':
         return !wizardState.generateRehearsals || rehearsalPreview.length > 0;
       case 'concerts':
-        return !wizardState.generateConcerts || wizardState.concerts.every(c => !c.name || (c.name && c.date));
+        return !wizardState.generateConcerts || wizardState.concerts.every((c) => !c.name || (c.name && c.date));
       case 'budget':
         return true;
       case 'review':
@@ -207,7 +219,7 @@ export default function SeasonPlanner() {
     { id: 'review', label: t('seasonPlanner.steps.review') },
   ];
 
-  const currentStepIndex = steps.findIndex(s => s.id === wizardStep);
+  const currentStepIndex = steps.findIndex((s) => s.id === wizardStep);
 
   const goToNextStep = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -240,7 +252,7 @@ export default function SeasonPlanner() {
       });
 
       // Generate events
-      const validConcerts = wizardState.concerts.filter(c => c.name && c.date);
+      const validConcerts = wizardState.concerts.filter((c) => c.name && c.date);
 
       await generateEvents.mutateAsync({
         seasonId: result.id,
@@ -303,38 +315,43 @@ export default function SeasonPlanner() {
   };
 
   const addConcert = () => {
-    setWizardState(prev => ({
+    setWizardState((prev) => ({
       ...prev,
       concerts: [...prev.concerts, { name: '', date: '', location: '', type: '', budgetAmount: 0 }],
     }));
   };
 
   const removeConcert = (index: number) => {
-    setWizardState(prev => ({
+    setWizardState((prev) => ({
       ...prev,
       concerts: prev.concerts.filter((_, i) => i !== index),
     }));
   };
 
   const updateConcert = (index: number, field: keyof PlannedConcert, value: string | number) => {
-    setWizardState(prev => ({
+    setWizardState((prev) => ({
       ...prev,
-      concerts: prev.concerts.map((c, i) => i === index ? { ...c, [field]: value } : c),
+      concerts: prev.concerts.map((c, i) => (i === index ? { ...c, [field]: value } : c)),
     }));
   };
 
   const toggleExcludeDate = (date: string) => {
-    setWizardState(prev => ({
+    setWizardState((prev) => ({
       ...prev,
       excludedDates: prev.excludedDates.includes(date)
-        ? prev.excludedDates.filter(d => d !== date)
+        ? prev.excludedDates.filter((d) => d !== date)
         : [...prev.excludedDates, date],
     }));
   };
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString(currentLocale(), {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   const getStatusBadge = (status: Season['status']) => {
@@ -343,11 +360,7 @@ export default function SeasonPlanner() {
       active: 'success',
       completed: 'primary',
     };
-    return (
-      <span className={`badge badge-${colors[status]}`}>
-        {t(`seasonPlanner.status.${status}`)}
-      </span>
-    );
+    return <span className={`badge badge-${colors[status]}`}>{t(`seasonPlanner.status.${status}`)}</span>;
   };
 
   if (!isManager) {
@@ -381,19 +394,32 @@ export default function SeasonPlanner() {
           <div>
             <h1>{selectedSeason.name}</h1>
             <p className="piece-meta">
-              {formatDate(selectedSeason.startDate)} - {formatDate(selectedSeason.endDate)}
-              {' '}{getStatusBadge(selectedSeason.status)}
+              {formatDate(selectedSeason.startDate)} - {formatDate(selectedSeason.endDate)}{' '}
+              {getStatusBadge(selectedSeason.status)}
             </p>
           </div>
           <div className="flex gap-2">
             <button
               className="btn btn-outline"
-              onClick={() => updateSeason.mutate({
-                id: selectedSeasonId,
-                data: { status: selectedSeason.status === 'draft' ? 'active' : selectedSeason.status === 'active' ? 'completed' : 'draft' },
-              })}
+              onClick={() =>
+                updateSeason.mutate({
+                  id: selectedSeasonId,
+                  data: {
+                    status:
+                      selectedSeason.status === 'draft'
+                        ? 'active'
+                        : selectedSeason.status === 'active'
+                          ? 'completed'
+                          : 'draft',
+                  },
+                })
+              }
             >
-              {selectedSeason.status === 'draft' ? t('seasonPlanner.activate') : selectedSeason.status === 'active' ? t('seasonPlanner.complete') : t('seasonPlanner.reopen')}
+              {selectedSeason.status === 'draft'
+                ? t('seasonPlanner.activate')
+                : selectedSeason.status === 'active'
+                  ? t('seasonPlanner.complete')
+                  : t('seasonPlanner.reopen')}
             </button>
           </div>
         </div>
@@ -416,16 +442,34 @@ export default function SeasonPlanner() {
               <div className="flex gap-4">
                 <div>
                   <span className="piece-meta">{t('seasonPlanner.budget.total')}</span>
-                  <div className="text-lg font-bold">{selectedSeason.budgetTotal.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</div>
+                  <div className="text-lg font-bold">
+                    {selectedSeason.budgetTotal.toLocaleString(currentLocale(), { style: 'currency', currency: 'EUR' })}
+                  </div>
                 </div>
                 <div>
                   <span className="piece-meta">{t('seasonPlanner.budget.allocated')}</span>
-                  <div className="text-lg font-bold">{selectedSeason.budgetAllocated.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</div>
+                  <div className="text-lg font-bold">
+                    {selectedSeason.budgetAllocated.toLocaleString(currentLocale(), {
+                      style: 'currency',
+                      currency: 'EUR',
+                    })}
+                  </div>
                 </div>
                 <div>
                   <span className="piece-meta">{t('seasonPlanner.budget.remaining')}</span>
-                  <div className="text-lg font-bold" style={{ color: (selectedSeason.budgetTotal - selectedSeason.budgetAllocated) < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                    {(selectedSeason.budgetTotal - selectedSeason.budgetAllocated).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}
+                  <div
+                    className="text-lg font-bold"
+                    style={{
+                      color:
+                        selectedSeason.budgetTotal - selectedSeason.budgetAllocated < 0
+                          ? 'var(--danger)'
+                          : 'var(--success)',
+                    }}
+                  >
+                    {(selectedSeason.budgetTotal - selectedSeason.budgetAllocated).toLocaleString(currentLocale(), {
+                      style: 'currency',
+                      currency: 'EUR',
+                    })}
                   </div>
                 </div>
               </div>
@@ -436,7 +480,9 @@ export default function SeasonPlanner() {
         {/* Events */}
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">{t('seasonPlanner.events.title')} ({selectedSeason.events.length})</h2>
+            <h2 className="card-title">
+              {t('seasonPlanner.events.title')} ({selectedSeason.events.length})
+            </h2>
           </div>
           <div className="card-body flush">
             {selectedSeason.events.length > 0 ? (
@@ -450,16 +496,22 @@ export default function SeasonPlanner() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedSeason.events.map(event => (
+                  {selectedSeason.events.map((event) => (
                     <tr key={event.id}>
                       <td>{formatDate(event.plannedDate)}</td>
                       <td>
-                        <span className={`badge badge-${event.eventType === 'concert' ? 'primary' : event.eventType === 'rehearsal' ? 'secondary' : 'outline'}`}>
+                        <span
+                          className={`badge badge-${event.eventType === 'concert' ? 'primary' : event.eventType === 'rehearsal' ? 'secondary' : 'outline'}`}
+                        >
                           {t(`seasonPlanner.events.types.${event.eventType}`)}
                         </span>
                       </td>
                       <td>{event.eventName || '-'}</td>
-                      <td>{event.budgetAmount ? event.budgetAmount.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' }) : '-'}</td>
+                      <td>
+                        {event.budgetAmount
+                          ? event.budgetAmount.toLocaleString(currentLocale(), { style: 'currency', currency: 'EUR' })
+                          : '-'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -491,7 +543,12 @@ export default function SeasonPlanner() {
               className="flex-1"
               style={{
                 padding: '0.75rem',
-                background: index === currentStepIndex ? 'var(--primary)' : index < currentStepIndex ? 'var(--success)' : 'var(--border)',
+                background:
+                  index === currentStepIndex
+                    ? 'var(--primary)'
+                    : index < currentStepIndex
+                      ? 'var(--success)'
+                      : 'var(--border)',
                 color: index <= currentStepIndex ? 'white' : 'inherit',
                 borderRadius: 'var(--radius-sm)',
                 textAlign: 'center',
@@ -519,7 +576,7 @@ export default function SeasonPlanner() {
                     type="text"
                     className="form-control"
                     value={wizardState.name}
-                    onChange={e => setWizardState(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setWizardState((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder={t('seasonPlanner.fields.namePlaceholder')}
                   />
                 </div>
@@ -531,7 +588,7 @@ export default function SeasonPlanner() {
                       type="date"
                       className="form-control"
                       value={wizardState.startDate}
-                      onChange={e => setWizardState(prev => ({ ...prev, startDate: e.target.value }))}
+                      onChange={(e) => setWizardState((prev) => ({ ...prev, startDate: e.target.value }))}
                     />
                   </div>
                   <div className="form-group">
@@ -540,7 +597,7 @@ export default function SeasonPlanner() {
                       type="date"
                       className="form-control"
                       value={wizardState.endDate}
-                      onChange={e => setWizardState(prev => ({ ...prev, endDate: e.target.value }))}
+                      onChange={(e) => setWizardState((prev) => ({ ...prev, endDate: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -551,18 +608,20 @@ export default function SeasonPlanner() {
                     <select
                       className="form-control form-select"
                       value={wizardState.templateId}
-                      onChange={e => {
-                        const template = templates.find(t => t.id === e.target.value);
+                      onChange={(e) => {
+                        const template = templates.find((t) => t.id === e.target.value);
                         if (template) {
                           applyTemplate(template);
                         } else {
-                          setWizardState(prev => ({ ...prev, templateId: '' }));
+                          setWizardState((prev) => ({ ...prev, templateId: '' }));
                         }
                       }}
                     >
                       <option value="">{t('seasonPlanner.fields.noTemplate')}</option>
-                      {templates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                      {templates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -574,7 +633,12 @@ export default function SeasonPlanner() {
                     type="number"
                     className="form-control"
                     value={wizardState.budgetTotal || ''}
-                    onChange={e => setWizardState(prev => ({ ...prev, budgetTotal: e.target.value ? Number(e.target.value) : null }))}
+                    onChange={(e) =>
+                      setWizardState((prev) => ({
+                        ...prev,
+                        budgetTotal: e.target.value ? Number(e.target.value) : null,
+                      }))
+                    }
                     placeholder="0.00"
                     step="0.01"
                   />
@@ -585,7 +649,7 @@ export default function SeasonPlanner() {
                   <textarea
                     className="form-control"
                     value={wizardState.notes}
-                    onChange={e => setWizardState(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) => setWizardState((prev) => ({ ...prev, notes: e.target.value }))}
                     rows={3}
                   />
                 </div>
@@ -602,7 +666,7 @@ export default function SeasonPlanner() {
                     <input
                       type="checkbox"
                       checked={wizardState.generateRehearsals}
-                      onChange={e => setWizardState(prev => ({ ...prev, generateRehearsals: e.target.checked }))}
+                      onChange={(e) => setWizardState((prev) => ({ ...prev, generateRehearsals: e.target.checked }))}
                     />
                     {t('seasonPlanner.fields.generateRehearsals')}
                   </label>
@@ -616,10 +680,14 @@ export default function SeasonPlanner() {
                         <select
                           className="form-control form-select"
                           value={wizardState.rehearsalDay}
-                          onChange={e => setWizardState(prev => ({ ...prev, rehearsalDay: Number(e.target.value) }))}
+                          onChange={(e) =>
+                            setWizardState((prev) => ({ ...prev, rehearsalDay: Number(e.target.value) }))
+                          }
                         >
-                          {WEEKDAYS.map(day => (
-                            <option key={day.value} value={day.value}>{t(`rehearsals.days.${day.value}`)}</option>
+                          {WEEKDAYS.map((day) => (
+                            <option key={day.value} value={day.value}>
+                              {t(`rehearsals.days.${day.value}`)}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -629,7 +697,7 @@ export default function SeasonPlanner() {
                           type="time"
                           className="form-control"
                           value={wizardState.rehearsalTime}
-                          onChange={e => setWizardState(prev => ({ ...prev, rehearsalTime: e.target.value }))}
+                          onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalTime: e.target.value }))}
                         />
                       </div>
                       <div className="form-group">
@@ -638,7 +706,7 @@ export default function SeasonPlanner() {
                           type="time"
                           className="form-control"
                           value={wizardState.rehearsalEndTime}
-                          onChange={e => setWizardState(prev => ({ ...prev, rehearsalEndTime: e.target.value }))}
+                          onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalEndTime: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -650,7 +718,7 @@ export default function SeasonPlanner() {
                           type="text"
                           className="form-control"
                           value={wizardState.rehearsalLocation}
-                          onChange={e => setWizardState(prev => ({ ...prev, rehearsalLocation: e.target.value }))}
+                          onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalLocation: e.target.value }))}
                         />
                       </div>
                       <div className="form-group">
@@ -658,11 +726,13 @@ export default function SeasonPlanner() {
                         <select
                           className="form-control form-select"
                           value={wizardState.orchestraId}
-                          onChange={e => setWizardState(prev => ({ ...prev, orchestraId: e.target.value }))}
+                          onChange={(e) => setWizardState((prev) => ({ ...prev, orchestraId: e.target.value }))}
                         >
                           <option value="">{t('rehearsals.allOrchestras')}</option>
-                          {orchestras.map(o => (
-                            <option key={o.id} value={o.id}>{o.name}</option>
+                          {orchestras.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -670,11 +740,28 @@ export default function SeasonPlanner() {
 
                     {/* Preview */}
                     {rehearsalPreview.length > 0 && (
-                      <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: 'var(--radius)' }}>
-                        <strong>{t('seasonPlanner.wizard.rehearsalPreview')} ({rehearsalPreview.length})</strong>
+                      <div
+                        style={{
+                          marginTop: '1rem',
+                          padding: '1rem',
+                          background: 'var(--background)',
+                          borderRadius: 'var(--radius)',
+                        }}
+                      >
+                        <strong>
+                          {t('seasonPlanner.wizard.rehearsalPreview')} ({rehearsalPreview.length})
+                        </strong>
                         <p className="piece-meta mb-2">{t('seasonPlanner.wizard.clickToExclude')}</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-                          {rehearsalPreview.map(date => {
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '0.5rem',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                          }}
+                        >
+                          {rehearsalPreview.map((date) => {
                             const isExcluded = wizardState.excludedDates.includes(date);
                             return (
                               <button
@@ -711,7 +798,7 @@ export default function SeasonPlanner() {
                     <input
                       type="checkbox"
                       checked={wizardState.generateConcerts}
-                      onChange={e => setWizardState(prev => ({ ...prev, generateConcerts: e.target.checked }))}
+                      onChange={(e) => setWizardState((prev) => ({ ...prev, generateConcerts: e.target.checked }))}
                     />
                     {t('seasonPlanner.fields.generateConcerts')}
                   </label>
@@ -722,8 +809,17 @@ export default function SeasonPlanner() {
                     {wizardState.concerts.map((concert, index) => (
                       <div key={index} className="card mb-2" style={{ background: 'var(--background)' }}>
                         <div className="card-body" style={{ padding: '0.75rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <strong>{t('seasonPlanner.wizard.concert')} {index + 1}</strong>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '0.5rem',
+                            }}
+                          >
+                            <strong>
+                              {t('seasonPlanner.wizard.concert')} {index + 1}
+                            </strong>
                             <button
                               type="button"
                               className="btn btn-outline btn-sm"
@@ -739,29 +835,31 @@ export default function SeasonPlanner() {
                               className="form-control"
                               placeholder={t('seasonPlanner.fields.concertName')}
                               value={concert.name}
-                              onChange={e => updateConcert(index, 'name', e.target.value)}
+                              onChange={(e) => updateConcert(index, 'name', e.target.value)}
                             />
                             <input
                               type="date"
                               className="form-control"
                               value={concert.date}
-                              onChange={e => updateConcert(index, 'date', e.target.value)}
+                              onChange={(e) => updateConcert(index, 'date', e.target.value)}
                             />
                             <input
                               type="text"
                               className="form-control"
                               placeholder={t('rehearsals.location')}
                               value={concert.location || ''}
-                              onChange={e => updateConcert(index, 'location', e.target.value)}
+                              onChange={(e) => updateConcert(index, 'location', e.target.value)}
                             />
                             <select
                               className="form-control form-select"
                               value={concert.type || ''}
-                              onChange={e => updateConcert(index, 'type', e.target.value)}
+                              onChange={(e) => updateConcert(index, 'type', e.target.value)}
                             >
                               <option value="">{t('seasonPlanner.fields.concertType')}</option>
-                              {concertTypes.map(ct => (
-                                <option key={ct.value} value={ct.value}>{ct.label}</option>
+                              {concertTypes.map((ct) => (
+                                <option key={ct.value} value={ct.value}>
+                                  {ct.label}
+                                </option>
                               ))}
                             </select>
                           </div>
@@ -787,16 +885,32 @@ export default function SeasonPlanner() {
                       <div className="flex gap-4">
                         <div>
                           <span className="piece-meta">{t('seasonPlanner.budget.total')}</span>
-                          <div className="text-lg font-bold">{wizardState.budgetTotal.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</div>
+                          <div className="text-lg font-bold">
+                            {wizardState.budgetTotal.toLocaleString(currentLocale(), {
+                              style: 'currency',
+                              currency: 'EUR',
+                            })}
+                          </div>
                         </div>
                         <div>
                           <span className="piece-meta">{t('seasonPlanner.budget.allocated')}</span>
-                          <div className="text-lg font-bold">{totalConcertBudget.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</div>
+                          <div className="text-lg font-bold">
+                            {totalConcertBudget.toLocaleString(currentLocale(), { style: 'currency', currency: 'EUR' })}
+                          </div>
                         </div>
                         <div>
                           <span className="piece-meta">{t('seasonPlanner.budget.remaining')}</span>
-                          <div className="text-lg font-bold" style={{ color: (wizardState.budgetTotal - totalConcertBudget) < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                            {(wizardState.budgetTotal - totalConcertBudget).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}
+                          <div
+                            className="text-lg font-bold"
+                            style={{
+                              color:
+                                wizardState.budgetTotal - totalConcertBudget < 0 ? 'var(--danger)' : 'var(--success)',
+                            }}
+                          >
+                            {(wizardState.budgetTotal - totalConcertBudget).toLocaleString(currentLocale(), {
+                              style: 'currency',
+                              currency: 'EUR',
+                            })}
                           </div>
                         </div>
                       </div>
@@ -807,27 +921,29 @@ export default function SeasonPlanner() {
                 {wizardState.generateConcerts && wizardState.concerts.length > 0 && (
                   <div>
                     <h3>{t('seasonPlanner.wizard.concertBudgets')}</h3>
-                    {wizardState.concerts.filter(c => c.name).map((concert, index) => (
-                      <div key={index} className="flex items-center gap-2 mb-2">
-                        <span style={{ minWidth: '200px' }}>{concert.name || `Concert ${index + 1}`}</span>
-                        <input
-                          type="number"
-                          className="form-control"
-                          style={{ width: '150px' }}
-                          value={concert.budgetAmount || ''}
-                          onChange={e => updateConcert(index, 'budgetAmount', e.target.value ? Number(e.target.value) : 0)}
-                          placeholder="0.00"
-                          step="0.01"
-                        />
-                        <span>EUR</span>
-                      </div>
-                    ))}
+                    {wizardState.concerts
+                      .filter((c) => c.name)
+                      .map((concert, index) => (
+                        <div key={index} className="flex items-center gap-2 mb-2">
+                          <span style={{ minWidth: '200px' }}>{concert.name || `Concert ${index + 1}`}</span>
+                          <input
+                            type="number"
+                            className="form-control"
+                            style={{ width: '150px' }}
+                            value={concert.budgetAmount || ''}
+                            onChange={(e) =>
+                              updateConcert(index, 'budgetAmount', e.target.value ? Number(e.target.value) : 0)
+                            }
+                            placeholder="0.00"
+                            step="0.01"
+                          />
+                          <span>EUR</span>
+                        </div>
+                      ))}
                   </div>
                 )}
 
-                {!wizardState.budgetTotal && (
-                  <p className="piece-meta">{t('seasonPlanner.wizard.noBudgetSet')}</p>
-                )}
+                {!wizardState.budgetTotal && <p className="piece-meta">{t('seasonPlanner.wizard.noBudgetSet')}</p>}
               </div>
             )}
 
@@ -842,44 +958,73 @@ export default function SeasonPlanner() {
                     <table className="table">
                       <tbody>
                         <tr>
-                          <td><strong>{t('seasonPlanner.fields.name')}</strong></td>
+                          <td>
+                            <strong>{t('seasonPlanner.fields.name')}</strong>
+                          </td>
                           <td>{wizardState.name}</td>
                         </tr>
                         <tr>
-                          <td><strong>{t('seasonPlanner.fields.period')}</strong></td>
-                          <td>{formatDate(wizardState.startDate)} - {formatDate(wizardState.endDate)}</td>
+                          <td>
+                            <strong>{t('seasonPlanner.fields.period')}</strong>
+                          </td>
+                          <td>
+                            {formatDate(wizardState.startDate)} - {formatDate(wizardState.endDate)}
+                          </td>
                         </tr>
                         {wizardState.budgetTotal && (
                           <tr>
-                            <td><strong>{t('seasonPlanner.budget.total')}</strong></td>
-                            <td>{wizardState.budgetTotal.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })}</td>
+                            <td>
+                              <strong>{t('seasonPlanner.budget.total')}</strong>
+                            </td>
+                            <td>
+                              {wizardState.budgetTotal.toLocaleString(currentLocale(), {
+                                style: 'currency',
+                                currency: 'EUR',
+                              })}
+                            </td>
                           </tr>
                         )}
                         <tr>
-                          <td><strong>{t('seasonPlanner.wizard.rehearsalsToCreate')}</strong></td>
-                          <td>{wizardState.generateRehearsals ? rehearsalPreview.length - wizardState.excludedDates.length : 0}</td>
+                          <td>
+                            <strong>{t('seasonPlanner.wizard.rehearsalsToCreate')}</strong>
+                          </td>
+                          <td>
+                            {wizardState.generateRehearsals
+                              ? rehearsalPreview.length - wizardState.excludedDates.length
+                              : 0}
+                          </td>
                         </tr>
                         <tr>
-                          <td><strong>{t('seasonPlanner.wizard.concertsToCreate')}</strong></td>
-                          <td>{wizardState.generateConcerts ? wizardState.concerts.filter(c => c.name && c.date).length : 0}</td>
+                          <td>
+                            <strong>{t('seasonPlanner.wizard.concertsToCreate')}</strong>
+                          </td>
+                          <td>
+                            {wizardState.generateConcerts
+                              ? wizardState.concerts.filter((c) => c.name && c.date).length
+                              : 0}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
 
-                {wizardState.generateConcerts && wizardState.concerts.filter(c => c.name && c.date).length > 0 && (
+                {wizardState.generateConcerts && wizardState.concerts.filter((c) => c.name && c.date).length > 0 && (
                   <div className="card mb-3" style={{ background: 'var(--background)' }}>
                     <div className="card-body">
                       <h3>{t('seasonPlanner.wizard.plannedConcerts')}</h3>
                       <ul>
-                        {wizardState.concerts.filter(c => c.name && c.date).map((concert, index) => (
-                          <li key={index}>
-                            <strong>{concert.name}</strong> - {formatDate(concert.date)}
-                            {concert.location && ` @ ${concert.location}`}
-                            {concert.budgetAmount ? ` (${concert.budgetAmount.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' })})` : ''}
-                          </li>
-                        ))}
+                        {wizardState.concerts
+                          .filter((c) => c.name && c.date)
+                          .map((concert, index) => (
+                            <li key={index}>
+                              <strong>{concert.name}</strong> - {formatDate(concert.date)}
+                              {concert.location && ` @ ${concert.location}`}
+                              {concert.budgetAmount
+                                ? ` (${concert.budgetAmount.toLocaleString(currentLocale(), { style: 'currency', currency: 'EUR' })})`
+                                : ''}
+                            </li>
+                          ))}
                       </ul>
                     </div>
                   </div>
@@ -906,7 +1051,9 @@ export default function SeasonPlanner() {
                   onClick={handleFinishWizard}
                   disabled={!isStepValid(wizardStep) || createSeason.isPending || generateEvents.isPending}
                 >
-                  {createSeason.isPending || generateEvents.isPending ? t('common.loading') : t('seasonPlanner.wizard.finish')}
+                  {createSeason.isPending || generateEvents.isPending
+                    ? t('common.loading')
+                    : t('seasonPlanner.wizard.finish')}
                 </button>
               ) : (
                 <button
@@ -985,17 +1132,24 @@ export default function SeasonPlanner() {
                   </tr>
                 </thead>
                 <tbody>
-                  {seasons.map(season => (
+                  {seasons.map((season) => (
                     <tr key={season.id} onClick={() => setSelectedSeasonId(season.id)} style={{ cursor: 'pointer' }}>
-                      <td><strong>{season.name}</strong></td>
-                      <td>{formatDate(season.startDate)} - {formatDate(season.endDate)}</td>
+                      <td>
+                        <strong>{season.name}</strong>
+                      </td>
+                      <td>
+                        {formatDate(season.startDate)} - {formatDate(season.endDate)}
+                      </td>
                       <td>{getStatusBadge(season.status)}</td>
                       <td>
-                        <span className="badge badge-secondary">{season.rehearsalCount} {t('seasonPlanner.rehearsals')}</span>
-                        {' '}
-                        <span className="badge badge-primary">{season.concertCount} {t('seasonPlanner.concerts')}</span>
+                        <span className="badge badge-secondary">
+                          {season.rehearsalCount} {t('seasonPlanner.rehearsals')}
+                        </span>{' '}
+                        <span className="badge badge-primary">
+                          {season.concertCount} {t('seasonPlanner.concerts')}
+                        </span>
                       </td>
-                      <td onClick={e => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={() => setDeletingSeasonId(season.id)}
@@ -1042,7 +1196,7 @@ export default function SeasonPlanner() {
                     type="text"
                     className="form-control"
                     value={templateForm.name}
-                    onChange={e => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
@@ -1050,7 +1204,7 @@ export default function SeasonPlanner() {
                   <textarea
                     className="form-control"
                     value={templateForm.description}
-                    onChange={e => setTemplateForm(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, description: e.target.value }))}
                     rows={2}
                   />
                 </div>
@@ -1060,10 +1214,14 @@ export default function SeasonPlanner() {
                     <select
                       className="form-control form-select"
                       value={templateForm.defaultRehearsalDay}
-                      onChange={e => setTemplateForm(prev => ({ ...prev, defaultRehearsalDay: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setTemplateForm((prev) => ({ ...prev, defaultRehearsalDay: Number(e.target.value) }))
+                      }
                     >
-                      {WEEKDAYS.map(day => (
-                        <option key={day.value} value={day.value}>{t(`rehearsals.days.${day.value}`)}</option>
+                      {WEEKDAYS.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {t(`rehearsals.days.${day.value}`)}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -1073,7 +1231,7 @@ export default function SeasonPlanner() {
                       type="time"
                       className="form-control"
                       value={templateForm.defaultRehearsalTime}
-                      onChange={e => setTemplateForm(prev => ({ ...prev, defaultRehearsalTime: e.target.value }))}
+                      onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultRehearsalTime: e.target.value }))}
                     />
                   </div>
                   <div className="form-group">
@@ -1082,7 +1240,9 @@ export default function SeasonPlanner() {
                       type="number"
                       className="form-control"
                       value={templateForm.typicalConcertsCount}
-                      onChange={e => setTemplateForm(prev => ({ ...prev, typicalConcertsCount: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setTemplateForm((prev) => ({ ...prev, typicalConcertsCount: Number(e.target.value) }))
+                      }
                       min={0}
                     />
                   </div>
@@ -1093,11 +1253,15 @@ export default function SeasonPlanner() {
                     type="text"
                     className="form-control"
                     value={templateForm.defaultRehearsalLocation}
-                    onChange={e => setTemplateForm(prev => ({ ...prev, defaultRehearsalLocation: e.target.value }))}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultRehearsalLocation: e.target.value }))}
                   />
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <button className="btn btn-primary" onClick={handleCreateTemplate} disabled={!templateForm.name || createTemplate.isPending}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleCreateTemplate}
+                    disabled={!templateForm.name || createTemplate.isPending}
+                  >
                     {createTemplate.isPending ? t('common.loading') : t('common.save')}
                   </button>
                   <button className="btn btn-outline" onClick={() => setShowTemplateForm(false)}>
@@ -1122,11 +1286,17 @@ export default function SeasonPlanner() {
                     </tr>
                   </thead>
                   <tbody>
-                    {templates.map(template => (
+                    {templates.map((template) => (
                       <tr key={template.id}>
-                        <td><strong>{template.name}</strong></td>
+                        <td>
+                          <strong>{template.name}</strong>
+                        </td>
                         <td>{template.description || '-'}</td>
-                        <td>{template.defaultRehearsalDay !== null ? t(`rehearsals.days.${template.defaultRehearsalDay}`) : '-'}</td>
+                        <td>
+                          {template.defaultRehearsalDay !== null
+                            ? t(`rehearsals.days.${template.defaultRehearsalDay}`)
+                            : '-'}
+                        </td>
                         <td>{template.typicalConcertsCount}</td>
                         <td>
                           <button

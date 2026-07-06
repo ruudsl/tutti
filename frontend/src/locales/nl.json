@@ -1,5 +1,16 @@
 {
   "common": {
+    "sort": {
+      "sortBy": "Sorteer op",
+      "placeholder": "Sorteer op...",
+      "options": "Sorteeropties",
+      "nameAsc": "Naam (A-Z)",
+      "nameDesc": "Naam (Z-A)",
+      "dateNewest": "Datum (nieuwste eerst)",
+      "dateOldest": "Datum (oudste eerst)",
+      "composer": "Componist",
+      "lastViewed": "Laatst bekeken"
+    },
     "loading": "Laden...",
     "save": "Opslaan",
     "cancel": "Annuleren",
@@ -1099,7 +1110,13 @@
     "newList": "Nieuwe lijst",
     "newListPlaceholder": "Naam van de nieuwe lijst...",
     "filesFailed": "bestand(en) mislukt",
+    "zipBulkDescription": "Upload een ZIP bestand met meerdere PDF's in één keer.",
     "filesUploaded": "bestand(en) succesvol geüpload"
+  },
+  "publicCalendar": {
+    "upcomingEvents": "Aankomende evenementen",
+    "noUpcomingEvents": "Geen aankomende evenementen",
+    "lastUpdated": "Laatst bijgewerkt"
   },
   "instruments": {
     "title": "Instrumenten",
@@ -1118,6 +1135,7 @@
     "aliasPlaceholder": "Bijv. Altsax",
     "removeAlias": "Verwijder alias",
     "noInstruments": "Geen instrumenten gevonden",
+    "noMaintenanceDue": "Geen instrumenten met gepland onderhoud",
     "deleteConfirm": "Weet je zeker dat je \"{{name}}\" wilt verwijderen?",
     "clefOptions": {
       "sol": "Sol (vioolsleutel)",
@@ -1485,7 +1503,13 @@
     "disableSuccess": "MFA is uitgeschakeld",
     "errorSetup": "Fout bij starten MFA setup",
     "errorEnable": "Fout bij inschakelen MFA",
-    "errorDisable": "Fout bij uitschakelen MFA"
+    "errorDisable": "Fout bij uitschakelen MFA",
+    "recoveryCodesTitle": "Recovery codes",
+    "recoveryCodesDescription": "Bewaar deze recovery codes op een veilige plek. Met een recovery code kun je inloggen als je geen toegang meer hebt tot je authenticator app. Elke code is eenmalig bruikbaar.",
+    "recoveryCodesWarning": "Deze codes worden maar één keer getoond. Kopieer ze nu.",
+    "recoveryCodesCopy": "Codes kopiëren",
+    "recoveryCodesCopied": "Recovery codes gekopieerd",
+    "recoveryCodesDone": "Ik heb ze opgeslagen"
   },
   "backup": {
     "title": "Backup",
@@ -3054,6 +3078,9 @@
     "autoAssign": "Automatisch indelen",
     "unsavedChanges": "Niet-opgeslagen wijzigingen",
     "dragDropHint": "Sleep leden naar de gewenste positie",
+    "memberAria": "{{name}}, {{section}}. Gebruik de pijltjestoetsen om te verplaatsen",
+    "movedAnnouncement": "{{name}} verplaatst naar {{section}}, positie {{position}}",
+    "movedToUnassigned": "{{name}} verplaatst naar niet-ingedeelde leden",
     "dropHere": "Sleep hier een lid naartoe",
     "unassignedMembers": "Niet-ingedeelde leden",
     "allMembersAssigned": "Alle leden zijn ingedeeld",
@@ -4166,6 +4193,10 @@
     "yourAssociations": "Jouw verenigingen",
     "switchedSuccess": "Gewisseld naar vereniging",
     "switchError": "Kon niet wisselen van vereniging",
+    "checkingAccess": "Toegang controleren...",
+    "accessRequiredTitle": "Super Admin Rechten Vereist",
+    "accessRequiredMessage": "Je hebt super admin rechten nodig om verenigingen te beheren. Neem contact op met een bestaande super admin om toegang te krijgen.",
+    "roleLabel": "Rol",
     "roles": {
       "member": "Lid",
       "board": "Bestuur",
@@ -4202,6 +4233,7 @@
       "maxMembers": "Max Leden",
       "maxOrchestras": "Max Orkesten",
       "maxStorage": "Max Opslag (MB)",
+      "isActive": "Vereniging is actief",
       "tiers": {
         "free": "Gratis",
         "basic": "Basis",
@@ -4212,6 +4244,7 @@
     "invitations": {
       "title": "Uitnodigingen",
       "invite": "Uitnodigen",
+      "emailPlaceholder": "E-mailadres",
       "noInvitations": "Geen uitnodigingen",
       "invitedBy": "Uitgenodigd door",
       "status": {
@@ -4240,6 +4273,7 @@
     "members": {
       "title": "Leden",
       "noMembers": "Geen leden gevonden",
+      "removeTitle": "Lid verwijderen",
       "removeConfirm": "Weet je zeker dat je dit lid wilt verwijderen uit de vereniging?",
       "roles": {
         "member": "Lid",
@@ -4249,13 +4283,16 @@
     },
     "superAdmins": {
       "title": "Super Administrators",
+      "warningLabel": "Let op:",
       "warning": "Super admins hebben volledige toegang tot alle verenigingen en hun data. Wees voorzichtig met wie je deze rechten geeft.",
       "noAdmins": "Geen super admins gevonden",
+      "removeTitle": "Super Admin verwijderen",
       "removeConfirm": "Weet je zeker dat je deze super admin wilt verwijderen?"
     },
     "activity": {
       "title": "Activiteitenlog",
       "noActivity": "Geen activiteiten gevonden",
+      "by": "Door: {{name}}",
       "actions": {
         "association_created": "Vereniging aangemaakt",
         "subscription_updated": "Abonnement bijgewerkt",
@@ -4272,6 +4309,7 @@
       "name": "Naam",
       "displayName": "Weergavenaam",
       "slug": "Slug",
+      "slugPlaceholder": "mijn-vereniging",
       "website": "Website",
       "phone": "Telefoon",
       "email": "E-mail",
@@ -4678,6 +4716,8 @@
     "capacity": "Capaciteit",
     "costPerHour": "Kosten per uur",
     "costPerDay": "Kosten per dag",
+    "perHour": "{{amount}}/uur",
+    "perDay": "{{amount}}/dag",
     "requiresApproval": "Goedkeuring vereist",
     "book": "Reserveren",
     "created": "Middel aangemaakt",
@@ -4865,6 +4905,8 @@
     "color": "Kleur",
     "items": "Onderdelen",
     "itemPlaceholder": "Voeg onderdeel toe (bijv. zwarte broek)",
+    "addItem": "Onderdeel toevoegen",
+    "removeItem": "{{item}} verwijderen",
     "default": "Standaard",
     "setAsDefault": "Als standaard instellen",
     "usedIn": "Gebruikt in {{count}} concerten",
@@ -5542,6 +5584,51 @@
   "seatCards": {
     "cards": "kaartjes",
     "print": "Afdrukken"
+  },
+  "printTemplates": {
+    "print": "Afdrukken",
+    "loanReceipt": {
+      "printButton": "Print bon",
+      "title": "Uitleenbon",
+      "borrower": "Lener",
+      "organization": "Organisatie",
+      "email": "E-mailadres",
+      "item": "Item",
+      "arranger": "arrangeur",
+      "reference": "Referentienummer",
+      "dateOut": "Uitleendatum",
+      "expectedReturn": "Verwachte retourdatum",
+      "conditionNotes": "Conditie / opmerkingen",
+      "signatureIssue": "Uitgifte",
+      "signatureReturn": "Retour",
+      "signature": "Handtekening",
+      "date": "Datum",
+      "issuedBy": "Uitgegeven door"
+    },
+    "invoice": {
+      "printButton": "Print factuur",
+      "title": "Factuur",
+      "creditNoteTitle": "Creditnota",
+      "invoiceNumber": "Factuurnummer",
+      "invoiceDate": "Factuurdatum",
+      "dueDate": "Vervaldatum",
+      "reference": "Referentie",
+      "billedTo": "Factuur aan",
+      "description": "Omschrijving",
+      "quantity": "Aantal",
+      "unitPrice": "Stukprijs",
+      "vatRate": "BTW %",
+      "lineTotal": "Bedrag",
+      "subtotal": "Subtotaal",
+      "vatAmount": "BTW",
+      "total": "Totaal",
+      "amountPaid": "Reeds betaald",
+      "amountDue": "Te betalen",
+      "paymentInstructions": "Betaalinstructies",
+      "paymentInstructionsText": "Gelieve het openstaande bedrag van {{amount}} te voldoen vóór {{dueDate}}, onder vermelding van factuurnummer {{invoiceNumber}}.",
+      "paymentReference": "Betalingskenmerk",
+      "notes": "Opmerkingen"
+    }
   },
   "pageTitle": {
     "stageDesigner": "Podiumindeling Designer",

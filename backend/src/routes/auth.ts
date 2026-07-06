@@ -7,56 +7,135 @@ import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
 import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
+import { registerSession, revokeUserSessions, hashToken } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { loginSchema, changePasswordSchema } from '../validation/schemas';
 import { sendPasswordResetEmail } from '../utils/email';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
+import {
+  protectMfaSecret,
+  revealMfaSecret,
+  issueRecoveryCodes,
+  deleteRecoveryCodes,
+  consumeRecoveryCode,
+} from '../utils/mfa';
 
 // Rate limiter for login: 5 attempts per 15 minutes per IP
 const loginRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests: false, // Count all attempts, not just failures
-    keyGenerator: (req) => req.ip || 'unknown',
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Only failed attempts count toward the IP limit: brute force is covered
+  // by the per-account lockout, and a whole association behind one NAT
+  // would otherwise hit the limit after 5 successful logins.
+  skipSuccessfulRequests: true,
+  // The limiter's in-memory store persists across tests within a file,
+  // so deliberate failed-login tests would trip it for later tests.
+  skip: () => process.env.NODE_ENV === 'test',
+  keyGenerator: (req) => req.ip || 'unknown',
 });
 
 // Rate limiter for password reset: 3 attempts per hour per email
 // Uses a custom key generator to rate limit by email address
 const passwordResetRateLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3,
-    message: { error: 'Te veel wachtwoord reset verzoeken. Probeer het over een uur opnieuw.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => {
-        // Rate limit by email address (normalized to lowercase)
-        const email = req.body?.email?.toLowerCase?.() || req.ip || 'unknown';
-        return `pwd-reset:${email}`;
-    },
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: { error: 'Te veel wachtwoord reset verzoeken. Probeer het over een uur opnieuw.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Rate limit by email address (normalized to lowercase)
+    const email = req.body?.email?.toLowerCase?.() || req.ip || 'unknown';
+    return `pwd-reset:${email}`;
+  },
 });
 
 const sanitizeForLog = (value: unknown): string =>
-    String(value ?? '')
-        .replace(/[\r\n]+/g, ' ')
-        .replace(/[\u0000-\u001F\u007F]+/g, ' ')
-        .trim();
+  String(value ?? '')
+    .replace(/[\r\n]+/g, ' ')
+    // eslint-disable-next-line no-control-regex -- strip control chars from log output
+    .replace(/[\u0000-\u001F\u007F]+/g, ' ')
+    .trim();
 
 const router = Router();
 
 interface User {
-    id: string;
-    email: string;
-    password_hash: string;
-    first_name: string;
-    last_name: string;
-    role: string;
-    association_id: string | null;
-    mfa_secret: string | null;
-    mfa_enabled: boolean;
+  id: string;
+  email: string;
+  password_hash: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  association_id: string | null;
+  mfa_secret: string | null;
+  mfa_enabled: boolean;
+  failed_login_attempts: number | null;
+  locked_until: string | null;
+}
+
+// Account lockout: from this many failed attempts on, the account is locked
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_BASE_MINUTES = 15;
+const LOCKOUT_MAX_MINUTES = 24 * 60; // 24 hours
+
+const GENERIC_LOCKOUT_MESSAGE = 'Te veel mislukte pogingen, probeer later opnieuw.';
+
+/**
+ * Verify a TOTP code. verifySync can throw on malformed input (e.g. a
+ * recovery code instead of a 6-digit token), which should count as invalid.
+ */
+function isTotpCodeValid(token: string, secret: string): boolean {
+  try {
+    return verifySync({ token, secret }).valid;
+  } catch {
+    return false;
+  }
+}
+
+/** Hash a password reset token for storage/lookup (tokens are never stored in plaintext). */
+function hashResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function isAccountLocked(user: User): boolean {
+  if (!user.locked_until) return false;
+  const lockedUntil = new Date(user.locked_until).getTime();
+  return !isNaN(lockedUntil) && lockedUntil > Date.now();
+}
+
+/**
+ * Record a failed login attempt. From LOCKOUT_THRESHOLD attempts on, the
+ * account is locked exponentially: 5 attempts -> 15 min, each subsequent
+ * failed attempt doubles the lock, capped at 24 hours.
+ */
+function recordFailedLoginAttempt(user: User, ipAddress?: string, userAgent?: string): void {
+  const attempts = (user.failed_login_attempts || 0) + 1;
+
+  let lockedUntil: string | null = null;
+  if (attempts >= LOCKOUT_THRESHOLD) {
+    const lockMinutes = Math.min(LOCKOUT_BASE_MINUTES * Math.pow(2, attempts - LOCKOUT_THRESHOLD), LOCKOUT_MAX_MINUTES);
+    lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000).toISOString();
+  }
+
+  db.prepare('UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?').run(
+    attempts,
+    lockedUntil,
+    user.id,
+  );
+
+  logAuditEvent(
+    user.id,
+    'login_failed',
+    'user',
+    user.id,
+    `${user.first_name} ${user.last_name}`,
+    { failedAttempts: attempts, lockedUntil },
+    ipAddress,
+    userAgent,
+  );
 }
 
 /**
@@ -89,73 +168,130 @@ interface User {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
+router.post(
+  '/login',
+  loginRateLimiter,
+  asyncHandler(async (req, res) => {
     const { email, password, mfaCode } = req.body;
 
     // Validate basic login credentials
     loginSchema.parse({ email, password });
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+    const user = db.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').get(email) as
+      | User
+      | undefined;
 
     if (!user) {
-        throw new ApiError(401, 'Ongeldige inloggegevens.');
+      throw new ApiError(401, 'Ongeldige inloggegevens.');
+    }
+
+    // Account lockout check BEFORE password verification, with a generic
+    // message that doesn't reveal whether the password was correct.
+    if (isAccountLocked(user)) {
+      logAuditEvent(
+        user.id,
+        'login_blocked',
+        'user',
+        user.id,
+        `${user.first_name} ${user.last_name}`,
+        { reason: 'account_locked', lockedUntil: user.locked_until },
+        req.ip,
+        req.get('user-agent'),
+      );
+      throw new ApiError(429, GENERIC_LOCKOUT_MESSAGE);
     }
 
     const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
-        throw new ApiError(401, 'Ongeldige inloggegevens.');
+      recordFailedLoginAttempt(user, req.ip, req.get('user-agent'));
+      throw new ApiError(401, 'Ongeldige inloggegevens.');
     }
 
     // Check if MFA is enabled
     if (user.mfa_enabled && user.mfa_secret) {
-        // MFA is enabled, check if code is provided
-        if (!mfaCode) {
-            // Return indicator that MFA is required
-            return res.json({
-                requiresMfa: true,
-                message: 'MFA verificatie vereist.',
-            });
+      // MFA is enabled, check if code is provided
+      if (!mfaCode) {
+        // Return indicator that MFA is required
+        return res.json({
+          requiresMfa: true,
+          message: 'MFA verificatie vereist.',
+        });
+      }
+
+      // The secret is stored encrypted; legacy installs may still hold plaintext
+      const { secret: mfaSecret, wasPlaintext } = revealMfaSecret(user.mfa_secret);
+
+      // Verify as TOTP code first; fall back to a one-time recovery code
+      const totpValid = isTotpCodeValid(mfaCode, mfaSecret);
+
+      if (!totpValid) {
+        const recoveryCodeUsed = consumeRecoveryCode(user.id, mfaCode);
+        if (!recoveryCodeUsed) {
+          throw new ApiError(401, 'Ongeldige MFA code.');
         }
 
-        // Verify MFA code
-        const verifyResult = verifySync({ token: mfaCode, secret: user.mfa_secret });
+        logAuditEvent(
+          user.id,
+          'mfa_recovery_code_used',
+          'user',
+          user.id,
+          `${user.first_name} ${user.last_name}`,
+          undefined,
+          req.ip,
+          req.get('user-agent'),
+        );
+      }
 
-        if (!verifyResult.valid) {
-            throw new ApiError(401, 'Ongeldige MFA code.');
+      // Legacy plaintext secret: re-encrypt now that the login succeeded.
+      // protectMfaSecret degrades to plaintext when no key is configured,
+      // in which case the stored value simply stays as-is.
+      if (wasPlaintext) {
+        const protectedSecret = protectMfaSecret(mfaSecret);
+        if (protectedSecret !== user.mfa_secret) {
+          db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(protectedSecret, user.id);
         }
+      }
     }
 
-    // Update last login timestamp
-    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
+    // Successful login (password + optional MFA verified):
+    // update last login timestamp and reset the failed-attempts counter
+    db.prepare('UPDATE users SET last_login = ?, failed_login_attempts = 0, locked_until = NULL WHERE id = ?').run(
+      new Date().toISOString(),
+      user.id,
+    );
 
     // Generate token and return user data
     const token = generateToken(user);
 
+    // Register the session so it shows up in session management and can be revoked
+    registerSession(user.id, token, req.ip, req.get('user-agent'));
+
     // Log audit event for successful login
     logAuditEvent(
-        user.id,
-        'login',
-        'user',
-        user.id,
-        `${user.first_name} ${user.last_name}`,
-        undefined,
-        req.ip,
-        req.get('user-agent')
+      user.id,
+      'login',
+      'user',
+      user.id,
+      `${user.first_name} ${user.last_name}`,
+      undefined,
+      req.ip,
+      req.get('user-agent'),
     );
 
     res.json({
-        token,
-        user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            role: user.role,
-            associationId: user.association_id,
-            mfaEnabled: Boolean(user.mfa_enabled),
-        },
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        associationId: user.association_id,
+        mfaEnabled: Boolean(user.mfa_enabled),
+      },
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -175,48 +311,64 @@ router.post('/login', loginRateLimiter, asyncHandler(async (req, res) => {
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
-router.get('/me', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = db.prepare(`
+router.get(
+  '/me',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = db
+      .prepare(
+        `
         SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.association_id,
                u.mfa_enabled, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
         WHERE u.id = ?
-    `).get(req.user!.id) as any;
+    `,
+      )
+      .get(req.user!.id) as any;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     // Get user's instruments
-    const instruments = db.prepare(`
+    const instruments = db
+      .prepare(
+        `
         SELECT i.id, i.name, i.tuning
         FROM instruments i
         JOIN user_instruments ui ON i.id = ui.instrument_id
         WHERE ui.user_id = ?
-    `).all(req.user!.id);
+    `,
+      )
+      .all(req.user!.id);
 
     // Get user's orchestras
-    const orchestras = db.prepare(`
+    const orchestras = db
+      .prepare(
+        `
         SELECT o.id, o.name
         FROM orchestras o
         JOIN user_orchestras uo ON o.id = uo.orchestra_id
         WHERE uo.user_id = ?
-    `).all(req.user!.id);
+    `,
+      )
+      .all(req.user!.id);
 
     res.json({
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        role: user.role,
-        associationId: user.association_id,
-        associationName: user.association_name,
-        mfaEnabled: Boolean(user.mfa_enabled),
-        instruments,
-        orchestras,
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      associationId: user.association_id,
+      associationName: user.association_name,
+      mfaEnabled: Boolean(user.mfa_enabled),
+      instruments,
+      orchestras,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -246,37 +398,52 @@ router.get('/me', authenticateToken, asyncHandler(async (req: AuthRequest, res: 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/change-password', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/change-password',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
-    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user!.id) as { password_hash: string } | undefined;
+    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user!.id) as
+      | { password_hash: string }
+      | undefined;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     const validPassword = bcrypt.compareSync(currentPassword, user.password_hash);
     if (!validPassword) {
-        throw new ApiError(401, 'Huidig wachtwoord is onjuist.');
+      throw new ApiError(401, 'Huidig wachtwoord is onjuist.');
     }
 
     const newPasswordHash = bcrypt.hashSync(newPassword, 10);
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newPasswordHash, req.user!.id);
+    db.prepare('UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?').run(
+      newPasswordHash,
+      new Date().toISOString(),
+      req.user!.id,
+    );
+
+    // Revoke all other sessions for this user; the current session stays valid
+    const authHeader = req.headers.authorization;
+    const currentToken = (authHeader && authHeader.split(' ')[1]) || (req.query.token as string | undefined);
+    revokeUserSessions(req.user!.id, currentToken ? hashToken(currentToken) : undefined);
 
     // Log audit event
     logAuditEvent(
-        req.user!.id,
-        'update',
-        'user',
-        req.user!.id,
-        'Wachtwoord gewijzigd',
-        { field: 'password' },
-        req.ip,
-        req.get('user-agent')
+      req.user!.id,
+      'update',
+      'user',
+      req.user!.id,
+      'Wachtwoord gewijzigd',
+      { field: 'password' },
+      req.ip,
+      req.get('user-agent'),
     );
 
     res.json({ message: 'Wachtwoord succesvol gewijzigd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -305,22 +472,27 @@ router.post('/change-password', authenticateToken, asyncHandler(async (req: Auth
  *       400:
  *         description: MFA already enabled
  */
-router.post('/mfa/setup', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = db.prepare('SELECT email, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { email: string; mfa_enabled: boolean } | undefined;
+router.post(
+  '/mfa/setup',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = db.prepare('SELECT email, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
+      | { email: string; mfa_enabled: boolean }
+      | undefined;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     if (user.mfa_enabled) {
-        throw new ApiError(400, 'MFA is al ingeschakeld. Schakel eerst uit om opnieuw in te stellen.');
+      throw new ApiError(400, 'MFA is al ingeschakeld. Schakel eerst uit om opnieuw in te stellen.');
     }
 
     // Generate new secret
     const secret = generateSecret();
 
-    // Store secret temporarily (not enabled yet)
-    db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(secret, req.user!.id);
+    // Store secret temporarily (not enabled yet), encrypted at rest
+    db.prepare('UPDATE users SET mfa_secret = ? WHERE id = ?').run(protectMfaSecret(secret), req.user!.id);
 
     // Generate OTP Auth URL for QR code
     const otpauthUrl = `otpauth://totp/${encodeURIComponent('Harmonie Muziek')}:${encodeURIComponent(user.email)}?secret=${secret}&issuer=${encodeURIComponent('Harmonie Muziek')}`;
@@ -329,11 +501,12 @@ router.post('/mfa/setup', authenticateToken, asyncHandler(async (req: AuthReques
     const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
 
     res.json({
-        secret,
-        qrCode: qrCodeDataUrl,
-        message: 'Scan de QR code met je authenticator app en verifieer met een code.',
+      secret,
+      qrCode: qrCodeDataUrl,
+      message: 'Scan de QR code met je authenticator app en verifieer met een code.',
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -371,54 +544,63 @@ router.post('/mfa/setup', authenticateToken, asyncHandler(async (req: AuthReques
  *       401:
  *         description: Invalid verification code
  */
-router.post('/mfa/enable', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/mfa/enable',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { code } = req.body;
 
     if (!code) {
-        throw new ApiError(400, 'Verificatie code is verplicht.');
+      throw new ApiError(400, 'Verificatie code is verplicht.');
     }
 
-    const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { mfa_secret: string | null; mfa_enabled: boolean } | undefined;
+    const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
+      | { mfa_secret: string | null; mfa_enabled: boolean }
+      | undefined;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     if (user.mfa_enabled) {
-        throw new ApiError(400, 'MFA is al ingeschakeld.');
+      throw new ApiError(400, 'MFA is al ingeschakeld.');
     }
 
     if (!user.mfa_secret) {
-        throw new ApiError(400, 'Start eerst de MFA setup.');
+      throw new ApiError(400, 'Start eerst de MFA setup.');
     }
 
-    // Verify the code
-    const verifyResult = verifySync({ token: code, secret: user.mfa_secret });
-
-    if (!verifyResult.valid) {
-        throw new ApiError(401, 'Ongeldige verificatie code. Probeer opnieuw.');
+    // Verify the code (secret is stored encrypted)
+    const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+    if (!isTotpCodeValid(code, mfaSecret)) {
+      throw new ApiError(401, 'Ongeldige verificatie code. Probeer opnieuw.');
     }
 
     // Enable MFA
     db.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(req.user!.id);
 
+    // Generate one-time recovery codes; the plaintext is only returned here
+    const recoveryCodes = issueRecoveryCodes(req.user!.id);
+
     // Log audit event
     logAuditEvent(
-        req.user!.id,
-        'update',
-        'user',
-        req.user!.id,
-        'MFA ingeschakeld',
-        { mfaEnabled: true },
-        req.ip,
-        req.get('user-agent')
+      req.user!.id,
+      'update',
+      'user',
+      req.user!.id,
+      'MFA ingeschakeld',
+      { mfaEnabled: true },
+      req.ip,
+      req.get('user-agent'),
     );
 
     res.json({
-        message: 'MFA is succesvol ingeschakeld.',
-        mfaEnabled: true,
+      message: 'MFA is succesvol ingeschakeld.',
+      mfaEnabled: true,
+      recoveryCodes,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -458,58 +640,64 @@ router.post('/mfa/enable', authenticateToken, asyncHandler(async (req: AuthReque
  *       401:
  *         description: Invalid password or MFA code
  */
-router.post('/mfa/disable', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/mfa/disable',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { password, code } = req.body;
 
     if (!password) {
-        throw new ApiError(400, 'Wachtwoord is verplicht om MFA uit te schakelen.');
+      throw new ApiError(400, 'Wachtwoord is verplicht om MFA uit te schakelen.');
     }
 
-    const user = db.prepare('SELECT password_hash, mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { password_hash: string; mfa_secret: string | null; mfa_enabled: boolean } | undefined;
+    const user = db
+      .prepare('SELECT password_hash, mfa_secret, mfa_enabled FROM users WHERE id = ?')
+      .get(req.user!.id) as { password_hash: string; mfa_secret: string | null; mfa_enabled: boolean } | undefined;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     if (!user.mfa_enabled) {
-        throw new ApiError(400, 'MFA is niet ingeschakeld.');
+      throw new ApiError(400, 'MFA is niet ingeschakeld.');
     }
 
     // Verify password
     const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
-        throw new ApiError(401, 'Onjuist wachtwoord.');
+      throw new ApiError(401, 'Onjuist wachtwoord.');
     }
 
     // Optionally verify MFA code if provided
     if (code && user.mfa_secret) {
-        const verifyResult = verifySync({ token: code, secret: user.mfa_secret });
-
-        if (!verifyResult.valid) {
-            throw new ApiError(401, 'Ongeldige MFA code.');
-        }
+      const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+      if (!isTotpCodeValid(code, mfaSecret)) {
+        throw new ApiError(401, 'Ongeldige MFA code.');
+      }
     }
 
-    // Disable MFA and clear secret
+    // Disable MFA, clear secret and remove recovery codes
     db.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?').run(req.user!.id);
+    deleteRecoveryCodes(req.user!.id);
 
     // Log audit event
     logAuditEvent(
-        req.user!.id,
-        'update',
-        'user',
-        req.user!.id,
-        'MFA uitgeschakeld',
-        { mfaEnabled: false },
-        req.ip,
-        req.get('user-agent')
+      req.user!.id,
+      'update',
+      'user',
+      req.user!.id,
+      'MFA uitgeschakeld',
+      { mfaEnabled: false },
+      req.ip,
+      req.get('user-agent'),
     );
 
     res.json({
-        message: 'MFA is uitgeschakeld.',
-        mfaEnabled: false,
+      message: 'MFA is uitgeschakeld.',
+      mfaEnabled: false,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -530,17 +718,110 @@ router.post('/mfa/disable', authenticateToken, asyncHandler(async (req: AuthRequ
  *                 mfaEnabled:
  *                   type: boolean
  */
-router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as { mfa_enabled: boolean } | undefined;
+router.get(
+  '/mfa/status',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
+      | { mfa_enabled: boolean }
+      | undefined;
 
     if (!user) {
-        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
     res.json({
-        mfaEnabled: Boolean(user.mfa_enabled),
+      mfaEnabled: Boolean(user.mfa_enabled),
     });
-}));
+  }),
+);
+
+/**
+ * @swagger
+ * /auth/mfa/recovery-codes/regenerate:
+ *   post:
+ *     summary: Regenerate MFA recovery codes (requires a valid TOTP code)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: 6-digit verification code from authenticator app
+ *     responses:
+ *       200:
+ *         description: New recovery codes (shown only once, old codes are invalidated)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 recoveryCodes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         description: MFA not enabled or code missing
+ *       401:
+ *         description: Invalid verification code
+ */
+router.post(
+  '/mfa/recovery-codes/regenerate',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { code } = req.body;
+
+    if (!code) {
+      throw new ApiError(400, 'Verificatie code is verplicht.');
+    }
+
+    const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
+      | { mfa_secret: string | null; mfa_enabled: boolean }
+      | undefined;
+
+    if (!user) {
+      throw new ApiError(404, 'Gebruiker niet gevonden.');
+    }
+
+    if (!user.mfa_enabled || !user.mfa_secret) {
+      throw new ApiError(400, 'MFA is niet ingeschakeld.');
+    }
+
+    // Require a valid TOTP code (recovery codes cannot regenerate themselves)
+    const { secret: mfaSecret } = revealMfaSecret(user.mfa_secret);
+    if (!isTotpCodeValid(code, mfaSecret)) {
+      throw new ApiError(401, 'Ongeldige MFA code.');
+    }
+
+    // Replace all existing codes with a fresh set
+    const recoveryCodes = issueRecoveryCodes(req.user!.id);
+
+    logAuditEvent(
+      req.user!.id,
+      'mfa_recovery_codes_regenerated',
+      'user',
+      req.user!.id,
+      'MFA recovery codes opnieuw gegenereerd',
+      undefined,
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: 'Nieuwe recovery codes gegenereerd. Bewaar ze op een veilige plek; ze worden eenmalig getoond.',
+      recoveryCodes,
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -572,22 +853,28 @@ router.get('/mfa/status', authenticateToken, asyncHandler(async (req: AuthReques
  *                 message:
  *                   type: string
  */
-router.post('/forgot-password', passwordResetRateLimiter, asyncHandler(async (req, res) => {
+router.post(
+  '/forgot-password',
+  passwordResetRateLimiter,
+  asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-        throw new ApiError(400, 'E-mailadres is verplicht.');
+      throw new ApiError(400, 'E-mailadres is verplicht.');
     }
 
     // Always return success to prevent email enumeration
-    const successMessage = 'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
+    const successMessage =
+      'Als dit e-mailadres bij ons bekend is, ontvang je binnen enkele minuten een e-mail met instructies.';
 
-    const user = db.prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ?').get(email) as { id: string; first_name: string; last_name: string; association_id: string | null } | undefined;
+    const user = db
+      .prepare('SELECT id, first_name, last_name, association_id FROM users WHERE email = ? AND deleted_at IS NULL')
+      .get(email) as { id: string; first_name: string; last_name: string; association_id: string | null } | undefined;
 
     if (!user) {
-        // Don't reveal that email doesn't exist
-        logger.info(`Password reset requested for unknown email: ${sanitizeForLog(email)}`);
-        return res.json({ message: successMessage });
+      // Don't reveal that email doesn't exist
+      logger.info(`Password reset requested for unknown email: ${sanitizeForLog(email)}`);
+      return res.json({ message: successMessage });
     }
 
     // Invalidate any existing tokens for this user
@@ -601,24 +888,28 @@ router.post('/forgot-password', passwordResetRateLimiter, asyncHandler(async (re
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
 
-    // Store token
-    db.prepare(`
+    // Store only the SHA-256 hash of the token; the plaintext token exists
+    // solely in the e-mail sent to the user.
+    db.prepare(
+      `
         INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
         VALUES (?, ?, ?, ?)
-    `).run(tokenId, user.id, token, expiresAt.toISOString());
+    `,
+    ).run(tokenId, user.id, hashResetToken(token), expiresAt.toISOString());
 
     // Send email
     const userName = `${user.first_name} ${user.last_name}`;
     const emailSent = await sendPasswordResetEmail(email, token, userName, user.association_id);
 
     if (!emailSent) {
-        logger.error(`Failed to send password reset email to ${sanitizeForLog(email)}`);
+      logger.error(`Failed to send password reset email for user ${user.id}`);
     }
 
     logger.info(`Password reset token generated for user ${user.id}`);
 
     res.json({ message: successMessage });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -652,54 +943,71 @@ router.post('/forgot-password', passwordResetRateLimiter, asyncHandler(async (re
  *       400:
  *         description: Invalid or expired token
  */
-router.post('/reset-password', asyncHandler(async (req, res) => {
+router.post(
+  '/reset-password',
+  asyncHandler(async (req, res) => {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-        throw new ApiError(400, 'Token en nieuw wachtwoord zijn verplicht.');
+      throw new ApiError(400, 'Token en nieuw wachtwoord zijn verplicht.');
     }
 
     if (newPassword.length < 8) {
-        throw new ApiError(400, 'Wachtwoord moet minimaal 8 tekens bevatten.');
+      throw new ApiError(400, 'Wachtwoord moet minimaal 8 tekens bevatten.');
     }
 
-    // Find valid token
-    const resetToken = db.prepare(`
+    // Find valid token. Only hashes are stored, so the supplied token is
+    // hashed for the lookup; legacy plaintext rows simply never match.
+    const resetToken = db
+      .prepare(
+        `
         SELECT prt.*, u.email
         FROM password_reset_tokens prt
         JOIN users u ON prt.user_id = u.id
         WHERE prt.token = ? AND prt.used = 0 AND prt.expires_at > datetime('now')
-    `).get(token) as { id: string; user_id: string; email: string } | undefined;
+    `,
+      )
+      .get(hashResetToken(String(token))) as { id: string; user_id: string; email: string } | undefined;
 
     if (!resetToken) {
-        throw new ApiError(400, 'Ongeldige of verlopen reset link. Vraag een nieuwe aan.');
+      throw new ApiError(400, 'Ongeldige of verlopen reset link. Vraag een nieuwe aan.');
     }
 
     // Hash new password
     const passwordHash = bcrypt.hashSync(newPassword, 10);
 
-    // Update password
-    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, resetToken.user_id);
+    // Update password. Also reset the failed-login lockout: the user has
+    // proven ownership of the e-mail address.
+    db.prepare(
+      `
+        UPDATE users SET password_hash = ?, password_changed_at = ?, failed_login_attempts = 0, locked_until = NULL
+        WHERE id = ?
+    `,
+    ).run(passwordHash, new Date().toISOString(), resetToken.user_id);
+
+    // Revoke ALL existing sessions for this user
+    revokeUserSessions(resetToken.user_id);
 
     // Mark token as used
     db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
 
     // Log audit event
     logAuditEvent(
-        resetToken.user_id,
-        'update',
-        'user',
-        resetToken.user_id,
-        'Wachtwoord hersteld via reset link',
-        { field: 'password', method: 'reset_token' },
-        req.ip,
-        req.get('user-agent')
+      resetToken.user_id,
+      'update',
+      'user',
+      resetToken.user_id,
+      'Wachtwoord hersteld via reset link',
+      { field: 'password', method: 'reset_token' },
+      req.ip,
+      req.get('user-agent'),
     );
 
     logger.info(`Password reset successful for user ${resetToken.user_id}`);
 
     res.json({ message: 'Wachtwoord succesvol gewijzigd. Je kunt nu inloggen met je nieuwe wachtwoord.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -729,23 +1037,30 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
  *       400:
  *         description: Token is invalid or expired
  */
-router.get('/reset-password/validate', asyncHandler(async (req, res) => {
+router.get(
+  '/reset-password/validate',
+  asyncHandler(async (req, res) => {
     const { token } = req.query;
 
     if (!token) {
-        throw new ApiError(400, 'Token is verplicht.');
+      throw new ApiError(400, 'Token is verplicht.');
     }
 
-    const resetToken = db.prepare(`
+    const resetToken = db
+      .prepare(
+        `
         SELECT id FROM password_reset_tokens
         WHERE token = ? AND used = 0 AND expires_at > datetime('now')
-    `).get(token);
+    `,
+      )
+      .get(hashResetToken(String(token)));
 
     if (!resetToken) {
-        throw new ApiError(400, 'Ongeldige of verlopen reset link.');
+      throw new ApiError(400, 'Ongeldige of verlopen reset link.');
     }
 
     res.json({ valid: true });
-}));
+  }),
+);
 
 export default router;

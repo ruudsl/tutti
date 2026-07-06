@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -7,7 +8,14 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { SkeletonTable, Skeleton } from '../components/Skeleton';
 import SeatHeatmap from '../components/SeatHeatmap';
 import { SalesPredictionChart } from '../components/SalesPredictionChart';
-import type { TicketDashboard as TicketDashboardType, TicketDashboardTicketType, TicketDashboardSalesOverTime, VenueLayout, SeatHeatmapData, ScannedTicketsResponse } from '../types';
+import type {
+  TicketDashboard as TicketDashboardType,
+  TicketDashboardTicketType,
+  TicketDashboardSalesOverTime,
+  VenueLayout,
+  SeatHeatmapData,
+  ScannedTicketsResponse,
+} from '../types';
 
 // CSS for counter animation
 const counterAnimationStyles = `
@@ -54,17 +62,22 @@ function AnimatedCounter({ value, prefix = '', suffix = '' }: { value: number; p
 
   return (
     <span className={isAnimating ? 'counter-animate' : ''}>
-      {prefix}{displayValue.toLocaleString('nl-NL')}{suffix}
+      {prefix}
+      {displayValue.toLocaleString(currentLocale())}
+      {suffix}
     </span>
   );
 }
 
 /** Horizontal bar chart for ticket types */
-function TicketTypeBarChart({ ticketTypes, t }: {
+function TicketTypeBarChart({
+  ticketTypes,
+  t,
+}: {
   ticketTypes: TicketDashboardTicketType[];
   t: (key: string) => string;
 }) {
-  const maxSold = Math.max(...ticketTypes.map(tt => tt.quantity), 1);
+  const maxSold = Math.max(...ticketTypes.map((tt) => tt.quantity), 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -73,19 +86,28 @@ function TicketTypeBarChart({ ticketTypes, t }: {
         const availablePercent = (tt.available / maxSold) * 100;
         return (
           <div key={tt.id}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.875rem',
+                marginBottom: '0.25rem',
+              }}
+            >
               <span style={{ fontWeight: 500 }}>{tt.name}</span>
               <span style={{ color: 'var(--text-light)' }}>
                 {tt.sold} / {tt.quantity} ({formatCurrency(tt.revenue)})
               </span>
             </div>
-            <div style={{
-              height: 12,
-              background: 'var(--border)',
-              borderRadius: 6,
-              overflow: 'hidden',
-              display: 'flex',
-            }}>
+            <div
+              style={{
+                height: 12,
+                background: 'var(--border)',
+                borderRadius: 6,
+                overflow: 'hidden',
+                display: 'flex',
+              }}
+            >
               <div
                 style={{
                   height: '100%',
@@ -114,11 +136,8 @@ function TicketTypeBarChart({ ticketTypes, t }: {
 }
 
 /** Line chart for sales over time */
-function SalesLineChart({ data, t }: {
-  data: TicketDashboardSalesOverTime[];
-  t: (key: string) => string;
-}) {
-  const maxTickets = Math.max(...data.map(d => d.ticketsSold), 1);
+function SalesLineChart({ data, t }: { data: TicketDashboardSalesOverTime[]; t: (key: string) => string }) {
+  const maxTickets = Math.max(...data.map((d) => d.ticketsSold), 1);
   const chartHeight = 160;
 
   if (data.length === 0) {
@@ -130,11 +149,13 @@ function SalesLineChart({ data, t }: {
   }
 
   // Calculate points for SVG polyline
-  const points = data.map((d, i) => {
-    const x = (i / Math.max(data.length - 1, 1)) * 100;
-    const y = 100 - (d.ticketsSold / maxTickets) * 100;
-    return `${x},${y}`;
-  }).join(' ');
+  const points = data
+    .map((d, i) => {
+      const x = (i / Math.max(data.length - 1, 1)) * 100;
+      const y = 100 - (d.ticketsSold / maxTickets) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   const formatShortDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -146,20 +167,18 @@ function SalesLineChart({ data, t }: {
       {/* Legend */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 3, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 3, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }}
+          />
           {t('ticketDashboard.ticketsSold')}
         </span>
       </div>
 
       {/* SVG Chart */}
       <div style={{ position: 'relative', height: chartHeight, marginBottom: '0.5rem' }}>
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          style={{ width: '100%', height: '100%' }}
-        >
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
           {/* Grid lines */}
-          {[0, 25, 50, 75, 100].map(y => (
+          {[0, 25, 50, 75, 100].map((y) => (
             <line
               key={y}
               x1="0"
@@ -182,41 +201,32 @@ function SalesLineChart({ data, t }: {
             strokeLinejoin="round"
           />
           {/* Area fill */}
-          <polygon
-            points={`0,100 ${points} 100,100`}
-            fill="var(--primary)"
-            opacity="0.1"
-          />
+          <polygon points={`0,100 ${points} 100,100`} fill="var(--primary)" opacity="0.1" />
           {/* Data points */}
           {data.map((d, i) => {
             const x = (i / Math.max(data.length - 1, 1)) * 100;
             const y = 100 - (d.ticketsSold / maxTickets) * 100;
             return (
-              <circle
-                key={i}
-                cx={x}
-                cy={y}
-                r="1.5"
-                fill="var(--primary)"
-                vectorEffect="non-scaling-stroke"
-              >
+              <circle key={i} cx={x} cy={y} r="1.5" fill="var(--primary)" vectorEffect="non-scaling-stroke">
                 <title>{`${formatShortDate(d.date)}: ${d.ticketsSold} ${t('tickets.tickets')}, ${formatCurrency(d.revenue)}`}</title>
               </circle>
             );
           })}
         </svg>
         {/* Y-axis labels */}
-        <div style={{
-          position: 'absolute',
-          left: -30,
-          top: 0,
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          fontSize: '0.6rem',
-          color: 'var(--text-light)',
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: -30,
+            top: 0,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            fontSize: '0.6rem',
+            color: 'var(--text-light)',
+          }}
+        >
           <span>{maxTickets}</span>
           <span>{Math.round(maxTickets / 2)}</span>
           <span>0</span>
@@ -224,12 +234,14 @@ function SalesLineChart({ data, t }: {
       </div>
 
       {/* X-axis labels */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: '0.6rem',
-        color: 'var(--text-light)',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '0.6rem',
+          color: 'var(--text-light)',
+        }}
+      >
         {data.length > 0 && <span>{formatShortDate(data[0].date)}</span>}
         {data.length > 1 && <span>{formatShortDate(data[data.length - 1].date)}</span>}
       </div>
@@ -238,7 +250,12 @@ function SalesLineChart({ data, t }: {
 }
 
 /** Capacity indicator component */
-function CapacityIndicator({ sold, total, guestList, t }: {
+function CapacityIndicator({
+  sold,
+  total,
+  guestList,
+  t,
+}: {
   sold: number;
   total: number;
   guestList: number;
@@ -252,26 +269,34 @@ function CapacityIndicator({ sold, total, guestList, t }: {
     <div>
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--success)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--success)', display: 'inline-block' }}
+          />
           {t('ticketDashboard.paidTickets')} ({sold})
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--warning)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--warning)', display: 'inline-block' }}
+          />
           {t('ticketDashboard.guestListTickets')} ({guestList})
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--border)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--border)', display: 'inline-block' }}
+          />
           {t('ticketDashboard.available')} ({available})
         </span>
       </div>
 
-      <div style={{
-        height: 24,
-        background: 'var(--border)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-      }}>
+      <div
+        style={{
+          height: 24,
+          background: 'var(--border)',
+          borderRadius: 12,
+          overflow: 'hidden',
+          display: 'flex',
+        }}
+      >
         <div
           style={{
             height: '100%',
@@ -292,19 +317,19 @@ function CapacityIndicator({ sold, total, guestList, t }: {
         />
       </div>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: '0.5rem',
-        fontSize: '0.875rem',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: '0.5rem',
+          fontSize: '0.875rem',
+        }}
+      >
         <span style={{ color: 'var(--text-light)' }}>
           {sold + guestList} / {total} ({Math.round(paidPercent + guestPercent)}%)
         </span>
         <span style={{ color: available > 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 500 }}>
-          {available > 0
-            ? t('ticketDashboard.ticketsAvailable', { count: available })
-            : t('ticketDashboard.soldOut')}
+          {available > 0 ? t('ticketDashboard.ticketsAvailable', { count: available }) : t('ticketDashboard.soldOut')}
         </span>
       </div>
     </div>
@@ -313,7 +338,7 @@ function CapacityIndicator({ sold, total, guestList, t }: {
 
 /** Format currency */
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('nl-NL', {
+  return new Intl.NumberFormat(currentLocale(), {
     style: 'currency',
     currency: 'EUR',
   }).format(amount);
@@ -321,7 +346,7 @@ function formatCurrency(amount: number) {
 
 /** Format date/time */
 function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('nl-NL', {
+  return new Date(dateStr).toLocaleDateString(currentLocale(), {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -331,7 +356,7 @@ function formatDateTime(dateStr: string) {
 
 /** Format date */
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('nl-NL', {
+  return new Date(dateStr).toLocaleDateString(currentLocale(), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -403,29 +428,31 @@ export default function TicketDashboard() {
   });
 
   // Create a simple venue layout from ticket types for the heatmap
-  const venueLayout: VenueLayout | null = heatmapData ? {
-    id: `venue-${concertId}`,
-    concertId: concertId!,
-    name: heatmapData.concertName,
-    sections: heatmapData.sections.map((s, i) => ({
-      id: s.sectionId,
-      name: s.sectionName,
-      rowNumber: Math.floor(i / 3) + 1,
-      capacity: s.capacity,
-      sortOrder: i,
-    })),
-    rows: [],
-    seats: heatmapData.seats.map(s => ({
-      id: s.seatId,
-      rowId: s.rowLabel,
-      sectionId: s.sectionId,
-      seatLabel: s.seatLabel,
-      x: s.x,
-      y: s.y,
-    })),
-    width: Math.max(...heatmapData.seats.map(s => s.x)) + 100,
-    height: Math.max(...heatmapData.seats.map(s => s.y)) + 100,
-  } : null;
+  const venueLayout: VenueLayout | null = heatmapData
+    ? {
+        id: `venue-${concertId}`,
+        concertId: concertId!,
+        name: heatmapData.concertName,
+        sections: heatmapData.sections.map((s, i) => ({
+          id: s.sectionId,
+          name: s.sectionName,
+          rowNumber: Math.floor(i / 3) + 1,
+          capacity: s.capacity,
+          sortOrder: i,
+        })),
+        rows: [],
+        seats: heatmapData.seats.map((s) => ({
+          id: s.seatId,
+          rowId: s.rowLabel,
+          sectionId: s.sectionId,
+          seatLabel: s.seatLabel,
+          x: s.x,
+          y: s.y,
+        })),
+        width: Math.max(...heatmapData.seats.map((s) => s.x)) + 100,
+        height: Math.max(...heatmapData.seats.map((s) => s.y)) + 100,
+      }
+    : null;
 
   if (!concertId) {
     return (
@@ -441,10 +468,12 @@ export default function TicketDashboard() {
     return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h1><Skeleton width="300px" height="2rem" /></h1>
+          <h1>
+            <Skeleton width="300px" height="2rem" />
+          </h1>
         </div>
         <div className="stat-card-grid">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="card">
               <div className="card-body">
                 <Skeleton width="60%" height="1.5rem" style={{ marginBottom: '0.5rem' }} />
@@ -519,21 +548,25 @@ export default function TicketDashboard() {
       </div>
 
       {/* Live indicator */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        marginBottom: '1rem',
-        fontSize: '0.75rem',
-        color: 'var(--text-light)',
-      }}>
-        <span style={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          background: 'var(--success)',
-          animation: 'pulse-green 2s infinite',
-        }} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+          fontSize: '0.75rem',
+          color: 'var(--text-light)',
+        }}
+      >
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: 'var(--success)',
+            animation: 'pulse-green 2s infinite',
+          }}
+        />
         {t('ticketDashboard.liveUpdates')}
       </div>
 
@@ -551,7 +584,12 @@ export default function TicketDashboard() {
           <div className="card-body stat-inline">
             <div className="stat-number" style={{ color: 'var(--primary)' }}>
               <AnimatedCounter value={data.revenueToday} prefix="" suffix="" />
-              <span style={{ fontSize: '0.5em' }}> {formatCurrency(data.revenueToday).replace(/[\d,.]+/, '').trim()}</span>
+              <span style={{ fontSize: '0.5em' }}>
+                {' '}
+                {formatCurrency(data.revenueToday)
+                  .replace(/[\d,.]+/, '')
+                  .trim()}
+              </span>
             </div>
             <div className="stat-label">{t('ticketDashboard.revenueToday')}</div>
           </div>
@@ -596,9 +634,7 @@ export default function TicketDashboard() {
             {data.ticketTypes.length > 0 ? (
               <TicketTypeBarChart ticketTypes={data.ticketTypes} t={t} />
             ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                {t('ticketDashboard.noTicketTypes')}
-              </p>
+              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>{t('ticketDashboard.noTicketTypes')}</p>
             )}
           </div>
         </div>
@@ -621,10 +657,20 @@ export default function TicketDashboard() {
             prediction={{
               predictedTotalSales: Math.round(data.totalCapacity * 0.85),
               predictedRevenue: data.revenueAllTime * 1.2,
-              confidenceLevel: data.totalTicketsSold > data.totalCapacity * 0.5 ? 'high' : data.totalTicketsSold > data.totalCapacity * 0.25 ? 'medium' : 'low',
+              confidenceLevel:
+                data.totalTicketsSold > data.totalCapacity * 0.5
+                  ? 'high'
+                  : data.totalTicketsSold > data.totalCapacity * 0.25
+                    ? 'medium'
+                    : 'low',
               factors: [
                 t('predictions.factors.historicalData', 'Gebaseerd op historische verkoopdata'),
-                t('predictions.factors.daysUntilConcert', 'Dagen tot concert: {{days}}', { days: Math.max(0, Math.ceil((new Date(data.concertDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) }),
+                t('predictions.factors.daysUntilConcert', 'Dagen tot concert: {{days}}', {
+                  days: Math.max(
+                    0,
+                    Math.ceil((new Date(data.concertDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+                  ),
+                }),
                 t('predictions.factors.currentTrend', 'Huidige verkooptrend'),
               ],
               dailyPredictions: data.salesOverTime.slice(-7).map((day, i, arr) => ({
@@ -673,15 +719,9 @@ export default function TicketDashboard() {
                 <p style={{ color: 'var(--text-light)' }}>{t('common.loading')}</p>
               </div>
             ) : venueLayout ? (
-              <SeatHeatmap
-                concertId={concertId!}
-                layout={venueLayout}
-                mode={heatmapMode}
-              />
+              <SeatHeatmap concertId={concertId!} layout={venueLayout} mode={heatmapMode} />
             ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '2rem' }}>
-                {t('heatmap.noData')}
-              </p>
+              <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '2rem' }}>{t('heatmap.noData')}</p>
             )}
           </div>
         </div>
@@ -719,7 +759,9 @@ export default function TicketDashboard() {
                       </td>
                       <td style={{ textAlign: 'center' }}>{order.ticketCount}</td>
                       <td style={{ textAlign: 'right', fontWeight: 500 }}>{formatCurrency(order.total)}</td>
-                      <td><StatusBadge status={order.status} t={t} /></td>
+                      <td>
+                        <StatusBadge status={order.status} t={t} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

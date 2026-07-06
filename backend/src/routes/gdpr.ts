@@ -5,6 +5,7 @@ import db from '../database/connection';
 import archiver from 'archiver';
 import logger from '../utils/logger';
 import { ApiError } from '../middleware/errorHandler';
+import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
@@ -26,64 +27,70 @@ interface DataCategory {
  *       200:
  *         description: Summary of data categories
  */
-router.get('/data-summary', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+router.get(
+  '/data-summary',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
 
-  const categories: DataCategory[] = [
-    {
-      name: 'profile',
-      count: 1,
-      description: 'Your profile information including name, email, and preferences',
-    },
-    {
-      name: 'sessions',
-      count: db.prepare('SELECT COUNT(*) as count FROM user_sessions WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Login sessions and device information',
-    },
-    {
-      name: 'favorites',
-      count: db.prepare('SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your favorited music pieces',
-    },
-    {
-      name: 'practiceHistory',
-      count: db.prepare('SELECT COUNT(*) as count FROM practice_logs WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your practice session history',
-    },
-    {
-      name: 'activityLog',
-      count: db.prepare('SELECT COUNT(*) as count FROM activity_log WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your activity log (views, downloads)',
-    },
-    {
-      name: 'annotations',
-      count: db.prepare('SELECT COUNT(*) as count FROM pdf_annotations WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your PDF annotations',
-    },
-    {
-      name: 'audioRecordings',
-      count: db.prepare('SELECT COUNT(*) as count FROM audio_recordings WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your audio recordings',
-    },
-    {
-      name: 'issues',
-      count: db.prepare('SELECT COUNT(*) as count FROM issues WHERE reporter_id = ?').get(userId)?.count || 0,
-      description: 'Issues you have reported',
-    },
-    {
-      name: 'notificationPreferences',
-      count: db.prepare('SELECT COUNT(*) as count FROM notification_preferences WHERE user_id = ?').get(userId)?.count || 0,
-      description: 'Your notification preferences',
-    },
-  ];
+    const categories: DataCategory[] = [
+      {
+        name: 'profile',
+        count: 1,
+        description: 'Your profile information including name, email, and preferences',
+      },
+      {
+        name: 'sessions',
+        count: db.prepare('SELECT COUNT(*) as count FROM user_sessions WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Login sessions and device information',
+      },
+      {
+        name: 'favorites',
+        count: db.prepare('SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Your favorited music pieces',
+      },
+      {
+        name: 'practiceHistory',
+        count: db.prepare('SELECT COUNT(*) as count FROM practice_logs WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Your practice session history',
+      },
+      {
+        name: 'activityLog',
+        count: db.prepare('SELECT COUNT(*) as count FROM activity_log WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Your activity log (views, downloads)',
+      },
+      {
+        name: 'annotations',
+        count: db.prepare('SELECT COUNT(*) as count FROM pdf_annotations WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Your PDF annotations',
+      },
+      {
+        name: 'audioRecordings',
+        count: db.prepare('SELECT COUNT(*) as count FROM audio_recordings WHERE user_id = ?').get(userId)?.count || 0,
+        description: 'Your audio recordings',
+      },
+      {
+        name: 'issues',
+        count: db.prepare('SELECT COUNT(*) as count FROM issues WHERE reporter_id = ?').get(userId)?.count || 0,
+        description: 'Issues you have reported',
+      },
+      {
+        name: 'notificationPreferences',
+        count:
+          db.prepare('SELECT COUNT(*) as count FROM notification_preferences WHERE user_id = ?').get(userId)?.count ||
+          0,
+        description: 'Your notification preferences',
+      },
+    ];
 
-  res.json({
-    userId,
-    exportDate: new Date().toISOString(),
-    categories: categories.filter(c => c.count > 0 || c.name === 'profile'),
-    totalRecords: categories.reduce((sum, c) => sum + c.count, 0),
-  });
-}));
+    res.json({
+      userId,
+      exportDate: new Date().toISOString(),
+      categories: categories.filter((c) => c.count > 0 || c.name === 'profile'),
+      totalRecords: categories.reduce((sum, c) => sum + c.count, 0),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -97,82 +104,119 @@ router.get('/data-summary', authenticateToken, asyncHandler(async (req: AuthRequ
  *       200:
  *         description: ZIP file containing all user data
  */
-router.get('/export', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
-  const format = req.query.format === 'zip' ? 'zip' : 'json';
+router.get(
+  '/export',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
+    const format = req.query.format === 'zip' ? 'zip' : 'json';
 
-  logger.info(`GDPR data export requested by user ${userId}`);
+    logger.info(`GDPR data export requested by user ${userId}`);
 
-  // Gather all user data
-  const userData = {
-    exportInfo: {
-      exportDate: new Date().toISOString(),
-      userId,
-      format: 'GDPR Data Export',
-      version: '1.0',
-    },
+    // Gather all user data
+    const userData = {
+      exportInfo: {
+        exportDate: new Date().toISOString(),
+        userId,
+        format: 'GDPR Data Export',
+        version: '1.0',
+      },
 
-    profile: db.prepare(`
+      profile: db
+        .prepare(
+          `
       SELECT
         id, email, first_name, last_name, role, status,
         mfa_enabled, last_login, created_at,
         private_email
       FROM users WHERE id = ?
-    `).get(userId),
+    `,
+        )
+        .get(userId),
 
-    instruments: db.prepare(`
+      instruments: db
+        .prepare(
+          `
       SELECT i.id, i.name, i.tuning, i.family
       FROM instruments i
       JOIN user_instruments ui ON ui.instrument_id = i.id
       WHERE ui.user_id = ?
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    orchestras: db.prepare(`
+      orchestras: db
+        .prepare(
+          `
       SELECT o.id, o.name
       FROM orchestras o
       JOIN user_orchestras uo ON uo.orchestra_id = o.id
       WHERE uo.user_id = ?
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    sessions: db.prepare(`
+      sessions: db
+        .prepare(
+          `
       SELECT id, ip_address, user_agent, last_active, created_at, expires_at
       FROM user_sessions WHERE user_id = ?
       ORDER BY created_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    favorites: db.prepare(`
+      favorites: db
+        .prepare(
+          `
       SELECT uf.id, uf.created_at, mt.title, mt.composer, mt.arranger
       FROM user_favorites uf
       JOIN music_titles mt ON mt.id = uf.music_title_id
       WHERE uf.user_id = ?
       ORDER BY uf.created_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    recentViews: db.prepare(`
+      recentViews: db
+        .prepare(
+          `
       SELECT urv.id, urv.viewed_at, mt.title
       FROM user_recent_views urv
       JOIN music_titles mt ON mt.id = urv.music_title_id
       WHERE urv.user_id = ?
       ORDER BY urv.viewed_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    practiceHistory: db.prepare(`
+      practiceHistory: db
+        .prepare(
+          `
       SELECT pl.id, pl.duration_minutes, pl.notes, pl.started_at, pl.ended_at,
              mt.title as music_title
       FROM practice_logs pl
       LEFT JOIN music_titles mt ON mt.id = pl.music_title_id
       WHERE pl.user_id = ?
       ORDER BY pl.started_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    activityLog: db.prepare(`
+      activityLog: db
+        .prepare(
+          `
       SELECT id, action_type, entity_type, entity_id, created_at
       FROM activity_log WHERE user_id = ?
       ORDER BY created_at DESC
       LIMIT 1000
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    annotations: db.prepare(`
+      annotations: db
+        .prepare(
+          `
       SELECT pa.id, pa.page_number, pa.annotation_type, pa.content,
              pa.position_x, pa.position_y, pa.created_at, pa.updated_at,
              mp.title as music_piece_title
@@ -180,18 +224,26 @@ router.get('/export', authenticateToken, asyncHandler(async (req: AuthRequest, r
       LEFT JOIN music_pieces mp ON mp.id = pa.music_piece_id
       WHERE pa.user_id = ?
       ORDER BY pa.created_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    audioRecordings: db.prepare(`
+      audioRecordings: db
+        .prepare(
+          `
       SELECT ar.id, ar.title, ar.duration_seconds, ar.created_at,
              mt.title as music_title
       FROM audio_recordings ar
       LEFT JOIN music_titles mt ON mt.id = ar.music_title_id
       WHERE ar.user_id = ?
       ORDER BY ar.created_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    reportedIssues: db.prepare(`
+      reportedIssues: db
+        .prepare(
+          `
       SELECT i.id, i.page_number, i.measure_number, i.description,
              i.status, i.created_at,
              mp.title as music_piece_title
@@ -199,41 +251,52 @@ router.get('/export', authenticateToken, asyncHandler(async (req: AuthRequest, r
       LEFT JOIN music_pieces mp ON mp.id = i.music_piece_id
       WHERE i.reporter_id = ?
       ORDER BY i.created_at DESC
-    `).all(userId),
+    `,
+        )
+        .all(userId),
 
-    notificationPreferences: db.prepare(`
+      notificationPreferences: db
+        .prepare(
+          `
       SELECT * FROM notification_preferences WHERE user_id = ?
-    `).get(userId),
+    `,
+        )
+        .get(userId),
 
-    seatingPreferences: db.prepare(`
+      seatingPreferences: db
+        .prepare(
+          `
       SELECT sp.id, sp.preference_type, sp.created_at,
              u.first_name || ' ' || u.last_name as neighbor_name
       FROM seating_preferences sp
       LEFT JOIN users u ON u.id = sp.neighbor_user_id
       WHERE sp.user_id = ?
-    `).all(userId),
-  };
+    `,
+        )
+        .all(userId),
+    };
 
-  // Remove sensitive data
-  if (userData.profile) {
-    delete (userData.profile as any).password_hash;
-    delete (userData.profile as any).mfa_secret;
-    delete (userData.profile as any).microsoft_id;
-  }
+    // Remove sensitive data
+    if (userData.profile) {
+      delete (userData.profile as any).password_hash;
+      delete (userData.profile as any).mfa_secret;
+      delete (userData.profile as any).microsoft_id;
+    }
 
-  if (format === 'zip') {
-    // Create ZIP archive
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.zip"`);
+    if (format === 'zip') {
+      // Create ZIP archive
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.zip"`);
 
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.pipe(res);
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      archive.pipe(res);
 
-    // Add main data file
-    archive.append(JSON.stringify(userData, null, 2), { name: 'data.json' });
+      // Add main data file
+      archive.append(JSON.stringify(userData, null, 2), { name: 'data.json' });
 
-    // Add README
-    archive.append(`
+      // Add README
+      archive.append(
+        `
 GDPR Data Export
 ================
 
@@ -258,18 +321,21 @@ Data categories:
 Export Date: ${new Date().toISOString()}
 
 For questions about your data, contact your association administrator.
-    `.trim(), { name: 'README.txt' });
+    `.trim(),
+        { name: 'README.txt' },
+      );
 
-    await archive.finalize();
-  } else {
-    // Return JSON directly
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.json"`);
-    res.json(userData);
-  }
+      await archive.finalize();
+    } else {
+      // Return JSON directly
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="gdpr-export-${userId}-${Date.now()}.json"`);
+      res.json(userData);
+    }
 
-  logger.info(`GDPR data export completed for user ${userId}`);
-}));
+    logger.info(`GDPR data export completed for user ${userId}`);
+  }),
+);
 
 /**
  * @swagger
@@ -283,25 +349,28 @@ For questions about your data, contact your association administrator.
  *       200:
  *         description: Deletion request submitted
  */
-router.post('/delete-request', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const userId = req.user!.id;
+router.post(
+  '/delete-request',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const userId = req.user!.id;
 
-  // Create deletion request (actual deletion requires admin approval)
-  const existing = db.prepare(
-    'SELECT id FROM deletion_requests WHERE user_id = ? AND status = ?'
-  ).get(userId, 'pending');
+    // Create deletion request (actual deletion requires admin approval)
+    const existing = db
+      .prepare('SELECT id FROM deletion_requests WHERE user_id = ? AND status = ?')
+      .get(userId, 'pending');
 
-  if (existing) {
-    return res.json({
-      message: 'You already have a pending deletion request.',
-      requestId: existing.id,
-    });
-  }
+    if (existing) {
+      return res.json({
+        message: 'You already have a pending deletion request.',
+        requestId: existing.id,
+      });
+    }
 
-  const requestId = crypto.randomUUID();
+    const requestId = crypto.randomUUID();
 
-  // Check if table exists, create if not
-  db.exec(`
+    // Check if table exists, create if not
+    db.exec(`
     CREATE TABLE IF NOT EXISTS deletion_requests (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -314,18 +383,21 @@ router.post('/delete-request', authenticateToken, asyncHandler(async (req: AuthR
     )
   `);
 
-  db.prepare(`
+    db.prepare(
+      `
     INSERT INTO deletion_requests (id, user_id, reason)
     VALUES (?, ?, ?)
-  `).run(requestId, userId, req.body.reason || null);
+  `,
+    ).run(requestId, userId, req.body.reason || null);
 
-  logger.info(`GDPR deletion request submitted by user ${userId}`);
+    logger.info(`GDPR deletion request submitted by user ${userId}`);
 
-  res.json({
-    message: 'Your deletion request has been submitted. An administrator will process it within 30 days.',
-    requestId,
-  });
-}));
+    res.json({
+      message: 'Your deletion request has been submitted. An administrator will process it within 30 days.',
+      requestId,
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -339,10 +411,16 @@ router.post('/delete-request', authenticateToken, asyncHandler(async (req: AuthR
  *       200:
  *         description: List of deletion requests
  */
-router.get('/deletion-requests', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.get(
+  '/deletion-requests',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  const requests = db.prepare(`
+    const requests = db
+      .prepare(
+        `
     SELECT
       dr.id,
       dr.user_id,
@@ -359,10 +437,13 @@ router.get('/deletion-requests', authenticateToken, requireRole('admin'), asyncH
     LEFT JOIN users processor ON processor.id = dr.processed_by
     WHERE u.association_id = ?
     ORDER BY dr.created_at DESC
-  `).all(associationId);
+  `,
+      )
+      .all(associationId);
 
-  res.json({ requests });
-}));
+    res.json({ requests });
+  }),
+);
 
 /**
  * @swagger
@@ -391,74 +472,84 @@ router.get('/deletion-requests', authenticateToken, requireRole('admin'), asyncH
  *               reason:
  *                 type: string
  */
-router.post('/deletion-requests/:requestId/process', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { requestId } = req.params;
-  const { action, reason } = req.body;
-  const adminId = req.user!.id;
-  const associationId = req.user!.associationId;
+router.post(
+  '/deletion-requests/:requestId/process',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { requestId } = req.params;
+    const { action, reason } = req.body;
+    const adminId = req.user!.id;
+    const associationId = req.user!.associationId;
 
-  if (!['approve', 'reject'].includes(action)) {
-    throw new ApiError(400, 'Action must be either "approve" or "reject"');
-  }
+    if (!['approve', 'reject'].includes(action)) {
+      throw new ApiError(400, 'Action must be either "approve" or "reject"');
+    }
 
-  // Get the deletion request
-  const request = db.prepare(`
+    // Get the deletion request
+    const request = db
+      .prepare(
+        `
     SELECT dr.*, u.association_id
     FROM deletion_requests dr
     JOIN users u ON u.id = dr.user_id
     WHERE dr.id = ? AND dr.status = 'pending'
-  `).get(requestId) as { id: string; user_id: string; association_id: string } | undefined;
+  `,
+      )
+      .get(requestId) as { id: string; user_id: string; association_id: string } | undefined;
 
-  if (!request) {
-    throw new ApiError(404, 'Deletion request not found or already processed');
-  }
-
-  if (request.association_id !== associationId) {
-    throw new ApiError(403, 'Cannot process deletion requests from other associations');
-  }
-
-  const userId = request.user_id;
-
-  if (action === 'approve') {
-    // Perform cascade delete of all user data
-    logger.info(`Processing GDPR deletion for user ${userId}`, { adminId, requestId });
-
-    // Delete in order to respect foreign key constraints
-    const deleteOperations = [
-      'DELETE FROM user_sessions WHERE user_id = ?',
-      'DELETE FROM user_favorites WHERE user_id = ?',
-      'DELETE FROM user_recent_views WHERE user_id = ?',
-      'DELETE FROM practice_logs WHERE user_id = ?',
-      'DELETE FROM activity_log WHERE user_id = ?',
-      'DELETE FROM pdf_annotations WHERE user_id = ?',
-      'DELETE FROM audio_recordings WHERE user_id = ?',
-      'DELETE FROM issues WHERE reporter_id = ?',
-      'DELETE FROM notification_preferences WHERE user_id = ?',
-      'DELETE FROM seating_preferences WHERE user_id = ?',
-      'DELETE FROM seating_preferences WHERE neighbor_user_id = ?',
-      'DELETE FROM user_instruments WHERE user_id = ?',
-      'DELETE FROM user_orchestras WHERE user_id = ?',
-      'DELETE FROM push_subscriptions WHERE user_id = ?',
-      'DELETE FROM password_reset_tokens WHERE user_id = ?',
-      'DELETE FROM mfa_backup_codes WHERE user_id = ?',
-      'DELETE FROM deletion_requests WHERE user_id = ?',
-    ];
-
-    let deletedCounts: Record<string, number> = {};
-
-    for (const sql of deleteOperations) {
-      try {
-        const result = db.prepare(sql).run(userId);
-        const tableName = sql.match(/FROM (\w+)/)?.[1] || 'unknown';
-        deletedCounts[tableName] = (deletedCounts[tableName] || 0) + result.changes;
-      } catch (error) {
-        // Table might not exist, continue
-        logger.warn(`Delete operation failed: ${sql}`, { error: (error as Error).message });
-      }
+    if (!request) {
+      throw new ApiError(404, 'Deletion request not found or already processed');
     }
 
-    // Anonymize the user record instead of deleting (preserve audit trail)
-    db.prepare(`
+    if (request.association_id !== associationId) {
+      throw new ApiError(403, 'Cannot process deletion requests from other associations');
+    }
+
+    const userId = request.user_id;
+
+    if (action === 'approve') {
+      // Perform cascade delete of all user data
+      logger.info(`Processing GDPR deletion for user ${userId}`, { adminId, requestId });
+
+      // Delete in order to respect foreign key constraints
+      const deleteOperations = [
+        'DELETE FROM user_sessions WHERE user_id = ?',
+        'DELETE FROM user_favorites WHERE user_id = ?',
+        'DELETE FROM user_recent_views WHERE user_id = ?',
+        'DELETE FROM practice_logs WHERE user_id = ?',
+        'DELETE FROM activity_log WHERE user_id = ?',
+        'DELETE FROM pdf_annotations WHERE user_id = ?',
+        'DELETE FROM audio_recordings WHERE user_id = ?',
+        'DELETE FROM issues WHERE reporter_id = ?',
+        'DELETE FROM notification_preferences WHERE user_id = ?',
+        'DELETE FROM seating_preferences WHERE user_id = ?',
+        'DELETE FROM seating_preferences WHERE neighbor_user_id = ?',
+        'DELETE FROM user_instruments WHERE user_id = ?',
+        'DELETE FROM user_orchestras WHERE user_id = ?',
+        'DELETE FROM push_subscriptions WHERE user_id = ?',
+        'DELETE FROM password_reset_tokens WHERE user_id = ?',
+        'DELETE FROM mfa_backup_codes WHERE user_id = ?',
+        'DELETE FROM mfa_recovery_codes WHERE user_id = ?',
+        'DELETE FROM deletion_requests WHERE user_id = ?',
+      ];
+
+      const deletedCounts: Record<string, number> = {};
+
+      for (const sql of deleteOperations) {
+        try {
+          const result = db.prepare(sql).run(userId);
+          const tableName = sql.match(/FROM (\w+)/)?.[1] || 'unknown';
+          deletedCounts[tableName] = (deletedCounts[tableName] || 0) + result.changes;
+        } catch (error) {
+          // Table might not exist, continue
+          logger.warn(`Delete operation failed: ${sql}`, { error: (error as Error).message });
+        }
+      }
+
+      // Anonymize the user record instead of deleting (preserve audit trail)
+      db.prepare(
+        `
       UPDATE users SET
         email = 'deleted_' || id || '@deleted.local',
         first_name = 'Deleted',
@@ -471,41 +562,69 @@ router.post('/deletion-requests/:requestId/process', authenticateToken, requireR
         private_email = NULL,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(userId);
+    `,
+      ).run(userId);
 
-    // Update the request status
-    db.prepare(`
+      // Update the request status
+      db.prepare(
+        `
       UPDATE deletion_requests SET
         status = 'completed',
         processed_at = datetime('now'),
         processed_by = ?
       WHERE id = ?
-    `).run(adminId, requestId);
+    `,
+      ).run(adminId, requestId);
 
-    logger.info(`GDPR deletion completed for user ${userId}`, { adminId, deletedCounts });
+      logger.info(`GDPR deletion completed for user ${userId}`, { adminId, deletedCounts });
 
-    res.json({
-      message: 'User data has been deleted successfully',
-      deletedCounts,
-    });
-  } else {
-    // Reject the request
-    db.prepare(`
+      logAuditEvent(
+        adminId,
+        'gdpr_deletion_approved',
+        'user',
+        userId,
+        'GDPR verwijderverzoek goedgekeurd en uitgevoerd',
+        { requestId, deletedCounts },
+        req.ip,
+        req.get('user-agent'),
+      );
+
+      res.json({
+        message: 'User data has been deleted successfully',
+        deletedCounts,
+      });
+    } else {
+      // Reject the request
+      db.prepare(
+        `
       UPDATE deletion_requests SET
         status = 'rejected',
         processed_at = datetime('now'),
         processed_by = ?
       WHERE id = ?
-    `).run(adminId, requestId);
+    `,
+      ).run(adminId, requestId);
 
-    logger.info(`GDPR deletion request rejected for user ${userId}`, { adminId, reason });
+      logger.info(`GDPR deletion request rejected for user ${userId}`, { adminId, reason });
 
-    res.json({
-      message: 'Deletion request has been rejected',
-      reason,
-    });
-  }
-}));
+      logAuditEvent(
+        adminId,
+        'gdpr_deletion_rejected',
+        'deletion_request',
+        requestId,
+        'GDPR verwijderverzoek afgewezen',
+        { userId, reason },
+        req.ip,
+        req.get('user-agent'),
+      );
+
+      res.json({
+        message: 'Deletion request has been rejected',
+        reason,
+      });
+    }
+  }),
+);
 
 /**
  * @swagger
@@ -516,11 +635,15 @@ router.post('/deletion-requests/:requestId/process', authenticateToken, requireR
  *     security:
  *       - bearerAuth: []
  */
-router.get('/retention-settings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.get(
+  '/retention-settings',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  // Ensure table exists
-  db.exec(`
+    // Ensure table exists
+    db.exec(`
     CREATE TABLE IF NOT EXISTS data_retention_settings (
       id TEXT PRIMARY KEY,
       association_id TEXT NOT NULL,
@@ -533,26 +656,31 @@ router.get('/retention-settings', authenticateToken, requireRole('admin'), async
     )
   `);
 
-  const settings = db.prepare(`
+    const settings = db
+      .prepare(
+        `
     SELECT * FROM data_retention_settings WHERE association_id = ?
-  `).all(associationId);
+  `,
+      )
+      .all(associationId);
 
-  // Return with defaults
-  const defaults = [
-    { data_type: 'sessions', retention_days: 90, auto_delete: true, description: 'Login sessions' },
-    { data_type: 'activity_log', retention_days: 365, auto_delete: true, description: 'Activity logs' },
-    { data_type: 'practice_logs', retention_days: 730, auto_delete: false, description: 'Practice history' },
-    { data_type: 'audio_recordings', retention_days: 365, auto_delete: false, description: 'Audio recordings' },
-    { data_type: 'deleted_users', retention_days: 90, auto_delete: true, description: 'Deleted user records' },
-  ];
+    // Return with defaults
+    const defaults = [
+      { data_type: 'sessions', retention_days: 90, auto_delete: true, description: 'Login sessions' },
+      { data_type: 'activity_log', retention_days: 365, auto_delete: true, description: 'Activity logs' },
+      { data_type: 'practice_logs', retention_days: 730, auto_delete: false, description: 'Practice history' },
+      { data_type: 'audio_recordings', retention_days: 365, auto_delete: false, description: 'Audio recordings' },
+      { data_type: 'deleted_users', retention_days: 90, auto_delete: true, description: 'Deleted user records' },
+    ];
 
-  const merged = defaults.map(d => {
-    const existing = settings.find((s: any) => s.data_type === d.data_type);
-    return existing || { ...d, association_id: associationId };
-  });
+    const merged = defaults.map((d) => {
+      const existing = settings.find((s: any) => s.data_type === d.data_type);
+      return existing || { ...d, association_id: associationId };
+    });
 
-  res.json({ settings: merged });
-}));
+    res.json({ settings: merged });
+  }),
+);
 
 /**
  * @swagger
@@ -563,15 +691,19 @@ router.get('/retention-settings', authenticateToken, requireRole('admin'), async
  *     security:
  *       - bearerAuth: []
  */
-router.put('/retention-settings', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
-  const { settings } = req.body;
+router.put(
+  '/retention-settings',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { settings } = req.body;
 
-  if (!Array.isArray(settings)) {
-    throw new ApiError(400, 'Settings must be an array');
-  }
+    if (!Array.isArray(settings)) {
+      throw new ApiError(400, 'Settings must be an array');
+    }
 
-  const upsert = db.prepare(`
+    const upsert = db.prepare(`
     INSERT INTO data_retention_settings (id, association_id, data_type, retention_days, auto_delete, updated_at)
     VALUES (?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(association_id, data_type) DO UPDATE SET
@@ -580,21 +712,33 @@ router.put('/retention-settings', authenticateToken, requireRole('admin'), async
       updated_at = datetime('now')
   `);
 
-  for (const setting of settings) {
-    if (!setting.data_type || typeof setting.retention_days !== 'number') continue;
-    upsert.run(
-      crypto.randomUUID(),
-      associationId,
-      setting.data_type,
-      setting.retention_days,
-      setting.auto_delete ? 1 : 0
+    for (const setting of settings) {
+      if (!setting.data_type || typeof setting.retention_days !== 'number') continue;
+      upsert.run(
+        crypto.randomUUID(),
+        associationId,
+        setting.data_type,
+        setting.retention_days,
+        setting.auto_delete ? 1 : 0,
+      );
+    }
+
+    logger.info(`Data retention settings updated`, { associationId, adminId: req.user!.id });
+
+    logAuditEvent(
+      req.user!.id,
+      'gdpr_retention_updated',
+      'association',
+      associationId ?? 'unknown',
+      'Data retentie-instellingen gewijzigd',
+      { settings },
+      req.ip,
+      req.get('user-agent'),
     );
-  }
 
-  logger.info(`Data retention settings updated`, { associationId, adminId: req.user!.id });
-
-  res.json({ message: 'Retention settings updated successfully' });
-}));
+    res.json({ message: 'Retention settings updated successfully' });
+  }),
+);
 
 /**
  * @swagger
@@ -605,50 +749,70 @@ router.put('/retention-settings', authenticateToken, requireRole('admin'), async
  *     security:
  *       - bearerAuth: []
  */
-router.post('/cleanup', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.post(
+  '/cleanup',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  const settings = db.prepare(`
+    const settings = db
+      .prepare(
+        `
     SELECT * FROM data_retention_settings
     WHERE association_id = ? AND auto_delete = 1
-  `).all(associationId) as Array<{ data_type: string; retention_days: number }>;
+  `,
+      )
+      .all(associationId) as Array<{ data_type: string; retention_days: number }>;
 
-  const results: Record<string, number> = {};
+    const results: Record<string, number> = {};
 
-  for (const setting of settings) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - setting.retention_days);
-    const cutoff = cutoffDate.toISOString();
+    for (const setting of settings) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - setting.retention_days);
+      const cutoff = cutoffDate.toISOString();
 
-    let sql = '';
-    switch (setting.data_type) {
-      case 'sessions':
-        sql = `DELETE FROM user_sessions WHERE expires_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
-        break;
-      case 'activity_log':
-        sql = `DELETE FROM activity_log WHERE created_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
-        break;
-      case 'deleted_users':
-        sql = `DELETE FROM users WHERE status = 'deleted' AND updated_at < ? AND association_id = ?`;
-        break;
-    }
+      let sql = '';
+      switch (setting.data_type) {
+        case 'sessions':
+          sql = `DELETE FROM user_sessions WHERE expires_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
+          break;
+        case 'activity_log':
+          sql = `DELETE FROM activity_log WHERE created_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
+          break;
+        case 'deleted_users':
+          sql = `DELETE FROM users WHERE status = 'deleted' AND updated_at < ? AND association_id = ?`;
+          break;
+      }
 
-    if (sql) {
-      try {
-        const result = db.prepare(sql).run(cutoff, associationId);
-        results[setting.data_type] = result.changes;
-      } catch (error) {
-        logger.error(`Cleanup failed for ${setting.data_type}`, { error: (error as Error).message });
+      if (sql) {
+        try {
+          const result = db.prepare(sql).run(cutoff, associationId);
+          results[setting.data_type] = result.changes;
+        } catch (error) {
+          logger.error(`Cleanup failed for ${setting.data_type}`, { error: (error as Error).message });
+        }
       }
     }
-  }
 
-  logger.info(`Data cleanup completed`, { associationId, results });
+    logger.info(`Data cleanup completed`, { associationId, results });
 
-  res.json({
-    message: 'Data cleanup completed',
-    deletedCounts: results,
-  });
-}));
+    logAuditEvent(
+      req.user!.id,
+      'gdpr_cleanup',
+      'association',
+      associationId ?? 'unknown',
+      'Data cleanup uitgevoerd op basis van retentie-instellingen',
+      { deletedCounts: results },
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: 'Data cleanup completed',
+      deletedCounts: results,
+    });
+  }),
+);
 
 export default router;

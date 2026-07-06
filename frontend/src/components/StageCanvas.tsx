@@ -1,12 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type {
-  StagePosition,
-  StageShape,
-  StageLayoutData,
-  StagePositionType,
-  StageShapeType,
-} from '../types';
+import type { StagePosition, StageShape, StageLayoutData, StagePositionType, StageShapeType } from '../types';
 
 interface StageCanvasProps {
   width: number;
@@ -66,7 +60,7 @@ export default function StageCanvas({
         y: Math.round(y / GRID_SIZE) * GRID_SIZE,
       };
     },
-    [gridSnap]
+    [gridSnap],
   );
 
   // Convert screen coordinates to SVG coordinates
@@ -79,7 +73,7 @@ export default function StageCanvas({
         y: (clientY - rect.top) / zoom,
       };
     },
-    [zoom]
+    [zoom],
   );
 
   // Generate unique ID
@@ -121,7 +115,7 @@ export default function StageCanvas({
         onSelectionChange([newShape.id]);
       }
     },
-    [layoutData, tool, currentSection, onLayoutChange, onSelectionChange]
+    [layoutData, tool, currentSection, onLayoutChange, onSelectionChange],
   );
 
   // Handle canvas click (add new element or deselect)
@@ -146,7 +140,7 @@ export default function StageCanvas({
         onSelectionChange([]);
       }
     },
-    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange, addElement]
+    [readOnly, isDragging, tool, screenToSvg, snapToGrid, onSelectionChange, addElement],
   );
 
   // Handle element click (select only - placement is handled by canvas click)
@@ -172,7 +166,7 @@ export default function StageCanvas({
         onSelectionChange([id]);
       }
     },
-    [readOnly, tool, selectedIds, onSelectionChange]
+    [readOnly, tool, selectedIds, onSelectionChange],
   );
 
   // Handle drag start
@@ -191,7 +185,48 @@ export default function StageCanvas({
       setDragStart(pos);
       setIsDragging(true);
     },
-    [readOnly, tool, selectedIds, screenToSvg, onSelectionChange]
+    [readOnly, tool, selectedIds, screenToSvg, onSelectionChange],
+  );
+
+  // Move a single element by a delta (used for keyboard-based dragging)
+  const moveElementBy = useCallback(
+    (id: string, dx: number, dy: number) => {
+      const newLayoutData = {
+        ...layoutData,
+        positions: layoutData.positions.map((pos) => (pos.id === id ? { ...pos, x: pos.x + dx, y: pos.y + dy } : pos)),
+        shapes: layoutData.shapes.map((shape) =>
+          shape.id === id ? { ...shape, x: shape.x + dx, y: shape.y + dy } : shape,
+        ),
+      };
+      onLayoutChange(newLayoutData);
+    },
+    [layoutData, onLayoutChange],
+  );
+
+  // Keyboard support on individual elements: arrow keys move the focused
+  // element, Enter/Space selects (grabs) or deselects (releases) it.
+  const handleElementKeyDown = useCallback(
+    (e: React.KeyboardEvent, id: string) => {
+      if (readOnly) return;
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        // Prevent the window-level handler from moving the selection as well
+        e.stopPropagation();
+        const delta = gridSnap ? GRID_SIZE : 5;
+        const dx = e.key === 'ArrowLeft' ? -delta : e.key === 'ArrowRight' ? delta : 0;
+        const dy = e.key === 'ArrowUp' ? -delta : e.key === 'ArrowDown' ? delta : 0;
+        if (!selectedIds.includes(id)) {
+          onSelectionChange([id]);
+        }
+        moveElementBy(id, dx, dy);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        onSelectionChange(selectedIds.includes(id) ? [] : [id]);
+      }
+    },
+    [readOnly, gridSnap, selectedIds, onSelectionChange, moveElementBy],
   );
 
   // Handle mouse move (dragging)
@@ -205,7 +240,7 @@ export default function StageCanvas({
         y: pos.y - dragStart.y,
       });
     },
-    [isDragging, dragStart, readOnly, screenToSvg]
+    [isDragging, dragStart, readOnly, screenToSvg],
   );
 
   // Handle mouse up (end drag)
@@ -273,14 +308,10 @@ export default function StageCanvas({
           const newLayoutData = {
             ...layoutData,
             positions: layoutData.positions.map((pos) =>
-              selectedIds.includes(pos.id)
-                ? { ...pos, x: pos.x + dx, y: pos.y + dy }
-                : pos
+              selectedIds.includes(pos.id) ? { ...pos, x: pos.x + dx, y: pos.y + dy } : pos,
             ),
             shapes: layoutData.shapes.map((shape) =>
-              selectedIds.includes(shape.id)
-                ? { ...shape, x: shape.x + dx, y: shape.y + dy }
-                : shape
+              selectedIds.includes(shape.id) ? { ...shape, x: shape.x + dx, y: shape.y + dy } : shape,
             ),
           };
           onLayoutChange(newLayoutData);
@@ -307,14 +338,8 @@ export default function StageCanvas({
     const sectionColor = getSectionColor(pos.section);
 
     // Calculate position with drag offset if dragging
-    const x =
-      isSelected && isDragging
-        ? snapToGrid(pos.x + dragOffset.x, pos.y + dragOffset.y).x
-        : pos.x;
-    const y =
-      isSelected && isDragging
-        ? snapToGrid(pos.x + dragOffset.x, pos.y + dragOffset.y).y
-        : pos.y;
+    const x = isSelected && isDragging ? snapToGrid(pos.x + dragOffset.x, pos.y + dragOffset.y).x : pos.x;
+    const y = isSelected && isDragging ? snapToGrid(pos.x + dragOffset.x, pos.y + dragOffset.y).y : pos.y;
 
     return (
       <g
@@ -323,6 +348,10 @@ export default function StageCanvas({
         style={{ cursor: readOnly ? 'default' : 'move' }}
         onClick={(e) => handleElementClick(e, pos.id)}
         onMouseDown={(e) => handleDragStart(e, pos.id)}
+        tabIndex={readOnly ? -1 : 0}
+        role="button"
+        aria-label={pos.label || t(`stageDesigner.tools.${pos.type}`, pos.type)}
+        onKeyDown={(e) => handleElementKeyDown(e, pos.id)}
       >
         {/* Chair/Stand shape */}
         {pos.type === 'chair' && (
@@ -353,22 +382,8 @@ export default function StageCanvas({
               stroke={isSelected ? '#1976D2' : '#333'}
               strokeWidth={isSelected ? 3 : 1}
             />
-            <line
-              x1={-size / 3}
-              y1={0}
-              x2={size / 3}
-              y2={0}
-              stroke="#333"
-              strokeWidth={2}
-            />
-            <line
-              x1={0}
-              y1={-size / 3}
-              x2={0}
-              y2={size / 3}
-              stroke="#333"
-              strokeWidth={2}
-            />
+            <line x1={-size / 3} y1={0} x2={size / 3} y2={0} stroke="#333" strokeWidth={2} />
+            <line x1={0} y1={-size / 3} x2={0} y2={size / 3} stroke="#333" strokeWidth={2} />
           </>
         )}
 
@@ -395,13 +410,7 @@ export default function StageCanvas({
               stroke={isSelected ? '#1976D2' : '#333'}
               strokeWidth={isSelected ? 3 : 1}
             />
-            <rect
-              x={-size + 5}
-              y={-size / 2 + 5}
-              width={size * 2 - 10}
-              height={size / 3}
-              fill="#111"
-            />
+            <rect x={-size + 5} y={-size / 2 + 5} width={size * 2 - 10} height={size / 3} fill="#111" />
           </>
         )}
 
@@ -434,14 +443,7 @@ export default function StageCanvas({
 
         {/* Label */}
         {pos.label && (
-          <text
-            x={0}
-            y={size / 2 + 14}
-            textAnchor="middle"
-            fontSize={11}
-            fill="#333"
-            fontWeight="bold"
-          >
+          <text x={0} y={size / 2 + 14} textAnchor="middle" fontSize={11} fill="#333" fontWeight="bold">
             {pos.label}
           </text>
         )}
@@ -454,14 +456,8 @@ export default function StageCanvas({
     const isSelected = selectedIds.includes(shape.id);
 
     // Calculate position with drag offset if dragging
-    const x =
-      isSelected && isDragging
-        ? snapToGrid(shape.x + dragOffset.x, shape.y + dragOffset.y).x
-        : shape.x;
-    const y =
-      isSelected && isDragging
-        ? snapToGrid(shape.x + dragOffset.x, shape.y + dragOffset.y).y
-        : shape.y;
+    const x = isSelected && isDragging ? snapToGrid(shape.x + dragOffset.x, shape.y + dragOffset.y).x : shape.x;
+    const y = isSelected && isDragging ? snapToGrid(shape.x + dragOffset.x, shape.y + dragOffset.y).y : shape.y;
 
     const strokeWidth = isSelected ? 3 : 1;
     const stroke = isSelected ? '#1976D2' : shape.stroke || '#999';
@@ -472,6 +468,10 @@ export default function StageCanvas({
         style={{ cursor: readOnly ? 'default' : 'move' }}
         onClick={(e) => handleElementClick(e, shape.id)}
         onMouseDown={(e) => handleDragStart(e, shape.id)}
+        tabIndex={readOnly ? -1 : 0}
+        role="button"
+        aria-label={shape.label || t(`stageDesigner.tools.${shape.type}`, shape.type)}
+        onKeyDown={(e) => handleElementKeyDown(e, shape.id)}
       >
         {shape.type === 'rect' && (
           <>
@@ -553,32 +553,12 @@ export default function StageCanvas({
 
     // Vertical lines
     for (let x = 0; x <= width; x += GRID_SIZE) {
-      lines.push(
-        <line
-          key={`v-${x}`}
-          x1={x}
-          y1={0}
-          x2={x}
-          y2={height}
-          stroke={gridColor}
-          strokeWidth={1}
-        />
-      );
+      lines.push(<line key={`v-${x}`} x1={x} y1={0} x2={x} y2={height} stroke={gridColor} strokeWidth={1} />);
     }
 
     // Horizontal lines
     for (let y = 0; y <= height; y += GRID_SIZE) {
-      lines.push(
-        <line
-          key={`h-${y}`}
-          x1={0}
-          y1={y}
-          x2={width}
-          y2={y}
-          stroke={gridColor}
-          strokeWidth={1}
-        />
-      );
+      lines.push(<line key={`h-${y}`} x1={0} y1={y} x2={width} y2={y} stroke={gridColor} strokeWidth={1} />);
     }
 
     return <g className="grid">{lines}</g>;
@@ -601,12 +581,7 @@ export default function StageCanvas({
         viewBox={`0 0 ${width} ${height}`}
         style={{
           display: 'block',
-          cursor:
-            tool === 'select'
-              ? isDragging
-                ? 'grabbing'
-                : 'default'
-              : 'crosshair',
+          cursor: tool === 'select' ? (isDragging ? 'grabbing' : 'default') : 'crosshair',
         }}
         onClickCapture={handleCanvasClick}
         onMouseMove={handleMouseMove}
@@ -614,14 +589,7 @@ export default function StageCanvas({
         onMouseLeave={handleMouseUp}
       >
         {/* Background */}
-        <rect
-          className="stage-background"
-          x={0}
-          y={0}
-          width={width}
-          height={height}
-          fill="#f5f5f5"
-        />
+        <rect className="stage-background" x={0} y={0} width={width} height={height} fill="#f5f5f5" />
 
         {/* Grid */}
         {gridSnap && renderGrid()}
@@ -640,7 +608,7 @@ export default function StageCanvas({
         />
 
         {/* Front label */}
-        <text x={width / 2} y={height - 20} textAnchor="middle" fontSize={14} fill="#999">
+        <text x={width / 2} y={height - 20} textAnchor="middle" fontSize={14} fill="#666">
           {t('stageDesigner.front', 'VOORKANT (PUBLIEK)')}
         </text>
 

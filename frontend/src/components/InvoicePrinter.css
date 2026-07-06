@@ -1,0 +1,222 @@
+/* Invoice Printer Styles */
+
+.invoice-printer {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  padding: 2rem 1rem;
+}
+
+.invoice-printer .print-controls {
+  max-width: 210mm;
+  margin: 0 auto 1rem auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Screen preview: simulate an A4 sheet */
+.invoice-printer .print-area {
+  background: white;
+  color: #222;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 20mm;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.invoice-document .invoice-header {
+  border-bottom: 2px solid #222;
+  padding-bottom: 5mm;
+  margin-bottom: 8mm;
+}
+
+.invoice-document .association-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #444;
+}
+
+.invoice-document .invoice-title {
+  margin: 2mm 0 0 0;
+  font-size: 1.75rem;
+  color: #111;
+}
+
+.invoice-document .invoice-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10mm;
+  margin-bottom: 8mm;
+}
+
+.invoice-document .billed-to h2,
+.invoice-document .payment-instructions h2,
+.invoice-document .invoice-notes h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+  margin: 0 0 2mm 0;
+}
+
+.invoice-document .relation-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.invoice-document .relation-email {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.invoice-document .invoice-info th,
+.invoice-document .invoice-info td {
+  text-align: left;
+  padding: 1mm 0;
+  font-size: 0.95rem;
+  vertical-align: top;
+}
+
+.invoice-document .invoice-info th {
+  font-weight: 600;
+  color: #555;
+  padding-right: 8mm;
+}
+
+.invoice-document .invoice-description {
+  margin: 0 0 6mm 0;
+  font-size: 0.95rem;
+}
+
+.invoice-document .invoice-lines {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 6mm;
+}
+
+.invoice-document .invoice-lines th,
+.invoice-document .invoice-lines td {
+  padding: 2mm 2mm;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #ccc;
+}
+
+.invoice-document .invoice-lines thead th {
+  border-bottom: 2px solid #222;
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #555;
+}
+
+.invoice-document .invoice-lines .col-description {
+  text-align: left;
+}
+
+.invoice-document .invoice-lines .col-number {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.invoice-document .invoice-lines tbody tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.invoice-document .invoice-totals {
+  margin-left: auto;
+  border-collapse: collapse;
+  margin-bottom: 8mm;
+}
+
+.invoice-document .invoice-totals th,
+.invoice-document .invoice-totals td {
+  padding: 1.5mm 0;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.invoice-document .invoice-totals th {
+  font-weight: 600;
+  color: #555;
+  padding-right: 10mm;
+  text-align: left;
+}
+
+.invoice-document .invoice-totals .grand-total th,
+.invoice-document .invoice-totals .grand-total td {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: #111;
+  border-top: 2px solid #222;
+}
+
+.invoice-document .payment-instructions,
+.invoice-document .invoice-notes {
+  border-top: 1px solid #ccc;
+  padding-top: 4mm;
+  margin-top: 4mm;
+  font-size: 0.9rem;
+}
+
+.invoice-document .payment-instructions p,
+.invoice-document .invoice-notes p {
+  margin: 0 0 2mm 0;
+}
+
+/* Print styles: only the invoice is printed */
+@media print {
+  body.invoice-printing * {
+    visibility: hidden;
+  }
+
+  .invoice-printer {
+    position: absolute;
+    inset: auto;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .invoice-printer .no-print {
+    display: none !important;
+  }
+
+  .invoice-printer .print-area,
+  .invoice-printer .print-area * {
+    visibility: visible;
+  }
+
+  .invoice-printer .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .invoice-document .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

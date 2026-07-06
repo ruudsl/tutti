@@ -1,5 +1,16 @@
 {
   "common": {
+    "sort": {
+      "sortBy": "Sort by",
+      "placeholder": "Sort by...",
+      "options": "Sort options",
+      "nameAsc": "Name (A-Z)",
+      "nameDesc": "Name (Z-A)",
+      "dateNewest": "Date (newest first)",
+      "dateOldest": "Date (oldest first)",
+      "composer": "Composer",
+      "lastViewed": "Last viewed"
+    },
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -1125,9 +1136,15 @@
     "tip": "Tip",
     "instrumentTip": "The instrument is automatically recognized via the instrument list and aliases.",
     "filesFailed": "file(s) failed",
+    "zipBulkDescription": "Upload a ZIP file containing multiple PDFs at once.",
     "filesUploaded": "file(s) successfully uploaded",
     "newList": "New list",
     "newListPlaceholder": "Name of the new list..."
+  },
+  "publicCalendar": {
+    "upcomingEvents": "Upcoming events",
+    "noUpcomingEvents": "No upcoming events",
+    "lastUpdated": "Last updated"
   },
   "instruments": {
     "title": "Instruments",
@@ -1146,6 +1163,7 @@
     "aliasPlaceholder": "E.g. Altsax",
     "removeAlias": "Remove alias",
     "noInstruments": "No instruments found",
+    "noMaintenanceDue": "No instruments with scheduled maintenance",
     "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?",
     "clefOptions": {
       "sol": "Treble (G clef)",
@@ -1513,7 +1531,13 @@
     "disableSuccess": "MFA has been disabled",
     "errorSetup": "Error starting MFA setup",
     "errorEnable": "Error enabling MFA",
-    "errorDisable": "Error disabling MFA"
+    "errorDisable": "Error disabling MFA",
+    "recoveryCodesTitle": "Recovery codes",
+    "recoveryCodesDescription": "Store these recovery codes in a safe place. A recovery code lets you sign in if you lose access to your authenticator app. Each code can be used only once.",
+    "recoveryCodesWarning": "These codes are shown only once. Copy them now.",
+    "recoveryCodesCopy": "Copy codes",
+    "recoveryCodesCopied": "Recovery codes copied",
+    "recoveryCodesDone": "I have saved them"
   },
   "backup": {
     "title": "Backup",
@@ -3118,6 +3142,9 @@
     "autoAssign": "Auto-assign",
     "unsavedChanges": "Unsaved changes",
     "dragDropHint": "Drag members to the desired position",
+    "memberAria": "{{name}}, {{section}}. Use the arrow keys to move",
+    "movedAnnouncement": "{{name}} moved to {{section}}, position {{position}}",
+    "movedToUnassigned": "{{name}} moved to unassigned members",
     "dropHere": "Drop a member here",
     "unassignedMembers": "Unassigned members",
     "allMembersAssigned": "All members are assigned",
@@ -4166,6 +4193,10 @@
     "yourAssociations": "Your associations",
     "switchedSuccess": "Switched to association",
     "switchError": "Could not switch association",
+    "checkingAccess": "Checking access...",
+    "accessRequiredTitle": "Super Admin Rights Required",
+    "accessRequiredMessage": "You need super admin rights to manage associations. Contact an existing super admin to get access.",
+    "roleLabel": "Role",
     "roles": {
       "member": "Member",
       "board": "Board",
@@ -4202,6 +4233,7 @@
       "maxMembers": "Max Members",
       "maxOrchestras": "Max Orchestras",
       "maxStorage": "Max Storage (MB)",
+      "isActive": "Association is active",
       "tiers": {
         "free": "Free",
         "basic": "Basic",
@@ -4212,6 +4244,7 @@
     "invitations": {
       "title": "Invitations",
       "invite": "Invite",
+      "emailPlaceholder": "Email address",
       "noInvitations": "No invitations",
       "invitedBy": "Invited by",
       "status": {
@@ -4240,6 +4273,7 @@
     "members": {
       "title": "Members",
       "noMembers": "No members found",
+      "removeTitle": "Remove member",
       "removeConfirm": "Are you sure you want to remove this member from the association?",
       "roles": {
         "member": "Member",
@@ -4249,13 +4283,16 @@
     },
     "superAdmins": {
       "title": "Super Administrators",
+      "warningLabel": "Note:",
       "warning": "Super admins have full access to all associations and their data. Be careful who you grant these permissions to.",
       "noAdmins": "No super admins found",
+      "removeTitle": "Remove super admin",
       "removeConfirm": "Are you sure you want to remove this super admin?"
     },
     "activity": {
       "title": "Activity log",
       "noActivity": "No activities found",
+      "by": "By: {{name}}",
       "actions": {
         "association_created": "Association created",
         "subscription_updated": "Subscription updated",
@@ -4272,6 +4309,7 @@
       "name": "Name",
       "displayName": "Display name",
       "slug": "Slug",
+      "slugPlaceholder": "my-association",
       "website": "Website",
       "phone": "Phone",
       "email": "Email",
@@ -4678,6 +4716,8 @@
     "capacity": "Capacity",
     "costPerHour": "Cost per hour",
     "costPerDay": "Cost per day",
+    "perHour": "{{amount}}/hour",
+    "perDay": "{{amount}}/day",
     "requiresApproval": "Requires approval",
     "book": "Book",
     "created": "Resource created",
@@ -4865,6 +4905,8 @@
     "color": "Color",
     "items": "Items",
     "itemPlaceholder": "Add item (e.g. black trousers)",
+    "addItem": "Add item",
+    "removeItem": "Remove {{item}}",
     "default": "Default",
     "setAsDefault": "Set as default",
     "usedIn": "Used in {{count}} concerts",
@@ -5542,6 +5584,51 @@
   "seatCards": {
     "cards": "cards",
     "print": "Print"
+  },
+  "printTemplates": {
+    "print": "Print",
+    "loanReceipt": {
+      "printButton": "Print receipt",
+      "title": "Loan Receipt",
+      "borrower": "Borrower",
+      "organization": "Organization",
+      "email": "Email address",
+      "item": "Item",
+      "arranger": "arranger",
+      "reference": "Reference number",
+      "dateOut": "Loan date",
+      "expectedReturn": "Expected return date",
+      "conditionNotes": "Condition / notes",
+      "signatureIssue": "Issue",
+      "signatureReturn": "Return",
+      "signature": "Signature",
+      "date": "Date",
+      "issuedBy": "Issued by"
+    },
+    "invoice": {
+      "printButton": "Print invoice",
+      "title": "Invoice",
+      "creditNoteTitle": "Credit Note",
+      "invoiceNumber": "Invoice number",
+      "invoiceDate": "Invoice date",
+      "dueDate": "Due date",
+      "reference": "Reference",
+      "billedTo": "Billed to",
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "vatRate": "VAT %",
+      "lineTotal": "Amount",
+      "subtotal": "Subtotal",
+      "vatAmount": "VAT",
+      "total": "Total",
+      "amountPaid": "Amount paid",
+      "amountDue": "Amount due",
+      "paymentInstructions": "Payment instructions",
+      "paymentInstructionsText": "Please pay the outstanding amount of {{amount}} before {{dueDate}}, quoting invoice number {{invoiceNumber}}.",
+      "paymentReference": "Payment reference",
+      "notes": "Notes"
+    }
   },
   "pageTitle": {
     "stageDesigner": "Stage Layout Designer",

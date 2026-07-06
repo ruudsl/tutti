@@ -72,6 +72,11 @@ CREATE TABLE IF NOT EXISTS users (
     last_login DATETIME, -- Laatste keer ingelogd
     onboarded_at DATETIME, -- Wanneer onboarding is voltooid
     offboarded_at DATETIME, -- Wanneer offboarding is voltooid
+    password_changed_at TEXT, -- Laatste wachtwoordwijziging (invalideert oudere JWT's)
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0, -- Mislukte inlogpogingen (brute-force lockout)
+    locked_until TEXT, -- Account gelockt tot dit tijdstip (NULL = niet gelockt)
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
+    email_before_delete TEXT DEFAULT NULL, -- Origineel e-mailadres vóór soft delete (voor herstel)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
 );
@@ -104,6 +109,7 @@ CREATE TABLE IF NOT EXISTS music_lists (
     list_type TEXT NOT NULL DEFAULT 'regular', -- 'regular' of 'concert'
     concert_date TEXT, -- Datum van het concert (ISO 8601)
     concert_location TEXT, -- Locatie van het concert
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
 );
@@ -124,6 +130,7 @@ CREATE TABLE IF NOT EXISTS music_pieces (
     is_shared BOOLEAN DEFAULT 0, -- Toegankelijk voor andere verenigingen
     uploaded_by TEXT,
     imslp_source TEXT, -- IMSLP download URL if imported from IMSLP
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE SET NULL,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
@@ -214,6 +221,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL,
+    revoked_at TEXT, -- Soft revocation: ingetrokken sessies geven 401
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -234,6 +242,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     imslp_work_id TEXT, -- IMSLP work/page ID
     imslp_permalink TEXT, -- IMSLP permanent link to work
     association_id TEXT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
     UNIQUE(title, arranger, association_id)
@@ -327,9 +336,19 @@ CREATE TABLE IF NOT EXISTS activity_log (
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    token TEXT NOT NULL UNIQUE,
+    token TEXT NOT NULL UNIQUE, -- SHA-256 hash van het reset token
     expires_at DATETIME NOT NULL,
     used BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- MFA recovery codes (alleen SHA-256 hashes, plaintext wordt eenmalig getoond)
+CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    used_at TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -337,6 +356,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 -- Indexen voor betere performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_association ON users(association_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_orchestras_association ON orchestras(association_id);
 CREATE INDEX IF NOT EXISTS idx_music_pieces_instrument ON music_pieces(instrument_id);
 CREATE INDEX IF NOT EXISTS idx_music_pieces_association ON music_pieces(association_id);
@@ -354,6 +374,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, 
 CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user ON mfa_recovery_codes(user_id);
 
 -- Standaard repetitiedagen (wekelijks terugkerend)
 CREATE TABLE IF NOT EXISTS rehearsal_default_days (
@@ -625,6 +646,7 @@ CREATE TABLE IF NOT EXISTS concerts (
     -- Venue layout (for seated events)
     venue_layout_id TEXT,
     is_seated_event BOOLEAN DEFAULT 0,
+    deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,

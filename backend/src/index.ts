@@ -38,6 +38,7 @@ import musicPiecesRoutes from './routes/music-pieces';
 import associationsRoutes from './routes/associations';
 import genresRoutes from './routes/genres';
 import backupRoutes from './routes/backup';
+import downloadTokenRoutes from './routes/download-token';
 import issuesRoutes from './routes/issues';
 import pdfToolsRoutes from './routes/pdf-tools';
 import loansRoutes from './routes/loans';
@@ -78,11 +79,13 @@ import guestListRoutes from './routes/guest-list';
 import paymentSettingsRoutes from './routes/payment-settings';
 import discountCodesRoutes from './routes/discount-codes';
 import venueLayoutsRoutes from './routes/venue-layouts';
-import { createServer } from 'http';
-import { initWebSocket } from './websocket';
+import { createServer, Server as HttpServer } from 'http';
+import { initWebSocket, getIO } from './websocket';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
 import { startScheduler as startEmailForwardingScheduler } from './scheduler/email-forwarding-retry';
 import { startScheduler as startGdprCleanupScheduler } from './scheduler/gdpr-cleanup';
+import { stopAllSchedulers } from './scheduler';
+import { startScheduler as startBackupScheduler } from './scheduler/backup';
 import healthRoutes from './routes/health';
 import analyticsRoutes from './routes/analytics';
 import maintenanceRoutes from './routes/maintenance';
@@ -129,7 +132,7 @@ const app = express();
 // Trust proxy - required for correct client IP detection behind reverse proxies (e.g., Render, Nginx)
 // This enables express-rate-limit to work correctly with X-Forwarded-For headers
 if (config.isProduction) {
-    app.set('trust proxy', 1);
+  app.set('trust proxy', 1);
 }
 
 // Add request ID to each request (should be first middleware)
@@ -140,102 +143,107 @@ app.use(requestLoggerMiddleware);
 
 // Content Security Policy configuration for production
 const getContentSecurityPolicy = (): false | { directives: Record<string, string[]> } => {
-    if (!config.isProduction) {
-        return false; // Disable CSP in development for hot reload
-    }
+  if (!config.isProduction) {
+    // Disable CSP entirely in development: Vite dev tooling (HMR, React refresh)
+    // needs eval/inline scripts. Production gets the strict policy below.
+    return false;
+  }
 
-    const directives: Record<string, string[]> = {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-            "'self'",
-            "'unsafe-inline'", // Required for inline event handlers
-            "'unsafe-eval'", // Required for some libraries in development
-            "https://www.youtube.com",
-            "https://s.ytimg.com",
-            "https://alcdn.msauth.net",
-            "https://apis.google.com",
-            "https://accounts.google.com",
-        ],
-        styleSrc: [
-            "'self'",
-            "'unsafe-inline'", // Required for styled-components / CSS-in-JS
-            "https://fonts.googleapis.com",
-        ],
-        fontSrc: [
-            "'self'",
-            "https://fonts.gstatic.com",
-            "data:",
-        ],
-        imgSrc: [
-            "'self'",
-            "data:",
-            "blob:",
-            "https:",
-        ],
-        mediaSrc: [
-            "'self'",
-            "blob:",
-            "https://www.youtube.com",
-        ],
-        frameSrc: [
-            "'self'",
-            "https://www.youtube.com",
-            "https://www.youtube-nocookie.com",
-            "https://accounts.google.com",
-            "https://docs.google.com",
-            "https://login.microsoftonline.com",
-        ],
-        connectSrc: [
-            "'self'",
-            config.frontendUrl,
-            "https://graph.microsoft.com",
-            "https://login.microsoftonline.com",
-            "https://www.googleapis.com",
-            "https://accounts.google.com",
-        ],
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"],
-        frameAncestors: ["'self'"],
-        workerSrc: ["'self'", "blob:"], // Service workers and web workers
-        childSrc: ["'self'", "blob:"], // Web workers (legacy)
-        manifestSrc: ["'self'"], // PWA manifests
-        upgradeInsecureRequests: [],
-    };
+  const directives: Record<string, string[]> = {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      // NOTE: no 'unsafe-inline' / 'unsafe-eval' here. Vite production builds
+      // load only external module scripts and need neither directive; dev
+      // tooling that requires eval is covered by the early return above.
+      'https://www.youtube.com',
+      'https://s.ytimg.com',
+      'https://alcdn.msauth.net',
+      'https://apis.google.com',
+      'https://accounts.google.com',
+    ],
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'", // Required for styled-components / CSS-in-JS
+      'https://fonts.googleapis.com',
+    ],
+    fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+    imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+    mediaSrc: ["'self'", 'blob:', 'https://www.youtube.com'],
+    frameSrc: [
+      "'self'",
+      'https://www.youtube.com',
+      'https://www.youtube-nocookie.com',
+      'https://accounts.google.com',
+      'https://docs.google.com',
+      'https://login.microsoftonline.com',
+    ],
+    connectSrc: [
+      "'self'",
+      config.frontendUrl,
+      'https://graph.microsoft.com',
+      'https://login.microsoftonline.com',
+      'https://www.googleapis.com',
+      'https://accounts.google.com',
+    ],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    // Kept at 'self' (not 'none'): the app has a public calendar embed feature
+    // (frontend route /calendar/:slug and /api/calendar, meant for embedding on
+    // external websites), so frames must not be blocked outright.
+    frameAncestors: ["'self'"],
+    workerSrc: ["'self'", 'blob:'], // Service workers and web workers
+    childSrc: ["'self'", 'blob:'], // Web workers (legacy)
+    manifestSrc: ["'self'"], // PWA manifests
+    upgradeInsecureRequests: [],
+  };
 
-    // Add report-uri if configured
-    if (config.cspReportUri) {
-        directives.reportUri = [config.cspReportUri];
-    }
+  // Add report-uri if configured
+  if (config.cspReportUri) {
+    directives.reportUri = [config.cspReportUri];
+  }
 
-    return { directives };
+  return { directives };
 };
 
 // Security middleware
-app.use(helmet({
+app.use(
+  helmet({
     contentSecurityPolicy: getContentSecurityPolicy(),
     crossOriginEmbedderPolicy: false, // Allow embedding YouTube videos
-}));
+  }),
+);
 
 // Compression middleware - compress all responses
-app.use(compression({
+app.use(
+  compression({
     filter: (req, res) => {
-        // Don't compress responses if the request includes 'x-no-compression' header
-        if (req.headers['x-no-compression']) {
-            return false;
-        }
-        // Use compression filter default
-        return compression.filter(req, res);
+      // Don't compress responses if the request includes 'x-no-compression' header
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      // Use compression filter default
+      return compression.filter(req, res);
     },
     level: 6, // Compression level (0-9, default 6)
     threshold: 1024, // Only compress responses larger than 1KB
-}));
+  }),
+);
 
 // CORS
-app.use(cors({
+app.use(
+  cors({
     origin: config.frontendUrl,
     credentials: true,
-}));
+  }),
+);
+
+// Payment webhook needs the RAW request body for signature verification (Stripe
+// computes the signature over the exact bytes). Mount raw parser for this path
+// BEFORE express.json() so req.body is a Buffer there. Non-JSON content types
+// (e.g. Mollie's form-encoded webhook) fall through to express.urlencoded below.
+app.use('/api/tickets/webhooks/payment', express.raw({ type: 'application/json', limit: '1mb' }));
 
 // Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
@@ -248,25 +256,25 @@ app.use(cookieParser());
 app.use(csrfTokenMiddleware);
 app.use(validateCsrfToken);
 
-// General rate limiting
+// General rate limiting (counts ALL requests; keep the max high enough for
+// legitimate SPA usage - at least 300 requests per 15 minutes)
 const generalLimiter = rateLimit({
-    windowMs: config.rateLimitWindowMs,
-    max: config.rateLimitMaxRequests,
-    message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests: true, // Only count failed requests toward the limit
+  windowMs: config.rateLimitWindowMs,
+  max: Math.max(config.rateLimitMaxRequests, 300),
+  message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api', generalLimiter);
 
 // Stricter rate limiting for authentication routes
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: config.authRateLimitMaxRequests,
-    message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests: true, // Only count failed attempts
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: config.authRateLimitMaxRequests,
+  message: { error: 'Te veel inlogpogingen. Probeer het over 15 minuten opnieuw.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed attempts
 });
 app.use('/api/auth/login', authLimiter);
 
@@ -282,6 +290,7 @@ app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/associations', associationsRoutes);
 app.use('/api/genres', genresRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/download-token', downloadTokenRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/pdf-tools', pdfToolsRoutes);
 app.use('/api/loans', loansRoutes);
@@ -340,7 +349,6 @@ app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/holidays', holidaysRoutes);
 app.use('/api/stage-layouts', stageLayoutsRoutes);
-app.use('/api', stageLayoutsRoutes); // Also mount for /concerts/:id/stage routes
 
 // External Musicians Network
 app.use('/api/external-musicians', externalMusiciansRoutes);
@@ -351,6 +359,9 @@ app.use('/api/failed-imports', failedImportsRoutes);
 
 // Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
+// Root-level mount for /concerts/:id/stage routes; must come after the
+// specific /api/* mounts above or it shadows them (e.g. /api/health)
+app.use('/api', stageLayoutsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/vocabularies', vocabulariesRoutes);
@@ -360,29 +371,50 @@ app.use('/api/interop', interopRoutes);
 app.get('/api/csrf-token', getCsrfToken);
 
 // Changelog endpoint (language-aware, public)
-app.get('/api/changelog', (req, res) => {
-    const lang = (req.query.lang as string) || 'nl';
-    const suffix = lang === 'nl' ? '' : `_${lang}`;
+// Content is memoized per language on first request to avoid sync fs I/O per request.
+const changelogCache = new Map<string, string>();
 
-    // In production (Render), CHANGELOG files are copied to backend/ during build
-    // In development, they're in the repo root (../../ from dist/)
-    const prodPath = path.join(__dirname, `../CHANGELOG${suffix}.md`);
-    const devPath = path.join(__dirname, `../../CHANGELOG${suffix}.md`);
-    const changelogPath = fs.existsSync(prodPath) ? prodPath : devPath;
+async function loadChangelog(lang: string): Promise<string> {
+  const changelogFileByLang: Record<string, string> = {
+    nl: 'CHANGELOG.md',
+    en: 'CHANGELOG_en.md',
+  };
 
-    const prodFallback = path.join(__dirname, '../CHANGELOG.md');
-    const devFallback = path.join(__dirname, '../../CHANGELOG.md');
-    const fallbackPath = fs.existsSync(prodFallback) ? prodFallback : devFallback;
+  const requestedFile = changelogFileByLang[lang] ?? 'CHANGELOG.md';
 
-    if (fs.existsSync(changelogPath)) {
-        const content = fs.readFileSync(changelogPath, 'utf-8');
-        res.json({ content });
-    } else if (fs.existsSync(fallbackPath)) {
-        const content = fs.readFileSync(fallbackPath, 'utf-8');
-        res.json({ content });
-    } else {
-        res.json({ content: '# Changelog\n\nNo changelog available.' });
+  // In production (Render), CHANGELOG files are copied to backend/ during build
+  // In development, they're in the repo root (../../ from dist/).
+  // The language-less CHANGELOG.md acts as fallback for unknown languages.
+  const candidates = [
+    path.join(__dirname, `../${requestedFile}`),
+    path.join(__dirname, `../../${requestedFile}`),
+    path.join(__dirname, '../CHANGELOG.md'),
+    path.join(__dirname, '../../CHANGELOG.md'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return await fs.promises.readFile(candidate, 'utf-8');
+    } catch {
+      // Try the next candidate
     }
+  }
+
+  return '# Changelog\n\nNo changelog available.';
+}
+
+app.get('/api/changelog', async (req, res) => {
+  // Restrict to simple language codes so arbitrary input can't grow the cache
+  const rawLang = (req.query.lang as string) || 'nl';
+  const lang = /^[a-z]{2}$/i.test(rawLang) ? rawLang.toLowerCase() : 'nl';
+
+  let content = changelogCache.get(lang);
+  if (content === undefined) {
+    content = await loadChangelog(lang);
+    changelogCache.set(lang, content);
+  }
+
+  res.json({ content });
 });
 
 // Routes with catch-all patterns (mount these AFTER specific routes)
@@ -394,51 +426,55 @@ app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /c
 
 // Swagger API documentation
 if (config.isDevelopment) {
-    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-        customCss: '.swagger-ui .topbar { display: none }',
-        customSiteTitle: 'Harmonie API Docs',
-    }));
-    app.get('/api/docs.json', (req, res) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.send(swaggerSpec);
-    });
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Harmonie API Docs',
+    }),
+  );
+  app.get('/api/docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
 }
 
 // Serve static files in production (only if frontend is bundled with backend)
 if (config.isProduction) {
-    const frontendPath = path.join(__dirname, '../../frontend/dist');
-    const frontendExists = fs.existsSync(path.join(frontendPath, 'index.html'));
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  const frontendExists = fs.existsSync(path.join(frontendPath, 'index.html'));
 
-    if (frontendExists) {
-        logger.info('Serving frontend from ' + frontendPath);
-        app.use(express.static(frontendPath));
+  if (frontendExists) {
+    logger.info('Serving frontend from ' + frontendPath);
+    app.use(express.static(frontendPath));
 
-        app.get('*', (req, res, next) => {
-            if (!req.path.startsWith('/api')) {
-                res.sendFile(path.join(frontendPath, 'index.html'));
-            } else {
-                next();
-            }
-        });
-    } else {
-        logger.info('Frontend not bundled - running as API-only backend');
-    }
+    app.get('*', (req, res, next) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(frontendPath, 'index.html'));
+      } else {
+        next();
+      }
+    });
+  } else {
+    logger.info('Frontend not bundled - running as API-only backend');
+  }
 }
 
 // Debug route for unexpected POST to root (tracking browser privacy tool interference)
 app.post('/', (req, res) => {
-    logger.warn('Unexpected POST to root path', {
-        headers: {
-            'user-agent': req.headers['user-agent'],
-            'referer': req.headers['referer'],
-            'origin': req.headers['origin'],
-            'content-type': req.headers['content-type'],
-        },
-        body: req.body,
-        query: req.query,
-        ip: req.ip,
-    });
-    res.status(404).json({ error: 'Not found', message: 'POST to root is not a valid endpoint' });
+  logger.warn('Unexpected POST to root path', {
+    headers: {
+      'user-agent': req.headers['user-agent'],
+      referer: req.headers['referer'],
+      origin: req.headers['origin'],
+      'content-type': req.headers['content-type'],
+    },
+    body: req.body,
+    query: req.query,
+    ip: req.ip,
+  });
+  res.status(404).json({ error: 'Not found', message: 'POST to root is not a valid endpoint' });
 });
 
 // 404 handler for unknown API routes
@@ -453,54 +489,109 @@ app.use(sentryErrorHandler);
 // Central error handling middleware
 app.use(errorHandler);
 
+// HTTP server reference for graceful shutdown
+let httpServer: HttpServer | null = null;
+
 // Start server (after database initialization)
 async function startServer() {
-    try {
-        // Initialize database
-        await db.init();
-        logger.info('Database initialized successfully');
+  try {
+    // Initialize database
+    await db.init();
+    logger.info('Database initialized successfully');
 
-        // Initialize default data
-        const { initializeDatabase } = await import('./database/init');
-        await initializeDatabase();
+    // Initialize default data
+    const { initializeDatabase } = await import('./database/init');
+    await initializeDatabase();
 
-        // Create HTTP server and initialize WebSocket
-        const httpServer = createServer(app);
-        initWebSocket(httpServer);
+    // Create HTTP server and initialize WebSocket
+    httpServer = createServer(app);
+    initWebSocket(httpServer);
 
-        httpServer.listen(config.port, () => {
-            logger.info(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
-            logger.info(`   API beschikbaar op http://localhost:${config.port}/api`);
-            logger.info(`   WebSocket beschikbaar op ws://localhost:${config.port}`);
-            if (config.isDevelopment) {
-                logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
-            }
+    httpServer.listen(config.port, () => {
+      logger.info(`🎵 Harmonie Muziek Server draait op http://localhost:${config.port}`);
+      logger.info(`   API beschikbaar op http://localhost:${config.port}/api`);
+      logger.info(`   WebSocket beschikbaar op ws://localhost:${config.port}`);
+      if (config.isDevelopment) {
+        logger.info(`   Swagger docs: http://localhost:${config.port}/api/docs`);
+      }
 
-            // Start schedulers
-            startSeatingScheduler();
-            startEmailForwardingScheduler();
-            startGdprCleanupScheduler();
-        });
-    } catch (error) {
-        logger.error('Failed to start server:', error);
-        process.exit(1);
-    }
+      // Start schedulers
+      startSeatingScheduler();
+      startEmailForwardingScheduler();
+      startGdprCleanupScheduler();
+      startBackupScheduler();
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
 
 // Setup global error handlers for unhandled rejections and exceptions (including Sentry)
 setupGlobalErrorHandlers();
 
 // Graceful shutdown handler
-process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down gracefully');
-    await flushSentry();
-    process.exit(0);
-});
+let shuttingDown = false;
 
-process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    await flushSentry();
-    process.exit(0);
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  logger.info(`${signal} received, shutting down gracefully`);
+
+  // Timeout guard: force exit if graceful shutdown takes too long
+  const forceExitTimer = setTimeout(() => {
+    logger.error('Graceful shutdown timed out after 10s, forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
+  // 1. Stop background schedulers (clears their pending timeouts)
+  try {
+    stopAllSchedulers();
+  } catch (err) {
+    logger.error('Failed to stop schedulers on shutdown', { error: err });
+  }
+
+  // 2. Stop accepting new connections and wait for in-flight requests
+  if (httpServer) {
+    const server = httpServer;
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+      // Don't let idle keep-alive connections stall the shutdown
+      server.closeIdleConnections?.();
+    });
+  }
+
+  // 3. Close socket.io if initialized (disconnects remaining clients)
+  const io = getIO();
+  if (io) {
+    await new Promise<void>((resolve) => {
+      // The callback also fires when the underlying HTTP server is
+      // already closed; shutdown proceeds regardless
+      io.close(() => resolve());
+    });
+  }
+
+  // 4. Persist the database (flush = cancel pending debounced save + save now)
+  try {
+    db.flush();
+  } catch (err) {
+    logger.error('Failed to flush database on shutdown', { error: err });
+  }
+
+  // 5. Flush error monitoring
+  await flushSentry();
+
+  logger.info('Graceful shutdown complete');
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => {
+  void shutdown('SIGTERM');
+});
+process.on('SIGINT', () => {
+  void shutdown('SIGINT');
 });
 
 startServer();

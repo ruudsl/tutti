@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -78,7 +79,7 @@ export default function PaymentSettings() {
       showSuccess(
         data.mode === 'live'
           ? t('paymentSettings.switchedToLive', 'Gewijzigd naar live modus')
-          : t('paymentSettings.switchedToTest', 'Gewijzigd naar test modus')
+          : t('paymentSettings.switchedToTest', 'Gewijzigd naar test modus'),
       );
       queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
     },
@@ -128,7 +129,7 @@ export default function PaymentSettings() {
   });
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+    new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'EUR' }).format(amount);
 
   if (isLoading) {
     return (
@@ -166,9 +167,7 @@ export default function PaymentSettings() {
               >
                 Status:{' '}
                 {mollieStatus?.operational ? (
-                  <span style={{ color: 'var(--success)' }}>
-                    {mollieStatus?.statusDescription || 'Operational'}
-                  </span>
+                  <span style={{ color: 'var(--success)' }}>{mollieStatus?.statusDescription || 'Operational'}</span>
                 ) : (
                   <span style={{ color: 'var(--warning)' }}>
                     {mollieStatus?.statusDescription || 'Issues detected'}
@@ -198,9 +197,7 @@ export default function PaymentSettings() {
                     aria-selected={activeMode === 'live'}
                     className={`btn btn-sm ${activeMode === 'live' ? 'btn-primary' : 'btn-outline'}`}
                     onClick={() => setModeMutation.mutate('live')}
-                    disabled={
-                      !liveConfigured || setModeMutation.isPending || activeMode === 'live'
-                    }
+                    disabled={!liveConfigured || setModeMutation.isPending || activeMode === 'live'}
                     title={!liveConfigured ? t('paymentSettings.noLiveKey', 'Geen live sleutel geconfigureerd') : ''}
                   >
                     {t('paymentSettings.liveMode', 'Live')}
@@ -210,9 +207,7 @@ export default function PaymentSettings() {
                     aria-selected={activeMode === 'test'}
                     className={`btn btn-sm ${activeMode === 'test' ? 'btn-primary' : 'btn-outline'}`}
                     onClick={() => setModeMutation.mutate('test')}
-                    disabled={
-                      !testConfigured || setModeMutation.isPending || activeMode === 'test'
-                    }
+                    disabled={!testConfigured || setModeMutation.isPending || activeMode === 'test'}
                     title={!testConfigured ? t('paymentSettings.noTestKey', 'Geen test sleutel geconfigureerd') : ''}
                   >
                     {t('paymentSettings.testMode', 'Test')}
@@ -230,7 +225,10 @@ export default function PaymentSettings() {
                       fontSize: '0.8rem',
                     }}
                   >
-                    {t('paymentSettings.testModeWarning', 'Testmodus actief — er worden geen echte betalingen verwerkt')}
+                    {t(
+                      'paymentSettings.testModeWarning',
+                      'Testmodus actief — er worden geen echte betalingen verwerkt',
+                    )}
                   </span>
                 )}
               </div>
@@ -242,19 +240,23 @@ export default function PaymentSettings() {
             <div className="flex justify-between items-center mb-1">
               <strong>{t('paymentSettings.liveApiKey', 'Live API-sleutel')}</strong>
               {liveConfigured && activeMode === 'live' && (
-                <span style={{ color: 'var(--success)', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    color: 'var(--success)',
+                    fontSize: '0.875rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
                   <Icon name="check" size={14} /> {t('paymentSettings.active', 'Actief')}
                 </span>
               )}
             </div>
             {liveConfigured ? (
               <div className="flex gap-1 items-center">
-                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                  live_••••••••••••••
-                </span>
-                {settings?.liveProfileId && (
-                  <span className="text-muted text-sm ml-2">({settings.liveProfileId})</span>
-                )}
+                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>live_••••••••••••••</span>
+                {settings?.liveProfileId && <span className="text-muted text-sm ml-2">({settings.liveProfileId})</span>}
                 <div style={{ marginLeft: 'auto' }}>
                   <button
                     className="btn btn-outline btn-sm"
@@ -293,19 +295,23 @@ export default function PaymentSettings() {
             <div className="flex justify-between items-center mb-1">
               <strong>{t('paymentSettings.testApiKey', 'Test API-sleutel')}</strong>
               {testConfigured && activeMode === 'test' && (
-                <span style={{ color: 'var(--success)', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    color: 'var(--success)',
+                    fontSize: '0.875rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
                   <Icon name="check" size={14} /> {t('paymentSettings.active', 'Actief')}
                 </span>
               )}
             </div>
             {testConfigured ? (
               <div className="flex gap-1 items-center">
-                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                  test_••••••••••••••
-                </span>
-                {settings?.testProfileId && (
-                  <span className="text-muted text-sm ml-2">({settings.testProfileId})</span>
-                )}
+                <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>test_••••••••••••••</span>
+                {settings?.testProfileId && <span className="text-muted text-sm ml-2">({settings.testProfileId})</span>}
                 <div style={{ marginLeft: 'auto' }}>
                   <button
                     className="btn btn-outline btn-sm"
@@ -349,9 +355,7 @@ export default function PaymentSettings() {
                   padding: '1rem',
                 }}
               >
-                <div style={{ color: 'var(--success)', fontWeight: 500 }}>
-                  {t('paymentSettings.connectedMessage')}
-                </div>
+                <div style={{ color: 'var(--success)', fontWeight: 500 }}>{t('paymentSettings.connectedMessage')}</div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-3">
@@ -392,9 +396,7 @@ export default function PaymentSettings() {
                 padding: '1rem',
               }}
             >
-              <div style={{ color: 'var(--warning-dark, #e65100)' }}>
-                {t('paymentSettings.notConnected')}
-              </div>
+              <div style={{ color: 'var(--warning-dark, #e65100)' }}>{t('paymentSettings.notConnected')}</div>
             </div>
           )}
         </div>
@@ -522,8 +524,14 @@ export default function PaymentSettings() {
               />
               <small style={{ color: 'var(--text-light)' }}>
                 {connectModalMode === 'live'
-                  ? t('paymentSettings.liveKeyHelp', 'Deze sleutel begint met "live_" en wordt gebruikt voor echte betalingen.')
-                  : t('paymentSettings.testKeyHelp', 'Deze sleutel begint met "test_" en is alleen voor testdoeleinden.')}
+                  ? t(
+                      'paymentSettings.liveKeyHelp',
+                      'Deze sleutel begint met "live_" en wordt gebruikt voor echte betalingen.',
+                    )
+                  : t(
+                      'paymentSettings.testKeyHelp',
+                      'Deze sleutel begint met "test_" en is alleen voor testdoeleinden.',
+                    )}
               </small>
             </div>
             <div className="flex justify-end gap-2 mt-3">

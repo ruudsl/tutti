@@ -91,13 +91,10 @@ export default function MyMusic() {
   });
 
   // Reset expanded titles when list changes
-  const prevListId = useMemo(() => listId, [listId]);
-  useMemo(() => {
-    if (listId !== prevListId) {
-      setExpandedTitles(new Set());
-      setCurrentTitleIndex(0);
-    }
-  }, [listId, prevListId]);
+  useEffect(() => {
+    setExpandedTitles(new Set());
+    setCurrentTitleIndex(0);
+  }, [listId]);
 
   const isLoading = listId ? listLoading : listsLoading;
 
@@ -300,7 +297,7 @@ export default function MyMusic() {
   };
 
   const toggleTitle = (key: string) => {
-    setExpandedTitles(prev => {
+    setExpandedTitles((prev) => {
       const next = new Set(prev);
       if (next.has(key)) {
         next.delete(key);
@@ -337,295 +334,321 @@ export default function MyMusic() {
     setReportingPiece(piece);
   };
 
-  // Show single list view with titles grouped as accordion
-  if (listId) {
-    return (
-      <>
-      <div>
-        <button className="btn btn-outline mb-2" onClick={handleBack}>
-          ← {t('myMusic.backToOverview')}
-        </button>
-
-        {isLoading || !selectedList ? (
-          <div className="card">
-            <div className="card-body">
-              <div className="loading" role="status">
-                <div className="spinner" aria-hidden="true"></div>
-                <span className="sr-only">{t('common.loading')}</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">{selectedList.name}</h2>
-              <span className="piece-meta">{selectedList.orchestraName}</span>
-            </div>
-            <div className="flex gap-1" style={{ alignItems: 'center' }}>
-              <button
-                className={`btn btn-sm ${compactView ? 'btn-primary' : 'btn-outline'}`}
-                onClick={toggleCompactView}
-                title={compactView ? t('myMusic.fullView', 'Volledige weergave') : t('myMusic.compactView', 'Compacte weergave')}
-              >
-                <Icon name="menu" size={16} />
-              </button>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={handleMakeOffline}
-                disabled={cachingList || downloadingAll}
-                title={t('myMusic.makeOffline')}
-              >
-                {cachingList ? (
-                  `${t('myMusic.makingOffline')} (${cacheProgress.cached}/${cacheProgress.total})`
-                ) : (
-                  <><Icon name="download" size={16} /> {t('myMusic.makeOffline')}</>
-                )}
-              </button>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={handleDownloadAll}
-                disabled={downloadingAll || cachingList}
-              >
-                {downloadingAll ? t('myMusic.downloadingAll') : `⬇ ${t('myMusic.downloadAll')}`}
-              </button>
-            </div>
-          </div>
-          <div className="card-body">
-            {titleGroups.length > 0 ? (
-              <SwipeContainer
-                onSwipeLeft={handleSwipeToNextTitle}
-                onSwipeRight={handleSwipeToPrevTitle}
-                threshold={60}
-                visualFeedback={true}
-                showIndicators={titleGroups.length > 1}
-                indicators={{
-                  left: currentTitleIndex < titleGroups.length - 1 ? (
-                    <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
-                      {titleGroups[currentTitleIndex + 1]?.title.substring(0, 20)}...
-                    </span>
-                  ) : null,
-                  right: currentTitleIndex > 0 ? (
-                    <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
-                      {titleGroups[currentTitleIndex - 1]?.title.substring(0, 20)}...
-                    </span>
-                  ) : null,
-                }}
-              >
-                {/* Title navigation indicator */}
-                {titleGroups.length > 1 && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '1rem',
-                    padding: '0.5rem',
-                    backgroundColor: 'var(--background-secondary)',
-                    borderRadius: '0.5rem',
-                  }}>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={handleSwipeToPrevTitle}
-                      disabled={currentTitleIndex === 0}
-                      style={{ opacity: currentTitleIndex === 0 ? 0.5 : 1 }}
-                    >
-                      &#8249;
-                    </button>
-                    <span style={{ fontVariantNumeric: 'tabular-nums', minWidth: '4rem', textAlign: 'center' }}>
-                      {currentTitleIndex + 1} / {titleGroups.length}
-                    </span>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={handleSwipeToNextTitle}
-                      disabled={currentTitleIndex === titleGroups.length - 1}
-                      style={{ opacity: currentTitleIndex === titleGroups.length - 1 ? 0.5 : 1 }}
-                    >
-                      &#8250;
-                    </button>
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {t('myMusic.swipeHint', 'Swipe to navigate')}
-                    </span>
-                  </div>
-                )}
-
-                <div className="title-accordion">
-                  {titleGroups.map((group, index) => {
-                    const key = `${group.title}|||${group.arranger || ''}`;
-                    const isExpanded = expandedTitles.has(key);
-
-                    return (
-                      <div key={key} className="title-group">
-                        <button
-                          className={`title-group-header ${isExpanded ? 'expanded' : ''}`}
-                          onClick={() => {
-                            toggleTitle(key);
-                            setCurrentTitleIndex(index);
-                          }}
-                          aria-expanded={isExpanded}
-                          type="button"
-                        >
-                          <div className="title-group-info">
-                            <span className="title-group-arrow" aria-hidden="true">
-                              {isExpanded ? '▼' : '▶'}
-                            </span>
-                            <div>
-                              <strong className="title-group-name">{group.title}</strong>
-                              {group.arranger && (
-                                <span className="title-group-arranger"> -- {group.arranger}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="title-group-meta">
-                            {group.youtubeUrl && (
-                              <a
-                                href={group.youtubeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-outline btn-sm"
-                                onClick={(e) => e.stopPropagation()}
-                                aria-label={`YouTube: ${group.title}`}
-                              >
-                                <span aria-hidden="true">▶</span> YouTube
-                              </a>
-                            )}
-                            <span className="badge badge-primary">
-                              {group.pieces.length} {t('myMusic.pieces')}
-                            </span>
-                          </div>
-                        </button>
-
-                        {isExpanded && (
-                          <div className="title-group-body">
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th scope="col">{t('myMusic.table.instrument')}</th>
-                                  {!compactView && <th scope="col">{t('myMusic.table.tuning')}</th>}
-                                  {!compactView && <th scope="col">{t('myMusic.table.number')}</th>}
-                                  {!compactView && <th scope="col">{t('myMusic.table.clef')}</th>}
-                                  <th scope="col"></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {group.pieces.map((piece) => (
-                                  <tr key={piece.id}>
-                                    <td>
-                                      <span>{piece.instrumentName || '-'}</span>
-                                      {compactView && (piece.tuning || piece.groupNumber || piece.clef) && (
-                                        <span className="text-muted text-xs" style={{ marginLeft: '0.5rem' }}>
-                                          {[piece.tuning, piece.groupNumber, piece.clef].filter(Boolean).join(' · ')}
-                                        </span>
-                                      )}
-                                      {cachedPieces.has(piece.id) && (
-                                        <span
-                                          title={t('myMusic.offlineReady')}
-                                          aria-label={t('myMusic.offlineReady')}
-                                          style={{ marginLeft: '0.35rem', color: 'var(--success, #22c55e)', display: 'inline-flex' }}
-                                        >
-                                          <Icon name="check" size={14} />
-                                        </span>
-                                      )}
-                                    </td>
-                                    {!compactView && <td>{piece.tuning || '-'}</td>}
-                                    {!compactView && <td>{piece.groupNumber || '-'}</td>}
-                                    {!compactView && <td>{piece.clef || '-'}</td>}
-                                    <td>
-                                      <div className="flex gap-1">
-                                        <button
-                                          className="btn btn-primary btn-sm"
-                                          onClick={() => handleDownload(piece)}
-                                          disabled={downloading === piece.id}
-                                        >
-                                          {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
-                                        </button>
-                                        <button
-                                          className="btn btn-outline btn-sm"
-                                          onClick={() => setViewingPiece(piece)}
-                                          title={t('myMusic.viewPdf', 'Bekijken')}
-                                        >
-                                          <Icon name="eye" size={14} /> {t('myMusic.view', 'Bekijk')}
-                                        </button>
-                                        <button
-                                          className="btn btn-outline btn-sm"
-                                          onClick={() => openReportModal(piece)}
-                                          aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
-                                        >
-                                          <Icon name="pencil" size={14} />
-                                          <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </SwipeContainer>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-icon" aria-hidden="true"><Icon name="music" size={48} /></div>
-                <p>{t('myMusic.noPieces')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-        )}
-      </div>
-
-      {/* PDF Viewer Modal */}
-      {viewingPiece && (
-        <Modal
-          title={`${viewingPiece.title}${viewingPiece.instrumentName ? ` - ${viewingPiece.instrumentName}` : ''}`}
-          onClose={() => setViewingPiece(null)}
-          size="large"
-        >
-          <div style={{ height: '75vh' }}>
-            {viewerLoading ? (
-              <div className="loading" role="status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <div className="spinner" aria-hidden="true"></div>
-                <span className="sr-only">{t('common.loading')}</span>
-              </div>
-            ) : viewerBlobUrl ? (
-              <PdfViewer
-                url={viewerBlobUrl}
-                musicPieceId={viewingPiece.id}
-                fitMode="contain"
-                enableSwipe={true}
-                enableZoom={true}
-                autoDarkMode={true}
-              />
-            ) : null}
-          </div>
-        </Modal>
-      )}
-
-      {/* Issue Report Modal - using ReportIssueModal component */}
-      {reportingPiece && (
-        <ReportIssueModal
-          pieceId={reportingPiece.id}
-          pieceTitle={`${reportingPiece.title}${reportingPiece.instrumentName ? ` - ${reportingPiece.instrumentName}` : ''}`}
-          onClose={() => setReportingPiece(null)}
-        />
-      )}
-    </>
-    );
-  }
-
-  // Flatten lists for swipeable view
+  // Flatten lists for swipeable view (hook must run unconditionally,
+  // before the single-list early return below)
   const allLists: MusicItem[] = useMemo(() => {
-    return lists.map(list => ({
+    return lists.map((list) => ({
       id: list.id,
       title: list.name,
       subtitle: list.orchestraName,
       metadata: `${list.titleCount || 0} ${t('myMusic.titlesForYou')}`,
     }));
   }, [lists, t]);
+
+  // Show single list view with titles grouped as accordion
+  if (listId) {
+    return (
+      <>
+        <div>
+          <button className="btn btn-outline mb-2" onClick={handleBack}>
+            ← {t('myMusic.backToOverview')}
+          </button>
+
+          {isLoading || !selectedList ? (
+            <div className="card">
+              <div className="card-body">
+                <div className="loading" role="status">
+                  <div className="spinner" aria-hidden="true"></div>
+                  <span className="sr-only">{t('common.loading')}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <h2 className="card-title">{selectedList.name}</h2>
+                  <span className="piece-meta">{selectedList.orchestraName}</span>
+                </div>
+                <div className="flex gap-1" style={{ alignItems: 'center' }}>
+                  <button
+                    className={`btn btn-sm ${compactView ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={toggleCompactView}
+                    title={
+                      compactView
+                        ? t('myMusic.fullView', 'Volledige weergave')
+                        : t('myMusic.compactView', 'Compacte weergave')
+                    }
+                    aria-label={
+                      compactView
+                        ? t('myMusic.fullView', 'Volledige weergave')
+                        : t('myMusic.compactView', 'Compacte weergave')
+                    }
+                  >
+                    <Icon name="menu" size={16} />
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={handleMakeOffline}
+                    disabled={cachingList || downloadingAll}
+                    title={t('myMusic.makeOffline')}
+                  >
+                    {cachingList ? (
+                      `${t('myMusic.makingOffline')} (${cacheProgress.cached}/${cacheProgress.total})`
+                    ) : (
+                      <>
+                        <Icon name="download" size={16} /> {t('myMusic.makeOffline')}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={handleDownloadAll}
+                    disabled={downloadingAll || cachingList}
+                  >
+                    {downloadingAll ? t('myMusic.downloadingAll') : `⬇ ${t('myMusic.downloadAll')}`}
+                  </button>
+                </div>
+              </div>
+              <div className="card-body">
+                {titleGroups.length > 0 ? (
+                  <SwipeContainer
+                    onSwipeLeft={handleSwipeToNextTitle}
+                    onSwipeRight={handleSwipeToPrevTitle}
+                    threshold={60}
+                    visualFeedback={true}
+                    showIndicators={titleGroups.length > 1}
+                    indicators={{
+                      left:
+                        currentTitleIndex < titleGroups.length - 1 ? (
+                          <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                            {titleGroups[currentTitleIndex + 1]?.title.substring(0, 20)}...
+                          </span>
+                        ) : null,
+                      right:
+                        currentTitleIndex > 0 ? (
+                          <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
+                            {titleGroups[currentTitleIndex - 1]?.title.substring(0, 20)}...
+                          </span>
+                        ) : null,
+                    }}
+                  >
+                    {/* Title navigation indicator */}
+                    {titleGroups.length > 1 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '1rem',
+                          padding: '0.5rem',
+                          backgroundColor: 'var(--background-secondary)',
+                          borderRadius: '0.5rem',
+                        }}
+                      >
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={handleSwipeToPrevTitle}
+                          disabled={currentTitleIndex === 0}
+                          style={{ opacity: currentTitleIndex === 0 ? 0.5 : 1 }}
+                        >
+                          &#8249;
+                        </button>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', minWidth: '4rem', textAlign: 'center' }}>
+                          {currentTitleIndex + 1} / {titleGroups.length}
+                        </span>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={handleSwipeToNextTitle}
+                          disabled={currentTitleIndex === titleGroups.length - 1}
+                          style={{ opacity: currentTitleIndex === titleGroups.length - 1 ? 0.5 : 1 }}
+                        >
+                          &#8250;
+                        </button>
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                          {t('myMusic.swipeHint', 'Swipe to navigate')}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="title-accordion">
+                      {titleGroups.map((group, index) => {
+                        const key = `${group.title}|||${group.arranger || ''}`;
+                        const isExpanded = expandedTitles.has(key);
+
+                        return (
+                          <div key={key} className="title-group">
+                            <button
+                              className={`title-group-header ${isExpanded ? 'expanded' : ''}`}
+                              onClick={() => {
+                                toggleTitle(key);
+                                setCurrentTitleIndex(index);
+                              }}
+                              aria-expanded={isExpanded}
+                              type="button"
+                            >
+                              <div className="title-group-info">
+                                <span className="title-group-arrow" aria-hidden="true">
+                                  {isExpanded ? '▼' : '▶'}
+                                </span>
+                                <div>
+                                  <strong className="title-group-name">{group.title}</strong>
+                                  {group.arranger && <span className="title-group-arranger"> -- {group.arranger}</span>}
+                                </div>
+                              </div>
+                              <div className="title-group-meta">
+                                {group.youtubeUrl && (
+                                  <a
+                                    href={group.youtubeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-outline btn-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                    aria-label={`YouTube: ${group.title}`}
+                                  >
+                                    <span aria-hidden="true">▶</span> YouTube
+                                  </a>
+                                )}
+                                <span className="badge badge-primary">
+                                  {group.pieces.length} {t('myMusic.pieces')}
+                                </span>
+                              </div>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="title-group-body">
+                                <table className="table">
+                                  <thead>
+                                    <tr>
+                                      <th scope="col">{t('myMusic.table.instrument')}</th>
+                                      {!compactView && <th scope="col">{t('myMusic.table.tuning')}</th>}
+                                      {!compactView && <th scope="col">{t('myMusic.table.number')}</th>}
+                                      {!compactView && <th scope="col">{t('myMusic.table.clef')}</th>}
+                                      <th scope="col"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {group.pieces.map((piece) => (
+                                      <tr key={piece.id}>
+                                        <td>
+                                          <span>{piece.instrumentName || '-'}</span>
+                                          {compactView && (piece.tuning || piece.groupNumber || piece.clef) && (
+                                            <span className="text-muted text-xs" style={{ marginLeft: '0.5rem' }}>
+                                              {[piece.tuning, piece.groupNumber, piece.clef]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                            </span>
+                                          )}
+                                          {cachedPieces.has(piece.id) && (
+                                            <span
+                                              title={t('myMusic.offlineReady')}
+                                              aria-label={t('myMusic.offlineReady')}
+                                              style={{
+                                                marginLeft: '0.35rem',
+                                                color: 'var(--success, #22c55e)',
+                                                display: 'inline-flex',
+                                              }}
+                                            >
+                                              <Icon name="check" size={14} />
+                                            </span>
+                                          )}
+                                        </td>
+                                        {!compactView && <td>{piece.tuning || '-'}</td>}
+                                        {!compactView && <td>{piece.groupNumber || '-'}</td>}
+                                        {!compactView && <td>{piece.clef || '-'}</td>}
+                                        <td>
+                                          <div className="flex gap-1">
+                                            <button
+                                              className="btn btn-primary btn-sm"
+                                              onClick={() => handleDownload(piece)}
+                                              disabled={downloading === piece.id}
+                                            >
+                                              {downloading === piece.id ? t('myMusic.downloading') : '⬇ Download'}
+                                            </button>
+                                            <button
+                                              className="btn btn-outline btn-sm"
+                                              onClick={() => setViewingPiece(piece)}
+                                              title={t('myMusic.viewPdf', 'Bekijken')}
+                                            >
+                                              <Icon name="eye" size={14} /> {t('myMusic.view', 'Bekijk')}
+                                            </button>
+                                            <button
+                                              className="btn btn-outline btn-sm"
+                                              onClick={() => openReportModal(piece)}
+                                              aria-label={`${t('myMusic.reportIssue.title')}: ${piece.title} - ${piece.instrumentName || ''}`}
+                                            >
+                                              <Icon name="pencil" size={14} />
+                                              <span className="sr-only">{t('myMusic.reportIssue.title')}</span>
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SwipeContainer>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon" aria-hidden="true">
+                      <Icon name="music" size={48} />
+                    </div>
+                    <p>{t('myMusic.noPieces')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* PDF Viewer Modal */}
+        {viewingPiece && (
+          <Modal
+            title={`${viewingPiece.title}${viewingPiece.instrumentName ? ` - ${viewingPiece.instrumentName}` : ''}`}
+            onClose={() => setViewingPiece(null)}
+            size="large"
+          >
+            <div style={{ height: '75vh' }}>
+              {viewerLoading ? (
+                <div
+                  className="loading"
+                  role="status"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
+                >
+                  <div className="spinner" aria-hidden="true"></div>
+                  <span className="sr-only">{t('common.loading')}</span>
+                </div>
+              ) : viewerBlobUrl ? (
+                <PdfViewer
+                  url={viewerBlobUrl}
+                  musicPieceId={viewingPiece.id}
+                  fitMode="contain"
+                  enableSwipe={true}
+                  enableZoom={true}
+                  autoDarkMode={true}
+                />
+              ) : null}
+            </div>
+          </Modal>
+        )}
+
+        {/* Issue Report Modal - using ReportIssueModal component */}
+        {reportingPiece && (
+          <ReportIssueModal
+            pieceId={reportingPiece.id}
+            pieceTitle={`${reportingPiece.title}${reportingPiece.instrumentName ? ` - ${reportingPiece.instrumentName}` : ''}`}
+            onClose={() => setReportingPiece(null)}
+          />
+        )}
+      </>
+    );
+  }
 
   // Show lists overview - grouped by orchestra
   return (
@@ -638,7 +661,8 @@ export default function MyMusic() {
             onClick={() => setSwipeViewEnabled(!swipeViewEnabled)}
             title={t('myMusic.swipeView', 'Swipe View')}
           >
-            <Icon name="menu" size={16} /> {swipeViewEnabled ? t('myMusic.gridView', 'Grid') : t('myMusic.swipeView', 'Swipe')}
+            <Icon name="menu" size={16} />{' '}
+            {swipeViewEnabled ? t('myMusic.gridView', 'Grid') : t('myMusic.swipeView', 'Swipe')}
           </button>
         )}
       </div>
@@ -697,10 +721,7 @@ export default function MyMusic() {
                           <p className="piece-meta mb-2">
                             {list.titleCount || 0} {t('myMusic.titlesForYou')}
                           </p>
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => handleSelectList(list.id)}
-                          >
+                          <button className="btn btn-primary" onClick={() => handleSelectList(list.id)}>
                             {t('myMusic.viewMusic')}
                           </button>
                         </div>
@@ -716,7 +737,9 @@ export default function MyMusic() {
         <div className="card">
           <div className="card-body">
             <div className="empty-state">
-              <div className="empty-icon" aria-hidden="true"><Icon name="clipboard" size={48} /></div>
+              <div className="empty-icon" aria-hidden="true">
+                <Icon name="clipboard" size={48} />
+              </div>
               <h3>{t('myMusic.noLists')}</h3>
               <p>{t('myMusic.noListsDescription')}</p>
             </div>

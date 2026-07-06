@@ -56,6 +56,7 @@ const CSRF_EXEMPT_ROUTES: RegExp[] = [
     /^\/api\/settings\/branding$/, // Public branding endpoint
     /^\/api\/settings\/logo\/.*/, // Public logo serving
     /^\/api\/changelog$/,
+    /^\/api\/tickets\/webhooks\/payment$/, // Payment provider webhook (authenticated via signature verification)
 ];
 
 /**

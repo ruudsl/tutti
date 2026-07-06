@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import logger from '../utils/logger';
+import { FileValidationError } from '../utils/errors';
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -53,7 +54,14 @@ export function errorHandler(
         return;
     }
 
-    // Handle multer file upload errors
+    // Handle file upload validation errors (e.g. from multer fileFilter callbacks)
+    if (err instanceof FileValidationError) {
+        res.status(400).json({ error: err.message });
+        return;
+    }
+
+    // Legacy fallback: some fileFilter callbacks may still throw a plain Error
+    // with this exact message (e.g. routes maintained elsewhere)
     if (err.message === 'Alleen PDF bestanden zijn toegestaan.') {
         res.status(400).json({ error: err.message });
         return;
@@ -63,7 +71,7 @@ export function errorHandler(
     if (err.name === 'ZodError') {
         res.status(400).json({
             error: 'Validatiefout.',
-            details: (err as any).errors,
+            details: (err as any).issues ?? (err as any).errors,
         });
         return;
     }

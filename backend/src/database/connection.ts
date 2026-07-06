@@ -13,6 +13,9 @@ if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
 
+// Debounce window for coalescing automatic after-write saves
+const SAVE_DEBOUNCE_MS = 500;
+
 // Wrapper class to provide better-sqlite3 compatible API
 class DatabaseWrapper {
     private db: any = null;
@@ -20,6 +23,9 @@ class DatabaseWrapper {
     private initialized: boolean = false;
     private initPromise: Promise<void> | null = null;
     private inTransaction: boolean = false;
+    private SQL: any = null;
+    private dirty: boolean = false;
+    private saveTimer: NodeJS.Timeout | null = null;
 
     constructor(dbPath: string) {
         this.dbPath = dbPath;
@@ -31,6 +37,7 @@ class DatabaseWrapper {
 
         this.initPromise = (async () => {
             const SQL = await initSqlJs();
+            this.SQL = SQL;
 
             const isExistingDb = fs.existsSync(this.dbPath);
 
@@ -99,11 +106,109 @@ class DatabaseWrapper {
         return this.db;
     }
 
+    /**
+     * Synchronously write the in-memory database to disk.
+     * Writes atomically: first to a temp file, then renamed over the real file,
+     * so a crash mid-write never leaves a corrupt/partial database file.
+     */
     save(): void {
-        if (this.db) {
-            const data = this.db.export();
-            const buffer = Buffer.from(data);
-            fs.writeFileSync(this.dbPath, buffer);
+        if (!this.db) return;
+
+        // A direct save supersedes any pending debounced save
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+
+        const data = this.db.export();
+        const buffer = Buffer.from(data);
+        const tmpPath = `${this.dbPath}.tmp`;
+        fs.writeFileSync(tmpPath, buffer);
+        fs.renameSync(tmpPath, this.dbPath);
+        this.dirty = false;
+    }
+
+    /**
+     * Mark the database as dirty and schedule a debounced save.
+     * Multiple writes within the debounce window are coalesced into one disk write,
+     * so the event loop is no longer blocked by an export+write after every statement.
+     */
+    private scheduleSave(): void {
+        this.dirty = true;
+        if (this.saveTimer) return;
+
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            if (!this.dirty) return;
+            try {
+                this.save();
+            } catch (err) {
+                console.error('Debounced database save failed:', err);
+            }
+        }, SAVE_DEBOUNCE_MS);
+
+        // Don't let a pending save keep the process alive; graceful shutdown calls flush()
+        if (typeof this.saveTimer.unref === 'function') {
+            this.saveTimer.unref();
+        }
+    }
+
+    /**
+     * Immediately and synchronously flush any pending (debounced) changes to disk.
+     * Call this on graceful shutdown and before backup/restore operations.
+     */
+    flush(): void {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (this.dirty) {
+            this.save();
+        }
+    }
+
+    /**
+     * Alias for flush(): synchronously persist pending changes to disk right away.
+     */
+    saveNow(): void {
+        this.flush();
+    }
+
+    /**
+     * Reload the database from disk, discarding the current in-memory copy.
+     * Used after a restore has replaced the database file on disk, so the running
+     * process picks up the restored data instead of overwriting it on the next save.
+     */
+    async reload(): Promise<void> {
+        // Discard any pending in-memory changes: they belong to the pre-restore state
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        this.dirty = false;
+
+        if (!this.SQL) {
+            this.SQL = await initSqlJs();
+        }
+
+        if (!fs.existsSync(this.dbPath)) {
+            throw new Error(`Cannot reload database: file not found at ${this.dbPath}`);
+        }
+
+        const buffer = fs.readFileSync(this.dbPath);
+        const newDb = new this.SQL.Database(buffer);
+        newDb.run('PRAGMA foreign_keys = ON');
+
+        const oldDb = this.db;
+        this.db = newDb;
+        this.inTransaction = false;
+
+        if (oldDb) {
+            try {
+                oldDb.close();
+            } catch (err) {
+                console.warn('Failed to close old database instance during reload:', err);
+            }
         }
     }
 
@@ -115,7 +220,7 @@ class DatabaseWrapper {
         this.ensureInit().run(sql);
         // Only save if not inside a transaction (transaction will save on commit)
         if (!this.inTransaction) {
-            this.save();
+            this.scheduleSave();
         }
     }
 
@@ -142,7 +247,7 @@ class DatabaseWrapper {
 
         // Only save if not inside a transaction (transaction will save on commit)
         if (!this.inTransaction) {
-            this.save();
+            this.scheduleSave();
         }
 
         return { changes, lastInsertRowid };
@@ -204,7 +309,7 @@ class DatabaseWrapper {
                 const result = fn();
                 db.run('COMMIT');
                 this.inTransaction = false;
-                this.save();
+                this.scheduleSave();
                 return result;
             } catch (error) {
                 db.run('ROLLBACK');

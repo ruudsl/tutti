@@ -37,14 +37,15 @@ export default function Upload() {
 
   // Upload mutation
   const uploadMutation = useMutation({
-    mutationFn: (uploadFiles: File[]) =>
-      uploadMusicPieces(uploadFiles, selectedList || undefined),
+    mutationFn: (uploadFiles: File[]) => uploadMusicPieces(uploadFiles, selectedList || undefined),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       queryClient.invalidateQueries({ queryKey: ['musicLists'] });
 
       if (result.errors && result.errors.length > 0) {
-        showError(`${result.errors.length} ${t('upload.filesFailed')}:\n${result.errors.map((e: any) => e.filename).join(', ')}`);
+        showError(
+          `${result.errors.length} ${t('upload.filesFailed')}:\n${result.errors.map((e: any) => e.filename).join(', ')}`,
+        );
       }
 
       if (result.uploaded.length > 0) {
@@ -121,7 +122,7 @@ export default function Upload() {
           setShowNewList(false);
           setNewListName('');
         },
-      }
+      },
     );
   };
 
@@ -138,10 +139,7 @@ export default function Upload() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>{t('upload.title')}</h1>
-        <button
-          className="btn btn-outline"
-          onClick={() => setShowImslpSearch(true)}
-        >
+        <button className="btn btn-outline" onClick={() => setShowImslpSearch(true)}>
           {t('imslp.searchOnImslp')}
         </button>
       </div>
@@ -179,8 +177,14 @@ export default function Upload() {
                     placeholder={t('upload.newListPlaceholder')}
                     autoFocus
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); handleCreateList(); }
-                      if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); }
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateList();
+                      }
+                      if (e.key === 'Escape') {
+                        setShowNewList(false);
+                        setNewListName('');
+                      }
                     }}
                   />
                   <button
@@ -193,7 +197,10 @@ export default function Upload() {
                   </button>
                   <button
                     className="btn btn-outline btn-sm"
-                    onClick={() => { setShowNewList(false); setNewListName(''); }}
+                    onClick={() => {
+                      setShowNewList(false);
+                      setNewListName('');
+                    }}
                   >
                     {t('common.cancel')}
                   </button>
@@ -235,11 +242,10 @@ export default function Upload() {
           <h2 className="card-title">{t('upload.step2')}</h2>
         </div>
         <div className="card-body">
-          <FileDropzone
-            onFilesAccepted={handleFilesAccepted}
-            disabled={uploadMutation.isPending}
-          >
-            <div className="dropzone-icon"><Icon name="fileText" size={48} /></div>
+          <FileDropzone onFilesAccepted={handleFilesAccepted} disabled={uploadMutation.isPending}>
+            <div className="dropzone-icon">
+              <Icon name="fileText" size={48} />
+            </div>
             <p className="dropzone-text">
               {t('upload.dragPdfHere')} <strong>{t('upload.clickToSelect')}</strong>
             </p>
@@ -249,9 +255,16 @@ export default function Upload() {
           </FileDropzone>
 
           {/* ZIP Upload Section */}
-          <div className="mt-2 p-2" style={{ backgroundColor: 'var(--bg-alt)', border: '2px dashed var(--border)', borderRadius: '8px' }}>
-            <h4 className="mb-1"><Icon name="archive" size={20} /> ZIP Bulk Upload</h4>
-            <p className="text-light mb-1" style={{ fontSize: '0.875rem' }}>Upload een ZIP bestand met meerdere PDF's in één keer.</p>
+          <div
+            className="mt-2 p-2"
+            style={{ backgroundColor: 'var(--bg-alt)', border: '2px dashed var(--border)', borderRadius: '8px' }}
+          >
+            <h4 className="mb-1">
+              <Icon name="archive" size={20} /> ZIP Bulk Upload
+            </h4>
+            <p className="text-light mb-1" style={{ fontSize: '0.875rem' }}>
+              {t('upload.zipBulkDescription')}
+            </p>
 
             <div className="flex gap-1 items-center" style={{ flexWrap: 'wrap' }}>
               <input
@@ -266,12 +279,10 @@ export default function Upload() {
               </label>
               {zipFile && (
                 <>
-                  <span className="text-light">{zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(1)} MB)</span>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleZipUpload}
-                    disabled={zipUploadMutation.isPending}
-                  >
+                  <span className="text-light">
+                    {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(1)} MB)
+                  </span>
+                  <button className="btn btn-primary" onClick={handleZipUpload} disabled={zipUploadMutation.isPending}>
                     {zipUploadMutation.isPending ? 'Uploaden...' : 'Upload ZIP'}
                   </button>
                   <button
@@ -298,7 +309,9 @@ export default function Upload() {
 
           {files.length > 0 && (
             <div className="upload-list">
-              <h4 className="mb-1">{files.length} {t('upload.filesSelected')}</h4>
+              <h4 className="mb-1">
+                {files.length} {t('upload.filesSelected')}
+              </h4>
               {files.map((fileItem, index) => (
                 <div key={index} className="upload-item">
                   <div style={{ flex: 1 }}>
@@ -313,9 +326,7 @@ export default function Upload() {
                   </button>
                 </div>
               ))}
-              <p className="piece-meta mt-1">
-                {t('upload.metadataNote')}
-              </p>
+              <p className="piece-meta mt-1">{t('upload.metadataNote')}</p>
             </div>
           )}
         </div>
@@ -328,7 +339,9 @@ export default function Upload() {
             onClick={handleUpload}
             disabled={files.length === 0 || uploadMutation.isPending}
           >
-            {uploadMutation.isPending ? t('upload.uploading2') : `${t('upload.uploadFiles')} ${files.length} ${t('upload.files')}`}
+            {uploadMutation.isPending
+              ? t('upload.uploading2')
+              : `${t('upload.uploadFiles')} ${files.length} ${t('upload.files')}`}
           </button>
         </div>
       </div>
@@ -343,10 +356,18 @@ export default function Upload() {
 
           <h4 className="mt-2">{t('upload.examples')}:</h4>
           <ul>
-            <li><code>The Pacific_Ted Ricketts_Bariton_Bb__sol.pdf</code></li>
-            <li><code>Shannon Song_Rowwen Heze_Alto Saxophone_Eb_1.pdf</code></li>
-            <li><code>Shannon Song_Rowwen Heze_Alto Saxophone_Eb_2.pdf</code></li>
-            <li><code>The Pacific_Ted Ricketts_Altsax_Eb_1.pdf</code></li>
+            <li>
+              <code>The Pacific_Ted Ricketts_Bariton_Bb__sol.pdf</code>
+            </li>
+            <li>
+              <code>Shannon Song_Rowwen Heze_Alto Saxophone_Eb_1.pdf</code>
+            </li>
+            <li>
+              <code>Shannon Song_Rowwen Heze_Alto Saxophone_Eb_2.pdf</code>
+            </li>
+            <li>
+              <code>The Pacific_Ted Ricketts_Altsax_Eb_1.pdf</code>
+            </li>
           </ul>
 
           <p className="mt-2">

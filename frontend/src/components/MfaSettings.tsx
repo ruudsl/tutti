@@ -13,6 +13,7 @@ export function MfaSettings() {
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [disablePassword, setDisablePassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,15 +39,29 @@ export function MfaSettings() {
 
     setIsLoading(true);
     try {
-      await enableMfa(verificationCode);
+      const response = await enableMfa(verificationCode);
       showSuccess(t('mfa.enableSuccess'));
       await refreshProfile();
-      setShowSetupModal(false);
-      resetSetupState();
+      if (response.recoveryCodes && response.recoveryCodes.length > 0) {
+        // Keep the modal open to show the one-time recovery codes
+        setRecoveryCodes(response.recoveryCodes);
+      } else {
+        setShowSetupModal(false);
+        resetSetupState();
+      }
     } catch (error: any) {
       showError(error.response?.data?.error || t('mfa.errorEnable'));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCopyRecoveryCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      showSuccess(t('mfa.recoveryCodesCopied'));
+    } catch {
+      showError(t('mfa.errorEnable'));
     }
   };
 
@@ -74,6 +89,7 @@ export function MfaSettings() {
     setQrCode('');
     setSecret('');
     setVerificationCode('');
+    setRecoveryCodes([]);
   };
 
   const mfaEnabled = user?.mfaEnabled;
@@ -100,18 +116,11 @@ export function MfaSettings() {
           </div>
           <div>
             {mfaEnabled ? (
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowDisableModal(true)}
-              >
+              <button className="btn btn-outline" onClick={() => setShowDisableModal(true)}>
                 {t('mfa.disable')}
               </button>
             ) : (
-              <button
-                className="btn btn-primary"
-                onClick={handleStartSetup}
-                disabled={isLoading}
-              >
+              <button className="btn btn-primary" onClick={handleStartSetup} disabled={isLoading}>
                 {isLoading ? t('mfa.loading') : t('mfa.enable')}
               </button>
             )}
@@ -120,7 +129,55 @@ export function MfaSettings() {
       </div>
 
       {/* Setup Modal */}
-      {showSetupModal && (
+      {showSetupModal && recoveryCodes.length > 0 && (
+        <Modal
+          title={t('mfa.recoveryCodesTitle')}
+          onClose={() => {
+            setShowSetupModal(false);
+            resetSetupState();
+          }}
+        >
+          <p style={{ marginBottom: '0.75rem' }}>{t('mfa.recoveryCodesDescription')}</p>
+          <p style={{ marginBottom: '1rem', fontWeight: 600, color: 'var(--danger, #b91c1c)' }}>
+            {t('mfa.recoveryCodesWarning')}
+          </p>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '0.5rem',
+              marginBottom: '1rem',
+              padding: '0.75rem',
+              background: 'var(--bg-light, #f5f5f5)',
+              borderRadius: '6px',
+            }}
+          >
+            {recoveryCodes.map((code) => (
+              <code key={code} style={{ userSelect: 'all', textAlign: 'center' }}>
+                {code}
+              </code>
+            ))}
+          </div>
+
+          <div className="flex gap-1 justify-end">
+            <button className="btn btn-outline" onClick={handleCopyRecoveryCodes}>
+              {t('mfa.recoveryCodesCopy')}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setShowSetupModal(false);
+                resetSetupState();
+              }}
+            >
+              {t('mfa.recoveryCodesDone')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showSetupModal && recoveryCodes.length === 0 && (
         <Modal
           title={t('mfa.setupTitle')}
           onClose={() => {
@@ -129,9 +186,7 @@ export function MfaSettings() {
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <p style={{ marginBottom: '1rem' }}>
-              {t('mfa.scanQr')}
-            </p>
+            <p style={{ marginBottom: '1rem' }}>{t('mfa.scanQr')}</p>
 
             {qrCode && (
               <div style={{ marginBottom: '1rem' }}>
@@ -140,7 +195,8 @@ export function MfaSettings() {
             )}
 
             <p style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginBottom: '1rem' }}>
-              {t('mfa.manualCode')}<br />
+              {t('mfa.manualCode')}
+              <br />
               <code style={{ userSelect: 'all', fontSize: '0.8rem' }}>{secret}</code>
             </p>
 
@@ -190,9 +246,7 @@ export function MfaSettings() {
           }}
           size="small"
         >
-          <p style={{ marginBottom: '1rem' }}>
-            {t('mfa.disablePrompt')}
-          </p>
+          <p style={{ marginBottom: '1rem' }}>{t('mfa.disablePrompt')}</p>
 
           <div className="form-group">
             <label className="form-label">{t('mfa.password')}</label>
@@ -215,11 +269,7 @@ export function MfaSettings() {
             >
               {t('common.cancel')}
             </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleDisableMfa}
-              disabled={isLoading || !disablePassword}
-            >
+            <button className="btn btn-danger" onClick={handleDisableMfa} disabled={isLoading || !disablePassword}>
               {isLoading ? t('mfa.loading') : t('mfa.disable')}
             </button>
           </div>

@@ -1,8 +1,17 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { getGuestList, addGuest, updateGuest, deleteGuest, sendGuestTickets, sendAllGuestTickets, getConcertTickets } from '../api';
+import {
+  getGuestList,
+  addGuest,
+  updateGuest,
+  deleteGuest,
+  sendGuestTickets,
+  sendAllGuestTickets,
+  getConcertTickets,
+} from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { SkeletonTable } from '../components/Skeleton';
@@ -43,12 +52,13 @@ export default function GuestList() {
   // Fetch guest list
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['guestList', concertId, page, search, ticketsSentFilter],
-    queryFn: () => getGuestList(concertId!, {
-      page,
-      limit: 25,
-      search: search || undefined,
-      ticketsSent: ticketsSentFilter === '' ? undefined : ticketsSentFilter === 'true',
-    }),
+    queryFn: () =>
+      getGuestList(concertId!, {
+        page,
+        limit: 25,
+        search: search || undefined,
+        ticketsSent: ticketsSentFilter === '' ? undefined : ticketsSentFilter === 'true',
+      }),
     enabled: !!concertId,
   });
 
@@ -67,12 +77,13 @@ export default function GuestList() {
 
   // Mutations
   const addMutation = useMutation({
-    mutationFn: (guest: typeof formData) => addGuest(concertId!, {
-      ...guest,
-      organisation: guest.organisation || null,
-      ticketTypeId: guest.ticketTypeId || null,
-      notes: guest.notes || null,
-    }),
+    mutationFn: (guest: typeof formData) =>
+      addGuest(concertId!, {
+        ...guest,
+        organisation: guest.organisation || null,
+        ticketTypeId: guest.ticketTypeId || null,
+        notes: guest.notes || null,
+      }),
     onSuccess: () => {
       showSuccess(t('guestList.addSuccess'));
       setShowAddModal(false);
@@ -83,11 +94,12 @@ export default function GuestList() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...guest }: { id: string } & Partial<typeof formData>) => updateGuest(id, {
-      ...guest,
-      ticketTypeId: guest.ticketTypeId || null,
-      notes: guest.notes || null,
-    }),
+    mutationFn: ({ id, ...guest }: { id: string } & Partial<typeof formData>) =>
+      updateGuest(id, {
+        ...guest,
+        ticketTypeId: guest.ticketTypeId || null,
+        notes: guest.notes || null,
+      }),
     onSuccess: () => {
       showSuccess(t('guestList.updateSuccess'));
       setShowEditModal(false);
@@ -161,7 +173,7 @@ export default function GuestList() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -190,16 +202,11 @@ export default function GuestList() {
       <div className="flex justify-between items-center mb-3">
         <div>
           <h1>{t('guestList.title')}</h1>
-          {concertName && (
-            <p style={{ color: 'var(--text-light)', margin: 0 }}>{concertName}</p>
-          )}
+          {concertName && <p style={{ color: 'var(--text-light)', margin: 0 }}>{concertName}</p>}
         </div>
         <div className="flex gap-2">
           {summary.ticketsPending > 0 && (
-            <button
-              className="btn btn-outline"
-              onClick={() => setShowSendAllConfirm(true)}
-            >
+            <button className="btn btn-outline" onClick={() => setShowSendAllConfirm(true)}>
               {t('guestList.sendAll')} ({summary.ticketsPending})
             </button>
           )}
@@ -232,7 +239,9 @@ export default function GuestList() {
         <div className="card">
           <div className="card-body" style={{ padding: '1rem' }}>
             <div style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('guestList.ticketsPending')}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>{summary.ticketsPending}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning)' }}>
+              {summary.ticketsPending}
+            </div>
           </div>
         </div>
       </div>
@@ -248,7 +257,10 @@ export default function GuestList() {
                 className="form-control"
                 placeholder={t('guestList.searchPlaceholder')}
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
             <div>
@@ -256,7 +268,10 @@ export default function GuestList() {
               <select
                 className="form-control"
                 value={ticketsSentFilter}
-                onChange={(e) => { setTicketsSentFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setTicketsSentFilter(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('common.all')}</option>
                 <option value="true">{t('guestList.sent')}</option>
@@ -298,13 +313,9 @@ export default function GuestList() {
                 entries.map((entry) => (
                   <tr key={entry.id}>
                     <td>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                        {entry.orderNumber || '-'}
-                      </span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{entry.orderNumber || '-'}</span>
                     </td>
-                    <td>
-                      {entry.organisation || <span style={{ color: 'var(--text-light)' }}>-</span>}
-                    </td>
+                    <td>{entry.organisation || <span style={{ color: 'var(--text-light)' }}>-</span>}</td>
                     <td>
                       <div style={{ fontWeight: 500 }}>{entry.name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{entry.email}</div>
@@ -358,14 +369,20 @@ export default function GuestList() {
                             </button>
                             <button
                               className="btn btn-primary btn-sm"
-                              onClick={() => { setSelectedEntry(entry); setShowSendConfirm(true); }}
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setShowSendConfirm(true);
+                              }}
                               title={t('guestList.sendTickets')}
                             >
                               &#9993;
                             </button>
                             <button
                               className="btn btn-outline btn-sm"
-                              onClick={() => { setSelectedEntry(entry); setShowDeleteConfirm(true); }}
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setShowDeleteConfirm(true);
+                              }}
                               title={t('common.delete')}
                               style={{ color: 'var(--danger)' }}
                             >
@@ -384,16 +401,24 @@ export default function GuestList() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="card-body" style={{ borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            className="card-body"
+            style={{
+              borderTop: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <span style={{ color: 'var(--text-light)' }}>
-              {t('common.showingOf', { from: (page - 1) * pagination.limit + 1, to: Math.min(page * pagination.limit, pagination.total), total: pagination.total })}
+              {t('common.showingOf', {
+                from: (page - 1) * pagination.limit + 1,
+                to: Math.min(page * pagination.limit, pagination.total),
+                total: pagination.total,
+              })}
             </span>
             <div className="flex gap-1">
-              <button
-                className="btn btn-outline btn-sm"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
+              <button className="btn btn-outline btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
                 &laquo;
               </button>
               <button
@@ -411,184 +436,229 @@ export default function GuestList() {
       {/* Add Guest Modal */}
       {showAddModal && (
         <Modal
-          onClose={() => { setShowAddModal(false); resetForm(); }}
+          onClose={() => {
+            setShowAddModal(false);
+            resetForm();
+          }}
           title={t('guestList.addGuest')}
         >
-        <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(formData); }}>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.organisation')}</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.organisation}
-              onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
-              placeholder={t('guestList.organisationPlaceholder')}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.name')} *</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.email')} *</label>
-            <input
-              type="email"
-              className="form-control"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.ticketCount')} *</label>
-            <input
-              type="number"
-              className="form-control"
-              min={1}
-              max={20}
-              value={formData.ticketCount}
-              onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
-              required
-            />
-          </div>
-          {ticketTypes.length > 0 && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              addMutation.mutate(formData);
+            }}
+          >
             <div className="form-group">
-              <label className="form-label">{t('guestList.ticketType')}</label>
-              <select
+              <label className="form-label">{t('guestList.organisation')}</label>
+              <input
+                type="text"
                 className="form-control"
-                value={formData.ticketTypeId || ''}
-                onChange={(e) => setFormData({ ...formData, ticketTypeId: e.target.value || null })}
-              >
-                <option value="">{t('guestList.defaultTicket')}</option>
-                {ticketTypes.map((tt: TicketType) => (
-                  <option key={tt.id} value={tt.id}>{tt.name}</option>
-                ))}
-              </select>
-              <small style={{ color: 'var(--text-light)' }}>{t('guestList.ticketTypeHelp')}</small>
+                value={formData.organisation}
+                onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
+                placeholder={t('guestList.organisationPlaceholder')}
+              />
             </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">{t('guestList.notes')}</label>
-            <textarea
-              className="form-control"
-              rows={2}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder={t('guestList.notesPlaceholder')}
-            />
-          </div>
-          <div className="flex justify-end gap-2 mt-3">
-            <button type="button" className="btn btn-outline" onClick={() => { setShowAddModal(false); resetForm(); }}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={addMutation.isPending}>
-              {addMutation.isPending ? t('common.saving') : t('common.add')}
-            </button>
-          </div>
-        </form>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.name')} *</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.email')} *</label>
+              <input
+                type="email"
+                className="form-control"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.ticketCount')} *</label>
+              <input
+                type="number"
+                className="form-control"
+                min={1}
+                max={20}
+                value={formData.ticketCount}
+                onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
+                required
+              />
+            </div>
+            {ticketTypes.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">{t('guestList.ticketType')}</label>
+                <select
+                  className="form-control"
+                  value={formData.ticketTypeId || ''}
+                  onChange={(e) => setFormData({ ...formData, ticketTypeId: e.target.value || null })}
+                >
+                  <option value="">{t('guestList.defaultTicket')}</option>
+                  {ticketTypes.map((tt: TicketType) => (
+                    <option key={tt.id} value={tt.id}>
+                      {tt.name}
+                    </option>
+                  ))}
+                </select>
+                <small style={{ color: 'var(--text-light)' }}>{t('guestList.ticketTypeHelp')}</small>
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">{t('guestList.notes')}</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder={t('guestList.notesPlaceholder')}
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={addMutation.isPending}>
+                {addMutation.isPending ? t('common.saving') : t('common.add')}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
       {/* Edit Guest Modal */}
       {showEditModal && (
         <Modal
-          onClose={() => { setShowEditModal(false); setSelectedEntry(null); resetForm(); }}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedEntry(null);
+            resetForm();
+          }}
           title={t('guestList.editGuest')}
         >
-        <form onSubmit={(e) => { e.preventDefault(); if (selectedEntry) updateMutation.mutate({ id: selectedEntry.id, ...formData }); }}>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.organisation')}</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.organisation}
-              onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
-              placeholder={t('guestList.organisationPlaceholder')}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.name')} *</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.email')} *</label>
-            <input
-              type="email"
-              className="form-control"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('guestList.ticketCount')} *</label>
-            <input
-              type="number"
-              className="form-control"
-              min={1}
-              max={20}
-              value={formData.ticketCount}
-              onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
-              required
-            />
-          </div>
-          {ticketTypes.length > 0 && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (selectedEntry) updateMutation.mutate({ id: selectedEntry.id, ...formData });
+            }}
+          >
             <div className="form-group">
-              <label className="form-label">{t('guestList.ticketType')}</label>
-              <select
+              <label className="form-label">{t('guestList.organisation')}</label>
+              <input
+                type="text"
                 className="form-control"
-                value={formData.ticketTypeId || ''}
-                onChange={(e) => setFormData({ ...formData, ticketTypeId: e.target.value || null })}
-              >
-                <option value="">{t('guestList.defaultTicket')}</option>
-                {ticketTypes.map((tt: TicketType) => (
-                  <option key={tt.id} value={tt.id}>{tt.name}</option>
-                ))}
-              </select>
+                value={formData.organisation}
+                onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
+                placeholder={t('guestList.organisationPlaceholder')}
+              />
             </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">{t('guestList.notes')}</label>
-            <textarea
-              className="form-control"
-              rows={2}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </div>
-          <div className="flex justify-end gap-2 mt-3">
-            <button type="button" className="btn btn-outline" onClick={() => { setShowEditModal(false); setSelectedEntry(null); resetForm(); }}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? t('common.saving') : t('common.save')}
-            </button>
-          </div>
-        </form>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.name')} *</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.email')} *</label>
+              <input
+                type="email"
+                className="form-control"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{t('guestList.ticketCount')} *</label>
+              <input
+                type="number"
+                className="form-control"
+                min={1}
+                max={20}
+                value={formData.ticketCount}
+                onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
+                required
+              />
+            </div>
+            {ticketTypes.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">{t('guestList.ticketType')}</label>
+                <select
+                  className="form-control"
+                  value={formData.ticketTypeId || ''}
+                  onChange={(e) => setFormData({ ...formData, ticketTypeId: e.target.value || null })}
+                >
+                  <option value="">{t('guestList.defaultTicket')}</option>
+                  {ticketTypes.map((tt: TicketType) => (
+                    <option key={tt.id} value={tt.id}>
+                      {tt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">{t('guestList.notes')}</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedEntry(null);
+                  resetForm();
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <Modal
-          onClose={() => { setShowDeleteConfirm(false); setSelectedEntry(null); }}
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setSelectedEntry(null);
+          }}
           title={t('guestList.deleteConfirmTitle')}
         >
           <p>{t('guestList.deleteConfirmMessage', { name: selectedEntry?.name })}</p>
           <div className="flex justify-end gap-2 mt-3">
-            <button className="btn btn-outline" onClick={() => { setShowDeleteConfirm(false); setSelectedEntry(null); }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setSelectedEntry(null);
+              }}
+            >
               {t('common.cancel')}
             </button>
             <button
@@ -605,13 +675,24 @@ export default function GuestList() {
       {/* Send Tickets Confirmation Modal */}
       {showSendConfirm && (
         <Modal
-          onClose={() => { setShowSendConfirm(false); setSelectedEntry(null); }}
+          onClose={() => {
+            setShowSendConfirm(false);
+            setSelectedEntry(null);
+          }}
           title={t('guestList.sendConfirmTitle')}
         >
           <p>{t('guestList.sendConfirmMessage', { name: selectedEntry?.name, count: selectedEntry?.ticketCount })}</p>
-          <p style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>{t('guestList.sendConfirmEmail', { email: selectedEntry?.email })}</p>
+          <p style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>
+            {t('guestList.sendConfirmEmail', { email: selectedEntry?.email })}
+          </p>
           <div className="flex justify-end gap-2 mt-3">
-            <button className="btn btn-outline" onClick={() => { setShowSendConfirm(false); setSelectedEntry(null); }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setShowSendConfirm(false);
+                setSelectedEntry(null);
+              }}
+            >
               {t('common.cancel')}
             </button>
             <button
@@ -627,10 +708,7 @@ export default function GuestList() {
 
       {/* Send All Confirmation Modal */}
       {showSendAllConfirm && (
-        <Modal
-          onClose={() => setShowSendAllConfirm(false)}
-          title={t('guestList.sendAllConfirmTitle')}
-        >
+        <Modal onClose={() => setShowSendAllConfirm(false)} title={t('guestList.sendAllConfirmTitle')}>
           <p>{t('guestList.sendAllConfirmMessage', { count: summary.ticketsPending })}</p>
           <div className="flex justify-end gap-2 mt-3">
             <button className="btn btn-outline" onClick={() => setShowSendAllConfirm(false)}>

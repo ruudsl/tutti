@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -111,7 +112,7 @@ function PosterPreview({
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('nl-NL', {
+    return date.toLocaleDateString(currentLocale(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -422,33 +423,17 @@ function PosterPreview({
             }}
           >
             <div>
-              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>
-                Datum
-              </div>
-              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>
-                {formatDate(data.date)}
-              </div>
+              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>Datum</div>
+              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>{formatDate(data.date)}</div>
             </div>
             <div>
-              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>
-                Tijd
-              </div>
-              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>
-                {data.time || '20:00'}
-              </div>
+              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>Tijd</div>
+              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>{data.time || '20:00'}</div>
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>
-                Locatie
-              </div>
-              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>
-                {data.location || 'Locatie'}
-              </div>
-              {data.address && (
-                <div style={{ fontSize: `${12 * scale}px`, opacity: 0.8 }}>
-                  {data.address}
-                </div>
-              )}
+              <div style={{ fontSize: `${11 * scale}px`, opacity: 0.7, textTransform: 'uppercase' }}>Locatie</div>
+              <div style={{ fontSize: `${16 * scale}px`, fontWeight: 600 }}>{data.location || 'Locatie'}</div>
+              {data.address && <div style={{ fontSize: `${12 * scale}px`, opacity: 0.8 }}>{data.address}</div>}
             </div>
           </div>
 
@@ -555,18 +540,12 @@ function PosterPreview({
             <span style={{ fontSize: `${28 * scale}px`, fontWeight: 600, color: theme.primary }}>
               {formatDate(data.date)}
             </span>
-            <span style={{ fontSize: `${20 * scale}px`, color: theme.accent }}>
-              {data.time || '20:00'}
-            </span>
+            <span style={{ fontSize: `${20 * scale}px`, color: theme.accent }}>{data.time || '20:00'}</span>
           </div>
 
-          <div style={{ fontSize: `${16 * scale}px`, color: theme.text }}>
-            {data.location || 'Locatie'}
-          </div>
+          <div style={{ fontSize: `${16 * scale}px`, color: theme.text }}>{data.location || 'Locatie'}</div>
           {data.address && (
-            <div style={{ fontSize: `${14 * scale}px`, color: theme.text, opacity: 0.6 }}>
-              {data.address}
-            </div>
+            <div style={{ fontSize: `${14 * scale}px`, color: theme.text, opacity: 0.6 }}>{data.address}</div>
           )}
         </div>
 
@@ -605,11 +584,7 @@ function PosterPreview({
   );
 }
 
-export function ConcertPosterGenerator({
-  initialData,
-  onDownload,
-  customThemes = [],
-}: ConcertPosterGeneratorProps) {
+export function ConcertPosterGenerator({ initialData, onDownload, customThemes = [] }: ConcertPosterGeneratorProps) {
   const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const posterContainerRef = useRef<HTMLDivElement>(null);
@@ -645,85 +620,91 @@ export function ConcertPosterGenerator({
     setData((prev) => ({ ...prev, program: items }));
   }, []);
 
-  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleLogoUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      updateData('logoUrl', result);
-    };
-    reader.readAsDataURL(file);
-  }, [updateData]);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        updateData('logoUrl', result);
+      };
+      reader.readAsDataURL(file);
+    },
+    [updateData],
+  );
 
-  const handleDownload = useCallback(async (format: 'png' | 'pdf') => {
-    setIsGenerating(true);
+  const handleDownload = useCallback(
+    async (format: 'png' | 'pdf') => {
+      setIsGenerating(true);
 
-    try {
-      // Dynamic import of html2canvas (needs to be installed: npm install html2canvas)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let html2canvas: any;
       try {
-        const html2canvasModule = await import('html2canvas' as string);
-        html2canvas = html2canvasModule.default;
-      } catch {
-        // html2canvas not installed, provide a fallback message
-        alert(t('posterGenerator.installHtml2canvas'));
+        // Dynamic import of html2canvas (needs to be installed: npm install html2canvas)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let html2canvas: any;
+        try {
+          const html2canvasModule = await import('html2canvas' as string);
+          html2canvas = html2canvasModule.default;
+        } catch {
+          // html2canvas not installed, provide a fallback message
+          alert(t('posterGenerator.installHtml2canvas'));
+          setIsGenerating(false);
+          return;
+        }
+
+        // Find the poster preview element
+        const posterElement = posterContainerRef.current?.querySelector('.poster-preview') as HTMLElement;
+        if (!posterElement) {
+          console.error('Poster element not found');
+          return;
+        }
+
+        // Create a clone at full size
+        const clone = posterElement.cloneNode(true) as HTMLElement;
+        clone.style.transform = 'scale(2)';
+        clone.style.transformOrigin = 'top left';
+        clone.style.width = '600px';
+        clone.style.height = '800px';
+        clone.style.fontSize = '16px';
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        document.body.appendChild(clone);
+
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: selectedTheme.background,
+        });
+
+        document.body.removeChild(clone);
+
+        if (format === 'png') {
+          const link = document.createElement('a');
+          link.download = `concert-poster-${data.title || 'poster'}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } else {
+          // For PDF, we'll create a simple PDF with the image
+          // This is a simplified implementation
+          const imgData = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `concert-poster-${data.title || 'poster'}.png`;
+          link.href = imgData;
+          link.click();
+          // Note: For proper PDF export, you'd need a library like jsPDF
+        }
+
+        onDownload?.(format, data);
+      } catch (error) {
+        console.error('Error generating poster:', error);
+      } finally {
         setIsGenerating(false);
-        return;
       }
-
-      // Find the poster preview element
-      const posterElement = posterContainerRef.current?.querySelector('.poster-preview') as HTMLElement;
-      if (!posterElement) {
-        console.error('Poster element not found');
-        return;
-      }
-
-      // Create a clone at full size
-      const clone = posterElement.cloneNode(true) as HTMLElement;
-      clone.style.transform = 'scale(2)';
-      clone.style.transformOrigin = 'top left';
-      clone.style.width = '600px';
-      clone.style.height = '800px';
-      clone.style.fontSize = '16px';
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      document.body.appendChild(clone);
-
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: selectedTheme.background,
-      });
-
-      document.body.removeChild(clone);
-
-      if (format === 'png') {
-        const link = document.createElement('a');
-        link.download = `concert-poster-${data.title || 'poster'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } else {
-        // For PDF, we'll create a simple PDF with the image
-        // This is a simplified implementation
-        const imgData = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `concert-poster-${data.title || 'poster'}.png`;
-        link.href = imgData;
-        link.click();
-        // Note: For proper PDF export, you'd need a library like jsPDF
-      }
-
-      onDownload?.(format, data);
-    } catch (error) {
-      console.error('Error generating poster:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [data, selectedTheme, onDownload]);
+    },
+    [data, selectedTheme, onDownload],
+  );
 
   return (
     <div className="poster-generator">
@@ -774,21 +755,11 @@ export function ConcertPosterGenerator({
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="date">{t('posterGenerator.date')}</label>
-                <input
-                  id="date"
-                  type="date"
-                  value={data.date}
-                  onChange={(e) => updateData('date', e.target.value)}
-                />
+                <input id="date" type="date" value={data.date} onChange={(e) => updateData('date', e.target.value)} />
               </div>
               <div className="form-group">
                 <label htmlFor="time">{t('posterGenerator.time')}</label>
-                <input
-                  id="time"
-                  type="time"
-                  value={data.time}
-                  onChange={(e) => updateData('time', e.target.value)}
-                />
+                <input id="time" type="time" value={data.time} onChange={(e) => updateData('time', e.target.value)} />
               </div>
             </div>
             <div className="form-group">
@@ -841,21 +812,11 @@ export function ConcertPosterGenerator({
             </div>
             <div className="form-group">
               <label htmlFor="logo">{t('posterGenerator.uploadLogo')}</label>
-              <input
-                id="logo"
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="file-input"
-              />
+              <input id="logo" type="file" accept="image/*" onChange={handleLogoUpload} className="file-input" />
               {data.logoUrl && (
                 <div className="logo-preview">
                   <img src={data.logoUrl} alt={t('posterGenerator.logoPreview')} />
-                  <button
-                    type="button"
-                    className="remove-logo-btn"
-                    onClick={() => updateData('logoUrl', '')}
-                  >
+                  <button type="button" className="remove-logo-btn" onClick={() => updateData('logoUrl', '')}>
                     <Icon name="close" size={14} />
                   </button>
                 </div>
@@ -882,7 +843,11 @@ export function ConcertPosterGenerator({
                   className={`template-btn ${template === tmpl ? 'active' : ''}`}
                   onClick={() => setTemplate(tmpl)}
                 >
-                  {tmpl === 'classic' ? t('posterGenerator.classic') : tmpl === 'modern' ? t('posterGenerator.modern') : t('posterGenerator.minimal')}
+                  {tmpl === 'classic'
+                    ? t('posterGenerator.classic')
+                    : tmpl === 'modern'
+                      ? t('posterGenerator.modern')
+                      : t('posterGenerator.minimal')}
                 </button>
               ))}
             </div>
@@ -909,12 +874,7 @@ export function ConcertPosterGenerator({
 
           {/* Preview */}
           <div className="preview-container" ref={posterContainerRef}>
-            <PosterPreview
-              data={data}
-              template={template}
-              theme={selectedTheme}
-              scale={0.5}
-            />
+            <PosterPreview data={data} template={template} theme={selectedTheme} scale={0.5} />
           </div>
 
           {/* Download buttons */}

@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -30,11 +31,14 @@ interface ActivityFeedItem {
 }
 
 /** Lightweight vertical bar chart for activity per day */
-function ActivityBarChart({ data, t }: {
+function ActivityBarChart({
+  data,
+  t,
+}: {
   data: { date: string; downloads: number; views: number }[];
   t: (key: string) => string;
 }) {
-  const maxVal = Math.max(...data.map(d => d.downloads + d.views), 1);
+  const maxVal = Math.max(...data.map((d) => d.downloads + d.views), 1);
   const chartHeight = 180;
 
   const formatShortDate = (dateStr: string) => {
@@ -47,24 +51,36 @@ function ActivityBarChart({ data, t }: {
       {/* Legend */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }}
+          />
           {t('statistics.downloads')}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--info, #17a2b8)', display: 'inline-block' }} />
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 2,
+              background: 'var(--info, #17a2b8)',
+              display: 'inline-block',
+            }}
+          />
           {t('statistics.views')}
         </span>
       </div>
 
       {/* Chart area */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 2,
-        height: chartHeight,
-        borderBottom: '1px solid var(--border)',
-        paddingBottom: 0,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 2,
+          height: chartHeight,
+          borderBottom: '1px solid var(--border)',
+          paddingBottom: 0,
+        }}
+      >
         {data.map((day) => {
           const dlHeight = (day.downloads / maxVal) * (chartHeight - 20);
           const vwHeight = (day.views / maxVal) * (chartHeight - 20);
@@ -82,23 +98,25 @@ function ActivityBarChart({ data, t }: {
               title={`${formatShortDate(day.date)}: ${day.downloads} ${t('statistics.downloads').toLowerCase()}, ${day.views} ${t('statistics.views').toLowerCase()}`}
             >
               {total > 0 && (
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-light)', marginBottom: 2 }}>
-                  {total}
-                </span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-light)', marginBottom: 2 }}>{total}</span>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', width: '80%', maxWidth: 28 }}>
-                <div style={{
-                  height: vwHeight,
-                  background: 'var(--info, #17a2b8)',
-                  borderRadius: '2px 2px 0 0',
-                  minHeight: day.views > 0 ? 2 : 0,
-                }} />
-                <div style={{
-                  height: dlHeight,
-                  background: 'var(--primary)',
-                  borderRadius: day.views > 0 ? 0 : '2px 2px 0 0',
-                  minHeight: day.downloads > 0 ? 2 : 0,
-                }} />
+                <div
+                  style={{
+                    height: vwHeight,
+                    background: 'var(--info, #17a2b8)',
+                    borderRadius: '2px 2px 0 0',
+                    minHeight: day.views > 0 ? 2 : 0,
+                  }}
+                />
+                <div
+                  style={{
+                    height: dlHeight,
+                    background: 'var(--primary)',
+                    borderRadius: day.views > 0 ? 0 : '2px 2px 0 0',
+                    minHeight: day.downloads > 0 ? 2 : 0,
+                  }}
+                />
               </div>
             </div>
           );
@@ -120,9 +138,7 @@ function ActivityBarChart({ data, t }: {
             }}
           >
             {/* Show label every few bars depending on count */}
-            {data.length <= 14 || i % Math.ceil(data.length / 10) === 0
-              ? formatShortDate(day.date)
-              : ''}
+            {data.length <= 14 || i % Math.ceil(data.length / 10) === 0 ? formatShortDate(day.date) : ''}
           </div>
         ))}
       </div>
@@ -131,11 +147,14 @@ function ActivityBarChart({ data, t }: {
 }
 
 /** Horizontal bar chart for ranking data */
-function HorizontalBarChart({ items, color }: {
+function HorizontalBarChart({
+  items,
+  color,
+}: {
   items: { label: string; sublabel?: string; value: number }[];
   color: string;
 }) {
-  const maxVal = Math.max(...items.map(i => i.value), 1);
+  const maxVal = Math.max(...items.map((i) => i.value), 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -153,19 +172,23 @@ function HorizontalBarChart({ items, color }: {
             </span>
             <strong style={{ flexShrink: 0, marginLeft: '0.5rem' }}>{item.value}</strong>
           </div>
-          <div style={{
-            height: 6,
-            background: 'var(--border)',
-            borderRadius: 3,
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${(item.value / maxVal) * 100}%`,
-              background: color,
+          <div
+            style={{
+              height: 6,
+              background: 'var(--border)',
               borderRadius: 3,
-              transition: 'width 0.3s ease',
-            }} />
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                width: `${(item.value / maxVal) * 100}%`,
+                background: color,
+                borderRadius: 3,
+                transition: 'width 0.3s ease',
+              }}
+            />
           </div>
         </div>
       ))}
@@ -174,22 +197,35 @@ function HorizontalBarChart({ items, color }: {
 }
 
 /** Stacked horizontal bar for user activity (downloads + views) */
-function UserActivityChart({ users, t }: {
+function UserActivityChart({
+  users,
+  t,
+}: {
   users: { id: string; name: string; downloads: number; views: number }[];
   t: (key: string) => string;
 }) {
-  const maxVal = Math.max(...users.map(u => u.downloads + u.views), 1);
+  const maxVal = Math.max(...users.map((u) => u.downloads + u.views), 1);
 
   return (
     <div>
       {/* Legend */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }} />
+          <span
+            style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--primary)', display: 'inline-block' }}
+          />
           {t('statistics.downloads')}
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--info, #17a2b8)', display: 'inline-block' }} />
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 2,
+              background: 'var(--info, #17a2b8)',
+              display: 'inline-block',
+            }}
+          />
           {t('statistics.views')}
         </span>
       </div>
@@ -207,13 +243,15 @@ function UserActivityChart({ users, t }: {
                   {user.downloads}+{user.views} = <strong style={{ color: 'var(--text)' }}>{total}</strong>
                 </span>
               </div>
-              <div style={{
-                height: 6,
-                background: 'var(--border)',
-                borderRadius: 3,
-                overflow: 'hidden',
-                display: 'flex',
-              }}>
+              <div
+                style={{
+                  height: 6,
+                  background: 'var(--border)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  display: 'flex',
+                }}
+              >
                 <div
                   style={{
                     height: '100%',
@@ -271,7 +309,7 @@ export default function Statistics() {
   });
 
   const formatDateTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
@@ -338,9 +376,7 @@ export default function Statistics() {
           </div>
           <div className="card">
             <div className="card-body stat-inline">
-              <div className="stat-number">
-                {stats.totals.total_activities}
-              </div>
+              <div className="stat-number">{stats.totals.total_activities}</div>
               <div className="stat-label">{t('statistics.totalActions')}</div>
             </div>
           </div>
@@ -364,7 +400,7 @@ export default function Statistics() {
             <h4 style={{ marginBottom: '1rem' }}>{t('statistics.topPieces')}</h4>
             {stats?.topPieces && stats.topPieces.length > 0 ? (
               <HorizontalBarChart
-                items={stats.topPieces.map(p => ({
+                items={stats.topPieces.map((p) => ({
                   label: p.title,
                   sublabel: p.arranger || undefined,
                   value: p.count,
@@ -372,9 +408,7 @@ export default function Statistics() {
                 color="var(--primary)"
               />
             ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                {t('statistics.noActivity')}
-              </p>
+              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>{t('statistics.noActivity')}</p>
             )}
           </div>
         </div>
@@ -386,9 +420,7 @@ export default function Statistics() {
             {stats?.userActivity && stats.userActivity.length > 0 ? (
               <UserActivityChart users={stats.userActivity} t={t} />
             ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                {t('statistics.noActivity')}
-              </p>
+              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>{t('statistics.noActivity')}</p>
             )}
           </div>
         </div>
@@ -414,9 +446,7 @@ export default function Statistics() {
                         {t(`statistics.actions.${item.action_type}`, item.action_type)}
                       </span>
                     </div>
-                    {item.entity_name && (
-                      <div style={{ color: 'var(--text-light)' }}>{item.entity_name}</div>
-                    )}
+                    {item.entity_name && <div style={{ color: 'var(--text-light)' }}>{item.entity_name}</div>}
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                       {formatDateTime(item.created_at)}
                     </div>
@@ -424,9 +454,7 @@ export default function Statistics() {
                 ))}
               </div>
             ) : (
-              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>
-                {t('statistics.noActivity')}
-              </p>
+              <p style={{ color: 'var(--text-light)', textAlign: 'center' }}>{t('statistics.noActivity')}</p>
             )}
           </div>
         </div>

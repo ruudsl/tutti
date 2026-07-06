@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -70,12 +71,38 @@ export default function Tasks() {
   useDocumentTitle('pageTitle.tasks');
   const queryClient = useQueryClient();
 
-  const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('');
-  const [filterPriority, setFilterPriority] = useState<TaskPriority | ''>('');
-  const [filterList, setFilterList] = useState<string>('');
-  const [filterAssignee, setFilterAssignee] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showCompleted, setShowCompleted] = useState(false);
+  // Filters live in the URL so filtered views can be linked/bookmarked;
+  // default values are omitted from the URL to keep it clean.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterStatus = (searchParams.get('status') ?? '') as TaskStatus | '';
+  const filterPriority = (searchParams.get('priority') ?? '') as TaskPriority | '';
+  const filterList = searchParams.get('list') ?? '';
+  const filterAssignee = searchParams.get('assignee') ?? '';
+  const searchTerm = searchParams.get('search') ?? '';
+  const showCompleted = searchParams.get('completed') === '1';
+
+  const setFilterParam = (key: string, value: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) {
+          next.set(key, value);
+        } else {
+          next.delete(key);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const setFilterStatus = (value: TaskStatus | '') => setFilterParam('status', value);
+  const setFilterPriority = (value: TaskPriority | '') => setFilterParam('priority', value);
+  const setFilterList = (value: string) => setFilterParam('list', value);
+  const setFilterAssignee = (value: string) => setFilterParam('assignee', value);
+  const setSearchTerm = (value: string) => setFilterParam('search', value);
+  const setShowCompleted = (value: boolean) => setFilterParam('completed', value ? '1' : '');
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showListsModal, setShowListsModal] = useState(false);
@@ -86,14 +113,15 @@ export default function Tasks() {
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', filterStatus, filterPriority, filterList, filterAssignee, searchTerm, showCompleted],
-    queryFn: () => getTasks({
-      status: filterStatus || undefined,
-      priority: filterPriority || undefined,
-      listId: filterList || undefined,
-      assignedTo: filterAssignee || undefined,
-      search: searchTerm || undefined,
-      showCompleted,
-    }),
+    queryFn: () =>
+      getTasks({
+        status: filterStatus || undefined,
+        priority: filterPriority || undefined,
+        listId: filterList || undefined,
+        assignedTo: filterAssignee || undefined,
+        search: searchTerm || undefined,
+        showCompleted,
+      }),
   });
 
   const { data: taskLists = [] } = useQuery({
@@ -103,7 +131,7 @@ export default function Tasks() {
 
   const { data: taskDetail } = useQuery({
     queryKey: ['task', selectedTask?.id],
-    queryFn: () => selectedTask ? getTask(selectedTask.id) : null,
+    queryFn: () => (selectedTask ? getTask(selectedTask.id) : null),
     enabled: !!selectedTask,
   });
 
@@ -155,33 +183,21 @@ export default function Tasks() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
         <div className="flex flex-wrap gap-2">
-          <button
-            className="btn btn-ghost btn-sm gap-2"
-            onClick={() => setShowSummary(!showSummary)}
-          >
+          <button className="btn btn-ghost btn-sm gap-2" onClick={() => setShowSummary(!showSummary)}>
             <Icon name="chart" size={16} />
             {showSummary ? t('common.hide') : t('common.show')} {t('tasks.statusSummary')}
           </button>
-          <button
-            className="btn btn-outline btn-sm gap-2"
-            onClick={() => setShowTemplatesDialog(true)}
-          >
+          <button className="btn btn-outline btn-sm gap-2" onClick={() => setShowTemplatesDialog(true)}>
             <Icon name="clipboard" size={16} />
             {t('tasks.templates')}
           </button>
           {canManageLists && (
-            <button
-              className="btn btn-outline btn-sm gap-2"
-              onClick={() => setShowListsModal(true)}
-            >
+            <button className="btn btn-outline btn-sm gap-2" onClick={() => setShowListsModal(true)}>
               <Icon name="folder" size={16} />
               {t('tasks.manageLists')}
             </button>
           )}
-          <button
-            className="btn btn-primary gap-2"
-            onClick={() => setShowCreateModal(true)}
-          >
+          <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
             <Icon name="plus" size={16} />
             {t('tasks.createTask')}
           </button>
@@ -248,7 +264,9 @@ export default function Tasks() {
               <option value="">{t('common.all')}</option>
               <option value="none">{t('tasks.noList')}</option>
               {taskLists.map((list) => (
-                <option key={list.id} value={list.id}>{list.name}</option>
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
               ))}
             </select>
           </div>
@@ -333,26 +351,25 @@ export default function Tasks() {
                   {/* Task info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`font-medium ${task.status === 'done' ? 'line-through text-base-content/50' : ''}`}>
+                      <span
+                        className={`font-medium ${task.status === 'done' ? 'line-through text-base-content/50' : ''}`}
+                      >
                         {task.title}
                       </span>
                       {task.listName && (
-                        <span
-                          className="badge badge-sm"
-                          style={{ backgroundColor: task.listColor || undefined }}
-                        >
+                        <span className="badge badge-sm" style={{ backgroundColor: task.listColor || undefined }}>
                           {task.listName}
                         </span>
                       )}
                     </div>
 
-                    {task.description && (
-                      <p className="text-sm text-base-content/60 truncate">{task.description}</p>
-                    )}
+                    {task.description && <p className="text-sm text-base-content/60 truncate">{task.description}</p>}
 
                     <div className="flex flex-wrap gap-2 mt-1 text-xs text-base-content/50">
                       {task.dueDate && (
-                        <span className={`flex items-center gap-1 ${isOverdue(task.dueDate) && task.status !== 'done' ? 'text-error' : ''}`}>
+                        <span
+                          className={`flex items-center gap-1 ${isOverdue(task.dueDate) && task.status !== 'done' ? 'text-error' : ''}`}
+                        >
                           <Icon name="calendar" size={12} />
                           {new Date(task.dueDate).toLocaleDateString()}
                         </span>
@@ -514,7 +531,9 @@ function TaskDetailModal({
               onChange={(e) => onUpdate({ status: e.target.value })}
             >
               {statuses.map((s) => (
-                <option key={s} value={s}>{t(`tasks.status.${s}`)}</option>
+                <option key={s} value={s}>
+                  {t(`tasks.status.${s}`)}
+                </option>
               ))}
             </select>
           </div>
@@ -529,7 +548,9 @@ function TaskDetailModal({
               onChange={(e) => onUpdate({ priority: e.target.value })}
             >
               {priorities.map((p) => (
-                <option key={p} value={p}>{t(`tasks.priority.${p}`)}</option>
+                <option key={p} value={p}>
+                  {t(`tasks.priority.${p}`)}
+                </option>
               ))}
             </select>
           </div>
@@ -545,7 +566,9 @@ function TaskDetailModal({
             >
               <option value="">{t('tasks.noList')}</option>
               {taskLists.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
               ))}
             </select>
           </div>
@@ -564,13 +587,17 @@ function TaskDetailModal({
           {task.dueDate && (
             <div className="flex items-center gap-2">
               <Icon name="calendar" size={16} />
-              <span>{t('tasks.dueDate')}: {formatDateTime(task.dueDate)}</span>
+              <span>
+                {t('tasks.dueDate')}: {formatDateTime(task.dueDate)}
+              </span>
             </div>
           )}
           {task.assignedToName && (
             <div className="flex items-center gap-2">
               <Icon name="user" size={16} />
-              <span>{t('tasks.assignedTo')}: {task.assignedToName}</span>
+              <span>
+                {t('tasks.assignedTo')}: {task.assignedToName}
+              </span>
             </div>
           )}
         </div>
@@ -585,17 +612,10 @@ function TaskDetailModal({
                 type="checkbox"
                 className="checkbox checkbox-sm"
                 checked={item.isCompleted}
-                onChange={(e) =>
-                  toggleChecklistMutation.mutate({ itemId: item.id, isCompleted: e.target.checked })
-                }
+                onChange={(e) => toggleChecklistMutation.mutate({ itemId: item.id, isCompleted: e.target.checked })}
               />
-              <span className={item.isCompleted ? 'line-through text-base-content/50' : ''}>
-                {item.content}
-              </span>
-              <button
-                className="btn btn-ghost btn-xs ml-auto"
-                onClick={() => deleteChecklistMutation.mutate(item.id)}
-              >
+              <span className={item.isCompleted ? 'line-through text-base-content/50' : ''}>{item.content}</span>
+              <button className="btn btn-ghost btn-xs ml-auto" onClick={() => deleteChecklistMutation.mutate(item.id)}>
                 <Icon name="close" size={14} />
               </button>
             </div>
@@ -641,15 +661,10 @@ function TaskDetailModal({
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="font-medium">{comment.authorName}</span>
-                      <span className="text-xs text-base-content/50 ml-2">
-                        {formatDateTime(comment.createdAt)}
-                      </span>
+                      <span className="text-xs text-base-content/50 ml-2">{formatDateTime(comment.createdAt)}</span>
                     </div>
                     {comment.authorId === user?.id && (
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        onClick={() => deleteCommentMutation.mutate(comment.id)}
-                      >
+                      <button className="btn btn-ghost btn-xs" onClick={() => deleteCommentMutation.mutate(comment.id)}>
                         <Icon name="trash" size={14} />
                       </button>
                     )}
@@ -791,7 +806,9 @@ function CreateTaskModal({
             >
               <option value="">{t('tasks.noList')}</option>
               {taskLists.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
               ))}
             </select>
           </div>
@@ -805,10 +822,12 @@ function CreateTaskModal({
             type="datetime-local"
             className="input input-bordered"
             value={formData.dueDate ? formData.dueDate.slice(0, 16) : ''}
-            onChange={(e) => setFormData((prev) => ({
-              ...prev,
-              dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-            }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined,
+              }))
+            }
           />
         </div>
 
@@ -879,8 +898,7 @@ function ManageListsModal({
   });
 
   const updateListMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name?: string; color?: string } }) =>
-      updateTaskList(id, data),
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; color?: string } }) => updateTaskList(id, data),
     onSuccess: () => {
       showSuccess(t('tasks.updated'));
       setEditingList(null);
@@ -953,10 +971,7 @@ function ManageListsModal({
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setEditingList(null)}
-                      >
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingList(null)}>
                         {t('common.cancel')}
                       </button>
                       <button

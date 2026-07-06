@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+import { FileValidationError } from '../utils/errors';
 import db from '../database/connection';
 import logger from '../utils/logger';
 
@@ -75,7 +76,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
       cb(null, true);
     } else {
-      cb(new Error('Alleen PDF bestanden zijn toegestaan'));
+      cb(new FileValidationError());
     }
   },
 });

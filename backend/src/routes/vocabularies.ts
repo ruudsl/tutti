@@ -10,6 +10,7 @@
 import { Router, Response } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { cacheMiddleware } from '../middleware/cache';
 import {
   searchConcepts,
   getConcept,
@@ -24,6 +25,11 @@ import {
 } from '../services/jskos';
 
 const router = Router();
+
+// Vocabulary data is static and global (identical for every association), so
+// the response cache does not need to vary by association. This router has no
+// mutation endpoints, so no cache invalidation is needed.
+const vocabCache = cacheMiddleware({ ttlSeconds: 900, varyByAssociation: false });
 
 /**
  * @swagger
@@ -54,27 +60,32 @@ const router = Router();
  *       200:
  *         description: List of matching instruments
  */
-router.get('/instruments', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const query = (req.query.q as string) || '';
-  const lang = (req.query.lang as string) || 'nl';
-  const limit = parseInt(req.query.limit as string) || 20;
+router.get(
+  '/instruments',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = (req.query.q as string) || '';
+    const lang = (req.query.lang as string) || 'nl';
+    const limit = parseInt(req.query.limit as string) || 20;
 
-  if (query) {
-    const result = searchConcepts(query, 'instrument', limit, lang);
-    res.json({
-      instruments: formatConcepts(result.concepts, lang),
-      total: result.total,
-      query,
-    });
-  } else {
-    // Return all instruments if no query
-    const instruments = getConceptsByType('instrument', lang);
-    res.json({
-      instruments: formatConcepts(instruments, lang),
-      total: instruments.length,
-    });
-  }
-}));
+    if (query) {
+      const result = searchConcepts(query, 'instrument', limit, lang);
+      res.json({
+        instruments: formatConcepts(result.concepts, lang),
+        total: result.total,
+        query,
+      });
+    } else {
+      // Return all instruments if no query
+      const instruments = getConceptsByType('instrument', lang);
+      res.json({
+        instruments: formatConcepts(instruments, lang),
+        total: instruments.length,
+      });
+    }
+  }),
+);
 
 /**
  * @swagger
@@ -94,14 +105,19 @@ router.get('/instruments', authenticateToken, asyncHandler(async (req: AuthReque
  *       200:
  *         description: Hierarchical tree of instruments
  */
-router.get('/instruments/tree', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const lang = (req.query.lang as string) || 'nl';
-  const tree = buildHierarchy('instrument', lang);
+router.get(
+  '/instruments/tree',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const lang = (req.query.lang as string) || 'nl';
+    const tree = buildHierarchy('instrument', lang);
 
-  res.json({
-    tree: formatHierarchy(tree, lang),
-  });
-}));
+    res.json({
+      tree: formatHierarchy(tree, lang),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -129,23 +145,28 @@ router.get('/instruments/tree', authenticateToken, asyncHandler(async (req: Auth
  *       404:
  *         description: Instrument not found
  */
-router.get('/instruments/:uri', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const uri = decodeURIComponent(req.params.uri);
-  const lang = (req.query.lang as string) || 'nl';
+router.get(
+  '/instruments/:uri',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uri = decodeURIComponent(req.params.uri);
+    const lang = (req.query.lang as string) || 'nl';
 
-  const concept = getConcept(uri);
-  if (!concept || concept.type !== 'instrument') {
-    throw new ApiError(404, 'Instrument niet gevonden');
-  }
+    const concept = getConcept(uri);
+    if (!concept || concept.type !== 'instrument') {
+      throw new ApiError(404, 'Instrument niet gevonden');
+    }
 
-  // Get children if any
-  const children = getChildConcepts(uri, lang);
+    // Get children if any
+    const children = getChildConcepts(uri, lang);
 
-  res.json({
-    instrument: formatConcept(concept, lang),
-    children: formatConcepts(children, lang),
-  });
-}));
+    res.json({
+      instrument: formatConcept(concept, lang),
+      children: formatConcepts(children, lang),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -174,26 +195,31 @@ router.get('/instruments/:uri', authenticateToken, asyncHandler(async (req: Auth
  *       200:
  *         description: List of matching genres
  */
-router.get('/genres', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const query = (req.query.q as string) || '';
-  const lang = (req.query.lang as string) || 'nl';
-  const limit = parseInt(req.query.limit as string) || 20;
+router.get(
+  '/genres',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = (req.query.q as string) || '';
+    const lang = (req.query.lang as string) || 'nl';
+    const limit = parseInt(req.query.limit as string) || 20;
 
-  if (query) {
-    const result = searchConcepts(query, 'genre', limit, lang);
-    res.json({
-      genres: formatConcepts(result.concepts, lang),
-      total: result.total,
-      query,
-    });
-  } else {
-    const genres = getConceptsByType('genre', lang);
-    res.json({
-      genres: formatConcepts(genres, lang),
-      total: genres.length,
-    });
-  }
-}));
+    if (query) {
+      const result = searchConcepts(query, 'genre', limit, lang);
+      res.json({
+        genres: formatConcepts(result.concepts, lang),
+        total: result.total,
+        query,
+      });
+    } else {
+      const genres = getConceptsByType('genre', lang);
+      res.json({
+        genres: formatConcepts(genres, lang),
+        total: genres.length,
+      });
+    }
+  }),
+);
 
 /**
  * @swagger
@@ -213,14 +239,19 @@ router.get('/genres', authenticateToken, asyncHandler(async (req: AuthRequest, r
  *       200:
  *         description: Hierarchical tree of genres
  */
-router.get('/genres/tree', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const lang = (req.query.lang as string) || 'nl';
-  const tree = buildHierarchy('genre', lang);
+router.get(
+  '/genres/tree',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const lang = (req.query.lang as string) || 'nl';
+    const tree = buildHierarchy('genre', lang);
 
-  res.json({
-    tree: formatHierarchy(tree, lang),
-  });
-}));
+    res.json({
+      tree: formatHierarchy(tree, lang),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -245,22 +276,27 @@ router.get('/genres/tree', authenticateToken, asyncHandler(async (req: AuthReque
  *       200:
  *         description: Genre details
  */
-router.get('/genres/:uri', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const uri = decodeURIComponent(req.params.uri);
-  const lang = (req.query.lang as string) || 'nl';
+router.get(
+  '/genres/:uri',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const uri = decodeURIComponent(req.params.uri);
+    const lang = (req.query.lang as string) || 'nl';
 
-  const concept = getConcept(uri);
-  if (!concept || concept.type !== 'genre') {
-    throw new ApiError(404, 'Genre niet gevonden');
-  }
+    const concept = getConcept(uri);
+    if (!concept || concept.type !== 'genre') {
+      throw new ApiError(404, 'Genre niet gevonden');
+    }
 
-  const children = getChildConcepts(uri, lang);
+    const children = getChildConcepts(uri, lang);
 
-  res.json({
-    genre: formatConcept(concept, lang),
-    children: formatConcepts(children, lang),
-  });
-}));
+    res.json({
+      genre: formatConcept(concept, lang),
+      children: formatConcepts(children, lang),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -295,25 +331,30 @@ router.get('/genres/:uri', authenticateToken, asyncHandler(async (req: AuthReque
  *       200:
  *         description: Search results
  */
-router.get('/search', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const query = req.query.q as string;
-  const type = req.query.type as 'instrument' | 'genre' | 'composer' | undefined;
-  const lang = (req.query.lang as string) || 'nl';
-  const limit = parseInt(req.query.limit as string) || 20;
+router.get(
+  '/search',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = req.query.q as string;
+    const type = req.query.type as 'instrument' | 'genre' | 'composer' | undefined;
+    const lang = (req.query.lang as string) || 'nl';
+    const limit = parseInt(req.query.limit as string) || 20;
 
-  if (!query) {
-    throw new ApiError(400, 'Query parameter "q" is verplicht');
-  }
+    if (!query) {
+      throw new ApiError(400, 'Query parameter "q" is verplicht');
+    }
 
-  const result = searchConcepts(query, type, limit, lang);
+    const result = searchConcepts(query, type, limit, lang);
 
-  res.json({
-    concepts: formatConcepts(result.concepts, lang),
-    total: result.total,
-    query,
-    type: type || 'all',
-  });
-}));
+    res.json({
+      concepts: formatConcepts(result.concepts, lang),
+      total: result.total,
+      query,
+      type: type || 'all',
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -339,21 +380,29 @@ router.get('/search', authenticateToken, asyncHandler(async (req: AuthRequest, r
  *       200:
  *         description: List of concepts
  */
-router.get('/lookup', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const urisParam = req.query.uris as string;
-  const lang = (req.query.lang as string) || 'nl';
+router.get(
+  '/lookup',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const urisParam = req.query.uris as string;
+    const lang = (req.query.lang as string) || 'nl';
 
-  if (!urisParam) {
-    throw new ApiError(400, 'Query parameter "uris" is verplicht');
-  }
+    if (!urisParam) {
+      throw new ApiError(400, 'Query parameter "uris" is verplicht');
+    }
 
-  const uris = urisParam.split(',').map(u => u.trim()).filter(Boolean);
-  const concepts = getConcepts(uris);
+    const uris = urisParam
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
+    const concepts = getConcepts(uris);
 
-  res.json({
-    concepts: formatConcepts(concepts, lang),
-  });
-}));
+    res.json({
+      concepts: formatConcepts(concepts, lang),
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -367,15 +416,20 @@ router.get('/lookup', authenticateToken, asyncHandler(async (req: AuthRequest, r
  *       200:
  *         description: Cache statistics
  */
-router.get('/stats', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const stats = getCacheStats();
+router.get(
+  '/stats',
+  authenticateToken,
+  vocabCache,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = getCacheStats();
 
-  res.json({
-    total: stats.total,
-    byType: stats.byType,
-    expired: stats.expired,
-  });
-}));
+    res.json({
+      total: stats.total,
+      byType: stats.byType,
+      expired: stats.expired,
+    });
+  }),
+);
 
 // Helper functions to format concepts for API response
 
@@ -383,7 +437,8 @@ function formatConcept(concept: JskosConcept, lang: string): Record<string, unkn
   return {
     uri: concept.uri,
     type: concept.type,
-    label: concept.prefLabel[lang] || concept.prefLabel.en || concept.prefLabel.nl || Object.values(concept.prefLabel)[0],
+    label:
+      concept.prefLabel[lang] || concept.prefLabel.en || concept.prefLabel.nl || Object.values(concept.prefLabel)[0],
     labels: concept.prefLabel,
     altLabels: concept.altLabels,
     notation: concept.notation,
@@ -394,7 +449,7 @@ function formatConcept(concept: JskosConcept, lang: string): Record<string, unkn
 }
 
 function formatConcepts(concepts: JskosConcept[], lang: string): Array<Record<string, unknown>> {
-  return concepts.map(c => formatConcept(c, lang));
+  return concepts.map((c) => formatConcept(c, lang));
 }
 
 function formatHierarchyNode(node: JskosHierarchyNode, lang: string): Record<string, unknown> {
@@ -405,12 +460,12 @@ function formatHierarchyNode(node: JskosHierarchyNode, lang: string): Record<str
     labels: node.prefLabel,
     notation: node.notation,
     level: node.level,
-    children: node.children?.map(c => formatHierarchyNode(c, lang)) || [],
+    children: node.children?.map((c) => formatHierarchyNode(c, lang)) || [],
   };
 }
 
 function formatHierarchy(nodes: JskosHierarchyNode[], lang: string): Array<Record<string, unknown>> {
-  return nodes.map(n => formatHierarchyNode(n, lang));
+  return nodes.map((n) => formatHierarchyNode(n, lang));
 }
 
 export default router;

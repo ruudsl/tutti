@@ -6,7 +6,6 @@ import {
   getFiscalYears,
   createFiscalYear,
   getAccounts,
-  getMembershipFeeTypes,
   getInvoices,
   createAccount,
   updateAccount,
@@ -40,7 +39,9 @@ import {
   RelationType,
   CostCenter,
   Budget,
+  Invoice,
 } from '../api/accounting';
+import InvoicePrinter from '../components/InvoicePrinter';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -82,25 +83,28 @@ export default function Accounting() {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showFiscalYearModal, setShowFiscalYearModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
 
+  // Fiscal years intentionally have no `enabled` condition: the fiscal year
+  // selector in the page header (and the reports/budgets/export logic) needs
+  // them on every tab.
   const { data: fiscalYears = [] } = useQuery({
     queryKey: ['fiscal-years'],
     queryFn: getFiscalYears,
   });
 
+  // Accounts are shown on the overview and chart tabs, and are needed by the
+  // transaction/invoice/budget modals opened from those tabs.
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: getAccounts,
-  });
-
-  useQuery({
-    queryKey: ['membership-fee-types'],
-    queryFn: getMembershipFeeTypes,
+    enabled: ['overview', 'chart', 'transactions', 'invoices', 'budgets'].includes(activeTab),
   });
 
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ['invoices'],
     queryFn: () => getInvoices(),
+    enabled: activeTab === 'invoices' || activeTab === 'overview',
   });
 
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery({
@@ -230,15 +234,18 @@ export default function Accounting() {
     { id: 'reports', label: t('accounting.reports'), icon: 'chart' },
   ];
 
-  const groupedAccounts = accounts.reduce((acc, account) => {
-    if (!acc[account.accountType]) acc[account.accountType] = [];
-    acc[account.accountType].push(account);
-    return acc;
-  }, {} as Record<AccountType, Account[]>);
+  const groupedAccounts = accounts.reduce(
+    (acc, account) => {
+      if (!acc[account.accountType]) acc[account.accountType] = [];
+      acc[account.accountType].push(account);
+      return acc;
+    },
+    {} as Record<AccountType, Account[]>,
+  );
 
-  const bankAccounts = accounts.filter(a => a.accountSubtype === 'bank');
-  const receivableAccounts = accounts.filter(a => a.accountSubtype === 'receivable');
-  const payableAccounts = accounts.filter(a => a.accountSubtype === 'payable');
+  const bankAccounts = accounts.filter((a) => a.accountSubtype === 'bank');
+  const receivableAccounts = accounts.filter((a) => a.accountSubtype === 'receivable');
+  const payableAccounts = accounts.filter((a) => a.accountSubtype === 'payable');
 
   return (
     <div className="container mx-auto p-4 space-y-4">
@@ -267,20 +274,13 @@ export default function Accounting() {
               </button>
             </>
           ) : (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setShowFiscalYearModal(true)}
-            >
+            <button className="btn btn-primary btn-sm" onClick={() => setShowFiscalYearModal(true)}>
               <Icon name="plus" size={16} />
               {t('accounting.newFiscalYear')}
             </button>
           )}
           <div className="dropdown dropdown-end">
-            <button
-              tabIndex={0}
-              className="btn btn-outline btn-sm"
-              disabled={isExporting}
-            >
+            <button tabIndex={0} className="btn btn-outline btn-sm" disabled={isExporting}>
               {isExporting ? (
                 <span className="loading loading-spinner loading-xs" />
               ) : (
@@ -290,13 +290,25 @@ export default function Accounting() {
             </button>
             <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-56 z-50">
               <li className="menu-title">{t('accounting.exportData')}</li>
-              <li><button onClick={() => handleExport('transactions')}>{t('accounting.journalEntries')}</button></li>
-              <li><button onClick={() => handleExport('accounts')}>{t('accounting.chartOfAccounts')}</button></li>
-              <li><button onClick={() => handleExport('invoices')}>{t('accounting.invoices')}</button></li>
-              <li><button onClick={() => handleExport('relations')}>{t('accounting.relations')}</button></li>
+              <li>
+                <button onClick={() => handleExport('transactions')}>{t('accounting.journalEntries')}</button>
+              </li>
+              <li>
+                <button onClick={() => handleExport('accounts')}>{t('accounting.chartOfAccounts')}</button>
+              </li>
+              <li>
+                <button onClick={() => handleExport('invoices')}>{t('accounting.invoices')}</button>
+              </li>
+              <li>
+                <button onClick={() => handleExport('relations')}>{t('accounting.relations')}</button>
+              </li>
               <li className="menu-title">{t('accounting.reports')}</li>
-              <li><button onClick={() => handleExport('balance-sheet')}>{t('accounting.balanceSheet')}</button></li>
-              <li><button onClick={() => handleExport('profit-loss')}>{t('accounting.profitLoss')}</button></li>
+              <li>
+                <button onClick={() => handleExport('balance-sheet')}>{t('accounting.balanceSheet')}</button>
+              </li>
+              <li>
+                <button onClick={() => handleExport('profit-loss')}>{t('accounting.profitLoss')}</button>
+              </li>
             </ul>
           </div>
         </div>
@@ -321,21 +333,30 @@ export default function Accounting() {
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('chart')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('chart')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.chartOfAccounts')}</div>
                 <div className="text-2xl font-bold">{accounts.length}</div>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('transactions')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('transactions')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.journalEntries')}</div>
                 <div className="text-2xl font-bold">{transactions.length}</div>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('invoices')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('invoices')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.openInvoices')}</div>
                 <div className="text-2xl font-bold">
@@ -344,21 +365,30 @@ export default function Accounting() {
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('relations')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('relations')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.relations')}</div>
                 <div className="text-2xl font-bold">{relations.length}</div>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('costcenters')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('costcenters')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.costCenters')}</div>
                 <div className="text-2xl font-bold">{costCenters.length}</div>
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveTab('budgets')}>
+            <div
+              className="card bg-base-100 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setActiveTab('budgets')}
+            >
               <div className="card-body p-4">
                 <div className="text-sm text-base-content/60">{t('accounting.budgets')}</div>
                 <div className="text-2xl font-bold">{budgets.length}</div>
@@ -380,7 +410,9 @@ export default function Accounting() {
                           <div className="text-sm text-base-content/60">{account.code}</div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-lg font-bold ${account.currentBalance >= 0 ? 'text-success' : 'text-error'}`}>
+                          <div
+                            className={`text-lg font-bold ${account.currentBalance >= 0 ? 'text-success' : 'text-error'}`}
+                          >
                             {formatCurrency(account.currentBalance)}
                           </div>
                         </div>
@@ -479,7 +511,10 @@ export default function Accounting() {
               )}
               <button
                 className="btn btn-primary gap-2"
-                onClick={() => { setEditingAccount(null); setShowAccountModal(true); }}
+                onClick={() => {
+                  setEditingAccount(null);
+                  setShowAccountModal(true);
+                }}
               >
                 <Icon name="plus" size={16} />
                 {t('accounting.newAccount')}
@@ -535,48 +570,52 @@ export default function Accounting() {
                             </tr>
                           </thead>
                           <tbody>
-                            {typeAccounts.sort((a, b) => a.code.localeCompare(b.code)).map((account) => (
-                              <tr key={account.id} className={account.parentId ? 'bg-base-200/50' : ''}>
-                                <td className="font-mono">
-                                  {account.parentId && <span className="text-base-content/40 mr-1">└</span>}
-                                  {account.code}
-                                </td>
-                                <td>
-                                  {account.name}
-                                  {account.isSystem && (
-                                    <span className="badge badge-ghost badge-xs ml-2">{t('accounting.system')}</span>
-                                  )}
-                                </td>
-                                <td className="text-sm text-base-content/70">
-                                  {account.accountSubtype && t(`accounting.accountSubtypes.${account.accountSubtype}`)}
-                                </td>
-                                <td className="text-right font-mono">
-                                  {formatCurrency(account.currentBalance)}
-                                </td>
-                                <td>
-                                  <div className="flex gap-1">
-                                    <button
-                                      className="btn btn-ghost btn-xs"
-                                      onClick={() => { setEditingAccount(account); setShowAccountModal(true); }}
-                                    >
-                                      <Icon name="pencil" size={14} />
-                                    </button>
-                                    {!account.isSystem && (
+                            {typeAccounts
+                              .sort((a, b) => a.code.localeCompare(b.code))
+                              .map((account) => (
+                                <tr key={account.id} className={account.parentId ? 'bg-base-200/50' : ''}>
+                                  <td className="font-mono">
+                                    {account.parentId && <span className="text-base-content/40 mr-1">└</span>}
+                                    {account.code}
+                                  </td>
+                                  <td>
+                                    {account.name}
+                                    {account.isSystem && (
+                                      <span className="badge badge-ghost badge-xs ml-2">{t('accounting.system')}</span>
+                                    )}
+                                  </td>
+                                  <td className="text-sm text-base-content/70">
+                                    {account.accountSubtype &&
+                                      t(`accounting.accountSubtypes.${account.accountSubtype}`)}
+                                  </td>
+                                  <td className="text-right font-mono">{formatCurrency(account.currentBalance)}</td>
+                                  <td>
+                                    <div className="flex gap-1">
                                       <button
-                                        className="btn btn-ghost btn-xs text-error"
+                                        className="btn btn-ghost btn-xs"
                                         onClick={() => {
-                                          if (confirm(t('accounting.confirmDeleteAccount'))) {
-                                            deleteAccountMutation.mutate(account.id);
-                                          }
+                                          setEditingAccount(account);
+                                          setShowAccountModal(true);
                                         }}
                                       >
-                                        <Icon name="trash" size={14} />
+                                        <Icon name="pencil" size={14} />
                                       </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                      {!account.isSystem && (
+                                        <button
+                                          className="btn btn-ghost btn-xs text-error"
+                                          onClick={() => {
+                                            if (confirm(t('accounting.confirmDeleteAccount'))) {
+                                              deleteAccountMutation.mutate(account.id);
+                                            }
+                                          }}
+                                        >
+                                          <Icon name="trash" size={14} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
                           </tbody>
                         </table>
                       </div>
@@ -681,6 +720,9 @@ export default function Accounting() {
                         <th>{t('accounting.due')}</th>
                         <th className="text-right">{t('accounting.amount')}</th>
                         <th>{t('common.status')}</th>
+                        <th>
+                          <span className="sr-only">{t('common.actions')}</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -692,13 +734,28 @@ export default function Accounting() {
                           <td>{new Date(invoice.dueDate).toLocaleDateString('nl-NL')}</td>
                           <td className="text-right font-mono">{formatCurrency(invoice.total)}</td>
                           <td>
-                            <span className={`badge badge-sm ${
-                              invoice.status === 'paid' ? 'badge-success' :
-                              invoice.status === 'overdue' ? 'badge-error' :
-                              invoice.status === 'sent' ? 'badge-info' : 'badge-ghost'
-                            }`}>
+                            <span
+                              className={`badge badge-sm ${
+                                invoice.status === 'paid'
+                                  ? 'badge-success'
+                                  : invoice.status === 'overdue'
+                                    ? 'badge-error'
+                                    : invoice.status === 'sent'
+                                      ? 'badge-info'
+                                      : 'badge-ghost'
+                              }`}
+                            >
                               {t(`accounting.invoiceStatus.${invoice.status}`)}
                             </span>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setPrintInvoice(invoice)}
+                              title={t('printTemplates.invoice.printButton')}
+                            >
+                              {t('printTemplates.print')}
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -749,10 +806,15 @@ export default function Accounting() {
                           <td className="font-mono">{rel.relationNumber || '-'}</td>
                           <td>{rel.name}</td>
                           <td>
-                            <span className={`badge badge-sm ${
-                              rel.relationType === 'customer' ? 'badge-success' :
-                              rel.relationType === 'supplier' ? 'badge-warning' : 'badge-info'
-                            }`}>
+                            <span
+                              className={`badge badge-sm ${
+                                rel.relationType === 'customer'
+                                  ? 'badge-success'
+                                  : rel.relationType === 'supplier'
+                                    ? 'badge-warning'
+                                    : 'badge-info'
+                              }`}
+                            >
                               {t(`accounting.relationTypes.${rel.relationType}`)}
                             </span>
                           </td>
@@ -866,7 +928,9 @@ export default function Accounting() {
                             </td>
                             <td className="text-right font-mono">{formatCurrency(budget.amount)}</td>
                             <td className="text-right font-mono">{formatCurrency(budget.actual)}</td>
-                            <td className={`text-right font-mono ${budget.remaining >= 0 ? 'text-success' : 'text-error'}`}>
+                            <td
+                              className={`text-right font-mono ${budget.remaining >= 0 ? 'text-success' : 'text-error'}`}
+                            >
                               {formatCurrency(budget.remaining)}
                             </td>
                             <td>
@@ -908,7 +972,9 @@ export default function Accounting() {
                 <p className="text-base-content/60">{t('accounting.selectFiscalYearFirst')}</p>
               ) : !balanceReport ? (
                 <SkeletonCard />
-              ) : balanceReport.assets?.length === 0 && balanceReport.liabilities?.length === 0 && balanceReport.equity?.length === 0 ? (
+              ) : balanceReport.assets?.length === 0 &&
+                balanceReport.liabilities?.length === 0 &&
+                balanceReport.equity?.length === 0 ? (
                 <p className="text-base-content/60">{t('accounting.noAccountsForReport')}</p>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -917,7 +983,9 @@ export default function Accounting() {
                     <div className="space-y-2">
                       {balanceReport.assets?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
-                          <span>{item.code} - {item.name}</span>
+                          <span>
+                            {item.code} - {item.name}
+                          </span>
                           <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
@@ -932,19 +1000,25 @@ export default function Accounting() {
                     <div className="space-y-2">
                       {balanceReport.liabilities?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
-                          <span>{item.code} - {item.name}</span>
+                          <span>
+                            {item.code} - {item.name}
+                          </span>
                           <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
                       {balanceReport.equity?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
-                          <span>{item.code} - {item.name}</span>
+                          <span>
+                            {item.code} - {item.name}
+                          </span>
                           <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between font-bold border-t pt-2">
                         <span>{t('accounting.totalLiabilitiesEquity')}</span>
-                        <span className="font-mono">{formatCurrency(balanceReport.totals?.liabilitiesAndEquity || 0)}</span>
+                        <span className="font-mono">
+                          {formatCurrency(balanceReport.totals?.liabilitiesAndEquity || 0)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -970,7 +1044,9 @@ export default function Accounting() {
                     <div className="space-y-1">
                       {profitLossReport.income?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
-                          <span>{item.code} - {item.name}</span>
+                          <span>
+                            {item.code} - {item.name}
+                          </span>
                           <span className="font-mono">{formatCurrency(item.amount)}</span>
                         </div>
                       ))}
@@ -985,7 +1061,9 @@ export default function Accounting() {
                     <div className="space-y-1">
                       {profitLossReport.expenses?.map((item: any) => (
                         <div key={item.code} className="flex justify-between">
-                          <span>{item.code} - {item.name}</span>
+                          <span>
+                            {item.code} - {item.name}
+                          </span>
                           <span className="font-mono">{formatCurrency(item.amount)}</span>
                         </div>
                       ))}
@@ -995,9 +1073,13 @@ export default function Accounting() {
                       </div>
                     </div>
                   </div>
-                  <div className={`text-xl font-bold p-4 rounded-lg ${
-                    (profitLossReport.totals?.netResult || 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-                  }`}>
+                  <div
+                    className={`text-xl font-bold p-4 rounded-lg ${
+                      (profitLossReport.totals?.netResult || 0) >= 0
+                        ? 'bg-success/10 text-success'
+                        : 'bg-error/10 text-error'
+                    }`}
+                  >
                     <div className="flex justify-between">
                       <span>{t('accounting.netResult')}</span>
                       <span className="font-mono">{formatCurrency(profitLossReport.totals?.netResult || 0)}</span>
@@ -1015,7 +1097,10 @@ export default function Accounting() {
         <AccountModal
           account={editingAccount}
           accounts={accounts}
-          onClose={() => { setShowAccountModal(false); setEditingAccount(null); }}
+          onClose={() => {
+            setShowAccountModal(false);
+            setEditingAccount(null);
+          }}
           onSave={() => {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             setShowAccountModal(false);
@@ -1050,6 +1135,9 @@ export default function Accounting() {
           }}
         />
       )}
+
+      {/* Invoice Print View */}
+      {printInvoice && <InvoicePrinter invoice={printInvoice} onClose={() => setPrintInvoice(null)} />}
 
       {/* Relation Modal */}
       {showRelationModal && (
@@ -1156,7 +1244,7 @@ function AccountModal({
     }
   };
 
-  const parentOptions = accounts.filter(a => a.id !== account?.id && a.accountType === formData.accountType);
+  const parentOptions = accounts.filter((a) => a.id !== account?.id && a.accountType === formData.accountType);
 
   return (
     <Modal title={account ? t('accounting.editAccount') : t('accounting.newAccount')} onClose={onClose}>
@@ -1181,10 +1269,14 @@ function AccountModal({
             <select
               className="select select-bordered"
               value={formData.accountType}
-              onChange={(e) => setFormData({ ...formData, accountType: e.target.value as AccountType, parentId: undefined })}
+              onChange={(e) =>
+                setFormData({ ...formData, accountType: e.target.value as AccountType, parentId: undefined })
+              }
             >
               {(['asset', 'liability', 'equity', 'income', 'expense'] as AccountType[]).map((type) => (
-                <option key={type} value={type}>{t(`accounting.accountTypes.${type}`)}</option>
+                <option key={type} value={type}>
+                  {t(`accounting.accountTypes.${type}`)}
+                </option>
               ))}
             </select>
           </div>
@@ -1211,14 +1303,40 @@ function AccountModal({
             <select
               className="select select-bordered"
               value={formData.accountSubtype || ''}
-              onChange={(e) => setFormData({ ...formData, accountSubtype: (e.target.value || undefined) as AccountSubtype | undefined })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  accountSubtype: (e.target.value || undefined) as AccountSubtype | undefined,
+                })
+              }
             >
               <option value="">{t('accounting.noSubtype')}</option>
-              {['bank', 'cash', 'receivable', 'payable', 'inventory', 'fixed_asset', 'current_liability',
-                'long_term_liability', 'retained_earnings', 'membership_fees', 'donations', 'grants',
-                'ticket_sales', 'sponsoring', 'personnel', 'materials', 'rent', 'utilities', 'insurance',
-                'depreciation', 'other'].map((subtype) => (
-                <option key={subtype} value={subtype}>{t(`accounting.accountSubtypes.${subtype}`)}</option>
+              {[
+                'bank',
+                'cash',
+                'receivable',
+                'payable',
+                'inventory',
+                'fixed_asset',
+                'current_liability',
+                'long_term_liability',
+                'retained_earnings',
+                'membership_fees',
+                'donations',
+                'grants',
+                'ticket_sales',
+                'sponsoring',
+                'personnel',
+                'materials',
+                'rent',
+                'utilities',
+                'insurance',
+                'depreciation',
+                'other',
+              ].map((subtype) => (
+                <option key={subtype} value={subtype}>
+                  {t(`accounting.accountSubtypes.${subtype}`)}
+                </option>
               ))}
             </select>
           </div>
@@ -1233,7 +1351,9 @@ function AccountModal({
             >
               <option value="">{t('accounting.noParent')}</option>
               {parentOptions.map((a) => (
-                <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                <option key={a.id} value={a.id}>
+                  {a.code} - {a.name}
+                </option>
               ))}
             </select>
           </div>
@@ -1324,7 +1444,7 @@ function TransactionModal({
     e.preventDefault();
     // Filter out empty lines and validate
     const validLines = formData.lines.filter(
-      (line) => line.accountId && (line.debitAmount > 0 || line.creditAmount > 0)
+      (line) => line.accountId && (line.debitAmount > 0 || line.creditAmount > 0),
     );
     if (validLines.length < 2) {
       showError(t('accounting.minTwoLines'));
@@ -1390,7 +1510,9 @@ function TransactionModal({
               onChange={(e) => setFormData({ ...formData, transactionType: e.target.value as TransactionType })}
             >
               {(['journal', 'payment', 'receipt', 'bank', 'transfer'] as TransactionType[]).map((type) => (
-                <option key={type} value={type}>{t(`accounting.transactionTypes.${type}`)}</option>
+                <option key={type} value={type}>
+                  {t(`accounting.transactionTypes.${type}`)}
+                </option>
               ))}
             </select>
           </div>
@@ -1444,7 +1566,9 @@ function TransactionModal({
                     >
                       <option value="">{t('accounting.selectAccount')}</option>
                       {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                        <option key={a.id} value={a.id}>
+                          {a.code} - {a.name}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -1456,7 +1580,9 @@ function TransactionModal({
                     >
                       <option value="">-</option>
                       {costCenters.map((cc) => (
-                        <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                        <option key={cc.id} value={cc.id}>
+                          {cc.code} - {cc.name}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -1495,7 +1621,9 @@ function TransactionModal({
             </tbody>
             <tfoot>
               <tr className={`font-bold ${isBalanced ? '' : 'text-error'}`}>
-                <td colSpan={2} className="text-right">{t('common.total')}</td>
+                <td colSpan={2} className="text-right">
+                  {t('common.total')}
+                </td>
                 <td className="text-right">{totalDebit.toFixed(2)}</td>
                 <td className="text-right">{totalCredit.toFixed(2)}</td>
                 <td></td>
@@ -1520,16 +1648,8 @@ function TransactionModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createMutation.isPending || !isBalanced}
-          >
-            {createMutation.isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending || !isBalanced}>
+            {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>
@@ -1609,7 +1729,7 @@ function InvoiceModal({
   const expenseAccounts = accounts.filter((a) => a.accountType === 'expense');
   const relevantAccounts = formData.invoiceType === 'sales' ? incomeAccounts : expenseAccounts;
 
-  const subtotal = formData.lines.reduce((sum, l) => sum + (l.quantity * l.unitPrice), 0);
+  const subtotal = formData.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
 
   return (
     <Modal title={t('accounting.newInvoice')} onClose={onClose} size="large">
@@ -1641,7 +1761,9 @@ function InvoiceModal({
             >
               <option value="">{t('accounting.selectRelation')}</option>
               {relations.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
               ))}
             </select>
           </div>
@@ -1752,13 +1874,13 @@ function InvoiceModal({
                     >
                       <option value="">-</option>
                       {relevantAccounts.map((a) => (
-                        <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                        <option key={a.id} value={a.id}>
+                          {a.code} - {a.name}
+                        </option>
                       ))}
                     </select>
                   </td>
-                  <td className="text-right font-mono">
-                    {(line.quantity * line.unitPrice).toFixed(2)}
-                  </td>
+                  <td className="text-right font-mono">{(line.quantity * line.unitPrice).toFixed(2)}</td>
                   <td>
                     <button
                       type="button"
@@ -1774,7 +1896,9 @@ function InvoiceModal({
             </tbody>
             <tfoot>
               <tr className="font-bold">
-                <td colSpan={4} className="text-right">{t('accounting.subtotal')}</td>
+                <td colSpan={4} className="text-right">
+                  {t('accounting.subtotal')}
+                </td>
                 <td className="text-right font-mono">{subtotal.toFixed(2)}</td>
                 <td></td>
               </tr>
@@ -1803,16 +1927,8 @@ function InvoiceModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+            {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>
@@ -1823,13 +1939,7 @@ function InvoiceModal({
 // =====================================================
 // RELATION MODAL
 // =====================================================
-function RelationModal({
-  onClose,
-  onSave,
-}: {
-  onClose: () => void;
-  onSave: () => void;
-}) {
+function RelationModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<Partial<AccountingRelation>>({
     relationType: 'customer',
@@ -2019,16 +2129,8 @@ function RelationModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+            {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>
@@ -2039,13 +2141,7 @@ function RelationModal({
 // =====================================================
 // COST CENTER MODAL
 // =====================================================
-function CostCenterModal({
-  onClose,
-  onSave,
-}: {
-  onClose: () => void;
-  onSave: () => void;
-}) {
+function CostCenterModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<Partial<CostCenter>>({
     code: '',
@@ -2128,16 +2224,8 @@ function CostCenterModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+            {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>
@@ -2217,7 +2305,9 @@ function BudgetModal({
           >
             <option value="">{t('accounting.selectAccount')}</option>
             {expenseAccounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+              <option key={a.id} value={a.id}>
+                {a.code} - {a.name}
+              </option>
             ))}
           </select>
         </div>
@@ -2234,7 +2324,9 @@ function BudgetModal({
             >
               <option value="">{t('accounting.allYears')}</option>
               {fiscalYears.map((fy) => (
-                <option key={fy.id} value={fy.id}>{fy.name}</option>
+                <option key={fy.id} value={fy.id}>
+                  {fy.name}
+                </option>
               ))}
             </select>
           </div>
@@ -2249,7 +2341,9 @@ function BudgetModal({
             >
               <option value="">-</option>
               {costCenters.map((cc) => (
-                <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                <option key={cc.id} value={cc.id}>
+                  {cc.code} - {cc.name}
+                </option>
               ))}
             </select>
           </div>
@@ -2285,16 +2379,8 @@ function BudgetModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+            {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>
@@ -2383,9 +2469,7 @@ function FiscalYearModal({
           </label>
         </div>
 
-        {fiscalYears.length > 0 && (
-          <div className="divider">{t('accounting.existingFiscalYears')}</div>
-        )}
+        {fiscalYears.length > 0 && <div className="divider">{t('accounting.existingFiscalYears')}</div>}
         {fiscalYears.length > 0 && (
           <ul className="space-y-1 text-sm">
             {fiscalYears.map((fy) => (
@@ -2404,16 +2488,8 @@ function FiscalYearModal({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isPending}
-          >
-            {isPending ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              t('common.save')
-            )}
+          <button type="submit" className="btn btn-primary" disabled={isPending}>
+            {isPending ? <span className="loading loading-spinner loading-sm" /> : t('common.save')}
           </button>
         </div>
       </form>

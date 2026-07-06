@@ -1,0 +1,183 @@
+/* Loan Receipt Printer Styles */
+
+.loan-receipt-printer {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  padding: 2rem 1rem;
+}
+
+.loan-receipt-printer .print-controls {
+  max-width: 210mm;
+  margin: 0 auto 1rem auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Screen preview: simulate an A4 sheet */
+.loan-receipt-printer .print-area {
+  background: white;
+  color: #222;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 20mm;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.loan-receipt .receipt-header {
+  border-bottom: 2px solid #222;
+  padding-bottom: 5mm;
+  margin-bottom: 8mm;
+}
+
+.loan-receipt .association-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #444;
+}
+
+.loan-receipt .receipt-title {
+  margin: 2mm 0 0 0;
+  font-size: 1.75rem;
+  color: #111;
+}
+
+.loan-receipt .receipt-details {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8mm;
+}
+
+.loan-receipt .receipt-details th,
+.loan-receipt .receipt-details td {
+  text-align: left;
+  vertical-align: top;
+  padding: 2mm 0;
+  border-bottom: 1px dashed #ccc;
+  font-size: 0.95rem;
+}
+
+.loan-receipt .receipt-details th {
+  width: 55mm;
+  font-weight: 600;
+  color: #555;
+  padding-right: 5mm;
+}
+
+.loan-receipt .item-arranger {
+  color: #555;
+}
+
+.loan-receipt .reference-number {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.loan-receipt .condition-notes h2,
+.loan-receipt .signature-block h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+  margin: 0 0 3mm 0;
+}
+
+.loan-receipt .notes-box {
+  border: 1px solid #999;
+  border-radius: 2mm;
+  min-height: 25mm;
+  padding: 3mm;
+  margin-bottom: 10mm;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.loan-receipt .signatures {
+  display: flex;
+  gap: 10mm;
+}
+
+.loan-receipt .signature-block {
+  flex: 1;
+  border: 1px solid #999;
+  border-radius: 2mm;
+  padding: 5mm;
+}
+
+.loan-receipt .signature-line {
+  margin-top: 14mm;
+}
+
+.loan-receipt .signature-line .line {
+  display: block;
+  border-bottom: 1px solid #222;
+}
+
+.loan-receipt .signature-line .line-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 1mm;
+}
+
+.loan-receipt .receipt-footer {
+  margin-top: 10mm;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Print styles: only the receipt is printed */
+@media print {
+  body.loan-receipt-printing * {
+    visibility: hidden;
+  }
+
+  .loan-receipt-printer {
+    position: absolute;
+    inset: auto;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .loan-receipt-printer .no-print {
+    display: none !important;
+  }
+
+  .loan-receipt-printer .print-area,
+  .loan-receipt-printer .print-area * {
+    visibility: visible;
+  }
+
+  .loan-receipt-printer .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .loan-receipt .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

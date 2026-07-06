@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -55,9 +56,7 @@ export default function InfoScreen() {
         <div className="text-center" role="alert">
           <Icon name="warning" size={48} className="mx-auto mb-4 opacity-50" aria-hidden={true} />
           <h1 className="text-xl font-bold mb-2">Info Screen Not Available</h1>
-          <p className="text-base-content/70">
-            {error instanceof Error ? error.message : 'Association not found'}
-          </p>
+          <p className="text-base-content/70">{error instanceof Error ? error.message : 'Association not found'}</p>
         </div>
       </div>
     );
@@ -68,7 +67,7 @@ export default function InfoScreen() {
 
 function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; currentTime: Date }) {
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -87,10 +86,10 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
         <h1 className="text-4xl md:text-5xl font-bold">{data.association.name}</h1>
         <div className="text-right">
           <div className="text-5xl md:text-6xl font-mono font-bold">
-            {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+            {currentTime.toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' })}
           </div>
           <div className="text-lg text-base-content/70">
-            {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {currentTime.toLocaleDateString(currentLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
         </div>
       </header>
@@ -106,20 +105,21 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
               </div>
               <h2 className="card-title text-3xl mt-2">{data.nextConcert.name}</h2>
               <div className="text-xl mt-2">{formatDate(data.nextConcert.date)}</div>
-              {data.nextConcert.startTime && (
-                <div className="text-lg">{formatTime(data.nextConcert.startTime)}</div>
-              )}
+              {data.nextConcert.startTime && <div className="text-lg">{formatTime(data.nextConcert.startTime)}</div>}
               {data.nextConcert.venue && (
                 <div className="flex items-center gap-1 mt-2">
                   <Icon name="mapPin" size={16} aria-hidden={true} />
-                  {data.nextConcert.venue}{data.nextConcert.city && `, ${data.nextConcert.city}`}
+                  {data.nextConcert.venue}
+                  {data.nextConcert.city && `, ${data.nextConcert.city}`}
                 </div>
               )}
               <div className="mt-4">
                 <span className="badge badge-lg bg-primary-content/20 border-0 text-primary-content">
-                  {data.nextConcert.daysUntil === 0 ? 'Today!' :
-                   data.nextConcert.daysUntil === 1 ? 'Tomorrow!' :
-                   `In ${data.nextConcert.daysUntil} days`}
+                  {data.nextConcert.daysUntil === 0
+                    ? 'Today!'
+                    : data.nextConcert.daysUntil === 1
+                      ? 'Tomorrow!'
+                      : `In ${data.nextConcert.daysUntil} days`}
                 </span>
               </div>
             </div>
@@ -134,9 +134,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
                 <Icon name="users" size={20} aria-hidden={true} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Next Rehearsal</span>
               </div>
-              <h2 className="card-title text-2xl mt-2">
-                {data.nextRehearsal.orchestraName || 'Rehearsal'}
-              </h2>
+              <h2 className="card-title text-2xl mt-2">{data.nextRehearsal.orchestraName || 'Rehearsal'}</h2>
               <div className="text-lg">{formatDate(data.nextRehearsal.date)}</div>
               <div className="flex items-center gap-2">
                 <Icon name="clock" size={16} className="opacity-70" aria-hidden={true} />
@@ -162,13 +160,14 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
                 <span className="uppercase text-sm font-semibold tracking-wider">Coming Up</span>
               </div>
               <div className="space-y-3 mt-2">
-                {data.upcomingConcerts.slice(0, 4).map(concert => (
-                  <div key={concert.id} className="flex justify-between items-center py-2 border-b border-base-200 last:border-0">
+                {data.upcomingConcerts.slice(0, 4).map((concert) => (
+                  <div
+                    key={concert.id}
+                    className="flex justify-between items-center py-2 border-b border-base-200 last:border-0"
+                  >
                     <div>
                       <div className="font-medium">{concert.name}</div>
-                      <div className="text-sm text-base-content/60">
-                        {concert.venue}
-                      </div>
+                      <div className="text-sm text-base-content/60">{concert.venue}</div>
                     </div>
                     <div className="text-right text-sm">
                       <div>{formatDate(concert.date)}</div>
@@ -191,9 +190,7 @@ function InfoScreenDisplay({ data, currentTime }: { data: InfoScreenData; curren
               </div>
               <h3 className="font-semibold text-xl mt-2">{data.announcement.title}</h3>
               {data.announcement.content && (
-                <p className="text-base-content/80 mt-2 line-clamp-3">
-                  {data.announcement.content}
-                </p>
+                <p className="text-base-content/80 mt-2 line-clamp-3">{data.announcement.content}</p>
               )}
             </div>
           </div>

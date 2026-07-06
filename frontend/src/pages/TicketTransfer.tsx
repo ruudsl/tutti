@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -177,7 +178,7 @@ export default function TicketTransferPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nl-NL', {
+    return new Date(dateString).toLocaleDateString(currentLocale(), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -185,7 +186,7 @@ export default function TicketTransferPage() {
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('nl-NL', {
+    return new Date(dateString).toLocaleString(currentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -212,26 +213,27 @@ export default function TicketTransferPage() {
           <div className="card-body" style={{ textAlign: 'center', padding: '3rem' }}>
             <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>&#127915;</span>
             <h3>{t('ticketTransfer.noTransferableTickets')}</h3>
-            <p style={{ color: 'var(--text-light)' }}>
-              {t('ticketTransfer.noTransferableTicketsDescription')}
-            </p>
+            <p style={{ color: 'var(--text-light)' }}>{t('ticketTransfer.noTransferableTicketsDescription')}</p>
           </div>
         </div>
       );
     }
 
     // Group tickets by concert
-    const ticketsByConcert = transferableTickets.reduce((acc, ticket) => {
-      const key = ticket.concert.id;
-      if (!acc[key]) {
-        acc[key] = {
-          concert: ticket.concert,
-          tickets: [],
-        };
-      }
-      acc[key].tickets.push(ticket);
-      return acc;
-    }, {} as Record<string, { concert: TransferableTicket['concert']; tickets: TransferableTicket[] }>);
+    const ticketsByConcert = transferableTickets.reduce(
+      (acc, ticket) => {
+        const key = ticket.concert.id;
+        if (!acc[key]) {
+          acc[key] = {
+            concert: ticket.concert,
+            tickets: [],
+          };
+        }
+        acc[key].tickets.push(ticket);
+        return acc;
+      },
+      {} as Record<string, { concert: TransferableTicket['concert']; tickets: TransferableTicket[] }>,
+    );
 
     return (
       <div className="flex gap-3" style={{ flexDirection: 'column' }}>
@@ -281,9 +283,7 @@ export default function TicketTransferPage() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {ticket.code}
-                    </code>
+                    <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{ticket.code}</code>
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={() => openTransferModal(ticket)}
@@ -319,9 +319,7 @@ export default function TicketTransferPage() {
           <div className="card-body" style={{ textAlign: 'center', padding: '3rem' }}>
             <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>&#128230;</span>
             <h3>{t('ticketTransfer.noPendingTransfers')}</h3>
-            <p style={{ color: 'var(--text-light)' }}>
-              {t('ticketTransfer.noPendingTransfersDescription')}
-            </p>
+            <p style={{ color: 'var(--text-light)' }}>{t('ticketTransfer.noPendingTransfersDescription')}</p>
           </div>
         </div>
       );
@@ -346,9 +344,7 @@ export default function TicketTransferPage() {
                   <td>
                     <strong>{transfer.ticket.ticketType}</strong>
                     <br />
-                    <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {transfer.ticket.code}
-                    </code>
+                    <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{transfer.ticket.code}</code>
                   </td>
                   <td>
                     <div>{transfer.recipientName}</div>
@@ -356,9 +352,7 @@ export default function TicketTransferPage() {
                   </td>
                   <td>
                     <div>{transfer.ticket.concert.name}</div>
-                    <small style={{ color: 'var(--text-light)' }}>
-                      {formatDate(transfer.ticket.concert.date)}
-                    </small>
+                    <small style={{ color: 'var(--text-light)' }}>{formatDate(transfer.ticket.concert.date)}</small>
                   </td>
                   <td>
                     <small>{formatDateTime(transfer.expiresAt)}</small>
@@ -399,9 +393,7 @@ export default function TicketTransferPage() {
           <div className="card-body" style={{ textAlign: 'center', padding: '3rem' }}>
             <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>&#128196;</span>
             <h3>{t('ticketTransfer.noHistory')}</h3>
-            <p style={{ color: 'var(--text-light)' }}>
-              {t('ticketTransfer.noHistoryDescription')}
-            </p>
+            <p style={{ color: 'var(--text-light)' }}>{t('ticketTransfer.noHistoryDescription')}</p>
           </div>
         </div>
       );
@@ -426,9 +418,7 @@ export default function TicketTransferPage() {
                   <td>
                     <strong>{item.ticket.ticketType}</strong>
                     <br />
-                    <small style={{ color: 'var(--text-light)' }}>
-                      {item.ticket.concert.name}
-                    </small>
+                    <small style={{ color: 'var(--text-light)' }}>{item.ticket.concert.name}</small>
                   </td>
                   <td>
                     <div>{item.fromName}</div>
@@ -457,9 +447,7 @@ export default function TicketTransferPage() {
         <h1>{t('ticketTransfer.title')}</h1>
       </div>
 
-      <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>
-        {t('ticketTransfer.description')}
-      </p>
+      <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>{t('ticketTransfer.description')}</p>
 
       {/* Tab navigation */}
       <div className="flex gap-2 mb-3">
@@ -469,7 +457,13 @@ export default function TicketTransferPage() {
         >
           {t('ticketTransfer.tabs.transfer')}
           {transferableTickets.length > 0 && (
-            <span className="badge badge-primary ml-1" style={{ backgroundColor: activeTab === 'transfer' ? 'white' : undefined, color: activeTab === 'transfer' ? 'var(--primary)' : undefined }}>
+            <span
+              className="badge badge-primary ml-1"
+              style={{
+                backgroundColor: activeTab === 'transfer' ? 'white' : undefined,
+                color: activeTab === 'transfer' ? 'var(--primary)' : undefined,
+              }}
+            >
               {transferableTickets.length}
             </span>
           )}
@@ -521,9 +515,7 @@ export default function TicketTransferPage() {
               }}
             >
               <strong>{selectedTicket.ticketType}</strong>
-              <p style={{ margin: '0.25rem 0 0', color: 'var(--text-light)' }}>
-                {selectedTicket.concert.name}
-              </p>
+              <p style={{ margin: '0.25rem 0 0', color: 'var(--text-light)' }}>{selectedTicket.concert.name}</p>
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--text-light)' }}>
                 {formatDate(selectedTicket.concert.date)}
                 {selectedTicket.concert.location && ` - ${selectedTicket.concert.location}`}
@@ -542,9 +534,7 @@ export default function TicketTransferPage() {
               onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })}
               placeholder={t('ticketTransfer.recipientEmailPlaceholder')}
             />
-            {formErrors.recipientEmail && (
-              <div className="invalid-feedback">{formErrors.recipientEmail}</div>
-            )}
+            {formErrors.recipientEmail && <div className="invalid-feedback">{formErrors.recipientEmail}</div>}
           </div>
 
           <div className="form-group">
@@ -558,15 +548,10 @@ export default function TicketTransferPage() {
               onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
               placeholder={t('ticketTransfer.recipientNamePlaceholder')}
             />
-            {formErrors.recipientName && (
-              <div className="invalid-feedback">{formErrors.recipientName}</div>
-            )}
+            {formErrors.recipientName && <div className="invalid-feedback">{formErrors.recipientName}</div>}
           </div>
 
-          <div
-            className="alert alert-warning"
-            style={{ marginTop: '1rem' }}
-          >
+          <div className="alert alert-warning" style={{ marginTop: '1rem' }}>
             {t('ticketTransfer.transferWarning')}
           </div>
         </FormModal>
@@ -574,10 +559,7 @@ export default function TicketTransferPage() {
 
       {/* Confirmation Modal */}
       {showConfirmModal && selectedTicket && (
-        <Modal
-          title={t('ticketTransfer.confirmTransfer')}
-          onClose={() => setShowConfirmModal(false)}
-        >
+        <Modal title={t('ticketTransfer.confirmTransfer')} onClose={() => setShowConfirmModal(false)}>
           <p>{t('ticketTransfer.confirmMessage')}</p>
           <div
             style={{
@@ -609,11 +591,7 @@ export default function TicketTransferPage() {
             >
               {t('common.cancel')}
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={confirmTransfer}
-              disabled={transferMutation.isPending}
-            >
+            <button className="btn btn-primary" onClick={confirmTransfer} disabled={transferMutation.isPending}>
               {transferMutation.isPending ? t('accessibility.processing') : t('ticketTransfer.confirmAndSend')}
             </button>
           </div>

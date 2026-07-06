@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -75,13 +76,16 @@ export function SetlistMode({
     }
   }, [currentIndex, pieces, onPieceSelect]);
 
-  const goToIndex = useCallback((index: number) => {
-    if (index >= 0 && index < pieces.length) {
-      setCurrentIndex(index);
-      onPieceSelect?.(pieces[index], index);
-      triggerHaptic('selection');
-    }
-  }, [pieces, onPieceSelect]);
+  const goToIndex = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < pieces.length) {
+        setCurrentIndex(index);
+        onPieceSelect?.(pieces[index], index);
+        triggerHaptic('selection');
+      }
+    },
+    [pieces, onPieceSelect],
+  );
 
   const exitFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
@@ -140,7 +144,7 @@ export function SetlistMode({
         case 'n':
         case 'N':
           e.preventDefault();
-          setShowNotes(prev => !prev);
+          setShowNotes((prev) => !prev);
           break;
       }
     };
@@ -208,7 +212,7 @@ export function SetlistMode({
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           {showClock && (
             <div style={{ fontSize: '1.5rem', fontFamily: 'monospace', opacity: 0.8 }}>
-              {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+              {currentTime.toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' })}
             </div>
           )}
           <div style={{ fontSize: '1rem', opacity: 0.7 }}>
@@ -364,7 +368,7 @@ export function SetlistMode({
         </button>
 
         <button
-          onClick={() => setShowNotes(prev => !prev)}
+          onClick={() => setShowNotes((prev) => !prev)}
           style={{
             padding: '12px 20px',
             background: showNotes ? 'rgba(59, 130, 246, 0.3)' : 'transparent',

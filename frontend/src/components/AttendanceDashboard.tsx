@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -206,7 +207,7 @@ function TrendChart({ data, noDataText }: { data: AttendanceTrend[]; isDark: boo
                 height: '100%',
                 justifyContent: 'flex-end',
               }}
-              title={`${new Date(item.date).toLocaleDateString('nl-NL')}: ${item.attendanceRate.toFixed(0)}% (${item.presentCount}/${item.totalMembers})`}
+              title={`${new Date(item.date).toLocaleDateString(currentLocale())}: ${item.attendanceRate.toFixed(0)}% (${item.presentCount}/${item.totalMembers})`}
             >
               <div
                 style={{
@@ -250,16 +251,19 @@ function TrendChart({ data, noDataText }: { data: AttendanceTrend[]; isDark: boo
                 textOverflow: 'ellipsis',
               }}
             >
-              {new Date(item.date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
+              {new Date(item.date).toLocaleDateString(currentLocale(), { day: '2-digit', month: 'short' })}
             </div>
           ))
         ) : (
           <>
             <span style={{ flex: 1, textAlign: 'left' }}>
-              {new Date(data[0].date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
+              {new Date(data[0].date).toLocaleDateString(currentLocale(), { day: '2-digit', month: 'short' })}
             </span>
             <span style={{ flex: 1, textAlign: 'right' }}>
-              {new Date(data[data.length - 1].date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
+              {new Date(data[data.length - 1].date).toLocaleDateString(currentLocale(), {
+                day: '2-digit',
+                month: 'short',
+              })}
             </span>
           </>
         )}
@@ -283,16 +287,16 @@ export function AttendanceDashboard({
   const [filters, setFilters] = useState<AttendanceFilters>(getDefaultFilters);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const updateFilter = useCallback(<K extends keyof AttendanceFilters>(
-    key: K,
-    value: AttendanceFilters[K]
-  ) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev, [key]: value };
-      onFilterChange?.(newFilters);
-      return newFilters;
-    });
-  }, [onFilterChange]);
+  const updateFilter = useCallback(
+    <K extends keyof AttendanceFilters>(key: K, value: AttendanceFilters[K]) => {
+      setFilters((prev) => {
+        const newFilters = { ...prev, [key]: value };
+        onFilterChange?.(newFilters);
+        return newFilters;
+      });
+    },
+    [onFilterChange],
+  );
 
   const resetFilters = useCallback(() => {
     const defaults = getDefaultFilters();
@@ -306,7 +310,7 @@ export function AttendanceDashboard({
 
     // Filter by section
     if (filters.section) {
-      result = result.filter(m => m.section === filters.section || m.instrument === filters.section);
+      result = result.filter((m) => m.section === filters.section || m.instrument === filters.section);
     }
 
     // Sort
@@ -340,8 +344,8 @@ export function AttendanceDashboard({
 
     const totalRate = members.reduce((sum, m) => sum + m.attendanceRate, 0);
     const avgRate = totalRate / members.length;
-    const highAttendance = members.filter(m => m.attendanceRate >= 80).length;
-    const lowAttendance = members.filter(m => m.attendanceRate < 50).length;
+    const highAttendance = members.filter((m) => m.attendanceRate >= 80).length;
+    const lowAttendance = members.filter((m) => m.attendanceRate < 50).length;
 
     return { avgRate, highAttendance, lowAttendance };
   }, [members]);
@@ -361,11 +365,7 @@ export function AttendanceDashboard({
         </h2>
         <div className="attendance-header-actions">
           <div className="export-dropdown">
-            <button
-              className="btn btn-outline"
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              type="button"
-            >
+            <button className="btn btn-outline" onClick={() => setShowExportMenu(!showExportMenu)} type="button">
               <Icon name="download" size={18} />
               {t('common.export')}
             </button>
@@ -447,11 +447,7 @@ export function AttendanceDashboard({
         </div>
         <div className="filter-group">
           <label htmlFor="section-filter">{t('attendanceDashboard.section')}</label>
-          <select
-            id="section-filter"
-            value={filters.section}
-            onChange={(e) => updateFilter('section', e.target.value)}
-          >
+          <select id="section-filter" value={filters.section} onChange={(e) => updateFilter('section', e.target.value)}>
             <option value="">{t('attendanceDashboard.allSections')}</option>
             {sections.map((section) => (
               <option key={section} value={section}>
@@ -500,7 +496,9 @@ export function AttendanceDashboard({
 
       {/* Member table */}
       <div className="attendance-table-section">
-        <h3 className="section-title">{t('attendanceDashboard.memberList')} ({filteredMembers.length})</h3>
+        <h3 className="section-title">
+          {t('attendanceDashboard.memberList')} ({filteredMembers.length})
+        </h3>
         {isLoading ? (
           <div className="loading-state">
             <span>{t('common.loading')}</span>
@@ -527,9 +525,7 @@ export function AttendanceDashboard({
                   <tr key={member.id}>
                     <td className="member-name">
                       <span className="name-text">{member.name}</span>
-                      {member.email && (
-                        <span className="member-email">{member.email}</span>
-                      )}
+                      {member.email && <span className="member-email">{member.email}</span>}
                     </td>
                     <td>{member.instrument}</td>
                     <td className="count-cell present">{member.presentCount}</td>
@@ -547,7 +543,9 @@ export function AttendanceDashboard({
 
       {/* Rehearsal breakdown */}
       <div className="attendance-rehearsal-section">
-        <h3 className="section-title">{t('attendanceDashboard.rehearsals')} ({rehearsals.length})</h3>
+        <h3 className="section-title">
+          {t('attendanceDashboard.rehearsals')} ({rehearsals.length})
+        </h3>
         <div className="rehearsal-list">
           {rehearsals.length === 0 ? (
             <div className="empty-state">
@@ -558,7 +556,7 @@ export function AttendanceDashboard({
             rehearsals.slice(0, 10).map((rehearsal) => (
               <div key={rehearsal.id} className="rehearsal-item">
                 <div className="rehearsal-date">
-                  {new Date(rehearsal.date).toLocaleDateString('nl-NL', {
+                  {new Date(rehearsal.date).toLocaleDateString(currentLocale(), {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',

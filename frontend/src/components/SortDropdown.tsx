@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback, memo, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon, IconName } from './Icon';
 
@@ -15,7 +16,7 @@ export type SortDirection = 'asc' | 'desc';
 export interface SortOption<T extends string = string> {
   /** Unique identifier for the sort option */
   id: T;
-  /** Display label (Dutch) */
+  /** Display label: an i18n key (translated in the component) or a literal string */
   label: string;
   /** Optional icon */
   icon?: IconName;
@@ -53,14 +54,44 @@ interface SortDropdownProps<T extends string = string> {
   placeholder?: string;
 }
 
-// Predefined common sort options (Dutch labels)
+// Predefined common sort options (labels are i18n keys, translated inside the component)
 export const COMMON_SORT_OPTIONS = {
-  NAME_ASC: { id: 'name-asc', label: 'Naam (A-Z)', icon: 'type' as IconName, defaultDirection: 'asc' as SortDirection },
-  NAME_DESC: { id: 'name-desc', label: 'Naam (Z-A)', icon: 'type' as IconName, defaultDirection: 'desc' as SortDirection },
-  DATE_NEWEST: { id: 'date-newest', label: 'Datum (nieuwste eerst)', icon: 'calendar' as IconName, defaultDirection: 'desc' as SortDirection },
-  DATE_OLDEST: { id: 'date-oldest', label: 'Datum (oudste eerst)', icon: 'calendar' as IconName, defaultDirection: 'asc' as SortDirection },
-  COMPOSER: { id: 'composer', label: 'Componist', icon: 'music' as IconName, defaultDirection: 'asc' as SortDirection },
-  LAST_VIEWED: { id: 'last-viewed', label: 'Laatst bekeken', icon: 'clock' as IconName, defaultDirection: 'desc' as SortDirection },
+  NAME_ASC: {
+    id: 'name-asc',
+    label: 'common.sort.nameAsc',
+    icon: 'type' as IconName,
+    defaultDirection: 'asc' as SortDirection,
+  },
+  NAME_DESC: {
+    id: 'name-desc',
+    label: 'common.sort.nameDesc',
+    icon: 'type' as IconName,
+    defaultDirection: 'desc' as SortDirection,
+  },
+  DATE_NEWEST: {
+    id: 'date-newest',
+    label: 'common.sort.dateNewest',
+    icon: 'calendar' as IconName,
+    defaultDirection: 'desc' as SortDirection,
+  },
+  DATE_OLDEST: {
+    id: 'date-oldest',
+    label: 'common.sort.dateOldest',
+    icon: 'calendar' as IconName,
+    defaultDirection: 'asc' as SortDirection,
+  },
+  COMPOSER: {
+    id: 'composer',
+    label: 'common.sort.composer',
+    icon: 'music' as IconName,
+    defaultDirection: 'asc' as SortDirection,
+  },
+  LAST_VIEWED: {
+    id: 'last-viewed',
+    label: 'common.sort.lastViewed',
+    icon: 'clock' as IconName,
+    defaultDirection: 'desc' as SortDirection,
+  },
 };
 
 // Default options for music-related lists
@@ -82,8 +113,9 @@ function SortDropdownComponent<T extends string = string>({
   style,
   disabled = false,
   compact = false,
-  placeholder = 'Sorteer op...',
+  placeholder,
 }: SortDropdownProps<T>) {
+  const { t } = useTranslation();
   const { isDark } = useDarkMode();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -95,6 +127,9 @@ function SortDropdownComponent<T extends string = string>({
   });
 
   const currentOption = options.find((opt) => opt.id === value.sortBy);
+  // Labels may be i18n keys (e.g. COMMON_SORT_OPTIONS) or literal strings; fall back to the literal
+  const optionLabel = useCallback((label: string) => t(label, label), [t]);
+  const placeholderText = placeholder ?? t('common.sort.placeholder');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -168,51 +203,59 @@ function SortDropdownComponent<T extends string = string>({
     };
   }, [isOpen]);
 
-  const handleSelect = useCallback((option: SortOption<T>) => {
-    const isSameOption = option.id === value.sortBy;
-    const newDirection: SortDirection = isSameOption && !option.disableDirectionToggle
-      ? (value.direction === 'asc' ? 'desc' : 'asc')
-      : (option.defaultDirection ?? 'asc');
+  const handleSelect = useCallback(
+    (option: SortOption<T>) => {
+      const isSameOption = option.id === value.sortBy;
+      const newDirection: SortDirection =
+        isSameOption && !option.disableDirectionToggle
+          ? value.direction === 'asc'
+            ? 'desc'
+            : 'asc'
+          : (option.defaultDirection ?? 'asc');
 
-    onChange({
-      sortBy: option.id,
-      direction: newDirection,
-    });
-    setIsOpen(false);
-  }, [value, onChange]);
+      onChange({
+        sortBy: option.id,
+        direction: newDirection,
+      });
+      setIsOpen(false);
+    },
+    [value, onChange],
+  );
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'ArrowDown' && isOpen) {
-      event.preventDefault();
-      const items = dropdownRef.current?.querySelectorAll('[role="menuitem"]');
-      (items?.[0] as HTMLElement)?.focus();
-    }
-  }, [isOpen]);
-
-  const handleItemKeyDown = useCallback((
-    event: React.KeyboardEvent,
-    option: SortOption<T>,
-    index: number
-  ) => {
-    const items = dropdownRef.current?.querySelectorAll('[role="menuitem"]');
-    if (!items) return;
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      const next = items[index + 1] as HTMLElement;
-      if (next) next.focus();
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      if (index === 0) {
-        buttonRef.current?.focus();
-      } else {
-        (items[index - 1] as HTMLElement)?.focus();
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'ArrowDown' && isOpen) {
+        event.preventDefault();
+        const items = dropdownRef.current?.querySelectorAll('[role="option"]');
+        (items?.[0] as HTMLElement)?.focus();
       }
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleSelect(option);
-    }
-  }, [handleSelect]);
+    },
+    [isOpen],
+  );
+
+  const handleItemKeyDown = useCallback(
+    (event: React.KeyboardEvent, option: SortOption<T>, index: number) => {
+      const items = dropdownRef.current?.querySelectorAll('[role="option"]');
+      if (!items) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        const next = items[index + 1] as HTMLElement;
+        if (next) next.focus();
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (index === 0) {
+          buttonRef.current?.focus();
+        } else {
+          (items[index - 1] as HTMLElement)?.focus();
+        }
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleSelect(option);
+      }
+    },
+    [handleSelect],
+  );
 
   const buttonStyles: CSSProperties = {
     display: 'inline-flex',
@@ -246,17 +289,14 @@ function SortDropdownComponent<T extends string = string>({
     overflow: 'hidden',
   };
 
-  const itemStyles = (isSelected: boolean, isHovered: boolean): CSSProperties => ({
+  // Background color (including :hover) is handled via the
+  // .sort-dropdown-option CSS classes in index.css to avoid per-item state.
+  const itemStyles = (isSelected: boolean): CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
     padding: '0.625rem 1rem',
-    backgroundColor: isSelected
-      ? (isDark ? 'var(--primary-light)' : 'rgba(37, 99, 235, 0.08)')
-      : isHovered
-        ? (isDark ? 'var(--surface-hover)' : '#f9fafb')
-        : 'transparent',
-    color: isSelected ? 'var(--primary)' : (isDark ? 'var(--text)' : '#1f2937'),
+    color: isSelected ? 'var(--primary)' : isDark ? 'var(--text)' : '#1f2937',
     cursor: 'pointer',
     border: 'none',
     width: '100%',
@@ -277,11 +317,7 @@ function SortDropdownComponent<T extends string = string>({
       }}
       aria-hidden={true}
     >
-      {isAsc ? (
-        <Icon name="chevronUp" size={14} />
-      ) : (
-        <Icon name="chevronDown" size={14} />
-      )}
+      {isAsc ? <Icon name="chevronUp" size={14} /> : <Icon name="chevronDown" size={14} />}
     </span>
   );
 
@@ -296,13 +332,11 @@ function SortDropdownComponent<T extends string = string>({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label={`Sorteer op: ${currentOption?.label ?? placeholder}`}
+        aria-label={`${t('common.sort.sortBy')}: ${currentOption ? optionLabel(currentOption.label) : placeholderText}`}
       >
-        {currentOption?.icon && (
-          <Icon name={currentOption.icon} size={16} aria-hidden={true} />
-        )}
+        {currentOption?.icon && <Icon name={currentOption.icon} size={16} aria-hidden={true} />}
         <span style={{ flex: 1, textAlign: 'left' }}>
-          {currentOption?.label ?? placeholder}
+          {currentOption ? optionLabel(currentOption.label) : placeholderText}
         </span>
         {currentOption && !currentOption.disableDirectionToggle && (
           <DirectionIndicator isAsc={value.direction === 'asc'} />
@@ -315,81 +349,70 @@ function SortDropdownComponent<T extends string = string>({
         />
       </button>
 
-      {isOpen && createPortal(
-        <div
-          ref={dropdownRef}
-          style={dropdownStyles}
-          role="listbox"
-          aria-label="Sorteeropties"
-        >
-          <ul style={{ listStyle: 'none', margin: 0, padding: '0.25rem 0' }}>
-            {options.map((option, index) => {
-              const isSelected = option.id === value.sortBy;
-              const [isHovered, setIsHovered] = useState(false);
-
-              return (
-                <li key={option.id}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={itemStyles(isSelected, isHovered)}
-                    onClick={() => handleSelect(option)}
-                    onKeyDown={(e) => handleItemKeyDown(e, option, index)}
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                    aria-selected={isSelected}
-                  >
-                    {option.icon && (
-                      <Icon name={option.icon} size={16} aria-hidden={true} />
-                    )}
-                    <span>{option.label}</span>
-                    {isSelected && (
-                      <>
-                        {!option.disableDirectionToggle && (
-                          <DirectionIndicator isAsc={value.direction === 'asc'} />
-                        )}
-                        <Icon
-                          name="check"
-                          size={16}
-                          style={{ color: 'var(--primary)' }}
-                          aria-hidden={true}
-                        />
-                      </>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Footer with clear option */}
-          <div
-            style={{
-              borderTop: `1px solid ${isDark ? 'var(--border)' : '#e5e7eb'}`,
-              padding: '0.5rem 1rem',
-              display: 'flex',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <button
-              type="button"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                fontSize: 'var(--font-size-xs)',
-                cursor: 'pointer',
-                padding: '0.25rem 0.5rem',
-                borderRadius: 'var(--radius-sm)',
-              }}
-              onClick={() => setIsOpen(false)}
+      {isOpen &&
+        createPortal(
+          <div ref={dropdownRef} style={dropdownStyles}>
+            <ul
+              style={{ listStyle: 'none', margin: 0, padding: '0.25rem 0' }}
+              role="listbox"
+              aria-label={t('common.sort.options')}
             >
-              Sluiten
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+              {options.map((option, index) => {
+                const isSelected = option.id === value.sortBy;
+
+                return (
+                  <li key={option.id} role="none">
+                    <button
+                      type="button"
+                      role="option"
+                      className={`sort-dropdown-option${isSelected ? ' sort-dropdown-option--selected' : ''}`}
+                      style={itemStyles(isSelected)}
+                      onClick={() => handleSelect(option)}
+                      onKeyDown={(e) => handleItemKeyDown(e, option, index)}
+                      aria-selected={isSelected}
+                    >
+                      {option.icon && <Icon name={option.icon} size={16} aria-hidden={true} />}
+                      <span>{optionLabel(option.label)}</span>
+                      {isSelected && (
+                        <>
+                          {!option.disableDirectionToggle && <DirectionIndicator isAsc={value.direction === 'asc'} />}
+                          <Icon name="check" size={16} style={{ color: 'var(--primary)' }} aria-hidden={true} />
+                        </>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Footer with clear option */}
+            <div
+              style={{
+                borderTop: `1px solid ${isDark ? 'var(--border)' : '#e5e7eb'}`,
+                padding: '0.5rem 1rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-size-xs)',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+                onClick={() => setIsOpen(false)}
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -403,7 +426,7 @@ export const SortDropdown = memo(SortDropdownComponent) as typeof SortDropdownCo
 export function useSortState<T extends string = string>(
   defaultSortBy: T,
   defaultDirection: SortDirection = 'asc',
-  storageKey?: string
+  storageKey?: string,
 ): [SortState<T>, (state: SortState<T>) => void] {
   const [sortState, setSortState] = useState<SortState<T>>(() => {
     if (storageKey) {
@@ -422,16 +445,19 @@ export function useSortState<T extends string = string>(
     return { sortBy: defaultSortBy, direction: defaultDirection };
   });
 
-  const updateSortState = useCallback((newState: SortState<T>) => {
-    setSortState(newState);
-    if (storageKey) {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(newState));
-      } catch {
-        // Ignore
+  const updateSortState = useCallback(
+    (newState: SortState<T>) => {
+      setSortState(newState);
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(newState));
+        } catch {
+          // Ignore
+        }
       }
-    }
-  }, [storageKey]);
+    },
+    [storageKey],
+  );
 
   return [sortState, updateSortState];
 }

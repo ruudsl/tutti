@@ -2,13 +2,26 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getResources, getResourceCategories, getResourceBookings, getResource, createResource, createResourceBooking, deleteResource, Resource, ResourceType, CreateResourceData, ResourceBooking } from '../api/resources';
+import {
+  getResources,
+  getResourceCategories,
+  getResourceBookings,
+  getResource,
+  createResource,
+  createResourceBooking,
+  deleteResource,
+  Resource,
+  ResourceType,
+  CreateResourceData,
+  ResourceBooking,
+} from '../api/resources';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatDate } from '../utils/dateFormat';
+import { formatCurrency } from '../utils/format';
 import { ResourceAvailabilitySection } from '../components/ResourceAvailabilitySection';
 import { ResourceCategoriesManager } from '../components/ResourceCategoriesManager';
 
@@ -60,14 +73,15 @@ export default function Resources() {
 
   const { data: bookings = [] } = useQuery({
     queryKey: ['resource-bookings', calendarWeekStart.toISOString(), calendarWeekEnd.toISOString()],
-    queryFn: () => getResourceBookings({
-      startDate: calendarWeekStart.toISOString().split('T')[0],
-      endDate: calendarWeekEnd.toISOString().split('T')[0],
-    }),
+    queryFn: () =>
+      getResourceBookings({
+        startDate: calendarWeekStart.toISOString().split('T')[0],
+        endDate: calendarWeekEnd.toISOString().split('T')[0],
+      }),
     enabled: viewMode === 'calendar',
   });
 
-  const availableResources = resources.filter(r => r.isActive);
+  const availableResources = resources.filter((r) => r.isActive);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -108,7 +122,7 @@ export default function Resources() {
         <div className="card bg-base-100 shadow-sm">
           <div className="card-body p-4">
             <div className="text-sm text-base-content/60">{t('resources.rooms')}</div>
-            <div className="text-2xl font-bold">{resources.filter(r => r.resourceType === 'room').length}</div>
+            <div className="text-2xl font-bold">{resources.filter((r) => r.resourceType === 'room').length}</div>
           </div>
         </div>
       </div>
@@ -151,7 +165,9 @@ export default function Resources() {
         <>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+              {[1, 2, 3].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
             </div>
           ) : resources.length === 0 ? (
             <div className="card bg-base-200 p-8 text-center">
@@ -160,7 +176,7 @@ export default function Resources() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {resources.map(resource => (
+              {resources.map((resource) => (
                 <div key={resource.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
                   <div className="card-body">
                     <div className="flex justify-between items-start">
@@ -170,7 +186,9 @@ export default function Resources() {
                         </div>
                         <div>
                           <h3 className="font-semibold">{resource.name}</h3>
-                          <span className="text-xs text-base-content/60">{t(`resources.types.${resource.resourceType}`)}</span>
+                          <span className="text-xs text-base-content/60">
+                            {t(`resources.types.${resource.resourceType}`)}
+                          </span>
                         </div>
                       </div>
                       <span className={`badge ${resource.isActive ? 'badge-success' : 'badge-ghost'}`}>
@@ -199,24 +217,22 @@ export default function Resources() {
 
                     {(resource.costPerHour || resource.costPerDay) && (
                       <div className="text-sm">
-                        {resource.costPerHour && <span>€{resource.costPerHour}/uur</span>}
+                        {resource.costPerHour && (
+                          <span>{t('resources.perHour', { amount: formatCurrency(resource.costPerHour) })}</span>
+                        )}
                         {resource.costPerHour && resource.costPerDay && ' | '}
-                        {resource.costPerDay && <span>€{resource.costPerDay}/dag</span>}
+                        {resource.costPerDay && (
+                          <span>{t('resources.perDay', { amount: formatCurrency(resource.costPerDay) })}</span>
+                        )}
                       </div>
                     )}
 
                     <div className="card-actions justify-end mt-2">
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setSelectedResourceId(resource.id)}
-                      >
+                      <button className="btn btn-ghost btn-sm" onClick={() => setSelectedResourceId(resource.id)}>
                         {t('common.details')}
                       </button>
                       {resource.isActive && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => setShowBookingModal(resource)}
-                        >
+                        <button className="btn btn-primary btn-sm" onClick={() => setShowBookingModal(resource)}>
                           {t('resources.book')}
                         </button>
                       )}
@@ -276,9 +292,7 @@ export default function Resources() {
         />
       )}
 
-      {showCategoriesManager && (
-        <ResourceCategoriesManager onClose={() => setShowCategoriesManager(false)} />
-      )}
+      {showCategoriesManager && <ResourceCategoriesManager onClose={() => setShowCategoriesManager(false)} />}
 
       {selectedResourceId && (
         <ResourceDetailModal
@@ -371,7 +385,9 @@ function ResourceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => createMutation.mutate(formData)}
@@ -386,7 +402,15 @@ function ResourceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   );
 }
 
-function BookingModal({ resource, onClose, onSuccess }: { resource: Resource; onClose: () => void; onSuccess: () => void }) {
+function BookingModal({
+  resource,
+  onClose,
+  onSuccess,
+}: {
+  resource: Resource;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
@@ -396,10 +420,11 @@ function BookingModal({ resource, onClose, onSuccess }: { resource: Resource; on
   });
 
   const bookMutation = useMutation({
-    mutationFn: () => createResourceBooking({
-      resourceId: resource.id,
-      ...formData,
-    }),
+    mutationFn: () =>
+      createResourceBooking({
+        resourceId: resource.id,
+        ...formData,
+      }),
     onSuccess: (data) => {
       showSuccess(data.message);
       onSuccess();
@@ -469,7 +494,9 @@ function BookingModal({ resource, onClose, onSuccess }: { resource: Resource; on
         )}
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => bookMutation.mutate()}
@@ -525,7 +552,7 @@ function ResourceCalendar({
 
   const getBookingsForResourceOnDay = (resourceId: string, day: Date) => {
     const dayStr = day.toISOString().split('T')[0];
-    return bookings.filter(b => {
+    return bookings.filter((b) => {
       if (b.resourceId !== resourceId) return false;
       const startDate = b.startDatetime.split('T')[0];
       const endDate = b.endDatetime.split('T')[0];
@@ -533,7 +560,7 @@ function ResourceCalendar({
     });
   };
 
-  const activeResources = resources.filter(r => r.isActive);
+  const activeResources = resources.filter((r) => r.isActive);
 
   return (
     <div className="space-y-4">
@@ -566,9 +593,7 @@ function ResourceCalendar({
                 return (
                   <th key={idx} className={`text-center ${isToday ? 'bg-primary/10' : ''}`}>
                     <div className="text-xs text-base-content/60">{t(`resources.days.${dayNames[idx]}`)}</div>
-                    <div className={`${isToday ? 'text-primary font-bold' : ''}`}>
-                      {day.getDate()}
-                    </div>
+                    <div className={`${isToday ? 'text-primary font-bold' : ''}`}>{day.getDate()}</div>
                   </th>
                 );
               })}
@@ -582,7 +607,7 @@ function ResourceCalendar({
                 </td>
               </tr>
             ) : (
-              activeResources.map(resource => (
+              activeResources.map((resource) => (
                 <tr key={resource.id} className="hover">
                   <td>
                     <div className="flex items-center gap-2">
@@ -602,7 +627,7 @@ function ResourceCalendar({
                         className={`relative p-1 min-h-[60px] align-top cursor-pointer hover:bg-base-200 ${isToday ? 'bg-primary/5' : ''}`}
                         onClick={() => onBookResource(resource)}
                       >
-                        {dayBookings.map(booking => (
+                        {dayBookings.map((booking) => (
                           <div
                             key={booking.id}
                             className={`text-xs p-1 rounded mb-1 text-white truncate ${BOOKING_STATUS_COLORS[booking.status]}`}
@@ -697,9 +722,7 @@ function ResourceDetailModal({
             </div>
           </div>
 
-          {resource.description && (
-            <p className="text-base-content/70">{resource.description}</p>
-          )}
+          {resource.description && <p className="text-base-content/70">{resource.description}</p>}
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             {resource.location && (
@@ -723,13 +746,13 @@ function ResourceDetailModal({
             {resource.costPerHour && (
               <div>
                 <div className="text-base-content/60 text-xs">{t('resources.costPerHour')}</div>
-                <div>€{resource.costPerHour}</div>
+                <div>{formatCurrency(resource.costPerHour)}</div>
               </div>
             )}
             {resource.costPerDay && (
               <div>
                 <div className="text-base-content/60 text-xs">{t('resources.costPerDay')}</div>
-                <div>€{resource.costPerDay}</div>
+                <div>{formatCurrency(resource.costPerDay)}</div>
               </div>
             )}
             {resource.minBookingHours && (
@@ -763,10 +786,7 @@ function ResourceDetailModal({
 
         {/* Availability Rules Section */}
         <div className="divider" />
-        <ResourceAvailabilitySection
-          resourceId={resourceId}
-          availability={resource.availability || []}
-        />
+        <ResourceAvailabilitySection resourceId={resourceId} availability={resource.availability || []} />
 
         {/* Upcoming Bookings */}
         {resource.upcomingBookings && resource.upcomingBookings.length > 0 && (
@@ -783,7 +803,9 @@ function ResourceDetailModal({
                         {formatDate(booking.startDatetime)} - {formatDate(booking.endDatetime)}
                       </div>
                     </div>
-                    <span className={`badge badge-sm ${BOOKING_STATUS_COLORS[booking.status]?.replace('bg-', 'badge-') || 'badge-ghost'}`}>
+                    <span
+                      className={`badge badge-sm ${BOOKING_STATUS_COLORS[booking.status]?.replace('bg-', 'badge-') || 'badge-ghost'}`}
+                    >
                       {t(`resources.bookingStatuses.${booking.status}`)}
                     </span>
                   </div>
@@ -795,10 +817,7 @@ function ResourceDetailModal({
 
         {/* Actions */}
         <div className="flex justify-between pt-4 border-t">
-          <button
-            className="btn btn-error btn-outline"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
+          <button className="btn btn-error btn-outline" onClick={() => setShowDeleteConfirm(true)}>
             <Icon name="trash" size={16} />
             {t('common.delete')}
           </button>
@@ -807,10 +826,7 @@ function ResourceDetailModal({
               {t('common.close')}
             </button>
             {resource.isActive && (
-              <button
-                className="btn btn-primary"
-                onClick={() => onBook(resource)}
-              >
+              <button className="btn btn-primary" onClick={() => onBook(resource)}>
                 {t('resources.book')}
               </button>
             )}

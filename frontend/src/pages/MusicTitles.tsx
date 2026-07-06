@@ -1,9 +1,17 @@
-import { useReducer, useMemo, useRef, useCallback } from 'react';
+import { useReducer, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { Icon } from '../components/Icon';
 import { useGenres } from '../hooks/useGenres';
-import { updateTitleMeta, getYouTubeMeta, uploadTitleMp3, deleteTitleMp3, getMp3Url, searchMusicaInfo, getMusicaInfoDetail } from '../api';
+import {
+  updateTitleMeta,
+  getYouTubeMeta,
+  uploadTitleMp3,
+  deleteTitleMp3,
+  getMp3Url,
+  searchMusicaInfo,
+  getMusicaInfoDetail,
+} from '../api';
 import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
 import { SkeletonTable } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
@@ -17,6 +25,9 @@ import { searchSheetMusicWebsites } from '../utils/sheetMusic';
 import { StreamingLinks } from '../components/StreamingLinks';
 import { StreamingLinkEditor } from '../components/StreamingLinkEditor';
 import { ImslpSearch } from '../components/ImslpSearch';
+
+// Number of table rows rendered per incremental batch
+const TITLES_BATCH_SIZE = 100;
 
 // Format seconds to mm:ss string for form input
 function formatDurationForForm(seconds: number): string {
@@ -145,7 +156,7 @@ function musicTitlesReducer(state: MusicTitlesState, action: MusicTitlesAction):
           description: action.payload.description || '',
           durationStr: formatDurationForForm(action.payload.durationSeconds),
           grade: action.payload.grade || '',
-          genreIds: action.payload.genres?.map(g => g.id) || [],
+          genreIds: action.payload.genres?.map((g) => g.id) || [],
           isShared: action.payload.isShared || false,
           internalNotes: action.payload.internalNotes || '',
         },
@@ -280,10 +291,13 @@ export default function MusicTitles() {
   const debouncedSearch = useDebounce(search, 300);
 
   // Build filters object
-  const filters = useMemo(() => ({
-    search: debouncedSearch || undefined,
-    genreId: filterGenre || undefined,
-  }), [debouncedSearch, filterGenre]);
+  const filters = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      genreId: filterGenre || undefined,
+    }),
+    [debouncedSearch, filterGenre],
+  );
 
   // TanStack Query hooks
   const { data: titles = [], isLoading: titlesLoading, refetch } = useMusicTitles(filters);
@@ -291,9 +305,48 @@ export default function MusicTitles() {
 
   const isLoading = titlesLoading || genresLoading;
 
-  const toggleExpand = useCallback((title: string) => {
-    dispatch({ type: 'SET_EXPANDED_TITLE', payload: expandedTitle === title ? null : title });
-  }, [expandedTitle]);
+  // Incremental rendering: only mount the first batch of (expandable) table
+  // rows and grow the list as the user scrolls. Keeps the DOM small for
+  // large title collections without breaking the table layout.
+  const [visibleCount, setVisibleCount] = useState(TITLES_BATCH_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset the visible window when the filtered result set changes
+  useEffect(() => {
+    setVisibleCount(TITLES_BATCH_SIZE);
+  }, [debouncedSearch, filterGenre]);
+
+  const visibleTitles = useMemo(() => titles.slice(0, visibleCount), [titles, visibleCount]);
+  const hasMoreTitles = titles.length > visibleCount;
+
+  const showMoreTitles = useCallback(() => {
+    setVisibleCount((count) => count + TITLES_BATCH_SIZE);
+  }, []);
+
+  // Automatically grow the list when the sentinel below the table nears the viewport
+  useEffect(() => {
+    if (!hasMoreTitles) return;
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          showMoreTitles();
+        }
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreTitles, showMoreTitles]);
+
+  const toggleExpand = useCallback(
+    (title: string) => {
+      dispatch({ type: 'SET_EXPANDED_TITLE', payload: expandedTitle === title ? null : title });
+    },
+    [expandedTitle],
+  );
 
   const openTitleMetaModal = useCallback((title: MusicTitle) => {
     dispatch({ type: 'OPEN_EDIT_MODAL', payload: title });
@@ -306,19 +359,28 @@ export default function MusicTitles() {
       const data = await searchMusicaInfo(editingTitle.title);
       dispatch({ type: 'MUSICAINFO_SEARCH_SUCCESS', payload: { results: data.results, searchUrl: data.searchUrl } });
     } catch (error: any) {
-      dispatch({ type: 'MUSICAINFO_SEARCH_ERROR', payload: error.response?.data?.error || t('titles.musicaInfoError') });
+      dispatch({
+        type: 'MUSICAINFO_SEARCH_ERROR',
+        payload: error.response?.data?.error || t('titles.musicaInfoError'),
+      });
     }
   }, [editingTitle, t]);
 
-  const loadMusicaInfoDetail = useCallback(async (artnr: string) => {
-    dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_START', payload: artnr });
-    try {
-      const detail = await getMusicaInfoDetail(artnr);
-      dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_SUCCESS', payload: detail });
-    } catch (error: any) {
-      dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_ERROR', payload: error.response?.data?.error || t('titles.musicaInfoError') });
-    }
-  }, [t]);
+  const loadMusicaInfoDetail = useCallback(
+    async (artnr: string) => {
+      dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_START', payload: artnr });
+      try {
+        const detail = await getMusicaInfoDetail(artnr);
+        dispatch({ type: 'MUSICAINFO_LOAD_DETAIL_SUCCESS', payload: detail });
+      } catch (error: any) {
+        dispatch({
+          type: 'MUSICAINFO_LOAD_DETAIL_ERROR',
+          payload: error.response?.data?.error || t('titles.musicaInfoError'),
+        });
+      }
+    },
+    [t],
+  );
 
   const applyMusicaInfoDetail = useCallback((detail: MusicaInfoDetail) => {
     dispatch({ type: 'MUSICAINFO_APPLY_DETAIL', payload: detail });
@@ -338,65 +400,71 @@ export default function MusicTitles() {
     }
   }, [titleMetaForm.youtubeUrl, t]);
 
-  const handleSaveTitleMeta = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingTitle) return;
+  const handleSaveTitleMeta = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingTitle) return;
 
-    dispatch({ type: 'SET_SAVING', payload: true });
-    try {
-      // First save metadata and get the title ID
-      const result = await updateTitleMeta({
-        title: editingTitle.title,
-        arranger: editingTitle.arranger,
-        youtubeUrl: titleMetaForm.youtubeUrl || null,
-        description: titleMetaForm.description || null,
-        durationSeconds: parseDuration(titleMetaForm.durationStr),
-        grade: titleMetaForm.grade || null,
-        genreIds: titleMetaForm.genreIds,
-        isShared: titleMetaForm.isShared,
-        internalNotes: titleMetaForm.internalNotes || null,
-      });
+      dispatch({ type: 'SET_SAVING', payload: true });
+      try {
+        // First save metadata and get the title ID
+        const result = await updateTitleMeta({
+          title: editingTitle.title,
+          arranger: editingTitle.arranger,
+          youtubeUrl: titleMetaForm.youtubeUrl || null,
+          description: titleMetaForm.description || null,
+          durationSeconds: parseDuration(titleMetaForm.durationStr),
+          grade: titleMetaForm.grade || null,
+          genreIds: titleMetaForm.genreIds,
+          isShared: titleMetaForm.isShared,
+          internalNotes: titleMetaForm.internalNotes || null,
+        });
 
-      // If there's a pending MP3 file, upload it now
-      if (pendingMp3File && result.id) {
-        try {
-          await uploadTitleMp3(result.id, pendingMp3File);
-          showSuccess(t('titles.metadataSaved') + ' + MP3');
-        } catch (mp3Error: any) {
+        // If there's a pending MP3 file, upload it now
+        if (pendingMp3File && result.id) {
+          try {
+            await uploadTitleMp3(result.id, pendingMp3File);
+            showSuccess(t('titles.metadataSaved') + ' + MP3');
+          } catch (mp3Error: any) {
+            showSuccess(t('titles.metadataSaved'));
+            showError(t('titles.errorUploadMp3') + ': ' + (mp3Error.response?.data?.error || t('errors.generic')));
+          }
+        } else {
           showSuccess(t('titles.metadataSaved'));
-          showError(t('titles.errorUploadMp3') + ': ' + (mp3Error.response?.data?.error || t('errors.generic')));
         }
-      } else {
-        showSuccess(t('titles.metadataSaved'));
+
+        dispatch({ type: 'CLOSE_EDIT_MODAL' });
+        refetch();
+      } catch (error: any) {
+        showError(error.response?.data?.error || t('titles.errorSaveMetadata'));
+      } finally {
+        dispatch({ type: 'SET_SAVING', payload: false });
       }
+    },
+    [editingTitle, titleMetaForm, pendingMp3File, t, refetch],
+  );
 
-      dispatch({ type: 'CLOSE_EDIT_MODAL' });
-      refetch();
-    } catch (error: any) {
-      showError(error.response?.data?.error || t('titles.errorSaveMetadata'));
-    } finally {
-      dispatch({ type: 'SET_SAVING', payload: false });
-    }
-  }, [editingTitle, titleMetaForm, pendingMp3File, t, refetch]);
+  const handleMp3Upload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !editingTitle?.id) return;
 
-  const handleMp3Upload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingTitle?.id) return;
-
-    dispatch({ type: 'SET_UPLOADING_MP3', payload: true });
-    try {
-      const result = await uploadTitleMp3(editingTitle.id, file);
-      dispatch({ type: 'SET_CURRENT_MP3_PATH', payload: result.mp3FilePath });
-      showSuccess(t('titles.mp3Uploaded'));
-    } catch (error: any) {
-      showError(error.response?.data?.error || t('titles.errorUploadMp3'));
-    } finally {
-      dispatch({ type: 'SET_UPLOADING_MP3', payload: false });
-      if (mp3InputRef.current) {
-        mp3InputRef.current.value = '';
+      dispatch({ type: 'SET_UPLOADING_MP3', payload: true });
+      try {
+        const result = await uploadTitleMp3(editingTitle.id, file);
+        dispatch({ type: 'SET_CURRENT_MP3_PATH', payload: result.mp3FilePath });
+        showSuccess(t('titles.mp3Uploaded'));
+      } catch (error: any) {
+        showError(error.response?.data?.error || t('titles.errorUploadMp3'));
+      } finally {
+        dispatch({ type: 'SET_UPLOADING_MP3', payload: false });
+        if (mp3InputRef.current) {
+          mp3InputRef.current.value = '';
+        }
       }
-    }
-  }, [editingTitle?.id, t]);
+    },
+    [editingTitle?.id, t],
+  );
 
   const handleMp3Delete = useCallback(async () => {
     if (!editingTitle?.id || !currentMp3Path) return;
@@ -412,16 +480,19 @@ export default function MusicTitles() {
     }
   }, [editingTitle?.id, currentMp3Path, t]);
 
-  const toggleGenre = useCallback((genreId: string) => {
-    dispatch({
-      type: 'UPDATE_TITLE_META_FORM',
-      payload: {
-        genreIds: titleMetaForm.genreIds.includes(genreId)
-          ? titleMetaForm.genreIds.filter(id => id !== genreId)
-          : [...titleMetaForm.genreIds, genreId],
-      },
-    });
-  }, [titleMetaForm.genreIds]);
+  const toggleGenre = useCallback(
+    (genreId: string) => {
+      dispatch({
+        type: 'UPDATE_TITLE_META_FORM',
+        payload: {
+          genreIds: titleMetaForm.genreIds.includes(genreId)
+            ? titleMetaForm.genreIds.filter((id) => id !== genreId)
+            : [...titleMetaForm.genreIds, genreId],
+        },
+      });
+    },
+    [titleMetaForm.genreIds],
+  );
 
   if (isLoading) {
     return (
@@ -439,9 +510,7 @@ export default function MusicTitles() {
       <div className="flex justify-between items-center mb-3">
         <h1>
           {t('titles.title')}
-          <span className="badge badge-primary badge-title-count">
-            {titles.length}
-          </span>
+          <span className="badge badge-primary badge-title-count">{titles.length}</span>
         </h1>
       </div>
 
@@ -472,11 +541,7 @@ export default function MusicTitles() {
               </select>
             </div>
             {(search || filterGenre) && (
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => dispatch({ type: 'CLEAR_FILTERS' })}
-              >
+              <button type="button" className="btn btn-outline" onClick={() => dispatch({ type: 'CLEAR_FILTERS' })}>
                 {t('titles.clearFilters')}
               </button>
             )}
@@ -487,38 +552,45 @@ export default function MusicTitles() {
       <div className="card">
         <div className="card-body flush">
           {titles.length > 0 ? (
-            <table className="table mb-0">
-              <thead>
-                <tr>
-                  <th scope="col" style={{ width: '30px' }}></th>
-                  <th scope="col">{t('myMusic.table.title')}</th>
-                  <th scope="col">{t('titles.arranger')}</th>
-                  <th scope="col">{t('titles.genres')}</th>
-                  <th scope="col">{t('titles.grade')}</th>
-                  <th scope="col">{t('titles.duration')}</th>
-                  <th scope="col">{t('titles.parts')}</th>
-                  <th scope="col">{t('titles.lists')}</th>
-                  <th scope="col" style={{ width: '50px' }}><span className="sr-only">{t('common.actions')}</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {titles.map((title) => (
-                  <TitleRow
-                    key={`${title.title}-${title.arranger}`}
-                    title={title}
-                    isExpanded={expandedTitle === `${title.title}-${title.arranger}`}
-                    onToggle={() => toggleExpand(`${title.title}-${title.arranger}`)}
-                    onEdit={() => openTitleMetaModal(title)}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <>
+              <table className="table mb-0">
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ width: '30px' }}></th>
+                    <th scope="col">{t('myMusic.table.title')}</th>
+                    <th scope="col">{t('titles.arranger')}</th>
+                    <th scope="col">{t('titles.genres')}</th>
+                    <th scope="col">{t('titles.grade')}</th>
+                    <th scope="col">{t('titles.duration')}</th>
+                    <th scope="col">{t('titles.parts')}</th>
+                    <th scope="col">{t('titles.lists')}</th>
+                    <th scope="col" style={{ width: '50px' }}>
+                      <span className="sr-only">{t('common.actions')}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTitles.map((title) => (
+                    <TitleRow
+                      key={`${title.title}-${title.arranger}`}
+                      title={title}
+                      isExpanded={expandedTitle === `${title.title}-${title.arranger}`}
+                      onToggle={() => toggleExpand(`${title.title}-${title.arranger}`)}
+                      onEdit={() => openTitleMetaModal(title)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+              {hasMoreTitles && (
+                <div ref={loadMoreRef} style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}>
+                  <button type="button" className="btn btn-outline" onClick={showMoreTitles}>
+                    {t('common.more')} ({titles.length - visibleTitles.length})
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
-            <EmptyState
-              icon="music"
-              title={t('titles.noTitles')}
-              description={t('titles.noTitlesDescription')}
-            />
+            <EmptyState icon="music" title={t('titles.noTitles')} description={t('titles.noTitlesDescription')} />
           )}
         </div>
       </div>
@@ -543,13 +615,7 @@ export default function MusicTitles() {
             <div className="form-group">
               <label className="form-label">{t('myMusic.table.title')}</label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editingTitle.title}
-                  disabled
-                  style={{ flex: 1 }}
-                />
+                <input type="text" className="form-control" value={editingTitle.title} disabled style={{ flex: 1 }} />
                 <div className="dropdown" style={{ position: 'relative' }}>
                   <button
                     type="button"
@@ -576,7 +642,14 @@ export default function MusicTitles() {
                       minWidth: '200px',
                     }}
                   >
-                    <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                    <div
+                      style={{
+                        padding: '0.5rem',
+                        borderBottom: '1px solid var(--border)',
+                        fontWeight: 'bold',
+                        fontSize: '0.875rem',
+                      }}
+                    >
                       {t('titles.searchOnSites')}:
                     </div>
                     <button
@@ -626,18 +699,28 @@ export default function MusicTitles() {
             {editingTitle.arranger && (
               <div className="form-group">
                 <label className="form-label">{t('titles.arranger')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={editingTitle.arranger}
-                  disabled
-                />
+                <input type="text" className="form-control" value={editingTitle.arranger} disabled />
               </div>
             )}
 
             {/* MusicaInfo.net lookup section */}
-            <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: musicaInfoResults || musicaInfoDetail || musicaInfoError ? '0.5rem' : 0 }}>
+            <div
+              className="form-group"
+              style={{
+                background: 'var(--background)',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: musicaInfoResults || musicaInfoDetail || musicaInfoError ? '0.5rem' : 0,
+                }}
+              >
                 <strong style={{ fontSize: '0.875rem', flex: 1 }}>MusicaInfo.net</strong>
                 <button
                   type="button"
@@ -651,11 +734,24 @@ export default function MusicTitles() {
               </div>
 
               {musicaInfoError && (
-                <div style={{ color: 'var(--danger)', fontSize: '0.8rem', padding: '0.5rem', background: 'var(--danger-bg, #fee)', borderRadius: '0.25rem' }}>
+                <div
+                  style={{
+                    color: 'var(--danger)',
+                    fontSize: '0.8rem',
+                    padding: '0.5rem',
+                    background: 'var(--danger-bg, #fee)',
+                    borderRadius: '0.25rem',
+                  }}
+                >
                   {musicaInfoError}
                   {musicaInfoSearchUrl && (
                     <div style={{ marginTop: '0.25rem' }}>
-                      <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>
+                      <a
+                        href={musicaInfoSearchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--primary)' }}
+                      >
                         {t('titles.musicaInfoOpenManually')}
                       </a>
                     </div>
@@ -666,7 +762,12 @@ export default function MusicTitles() {
               {musicaInfoResults && musicaInfoResults.length === 0 && (
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
                   {t('titles.musicaInfoNoResults')}
-                  <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>
+                  <a
+                    href={musicaInfoSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}
+                  >
                     {t('titles.musicaInfoOpenManually')}
                   </a>
                 </div>
@@ -690,12 +791,20 @@ export default function MusicTitles() {
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontWeight: 'bold',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {result.title}
                         </div>
                         {result.composer && (
                           <div style={{ color: 'var(--text-light)', fontSize: '0.75rem' }}>
-                            {result.composer}{result.arranger ? ` / ${result.arranger}` : ''}
+                            {result.composer}
+                            {result.arranger ? ` / ${result.arranger}` : ''}
                           </div>
                         )}
                       </div>
@@ -710,7 +819,12 @@ export default function MusicTitles() {
                     </div>
                   ))}
                   <div style={{ padding: '0.25rem 0.5rem', textAlign: 'center' }}>
-                    <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontSize: '0.75rem' }}>
+                    <a
+                      href={musicaInfoSearchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary)', fontSize: '0.75rem' }}
+                    >
                       {t('titles.musicaInfoOpenManually')}
                     </a>
                   </div>
@@ -718,13 +832,41 @@ export default function MusicTitles() {
               )}
 
               {musicaInfoDetail && (
-                <div style={{ fontSize: '0.8rem', background: 'white', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border)' }}>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    background: 'white',
+                    padding: '0.5rem',
+                    borderRadius: '0.25rem',
+                    border: '1px solid var(--border)',
+                  }}
+                >
                   <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{musicaInfoDetail.title}</div>
-                  {musicaInfoDetail.composer && <div>{t('titles.musicaInfoComposer')}: {musicaInfoDetail.composer}</div>}
-                  {musicaInfoDetail.arranger && <div>{t('titles.arranger')}: {musicaInfoDetail.arranger}</div>}
-                  {musicaInfoDetail.duration && <div>{t('titles.durationFormat')}: <strong>{musicaInfoDetail.duration}</strong></div>}
-                  {musicaInfoDetail.difficulty && <div>{t('titles.difficulty')}: <strong>{musicaInfoDetail.difficulty}</strong></div>}
-                  {musicaInfoDetail.publisher && <div>{t('titles.musicaInfoPublisher')}: {musicaInfoDetail.publisher}</div>}
+                  {musicaInfoDetail.composer && (
+                    <div>
+                      {t('titles.musicaInfoComposer')}: {musicaInfoDetail.composer}
+                    </div>
+                  )}
+                  {musicaInfoDetail.arranger && (
+                    <div>
+                      {t('titles.arranger')}: {musicaInfoDetail.arranger}
+                    </div>
+                  )}
+                  {musicaInfoDetail.duration && (
+                    <div>
+                      {t('titles.durationFormat')}: <strong>{musicaInfoDetail.duration}</strong>
+                    </div>
+                  )}
+                  {musicaInfoDetail.difficulty && (
+                    <div>
+                      {t('titles.difficulty')}: <strong>{musicaInfoDetail.difficulty}</strong>
+                    </div>
+                  )}
+                  {musicaInfoDetail.publisher && (
+                    <div>
+                      {t('titles.musicaInfoPublisher')}: {musicaInfoDetail.publisher}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
                       type="button"
@@ -772,9 +914,19 @@ export default function MusicTitles() {
                 </button>
               </div>
               {youtubeMeta && (
-                <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                <div
+                  className="piece-meta"
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'var(--background)',
+                    borderRadius: '0.25rem',
+                  }}
+                >
                   <strong>{youtubeMeta.title}</strong>
-                  <div>{t('titles.by')}: {youtubeMeta.author}</div>
+                  <div>
+                    {t('titles.by')}: {youtubeMeta.author}
+                  </div>
                 </div>
               )}
             </div>
@@ -785,7 +937,9 @@ export default function MusicTitles() {
                   type="text"
                   className="form-control"
                   value={titleMetaForm.durationStr}
-                  onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { durationStr: e.target.value } })}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { durationStr: e.target.value } })
+                  }
                   placeholder="3:45"
                   pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
                 />
@@ -805,11 +959,7 @@ export default function MusicTitles() {
               <label className="form-label">{t('titles.mp3Preview')}</label>
               {currentMp3Path ? (
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <audio
-                    controls
-                    src={getMp3Url(currentMp3Path)}
-                    style={{ flex: 1, height: '40px' }}
-                  />
+                  <audio controls src={getMp3Url(currentMp3Path)} style={{ flex: 1, height: '40px' }} />
                   <button
                     type="button"
                     className="btn btn-danger btn-sm"
@@ -820,7 +970,16 @@ export default function MusicTitles() {
                   </button>
                 </div>
               ) : pendingMp3File ? (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    padding: '0.5rem',
+                    background: 'var(--background)',
+                    borderRadius: '0.25rem',
+                  }}
+                >
                   <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Icon name="paperclip" size={16} /> {pendingMp3File.name}
                     <span style={{ color: 'var(--text-light)', marginLeft: '0.5rem', fontSize: '0.875rem' }}>
@@ -864,8 +1023,12 @@ export default function MusicTitles() {
                     onClick={() => mp3InputRef.current?.click()}
                     disabled={uploadingMp3}
                   >
-                    {uploadingMp3 ? t('upload.uploading') : (
-                      <><Icon name="upload" size={16} /> {t('titles.selectMp3')}</>
+                    {uploadingMp3 ? (
+                      t('upload.uploading')
+                    ) : (
+                      <>
+                        <Icon name="upload" size={16} /> {t('titles.selectMp3')}
+                      </>
                     )}
                   </button>
                   {!editingTitle?.id && (
@@ -891,7 +1054,9 @@ export default function MusicTitles() {
               <textarea
                 className="form-control"
                 value={titleMetaForm.internalNotes}
-                onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { internalNotes: e.target.value } })}
+                onChange={(e) =>
+                  dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { internalNotes: e.target.value } })
+                }
                 rows={2}
                 placeholder={t('titles.internalNotesPlaceholder')}
                 style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
@@ -933,17 +1098,25 @@ export default function MusicTitles() {
                   type="checkbox"
                   className="form-check-input"
                   checked={titleMetaForm.isShared}
-                  onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { isShared: e.target.checked } })}
+                  onChange={(e) =>
+                    dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { isShared: e.target.checked } })
+                  }
                 />
-                <span style={{ marginLeft: '0.5rem' }}>
-                  {t('titles.sharingAllowed')}
-                </span>
+                <span style={{ marginLeft: '0.5rem' }}>{t('titles.sharingAllowed')}</span>
               </label>
             </div>
 
             {/* Streaming Links Section */}
             {editingTitle.id && (
-              <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+              <div
+                className="form-group"
+                style={{
+                  background: 'var(--background)',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border)',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <strong style={{ fontSize: '0.875rem' }}>{t('streaming.title')}</strong>
                   <button
@@ -1007,29 +1180,25 @@ interface TitleRowProps {
 function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
   const { t } = useTranslation();
 
-  const hasStreamingLinks = title.streamingLinks && (
-    title.streamingLinks.spotify_url ||
-    title.streamingLinks.apple_music_url ||
-    title.streamingLinks.youtube_music_url
-  );
+  const hasStreamingLinks =
+    title.streamingLinks &&
+    (title.streamingLinks.spotify_url ||
+      title.streamingLinks.apple_music_url ||
+      title.streamingLinks.youtube_music_url);
 
-  const hasDetails = (title.lists && title.lists.length > 0) ||
-                     title.youtubeUrl ||
-                     title.mp3FilePath ||
-                     title.description ||
-                     hasStreamingLinks ||
-                     (title.instruments && title.instruments.length > 0);
+  const hasDetails =
+    (title.lists && title.lists.length > 0) ||
+    title.youtubeUrl ||
+    title.mp3FilePath ||
+    title.description ||
+    hasStreamingLinks ||
+    (title.instruments && title.instruments.length > 0);
 
   return (
     <>
-      <tr
-        style={{ cursor: hasDetails ? 'pointer' : 'default' }}
-        onClick={hasDetails ? onToggle : undefined}
-      >
+      <tr style={{ cursor: hasDetails ? 'pointer' : 'default' }} onClick={hasDetails ? onToggle : undefined}>
         <td style={{ width: '30px', textAlign: 'center' }}>
-          {hasDetails && (
-            <span style={{ opacity: 0.5 }}>{isExpanded ? '▼' : '▶'}</span>
-          )}
+          {hasDetails && <span style={{ opacity: 0.5 }}>{isExpanded ? '▼' : '▶'}</span>}
         </td>
         <td>
           <strong>{title.title}</strong>
@@ -1044,7 +1213,9 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
           <div className="tags">
             {title.genres && title.genres.length > 0 ? (
               title.genres.map((genre) => (
-                <span key={genre.id} className="tag">{genre.name}</span>
+                <span key={genre.id} className="tag">
+                  {genre.name}
+                </span>
               ))
             ) : (
               <span style={{ color: 'var(--text-light)' }}>-</span>
@@ -1052,11 +1223,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
           </div>
         </td>
         <td>{title.grade || '-'}</td>
-        <td>
-          {title.durationSeconds > 0
-            ? formatDuration(title.durationSeconds)
-            : '-'}
-        </td>
+        <td>{title.durationSeconds > 0 ? formatDuration(title.durationSeconds) : '-'}</td>
         <td>
           <span className="badge badge-secondary">{title.pieceCount}</span>
         </td>
@@ -1068,11 +1235,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
           )}
         </td>
         <td onClick={(e) => e.stopPropagation()}>
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={onEdit}
-            title="Bewerk metadata"
-          >
+          <button className="btn btn-outline btn-sm" onClick={onEdit} title="Bewerk metadata">
             <Icon name="pencil" size={16} />
           </button>
         </td>
@@ -1081,16 +1244,18 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
         <tr className="expanded-row">
           <td></td>
           <td colSpan={8}>
-            <div className="expanded-content" style={{
-              padding: '1rem',
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '4px',
-              margin: '0.5rem 0'
-            }}>
+            <div
+              className="expanded-content"
+              style={{
+                padding: '1rem',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '4px',
+                margin: '0.5rem 0',
+              }}
+            >
               {title.instruments && title.instruments.length > 0 && (
                 <div style={{ marginBottom: '0.75rem' }}>
-                  <strong>Instrumenten:</strong>{' '}
-                  {title.instruments.join(', ')}
+                  <strong>Instrumenten:</strong> {title.instruments.join(', ')}
                 </div>
               )}
 
@@ -1125,8 +1290,7 @@ function TitleRow({ title, isExpanded, onToggle, onEdit }: TitleRowProps) {
 
               {title.description && (
                 <div style={{ marginBottom: '0.75rem' }}>
-                  <strong>Beschrijving:</strong>{' '}
-                  {title.description}
+                  <strong>Beschrijving:</strong> {title.description}
                 </div>
               )}
 

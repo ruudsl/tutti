@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
@@ -96,8 +97,7 @@ export default function Onboarding() {
   });
 
   const updateJobTitleMappingMutation = useMutation({
-    mutationFn: ({ id, jobTitle }: { id: string; jobTitle: string }) =>
-      updateInstrumentJobTitleMapping(id, jobTitle),
+    mutationFn: ({ id, jobTitle }: { id: string; jobTitle: string }) => updateInstrumentJobTitleMapping(id, jobTitle),
     onSuccess: () => {
       showSuccess(t('memberOnboarding.m365Settings.mappingUpdated'));
       queryClient.invalidateQueries({ queryKey: ['instrumentJobTitleMappings'] });
@@ -264,7 +264,7 @@ export default function Onboarding() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -347,40 +347,24 @@ export default function Onboarding() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="form-group">
                     <label className="form-label">{t('memberOnboarding.firstName')} *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      {...form.register('firstName', { required: true })}
-                    />
+                    <input type="text" className="form-control" {...form.register('firstName', { required: true })} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('memberOnboarding.lastName')} *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      {...form.register('lastName', { required: true })}
-                    />
+                    <input type="text" className="form-control" {...form.register('lastName', { required: true })} />
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">{t('memberOnboarding.email')} *</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    {...form.register('email', { required: true })}
-                  />
+                  <input type="email" className="form-control" {...form.register('email', { required: true })} />
                   <small className="text-secondary">{t('memberOnboarding.emailHint')}</small>
                 </div>
 
                 {msConfig?.configured && (
                   <div className="form-group">
                     <label className="form-label">{t('memberOnboarding.privateEmail')}</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      {...form.register('privateEmail')}
-                    />
+                    <input type="email" className="form-control" {...form.register('privateEmail')} />
                     <small className="text-secondary">{t('memberOnboarding.privateEmailHint')}</small>
                   </div>
                 )}
@@ -532,11 +516,7 @@ export default function Onboarding() {
                 </div>
 
                 <div className="flex gap-2 mt-4">
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={onboardMutation.isPending}
-                  >
+                  <button type="submit" className="btn btn-primary" disabled={onboardMutation.isPending}>
                     {onboardMutation.isPending ? t('common.loading') : t('memberOnboarding.createMember')}
                   </button>
                 </div>
@@ -564,7 +544,8 @@ export default function Onboarding() {
                     <div className="mb-3">
                       <h4>{t('memberOnboarding.memberDetails')}</h4>
                       <p>
-                        <strong>{t('memberOnboarding.name')}:</strong> {onboardingResult.firstName} {onboardingResult.lastName}
+                        <strong>{t('memberOnboarding.name')}:</strong> {onboardingResult.firstName}{' '}
+                        {onboardingResult.lastName}
                       </p>
                       <p>
                         <strong>{t('memberOnboarding.email')}:</strong> {onboardingResult.email}
@@ -602,21 +583,15 @@ export default function Onboarding() {
                     <div className="mb-3">
                       <h4>{t('memberOnboarding.statusTitle')}</h4>
                       <ul style={{ paddingLeft: '1.5rem' }}>
-                        <li style={{ color: 'var(--success)' }}>
-                          {t('memberOnboarding.harmonieCreated')}
-                        </li>
+                        <li style={{ color: 'var(--success)' }}>{t('memberOnboarding.harmonieCreated')}</li>
                         {onboardingResult.m365Created ? (
-                          <li style={{ color: 'var(--success)' }}>
-                            {t('memberOnboarding.m365Created')}
-                          </li>
+                          <li style={{ color: 'var(--success)' }}>{t('memberOnboarding.m365Created')}</li>
                         ) : onboardingResult.m365Error ? (
                           <li style={{ color: 'var(--danger)' }}>
                             {t('memberOnboarding.m365Error')}: {onboardingResult.m365Error}
                           </li>
                         ) : null}
-                        <li style={{ color: 'var(--warning)' }}>
-                          {t('memberOnboarding.spondPending')}
-                        </li>
+                        <li style={{ color: 'var(--warning)' }}>{t('memberOnboarding.spondPending')}</li>
                       </ul>
                     </div>
 
@@ -638,29 +613,35 @@ export default function Onboarding() {
                     </div>
 
                     {/* Retry email forwarding button when it wasn't set up */}
-                    {onboardingResult.m365Created && onboardingResult.licenseAssigned && !onboardingResult.emailForwardingSet && (
-                      <div
-                        style={{
-                          background: 'var(--warning-bg, #fff3cd)',
-                          border: '1px solid var(--warning)',
-                          borderRadius: '0.5rem',
-                          padding: '1rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{t('memberOnboarding.emailForwardingPending')}</h4>
-                        <p style={{ margin: 0, marginBottom: '0.75rem' }}>{t('memberOnboarding.emailForwardingPendingDesc')}</p>
-                        <button
-                          className="btn btn-warning btn-sm"
-                          onClick={() => retryEmailForwardingMutation.mutate(onboardingResult.userId)}
-                          disabled={retryEmailForwardingMutation.isPending}
+                    {onboardingResult.m365Created &&
+                      onboardingResult.licenseAssigned &&
+                      !onboardingResult.emailForwardingSet && (
+                        <div
+                          style={{
+                            background: 'var(--warning-bg, #fff3cd)',
+                            border: '1px solid var(--warning)',
+                            borderRadius: '0.5rem',
+                            padding: '1rem',
+                            marginBottom: '1rem',
+                          }}
                         >
-                          {retryEmailForwardingMutation.isPending
-                            ? t('memberOnboarding.retryingEmailForwarding')
-                            : t('memberOnboarding.retryEmailForwarding')}
-                        </button>
-                      </div>
-                    )}
+                          <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>
+                            {t('memberOnboarding.emailForwardingPending')}
+                          </h4>
+                          <p style={{ margin: 0, marginBottom: '0.75rem' }}>
+                            {t('memberOnboarding.emailForwardingPendingDesc')}
+                          </p>
+                          <button
+                            className="btn btn-warning btn-sm"
+                            onClick={() => retryEmailForwardingMutation.mutate(onboardingResult.userId)}
+                            disabled={retryEmailForwardingMutation.isPending}
+                          >
+                            {retryEmailForwardingMutation.isPending
+                              ? t('memberOnboarding.retryingEmailForwarding')
+                              : t('memberOnboarding.retryEmailForwarding')}
+                          </button>
+                        </div>
+                      )}
                   </>
                 )}
 
@@ -760,10 +741,7 @@ export default function Onboarding() {
                       <td>{member.email}</td>
                       <td>{formatDate(member.offboardedAt)}</td>
                       <td>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => setConfirmReactivate(member)}
-                        >
+                        <button className="btn btn-outline btn-sm" onClick={() => setConfirmReactivate(member)}>
                           {t('memberOnboarding.reactivate')}
                         </button>
                       </td>
@@ -827,9 +805,7 @@ export default function Onboarding() {
                 <button
                   className="btn btn-primary"
                   disabled={
-                    !newMappingInstrumentId ||
-                    !newMappingJobTitle.trim() ||
-                    createJobTitleMappingMutation.isPending
+                    !newMappingInstrumentId || !newMappingJobTitle.trim() || createJobTitleMappingMutation.isPending
                   }
                   onClick={() =>
                     createJobTitleMappingMutation.mutate({
@@ -874,9 +850,7 @@ export default function Onboarding() {
                             type="text"
                             className="form-control"
                             value={editingMapping.jobTitle}
-                            onChange={(e) =>
-                              setEditingMapping({ ...editingMapping, jobTitle: e.target.value })
-                            }
+                            onChange={(e) => setEditingMapping({ ...editingMapping, jobTitle: e.target.value })}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' && editingMapping.jobTitle.trim()) {
                                 updateJobTitleMappingMutation.mutate({
@@ -898,10 +872,7 @@ export default function Onboarding() {
                           <div className="flex gap-1">
                             <button
                               className="btn btn-primary btn-sm"
-                              disabled={
-                                !editingMapping.jobTitle.trim() ||
-                                updateJobTitleMappingMutation.isPending
-                              }
+                              disabled={!editingMapping.jobTitle.trim() || updateJobTitleMappingMutation.isPending}
                               onClick={() =>
                                 updateJobTitleMappingMutation.mutate({
                                   id: mapping.id,
@@ -911,10 +882,7 @@ export default function Onboarding() {
                             >
                               {t('common.save')}
                             </button>
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => setEditingMapping(null)}
-                            >
+                            <button className="btn btn-outline btn-sm" onClick={() => setEditingMapping(null)}>
                               {t('common.cancel')}
                             </button>
                           </div>
@@ -922,9 +890,7 @@ export default function Onboarding() {
                           <div className="flex gap-1">
                             <button
                               className="btn btn-outline btn-sm"
-                              onClick={() =>
-                                setEditingMapping({ id: mapping.id, jobTitle: mapping.jobTitle })
-                              }
+                              onClick={() => setEditingMapping({ id: mapping.id, jobTitle: mapping.jobTitle })}
                             >
                               {t('common.edit')}
                             </button>

@@ -1,5 +1,8 @@
+import { formatCurrency } from '../utils/format';
+import { currentLocale } from '../utils/locale';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 
 interface PublicEvent {
@@ -80,9 +83,8 @@ export default function PublicCalendar() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const endpoint = mode === 'info-screen'
-          ? `/api/calendar/info-screen/${slug}`
-          : `/api/calendar/public/${slug}?months=6`;
+        const endpoint =
+          mode === 'info-screen' ? `/api/calendar/info-screen/${slug}` : `/api/calendar/public/${slug}?months=6`;
 
         const response = await fetch(endpoint);
         if (!response.ok) {
@@ -161,8 +163,9 @@ export default function PublicCalendar() {
 }
 
 function CalendarEmbed({ data }: { data: CalendarData }) {
+  const { t } = useTranslation();
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -176,8 +179,8 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
   };
 
   const groupedEvents: Record<string, PublicEvent[]> = {};
-  data.events.forEach(event => {
-    const month = new Date(event.date).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+  data.events.forEach((event) => {
+    const month = new Date(event.date).toLocaleDateString(currentLocale(), { month: 'long', year: 'numeric' });
     if (!groupedEvents[month]) groupedEvents[month] = [];
     groupedEvents[month].push(event);
   });
@@ -187,13 +190,13 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">{data.association.name}</h1>
-          <p className="text-base-content/70">Upcoming Events</p>
+          <p className="text-base-content/70">{t('publicCalendar.upcomingEvents')}</p>
         </header>
 
         {data.events.length === 0 ? (
           <div className="card bg-base-100 p-8 text-center">
             <Icon name="calendar" size={48} className="mx-auto mb-4 opacity-50" />
-            <p className="text-base-content/70">No upcoming events</p>
+            <p className="text-base-content/70">{t('publicCalendar.noUpcomingEvents')}</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -201,7 +204,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
               <div key={month}>
                 <h2 className="text-xl font-semibold mb-4 capitalize">{month}</h2>
                 <div className="space-y-3">
-                  {events.map(event => (
+                  {events.map((event) => (
                     <div
                       key={event.id}
                       className={`card bg-base-100 shadow-md ${
@@ -241,7 +244,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
 
                         {event.ticketPrice && (
                           <div className="text-sm font-medium text-primary">
-                            Tickets: €{event.ticketPrice.toFixed(2)}
+                            Tickets: {formatCurrency(event.ticketPrice)}
                           </div>
                         )}
                       </div>
@@ -254,7 +257,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
         )}
 
         <footer className="text-center mt-8 text-sm text-base-content/50">
-          Last updated: {new Date(data.generatedAt).toLocaleString('nl-NL')}
+          {t('publicCalendar.lastUpdated')}: {new Date(data.generatedAt).toLocaleString(currentLocale())}
         </footer>
       </div>
     </div>
@@ -262,8 +265,9 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
 }
 
 function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: Date }) {
+  const { t } = useTranslation();
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
+    return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -282,10 +286,10 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
         <h1 className="text-4xl md:text-5xl font-bold">{data.association.name}</h1>
         <div className="text-right">
           <div className="text-5xl md:text-6xl font-mono font-bold">
-            {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+            {currentTime.toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' })}
           </div>
           <div className="text-lg text-base-content/70">
-            {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {currentTime.toLocaleDateString(currentLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
         </div>
       </header>
@@ -301,20 +305,21 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
               </div>
               <h2 className="card-title text-3xl mt-2">{data.nextConcert.name}</h2>
               <div className="text-xl mt-2">{formatDate(data.nextConcert.date)}</div>
-              {data.nextConcert.startTime && (
-                <div className="text-lg">{formatTime(data.nextConcert.startTime)}</div>
-              )}
+              {data.nextConcert.startTime && <div className="text-lg">{formatTime(data.nextConcert.startTime)}</div>}
               {data.nextConcert.venue && (
                 <div className="flex items-center gap-1 mt-2">
                   <Icon name="mapPin" size={16} />
-                  {data.nextConcert.venue}{data.nextConcert.city && `, ${data.nextConcert.city}`}
+                  {data.nextConcert.venue}
+                  {data.nextConcert.city && `, ${data.nextConcert.city}`}
                 </div>
               )}
               <div className="mt-4">
                 <span className="badge badge-lg bg-primary-content/20 border-0 text-primary-content">
-                  {data.nextConcert.daysUntil === 0 ? 'Today!' :
-                   data.nextConcert.daysUntil === 1 ? 'Tomorrow!' :
-                   `In ${data.nextConcert.daysUntil} days`}
+                  {data.nextConcert.daysUntil === 0
+                    ? 'Today!'
+                    : data.nextConcert.daysUntil === 1
+                      ? 'Tomorrow!'
+                      : `In ${data.nextConcert.daysUntil} days`}
                 </span>
               </div>
             </div>
@@ -329,9 +334,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
                 <Icon name="users" size={20} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Next Rehearsal</span>
               </div>
-              <h2 className="card-title text-2xl mt-2">
-                {data.nextRehearsal.orchestraName || 'Rehearsal'}
-              </h2>
+              <h2 className="card-title text-2xl mt-2">{data.nextRehearsal.orchestraName || 'Rehearsal'}</h2>
               <div className="text-lg">{formatDate(data.nextRehearsal.date)}</div>
               <div className="flex items-center gap-2">
                 <Icon name="clock" size={16} className="opacity-70" />
@@ -357,13 +360,14 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
                 <span className="uppercase text-sm font-semibold tracking-wider">Coming Up</span>
               </div>
               <div className="space-y-3 mt-2">
-                {data.upcomingConcerts.slice(0, 4).map(concert => (
-                  <div key={concert.id} className="flex justify-between items-center py-2 border-b border-base-200 last:border-0">
+                {data.upcomingConcerts.slice(0, 4).map((concert) => (
+                  <div
+                    key={concert.id}
+                    className="flex justify-between items-center py-2 border-b border-base-200 last:border-0"
+                  >
                     <div>
                       <div className="font-medium">{concert.name}</div>
-                      <div className="text-sm text-base-content/60">
-                        {concert.venue}
-                      </div>
+                      <div className="text-sm text-base-content/60">{concert.venue}</div>
                     </div>
                     <div className="text-right text-sm">
                       <div>{formatDate(concert.date)}</div>
@@ -386,9 +390,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
               </div>
               <h3 className="font-semibold text-xl mt-2">{data.announcement.title}</h3>
               {data.announcement.content && (
-                <p className="text-base-content/80 mt-2 line-clamp-3">
-                  {data.announcement.content}
-                </p>
+                <p className="text-base-content/80 mt-2 line-clamp-3">{data.announcement.content}</p>
               )}
             </div>
           </div>
@@ -399,7 +401,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
       {!data.nextConcert && !data.nextRehearsal && data.upcomingConcerts.length === 0 && (
         <div className="text-center py-20">
           <Icon name="calendar" size={64} className="mx-auto mb-4 opacity-30" />
-          <p className="text-xl text-base-content/50">No upcoming events</p>
+          <p className="text-xl text-base-content/50">{t('publicCalendar.noUpcomingEvents')}</p>
         </div>
       )}
     </div>

@@ -39,6 +39,7 @@ interface Seat {
 const CHECK_INTERVAL_MS = 60 * 1000;
 
 let schedulerRunning = false;
+let timeoutHandle: NodeJS.Timeout | null = null;
 
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
@@ -330,7 +331,7 @@ async function checkAndSendNotifications(): Promise<void> {
 
     // Schedule next check
     if (schedulerRunning) {
-        setTimeout(checkAndSendNotifications, CHECK_INTERVAL_MS);
+        timeoutHandle = setTimeout(checkAndSendNotifications, CHECK_INTERVAL_MS);
     }
 }
 
@@ -344,10 +345,14 @@ export function startScheduler(): void {
     logger.info('Seating notification scheduler started');
 
     // Start checking after a short delay
-    setTimeout(checkAndSendNotifications, 5000);
+    timeoutHandle = setTimeout(checkAndSendNotifications, 5000);
 }
 
 export function stopScheduler(): void {
     schedulerRunning = false;
+    if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+    }
     logger.info('Seating notification scheduler stopped');
 }

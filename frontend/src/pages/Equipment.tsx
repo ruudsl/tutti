@@ -1,8 +1,20 @@
+import { formatCurrency } from '../utils/format';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
-import { getEquipment, getEquipmentItem, createEquipment, deleteEquipment, getEquipmentTypes, createEquipmentLoan, returnEquipmentLoan, recordEquipmentMaintenance, addEquipmentDamageLog } from '../api/equipment';
+import {
+  getEquipment,
+  getEquipmentItem,
+  createEquipment,
+  deleteEquipment,
+  getEquipmentTypes,
+  createEquipmentLoan,
+  returnEquipmentLoan,
+  recordEquipmentMaintenance,
+  addEquipmentDamageLog,
+} from '../api/equipment';
 import { showSuccess, showError } from '../utils/toast';
 import { SkeletonCard } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -26,20 +38,44 @@ export default function Equipment() {
   useDocumentTitle('equipment.title');
   const queryClient = useQueryClient();
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  // Filters live in the URL so filtered views can be linked/bookmarked;
+  // default values are omitted from the URL to keep it clean.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('search') ?? '';
+  const statusFilter = searchParams.get('status') ?? '';
+  const typeFilter = searchParams.get('type') ?? '';
+
+  const setFilterParam = (key: string, value: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) {
+          next.set(key, value);
+        } else {
+          next.delete(key);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const setSearch = (value: string) => setFilterParam('search', value);
+  const setStatusFilter = (value: string) => setFilterParam('status', value);
+  const setTypeFilter = (value: string) => setFilterParam('type', value);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<EquipmentItem | null>(null);
 
   const { data: equipmentData, isLoading } = useQuery({
     queryKey: ['equipment', search, statusFilter, typeFilter],
-    queryFn: () => getEquipment({
-      search: search || undefined,
-      status: statusFilter || undefined,
-      type: typeFilter || undefined,
-    }),
+    queryFn: () =>
+      getEquipment({
+        search: search || undefined,
+        status: statusFilter || undefined,
+        type: typeFilter || undefined,
+      }),
   });
 
   const { data: equipmentTypes = [] } = useQuery({
@@ -100,8 +136,10 @@ export default function Equipment() {
             onChange={(e) => setTypeFilter(e.target.value)}
           >
             <option value="">{t('equipment.allTypes')}</option>
-            {equipmentTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+            {equipmentTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
             ))}
           </select>
         )}
@@ -110,7 +148,9 @@ export default function Equipment() {
       {/* Equipment Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : equipment.length === 0 ? (
         <EmptyState
@@ -122,7 +162,7 @@ export default function Equipment() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {equipment.map(item => (
+          {equipment.map((item) => (
             <div
               key={item.id}
               className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
@@ -136,9 +176,7 @@ export default function Equipment() {
                   </span>
                 </div>
 
-                {item.brandModel && (
-                  <p className="text-sm text-base-content/70">{item.brandModel}</p>
-                )}
+                {item.brandModel && <p className="text-sm text-base-content/70">{item.brandModel}</p>}
 
                 <div className="flex flex-wrap gap-2 text-sm text-base-content/60">
                   {item.serialNumber && (
@@ -166,7 +204,7 @@ export default function Equipment() {
 
                 {item.currentValue && (
                   <div className="text-sm font-medium">
-                    {t('equipment.value')}: €{item.currentValue.toFixed(2)}
+                    {t('equipment.value')}: {formatCurrency(item.currentValue)}
                   </div>
                 )}
 
@@ -176,19 +214,31 @@ export default function Equipment() {
                       <Icon name="menu" size={16} />
                     </label>
                     <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
-                      <li><button>{t('common.edit')}</button></li>
+                      <li>
+                        <button>{t('common.edit')}</button>
+                      </li>
                       {item.status === 'available' && (
-                        <li><button>{t('equipment.assignLoan')}</button></li>
+                        <li>
+                          <button>{t('equipment.assignLoan')}</button>
+                        </li>
                       )}
                       {item.status === 'on_loan' && (
-                        <li><button>{t('equipment.returnLoan')}</button></li>
+                        <li>
+                          <button>{t('equipment.returnLoan')}</button>
+                        </li>
                       )}
-                      <li><button>{t('equipment.recordMaintenance')}</button></li>
+                      <li>
+                        <button>{t('equipment.recordMaintenance')}</button>
+                      </li>
                       <li className="text-error">
-                        <button onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingItem(item);
-                        }}>{t('common.delete')}</button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingItem(item);
+                          }}
+                        >
+                          {t('common.delete')}
+                        </button>
                       </li>
                     </ul>
                   </div>
@@ -297,7 +347,7 @@ function EquipmentModal({
             onChange={(e) => setFormData({ ...formData, instrumentType: e.target.value })}
           />
           <datalist id="equipment-types">
-            {equipmentTypes.map(type => (
+            {equipmentTypes.map((type) => (
               <option key={type} value={type} />
             ))}
           </datalist>
@@ -401,12 +451,10 @@ function EquipmentModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || createMutation.isPending}
-          >
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit || createMutation.isPending}>
             {createMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : null}
             {t('common.create')}
           </button>
@@ -439,7 +487,11 @@ function EquipmentDetailModal({
   const [showDamageModal, setShowDamageModal] = useState(false);
   const [returnLoanId, setReturnLoanId] = useState<string | null>(null);
 
-  const { data: equipment, isLoading, refetch } = useQuery({
+  const {
+    data: equipment,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['equipment-detail', equipmentId],
     queryFn: () => getEquipmentItem(equipmentId),
   });
@@ -462,7 +514,7 @@ function EquipmentDetailModal({
     );
   }
 
-  const activeLoan = equipment.loanHistory.find(l => !l.returnDate);
+  const activeLoan = equipment.loanHistory.find((l) => !l.returnDate);
 
   return (
     <Modal onClose={onClose} title={equipment.instrumentType} className="max-w-3xl">
@@ -472,9 +524,7 @@ function EquipmentDetailModal({
           <span className={`badge ${STATUS_COLORS[equipment.status]} badge-lg`}>
             {t(`equipment.statuses.${equipment.status}`)}
           </span>
-          {equipment.brandModel && (
-            <span className="text-base-content/70">{equipment.brandModel}</span>
-          )}
+          {equipment.brandModel && <span className="text-base-content/70">{equipment.brandModel}</span>}
           {equipment.serialNumber && (
             <span className="font-mono text-sm text-base-content/60">S/N: {equipment.serialNumber}</span>
           )}
@@ -509,24 +559,21 @@ function EquipmentDetailModal({
           <div className="alert alert-info">
             <Icon name="user" size={16} />
             <span>
-              {t('equipment.currentlyWith')}: <strong>{equipment.currentUser.firstName} {equipment.currentUser.lastName}</strong>
+              {t('equipment.currentlyWith')}:{' '}
+              <strong>
+                {equipment.currentUser.firstName} {equipment.currentUser.lastName}
+              </strong>
             </span>
           </div>
         )}
 
         {/* Tabs */}
         <div className="tabs tabs-boxed">
-          <button
-            className={`tab ${activeTab === 'info' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('info')}
-          >
+          <button className={`tab ${activeTab === 'info' ? 'tab-active' : ''}`} onClick={() => setActiveTab('info')}>
             <Icon name="info" size={16} className="mr-1" />
             {t('equipment.details')}
           </button>
-          <button
-            className={`tab ${activeTab === 'loans' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('loans')}
-          >
+          <button className={`tab ${activeTab === 'loans' ? 'tab-active' : ''}`} onClick={() => setActiveTab('loans')}>
             <Icon name="users" size={16} className="mr-1" />
             {t('equipment.loanHistory')} ({equipment.loanHistory.length})
           </button>
@@ -617,15 +664,17 @@ function EquipmentInfoTab({ equipment }: { equipment: EquipmentDetail }) {
       </div>
       <div className="card bg-base-200 p-4">
         <h4 className="text-sm text-base-content/60">{t('equipment.purchasePrice')}</h4>
-        <p className="font-medium">{equipment.purchasePrice ? `€${equipment.purchasePrice.toFixed(2)}` : '-'}</p>
+        <p className="font-medium">{formatCurrency(equipment.purchasePrice)}</p>
       </div>
       <div className="card bg-base-200 p-4">
         <h4 className="text-sm text-base-content/60">{t('equipment.currentValue')}</h4>
-        <p className="font-medium">{equipment.currentValue ? `€${equipment.currentValue.toFixed(2)}` : '-'}</p>
+        <p className="font-medium">{formatCurrency(equipment.currentValue)}</p>
       </div>
       <div className="card bg-base-200 p-4">
         <h4 className="text-sm text-base-content/60">{t('equipment.maintenanceInterval')}</h4>
-        <p className="font-medium">{equipment.maintenanceIntervalMonths} {t('equipment.months')}</p>
+        <p className="font-medium">
+          {equipment.maintenanceIntervalMonths} {t('equipment.months')}
+        </p>
       </div>
       {equipment.notes && (
         <div className="col-span-2 card bg-base-200 p-4">
@@ -662,11 +711,19 @@ function EquipmentLoansTab({ loans }: { loans: EquipmentDetail['loanHistory'] })
           </tr>
         </thead>
         <tbody>
-          {loans.map(loan => (
+          {loans.map((loan) => (
             <tr key={loan.id}>
-              <td className="font-medium">{loan.user.firstName} {loan.user.lastName}</td>
+              <td className="font-medium">
+                {loan.user.firstName} {loan.user.lastName}
+              </td>
               <td>{formatDate(loan.loanDate)}</td>
-              <td>{loan.returnDate ? formatDate(loan.returnDate) : <span className="badge badge-warning badge-sm">{t('equipment.active')}</span>}</td>
+              <td>
+                {loan.returnDate ? (
+                  formatDate(loan.returnDate)
+                ) : (
+                  <span className="badge badge-warning badge-sm">{t('equipment.active')}</span>
+                )}
+              </td>
               <td className="text-sm">{loan.conditionAtLoan || '-'}</td>
               <td className="text-sm">{loan.conditionAtReturn || '-'}</td>
             </tr>
@@ -701,9 +758,7 @@ function EquipmentMaintenanceTab({ equipment }: { equipment: EquipmentDetail }) 
       </div>
       <div className="card bg-base-200 p-4">
         <h4 className="text-sm text-base-content/60 mb-2">{t('equipment.maintenanceSchedule')}</h4>
-        <p className="text-sm">
-          {t('equipment.maintenanceEvery', { months: equipment.maintenanceIntervalMonths })}
-        </p>
+        <p className="text-sm">{t('equipment.maintenanceEvery', { months: equipment.maintenanceIntervalMonths })}</p>
       </div>
     </div>
   );
@@ -723,7 +778,7 @@ function EquipmentDamageTab({ logs }: { logs: EquipmentDetail['damageLogs'] }) {
 
   return (
     <div className="space-y-3">
-      {logs.map(log => (
+      {logs.map((log) => (
         <div key={log.id} className="card bg-base-200 p-4">
           <div className="flex justify-between items-start">
             <div>
@@ -735,9 +790,7 @@ function EquipmentDamageTab({ logs }: { logs: EquipmentDetail['damageLogs'] }) {
               </div>
               <p className="text-sm">{log.description}</p>
             </div>
-            {log.repairCost && (
-              <span className="font-medium">€{log.repairCost.toFixed(2)}</span>
-            )}
+            {log.repairCost && <span className="font-medium">{formatCurrency(log.repairCost)}</span>}
           </div>
           {log.repairedBy && (
             <div className="text-sm text-base-content/60 mt-2">
@@ -814,7 +867,9 @@ function LoanModal({
           />
         </div>
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => loanMutation.mutate()}
@@ -881,7 +936,9 @@ function ReturnLoanModal({
           />
         </div>
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-warning"
             onClick={() => returnMutation.mutate()}
@@ -946,7 +1003,9 @@ function MaintenanceModal({
           />
         </div>
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-info"
             onClick={() => maintenanceMutation.mutate()}
@@ -979,12 +1038,13 @@ function DamageModal({
   });
 
   const damageMutation = useMutation({
-    mutationFn: () => addEquipmentDamageLog(equipmentId, {
-      date: formData.date,
-      description: formData.description,
-      repairCost: formData.repairCost ? parseFloat(formData.repairCost) : undefined,
-      status: formData.status,
-    }),
+    mutationFn: () =>
+      addEquipmentDamageLog(equipmentId, {
+        date: formData.date,
+        description: formData.description,
+        repairCost: formData.repairCost ? parseFloat(formData.repairCost) : undefined,
+        status: formData.status,
+      }),
     onSuccess: () => {
       showSuccess(t('equipment.damageReported'));
       onSuccess();
@@ -1047,7 +1107,9 @@ function DamageModal({
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <button className="btn btn-ghost" onClick={onClose}>{t('common.cancel')}</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
           <button
             className="btn btn-warning"
             onClick={() => damageMutation.mutate()}

@@ -1,3 +1,4 @@
+import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -35,17 +36,20 @@ export default function MyTickets() {
   });
 
   // Group by concert
-  const ticketsByConcert = filteredTickets.reduce((acc, ticket) => {
-    const key = ticket.concert.id;
-    if (!acc[key]) {
-      acc[key] = {
-        concert: ticket.concert,
-        tickets: [],
-      };
-    }
-    acc[key].tickets.push(ticket);
-    return acc;
-  }, {} as Record<string, { concert: Ticket['concert']; tickets: Ticket[] }>);
+  const ticketsByConcert = filteredTickets.reduce(
+    (acc, ticket) => {
+      const key = ticket.concert.id;
+      if (!acc[key]) {
+        acc[key] = {
+          concert: ticket.concert,
+          tickets: [],
+        };
+      }
+      acc[key].tickets.push(ticket);
+      return acc;
+    },
+    {} as Record<string, { concert: Ticket['concert']; tickets: Ticket[] }>,
+  );
 
   const sortedConcerts = Object.values(ticketsByConcert).sort((a, b) => {
     const dateA = new Date(a.concert.date).getTime();
@@ -116,10 +120,7 @@ export default function MyTickets() {
         >
           {t('tickets.pastConcerts')}
         </button>
-        <button
-          className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setFilter('all')}
-        >
+        <button className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setFilter('all')}>
           {t('common.all')}
         </button>
       </div>
@@ -129,9 +130,7 @@ export default function MyTickets() {
           <div className="card-body" style={{ textAlign: 'center', padding: '3rem' }}>
             <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>&#127915;</span>
             <h3>{t('tickets.noTickets')}</h3>
-            <p style={{ color: 'var(--text-light)' }}>
-              {t('tickets.noTicketsDescription')}
-            </p>
+            <p style={{ color: 'var(--text-light)' }}>{t('tickets.noTicketsDescription')}</p>
           </div>
         </div>
       ) : filteredTickets.length === 0 ? (
@@ -157,7 +156,7 @@ export default function MyTickets() {
                   <div>
                     <h3 style={{ margin: 0 }}>{concert.name}</h3>
                     <p style={{ color: 'var(--text-light)', margin: '0.25rem 0 0' }}>
-                      {new Date(concert.date).toLocaleDateString('nl-NL', {
+                      {new Date(concert.date).toLocaleDateString(currentLocale(), {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
@@ -195,13 +194,8 @@ export default function MyTickets() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                        {ticket.code}
-                      </code>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => setViewingTicket(ticket)}
-                      >
+                      <code style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{ticket.code}</code>
+                      <button className="btn btn-outline btn-sm" onClick={() => setViewingTicket(ticket)}>
                         {t('tickets.viewTicket')}
                       </button>
                     </div>
@@ -215,11 +209,7 @@ export default function MyTickets() {
 
       {/* Ticket Detail Modal */}
       {viewingTicket && (
-        <Modal
-          title={t('tickets.ticketDetails')}
-          onClose={() => setViewingTicket(null)}
-          size="medium"
-        >
+        <Modal title={t('tickets.ticketDetails')} onClose={() => setViewingTicket(null)} size="medium">
           <TicketDisplay ticket={viewingTicket} />
         </Modal>
       )}
