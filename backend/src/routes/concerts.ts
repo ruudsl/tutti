@@ -1188,7 +1188,8 @@ router.delete(
       throw new ApiError(404, 'Concert niet gevonden.');
     }
 
-    logger.info(`Concert soft-deleted: ${req.params.id}`, { deletedBy: req.user!.id });
+    const sanitizedConcertIdForLog = String(req.params.id).replace(/[\r\n]+/g, '');
+    logger.info(`Concert soft-deleted: ${sanitizedConcertIdForLog}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Concert succesvol verwijderd.' });
   }),
