@@ -82,6 +82,37 @@ function findInstrumentId(instrumentName: string): string | null {
   return alias ? alias.instrument_id : null;
 }
 
+function validateCloudDownloadUrl(rawUrl: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new ApiError(400, 'Invalid download URL');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new ApiError(400, 'Only HTTPS download URLs are allowed');
+  }
+
+  if (parsed.username || parsed.password) {
+    throw new ApiError(400, 'Download URL must not contain credentials');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const allowedExactHosts = new Set(['graph.microsoft.com', 'onedrive.live.com']);
+  const allowedHostSuffixes = ['.sharepoint.com', '.1drv.com'];
+
+  const allowed =
+    allowedExactHosts.has(hostname) ||
+    allowedHostSuffixes.some((suffix) => hostname.endsWith(suffix));
+
+  if (!allowed) {
+    throw new ApiError(400, 'Download URL host is not allowed');
+  }
+
+  return parsed.toString();
+}
+
 async function downloadAndSave(
   url: string,
   accessToken: string | null,
@@ -92,7 +123,8 @@ async function downloadAndSave(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(url, { headers });
+  const safeUrl = validateCloudDownloadUrl(url);
+  const response = await fetch(safeUrl, { headers });
   if (!response.ok) {
     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
   }
