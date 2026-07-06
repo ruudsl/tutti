@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import express, { Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import request from 'supertest';
 import '../setup';
 import downloadTokenRoutes from '../../routes/download-token';
@@ -16,7 +17,12 @@ import { createTestEnvironment, generateInvalidToken, TestUser } from '../testUt
 // Minimal app: the download-token router plus a protected resource route
 // (mirrors how download/media routes use authenticateToken in production).
 const app = express();
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // high limit to avoid test flakiness while still enforcing rate limiting
+});
 app.use(express.json());
+app.use(limiter);
 app.use('/api/download-token', downloadTokenRoutes);
 app.get('/api/protected', authenticateToken, (req: AuthRequest, res: Response) => {
   res.json({ ok: true, userId: req.user!.id, role: req.user!.role });
