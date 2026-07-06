@@ -375,14 +375,19 @@ app.get('/api/csrf-token', getCsrfToken);
 const changelogCache = new Map<string, string>();
 
 async function loadChangelog(lang: string): Promise<string> {
-  const suffix = lang === 'nl' ? '' : `_${lang}`;
+  const changelogFileByLang: Record<string, string> = {
+    nl: 'CHANGELOG.md',
+    en: 'CHANGELOG_en.md',
+  };
+
+  const requestedFile = changelogFileByLang[lang] ?? 'CHANGELOG.md';
 
   // In production (Render), CHANGELOG files are copied to backend/ during build
   // In development, they're in the repo root (../../ from dist/).
   // The language-less CHANGELOG.md acts as fallback for unknown languages.
   const candidates = [
-    path.join(__dirname, `../CHANGELOG${suffix}.md`),
-    path.join(__dirname, `../../CHANGELOG${suffix}.md`),
+    path.join(__dirname, `../${requestedFile}`),
+    path.join(__dirname, `../../${requestedFile}`),
     path.join(__dirname, '../CHANGELOG.md'),
     path.join(__dirname, '../../CHANGELOG.md'),
   ];
