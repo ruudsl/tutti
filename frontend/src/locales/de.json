@@ -14,6 +14,12 @@
     "loading": "Laden...",
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "message": "Du hast ungespeicherte Änderungen. Möchtest du wirklich schließen? Deine Änderungen gehen verloren.",
+      "discard": "Änderungen verwerfen",
+      "keepEditing": "Weiter bearbeiten"
+    },
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "add": "Hinzufügen",
@@ -25,6 +31,8 @@
     "yes": "Ja",
     "no": "Nein",
     "confirm": "Bestätigen",
+    "confirmDeleteTitle": "Löschen bestätigen",
+    "undo": "Rückgängig machen",
     "close": "Schließen",
     "submit": "Absenden",
     "download": "Herunterladen",
@@ -1013,6 +1021,10 @@
   },
   "musicPieces": {
     "title": "Musikstücke",
+    "deleted": "Musikstück gelöscht",
+    "deletedBulk": "{{count}} Musikstücke gelöscht",
+    "restored": "Musikstück wiederhergestellt",
+    "restoredBulk": "{{count}} Musikstücke wiederhergestellt",
     "searchPlaceholder": "Nach Titel oder Arrangeur suchen...",
     "allInstruments": "Alle Instrumente",
     "noInstrument": "Ohne Instrument",

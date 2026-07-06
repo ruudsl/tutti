@@ -7,6 +7,7 @@
  * @module utils/toast
  */
 
+import { createElement } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 
 export { toast, Toaster };
@@ -48,6 +49,53 @@ function announceToScreenReader(message: string, priority: 'polite' | 'assertive
  */
 export function showSuccess(message: string): void {
   toast.success(message);
+  announceToScreenReader(message, 'polite');
+}
+
+/**
+ * Shows a success toast with an undo action button.
+ *
+ * @description Displays a toast with the given message and an "undo" button.
+ * Clicking the button dismisses the toast and invokes the provided callback
+ * (e.g. to call a restore endpoint after a soft-delete). The message is also
+ * announced to screen readers with polite priority.
+ * @param {string} message - Message to display (e.g. "Item deleted")
+ * @param {string} undoLabel - Label for the undo button (e.g. "Undo")
+ * @param {() => void | Promise<void>} onUndo - Callback invoked when undo is clicked
+ * @param {number} [duration=8000] - How long the toast stays visible (ms)
+ * @example
+ * showUndoToast(t('musicPieces.deleted'), t('common.undo'), async () => {
+ *   await restoreMusicPiece(id);
+ * });
+ */
+export function showUndoToast(
+  message: string,
+  undoLabel: string,
+  onUndo: () => void | Promise<void>,
+  duration = 8000,
+): void {
+  toast.success(
+    (activeToast) =>
+      createElement(
+        'span',
+        { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+        message,
+        createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'btn btn-sm btn-outline',
+            style: { flexShrink: 0 },
+            onClick: () => {
+              toast.dismiss(activeToast.id);
+              void onUndo();
+            },
+          },
+          undoLabel,
+        ),
+      ),
+    { duration },
+  );
   announceToScreenReader(message, 'polite');
 }
 
@@ -127,7 +175,7 @@ export function showPromise<T>(
     loading: string;
     success: string;
     error: string | ((err: unknown) => string);
-  }
+  },
 ): Promise<T> {
   announceToScreenReader(messages.loading, 'polite');
 
@@ -137,11 +185,9 @@ export function showPromise<T>(
       return result;
     },
     (error) => {
-      const errorMessage = typeof messages.error === 'function'
-        ? messages.error(error)
-        : messages.error;
+      const errorMessage = typeof messages.error === 'function' ? messages.error(error) : messages.error;
       announceToScreenReader(errorMessage, 'assertive');
       throw error;
-    }
+    },
   );
 }

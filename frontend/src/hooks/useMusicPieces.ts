@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { queryKeys } from '../lib/queryClient';
 import {
   getMusicPieces,
@@ -6,12 +7,13 @@ import {
   updateMusicPiece,
   deleteMusicPiece,
   deleteMusicPiecesBulk,
+  restoreMusicPiece,
   bulkUpdatePieces,
   refreshInstrumentLinks,
   type PaginatedResponse,
 } from '../api';
 import type { MusicPiece } from '../types';
-import { showSuccess, showError } from '../utils/toast';
+import { showSuccess, showError, showUndoToast } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 
 interface MusicPiecesFilters {
@@ -40,7 +42,12 @@ export function useMusicPieces(filters?: MusicPiecesFilters) {
  */
 export function useMusicPiecesPaginated(filters?: PaginatedMusicPiecesFilters) {
   return useQuery<PaginatedResponse<MusicPiece>>({
-    queryKey: [...queryKeys.musicPieces(filters as Record<string, string>), 'paginated', filters?.page, filters?.pageSize],
+    queryKey: [
+      ...queryKeys.musicPieces(filters as Record<string, string>),
+      'paginated',
+      filters?.page,
+      filters?.pageSize,
+    ],
     queryFn: () => getMusicPiecesPaginated(filters),
     placeholderData: (previousData) => previousData,
   });
@@ -53,16 +60,22 @@ export function useUpdateMusicPiece() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: {
-      title?: string;
-      arranger?: string;
-      instrumentId?: string;
-      tuning?: string;
-      groupNumber?: string;
-      clef?: string;
-      youtubeUrl?: string;
-      isShared?: boolean;
-    }}) => updateMusicPiece(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        title?: string;
+        arranger?: string;
+        instrumentId?: string;
+        tuning?: string;
+        groupNumber?: string;
+        clef?: string;
+        youtubeUrl?: string;
+        isShared?: boolean;
+      };
+    }) => updateMusicPiece(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess('Muziekstuk bijgewerkt');
@@ -78,12 +91,21 @@ export function useUpdateMusicPiece() {
  */
 export function useDeleteMusicPiece() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: (id: string) => deleteMusicPiece(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
-      showSuccess('Muziekstuk verwijderd');
+      showUndoToast(t('musicPieces.deleted'), t('common.undo'), async () => {
+        try {
+          await restoreMusicPiece(id);
+          queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+          showSuccess(t('musicPieces.restored'));
+        } catch (error) {
+          showError(getErrorMessage(error));
+        }
+      });
     },
     onError: (error) => {
       showError(getErrorMessage(error));
@@ -96,12 +118,22 @@ export function useDeleteMusicPiece() {
  */
 export function useDeleteMusicPiecesBulk() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: (ids: string[]) => deleteMusicPiecesBulk(ids),
-    onSuccess: (result) => {
+    onSuccess: (result, ids) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
-      showSuccess(`${result.count} muziekstukken verwijderd`);
+      showUndoToast(t('musicPieces.deletedBulk', { count: result.count }), t('common.undo'), async () => {
+        try {
+          await Promise.all(ids.map((id) => restoreMusicPiece(id)));
+          queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+          showSuccess(t('musicPieces.restoredBulk', { count: ids.length }));
+        } catch (error) {
+          showError(getErrorMessage(error));
+          queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+        }
+      });
     },
     onError: (error) => {
       showError(getErrorMessage(error));
@@ -116,7 +148,10 @@ export function useBulkUpdatePieces() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ pieceIds, updates }: {
+    mutationFn: ({
+      pieceIds,
+      updates,
+    }: {
       pieceIds: string[];
       updates: {
         instrumentId?: string | null;

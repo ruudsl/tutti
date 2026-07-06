@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errorHandling';
 import { Icon } from '../components/Icon';
@@ -50,6 +51,16 @@ import AttendanceDashboard, {
 import { CustomFieldFormSection, CustomFieldRenderer } from '../components/CustomFields';
 
 const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR];
+
+const EMPTY_REHEARSAL_FORM = {
+  date: '',
+  startTime: '19:30',
+  endTime: '21:30',
+  location: '',
+  type: 'regular',
+  notes: '',
+  orchestraId: '',
+};
 
 export default function Rehearsals() {
   const { t } = useTranslation();
@@ -119,15 +130,16 @@ export default function Rehearsals() {
   // Form states
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    date: '',
-    startTime: '19:30',
-    endTime: '21:30',
-    location: '',
-    type: 'regular',
-    notes: '',
-    orchestraId: '',
-  });
+  const [form, setForm] = useState({ ...EMPTY_REHEARSAL_FORM });
+  // Snapshot of the form state when the form was opened, for dirty detection
+  const [formSnapshot, setFormSnapshot] = useState(() => JSON.stringify(EMPTY_REHEARSAL_FORM));
+  const isFormDirty = showForm && JSON.stringify(form) !== formSnapshot;
+  const { confirmClose, dialog: unsavedChangesDialog } = useUnsavedChanges(isFormDirty);
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   // Default day form
   const [showDefaultForm, setShowDefaultForm] = useState(false);
@@ -351,7 +363,7 @@ export default function Rehearsals() {
   };
 
   const handleEdit = (r: Rehearsal) => {
-    setForm({
+    const newForm = {
       date: r.date,
       startTime: r.start_time,
       endTime: r.end_time,
@@ -359,7 +371,9 @@ export default function Rehearsals() {
       type: r.type,
       notes: r.notes || '',
       orchestraId: r.orchestra_id || '',
-    });
+    };
+    setForm(newForm);
+    setFormSnapshot(JSON.stringify(newForm));
     setEditingId(r.id);
     setShowForm(true);
   };
@@ -914,15 +928,8 @@ export default function Rehearsals() {
             <button
               className="btn btn-primary"
               onClick={() => {
-                setForm({
-                  date: '',
-                  startTime: '19:30',
-                  endTime: '21:30',
-                  location: '',
-                  type: 'regular',
-                  notes: '',
-                  orchestraId: '',
-                });
+                setForm({ ...EMPTY_REHEARSAL_FORM });
+                setFormSnapshot(JSON.stringify(EMPTY_REHEARSAL_FORM));
                 setEditingId(null);
                 setShowForm(true);
               }}
@@ -1448,13 +1455,7 @@ export default function Rehearsals() {
                   >
                     {saveRehearsalMutation.isPending ? t('common.loading') : t('common.save')}
                   </button>
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => {
-                      setShowForm(false);
-                      setEditingId(null);
-                    }}
-                  >
+                  <button className="btn btn-outline" onClick={() => confirmClose(closeForm)}>
                     {t('common.cancel')}
                   </button>
                 </div>
@@ -1900,6 +1901,9 @@ export default function Rehearsals() {
           </div>
         </>
       )}
+
+      {/* Unsaved changes confirmation for the rehearsal form */}
+      {unsavedChangesDialog}
 
       {/* Delete Rehearsal Confirmation */}
       {deletingRehearsalId && (

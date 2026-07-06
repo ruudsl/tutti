@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   getNotificationChannels,
   getNotificationPreferences,
@@ -39,6 +40,9 @@ export default function NotificationPreferences({ onClose }: Props) {
   const [isUnlinkingWhatsApp, setIsUnlinkingWhatsApp] = useState(false);
   const [whatsAppPendingVerification, setWhatsAppPendingVerification] = useState(false);
 
+  // Unlink confirmation dialog ('telegram' | 'whatsapp' | null)
+  const [confirmAction, setConfirmAction] = useState<null | 'telegram' | 'whatsapp'>(null);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -46,10 +50,7 @@ export default function NotificationPreferences({ onClose }: Props) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [channelsData, prefsData] = await Promise.all([
-        getNotificationChannels(),
-        getNotificationPreferences(),
-      ]);
+      const [channelsData, prefsData] = await Promise.all([getNotificationChannels(), getNotificationPreferences()]);
       setChannels(channelsData);
       setPreferences(prefsData);
     } catch (error) {
@@ -101,8 +102,6 @@ export default function NotificationPreferences({ onClose }: Props) {
   };
 
   const handleUnlinkTelegram = async () => {
-    if (!confirm(t('notificationPrefs.telegram.unlinkConfirm'))) return;
-
     setIsUnlinkingTelegram(true);
     try {
       await unlinkTelegram();
@@ -114,6 +113,7 @@ export default function NotificationPreferences({ onClose }: Props) {
       showError(error.response?.data?.error || t('notificationPrefs.telegram.unlinkError'));
     } finally {
       setIsUnlinkingTelegram(false);
+      setConfirmAction(null);
     }
   };
 
@@ -157,8 +157,6 @@ export default function NotificationPreferences({ onClose }: Props) {
   };
 
   const handleUnlinkWhatsApp = async () => {
-    if (!confirm(t('notificationPrefs.whatsapp.unlinkConfirm'))) return;
-
     setIsUnlinkingWhatsApp(true);
     try {
       await unlinkWhatsApp();
@@ -168,6 +166,7 @@ export default function NotificationPreferences({ onClose }: Props) {
       showError(error.response?.data?.error || t('notificationPrefs.whatsapp.unlinkError'));
     } finally {
       setIsUnlinkingWhatsApp(false);
+      setConfirmAction(null);
     }
   };
 
@@ -252,11 +251,11 @@ export default function NotificationPreferences({ onClose }: Props) {
                 type="checkbox"
                 checked={preferences?.channels.push.enabled ?? true}
                 onChange={() => toggleChannel('push')}
-                disabled={!channels.find(c => c.channel === 'push')?.configured}
+                disabled={!channels.find((c) => c.channel === 'push')?.configured}
               />
               <span>
                 <strong>{t('notificationPrefs.channels.push')}</strong>
-                {!channels.find(c => c.channel === 'push')?.configured && (
+                {!channels.find((c) => c.channel === 'push')?.configured && (
                   <span className="text-muted ml-2">({t('notificationPrefs.channels.notConfigured')})</span>
                 )}
               </span>
@@ -279,17 +278,15 @@ export default function NotificationPreferences({ onClose }: Props) {
               </label>
             </div>
 
-            {channels.find(c => c.channel === 'telegram')?.configured ? (
+            {channels.find((c) => c.channel === 'telegram')?.configured ? (
               <div className="channel-details ml-4 mt-2">
                 {preferences?.channels.telegram.verified ? (
                   <div className="linked-status">
-                    <span className="status-badge status-success">
-                      {t('notificationPrefs.telegram.linked')}
-                    </span>
+                    <span className="status-badge status-success">{t('notificationPrefs.telegram.linked')}</span>
                     <button
                       type="button"
                       className="btn btn-sm btn-secondary ml-2"
-                      onClick={handleUnlinkTelegram}
+                      onClick={() => setConfirmAction('telegram')}
                       disabled={isUnlinkingTelegram}
                     >
                       {isUnlinkingTelegram ? t('common.loading') : t('notificationPrefs.telegram.unlink')}
@@ -309,11 +306,7 @@ export default function NotificationPreferences({ onClose }: Props) {
                     <p className="text-muted mt-2" style={{ fontSize: '0.8rem' }}>
                       {t('notificationPrefs.telegram.codeInfo')}: <code>{telegramLinkCode}</code>
                     </p>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-secondary mt-2"
-                      onClick={loadData}
-                    >
+                    <button type="button" className="btn btn-sm btn-secondary mt-2" onClick={loadData}>
                       {t('notificationPrefs.telegram.checkStatus')}
                     </button>
                   </div>
@@ -349,7 +342,7 @@ export default function NotificationPreferences({ onClose }: Props) {
               </label>
             </div>
 
-            {channels.find(c => c.channel === 'whatsapp')?.configured ? (
+            {channels.find((c) => c.channel === 'whatsapp')?.configured ? (
               <div className="channel-details ml-4 mt-2">
                 {preferences?.channels.whatsapp.verified ? (
                   <div className="linked-status">
@@ -362,7 +355,7 @@ export default function NotificationPreferences({ onClose }: Props) {
                     <button
                       type="button"
                       className="btn btn-sm btn-secondary ml-2"
-                      onClick={handleUnlinkWhatsApp}
+                      onClick={() => setConfirmAction('whatsapp')}
                       disabled={isUnlinkingWhatsApp}
                     >
                       {isUnlinkingWhatsApp ? t('common.loading') : t('notificationPrefs.whatsapp.unlink')}
@@ -440,7 +433,9 @@ export default function NotificationPreferences({ onClose }: Props) {
               <label className="checkbox-item">
                 <input
                   type="checkbox"
-                  checked={preferences?.notificationTypes[key as keyof typeof preferences.notificationTypes]?.enabled ?? true}
+                  checked={
+                    preferences?.notificationTypes[key as keyof typeof preferences.notificationTypes]?.enabled ?? true
+                  }
                   onChange={() => toggleNotificationType(key)}
                 />
                 <span>{label}</span>
@@ -452,20 +447,11 @@ export default function NotificationPreferences({ onClose }: Props) {
 
       {/* Save Button */}
       <div className="btn-group">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
+        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
           {isSaving ? t('common.loading') : t('common.save')}
         </button>
         {onClose && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-          >
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
         )}
@@ -507,6 +493,22 @@ export default function NotificationPreferences({ onClose }: Props) {
         .notification-preferences .gap-2 { gap: 0.5rem; }
         .notification-preferences .flex { display: flex; }
       `}</style>
+
+      {confirmAction && (
+        <ConfirmDialog
+          title={t('common.confirm')}
+          message={
+            confirmAction === 'telegram'
+              ? t('notificationPrefs.telegram.unlinkConfirm')
+              : t('notificationPrefs.whatsapp.unlinkConfirm')
+          }
+          confirmLabel={t('common.confirm')}
+          variant="danger"
+          isLoading={confirmAction === 'telegram' ? isUnlinkingTelegram : isUnlinkingWhatsApp}
+          onConfirm={confirmAction === 'telegram' ? handleUnlinkTelegram : handleUnlinkWhatsApp}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }

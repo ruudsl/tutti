@@ -52,6 +52,11 @@ export default function Settings() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Confirmation dialog state for remove actions
+  const [confirmAction, setConfirmAction] = useState<
+    null | 'removeLogo' | 'removeMicrosoft' | 'removeSmtp' | 'removeTelegram' | 'removeWhatsapp'
+  >(null);
+
   // React Query for settings
   const { data: settings = null, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -265,8 +270,6 @@ export default function Settings() {
   };
 
   const handleRemoveLogo = async () => {
-    if (!confirm(t('settings.removeLogoConfirm'))) return;
-
     try {
       await removeLogo();
       showSuccess(t('settings.logoRemoved'));
@@ -302,7 +305,6 @@ export default function Settings() {
   };
 
   const handleMicrosoftRemove = async () => {
-    if (!confirm(t('settings.microsoft.removeConfirm'))) return;
     try {
       await removeMicrosoftConfig();
       showSuccess(t('settings.microsoft.removed'));
@@ -344,7 +346,6 @@ export default function Settings() {
   };
 
   const handleSmtpRemove = async () => {
-    if (!confirm(t('settings.smtp.removeConfirm'))) return;
     try {
       await removeSmtpConfig();
       showSuccess(t('settings.smtp.removed'));
@@ -392,7 +393,6 @@ export default function Settings() {
   };
 
   const handleTelegramDelete = async () => {
-    if (!confirm(t('settings.telegram.removeConfirm'))) return;
     try {
       const result = await deleteTelegramConfig();
       showSuccess(result.message || t('settings.telegram.deleted'));
@@ -439,7 +439,6 @@ export default function Settings() {
   };
 
   const handleWhatsAppDelete = async () => {
-    if (!confirm(t('settings.whatsapp.removeConfirm'))) return;
     try {
       const result = await deleteWhatsAppConfig();
       showSuccess(result.message || t('settings.whatsapp.deleted'));
@@ -636,7 +635,7 @@ export default function Settings() {
                   background: 'white',
                 }}
               />
-              <button type="button" className="btn btn-outline btn-sm" onClick={handleRemoveLogo}>
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setConfirmAction('removeLogo')}>
                 {t('settings.removeLogo')}
               </button>
             </div>
@@ -749,7 +748,7 @@ export default function Settings() {
                 {msSaving ? t('common.loading') : t('common.save')}
               </button>
               {msConfig?.configured && (
-                <button type="button" className="btn btn-outline" onClick={handleMicrosoftRemove}>
+                <button type="button" className="btn btn-outline" onClick={() => setConfirmAction('removeMicrosoft')}>
                   {t('settings.microsoft.remove')}
                 </button>
               )}
@@ -951,7 +950,7 @@ export default function Settings() {
                   <button type="button" className="btn btn-outline" onClick={handleSmtpTest} disabled={smtpTesting}>
                     {smtpTesting ? t('common.loading') : t('settings.smtp.test')}
                   </button>
-                  <button type="button" className="btn btn-outline" onClick={handleSmtpRemove}>
+                  <button type="button" className="btn btn-outline" onClick={() => setConfirmAction('removeSmtp')}>
                     {t('settings.smtp.remove')}
                   </button>
                 </>
@@ -1010,7 +1009,7 @@ export default function Settings() {
                 {telegramSaving ? t('common.loading') : t('common.save')}
               </button>
               {telegramConfig?.configured && (
-                <button type="button" className="btn btn-outline" onClick={handleTelegramDelete}>
+                <button type="button" className="btn btn-outline" onClick={() => setConfirmAction('removeTelegram')}>
                   {t('settings.telegram.remove')}
                 </button>
               )}
@@ -1156,7 +1155,7 @@ export default function Settings() {
                 {whatsappSaving ? t('common.loading') : t('common.save')}
               </button>
               {whatsappConfig?.configured && (
-                <button type="button" className="btn btn-outline" onClick={handleWhatsAppDelete}>
+                <button type="button" className="btn btn-outline" onClick={() => setConfirmAction('removeWhatsapp')}>
                   {t('settings.whatsapp.remove')}
                 </button>
               )}
@@ -1310,6 +1309,34 @@ export default function Settings() {
             />
           </div>
         </FormModal>
+      )}
+
+      {/* Remove integration/logo confirmation */}
+      {confirmAction && (
+        <ConfirmDialog
+          title={t('common.delete')}
+          message={t(
+            {
+              removeLogo: 'settings.removeLogoConfirm',
+              removeMicrosoft: 'settings.microsoft.removeConfirm',
+              removeSmtp: 'settings.smtp.removeConfirm',
+              removeTelegram: 'settings.telegram.removeConfirm',
+              removeWhatsapp: 'settings.whatsapp.removeConfirm',
+            }[confirmAction],
+          )}
+          confirmLabel={t('common.delete')}
+          onConfirm={() => {
+            const action = confirmAction;
+            setConfirmAction(null);
+            if (action === 'removeLogo') void handleRemoveLogo();
+            else if (action === 'removeMicrosoft') void handleMicrosoftRemove();
+            else if (action === 'removeSmtp') void handleSmtpRemove();
+            else if (action === 'removeTelegram') void handleTelegramDelete();
+            else if (action === 'removeWhatsapp') void handleWhatsAppDelete();
+          }}
+          onCancel={() => setConfirmAction(null)}
+          variant="danger"
+        />
       )}
 
       {/* Delete Concert Type Confirmation */}

@@ -5,6 +5,7 @@ import type { AnnotationToolbarProps, ToolType, ShapeType } from './types';
 import { Icon, type IconName } from '../Icon';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { Tooltip } from '../Tooltip';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 interface ToolConfig {
   icon: IconName;
@@ -13,13 +14,37 @@ interface ToolConfig {
 }
 
 const TOOLS: Record<ToolType, ToolConfig> = {
-  select: { icon: 'mousePointer', labelKey: 'annotationToolbar.tools.select', descriptionKey: 'annotationToolbar.tools.selectDesc' },
-  freehand: { icon: 'penTool', labelKey: 'annotationToolbar.tools.freehand', descriptionKey: 'annotationToolbar.tools.freehandDesc' },
-  highlight: { icon: 'highlighter', labelKey: 'annotationToolbar.tools.highlight', descriptionKey: 'annotationToolbar.tools.highlightDesc' },
+  select: {
+    icon: 'mousePointer',
+    labelKey: 'annotationToolbar.tools.select',
+    descriptionKey: 'annotationToolbar.tools.selectDesc',
+  },
+  freehand: {
+    icon: 'penTool',
+    labelKey: 'annotationToolbar.tools.freehand',
+    descriptionKey: 'annotationToolbar.tools.freehandDesc',
+  },
+  highlight: {
+    icon: 'highlighter',
+    labelKey: 'annotationToolbar.tools.highlight',
+    descriptionKey: 'annotationToolbar.tools.highlightDesc',
+  },
   text: { icon: 'type', labelKey: 'annotationToolbar.tools.text', descriptionKey: 'annotationToolbar.tools.textDesc' },
-  stamp: { icon: 'stamp', labelKey: 'annotationToolbar.tools.stamp', descriptionKey: 'annotationToolbar.tools.stampDesc' },
-  shape: { icon: 'shapes', labelKey: 'annotationToolbar.tools.shape', descriptionKey: 'annotationToolbar.tools.shapeDesc' },
-  eraser: { icon: 'eraser', labelKey: 'annotationToolbar.tools.eraser', descriptionKey: 'annotationToolbar.tools.eraserDesc' },
+  stamp: {
+    icon: 'stamp',
+    labelKey: 'annotationToolbar.tools.stamp',
+    descriptionKey: 'annotationToolbar.tools.stampDesc',
+  },
+  shape: {
+    icon: 'shapes',
+    labelKey: 'annotationToolbar.tools.shape',
+    descriptionKey: 'annotationToolbar.tools.shapeDesc',
+  },
+  eraser: {
+    icon: 'eraser',
+    labelKey: 'annotationToolbar.tools.eraser',
+    descriptionKey: 'annotationToolbar.tools.eraserDesc',
+  },
 };
 
 const SHAPE_TYPE_KEYS: { type: ShapeType; icon: IconName; labelKey: string }[] = [
@@ -68,7 +93,15 @@ interface ToolButtonProps {
   description: string;
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shortcut, isDarkMode, label, description }) => (
+const ToolButton: React.FC<ToolButtonProps> = ({
+  config,
+  isActive,
+  onClick,
+  shortcut,
+  isDarkMode,
+  label,
+  description,
+}) => (
   <Tooltip content={`${description}${shortcut ? ` (${shortcut})` : ''}`} position="right">
     <button
       onClick={onClick}
@@ -83,7 +116,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ config, isActive, onClick, shor
         border: 'none',
         borderRadius: '8px',
         backgroundColor: isActive ? '#3b82f6' : 'transparent',
-        color: isActive ? '#ffffff' : (isDarkMode ? '#d1d5db' : '#374151'),
+        color: isActive ? '#ffffff' : isDarkMode ? '#d1d5db' : '#374151',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
       }}
@@ -129,6 +162,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [stampCategory, setStampCategory] = useState('dynamics');
   const [stampSearch, setStampSearch] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { isDarkMode } = useDarkMode();
 
   // Keyboard shortcuts for tools
@@ -173,13 +207,10 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
   // Filter stamps by search and category
   const filteredStamps = useMemo(() => {
-    let result = stamps.filter(s => s.category === stampCategory);
+    let result = stamps.filter((s) => s.category === stampCategory);
     if (stampSearch.trim()) {
       const search = stampSearch.toLowerCase();
-      result = stamps.filter(s =>
-        s.name.toLowerCase().includes(search) ||
-        s.category.toLowerCase().includes(search)
-      );
+      result = stamps.filter((s) => s.name.toLowerCase().includes(search) || s.category.toLowerCase().includes(search));
     }
     return result;
   }, [stamps, stampCategory, stampSearch]);
@@ -224,29 +255,41 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       }}
     >
       {/* Header */}
-      <div style={{
-        fontSize: '14px',
-        fontWeight: 600,
-        color: textColor,
-        paddingBottom: '8px',
-        borderBottom: `1px solid ${borderColor}`,
-      }}>
+      <div
+        style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: textColor,
+          paddingBottom: '8px',
+          borderBottom: `1px solid ${borderColor}`,
+        }}
+      >
         {t('annotationToolbar.title')}
       </div>
 
       {/* Tool Selection */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 500, color: textLightColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 500,
+            color: textLightColor,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           {t('annotationToolbar.toolsLabel')}
         </span>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '4px',
-          backgroundColor: bgSecondary,
-          padding: '4px',
-          borderRadius: '8px',
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '4px',
+            backgroundColor: bgSecondary,
+            padding: '4px',
+            borderRadius: '8px',
+          }}
+        >
           {(Object.entries(TOOLS) as [ToolType, ToolConfig][]).map(([tool, config], index) => (
             <ToolButton
               key={tool}
@@ -266,17 +309,27 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {/* Shape Type Picker */}
       {showShapePicker && activeTool === 'shape' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#6b7280',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
             {t('annotationToolbar.shapeType')}
           </span>
-          <div style={{
-            display: 'flex',
-            gap: '4px',
-            backgroundColor: '#f3f4f6',
-            padding: '4px',
-            borderRadius: '8px',
-          }}>
-            {SHAPE_TYPE_KEYS.map(shape => (
+          <div
+            style={{
+              display: 'flex',
+              gap: '4px',
+              backgroundColor: '#f3f4f6',
+              padding: '4px',
+              borderRadius: '8px',
+            }}
+          >
+            {SHAPE_TYPE_KEYS.map((shape) => (
               <button
                 key={shape.type}
                 onClick={() => onShapeTypeChange?.(shape.type)}
@@ -304,18 +357,28 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
       {/* Color Picker */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 500,
+            color: '#6b7280',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           {t('annotationToolbar.color')}
         </span>
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          flexWrap: 'wrap',
-          padding: '8px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '8px',
-        }}>
-          {COLORS_DATA.map(c => (
+        <div
+          style={{
+            display: 'flex',
+            gap: '6px',
+            flexWrap: 'wrap',
+            padding: '8px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+          }}
+        >
+          {COLORS_DATA.map((c) => (
             <button
               key={c.value}
               onClick={() => onColorChange(c.value)}
@@ -338,21 +401,29 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {/* Stroke Width */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#6b7280',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
             {t('annotationToolbar.strokeWidthLabel')}
           </span>
-          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>
-            {strokeWidth}px
-          </span>
+          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{strokeWidth}px</span>
         </div>
-        <div style={{
-          display: 'flex',
-          gap: '4px',
-          padding: '6px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '8px',
-        }}>
-          {STROKE_WIDTH_KEYS.map(w => (
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            padding: '6px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px',
+          }}
+        >
+          {STROKE_WIDTH_KEYS.map((w) => (
             <button
               key={w.value}
               onClick={() => onStrokeWidthChange(w.value)}
@@ -370,12 +441,14 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{
-                width: `${Math.min(w.value * 2, 16)}px`,
-                height: `${Math.min(w.value * 2, 16)}px`,
-                backgroundColor: strokeWidth === w.value ? '#ffffff' : color,
-                borderRadius: '50%',
-              }} />
+              <div
+                style={{
+                  width: `${Math.min(w.value * 2, 16)}px`,
+                  height: `${Math.min(w.value * 2, 16)}px`,
+                  backgroundColor: strokeWidth === w.value ? '#ffffff' : color,
+                  borderRadius: '50%',
+                }}
+              />
             </button>
           ))}
         </div>
@@ -384,12 +457,18 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {/* Opacity Slider */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#6b7280',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
             {t('annotationToolbar.opacity')}
           </span>
-          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>
-            {Math.round(opacity * 100)}%
-          </span>
+          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{Math.round(opacity * 100)}%</span>
         </div>
         <input
           type="range"
@@ -410,12 +489,14 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       </div>
 
       {/* Undo/Redo/Clear */}
-      <div style={{
-        display: 'flex',
-        gap: '6px',
-        paddingTop: '12px',
-        borderTop: '1px solid #e5e7eb',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '6px',
+          paddingTop: '12px',
+          borderTop: '1px solid #e5e7eb',
+        }}
+      >
         <Tooltip content={t('annotationToolbar.undoTooltip')} position="top" disabled={!canUndo}>
           <button
             onClick={onUndo}
@@ -468,11 +549,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         </Tooltip>
         <Tooltip content={t('annotationToolbar.clearAll')} position="top">
           <button
-            onClick={() => {
-              if (confirm(t('annotationToolbar.clearConfirm'))) {
-                onClear();
-              }
-            }}
+            onClick={() => setShowClearConfirm(true)}
             aria-label={t('annotationToolbar.clearAll')}
             style={{
               padding: '10px 14px',
@@ -494,19 +571,23 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
       {/* Stamp Picker */}
       {showStampPicker && activeTool === 'stamp' && (
-        <div style={{
-          paddingTop: '12px',
-          borderTop: `1px solid ${borderColor}`,
-        }}>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 500,
-            color: textLightColor,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            display: 'block',
-            marginBottom: '8px',
-          }}>
+        <div
+          style={{
+            paddingTop: '12px',
+            borderTop: `1px solid ${borderColor}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 500,
+              color: textLightColor,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              display: 'block',
+              marginBottom: '8px',
+            }}
+          >
             {t('annotationToolbar.stamps')}
           </span>
 
@@ -532,60 +613,66 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
           {/* Category tabs */}
           {!stampSearch && (
-          <div style={{
-            display: 'flex',
-            gap: '2px',
-            marginBottom: '12px',
-            backgroundColor: bgSecondary,
-            padding: '3px',
-            borderRadius: '8px',
-            overflowX: 'auto',
-          }}>
-            {STAMP_CATEGORY_KEYS.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setStampCategory(cat.id)}
-                style={{
-                  padding: '6px 10px',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: stampCategory === cat.id ? (isDarkMode ? '#4b5563' : '#ffffff') : 'transparent',
-                  color: stampCategory === cat.id ? textColor : textLightColor,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: stampCategory === cat.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {t(cat.nameKey)}
-              </button>
-            ))}
-          </div>
+            <div
+              style={{
+                display: 'flex',
+                gap: '2px',
+                marginBottom: '12px',
+                backgroundColor: bgSecondary,
+                padding: '3px',
+                borderRadius: '8px',
+                overflowX: 'auto',
+              }}
+            >
+              {STAMP_CATEGORY_KEYS.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setStampCategory(cat.id)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    border: 'none',
+                    borderRadius: '6px',
+                    backgroundColor: stampCategory === cat.id ? (isDarkMode ? '#4b5563' : '#ffffff') : 'transparent',
+                    color: stampCategory === cat.id ? textColor : textLightColor,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: stampCategory === cat.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {t(cat.nameKey)}
+                </button>
+              ))}
+            </div>
           )}
 
           {/* Stamps grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: '6px',
-            maxHeight: '160px',
-            overflowY: 'auto',
-            padding: '4px',
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '6px',
+              maxHeight: '160px',
+              overflowY: 'auto',
+              padding: '4px',
+            }}
+          >
             {filteredStamps.length === 0 ? (
-              <div style={{
-                gridColumn: '1 / -1',
-                textAlign: 'center',
-                color: '#9ca3af',
-                fontSize: '12px',
-                padding: '16px',
-              }}>
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  textAlign: 'center',
+                  color: '#9ca3af',
+                  fontSize: '12px',
+                  padding: '16px',
+                }}
+              >
                 {t('annotationToolbar.noStampsInCategory')}
               </div>
             ) : (
-              filteredStamps.map(stamp => {
+              filteredStamps.map((stamp) => {
                 const isTextStamp = stamp.svgData.includes('<text');
                 const textMatch = stamp.svgData.match(/>([^<]+)<\/text>/);
                 const stampText = textMatch ? textMatch[1] : stamp.name;
@@ -610,14 +697,16 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
                     }}
                   >
                     {isTextStamp ? (
-                      <span style={{
-                        fontSize: stampText.length > 3 ? '10px' : stampText.length > 2 ? '12px' : '16px',
-                        fontWeight: 'bold',
-                        fontStyle: 'italic',
-                        color: isDarkMode ? '#fff' : '#000',
-                        fontFamily: '"Times New Roman", Times, serif',
-                        lineHeight: 1,
-                      }}>
+                      <span
+                        style={{
+                          fontSize: stampText.length > 3 ? '10px' : stampText.length > 2 ? '12px' : '16px',
+                          fontWeight: 'bold',
+                          fontStyle: 'italic',
+                          color: isDarkMode ? '#fff' : '#000',
+                          fontFamily: '"Times New Roman", Times, serif',
+                          lineHeight: 1,
+                        }}
+                      >
                         {stampText}
                       </span>
                     ) : (
@@ -634,6 +723,21 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Clear All Confirmation */}
+      {showClearConfirm && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('annotationToolbar.clearConfirm')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          onConfirm={() => {
+            setShowClearConfirm(false);
+            onClear();
+          }}
+          onCancel={() => setShowClearConfirm(false)}
+        />
       )}
     </div>
   );

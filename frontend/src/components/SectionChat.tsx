@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
 import { Icon } from './Icon';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   useChatChannels,
   useChatMessages,
@@ -27,6 +28,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [showPinned, setShowPinned] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: channels, isLoading: channelsLoading } = useChatChannels(orchestraId);
@@ -69,9 +71,12 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
     setEditContent('');
   };
 
-  const handleDelete = async (messageId: string) => {
-    if (confirm(t('chat.confirmDelete'))) {
-      await deleteMessage.mutateAsync(messageId);
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    try {
+      await deleteMessage.mutateAsync(confirmDeleteId);
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -83,7 +88,11 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
   const canModerate = user?.role && ['admin', 'conductor', 'music_committee'].includes(user.role);
 
   if (channelsLoading) {
-    return <div className="flex justify-center p-8"><span className="loading loading-spinner loading-lg" /></div>;
+    return (
+      <div className="flex justify-center p-8">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
   }
 
   if (!channels || channels.length === 0) {
@@ -99,9 +108,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
     <div className="flex h-[600px] border rounded-lg overflow-hidden">
       {/* Channel List */}
       <div className="w-64 border-r bg-base-200 flex flex-col">
-        <div className="p-3 border-b bg-base-300 font-semibold">
-          {t('chat.channels')}
-        </div>
+        <div className="p-3 border-b bg-base-300 font-semibold">{t('chat.channels')}</div>
         <div className="flex-1 overflow-y-auto">
           {channels.map((channel) => (
             <button
@@ -113,13 +120,9 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
             >
               <div className="flex justify-between items-start">
                 <div className="font-medium truncate">{channel.name}</div>
-                {channel.unreadCount > 0 && (
-                  <span className="badge badge-primary badge-sm">{channel.unreadCount}</span>
-                )}
+                {channel.unreadCount > 0 && <span className="badge badge-primary badge-sm">{channel.unreadCount}</span>}
               </div>
-              <div className="text-sm text-base-content/60 truncate">
-                {channel.orchestra.name}
-              </div>
+              <div className="text-sm text-base-content/60 truncate">{channel.orchestra.name}</div>
             </button>
           ))}
         </div>
@@ -159,22 +162,17 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messagesLoading ? (
-            <div className="flex justify-center"><span className="loading loading-spinner" /></div>
-          ) : messages?.length === 0 ? (
-            <div className="text-center text-base-content/60 py-8">
-              {t('chat.noMessages')}
+            <div className="flex justify-center">
+              <span className="loading loading-spinner" />
             </div>
+          ) : messages?.length === 0 ? (
+            <div className="text-center text-base-content/60 py-8">{t('chat.noMessages')}</div>
           ) : (
             messages?.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.user.id === user?.id ? 'justify-end' : 'justify-start'}`}
-              >
+              <div key={msg.id} className={`flex ${msg.user.id === user?.id ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[70%] ${
-                    msg.user.id === user?.id
-                      ? 'bg-primary text-primary-content'
-                      : 'bg-base-200'
+                    msg.user.id === user?.id ? 'bg-primary text-primary-content' : 'bg-base-200'
                   } rounded-lg p-3`}
                 >
                   {/* Reply indicator */}
@@ -188,9 +186,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
                   {/* Header */}
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-sm">{msg.user.name}</span>
-                    {msg.isPinned && (
-                      <Icon name="bookmark" size={12} />
-                    )}
+                    {msg.isPinned && <Icon name="bookmark" size={12} />}
                     <span className="text-xs opacity-60">
                       {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true, locale })}
                     </span>
@@ -239,7 +235,10 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
                           >
                             {t('common.edit')}
                           </button>
-                          <button className="hover:opacity-100 hover:text-error" onClick={() => handleDelete(msg.id)}>
+                          <button
+                            className="hover:opacity-100 hover:text-error"
+                            onClick={() => setConfirmDeleteId(msg.id)}
+                          >
                             {t('common.delete')}
                           </button>
                         </>
@@ -282,11 +281,7 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
               onChange={(e) => setMessage(e.target.value)}
               disabled={sendMessage.isPending}
             />
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!message.trim() || sendMessage.isPending}
-            >
+            <button type="submit" className="btn btn-primary" disabled={!message.trim() || sendMessage.isPending}>
               {sendMessage.isPending ? (
                 <span className="loading loading-spinner loading-sm" />
               ) : (
@@ -296,6 +291,18 @@ export function SectionChat({ orchestraId }: SectionChatProps) {
           </div>
         </form>
       </div>
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('chat.confirmDelete')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMessage.isPending}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </div>
   );
 }

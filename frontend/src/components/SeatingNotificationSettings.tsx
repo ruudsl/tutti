@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 import { Icon } from './Icon';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   getSeatingNotificationSettings,
   saveSeatingNotificationSettings,
@@ -24,6 +25,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     notification_type: 'whatsapp' as 'webhook' | 'whatsapp',
@@ -94,7 +96,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
   };
 
   const handleDelete = async () => {
-    if (!confirm(t('seating.notifications.deleteConfirm'))) return;
+    setShowDeleteConfirm(false);
     try {
       await deleteSeatingNotificationSettings(orchestraId);
       setSettings(null);
@@ -117,7 +119,12 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
   };
 
   const handleTestTwilio = async () => {
-    if (!formData.twilio_account_sid || !formData.twilio_auth_token || !formData.twilio_whatsapp_from || !formData.twilio_whatsapp_to) {
+    if (
+      !formData.twilio_account_sid ||
+      !formData.twilio_auth_token ||
+      !formData.twilio_whatsapp_from ||
+      !formData.twilio_whatsapp_to
+    ) {
       showError(t('seating.notifications.fillAllTwilioFields'));
       return;
     }
@@ -247,12 +254,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
               <small className="form-help">{t('seating.notifications.twilioToHelp')}</small>
             </div>
 
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleTestTwilio}
-              disabled={isTesting}
-            >
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handleTestTwilio} disabled={isTesting}>
               {isTesting ? t('common.loading') : t('seating.notifications.testConnection')}
             </button>
           </div>
@@ -308,9 +310,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
             rows={4}
             placeholder={t('seating.notifications.messagePlaceholder')}
           />
-          <small className="form-help">
-            {t('seating.notifications.templateHelp')}
-          </small>
+          <small className="form-help">{t('seating.notifications.templateHelp')}</small>
         </div>
 
         <div className="btn-group" style={{ marginTop: '1rem' }}>
@@ -318,7 +318,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
             {isSaving ? t('common.loading') : t('common.save')}
           </button>
           {settings && (
-            <button type="button" className="btn btn-danger" onClick={handleDelete}>
+            <button type="button" className="btn btn-danger" onClick={() => setShowDeleteConfirm(true)}>
               {t('common.delete')}
             </button>
           )}
@@ -329,11 +329,7 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
         <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
           <h4>{t('seating.notifications.testSection')}</h4>
           <p className="text-muted">{t('seating.notifications.testDescription')}</p>
-          <button
-            className="btn btn-secondary"
-            onClick={handleTestSend}
-            disabled={isSending}
-          >
+          <button className="btn btn-secondary" onClick={handleTestSend} disabled={isSending}>
             {isSending ? t('common.loading') : t('seating.notifications.sendNow')}
           </button>
         </div>
@@ -359,15 +355,17 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
           <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
             {t('seating.notifications.webhookFormatDescription')}
           </p>
-          <pre style={{
-            fontSize: '0.75rem',
-            background: 'var(--surface-color)',
-            padding: '0.75rem',
-            borderRadius: '4px',
-            overflow: 'auto',
-            maxHeight: '200px'
-          }}>
-{`{
+          <pre
+            style={{
+              fontSize: '0.75rem',
+              background: 'var(--surface-color)',
+              padding: '0.75rem',
+              borderRadius: '4px',
+              overflow: 'auto',
+              maxHeight: '200px',
+            }}
+          >
+            {`{
   "type": "seating_notification",
   "rehearsal": {
     "id": "...",
@@ -390,6 +388,18 @@ export default function SeatingNotificationSettings({ orchestraId, rehearsalId, 
 }`}
           </pre>
         </div>
+      )}
+
+      {/* Delete Settings Confirmation */}
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('seating.notifications.deleteConfirm')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
     </div>
   );

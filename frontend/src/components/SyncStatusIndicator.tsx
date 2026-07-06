@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOfflineData, useSyncStatus } from '../hooks/useOfflineData';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface SyncStatusIndicatorProps {
   /** Show in compact mode (just icon) */
@@ -19,6 +20,7 @@ export function SyncStatusIndicator({ compact = false, inHeader = false }: SyncS
   const { syncAll, clearOfflineData } = useOfflineData();
   const { isOnline, isSyncing, lastSyncAt, pendingMutations, syncProgress, currentEntity, error } = useSyncStatus();
   const [showDetails, setShowDetails] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const formatLastSync = (dateStr: string | null): string => {
     if (!dateStr) return t('sync.never', 'Nog nooit');
@@ -57,9 +59,8 @@ export function SyncStatusIndicator({ compact = false, inHeader = false }: SyncS
   };
 
   const handleClearData = async () => {
-    if (window.confirm(t('sync.confirm_clear', 'Weet je zeker dat je alle offline data wilt wissen?'))) {
-      await clearOfflineData();
-    }
+    setConfirmClear(false);
+    await clearOfflineData();
   };
 
   if (compact) {
@@ -132,9 +133,7 @@ export function SyncStatusIndicator({ compact = false, inHeader = false }: SyncS
             animation: isSyncing ? 'pulse 1.5s infinite' : 'none',
           }}
         />
-        <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 500 }}>
-          {getStatusText()}
-        </span>
+        <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 500 }}>{getStatusText()}</span>
         {isOnline && !isSyncing && (
           <button
             onClick={handleSync}
@@ -226,7 +225,7 @@ export function SyncStatusIndicator({ compact = false, inHeader = false }: SyncS
       {/* Clear Data Button (for debugging/troubleshooting) */}
       {!inHeader && (
         <button
-          onClick={handleClearData}
+          onClick={() => setConfirmClear(true)}
           style={{
             marginTop: '0.5rem',
             padding: '0.5rem',
@@ -248,6 +247,17 @@ export function SyncStatusIndicator({ compact = false, inHeader = false }: SyncS
           50% { opacity: 0.5; }
         }
       `}</style>
+
+      {confirmClear && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('sync.confirm_clear', 'Weet je zeker dat je alle offline data wilt wissen?')}
+          confirmLabel={t('common.confirm')}
+          variant="danger"
+          onConfirm={handleClearData}
+          onCancel={() => setConfirmClear(false)}
+        />
+      )}
     </div>
   );
 }

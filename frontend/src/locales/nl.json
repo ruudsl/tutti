@@ -14,6 +14,12 @@
     "loading": "Laden...",
     "save": "Opslaan",
     "cancel": "Annuleren",
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je wilt sluiten? Je wijzigingen gaan verloren.",
+      "discard": "Wijzigingen verwerpen",
+      "keepEditing": "Verder bewerken"
+    },
     "delete": "Verwijderen",
     "edit": "Bewerken",
     "add": "Toevoegen",
@@ -25,6 +31,8 @@
     "yes": "Ja",
     "no": "Nee",
     "confirm": "Bevestigen",
+    "confirmDeleteTitle": "Verwijderen bevestigen",
+    "undo": "Ongedaan maken",
     "close": "Sluiten",
     "submit": "Versturen",
     "download": "Downloaden",
@@ -967,6 +975,10 @@
   },
   "musicPieces": {
     "title": "Muziekstukken",
+    "deleted": "Muziekstuk verwijderd",
+    "deletedBulk": "{{count}} muziekstukken verwijderd",
+    "restored": "Muziekstuk teruggezet",
+    "restoredBulk": "{{count}} muziekstukken teruggezet",
     "searchPlaceholder": "Zoeken op titel of arrangeur...",
     "allInstruments": "Alle instrumenten",
     "noInstrument": "Zonder instrument",

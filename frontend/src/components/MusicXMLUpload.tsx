@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { useUploadMusicXML, useDeleteMusicXML } from '../hooks/useVocabulary';
 import { Icon } from './Icon';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface MusicXMLUploadProps {
   titleId: string;
@@ -25,32 +26,37 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
     warnings?: string[];
   } | null>(null);
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const uploadMutation = useUploadMusicXML();
   const deleteMutation = useDeleteMusicXML();
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
 
-    setUploadResult(null);
+      setUploadResult(null);
 
-    try {
-      const result = await uploadMutation.mutateAsync({ titleId, file });
-      setUploadResult({
-        success: true,
-        message: result.message,
-        metadata: result.metadata,
-        warnings: result.warnings,
-      });
-      onSuccess?.();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Upload mislukt';
-      setUploadResult({
-        success: false,
-        message,
-      });
-    }
-  }, [titleId, uploadMutation, onSuccess]);
+      try {
+        const result = await uploadMutation.mutateAsync({ titleId, file });
+        setUploadResult({
+          success: true,
+          message: result.message,
+          metadata: result.metadata,
+          warnings: result.warnings,
+        });
+        onSuccess?.();
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Upload mislukt';
+        setUploadResult({
+          success: false,
+          message,
+        });
+      }
+    },
+    [titleId, uploadMutation, onSuccess],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -64,8 +70,6 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
   });
 
   const handleDelete = async () => {
-    if (!confirm(t('metadata.confirmDeleteMusicXML'))) return;
-
     try {
       await deleteMutation.mutateAsync(titleId);
       setUploadResult({
@@ -79,6 +83,8 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
         success: false,
         message,
       });
+    } finally {
+      setConfirmDelete(false);
     }
   };
 
@@ -88,9 +94,7 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragActive
-            ? 'border-primary bg-primary/10'
-            : 'border-base-300 hover:border-primary/50'
+          isDragActive ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'
         } ${uploadMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
       >
         <input {...getInputProps()} />
@@ -108,9 +112,7 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
               ) : (
                 <>
                   <p>{t('metadata.dragMusicXML')}</p>
-                  <p className="text-sm text-base-content/60">
-                    {t('metadata.musicXMLFormats')}
-                  </p>
+                  <p className="text-sm text-base-content/60">{t('metadata.musicXMLFormats')}</p>
                 </>
               )}
             </>
@@ -124,18 +126,14 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
           <Icon name="fileText" size={20} />
           <span>{t('metadata.hasMusicXML')}</span>
           <div className="flex gap-2">
-            <a
-              href={`/api/music-pieces/title-musicxml/${titleId}`}
-              download
-              className="btn btn-sm btn-ghost"
-            >
+            <a href={`/api/music-pieces/title-musicxml/${titleId}`} download className="btn btn-sm btn-ghost">
               <Icon name="download" size={16} />
               {t('common.download')}
             </a>
             <button
               type="button"
               className="btn btn-sm btn-ghost text-error"
-              onClick={handleDelete}
+              onClick={() => setConfirmDelete(true)}
               disabled={deleteMutation.isPending}
             >
               <Icon name="trash" size={16} />
@@ -158,16 +156,24 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
                 <p className="font-medium">{t('metadata.extractedData')}:</p>
                 <ul className="list-disc list-inside mt-1">
                   {uploadResult.metadata.composer ? (
-                    <li>{t('metadata.composer')}: {String(uploadResult.metadata.composer)}</li>
+                    <li>
+                      {t('metadata.composer')}: {String(uploadResult.metadata.composer)}
+                    </li>
                   ) : null}
                   {uploadResult.metadata.arranger ? (
-                    <li>{t('metadata.arranger')}: {String(uploadResult.metadata.arranger)}</li>
+                    <li>
+                      {t('metadata.arranger')}: {String(uploadResult.metadata.arranger)}
+                    </li>
                   ) : null}
                   {uploadResult.metadata.workNumber ? (
-                    <li>{t('metadata.workNumber')}: {String(uploadResult.metadata.workNumber)}</li>
+                    <li>
+                      {t('metadata.workNumber')}: {String(uploadResult.metadata.workNumber)}
+                    </li>
                   ) : null}
                   {Number(uploadResult.metadata.partsCount) > 0 ? (
-                    <li>{t('metadata.partsCount')}: {String(uploadResult.metadata.partsCount)}</li>
+                    <li>
+                      {t('metadata.partsCount')}: {String(uploadResult.metadata.partsCount)}
+                    </li>
                   ) : null}
                 </ul>
               </div>
@@ -185,14 +191,22 @@ export function MusicXMLUpload({ titleId, hasExistingData, onSuccess }: MusicXML
               </div>
             )}
           </div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => setUploadResult(null)}
-          >
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setUploadResult(null)}>
             <Icon name="close" size={16} />
           </button>
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('metadata.confirmDeleteMusicXML')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteMutation.isPending}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );

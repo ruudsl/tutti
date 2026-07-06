@@ -191,6 +191,10 @@ export const deleteMusicPiecesBulk = async (ids: string[]): Promise<{ count: num
   return data;
 };
 
+export const restoreMusicPiece = async (id: string): Promise<void> => {
+  await api.post(`/music-pieces/${id}/restore`);
+};
+
 export const downloadMusicPiece = async (id: string): Promise<void> => {
   const response = await api.get(`/music-pieces/${id}/download`, {
     responseType: 'blob',

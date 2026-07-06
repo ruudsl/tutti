@@ -12,26 +12,13 @@ import {
   useDuplicateStageLayout,
 } from '../hooks/useStageLayouts';
 import StageCanvas from '../components/StageCanvas';
-import type {
-  StageLayoutData,
-  StagePosition,
-  StageShape,
-  StageSection,
-} from '../types';
+import type { StageLayoutData, StagePosition, StageShape, StageSection } from '../types';
 import { showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import './StageDesigner.css';
 
-type Tool =
-  | 'select'
-  | 'chair'
-  | 'stand'
-  | 'conductor'
-  | 'piano'
-  | 'percussion'
-  | 'rect'
-  | 'circle'
-  | 'text';
+type Tool = 'select' | 'chair' | 'stand' | 'conductor' | 'piano' | 'percussion' | 'rect' | 'circle' | 'text';
 
 const DEFAULT_LAYOUT_DATA: StageLayoutData = {
   positions: [],
@@ -82,6 +69,10 @@ export default function StageDesigner() {
   const [showSectionModal, setShowSectionModal] = useState(false);
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);
   const [editingSection, setEditingSection] = useState<StageSection | null>(null);
+
+  // Confirmation dialogs
+  const [deletingLayoutId, setDeletingLayoutId] = useState<string | null>(null);
+  const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
 
   // Section form
   const [sectionName, setSectionName] = useState('');
@@ -162,10 +153,6 @@ export default function StageDesigner() {
 
   // Delete layout
   const handleDeleteLayout = async (id: string) => {
-    if (!confirm(t('stageDesigner.confirmDelete', 'Weet je zeker dat je deze podiumindeling wilt verwijderen?'))) {
-      return;
-    }
-
     try {
       await deleteLayout.mutateAsync(id);
       if (layoutId === id) {
@@ -175,6 +162,8 @@ export default function StageDesigner() {
       }
     } catch (error) {
       // Error handled by mutation
+    } finally {
+      setDeletingLayoutId(null);
     }
   };
 
@@ -221,9 +210,7 @@ export default function StageDesigner() {
       // Update existing
       setLayoutData({
         ...layoutData,
-        sections: layoutData.sections.map((s) =>
-          s.id === editingSection.id ? newSection : s
-        ),
+        sections: layoutData.sections.map((s) => (s.id === editingSection.id ? newSection : s)),
       });
     } else {
       // Add new
@@ -247,9 +234,7 @@ export default function StageDesigner() {
     setLayoutData({
       ...layoutData,
       sections: layoutData.sections.filter((s) => s.id !== sectionId),
-      positions: layoutData.positions.map((p) =>
-        p.section === sectionId ? { ...p, section: undefined } : p
-      ),
+      positions: layoutData.positions.map((p) => (p.section === sectionId ? { ...p, section: undefined } : p)),
     });
     setHasChanges(true);
     if (currentSection === sectionId) {
@@ -275,16 +260,12 @@ export default function StageDesigner() {
     if (selectedElement.type === 'position') {
       setLayoutData({
         ...layoutData,
-        positions: layoutData.positions.map((p) =>
-          p.id === selectedElement.data.id ? { ...p, [key]: value } : p
-        ),
+        positions: layoutData.positions.map((p) => (p.id === selectedElement.data.id ? { ...p, [key]: value } : p)),
       });
     } else {
       setLayoutData({
         ...layoutData,
-        shapes: layoutData.shapes.map((s) =>
-          s.id === selectedElement.data.id ? { ...s, [key]: value } : s
-        ),
+        shapes: layoutData.shapes.map((s) => (s.id === selectedElement.data.id ? { ...s, [key]: value } : s)),
       });
     }
     setHasChanges(true);
@@ -327,12 +308,16 @@ export default function StageDesigner() {
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  if (hasChanges && !confirm(t('stageDesigner.discardChanges', 'Wijzigingen negeren?'))) {
+                  const goBack = () => {
+                    setSearchParams({});
+                    setActiveTab('list');
+                    resetEditor();
+                  };
+                  if (hasChanges) {
+                    setPendingDiscardAction(() => goBack);
                     return;
                   }
-                  setSearchParams({});
-                  setActiveTab('list');
-                  resetEditor();
+                  goBack();
                 }}
               >
                 {t('common.back', 'Terug')}
@@ -342,9 +327,7 @@ export default function StageDesigner() {
                 onClick={handleSaveLayout}
                 disabled={updateLayout.isPending || !hasChanges}
               >
-                {updateLayout.isPending
-                  ? t('common.saving', 'Opslaan...')
-                  : t('common.save', 'Opslaan')}
+                {updateLayout.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
               </button>
             </>
           )}
@@ -367,12 +350,16 @@ export default function StageDesigner() {
         <button
           className={`tab ${activeTab === 'list' ? 'active' : ''}`}
           onClick={() => {
-            if (hasChanges && !confirm(t('stageDesigner.discardChanges', 'Wijzigingen negeren?'))) {
+            const goToList = () => {
+              setActiveTab('list');
+              setSearchParams({});
+              resetEditor();
+            };
+            if (hasChanges) {
+              setPendingDiscardAction(() => goToList);
               return;
             }
-            setActiveTab('list');
-            setSearchParams({});
-            resetEditor();
+            goToList();
           }}
         >
           {t('stageDesigner.tabs.layouts', 'Indelingen')}
@@ -435,35 +422,26 @@ export default function StageDesigner() {
                             </span>
                           )}
                         </div>
-                        {l.description && (
-                          <div className="layout-description">{l.description}</div>
-                        )}
+                        {l.description && <div className="layout-description">{l.description}</div>}
                       </td>
                       <td>{l.venueName || '-'}</td>
                       <td>
                         {l.stageWidth} x {l.stageDepth}
                       </td>
                       <td>
-                        {l.usageCount || 0}{' '}
-                        {t('stageDesigner.concerts', 'concert(en)')}
+                        {l.usageCount || 0} {t('stageDesigner.concerts', 'concert(en)')}
                       </td>
                       <td>
                         <div className="btn-group">
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => setSearchParams({ id: l.id })}
-                          >
+                          <button className="btn btn-secondary btn-sm" onClick={() => setSearchParams({ id: l.id })}>
                             {t('common.edit', 'Bewerken')}
                           </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => handleDuplicateLayout(l.id)}
-                          >
+                          <button className="btn btn-secondary btn-sm" onClick={() => handleDuplicateLayout(l.id)}>
                             {t('stageDesigner.duplicate', 'Dupliceren')}
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteLayout(l.id)}
+                            onClick={() => setDeletingLayoutId(l.id)}
                             disabled={(l.usageCount || 0) > 0}
                             title={
                               (l.usageCount || 0) > 0
@@ -507,37 +485,24 @@ export default function StageDesigner() {
 
             <div className="toolbar-group">
               <label>{t('stageDesigner.zoom', 'Zoom')}:</label>
-              <button
-                className="btn btn-sm"
-                onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
-              >
+              <button className="btn btn-sm" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
                 -
               </button>
               <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-              <button
-                className="btn btn-sm"
-                onClick={() => setZoom(Math.min(2, zoom + 0.25))}
-              >
+              <button className="btn btn-sm" onClick={() => setZoom(Math.min(2, zoom + 0.25))}>
                 +
               </button>
             </div>
 
             <div className="toolbar-group">
               <label>
-                <input
-                  type="checkbox"
-                  checked={gridSnap}
-                  onChange={(e) => setGridSnap(e.target.checked)}
-                />
+                <input type="checkbox" checked={gridSnap} onChange={(e) => setGridSnap(e.target.checked)} />
                 {t('stageDesigner.gridSnap', 'Raster')}
               </label>
             </div>
 
             <div className="toolbar-group">
-              <button
-                className="btn btn-sm"
-                onClick={() => setShowPropertiesPanel(!showPropertiesPanel)}
-              >
+              <button className="btn btn-sm" onClick={() => setShowPropertiesPanel(!showPropertiesPanel)}>
                 {showPropertiesPanel
                   ? t('stageDesigner.hideProperties', 'Verberg eigenschappen')
                   : t('stageDesigner.showProperties', 'Toon eigenschappen')}
@@ -554,25 +519,13 @@ export default function StageDesigner() {
                   className={`section-item ${!currentSection ? 'active' : ''}`}
                   onClick={() => setCurrentSection(undefined)}
                 >
-                  <span
-                    className="section-color"
-                    style={{ backgroundColor: '#cccccc' }}
-                  />
+                  <span className="section-color" style={{ backgroundColor: '#cccccc' }} />
                   <span>{t('stageDesigner.noSection', 'Geen sectie')}</span>
                 </button>
                 {layoutData.sections.map((section) => (
-                  <div
-                    key={section.id}
-                    className={`section-item ${currentSection === section.id ? 'active' : ''}`}
-                  >
-                    <button
-                      className="section-select"
-                      onClick={() => setCurrentSection(section.id)}
-                    >
-                      <span
-                        className="section-color"
-                        style={{ backgroundColor: section.color }}
-                      />
+                  <div key={section.id} className={`section-item ${currentSection === section.id ? 'active' : ''}`}>
+                    <button className="section-select" onClick={() => setCurrentSection(section.id)}>
+                      <span className="section-color" style={{ backgroundColor: section.color }} />
                       <span>{section.name}</span>
                     </button>
                     <div className="section-actions">
@@ -733,9 +686,7 @@ export default function StageDesigner() {
                           <label>{t('stageDesigner.section', 'Sectie')}</label>
                           <select
                             value={(selectedElement.data as StagePosition).section || ''}
-                            onChange={(e) =>
-                              updateSelectedProperty('section', e.target.value || undefined)
-                            }
+                            onChange={(e) => updateSelectedProperty('section', e.target.value || undefined)}
                           >
                             <option value="">{t('stageDesigner.noSection', 'Geen sectie')}</option>
                             {layoutData.sections.map((s) => (
@@ -750,9 +701,7 @@ export default function StageDesigner() {
                           <input
                             type="number"
                             value={(selectedElement.data as StagePosition).rotation || 0}
-                            onChange={(e) =>
-                              updateSelectedProperty('rotation', Number(e.target.value))
-                            }
+                            onChange={(e) => updateSelectedProperty('rotation', Number(e.target.value))}
                             min={-180}
                             max={180}
                             step={15}
@@ -786,9 +735,7 @@ export default function StageDesigner() {
                               <input
                                 type="number"
                                 value={(selectedElement.data as StageShape).width || 100}
-                                onChange={(e) =>
-                                  updateSelectedProperty('width', Number(e.target.value))
-                                }
+                                onChange={(e) => updateSelectedProperty('width', Number(e.target.value))}
                                 min={20}
                               />
                             </div>
@@ -797,9 +744,7 @@ export default function StageDesigner() {
                               <input
                                 type="number"
                                 value={(selectedElement.data as StageShape).height || 60}
-                                onChange={(e) =>
-                                  updateSelectedProperty('height', Number(e.target.value))
-                                }
+                                onChange={(e) => updateSelectedProperty('height', Number(e.target.value))}
                                 min={20}
                               />
                             </div>
@@ -811,9 +756,7 @@ export default function StageDesigner() {
                             <input
                               type="number"
                               value={(selectedElement.data as StageShape).radius || 50}
-                              onChange={(e) =>
-                                updateSelectedProperty('radius', Number(e.target.value))
-                              }
+                              onChange={(e) => updateSelectedProperty('radius', Number(e.target.value))}
                               min={10}
                             />
                           </div>
@@ -824,9 +767,7 @@ export default function StageDesigner() {
                             <input
                               type="number"
                               value={(selectedElement.data as StageShape).fontSize || 16}
-                              onChange={(e) =>
-                                updateSelectedProperty('fontSize', Number(e.target.value))
-                              }
+                              onChange={(e) => updateSelectedProperty('fontSize', Number(e.target.value))}
                               min={8}
                               max={72}
                             />
@@ -841,16 +782,12 @@ export default function StageDesigner() {
                         if (selectedElement.type === 'position') {
                           setLayoutData({
                             ...layoutData,
-                            positions: layoutData.positions.filter(
-                              (p) => p.id !== selectedElement.data.id
-                            ),
+                            positions: layoutData.positions.filter((p) => p.id !== selectedElement.data.id),
                           });
                         } else {
                           setLayoutData({
                             ...layoutData,
-                            shapes: layoutData.shapes.filter(
-                              (s) => s.id !== selectedElement.data.id
-                            ),
+                            shapes: layoutData.shapes.filter((s) => s.id !== selectedElement.data.id),
                           });
                         }
                         setSelectedIds([]);
@@ -893,10 +830,7 @@ export default function StageDesigner() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{t('stageDesigner.newLayout', 'Nieuwe indeling')}</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowNewLayoutModal(false)}
-              >
+              <button className="modal-close" onClick={() => setShowNewLayoutModal(false)}>
                 &times;
               </button>
             </div>
@@ -913,11 +847,7 @@ export default function StageDesigner() {
               </div>
               <div className="form-group">
                 <label>{t('common.description', 'Beschrijving')}</label>
-                <textarea
-                  value={layoutDescription}
-                  onChange={(e) => setLayoutDescription(e.target.value)}
-                  rows={2}
-                />
+                <textarea value={layoutDescription} onChange={(e) => setLayoutDescription(e.target.value)} rows={2} />
               </div>
               <div className="form-group">
                 <label>{t('stageDesigner.venue', 'Locatie')}</label>
@@ -952,20 +882,13 @@ export default function StageDesigner() {
               </div>
               <div className="form-group">
                 <label>
-                  <input
-                    type="checkbox"
-                    checked={isDefault}
-                    onChange={(e) => setIsDefault(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
                   {t('stageDesigner.setAsDefault', 'Standaard indeling')}
                 </label>
               </div>
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowNewLayoutModal(false)}
-              >
+              <button className="btn btn-secondary" onClick={() => setShowNewLayoutModal(false)}>
                 {t('common.cancel', 'Annuleren')}
               </button>
               <button
@@ -973,9 +896,7 @@ export default function StageDesigner() {
                 onClick={handleCreateLayout}
                 disabled={createLayout.isPending || !layoutName.trim()}
               >
-                {createLayout.isPending
-                  ? t('common.loading', 'Laden...')
-                  : t('common.create', 'Aanmaken')}
+                {createLayout.isPending ? t('common.loading', 'Laden...') : t('common.create', 'Aanmaken')}
               </button>
             </div>
           </div>
@@ -992,10 +913,7 @@ export default function StageDesigner() {
                   ? t('stageDesigner.editSection', 'Sectie bewerken')
                   : t('stageDesigner.addSection', 'Sectie toevoegen')}
               </h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowSectionModal(false)}
-              >
+              <button className="modal-close" onClick={() => setShowSectionModal(false)}>
                 &times;
               </button>
             </div>
@@ -1013,11 +931,7 @@ export default function StageDesigner() {
               <div className="form-group">
                 <label>{t('stageDesigner.color', 'Kleur')}</label>
                 <div className="color-picker-row">
-                  <input
-                    type="color"
-                    value={sectionColor}
-                    onChange={(e) => setSectionColor(e.target.value)}
-                  />
+                  <input type="color" value={sectionColor} onChange={(e) => setSectionColor(e.target.value)} />
                   <div className="preset-colors">
                     {['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FFEB3B', '#795548'].map(
                       (color) => (
@@ -1028,17 +942,14 @@ export default function StageDesigner() {
                           onClick={() => setSectionColor(color)}
                           type="button"
                         />
-                      )
+                      ),
                     )}
                   </div>
                 </div>
               </div>
               <div className="form-group">
                 <label>{t('stageDesigner.instrument', 'Instrument')}</label>
-                <select
-                  value={sectionInstrumentId}
-                  onChange={(e) => setSectionInstrumentId(e.target.value)}
-                >
+                <select value={sectionInstrumentId} onChange={(e) => setSectionInstrumentId(e.target.value)}>
                   <option value="">{t('common.none', 'Geen')}</option>
                   {instruments.map((inst) => (
                     <option key={inst.id} value={inst.id}>
@@ -1050,22 +961,43 @@ export default function StageDesigner() {
               </div>
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowSectionModal(false)}
-              >
+              <button className="btn btn-secondary" onClick={() => setShowSectionModal(false)}>
                 {t('common.cancel', 'Annuleren')}
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveSection}
-                disabled={!sectionName.trim()}
-              >
+              <button className="btn btn-primary" onClick={handleSaveSection} disabled={!sectionName.trim()}>
                 {t('common.save', 'Opslaan')}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Layout Confirmation */}
+      {deletingLayoutId && (
+        <ConfirmDialog
+          title={t('common.confirmDeleteTitle')}
+          message={t('stageDesigner.confirmDelete', 'Weet je zeker dat je deze podiumindeling wilt verwijderen?')}
+          confirmLabel={t('common.delete')}
+          variant="danger"
+          isLoading={deleteLayout.isPending}
+          onConfirm={() => handleDeleteLayout(deletingLayoutId)}
+          onCancel={() => setDeletingLayoutId(null)}
+        />
+      )}
+
+      {/* Discard Changes Confirmation */}
+      {pendingDiscardAction && (
+        <ConfirmDialog
+          title={t('common.warning')}
+          message={t('stageDesigner.discardChanges', 'Wijzigingen negeren?')}
+          confirmLabel={t('common.confirm')}
+          variant="warning"
+          onConfirm={() => {
+            pendingDiscardAction();
+            setPendingDiscardAction(null);
+          }}
+          onCancel={() => setPendingDiscardAction(null)}
+        />
       )}
     </div>
   );
