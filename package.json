@@ -30,7 +30,7 @@
     "test:e2e:headed": "npx playwright test --headed",
     "test:all": "npm run test && npm run test:e2e",
     "check:translations": "node scripts/check-translations.mjs",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
