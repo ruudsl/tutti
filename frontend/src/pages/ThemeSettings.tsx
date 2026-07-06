@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getSettings, updateTheme } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useConfirm } from '../hooks/useConfirm';
 import type { ThemeSettings } from '../types';
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -42,6 +43,7 @@ const COLOR_FIELDS: { key: keyof ThemeSettings; section: 'main' | 'ui' }[] = [
 export default function ThemeSettingsPage() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.theme');
+  const confirmDialog = useConfirm();
   const [theme, setTheme] = useState<ThemeSettings>({ ...DEFAULT_THEME });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,7 +62,7 @@ export default function ThemeSettingsPage() {
   }, [settings]);
 
   const handleColorChange = (key: keyof ThemeSettings, value: string) => {
-    setTheme(prev => ({ ...prev, [key]: value }));
+    setTheme((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
@@ -85,7 +87,7 @@ export default function ThemeSettingsPage() {
   };
 
   const handleReset = async () => {
-    if (!confirm(t('theme.resetConfirm'))) return;
+    if (!(await confirmDialog(t('theme.resetConfirm')))) return;
     setIsSaving(true);
     try {
       await updateTheme(null);
@@ -108,28 +110,18 @@ export default function ThemeSettingsPage() {
     );
   }
 
-  const mainColors = COLOR_FIELDS.filter(f => f.section === 'main');
-  const uiColors = COLOR_FIELDS.filter(f => f.section === 'ui');
+  const mainColors = COLOR_FIELDS.filter((f) => f.section === 'main');
+  const uiColors = COLOR_FIELDS.filter((f) => f.section === 'ui');
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1>{t('theme.title')}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={handleReset}
-            disabled={isSaving}
-          >
+          <button type="button" className="btn btn-outline" onClick={handleReset} disabled={isSaving}>
             {t('theme.reset')}
           </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
+          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
             {isSaving ? t('common.loading') : t('common.save')}
           </button>
         </div>
@@ -178,21 +170,26 @@ export default function ThemeSettingsPage() {
             </div>
             <div className="card-body">
               <div className="form-group mb-2">
-                <label htmlFor="fontFamily" className="form-label">{t('theme.fontFamily')}</label>
+                <label htmlFor="fontFamily" className="form-label">
+                  {t('theme.fontFamily')}
+                </label>
                 <select
                   id="fontFamily"
                   className="form-control form-select"
                   value={theme.fontFamily || 'system'}
-                  onChange={(e) => setTheme(prev => ({ ...prev, fontFamily: e.target.value }))}
+                  onChange={(e) => setTheme((prev) => ({ ...prev, fontFamily: e.target.value }))}
                 >
-                  {FONT_OPTIONS.map(f => (
-                    <option key={f} value={f}>{t(`theme.fonts.${f}`)}</option>
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f} value={f}>
+                      {t(`theme.fonts.${f}`)}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
                 <label htmlFor="fontSizeBase" className="form-label">
-                  {t('theme.fontSizeBase')}: {theme.fontSizeBase || 16}{t('theme.fontSizeUnit')}
+                  {t('theme.fontSizeBase')}: {theme.fontSizeBase || 16}
+                  {t('theme.fontSizeUnit')}
                 </label>
                 <input
                   id="fontSizeBase"
@@ -201,10 +198,17 @@ export default function ThemeSettingsPage() {
                   max="24"
                   step="1"
                   value={theme.fontSizeBase || 16}
-                  onChange={(e) => setTheme(prev => ({ ...prev, fontSizeBase: Number(e.target.value) }))}
+                  onChange={(e) => setTheme((prev) => ({ ...prev, fontSizeBase: Number(e.target.value) }))}
                   style={{ width: '100%' }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-light)',
+                  }}
+                >
                   <span>12px</span>
                   <span>24px</span>
                 </div>
@@ -228,10 +232,17 @@ export default function ThemeSettingsPage() {
                   max="2"
                   step="0.1"
                   value={theme.borderRadius ?? 0.5}
-                  onChange={(e) => setTheme(prev => ({ ...prev, borderRadius: Number(e.target.value) }))}
+                  onChange={(e) => setTheme((prev) => ({ ...prev, borderRadius: Number(e.target.value) }))}
                   style={{ width: '100%' }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-light)',
+                  }}
+                >
                   <span>{t('theme.borderRadiusSharp')}</span>
                   <span>{t('theme.borderRadiusRound')}</span>
                 </div>
@@ -356,10 +367,16 @@ function ThemePreview({ theme }: { theme: ThemeSettings }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <span style={{ ...btnStyle, backgroundColor: theme.successColor || '#22c55e', fontSize: '0.7rem' }}>Success</span>
+        <span style={{ ...btnStyle, backgroundColor: theme.successColor || '#22c55e', fontSize: '0.7rem' }}>
+          Success
+        </span>
         <span style={{ ...btnStyle, backgroundColor: theme.dangerColor || '#ef4444', fontSize: '0.7rem' }}>Danger</span>
-        <span style={{ ...btnStyle, backgroundColor: theme.warningColor || '#f59e0b', fontSize: '0.7rem' }}>Warning</span>
-        <span style={{ ...btnStyle, backgroundColor: theme.secondaryColor || '#64748b', fontSize: '0.7rem' }}>Secondary</span>
+        <span style={{ ...btnStyle, backgroundColor: theme.warningColor || '#f59e0b', fontSize: '0.7rem' }}>
+          Warning
+        </span>
+        <span style={{ ...btnStyle, backgroundColor: theme.secondaryColor || '#64748b', fontSize: '0.7rem' }}>
+          Secondary
+        </span>
       </div>
     </div>
   );

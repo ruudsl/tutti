@@ -1,16 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
-import {
-  getOrchestras,
-  getSeatingNeighbors,
-  createSeatingNeighbor,
-  deleteSeatingNeighbor,
-  getUsers,
-} from '../api';
+import { getOrchestras, getSeatingNeighbors, createSeatingNeighbor, deleteSeatingNeighbor, getUsers } from '../api';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -18,6 +13,7 @@ const MANAGER_ROLES: string[] = [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDU
 
 export default function NeighborPreferences() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   const { user } = useAuth();
   useDocumentTitle('pageTitle.neighborPreferences');
   const queryClient = useQueryClient();
@@ -96,7 +92,7 @@ export default function NeighborPreferences() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('neighborPreferences.confirmDelete'))) return;
+    if (!(await confirmDialog(t('neighborPreferences.confirmDelete')))) return;
 
     try {
       await deleteSeatingNeighbor(id);
@@ -109,24 +105,24 @@ export default function NeighborPreferences() {
 
   // Get users in this orchestra
   const orchestraUsers = useMemo(() => {
-    return users.filter(u =>
-      u.orchestras?.some(o => o.id === selectedOrchestraId)
-    ).sort((a, b) => {
-      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
+    return users
+      .filter((u) => u.orchestras?.some((o) => o.id === selectedOrchestraId))
+      .sort((a, b) => {
+        const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+        const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
   }, [users, selectedOrchestraId]);
 
   // Filter neighbors
   const filteredNeighbors = useMemo(() => {
     if (!filterType) return neighbors;
-    return neighbors.filter(n => n.preference === filterType);
+    return neighbors.filter((n) => n.preference === filterType);
   }, [neighbors, filterType]);
 
   // Group by preference type
-  const preferredNeighbors = neighbors.filter(n => n.preference === 'preferred');
-  const avoidNeighbors = neighbors.filter(n => n.preference === 'avoid');
+  const preferredNeighbors = neighbors.filter((n) => n.preference === 'preferred');
+  const avoidNeighbors = neighbors.filter((n) => n.preference === 'avoid');
 
   if (isLoading) {
     return (
@@ -142,11 +138,7 @@ export default function NeighborPreferences() {
       <div className="page-header">
         <h1>{t('neighborPreferences.title')}</h1>
         {isManager && (
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowForm(true)}
-            disabled={orchestraUsers.length < 2}
-          >
+          <button className="btn btn-primary" onClick={() => setShowForm(true)} disabled={orchestraUsers.length < 2}>
             {t('neighborPreferences.add')}
           </button>
         )}
@@ -160,23 +152,17 @@ export default function NeighborPreferences() {
       <div className="form-row" style={{ marginBottom: '1.5rem', gap: '1rem' }}>
         <div className="form-group" style={{ maxWidth: '300px' }}>
           <label htmlFor="orchestra">{t('seating.selectOrchestra')}</label>
-          <select
-            id="orchestra"
-            value={selectedOrchestraId}
-            onChange={(e) => setSelectedOrchestraId(e.target.value)}
-          >
-            {orchestras.map(o => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+          <select id="orchestra" value={selectedOrchestraId} onChange={(e) => setSelectedOrchestraId(e.target.value)}>
+            {orchestras.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
         </div>
         <div className="form-group" style={{ maxWidth: '200px' }}>
           <label htmlFor="filter">{t('common.filter')}</label>
-          <select
-            id="filter"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
+          <select id="filter" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
             <option value="">{t('common.all')}</option>
             <option value="preferred">{t('neighborPreferences.preferred')}</option>
             <option value="avoid">{t('neighborPreferences.avoid')}</option>
@@ -187,11 +173,15 @@ export default function NeighborPreferences() {
       {/* Summary Stats */}
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         <div className="stat-card">
-          <div className="stat-value" style={{ color: 'var(--success)' }}>{preferredNeighbors.length}</div>
+          <div className="stat-value" style={{ color: 'var(--success)' }}>
+            {preferredNeighbors.length}
+          </div>
           <div className="stat-label">{t('neighborPreferences.preferredCount')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value" style={{ color: 'var(--danger)' }}>{avoidNeighbors.length}</div>
+          <div className="stat-value" style={{ color: 'var(--danger)' }}>
+            {avoidNeighbors.length}
+          </div>
           <div className="stat-label">{t('neighborPreferences.avoidCount')}</div>
         </div>
       </div>
@@ -226,7 +216,7 @@ export default function NeighborPreferences() {
                 </tr>
               </thead>
               <tbody>
-                {filteredNeighbors.map(neighbor => (
+                {filteredNeighbors.map((neighbor) => (
                   <tr key={neighbor.id}>
                     <td>{neighbor.userName}</td>
                     <td>
@@ -235,17 +225,13 @@ export default function NeighborPreferences() {
                       >
                         {neighbor.preference === 'preferred'
                           ? t('neighborPreferences.wantsToSitWith')
-                          : t('neighborPreferences.prefersNotToSitWith')
-                        }
+                          : t('neighborPreferences.prefersNotToSitWith')}
                       </span>
                     </td>
                     <td>{neighbor.neighborUserName}</td>
                     {isManager && (
                       <td>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDelete(neighbor.id)}
-                        >
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(neighbor.id)}>
                           {t('common.delete')}
                         </button>
                       </td>
@@ -261,10 +247,12 @@ export default function NeighborPreferences() {
       {/* Add Form Modal */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{t('neighborPreferences.add')}</h3>
-              <button className="modal-close" onClick={() => setShowForm(false)}>&times;</button>
+              <button className="modal-close" onClick={() => setShowForm(false)}>
+                &times;
+              </button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
@@ -277,7 +265,7 @@ export default function NeighborPreferences() {
                     required
                   >
                     <option value="">{t('common.select')}</option>
-                    {orchestraUsers.map(u => (
+                    {orchestraUsers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName}
                       </option>
@@ -308,8 +296,8 @@ export default function NeighborPreferences() {
                   >
                     <option value="">{t('common.select')}</option>
                     {orchestraUsers
-                      .filter(u => u.id !== formData.userId)
-                      .map(u => (
+                      .filter((u) => u.id !== formData.userId)
+                      .map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.firstName} {u.lastName}
                         </option>

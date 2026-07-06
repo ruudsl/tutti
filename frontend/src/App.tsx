@@ -13,6 +13,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { AriaLiveProvider } from './components/AriaLiveRegion';
+import { ConfirmProvider } from './hooks/useConfirm';
 import { PrivacyConsentGate } from './components/PrivacyConsentGate';
 import { ROLES } from './utils/constants';
 
@@ -675,41 +676,43 @@ function AppContent() {
     <BrowserRouter>
       <AuthProvider>
         <AriaLiveProvider>
-          <AppInit />
-          <SectionErrorBoundary sectionName="Routes" compact>
-            <AppRoutes />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary sectionName="Notifications" compact>
-            <Toaster
-              toastOptions={{
-                style: {
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                },
-                success: {
-                  iconTheme: {
-                    primary: 'var(--success)',
-                    secondary: 'white',
+          <ConfirmProvider>
+            <AppInit />
+            <SectionErrorBoundary sectionName="Routes" compact>
+              <AppRoutes />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary sectionName="Notifications" compact>
+              <Toaster
+                toastOptions={{
+                  style: {
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: 'var(--danger)',
-                    secondary: 'white',
+                  success: {
+                    iconTheme: {
+                      primary: 'var(--success)',
+                      secondary: 'white',
+                    },
                   },
-                },
-              }}
-            />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary sectionName="Offline Indicator" compact>
-            <OfflineIndicator />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary sectionName="PWA Update" compact>
-            <PWAUpdatePrompt />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary sectionName="Install Prompt" compact>
-            <InstallPrompt />
-          </SectionErrorBoundary>
+                  error: {
+                    iconTheme: {
+                      primary: 'var(--danger)',
+                      secondary: 'white',
+                    },
+                  },
+                }}
+              />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary sectionName="Offline Indicator" compact>
+              <OfflineIndicator />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary sectionName="PWA Update" compact>
+              <PWAUpdatePrompt />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary sectionName="Install Prompt" compact>
+              <InstallPrompt />
+            </SectionErrorBoundary>
+          </ConfirmProvider>
         </AriaLiveProvider>
       </AuthProvider>
     </BrowserRouter>

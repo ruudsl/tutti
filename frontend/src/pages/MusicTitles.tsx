@@ -1,5 +1,6 @@
 import { useReducer, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { useMusicTitles } from '../hooks/useMusicTitles';
 import { Icon } from '../components/Icon';
 import { useGenres } from '../hooks/useGenres';
@@ -257,6 +258,7 @@ function musicTitlesReducer(state: MusicTitlesState, action: MusicTitlesAction):
 
 export default function MusicTitles() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.titles');
   const mp3InputRef = useRef<HTMLInputElement>(null);
 
@@ -469,7 +471,7 @@ export default function MusicTitles() {
   const handleMp3Delete = useCallback(async () => {
     if (!editingTitle?.id || !currentMp3Path) return;
 
-    if (!confirm(t('titles.confirmDeleteMp3'))) return;
+    if (!(await confirmDialog(t('titles.confirmDeleteMp3')))) return;
 
     try {
       await deleteTitleMp3(editingTitle.id);
@@ -478,7 +480,7 @@ export default function MusicTitles() {
     } catch (error: any) {
       showError(error.response?.data?.error || t('titles.errorDeleteMp3'));
     }
-  }, [editingTitle?.id, currentMp3Path, t]);
+  }, [editingTitle?.id, currentMp3Path, t, confirmDialog]);
 
   const toggleGenre = useCallback(
     (genreId: string) => {

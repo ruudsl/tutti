@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useConfirm } from '../hooks/useConfirm';
 import { Icon, IconName } from '../components/Icon';
 import {
   getFiscalYears,
@@ -69,6 +70,7 @@ const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
 
 export default function Accounting() {
   const { t } = useTranslation();
+  const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.accounting');
   const queryClient = useQueryClient();
 
@@ -605,8 +607,8 @@ export default function Accounting() {
                                       {!account.isSystem && (
                                         <button
                                           className="btn btn-ghost btn-xs text-error"
-                                          onClick={() => {
-                                            if (confirm(t('accounting.confirmDeleteAccount'))) {
+                                          onClick={async () => {
+                                            if (await confirmDialog(t('accounting.confirmDeleteAccount'))) {
                                               deleteAccountMutation.mutate(account.id);
                                             }
                                           }}
