@@ -25,18 +25,40 @@ export function encryptPassword(plaintext: string): string {
   return `${iv.toString('hex')}:${authTag}:${encrypted}`;
 }
 
+/**
+ * Fout die zegt: het opgeslagen wachtwoord is niet meer te lezen.
+ *
+ * De sleutel wordt afgeleid van JWT_SECRET. Verandert die - en in render.yaml
+ * staat hij op generateValue, dus bij het opnieuw aanmaken van de service
+ * gebeurt dat - dan valt AES-GCM om op de authenticatietag. Dat is iets heel
+ * anders dan een wachtwoord dat Spond weigert, en de gebruiker hoort dat
+ * verschil te zien: hier moet je de koppeling opnieuw instellen, daar je
+ * wachtwoord controleren.
+ */
+export class SpondCredentialsUnreadableError extends Error {
+  constructor() {
+    super('Het opgeslagen Spond-wachtwoord kan niet worden ontsleuteld.');
+    this.name = 'SpondCredentialsUnreadableError';
+  }
+}
+
 export function decryptPassword(encrypted: string): string {
   const key = getEncryptionKey();
   const parts = encrypted.split(':');
-  if (parts.length !== 3) throw new Error('Invalid encrypted format');
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
-  const encryptedText = parts[2];
-  const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
+  if (parts.length !== 3) throw new SpondCredentialsUnreadableError();
+
+  try {
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encryptedText = parts[2];
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch {
+    throw new SpondCredentialsUnreadableError();
+  }
 }
 
 // ========================
