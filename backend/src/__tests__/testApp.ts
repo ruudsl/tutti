@@ -21,9 +21,6 @@ import tasksRoutes from '../routes/tasks';
 import resourcesRoutes from '../routes/resources';
 import equipmentRoutes from '../routes/equipment';
 import modulesRoutes from '../routes/modules';
-import stageLayoutsRoutes from '../routes/stage-layouts';
-import { requireModule } from '../middleware/requireModule';
-import { optionalAuth } from '../middleware/auth';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -49,7 +46,6 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/modules', modulesRoutes);
-app.use('/api/stage-layouts', optionalAuth, requireModule('stage'), stageLayoutsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

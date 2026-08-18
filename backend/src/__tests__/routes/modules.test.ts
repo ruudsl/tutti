@@ -10,12 +10,34 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import app from '../testApp';
 import db from '../../database/connection';
+import stageLayoutsRoutes from '../../routes/stage-layouts';
+import { optionalAuth } from '../../middleware/auth';
+import { requireModule } from '../../middleware/requireModule';
+import { errorHandler } from '../../middleware/errorHandler';
 import { createTestAssociation, createTestEnvironment, createTestUser, generateTestToken } from '../testUtils';
 import { clearModuleCache } from '../../modules/service';
+
+/**
+ * Een aparte app met een module-guard erop, om te controleren dat een
+ * uitgezette module zijn API echt verbergt.
+ *
+ * De opbouw volgt index.ts: eerst een rate limiter op /api, dan de mounts met
+ * optionalAuth en requireModule ervoor. Die limiter staat er niet voor de
+ * sier - zonder hem is dit een route met een autorisatiecheck en geen limiet,
+ * en dat is nu juist het patroon dat productie wel afdekt. De grens staat zo
+ * hoog dat geen enkele test hem raakt.
+ */
+const guardedApp = express();
+guardedApp.use(express.json());
+guardedApp.use('/api', rateLimit({ windowMs: 60_000, limit: 10_000 }));
+guardedApp.use('/api/stage-layouts', optionalAuth, requireModule('stage'), stageLayoutsRoutes);
+guardedApp.use(errorHandler);
 
 describe('modules', () => {
   let adminToken: string;
@@ -149,7 +171,7 @@ describe('modules', () => {
     it('geeft 404 en niet 403, zodat de module lijkt niet te bestaan', async () => {
       setModule('stage', false);
 
-      const response = await request(app).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
+      const response = await request(guardedApp).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(404);
     });
@@ -158,7 +180,7 @@ describe('modules', () => {
       setModule('stage', false);
       setModule('stage', true);
 
-      const response = await request(app).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
+      const response = await request(guardedApp).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
     });
@@ -175,7 +197,7 @@ describe('modules', () => {
       setModule('stage', false);
 
       // Onzichtbaar via de API...
-      const hidden = await request(app).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
+      const hidden = await request(guardedApp).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
       expect(hidden.status).toBe(404);
 
       // ...maar nog gewoon in de database.
@@ -184,7 +206,7 @@ describe('modules', () => {
 
       // En na aanzetten weer zichtbaar, ongewijzigd.
       setModule('stage', true);
-      const restored = await request(app).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
+      const restored = await request(guardedApp).get('/api/stage-layouts').set('Authorization', `Bearer ${adminToken}`);
       expect(restored.status).toBe(200);
       expect(restored.body.map((l: { name: string }) => l.name)).toContain('Grote zaal');
     });
