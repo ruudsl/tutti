@@ -83,7 +83,11 @@ export default function DataExport() {
   const [deleteReason, setDeleteReason] = useState('');
   const [exportFormat, setExportFormat] = useState<'json' | 'zip'>('zip');
 
-  const { data: summary, isLoading, error } = useQuery({
+  const {
+    data: summary,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['gdpr-summary'],
     queryFn: getDataSummary,
   });
@@ -142,7 +146,7 @@ export default function DataExport() {
             <p className="piece-meta mb-3">{t('dataExport.dataDescription')}</p>
 
             <div className="mb-3">
-              {summary?.categories.map(category => (
+              {summary?.categories.map((category) => (
                 <div key={category.name} className="data-category">
                   <div className="data-category-name">
                     <Icon name={categoryIcons[category.name] || 'folder'} size={18} />
@@ -168,7 +172,9 @@ export default function DataExport() {
           </div>
           <div className="card-body">
             <div className="data-export-card">
-              <div className="data-export-icon"><Icon name="download" size={48} /></div>
+              <div className="data-export-icon">
+                <Icon name="download" size={48} />
+              </div>
               <h3>{t('dataExport.downloadYourData')}</h3>
               <p className="piece-meta">{t('dataExport.downloadDescription')}</p>
 
@@ -200,14 +206,10 @@ export default function DataExport() {
                 onClick={() => exportMutation.mutate()}
                 disabled={exportMutation.isPending}
               >
-                {exportMutation.isPending
-                  ? t('common.loading')
-                  : t('dataExport.downloadButton')}
+                {exportMutation.isPending ? t('common.loading') : t('dataExport.downloadButton')}
               </button>
 
-              <div className="data-export-info">
-                {t('dataExport.gdprInfo')}
-              </div>
+              <div className="data-export-info">{t('dataExport.gdprInfo')}</div>
             </div>
           </div>
         </div>
@@ -227,10 +229,7 @@ export default function DataExport() {
             <strong>{t('common.warning')}:</strong> {t('dataExport.deleteWarning')}
           </div>
 
-          <button
-            className="btn btn-danger"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
+          <button className="btn btn-danger" onClick={() => setShowDeleteConfirm(true)}>
             {t('dataExport.requestDeletion')}
           </button>
         </div>
@@ -244,7 +243,9 @@ export default function DataExport() {
             <div>
               <p className="mb-3">{t('dataExport.confirmDeleteMessage')}</p>
               <div className="form-group">
-                <label className="form-label">{t('dataExport.deleteReason')} ({t('common.optional')})</label>
+                <label className="form-label">
+                  {t('dataExport.deleteReason')} ({t('common.optional')})
+                </label>
                 <textarea
                   className="form-control"
                   rows={3}

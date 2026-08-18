@@ -165,7 +165,10 @@ export async function getCampaignAttachments(campaignId: string): Promise<Campai
   return response.data;
 }
 
-export async function uploadCampaignAttachment(campaignId: string, file: File): Promise<{ id: string; message: string }> {
+export async function uploadCampaignAttachment(
+  campaignId: string,
+  file: File,
+): Promise<{ id: string; message: string }> {
   const formData = new FormData();
   formData.append('file', file);
   const response = await api.post(`/email-campaigns/${campaignId}/attachments`, formData, {

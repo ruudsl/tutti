@@ -68,15 +68,9 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
     onError: () => showError(t('projects.events.errorUnlinkRehearsal')),
   });
 
-  const linkedConcertIds = useMemo(
-    () => new Set(project.concerts.map((c) => c.id)),
-    [project.concerts]
-  );
+  const linkedConcertIds = useMemo(() => new Set(project.concerts.map((c) => c.id)), [project.concerts]);
 
-  const linkedRehearsalIds = useMemo(
-    () => new Set(project.rehearsals.map((r) => r.id)),
-    [project.rehearsals]
-  );
+  const linkedRehearsalIds = useMemo(() => new Set(project.rehearsals.map((r) => r.id)), [project.rehearsals]);
 
   return (
     <div className="space-y-6">
@@ -87,28 +81,20 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
             <Icon name="music2" size={18} className="text-primary" aria-hidden={true} />
             {t('projects.concerts')} ({project.concerts.length})
           </h4>
-          <button
-            className="btn btn-sm btn-ghost gap-1"
-            onClick={() => setShowLinkConcertModal(true)}
-          >
+          <button className="btn btn-sm btn-ghost gap-1" onClick={() => setShowLinkConcertModal(true)}>
             <Icon name="plus" size={16} aria-hidden={true} />
             {t('projects.events.linkConcert')}
           </button>
         </div>
 
         {project.concerts.length === 0 ? (
-          <p className="text-base-content/60 text-sm text-center py-4">
-            {t('projects.events.noConcerts')}
-          </p>
+          <p className="text-base-content/60 text-sm text-center py-4">{t('projects.events.noConcerts')}</p>
         ) : (
           <div className="space-y-2">
             {project.concerts
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((concert) => (
-                <div
-                  key={concert.id}
-                  className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
-                >
+                <div key={concert.id} className="flex items-center justify-between p-3 bg-base-100 rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{concert.name}</div>
                     <div className="text-sm text-base-content/60 flex items-center gap-2">
@@ -144,28 +130,20 @@ export function ProjectEventsSection({ project, onUpdate }: ProjectEventsSection
             <Icon name="users" size={18} className="text-primary" aria-hidden={true} />
             {t('projects.rehearsals')} ({project.rehearsals.length})
           </h4>
-          <button
-            className="btn btn-sm btn-ghost gap-1"
-            onClick={() => setShowLinkRehearsalModal(true)}
-          >
+          <button className="btn btn-sm btn-ghost gap-1" onClick={() => setShowLinkRehearsalModal(true)}>
             <Icon name="plus" size={16} aria-hidden={true} />
             {t('projects.events.linkRehearsal')}
           </button>
         </div>
 
         {project.rehearsals.length === 0 ? (
-          <p className="text-base-content/60 text-sm text-center py-4">
-            {t('projects.events.noRehearsals')}
-          </p>
+          <p className="text-base-content/60 text-sm text-center py-4">{t('projects.events.noRehearsals')}</p>
         ) : (
           <div className="space-y-2">
             {project.rehearsals
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((rehearsal) => (
-                <div
-                  key={rehearsal.id}
-                  className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
-                >
+                <div key={rehearsal.id} className="flex items-center justify-between p-3 bg-base-100 rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">
                       {t('projects.rehearsal')} - {formatDate(rehearsal.date)}
@@ -226,12 +204,7 @@ interface LinkConcertModalProps {
   isLoading: boolean;
 }
 
-function LinkConcertModal({
-  linkedConcertIds,
-  onLink,
-  onClose,
-  isLoading,
-}: LinkConcertModalProps) {
+function LinkConcertModal({ linkedConcertIds, onLink, onClose, isLoading }: LinkConcertModalProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -246,11 +219,7 @@ function LinkConcertModal({
   }, [concertsData?.data, linkedConcertIds]);
 
   return (
-    <Modal
-      title={t('projects.events.linkConcert')}
-      onClose={onClose}
-      size="medium"
-    >
+    <Modal title={t('projects.events.linkConcert')} onClose={onClose} size="medium">
       <div className="space-y-4">
         {/* Search */}
         <div className="form-control">
@@ -276,9 +245,7 @@ function LinkConcertModal({
             </div>
           ) : availableConcerts.length === 0 ? (
             <p className="text-base-content/60 text-center py-8">
-              {searchQuery
-                ? t('projects.events.noConcertsFound')
-                : t('projects.events.allConcertsLinked')}
+              {searchQuery ? t('projects.events.noConcertsFound') : t('projects.events.allConcertsLinked')}
             </p>
           ) : (
             availableConcerts.map((concert) => (
@@ -324,19 +291,12 @@ interface LinkRehearsalModalProps {
   isLoading: boolean;
 }
 
-function LinkRehearsalModal({
-  linkedRehearsalIds,
-  onLink,
-  onClose,
-  isLoading,
-}: LinkRehearsalModalProps) {
+function LinkRehearsalModal({ linkedRehearsalIds, onLink, onClose, isLoading }: LinkRehearsalModalProps) {
   const { t } = useTranslation();
 
   // Fetch rehearsals for the next 3 months
   const startDate = new Date().toISOString().split('T')[0];
-  const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0];
+  const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const { data: rehearsals, isLoading: loadingRehearsals } = useQuery({
     queryKey: ['rehearsals', startDate, endDate],
@@ -349,15 +309,9 @@ function LinkRehearsalModal({
   }, [rehearsals, linkedRehearsalIds]);
 
   return (
-    <Modal
-      title={t('projects.events.linkRehearsal')}
-      onClose={onClose}
-      size="medium"
-    >
+    <Modal title={t('projects.events.linkRehearsal')} onClose={onClose} size="medium">
       <div className="space-y-4">
-        <p className="text-sm text-base-content/60">
-          {t('projects.events.rehearsalDateRange')}
-        </p>
+        <p className="text-sm text-base-content/60">{t('projects.events.rehearsalDateRange')}</p>
 
         {/* Rehearsal List */}
         <div className="max-h-80 overflow-y-auto space-y-2">
@@ -366,9 +320,7 @@ function LinkRehearsalModal({
               <span className="loading loading-spinner loading-md" />
             </div>
           ) : availableRehearsals.length === 0 ? (
-            <p className="text-base-content/60 text-center py-8">
-              {t('projects.events.noRehearsalsAvailable')}
-            </p>
+            <p className="text-base-content/60 text-center py-8">{t('projects.events.noRehearsalsAvailable')}</p>
           ) : (
             availableRehearsals.map((rehearsal) => (
               <div

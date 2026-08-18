@@ -123,7 +123,9 @@ export default function Genres() {
               <thead>
                 <tr>
                   <th scope="col">{t('genres.genre')}</th>
-                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
+                  <th scope="col">
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -177,24 +179,18 @@ export default function Genres() {
           <div className="card-header">
             <h3>
               {selectedGenre ? t('genres.titlesIn', { name: selectedGenre.name }) : t('genres.selectGenre')}
-              {selectedGenre && (
-                <span className="badge badge-secondary ml-2">{titlesForGenre.length}</span>
-              )}
+              {selectedGenre && <span className="badge badge-secondary ml-2">{titlesForGenre.length}</span>}
             </h3>
           </div>
           <div className="card-body flush">
             {!selectedGenre ? (
-              <div className="empty-state">
-                {t('genres.selectGenreHint')}
-              </div>
+              <div className="empty-state">{t('genres.selectGenreHint')}</div>
             ) : loadingTitles ? (
               <div className="p-2">
                 <SkeletonTable rows={3} columns={4} />
               </div>
             ) : titlesForGenre.length === 0 ? (
-              <div className="empty-state">
-                {t('genres.noTitlesForGenre')}
-              </div>
+              <div className="empty-state">{t('genres.noTitlesForGenre')}</div>
             ) : (
               <table className="table mb-0">
                 <thead>

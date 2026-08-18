@@ -16,7 +16,13 @@ function getEncryptionKey(): Buffer {
   }
 
   // Use configurable salt from environment, fallback to derived salt from secret
-  const salt = process.env.ENCRYPTION_SALT || crypto.createHash('sha256').update(secret + '-salt').digest('hex').slice(0, 32);
+  const salt =
+    process.env.ENCRYPTION_SALT ||
+    crypto
+      .createHash('sha256')
+      .update(secret + '-salt')
+      .digest('hex')
+      .slice(0, 32);
 
   // Return cached key if secret and salt haven't changed
   if (cachedKey && cachedSalt === salt) {

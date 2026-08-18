@@ -75,13 +75,7 @@ export function AdaptiveModal({
   }
 
   return (
-    <Modal
-      title={title}
-      onClose={onClose}
-      footer={footer}
-      size={size}
-      className={className}
-    >
+    <Modal title={title} onClose={onClose} footer={footer} size={size} className={className}>
       {children}
     </Modal>
   );
@@ -146,12 +140,7 @@ export function AdaptiveFormModal({
   if (isMobile) {
     const footer = (
       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="btn btn-outline"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
+        <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>
           {cancelLabel || t('common.cancel')}
         </button>
         <button
@@ -160,7 +149,7 @@ export function AdaptiveFormModal({
           className="btn btn-primary"
           disabled={isSubmitting || submitDisabled}
         >
-          {isSubmitting ? t('common.loading') : (submitLabel || t('common.save'))}
+          {isSubmitting ? t('common.loading') : submitLabel || t('common.save')}
         </button>
       </div>
     );

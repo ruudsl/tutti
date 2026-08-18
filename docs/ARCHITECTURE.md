@@ -53,26 +53,28 @@ Tutti is a multi-tenant web application for music associations (concert bands, b
 ## Tech Stack
 
 ### Frontend
-| Technology | Purpose |
-|------------|---------|
-| React 18 | UI framework |
-| TypeScript | Type safety |
-| Vite | Build tool |
-| React Query | Server state management |
-| React Router | Client-side routing |
-| i18next | Internationalization (nl, en, de) |
-| Workbox | PWA/Service Worker |
+
+| Technology   | Purpose                           |
+| ------------ | --------------------------------- |
+| React 18     | UI framework                      |
+| TypeScript   | Type safety                       |
+| Vite         | Build tool                        |
+| React Query  | Server state management           |
+| React Router | Client-side routing               |
+| i18next      | Internationalization (nl, en, de) |
+| Workbox      | PWA/Service Worker                |
 
 ### Backend
-| Technology | Purpose |
-|------------|---------|
-| Node.js 20 | Runtime |
-| Express | HTTP framework |
-| TypeScript | Type safety |
-| better-sqlite3 | Database |
-| Zod | Request validation |
-| JWT | Authentication |
-| bcrypt | Password hashing |
+
+| Technology     | Purpose            |
+| -------------- | ------------------ |
+| Node.js 20     | Runtime            |
+| Express        | HTTP framework     |
+| TypeScript     | Type safety        |
+| better-sqlite3 | Database           |
+| Zod            | Request validation |
+| JWT            | Authentication     |
+| bcrypt         | Password hashing   |
 
 ## Multi-Tenancy
 
@@ -194,15 +196,18 @@ DELETE /api/resource/:id      # Delete
 ## Caching Strategy
 
 ### Frontend (React Query)
+
 - Stale time: 5 minutes
 - Cache persisted to IndexedDB
 - Background refetch on focus
 
 ### Backend (HTTP)
+
 - ETag for conditional requests
 - Cache-Control headers for static assets
 
 ### PWA (Service Worker)
+
 - Precache: App shell, fonts, icons
 - Runtime cache: API responses, PDFs
 - Offline fallback page

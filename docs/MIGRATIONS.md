@@ -21,10 +21,10 @@ The migration runner provides:
 
 ```typescript
 interface Migration {
-  version: string;    // 14-digit timestamp
-  name: string;       // Descriptive name
-  up: () => void;     // Apply migration
-  down: () => void;   // Rollback migration
+  version: string; // 14-digit timestamp
+  name: string; // Descriptive name
+  up: () => void; // Apply migration
+  down: () => void; // Rollback migration
 }
 ```
 
@@ -73,7 +73,7 @@ export function up(): void {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
-  
+
   db.exec('CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id)');
 }
 
@@ -90,6 +90,7 @@ export function down(): void {
 ### Timestamps
 
 Use the format `YYYYMMDDHHmmss`:
+
 - Year (4 digits)
 - Month (2 digits)
 - Day (2 digits)
@@ -100,6 +101,7 @@ Use the format `YYYYMMDDHHmmss`:
 ### Descriptions
 
 Use lowercase with underscores:
+
 - `add_user_preferences` - Adding new table/column
 - `remove_legacy_field` - Removing deprecated data
 - `add_performance_indexes` - Performance improvements
@@ -127,7 +129,7 @@ console.log('Errors:', result.errors);
 import { getMigrationStatus } from './migrations/runner';
 
 const status = await getMigrationStatus();
-status.forEach(m => {
+status.forEach((m) => {
   console.log(`${m.version}_${m.name}: ${m.applied ? 'Applied' : 'Pending'}`);
 });
 ```
@@ -137,6 +139,7 @@ status.forEach(m => {
 ### SQLite Limitations
 
 SQLite has limited `ALTER TABLE` support. You cannot:
+
 - Drop columns directly (before SQLite 3.35.0)
 - Rename columns in older versions
 - Modify column constraints
@@ -257,7 +260,7 @@ Document the purpose and any special considerations:
 ```typescript
 /**
  * Migration: Add performance indexes
- * 
+ *
  * These indexes improve query performance for:
  * - User session lookups by expiry time
  * - Rehearsal attendance queries
@@ -271,6 +274,7 @@ export function up(): void {
 ### 6. Test Migrations Locally
 
 Before deploying:
+
 1. Run the migration on a copy of production data
 2. Verify the `up()` function works correctly
 3. Test the `down()` function if possible
@@ -285,18 +289,21 @@ If a migration fails, the transaction is rolled back. Check the error message an
 ### Duplicate Column Error
 
 If you see "duplicate column" errors:
+
 - The column already exists (possibly from an earlier partial run)
 - Use `columnExists()` check or `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` (SQLite 3.35+)
 
 ### Missing Migration File
 
 If the database shows a migration as applied but the file is missing:
+
 - The migration was applied and the file was later deleted
 - Remove the record manually: `DELETE FROM migrations WHERE version = '...'`
 
 ### Out-of-Order Migrations
 
 Migrations run in timestamp order. If you need to insert a migration before existing ones:
+
 - Use an earlier timestamp
 - Ensure it doesn't conflict with already-applied migrations
 
@@ -305,6 +312,7 @@ Migrations run in timestamp order. If you need to insert a migration before exis
 The codebase also includes a legacy migration system in `backend/src/database/migrations.ts`. This uses a simpler version-number approach and is being phased out in favor of the timestamp-based system in `backend/src/migrations/`.
 
 Legacy migrations:
+
 - Use integer version numbers (1, 2, 3, ...)
 - Stored in `schema_migrations` table
 - Only support `up` operations (no rollback)

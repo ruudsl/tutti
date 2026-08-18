@@ -33,11 +33,7 @@ export function GdprExport() {
       <p className="mb-2" style={{ color: 'var(--text-light)' }}>
         {t('gdpr.description')}
       </p>
-      <button
-        className="btn btn-outline"
-        onClick={handleExport}
-        disabled={isExporting}
-      >
+      <button className="btn btn-outline" onClick={handleExport} disabled={isExporting}>
         {isExporting ? t('gdpr.exporting') : t('gdpr.export')}
       </button>
     </div>

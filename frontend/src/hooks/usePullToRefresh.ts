@@ -56,49 +56,55 @@ export function usePullToRefresh<T extends HTMLElement = HTMLDivElement>({
   const touchStartRef = useRef<number>(0);
   const isPullingRef = useRef(false);
 
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (disabled || state.isRefreshing) return;
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      if (disabled || state.isRefreshing) return;
 
-    // Only trigger if at top of scroll container
-    const element = ref.current;
-    if (!element || element.scrollTop > 0) return;
+      // Only trigger if at top of scroll container
+      const element = ref.current;
+      if (!element || element.scrollTop > 0) return;
 
-    touchStartRef.current = e.touches[0].clientY;
-    isPullingRef.current = false;
-  }, [disabled, state.isRefreshing]);
+      touchStartRef.current = e.touches[0].clientY;
+      isPullingRef.current = false;
+    },
+    [disabled, state.isRefreshing],
+  );
 
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (disabled || state.isRefreshing) return;
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (disabled || state.isRefreshing) return;
 
-    const element = ref.current;
-    if (!element || element.scrollTop > 0) return;
+      const element = ref.current;
+      if (!element || element.scrollTop > 0) return;
 
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - touchStartRef.current;
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - touchStartRef.current;
 
-    // Only track downward pulls
-    if (deltaY <= 0) {
-      if (isPullingRef.current) {
-        isPullingRef.current = false;
-        setState(prev => ({ ...prev, isPulling: false, pullDistance: 0, progress: 0 }));
+      // Only track downward pulls
+      if (deltaY <= 0) {
+        if (isPullingRef.current) {
+          isPullingRef.current = false;
+          setState((prev) => ({ ...prev, isPulling: false, pullDistance: 0, progress: 0 }));
+        }
+        return;
       }
-      return;
-    }
 
-    // Prevent default scroll during pull
-    e.preventDefault();
+      // Prevent default scroll during pull
+      e.preventDefault();
 
-    isPullingRef.current = true;
-    const pullDistance = Math.min(deltaY * 0.5, maxPull); // Apply resistance
-    const progress = Math.min(pullDistance / threshold, 1);
+      isPullingRef.current = true;
+      const pullDistance = Math.min(deltaY * 0.5, maxPull); // Apply resistance
+      const progress = Math.min(pullDistance / threshold, 1);
 
-    setState(prev => ({
-      ...prev,
-      isPulling: true,
-      pullDistance,
-      progress,
-    }));
-  }, [disabled, state.isRefreshing, threshold, maxPull]);
+      setState((prev) => ({
+        ...prev,
+        isPulling: true,
+        pullDistance,
+        progress,
+      }));
+    },
+    [disabled, state.isRefreshing, threshold, maxPull],
+  );
 
   const handleTouchEnd = useCallback(async () => {
     if (disabled || !isPullingRef.current) return;
@@ -108,7 +114,7 @@ export function usePullToRefresh<T extends HTMLElement = HTMLDivElement>({
     const shouldRefresh = state.pullDistance >= threshold;
 
     if (shouldRefresh) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isPulling: false,
         pullDistance: 0,
@@ -119,13 +125,13 @@ export function usePullToRefresh<T extends HTMLElement = HTMLDivElement>({
       try {
         await onRefresh();
       } finally {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isRefreshing: false,
         }));
       }
     } else {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isPulling: false,
         pullDistance: 0,

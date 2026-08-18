@@ -67,7 +67,9 @@ export default function TicketScanner() {
   const playSound = (type: 'success' | 'error') => {
     // Create audio context for sound feedback
     try {
-      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const audioContext = new (
+        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -115,14 +117,17 @@ export default function TicketScanner() {
 
         // Wait for video to be ready before starting scan loop
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().then(() => {
-            setIsCameraActive(true);
-            scanningRef.current = true;
-            scanQRCode();
-          }).catch((err) => {
-            console.error('Failed to play video:', err);
-            showError(t('tickets.cameraError'));
-          });
+          videoRef.current
+            ?.play()
+            .then(() => {
+              setIsCameraActive(true);
+              scanningRef.current = true;
+              scanQRCode();
+            })
+            .catch((err) => {
+              console.error('Failed to play video:', err);
+              showError(t('tickets.cameraError'));
+            });
         };
       }
     } catch (error) {
@@ -172,7 +177,13 @@ export default function TicketScanner() {
     // Use BarcodeDetector API if available
     if ('BarcodeDetector' in window) {
       try {
-        const barcodeDetector = new (window as unknown as { BarcodeDetector: new (options: { formats: string[] }) => { detect: (image: ImageBitmap) => Promise<{ rawValue: string }[]> } }).BarcodeDetector({ formats: ['qr_code'] });
+        const barcodeDetector = new (
+          window as unknown as {
+            BarcodeDetector: new (options: { formats: string[] }) => {
+              detect: (image: ImageBitmap) => Promise<{ rawValue: string }[]>;
+            };
+          }
+        ).BarcodeDetector({ formats: ['qr_code'] });
         const imageBitmap = await createImageBitmap(canvas);
         const barcodes = await barcodeDetector.detect(imageBitmap);
 
@@ -257,9 +268,7 @@ export default function TicketScanner() {
                 </option>
               ))}
             </select>
-            <small style={{ color: 'var(--text-light)' }}>
-              {t('tickets.selectConcertDescription')}
-            </small>
+            <small style={{ color: 'var(--text-light)' }}>{t('tickets.selectConcertDescription')}</small>
           </div>
         </div>
       </div>
@@ -399,12 +408,8 @@ export default function TicketScanner() {
                   backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 }}
               >
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
-                  {scanCount.valid}
-                </div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                  {t('tickets.validScans')}
-                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>{scanCount.valid}</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('tickets.validScans')}</div>
               </div>
               <div
                 className="card"
@@ -415,12 +420,8 @@ export default function TicketScanner() {
                   backgroundColor: 'rgba(244, 67, 54, 0.1)',
                 }}
               >
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>
-                  {scanCount.invalid}
-                </div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                  {t('tickets.invalidScans')}
-                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger)' }}>{scanCount.invalid}</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('tickets.invalidScans')}</div>
               </div>
             </div>
 

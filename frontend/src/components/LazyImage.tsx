@@ -179,19 +179,10 @@ export const LazyImage = memo(function LazyImage({
   };
 
   return (
-    <div
-      ref={ref as React.RefObject<HTMLDivElement>}
-      className={containerClassName}
-      style={containerStyles}
-    >
+    <div ref={ref as React.RefObject<HTMLDivElement>} className={containerClassName} style={containerStyles}>
       {/* Placeholder/blur image */}
       {(placeholder || blurPlaceholder) && loadState !== 'loaded' && (
-        <img
-          src={blurPlaceholder || placeholder}
-          alt=""
-          aria-hidden="true"
-          style={placeholderStyles}
-        />
+        <img src={blurPlaceholder || placeholder} alt="" aria-hidden="true" style={placeholderStyles} />
       )}
 
       {/* Loading spinner */}
@@ -272,13 +263,7 @@ export const SimpleLazyImage = memo(function SimpleLazyImage({
   return (
     <span ref={ref as React.RefObject<HTMLSpanElement>} style={{ display: 'inline-block' }}>
       {isVisible ? (
-        <img
-          {...imgProps}
-          src={src}
-          alt={alt}
-          loading="lazy"
-          decoding="async"
-        />
+        <img {...imgProps} src={src} alt={alt} loading="lazy" decoding="async" />
       ) : (
         <span
           style={{

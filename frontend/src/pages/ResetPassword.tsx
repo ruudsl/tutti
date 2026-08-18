@@ -25,7 +25,12 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
 
   // Form with validation rules
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<ResetPasswordFormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<ResetPasswordFormData>({
     defaultValues: {
       password: '',
       confirmPassword: '',
@@ -96,12 +101,8 @@ export default function ResetPassword() {
             <h1>{t('resetPassword.invalidTitle')}</h1>
           </div>
           <div className="login-body">
-            <div className="alert alert-error mb-2">
-              {t('resetPassword.invalidMessage')}
-            </div>
-            <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>
-              {t('resetPassword.linkExpired')}
-            </p>
+            <div className="alert alert-error mb-2">{t('resetPassword.invalidMessage')}</div>
+            <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>{t('resetPassword.linkExpired')}</p>
             <Link to="/forgot-password" className="btn btn-primary" style={{ width: '100%', marginBottom: '0.5rem' }}>
               {t('resetPassword.requestNew')}
             </Link>
@@ -125,14 +126,8 @@ export default function ResetPassword() {
             <h1>{t('resetPassword.successTitle')}</h1>
           </div>
           <div className="login-body">
-            <div className="alert alert-success mb-2">
-              {t('resetPassword.successMessage')}
-            </div>
-            <button
-              onClick={() => navigate('/login')}
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-            >
+            <div className="alert alert-success mb-2">{t('resetPassword.successMessage')}</div>
+            <button onClick={() => navigate('/login')} className="btn btn-primary" style={{ width: '100%' }}>
               {t('resetPassword.loginNow')}
             </button>
           </div>
@@ -152,9 +147,7 @@ export default function ResetPassword() {
           <p>{t('resetPassword.subtitle')}</p>
         </div>
         <div className="login-body">
-          {error && (
-            <div className="alert alert-error mb-2">{error}</div>
-          )}
+          {error && <div className="alert alert-error mb-2">{error}</div>}
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group">
               <label className="form-label">{t('resetPassword.newPassword')} *</label>
@@ -168,9 +161,7 @@ export default function ResetPassword() {
                 placeholder={t('resetPassword.minLength')}
                 autoFocus
               />
-              {errors.password && (
-                <span className="form-error">{errors.password.message}</span>
-              )}
+              {errors.password && <span className="form-error">{errors.password.message}</span>}
             </div>
             <div className="form-group">
               <label className="form-label">{t('resetPassword.confirmPassword')} *</label>
@@ -183,16 +174,9 @@ export default function ResetPassword() {
                 })}
                 placeholder={t('resetPassword.repeatPassword')}
               />
-              {errors.confirmPassword && (
-                <span className="form-error">{errors.confirmPassword.message}</span>
-              )}
+              {errors.confirmPassword && <span className="form-error">{errors.confirmPassword.message}</span>}
             </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              disabled={isSubmitting}
-            >
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={isSubmitting}>
               {isSubmitting ? t('resetPassword.resetting') : t('resetPassword.resetButton')}
             </button>
           </form>

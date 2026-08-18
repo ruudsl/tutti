@@ -62,27 +62,33 @@ export function BottomSheet({
     }
   }, [swipeToDismiss, onClose]);
 
-  const handleSwipeMove = useCallback((_deltaX: number, deltaY: number) => {
-    if (!swipeToDismiss || !sheetRef.current) return;
+  const handleSwipeMove = useCallback(
+    (_deltaX: number, deltaY: number) => {
+      if (!swipeToDismiss || !sheetRef.current) return;
 
-    // Only track downward swipes
-    if (deltaY > 0) {
-      dragOffsetRef.current = deltaY;
-      sheetRef.current.style.transform = `translateY(${deltaY}px)`;
-    }
-  }, [swipeToDismiss]);
+      // Only track downward swipes
+      if (deltaY > 0) {
+        dragOffsetRef.current = deltaY;
+        sheetRef.current.style.transform = `translateY(${deltaY}px)`;
+      }
+    },
+    [swipeToDismiss],
+  );
 
-  const handleSwipeEnd = useCallback((completed: boolean) => {
-    if (!sheetRef.current) return;
+  const handleSwipeEnd = useCallback(
+    (completed: boolean) => {
+      if (!sheetRef.current) return;
 
-    // If dragged more than 100px, close. Otherwise, snap back
-    if (completed || dragOffsetRef.current > 100) {
-      onClose();
-    } else {
-      sheetRef.current.style.transform = 'translateY(0)';
-    }
-    dragOffsetRef.current = 0;
-  }, [onClose]);
+      // If dragged more than 100px, close. Otherwise, snap back
+      if (completed || dragOffsetRef.current > 100) {
+        onClose();
+      } else {
+        sheetRef.current.style.transform = 'translateY(0)';
+      }
+      dragOffsetRef.current = 0;
+    },
+    [onClose],
+  );
 
   const { ref: swipeRef } = useSwipeGesture<HTMLDivElement>(
     {
@@ -94,7 +100,7 @@ export function BottomSheet({
       threshold: 50,
       preventScrollOnVerticalSwipe: false,
       disabled: !swipeToDismiss,
-    }
+    },
   );
 
   // Focus management, escape key, and focus trap
@@ -126,9 +132,7 @@ export function BottomSheet({
           '[tabindex]:not([tabindex="-1"])',
         ].join(', ');
 
-        const focusableElements = Array.from(
-          sheetRef.current.querySelectorAll<HTMLElement>(focusableSelectors)
-        );
+        const focusableElements = Array.from(sheetRef.current.querySelectorAll<HTMLElement>(focusableSelectors));
 
         if (focusableElements.length === 0) return;
 

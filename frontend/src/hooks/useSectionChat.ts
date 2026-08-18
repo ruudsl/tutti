@@ -58,9 +58,7 @@ export function useChatMessages(channelId: string, options?: { before?: string; 
       if (options?.before) params.append('before', options.before);
       if (options?.limit) params.append('limit', options.limit.toString());
 
-      const response = await api.get<ChatMessage[]>(
-        `/section-chat/channels/${channelId}/messages?${params}`
-      );
+      const response = await api.get<ChatMessage[]>(`/section-chat/channels/${channelId}/messages?${params}`);
       return response.data;
     },
     enabled: !!channelId,
@@ -82,15 +80,19 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ channelId, content, replyToId }: {
+    mutationFn: async ({
+      channelId,
+      content,
+      replyToId,
+    }: {
       channelId: string;
       content: string;
       replyToId?: string;
     }) => {
-      const response = await api.post<ChatMessage>(
-        `/section-chat/channels/${channelId}/messages`,
-        { content, replyToId }
-      );
+      const response = await api.post<ChatMessage>(`/section-chat/channels/${channelId}/messages`, {
+        content,
+        replyToId,
+      });
       return response.data;
     },
     onSuccess: (_, variables) => {

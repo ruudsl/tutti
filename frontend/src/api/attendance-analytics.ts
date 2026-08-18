@@ -86,7 +86,10 @@ export async function getRehearsalAttendanceOverview(orchestraId?: string): Prom
   return data;
 }
 
-export async function getRehearsalAttendanceTrends(months = 12, orchestraId?: string): Promise<RehearsalAttendanceTrend[]> {
+export async function getRehearsalAttendanceTrends(
+  months = 12,
+  orchestraId?: string,
+): Promise<RehearsalAttendanceTrend[]> {
   const params: Record<string, string | number> = { months };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/trends', { params });
@@ -99,9 +102,11 @@ export async function getRehearsalAttendanceBySection(orchestraId?: string): Pro
   return data;
 }
 
-export async function getRehearsalAttendanceByMember(
-  options?: { limit?: number; sortBy?: 'rate_asc' | 'rate_desc' | 'name'; orchestraId?: string }
-): Promise<RehearsalMemberAttendanceStats[]> {
+export async function getRehearsalAttendanceByMember(options?: {
+  limit?: number;
+  sortBy?: 'rate_asc' | 'rate_desc' | 'name';
+  orchestraId?: string;
+}): Promise<RehearsalMemberAttendanceStats[]> {
   const params: Record<string, string | number> = {};
   if (options?.limit) params.limit = options.limit;
   if (options?.sortBy) params.sortBy = options.sortBy;
@@ -116,7 +121,10 @@ export async function getRehearsalAtRiskMembers(orchestraId?: string): Promise<R
   return data;
 }
 
-export async function getRehearsalAttendancePredictions(limit = 5, orchestraId?: string): Promise<RehearsalAttendancePrediction[]> {
+export async function getRehearsalAttendancePredictions(
+  limit = 5,
+  orchestraId?: string,
+): Promise<RehearsalAttendancePrediction[]> {
   const params: Record<string, string | number> = { limit };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/predictions', { params });
@@ -129,7 +137,10 @@ export async function getRehearsalAttendanceByDayOfWeek(orchestraId?: string): P
   return data;
 }
 
-export async function getRehearsalAttendanceLeaderboard(limit = 10, orchestraId?: string): Promise<RehearsalLeaderboardMember[]> {
+export async function getRehearsalAttendanceLeaderboard(
+  limit = 10,
+  orchestraId?: string,
+): Promise<RehearsalLeaderboardMember[]> {
   const params: Record<string, string | number> = { limit };
   if (orchestraId) params.orchestraId = orchestraId;
   const { data } = await api.get('/analytics/attendance/leaderboard', { params });

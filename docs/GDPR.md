@@ -18,16 +18,16 @@ This document describes how Harmonie handles personal data in compliance with th
 
 ### Personal Data Categories
 
-| Category | Data Fields | Purpose | Legal Basis |
-|----------|-------------|---------|-------------|
-| Identity | First name, last name | Member identification | Contract performance |
-| Contact | Email address, phone (optional) | Communication about events | Contract performance |
-| Membership | Instrument, voice part, orchestra | Organize rehearsals/performances | Contract performance |
-| Authentication | Password hash, session tokens | Account security | Contract performance |
-| Activity | Login timestamps, IP addresses | Security and abuse prevention | Legitimate interest |
-| Attendance | Rehearsal attendance records | Ensemble management | Legitimate interest |
-| Practice | Practice session logs | Progress tracking (optional) | Consent |
-| Financial | Ticket purchase history | Payment processing | Contract performance |
+| Category       | Data Fields                       | Purpose                          | Legal Basis          |
+| -------------- | --------------------------------- | -------------------------------- | -------------------- |
+| Identity       | First name, last name             | Member identification            | Contract performance |
+| Contact        | Email address, phone (optional)   | Communication about events       | Contract performance |
+| Membership     | Instrument, voice part, orchestra | Organize rehearsals/performances | Contract performance |
+| Authentication | Password hash, session tokens     | Account security                 | Contract performance |
+| Activity       | Login timestamps, IP addresses    | Security and abuse prevention    | Legitimate interest  |
+| Attendance     | Rehearsal attendance records      | Ensemble management              | Legitimate interest  |
+| Practice       | Practice session logs             | Progress tracking (optional)     | Consent              |
+| Financial      | Ticket purchase history           | Payment processing               | Contract performance |
 
 ### Special Categories
 
@@ -37,12 +37,12 @@ Harmonie does not collect special category data (health, religion, political vie
 
 When using integrations, additional data may be processed:
 
-| Integration | Data Received | Purpose |
-|-------------|---------------|---------|
-| Microsoft Entra | Name, email, job title, profile photo | User provisioning |
-| Google/Facebook OAuth | Name, email | Guest checkout authentication |
-| WhatsApp/Telegram | Phone number/Chat ID | Notification delivery |
-| Spond | Name, email, attendance responses | Calendar sync |
+| Integration           | Data Received                         | Purpose                       |
+| --------------------- | ------------------------------------- | ----------------------------- |
+| Microsoft Entra       | Name, email, job title, profile photo | User provisioning             |
+| Google/Facebook OAuth | Name, email                           | Guest checkout authentication |
+| WhatsApp/Telegram     | Phone number/Chat ID                  | Notification delivery         |
+| Spond                 | Name, email, attendance responses     | Calendar sync                 |
 
 ---
 
@@ -50,18 +50,18 @@ When using integrations, additional data may be processed:
 
 ### Default Retention Periods
 
-| Data Type | Retention Period | Auto-Delete |
-|-----------|------------------|-------------|
-| Active member data | Duration of membership | No |
-| Inactive member data | 2 years after membership end | Configurable |
-| Session data | 90 days | Yes |
-| Login audit logs | 1 year | Yes |
-| Attendance records | 1 year | Configurable |
-| Practice logs | 1 year | Configurable |
-| Password reset tokens | 24 hours | Yes |
-| Recent views | 30 days | Yes |
-| Audio recordings | Configurable | Configurable |
-| Deleted user records | Configurable | Configurable |
+| Data Type             | Retention Period             | Auto-Delete  |
+| --------------------- | ---------------------------- | ------------ |
+| Active member data    | Duration of membership       | No           |
+| Inactive member data  | 2 years after membership end | Configurable |
+| Session data          | 90 days                      | Yes          |
+| Login audit logs      | 1 year                       | Yes          |
+| Attendance records    | 1 year                       | Configurable |
+| Practice logs         | 1 year                       | Configurable |
+| Password reset tokens | 24 hours                     | Yes          |
+| Recent views          | 30 days                      | Yes          |
+| Audio recordings      | Configurable                 | Configurable |
+| Deleted user records  | Configurable                 | Configurable |
 
 ### Automated Cleanup
 
@@ -85,6 +85,7 @@ VALUES (uuid(), 'assoc-id', 'practice_logs', 180, 1);
 ```
 
 **Supported data types for auto-cleanup:**
+
 - `sessions` - User login sessions
 - `activity_log` - User activity records
 - `audit_logs` - Administrative audit trail
@@ -160,6 +161,7 @@ Users have the right to request deletion of their personal data (GDPR Article 17
 ### What Gets Deleted
 
 **Immediately deleted:**
+
 - Personal profile data (name, email, phone)
 - Password hash
 - Profile photo
@@ -168,10 +170,12 @@ Users have the right to request deletion of their personal data (GDPR Article 17
 - Notification preferences
 
 **Anonymized (retained for statistics):**
+
 - Attendance records (user reference replaced with anonymous ID)
 - Practice logs (anonymized)
 
 **Retained (legitimate interest / legal requirement):**
+
 - Audit logs (for 1 year) - required for security
 - Financial transactions (for 7 years) - legal requirement
 - Ticket purchases (anonymized after retention period)
@@ -179,6 +183,7 @@ Users have the right to request deletion of their personal data (GDPR Article 17
 ### Soft Delete vs. Hard Delete
 
 Harmonie uses soft delete by default:
+
 1. User data is marked as `status = 'deleted'`
 2. Personal data is overwritten with placeholders
 3. User can no longer log in
@@ -189,6 +194,7 @@ Harmonie uses soft delete by default:
 Admins can delete users via Admin > Members > [User] > Delete.
 
 Options:
+
 - **Soft delete**: Mark as deleted, retain for audit
 - **Hard delete**: Immediately remove all data (except legally required records)
 
@@ -199,6 +205,7 @@ DELETE /api/users/:id
 ```
 
 Query parameters:
+
 - `hard=true` - Perform hard delete (admin only)
 - `reason=...` - Deletion reason (logged for audit)
 
@@ -217,9 +224,11 @@ A Data Processing Agreement (DPA/Verwerkersovereenkomst) is required when:
 ### Template
 
 A DPA template is available at:
+
 - `/docs/templates/DATA_PROCESSING_AGREEMENT.md`
 
 This template includes:
+
 - Standard contractual clauses
 - Technical and organizational measures
 - Sub-processor list
@@ -227,14 +236,14 @@ This template includes:
 
 ### Integration-Specific DPAs
 
-| Provider | DPA Available |
-|----------|---------------|
-| Mollie | [Mollie DPA](https://www.mollie.com/legal/dpa) |
-| Stripe | [Stripe DPA](https://stripe.com/legal/dpa) |
+| Provider          | DPA Available                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Mollie            | [Mollie DPA](https://www.mollie.com/legal/dpa)                                                                              |
+| Stripe            | [Stripe DPA](https://stripe.com/legal/dpa)                                                                                  |
 | Microsoft (Entra) | [Microsoft DPA](https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA) |
-| Google | [Google Cloud DPA](https://cloud.google.com/terms/data-processing-addendum) |
-| Sentry | [Sentry DPA](https://sentry.io/legal/dpa/) |
-| Twilio | [Twilio DPA](https://www.twilio.com/legal/data-protection-addendum) |
+| Google            | [Google Cloud DPA](https://cloud.google.com/terms/data-processing-addendum)                                                 |
+| Sentry            | [Sentry DPA](https://sentry.io/legal/dpa/)                                                                                  |
+| Twilio            | [Twilio DPA](https://www.twilio.com/legal/data-protection-addendum)                                                         |
 
 ---
 
@@ -244,16 +253,17 @@ This template includes:
 
 Harmonie uses only **strictly necessary cookies**. No tracking or analytics cookies are used.
 
-| Cookie Name | Purpose | Duration | Type |
-|-------------|---------|----------|------|
-| `session_id` | User authentication | Session / 7 days | Essential |
-| `csrf_token` | CSRF protection | Session | Essential |
-| `lang` | Language preference | 1 year | Essential |
-| `theme` | Light/dark mode preference | 1 year | Essential |
+| Cookie Name  | Purpose                    | Duration         | Type      |
+| ------------ | -------------------------- | ---------------- | --------- |
+| `session_id` | User authentication        | Session / 7 days | Essential |
+| `csrf_token` | CSRF protection            | Session          | Essential |
+| `lang`       | Language preference        | 1 year           | Essential |
+| `theme`      | Light/dark mode preference | 1 year           | Essential |
 
 ### No Third-Party Tracking
 
 Harmonie does not use:
+
 - Google Analytics
 - Facebook Pixel
 - Any advertising cookies
@@ -267,12 +277,12 @@ Because only essential cookies are used, explicit cookie consent banners are gen
 
 The following data is stored in browser local storage:
 
-| Key | Purpose | Contains PII |
-|-----|---------|--------------|
-| `auth_token` | JWT authentication token | User ID |
-| `user_preferences` | UI preferences | No |
-| `recent_searches` | Recent search queries | No |
-| `offline_cache` | PWA offline data | Yes (cached content) |
+| Key                | Purpose                  | Contains PII         |
+| ------------------ | ------------------------ | -------------------- |
+| `auth_token`       | JWT authentication token | User ID              |
+| `user_preferences` | UI preferences           | No                   |
+| `recent_searches`  | Recent search queries    | No                   |
+| `offline_cache`    | PWA offline data         | Yes (cached content) |
 
 ---
 
@@ -283,6 +293,7 @@ The following data is stored in browser local storage:
 Available at: `/docs/templates/PRIVACY_POLICY.md`
 
 This template is designed for associations using Harmonie and includes:
+
 - Contact details placeholder
 - Data categories collected
 - Processing purposes and legal basis
@@ -291,6 +302,7 @@ This template is designed for associations using Harmonie and includes:
 - Cookie information
 
 **Usage:**
+
 1. Copy the template
 2. Fill in placeholders (marked with `[brackets]`)
 3. Review and adjust for your specific use case
@@ -302,10 +314,12 @@ This template is designed for associations using Harmonie and includes:
 Available at: `/docs/templates/DATA_PROCESSING_AGREEMENT.md`
 
 Use this template when:
+
 - You host Harmonie for other associations
 - You operate Harmonie as a SaaS service
 
 Includes:
+
 - Party definitions
 - Processing purposes
 - Security measures
@@ -329,6 +343,7 @@ When anonymizing data, Harmonie:
 6. Clears social login identifiers
 
 Example anonymization:
+
 ```sql
 UPDATE users SET
   email = 'deleted-' || id || '@deleted.invalid',
@@ -366,12 +381,12 @@ CREATE TABLE audit_logs (
 
 Sensitive data is encrypted:
 
-| Data | Encryption Method |
-|------|-------------------|
-| Passwords | bcrypt (cost factor 10) |
-| OAuth tokens | AES-256-GCM |
-| Spond credentials | AES-256-GCM |
-| Session tokens | JWT with HS256 |
+| Data              | Encryption Method       |
+| ----------------- | ----------------------- |
+| Passwords         | bcrypt (cost factor 10) |
+| OAuth tokens      | AES-256-GCM             |
+| Spond credentials | AES-256-GCM             |
+| Session tokens    | JWT with HS256          |
 
 ---
 

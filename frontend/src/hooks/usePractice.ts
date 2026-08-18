@@ -4,7 +4,11 @@ import { queryKeys } from '../lib/queryClient';
 import { showSuccess, showError } from '../utils/toast';
 
 export function usePracticeLogs(musicTitleId?: string) {
-  const { data: logs = [], isLoading, error } = useQuery({
+  const {
+    data: logs = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['practiceLogs', musicTitleId],
     queryFn: () => getPracticeLogs(musicTitleId),
   });
@@ -13,7 +17,11 @@ export function usePracticeLogs(musicTitleId?: string) {
 }
 
 export function usePracticeStats() {
-  const { data: stats, isLoading, error } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.practiceStats,
     queryFn: getPracticeStats,
   });

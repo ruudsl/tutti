@@ -2,167 +2,157 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface DailyPrediction {
-    date: string;
-    predictedSales: number;
-    actualSales?: number;
+  date: string;
+  predictedSales: number;
+  actualSales?: number;
 }
 
 interface SalesPrediction {
-    predictedTotalSales: number;
-    predictedRevenue: number;
-    confidenceLevel: 'low' | 'medium' | 'high';
-    factors: string[];
-    dailyPredictions: DailyPrediction[];
+  predictedTotalSales: number;
+  predictedRevenue: number;
+  confidenceLevel: 'low' | 'medium' | 'high';
+  factors: string[];
+  dailyPredictions: DailyPrediction[];
 }
 
 interface SalesPredictionChartProps {
-    prediction: SalesPrediction;
-    currentSales: number;
-    currentRevenue: number;
+  prediction: SalesPrediction;
+  currentSales: number;
+  currentRevenue: number;
 }
 
-export function SalesPredictionChart({
-    prediction,
-    currentSales,
-    currentRevenue,
-}: SalesPredictionChartProps) {
-    const { t } = useTranslation();
+export function SalesPredictionChart({ prediction, currentSales, currentRevenue }: SalesPredictionChartProps) {
+  const { t } = useTranslation();
 
-    const confidenceColors = {
-        low: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#ef4444' },
-        medium: { bg: 'rgba(234, 179, 8, 0.1)', text: '#eab308', border: '#eab308' },
-        high: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', border: '#22c55e' },
-    };
+  const confidenceColors = {
+    low: { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', border: '#ef4444' },
+    medium: { bg: 'rgba(234, 179, 8, 0.1)', text: '#eab308', border: '#eab308' },
+    high: { bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e', border: '#22c55e' },
+  };
 
-    const colors = confidenceColors[prediction.confidenceLevel];
+  const colors = confidenceColors[prediction.confidenceLevel];
 
-    const chartData = useMemo(() => {
-        const maxValue = Math.max(
-            ...prediction.dailyPredictions.map(d => Math.max(d.predictedSales, d.actualSales || 0)),
-            1
-        );
-        return prediction.dailyPredictions.map(d => ({
-            ...d,
-            predictedHeight: (d.predictedSales / maxValue) * 100,
-            actualHeight: ((d.actualSales || 0) / maxValue) * 100,
-        }));
-    }, [prediction.dailyPredictions]);
+  const chartData = useMemo(() => {
+    const maxValue = Math.max(
+      ...prediction.dailyPredictions.map((d) => Math.max(d.predictedSales, d.actualSales || 0)),
+      1,
+    );
+    return prediction.dailyPredictions.map((d) => ({
+      ...d,
+      predictedHeight: (d.predictedSales / maxValue) * 100,
+      actualHeight: ((d.actualSales || 0) / maxValue) * 100,
+    }));
+  }, [prediction.dailyPredictions]);
 
-    const progressPercentage = Math.min(100, (currentSales / prediction.predictedTotalSales) * 100);
+  const progressPercentage = Math.min(100, (currentSales / prediction.predictedTotalSales) * 100);
 
-    return (
-        <div className="sales-prediction-chart card">
-            <div className="card-body">
-                <div className="flex justify-between items-center mb-4">
-                    <h4>{t('predictions.title')}</h4>
-                    <span
-                        className="confidence-badge"
-                        style={{
-                            background: colors.bg,
-                            color: colors.text,
-                            border: `1px solid ${colors.border}`,
-                        }}
-                    >
-                        {t(`predictions.confidence.${prediction.confidenceLevel}`)}
-                    </span>
-                </div>
+  return (
+    <div className="sales-prediction-chart card">
+      <div className="card-body">
+        <div className="flex justify-between items-center mb-4">
+          <h4>{t('predictions.title')}</h4>
+          <span
+            className="confidence-badge"
+            style={{
+              background: colors.bg,
+              color: colors.text,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            {t(`predictions.confidence.${prediction.confidenceLevel}`)}
+          </span>
+        </div>
 
-                {/* Summary stats */}
-                <div className="prediction-stats grid grid-cols-2 gap-4 mb-6">
-                    <div className="stat-box">
-                        <div className="stat-label">{t('predictions.predictedSales')}</div>
-                        <div className="stat-value">{prediction.predictedTotalSales}</div>
-                        <div className="stat-comparison">
-                            {t('predictions.current')}: {currentSales}
-                        </div>
-                    </div>
-                    <div className="stat-box">
-                        <div className="stat-label">{t('predictions.predictedRevenue')}</div>
-                        <div className="stat-value">
-                            EUR {prediction.predictedRevenue.toLocaleString()}
-                        </div>
-                        <div className="stat-comparison">
-                            {t('predictions.current')}: EUR {currentRevenue.toLocaleString()}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="progress-section mb-6">
-                    <div className="flex justify-between text-sm mb-1">
-                        <span>{t('predictions.progress')}</span>
-                        <span>{progressPercentage.toFixed(0)}%</span>
-                    </div>
-                    <div className="progress-bar">
-                        <div
-                            className="progress-fill"
-                            style={{
-                                width: `${progressPercentage}%`,
-                                background: colors.border,
-                            }}
-                        />
-                    </div>
-                </div>
-
-                {/* Chart */}
-                <div className="chart-container mb-6">
-                    <div className="chart-title text-sm text-muted mb-2">
-                        {t('predictions.dailyForecast')}
-                    </div>
-                    <div className="chart">
-                        {chartData.map((day, index) => (
-                            <div key={index} className="chart-bar-group">
-                                <div className="bars">
-                                    <div
-                                        className="bar predicted"
-                                        style={{ height: `${day.predictedHeight}%` }}
-                                        title={`${t('predictions.predicted')}: ${day.predictedSales}`}
-                                    />
-                                    {day.actualSales !== undefined && (
-                                        <div
-                                            className="bar actual"
-                                            style={{ height: `${day.actualHeight}%` }}
-                                            title={`${t('predictions.actual')}: ${day.actualSales}`}
-                                        />
-                                    )}
-                                </div>
-                                <div className="bar-label">
-                                    {new Date(day.date).toLocaleDateString(undefined, {
-                                        day: 'numeric',
-                                        month: 'short',
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="chart-legend">
-                        <span className="legend-item">
-                            <span className="legend-color predicted" />
-                            {t('predictions.predicted')}
-                        </span>
-                        <span className="legend-item">
-                            <span className="legend-color actual" />
-                            {t('predictions.actual')}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Factors */}
-                {prediction.factors.length > 0 && (
-                    <div className="factors-section">
-                        <div className="factors-title text-sm font-medium mb-2">
-                            {t('predictions.keyFactors')}
-                        </div>
-                        <ul className="factors-list">
-                            {prediction.factors.map((factor, index) => (
-                                <li key={index}>{factor}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+        {/* Summary stats */}
+        <div className="prediction-stats grid grid-cols-2 gap-4 mb-6">
+          <div className="stat-box">
+            <div className="stat-label">{t('predictions.predictedSales')}</div>
+            <div className="stat-value">{prediction.predictedTotalSales}</div>
+            <div className="stat-comparison">
+              {t('predictions.current')}: {currentSales}
             </div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">{t('predictions.predictedRevenue')}</div>
+            <div className="stat-value">EUR {prediction.predictedRevenue.toLocaleString()}</div>
+            <div className="stat-comparison">
+              {t('predictions.current')}: EUR {currentRevenue.toLocaleString()}
+            </div>
+          </div>
+        </div>
 
-            <style>{`
+        {/* Progress bar */}
+        <div className="progress-section mb-6">
+          <div className="flex justify-between text-sm mb-1">
+            <span>{t('predictions.progress')}</span>
+            <span>{progressPercentage.toFixed(0)}%</span>
+          </div>
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{
+                width: `${progressPercentage}%`,
+                background: colors.border,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div className="chart-container mb-6">
+          <div className="chart-title text-sm text-muted mb-2">{t('predictions.dailyForecast')}</div>
+          <div className="chart">
+            {chartData.map((day, index) => (
+              <div key={index} className="chart-bar-group">
+                <div className="bars">
+                  <div
+                    className="bar predicted"
+                    style={{ height: `${day.predictedHeight}%` }}
+                    title={`${t('predictions.predicted')}: ${day.predictedSales}`}
+                  />
+                  {day.actualSales !== undefined && (
+                    <div
+                      className="bar actual"
+                      style={{ height: `${day.actualHeight}%` }}
+                      title={`${t('predictions.actual')}: ${day.actualSales}`}
+                    />
+                  )}
+                </div>
+                <div className="bar-label">
+                  {new Date(day.date).toLocaleDateString(undefined, {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="chart-legend">
+            <span className="legend-item">
+              <span className="legend-color predicted" />
+              {t('predictions.predicted')}
+            </span>
+            <span className="legend-item">
+              <span className="legend-color actual" />
+              {t('predictions.actual')}
+            </span>
+          </div>
+        </div>
+
+        {/* Factors */}
+        {prediction.factors.length > 0 && (
+          <div className="factors-section">
+            <div className="factors-title text-sm font-medium mb-2">{t('predictions.keyFactors')}</div>
+            <ul className="factors-list">
+              {prediction.factors.map((factor, index) => (
+                <li key={index}>{factor}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      <style>{`
                 .sales-prediction-chart {
                     overflow: hidden;
                 }
@@ -281,8 +271,8 @@ export function SalesPredictionChart({
                     margin-bottom: 0.25rem;
                 }
             `}</style>
-        </div>
-    );
+    </div>
+  );
 }
 
 export default SalesPredictionChart;

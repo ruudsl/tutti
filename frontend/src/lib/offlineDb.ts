@@ -127,7 +127,7 @@ export class SyncManager {
   }
 
   private notifyListeners() {
-    this.listeners.forEach(cb => cb(this.isOnline));
+    this.listeners.forEach((cb) => cb(this.isOnline));
   }
 
   onConnectionChange(callback: (online: boolean) => void) {
@@ -143,7 +143,7 @@ export class SyncManager {
     entityType: SyncQueueItem['entityType'],
     entityId: string,
     action: SyncQueueItem['action'],
-    data?: any
+    data?: any,
   ) {
     const item: SyncQueueItem = {
       id: crypto.randomUUID(),
@@ -170,7 +170,7 @@ export class SyncManager {
     try {
       const pendingItems = await offlineDb.syncQueue
         .orderBy('createdAt')
-        .filter(item => item.retryCount < 5)
+        .filter((item) => item.retryCount < 5)
         .toArray();
 
       for (const item of pendingItems) {
@@ -221,7 +221,7 @@ export class SyncManager {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: item.data,
     });
@@ -247,11 +247,16 @@ export class SyncManager {
 
   private getTable(entityType: SyncQueueItem['entityType']): Table<any, string> | null {
     switch (entityType) {
-      case 'musicPiece': return offlineDb.musicPieces;
-      case 'annotation': return offlineDb.annotations;
-      case 'rehearsal': return offlineDb.rehearsals;
-      case 'practiceLog': return offlineDb.practiceLogs;
-      default: return null;
+      case 'musicPiece':
+        return offlineDb.musicPieces;
+      case 'annotation':
+        return offlineDb.annotations;
+      case 'rehearsal':
+        return offlineDb.rehearsals;
+      case 'practiceLog':
+        return offlineDb.practiceLogs;
+      default:
+        return null;
     }
   }
 
@@ -288,19 +293,17 @@ export class SyncManager {
       await table.update(conflict.entityId, { ...serverData, syncStatus: 'synced' });
     } else if (resolution === 'useLocal') {
       const localData = JSON.parse(conflict.localData);
-      await this.queueChange(
-        conflict.entityType as SyncQueueItem['entityType'],
-        conflict.entityId,
-        'update',
-        { ...localData, forceOverwrite: true }
-      );
+      await this.queueChange(conflict.entityType as SyncQueueItem['entityType'], conflict.entityId, 'update', {
+        ...localData,
+        forceOverwrite: true,
+      });
     } else if (resolution === 'merge' && mergedData) {
       await table.update(conflict.entityId, { ...mergedData, syncStatus: 'pending' });
       await this.queueChange(
         conflict.entityType as SyncQueueItem['entityType'],
         conflict.entityId,
         'update',
-        mergedData
+        mergedData,
       );
     }
 
@@ -308,7 +311,7 @@ export class SyncManager {
   }
 
   async getConflicts() {
-    return offlineDb.conflicts.filter(c => !c.resolved).toArray();
+    return offlineDb.conflicts.filter((c) => !c.resolved).toArray();
   }
 
   async getPendingChangesCount() {
@@ -347,7 +350,9 @@ export async function getCachedMusicPieces() {
   return offlineDb.musicPieces.toArray();
 }
 
-export async function saveAnnotationOffline(annotation: Omit<OfflineAnnotation, 'version' | 'lastModified' | 'syncStatus'>) {
+export async function saveAnnotationOffline(
+  annotation: Omit<OfflineAnnotation, 'version' | 'lastModified' | 'syncStatus'>,
+) {
   const fullAnnotation: OfflineAnnotation = {
     ...annotation,
     version: 1,
@@ -366,7 +371,7 @@ export async function getAnnotationsForPiece(musicPieceId: string, pageNumber?: 
 
   if (pageNumber !== undefined) {
     const annotations = await query.toArray();
-    return annotations.filter(a => a.pageNumber === pageNumber);
+    return annotations.filter((a) => a.pageNumber === pageNumber);
   }
 
   return query.toArray();

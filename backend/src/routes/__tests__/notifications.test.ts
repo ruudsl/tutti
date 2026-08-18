@@ -3,12 +3,7 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import app from '../../__tests__/testApp';
 import testDb from '../../__tests__/testDb';
-import {
-  createTestAssociation,
-  createTestUser,
-  generateTestToken,
-  TestUser,
-} from '../../__tests__/testUtils';
+import { createTestAssociation, createTestUser, generateTestToken, TestUser } from '../../__tests__/testUtils';
 
 describe('Notifications API', () => {
   let adminUser: TestUser;
@@ -26,9 +21,7 @@ describe('Notifications API', () => {
 
   describe('GET /api/notifications', () => {
     it('should return empty list when no notifications', async () => {
-      const res = await request(app)
-        .get('/api/notifications')
-        .set('Authorization', `Bearer ${memberToken}`);
+      const res = await request(app).get('/api/notifications').set('Authorization', `Bearer ${memberToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([]);
@@ -36,14 +29,16 @@ describe('Notifications API', () => {
 
     it('should return user notifications', async () => {
       // Create notifications
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body)
         VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'new_music', 'New music available', 'A new piece has been uploaded');
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'new_music', 'New music available', 'A new piece has been uploaded');
 
-      const res = await request(app)
-        .get('/api/notifications')
-        .set('Authorization', `Bearer ${memberToken}`);
+      const res = await request(app).get('/api/notifications').set('Authorization', `Bearer ${memberToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
@@ -52,14 +47,16 @@ describe('Notifications API', () => {
     });
 
     it('should not return other user notifications', async () => {
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body)
         VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), adminUser.id, 'new_music', 'Admin notification', 'For admin only');
+      `,
+        )
+        .run(uuidv4(), adminUser.id, 'new_music', 'Admin notification', 'For admin only');
 
-      const res = await request(app)
-        .get('/api/notifications')
-        .set('Authorization', `Bearer ${memberToken}`);
+      const res = await request(app).get('/api/notifications').set('Authorization', `Bearer ${memberToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(0);
@@ -69,15 +66,23 @@ describe('Notifications API', () => {
       const readId = uuidv4();
       const unreadId = uuidv4();
 
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(readId, memberUser.id, 'info', 'Read notification', 'Test notification body', 1);
+      `,
+        )
+        .run(readId, memberUser.id, 'info', 'Read notification', 'Test notification body', 1);
 
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(unreadId, memberUser.id, 'info', 'Unread notification', 'Test notification body', 0);
+      `,
+        )
+        .run(unreadId, memberUser.id, 'info', 'Unread notification', 'Test notification body', 0);
 
       const res = await request(app)
         .get('/api/notifications?unreadOnly=true')
@@ -105,20 +110,32 @@ describe('Notifications API', () => {
     });
 
     it('should count unread notifications', async () => {
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notification 1', 'Test notification body', 0);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'info', 'Notification 1', 'Test notification body', 0);
 
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notification 2', 'Test notification body', 0);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'info', 'Notification 2', 'Test notification body', 0);
 
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Read one', 'Test notification body', 1);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'info', 'Read one', 'Test notification body', 1);
 
       const res = await request(app)
         .get('/api/notifications/unread-count')
@@ -132,10 +149,14 @@ describe('Notifications API', () => {
   describe('POST /api/notifications/:id/read', () => {
     it('should mark notification as read', async () => {
       const notifId = uuidv4();
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(notifId, memberUser.id, 'info', 'Test', 'Test notification body', 0);
+      `,
+        )
+        .run(notifId, memberUser.id, 'info', 'Test', 'Test notification body', 0);
 
       const res = await request(app)
         .post(`/api/notifications/${notifId}/read`)
@@ -150,25 +171,31 @@ describe('Notifications API', () => {
 
   describe('POST /api/notifications/read-all', () => {
     it('should mark all notifications as read', async () => {
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notif 1', 'Test notification body', 0);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'info', 'Notif 1', 'Test notification body', 0);
 
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notifications (id, user_id, type, title, body, is_read)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notif 2', 'Test notification body', 0);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 'info', 'Notif 2', 'Test notification body', 0);
 
-      const res = await request(app)
-        .post('/api/notifications/read-all')
-        .set('Authorization', `Bearer ${memberToken}`);
+      const res = await request(app).post('/api/notifications/read-all').set('Authorization', `Bearer ${memberToken}`);
 
       expect(res.status).toBe(200);
 
-      const count = testDb.prepare(
-        'SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND is_read = 0'
-      ).get(memberUser.id) as any;
+      const count = testDb
+        .prepare('SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND is_read = 0')
+        .get(memberUser.id) as any;
       expect(count.cnt).toBe(0);
     });
   });
@@ -190,10 +217,14 @@ describe('Notifications API', () => {
     });
 
     it('should return existing preferences', async () => {
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO notification_preferences (id, user_id, new_music, email_enabled)
         VALUES (?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 0, 0);
+      `,
+        )
+        .run(uuidv4(), memberUser.id, 0, 0);
 
       const res = await request(app)
         .get('/api/notifications/preferences')
@@ -217,9 +248,9 @@ describe('Notifications API', () => {
 
       expect(res.status).toBe(200);
 
-      const prefs = testDb.prepare(
-        'SELECT * FROM notification_preferences WHERE user_id = ?'
-      ).get(memberUser.id) as any;
+      const prefs = testDb
+        .prepare('SELECT * FROM notification_preferences WHERE user_id = ?')
+        .get(memberUser.id) as any;
 
       expect(prefs.new_music).toBe(0);
       expect(prefs.push_enabled).toBe(0);
@@ -241,9 +272,7 @@ describe('Notifications API', () => {
 
       expect(res.status).toBe(200);
 
-      const sub = testDb.prepare(
-        'SELECT * FROM push_subscriptions WHERE user_id = ?'
-      ).get(memberUser.id) as any;
+      const sub = testDb.prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').get(memberUser.id) as any;
 
       expect(sub).toBeDefined();
       expect(sub.endpoint).toBe('https://push.example.com/abc123');
@@ -264,10 +293,14 @@ describe('Notifications API', () => {
   describe('DELETE /api/notifications/push-subscription', () => {
     it('should unregister push subscription', async () => {
       const endpoint = 'https://push.example.com/delete-me';
-      testDb.prepare(`
+      testDb
+        .prepare(
+          `
         INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh_key, auth_key)
         VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, endpoint, 'key', 'auth');
+      `,
+        )
+        .run(uuidv4(), memberUser.id, endpoint, 'key', 'auth');
 
       const res = await request(app)
         .delete('/api/notifications/push-subscription')
@@ -276,9 +309,7 @@ describe('Notifications API', () => {
 
       expect(res.status).toBe(200);
 
-      const sub = testDb.prepare(
-        'SELECT * FROM push_subscriptions WHERE endpoint = ?'
-      ).get(endpoint);
+      const sub = testDb.prepare('SELECT * FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
 
       expect(sub).toBeUndefined();
     });

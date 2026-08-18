@@ -10,8 +10,8 @@ import db from '../database/connection';
 
 export function up(): void {
   // Add accessibility contact columns to concerts table
-  const concertColumns = db.prepare("PRAGMA table_info(concerts)").all() as { name: string }[];
-  const existingColumns = concertColumns.map(row => row.name);
+  const concertColumns = db.prepare('PRAGMA table_info(concerts)').all() as { name: string }[];
+  const existingColumns = concertColumns.map((row) => row.name);
 
   if (!existingColumns.includes('accessibility_contact_email')) {
     db.exec('ALTER TABLE concerts ADD COLUMN accessibility_contact_email TEXT');
@@ -24,8 +24,10 @@ export function up(): void {
   // Seed existing admins as super admins (for existing installations)
   const adminUsers = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all() as { id: string }[];
   for (const user of adminUsers) {
-    db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`)
-      .run(`super-${user.id}`, user.id);
+    db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`).run(
+      `super-${user.id}`,
+      user.id,
+    );
   }
 }
 

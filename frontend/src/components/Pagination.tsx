@@ -89,7 +89,7 @@ export function Pagination({
           >
             {p}
           </button>
-        )
+        ),
       )}
 
       <button

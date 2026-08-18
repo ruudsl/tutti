@@ -118,13 +118,8 @@ export function useCreateTicketOrder() {
  */
 export function usePayTicketOrder() {
   return useMutation({
-    mutationFn: ({
-      orderId,
-      payment,
-    }: {
-      orderId: string;
-      payment: { method?: string; returnUrl?: string };
-    }) => payTicketOrder(orderId, payment),
+    mutationFn: ({ orderId, payment }: { orderId: string; payment: { method?: string; returnUrl?: string } }) =>
+      payTicketOrder(orderId, payment),
   });
 }
 
@@ -136,8 +131,7 @@ export function useValidateTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ code, concertId }: { code: string; concertId?: string }) =>
-      validateTicket(code, concertId),
+    mutationFn: ({ code, concertId }: { code: string; concertId?: string }) => validateTicket(code, concertId),
     onSuccess: (result, { concertId }) => {
       if (result.valid) {
         showSuccess(t('tickets.ticketValidated'));
@@ -303,8 +297,7 @@ export function useMockPayment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ orderId, action }: { orderId: string; action: 'pay' | 'cancel' }) =>
-      mockPayment(orderId, action),
+    mutationFn: ({ orderId, action }: { orderId: string; action: 'pay' | 'cancel' }) => mockPayment(orderId, action),
     onSuccess: (_, { orderId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ticketOrder(orderId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.myTickets });

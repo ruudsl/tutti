@@ -67,10 +67,7 @@ export function ResourceAvailabilitySection({ resourceId, availability }: Resour
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h4 className="font-medium">{t('resources.availability.title')}</h4>
-        <button
-          className="btn btn-sm btn-primary gap-1"
-          onClick={() => setShowAddModal(true)}
-        >
+        <button className="btn btn-sm btn-primary gap-1" onClick={() => setShowAddModal(true)}>
           <Icon name="plus" size={14} aria-hidden={true} />
           {t('resources.availability.addRule')}
         </button>
@@ -85,19 +82,14 @@ export function ResourceAvailabilitySection({ resourceId, availability }: Resour
       ) : (
         <div className="space-y-2">
           {availability.map((rule) => (
-            <div
-              key={rule.id}
-              className="flex items-center justify-between p-3 bg-base-200 rounded-lg"
-            >
+            <div key={rule.id} className="flex items-center justify-between p-3 bg-base-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <div
                   className={`w-2 h-2 rounded-full ${rule.availabilityType === 'available' ? 'bg-success' : 'bg-error'}`}
                   aria-hidden={true}
                 />
                 <div>
-                  <div className="font-medium text-sm">
-                    {getRuleDescription(rule)}
-                  </div>
+                  <div className="font-medium text-sm">{getRuleDescription(rule)}</div>
                   <div className="text-xs text-base-content/60">
                     {rule.availabilityType === 'available'
                       ? t('resources.availability.available')
@@ -190,8 +182,7 @@ function AddAvailabilityModal({ resourceId, onClose, onSuccess }: AddAvailabilit
     addMutation.mutate(data);
   };
 
-  const canSubmit = formData.startTime && formData.endTime &&
-    (ruleType === 'recurring' || formData.startDate);
+  const canSubmit = formData.startTime && formData.endTime && (ruleType === 'recurring' || formData.startDate);
 
   return (
     <Modal onClose={onClose} title={t('resources.availability.addRule')}>
@@ -339,11 +330,7 @@ function AddAvailabilityModal({ resourceId, onClose, onSuccess }: AddAvailabilit
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={!canSubmit || addMutation.isPending}
-          >
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit || addMutation.isPending}>
             {addMutation.isPending ? <span className="loading loading-spinner loading-sm" /> : null}
             {t('common.save')}
           </button>

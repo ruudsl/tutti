@@ -63,7 +63,7 @@ export interface AsyncActionState<TResult> {
  */
 export function useAsyncAction<TArgs extends unknown[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
-  options: AsyncActionOptions<TResult> = {}
+  options: AsyncActionOptions<TResult> = {},
 ): [(...args: TArgs) => Promise<TResult | undefined>, AsyncActionState<TResult>] {
   const { t, i18n } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -106,10 +106,7 @@ export function useAsyncAction<TArgs extends unknown[], TResult>(
         }
 
         if (showToast && successMessage) {
-          const message =
-            typeof successMessage === 'function'
-              ? successMessage(res)
-              : successMessage;
+          const message = typeof successMessage === 'function' ? successMessage(res) : successMessage;
           showSuccess(message);
         }
 
@@ -141,7 +138,18 @@ export function useAsyncAction<TArgs extends unknown[], TResult>(
         setIsLoading(false);
       }
     },
-    [action, successMessage, customErrorMessage, loadingMessage, onSuccess, onError, showToast, resetErrorOnExecute, t, i18n.language]
+    [
+      action,
+      successMessage,
+      customErrorMessage,
+      loadingMessage,
+      onSuccess,
+      onError,
+      showToast,
+      resetErrorOnExecute,
+      t,
+      i18n.language,
+    ],
   );
 
   const reset = useCallback(() => {
@@ -177,7 +185,7 @@ export function useAsyncAction<TArgs extends unknown[], TResult>(
  */
 export function useSimpleAsyncAction<TArgs extends unknown[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
-  options: Omit<AsyncActionOptions<TResult>, 'resetErrorOnExecute'> = {}
+  options: Omit<AsyncActionOptions<TResult>, 'resetErrorOnExecute'> = {},
 ): [(...args: TArgs) => Promise<TResult | undefined>, boolean] {
   const [execute, { isLoading }] = useAsyncAction(action, options);
   return [execute, isLoading];

@@ -18,7 +18,6 @@ import {
 } from '../testUtils';
 
 describe('Tenant Isolation', () => {
-
   // Association A
   let associationA: TestAssociation;
   let adminA: TestUser;
@@ -54,13 +53,9 @@ describe('Tenant Isolation', () => {
       createTestUser(associationA.id, { email: 'member-a@test.com', role: 'member' });
       createTestUser(associationB.id, { email: 'member-b@test.com', role: 'member' });
 
-      const resA = await request(app)
-        .get('/api/users')
-        .set('Authorization', `Bearer ${tokenA}`);
+      const resA = await request(app).get('/api/users').set('Authorization', `Bearer ${tokenA}`);
 
-      const resB = await request(app)
-        .get('/api/users')
-        .set('Authorization', `Bearer ${tokenB}`);
+      const resB = await request(app).get('/api/users').set('Authorization', `Bearer ${tokenB}`);
 
       expect(resA.status).toBe(200);
       expect(resB.status).toBe(200);
@@ -91,9 +86,7 @@ describe('Tenant Isolation', () => {
       });
 
       // Admin A tries to access user from association B
-      const res = await request(app)
-        .get(`/api/users/${userB.id}`)
-        .set('Authorization', `Bearer ${tokenA}`);
+      const res = await request(app).get(`/api/users/${userB.id}`).set('Authorization', `Bearer ${tokenA}`);
 
       expect(res.status).toBe(404);
     });
@@ -124,9 +117,7 @@ describe('Tenant Isolation', () => {
       });
 
       // Admin A tries to delete user from association B
-      const res = await request(app)
-        .delete(`/api/users/${userB.id}`)
-        .set('Authorization', `Bearer ${tokenA}`);
+      const res = await request(app).delete(`/api/users/${userB.id}`).set('Authorization', `Bearer ${tokenA}`);
 
       expect(res.status).toBe(404);
 
@@ -141,13 +132,9 @@ describe('Tenant Isolation', () => {
       createTestOrchestra(associationA.id, { name: 'Orchestra A' });
       createTestOrchestra(associationB.id, { name: 'Orchestra B' });
 
-      const resA = await request(app)
-        .get('/api/orchestras')
-        .set('Authorization', `Bearer ${tokenA}`);
+      const resA = await request(app).get('/api/orchestras').set('Authorization', `Bearer ${tokenA}`);
 
-      const resB = await request(app)
-        .get('/api/orchestras')
-        .set('Authorization', `Bearer ${tokenB}`);
+      const resB = await request(app).get('/api/orchestras').set('Authorization', `Bearer ${tokenB}`);
 
       expect(resA.status).toBe(200);
       expect(resB.status).toBe(200);
@@ -168,9 +155,7 @@ describe('Tenant Isolation', () => {
     it('should not allow accessing orchestra from another association', async () => {
       const orchestraB = createTestOrchestra(associationB.id, { name: 'Orchestra B' });
 
-      const res = await request(app)
-        .get(`/api/orchestras/${orchestraB.id}`)
-        .set('Authorization', `Bearer ${tokenA}`);
+      const res = await request(app).get(`/api/orchestras/${orchestraB.id}`).set('Authorization', `Bearer ${tokenA}`);
 
       expect(res.status).toBe(404);
     });
@@ -202,9 +187,7 @@ describe('Tenant Isolation', () => {
         location: 'Location B',
       });
 
-      const resA = await request(app)
-        .get('/api/rehearsals')
-        .set('Authorization', `Bearer ${tokenA}`);
+      const resA = await request(app).get('/api/rehearsals').set('Authorization', `Bearer ${tokenA}`);
 
       expect(resA.status).toBe(200);
 
@@ -218,9 +201,7 @@ describe('Tenant Isolation', () => {
     it('should not allow accessing rehearsal from another association', async () => {
       const rehearsalB = createTestRehearsal(associationB.id, adminB.id);
 
-      const res = await request(app)
-        .get(`/api/rehearsals/${rehearsalB.id}`)
-        .set('Authorization', `Bearer ${tokenA}`);
+      const res = await request(app).get(`/api/rehearsals/${rehearsalB.id}`).set('Authorization', `Bearer ${tokenA}`);
 
       expect(res.status).toBe(404);
     });
@@ -260,19 +241,16 @@ describe('Tenant Isolation', () => {
   describe('Cross-association data injection prevention', () => {
     it('should not allow creating resources in another association', async () => {
       // Try to create an orchestra with association B's ID while authenticated as A
-      const res = await request(app)
-        .post('/api/orchestras')
-        .set('Authorization', `Bearer ${tokenA}`)
-        .send({
-          name: 'Injected Orchestra',
-          association_id: associationB.id, // Attempt to inject
-        });
+      const res = await request(app).post('/api/orchestras').set('Authorization', `Bearer ${tokenA}`).send({
+        name: 'Injected Orchestra',
+        association_id: associationB.id, // Attempt to inject
+      });
 
       // Should either fail or create in association A
       if (res.status === 201) {
-        const createdOrchestra = testDb.prepare(
-          'SELECT association_id FROM orchestras WHERE name = ?'
-        ).get('Injected Orchestra') as any;
+        const createdOrchestra = testDb
+          .prepare('SELECT association_id FROM orchestras WHERE name = ?')
+          .get('Injected Orchestra') as any;
         // The orchestra should be in association A, not B
         expect(createdOrchestra.association_id).toBe(associationA.id);
       }
@@ -292,5 +270,4 @@ describe('Tenant Isolation', () => {
       expect(rehearsal).toBeDefined();
     });
   });
-
 });

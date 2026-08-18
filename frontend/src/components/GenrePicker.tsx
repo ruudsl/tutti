@@ -62,24 +62,24 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
   }, [isOpen]);
 
   const filteredGenres = filter
-    ? genres.filter(g => {
+    ? genres.filter((g) => {
         const label = (g.labels[lang] || g.label || '').toLowerCase();
         return label.includes(filter.toLowerCase());
       })
     : genres;
 
-  const selectedGenres = genres.filter(g => value.includes(g.uri));
+  const selectedGenres = genres.filter((g) => value.includes(g.uri));
 
   const handleToggle = (uri: string) => {
     if (value.includes(uri)) {
-      onChange(value.filter(u => u !== uri));
+      onChange(value.filter((u) => u !== uri));
     } else {
       onChange([...value, uri]);
     }
   };
 
   const handleRemove = (uri: string) => {
-    onChange(value.filter(u => u !== uri));
+    onChange(value.filter((u) => u !== uri));
   };
 
   return (
@@ -119,80 +119,91 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
           <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} size={16} />
         </button>
 
-        {isOpen && createPortal(
-          <div ref={dropdownRef} style={dropdownStyle}>
-            {/* Filter input */}
-            <div style={{ padding: '0.5rem', borderBottom: '1px solid #e5e7eb' }}>
-              <input
-                type="text"
-                className="input input-sm input-bordered w-full"
-                placeholder={t('metadata.filterGenres')}
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                autoFocus
-                style={{ backgroundColor: '#fff' }}
-              />
-            </div>
+        {isOpen &&
+          createPortal(
+            <div ref={dropdownRef} style={dropdownStyle}>
+              {/* Filter input */}
+              <div style={{ padding: '0.5rem', borderBottom: '1px solid #e5e7eb' }}>
+                <input
+                  type="text"
+                  className="input input-sm input-bordered w-full"
+                  placeholder={t('metadata.filterGenres')}
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  autoFocus
+                  style={{ backgroundColor: '#fff' }}
+                />
+              </div>
 
-            {/* Genre list */}
-            <ul style={{ maxHeight: '15rem', overflowY: 'auto', padding: '0.25rem', margin: 0, listStyle: 'none', backgroundColor: '#fff' }}>
-              {isLoading ? (
-                <li style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
-                  <span className="loading loading-spinner loading-sm" />
-                </li>
-              ) : filteredGenres.length === 0 ? (
-                <li style={{ padding: '0.5rem 1rem', color: '#6b7280' }}>{t('metadata.noResults')}</li>
-              ) : (
-                filteredGenres.map((genre) => {
-                  const isSelected = value.includes(genre.uri);
-                  return (
-                    <li key={genre.uri}>
-                      <label style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '0.25rem',
-                        cursor: 'pointer',
-                        backgroundColor: '#fff',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggle(genre.uri)}
-                          style={{ width: '1rem', height: '1rem' }}
-                        />
-                        <span>{genre.labels[lang] || genre.label}</span>
-                      </label>
-                    </li>
-                  );
-                })
-              )}
-            </ul>
+              {/* Genre list */}
+              <ul
+                style={{
+                  maxHeight: '15rem',
+                  overflowY: 'auto',
+                  padding: '0.25rem',
+                  margin: 0,
+                  listStyle: 'none',
+                  backgroundColor: '#fff',
+                }}
+              >
+                {isLoading ? (
+                  <li style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
+                    <span className="loading loading-spinner loading-sm" />
+                  </li>
+                ) : filteredGenres.length === 0 ? (
+                  <li style={{ padding: '0.5rem 1rem', color: '#6b7280' }}>{t('metadata.noResults')}</li>
+                ) : (
+                  filteredGenres.map((genre) => {
+                    const isSelected = value.includes(genre.uri);
+                    return (
+                      <li key={genre.uri}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '0.25rem',
+                            cursor: 'pointer',
+                            backgroundColor: '#fff',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggle(genre.uri)}
+                            style={{ width: '1rem', height: '1rem' }}
+                          />
+                          <span>{genre.labels[lang] || genre.label}</span>
+                        </label>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
 
-            {/* Actions */}
-            <div style={{ padding: '0.5rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => onChange([])}
+              {/* Actions */}
+              <div
+                style={{
+                  padding: '0.5rem',
+                  borderTop: '1px solid #e5e7eb',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.5rem',
+                }}
               >
-                {t('common.clear')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => setIsOpen(false)}
-              >
-                {t('common.done')}
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([])}>
+                  {t('common.clear')}
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => setIsOpen(false)}>
+                  {t('common.done')}
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )}
       </div>
     </div>
   );

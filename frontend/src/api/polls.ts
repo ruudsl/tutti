@@ -230,7 +230,10 @@ export async function deletePoll(id: string): Promise<{ message: string }> {
  * @returns {Promise<{id: string, message: string}>} Created option ID and success message
  * @throws {AxiosError} When poll not found, not in draft status, or user lacks permission
  */
-export async function addPollOption(pollId: string, data: { text: string; description?: string }): Promise<{ id: string; message: string }> {
+export async function addPollOption(
+  pollId: string,
+  data: { text: string; description?: string },
+): Promise<{ id: string; message: string }> {
   const response = await api.post(`/polls/${pollId}/options`, data);
   return response.data;
 }
@@ -248,7 +251,11 @@ export async function addPollOption(pollId: string, data: { text: string; descri
  * @returns {Promise<{message: string}>} Success message
  * @throws {AxiosError} When poll/option not found or poll is not in draft status
  */
-export async function updatePollOption(pollId: string, optionId: string, data: { text?: string; description?: string }): Promise<{ message: string }> {
+export async function updatePollOption(
+  pollId: string,
+  optionId: string,
+  data: { text?: string; description?: string },
+): Promise<{ message: string }> {
   const response = await api.put(`/polls/${pollId}/options/${optionId}`, data);
   return response.data;
 }
@@ -350,7 +357,10 @@ export async function getPollComments(pollId: string): Promise<PollComment[]> {
  * @returns {Promise<PollComment & {message: string}>} Created comment with success message
  * @throws {AxiosError} When poll not found, comments disabled, or content is empty
  */
-export async function addPollComment(pollId: string, data: { content: string; parentId?: string }): Promise<PollComment & { message: string }> {
+export async function addPollComment(
+  pollId: string,
+  data: { content: string; parentId?: string },
+): Promise<PollComment & { message: string }> {
   const response = await api.post(`/polls/${pollId}/comments`, data);
   return response.data;
 }
@@ -365,7 +375,11 @@ export async function addPollComment(pollId: string, data: { content: string; pa
  * @returns {Promise<{message: string}>} Success message
  * @throws {AxiosError} When comment not found or user is not the author
  */
-export async function updatePollComment(pollId: string, commentId: string, content: string): Promise<{ message: string }> {
+export async function updatePollComment(
+  pollId: string,
+  commentId: string,
+  content: string,
+): Promise<{ message: string }> {
   const response = await api.put(`/polls/${pollId}/comments/${commentId}`, { content });
   return response.data;
 }
@@ -438,7 +452,7 @@ export interface CreateRehearsalFromPollData {
  */
 export async function createRehearsalFromPoll(
   pollId: string,
-  data?: CreateRehearsalFromPollData
+  data?: CreateRehearsalFromPollData,
 ): Promise<{
   message: string;
   rehearsalId: string;

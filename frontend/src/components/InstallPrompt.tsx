@@ -47,9 +47,7 @@ export function InstallPrompt() {
           </svg>
         </div>
         <div>
-          <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-            {t('pwa.install_title')}
-          </div>
+          <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{t('pwa.install_title')}</div>
           <div style={{ fontSize: '0.875rem', color: 'var(--color-text-light, #6b7280)' }}>
             {t('pwa.install_description')}
           </div>

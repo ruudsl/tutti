@@ -120,11 +120,8 @@ jobs:
       - name: Lint (ESLint)
         run: npm run lint
 
-      # NOTE: a repo-wide `npx prettier --check .` currently fails on ~550 files
-      # (the codebase has never been prettier-formatted). Run `npx prettier --write .`
-      # once and then enable this step:
-      # - name: Format check (Prettier)
-      #   run: npx prettier --check .
+      - name: Format check (Prettier)
+        run: npx prettier --check .
 
   security:
     name: Security Audit

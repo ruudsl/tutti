@@ -35,23 +35,27 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 ## Development Setup
 
 1. **Fork and clone the repository**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/tutti.git
    cd tutti
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp backend/.env.example backend/.env
    # Edit .env with your local settings
    ```
 
 4. **Start development servers**
+
    ```bash
    # Terminal 1: Backend
    npm run dev --workspace=backend
@@ -69,6 +73,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 ### Branch Naming
 
 Use descriptive branch names:
+
 - `feature/add-pdf-annotations` - New features
 - `fix/login-redirect-loop` - Bug fixes
 - `docs/api-reference` - Documentation
@@ -88,6 +93,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation only
@@ -97,6 +103,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore` - Maintenance tasks
 
 **Examples:**
+
 ```
 feat(music): add MusicXML import support
 

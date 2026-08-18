@@ -13,9 +13,9 @@ import { stopScheduler as stopEmailForwardingScheduler } from './email-forwardin
 import { stopScheduler as stopGdprCleanupScheduler } from './gdpr-cleanup';
 
 const schedulerStopFunctions: Array<() => void> = [
-    stopSeatingNotificationsScheduler,
-    stopEmailForwardingScheduler,
-    stopGdprCleanupScheduler,
+  stopSeatingNotificationsScheduler,
+  stopEmailForwardingScheduler,
+  stopGdprCleanupScheduler,
 ];
 
 /**
@@ -23,12 +23,12 @@ const schedulerStopFunctions: Array<() => void> = [
  * Safe to call multiple times.
  */
 export function stopAllSchedulers(): void {
-    for (const stop of schedulerStopFunctions) {
-        try {
-            stop();
-        } catch (err) {
-            // A failing stop function should never block shutdown
-            console.error('Failed to stop scheduler:', err);
-        }
+  for (const stop of schedulerStopFunctions) {
+    try {
+      stop();
+    } catch (err) {
+      // A failing stop function should never block shutdown
+      console.error('Failed to stop scheduler:', err);
     }
+  }
 }

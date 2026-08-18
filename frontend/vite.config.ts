@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
@@ -15,15 +15,13 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB to accommodate large bundles
-        additionalManifestEntries: [
-          { url: '/offline.html', revision: '1' },
-        ],
+        additionalManifestEntries: [{ url: '/offline.html', revision: '1' }],
       },
       devOptions: {
         enabled: false,
         type: 'module',
       },
-    })
+    }),
   ],
   server: {
     port: 5173,
@@ -74,4 +72,4 @@ export default defineConfig({
       target: 'esnext',
     },
   },
-})
+});

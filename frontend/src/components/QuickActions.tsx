@@ -48,9 +48,7 @@ export function QuickActions({ actions = defaultActions }: QuickActionsProps) {
 
       // Handle action shortcuts when menu is open
       if (isOpen) {
-        const action = actions.find(
-          (a) => a.shortcut?.toLowerCase() === e.key.toLowerCase()
-        );
+        const action = actions.find((a) => a.shortcut?.toLowerCase() === e.key.toLowerCase());
         if (action) {
           e.preventDefault();
           handleAction(action);

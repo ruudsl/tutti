@@ -61,45 +61,49 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
    * Focus the first field with a validation error.
    * Also announces the error(s) to screen readers.
    */
-  const focusFirstError = useCallback((errors: ValidationError[]) => {
-    if (errors.length === 0) return;
+  const focusFirstError = useCallback(
+    (errors: ValidationError[]) => {
+      if (errors.length === 0) return;
 
-    // Update errors ref
-    const errorMap: Record<string, string> = {};
-    errors.forEach(({ field, message }) => {
-      errorMap[field] = message;
-    });
-    errorsRef.current = errorMap;
+      // Update errors ref
+      const errorMap: Record<string, string> = {};
+      errors.forEach(({ field, message }) => {
+        errorMap[field] = message;
+      });
+      errorsRef.current = errorMap;
 
-    // Find and focus the first error field
-    const firstError = errors[0];
-    const element = document.querySelector<HTMLElement>(
-      `[name="${firstError.field}"], #${firstError.field}, [data-field="${firstError.field}"]`
-    );
+      // Find and focus the first error field
+      const firstError = errors[0];
+      const element = document.querySelector<HTMLElement>(
+        `[name="${firstError.field}"], #${firstError.field}, [data-field="${firstError.field}"]`,
+      );
 
-    if (element) {
-      // Set aria-invalid on the element
-      element.setAttribute('aria-invalid', 'true');
-      element.classList.add('has-error');
+      if (element) {
+        // Set aria-invalid on the element
+        element.setAttribute('aria-invalid', 'true');
+        element.classList.add('has-error');
 
-      // Focus the element
-      element.focus({ preventScroll: !scrollToError });
+        // Focus the element
+        element.focus({ preventScroll: !scrollToError });
 
-      // Scroll into view if needed
-      if (scrollToError) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Scroll into view if needed
+        if (scrollToError) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
-    }
 
-    // Announce errors to screen readers
-    if (announceErrors) {
-      const errorCount = errors.length;
-      const announcement = errorCount === 1
-        ? `Validatiefout: ${firstError.message}`
-        : `${errorCount} validatiefouten gevonden. Eerste fout: ${firstError.message}`;
-      announce(announcement, 'assertive');
-    }
-  }, [announce, announceErrors, scrollToError]);
+      // Announce errors to screen readers
+      if (announceErrors) {
+        const errorCount = errors.length;
+        const announcement =
+          errorCount === 1
+            ? `Validatiefout: ${firstError.message}`
+            : `${errorCount} validatiefouten gevonden. Eerste fout: ${firstError.message}`;
+        announce(announcement, 'assertive');
+      }
+    },
+    [announce, announceErrors, scrollToError],
+  );
 
   /**
    * Set error state for a specific field.
@@ -107,9 +111,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
   const setFieldError = useCallback((field: string, message: string) => {
     errorsRef.current = { ...errorsRef.current, [field]: message };
 
-    const element = document.querySelector<HTMLElement>(
-      `[name="${field}"], #${field}, [data-field="${field}"]`
-    );
+    const element = document.querySelector<HTMLElement>(`[name="${field}"], #${field}, [data-field="${field}"]`);
 
     if (element) {
       element.setAttribute('aria-invalid', 'true');
@@ -123,9 +125,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
   const clearErrors = useCallback((field?: string) => {
     if (field) {
       delete errorsRef.current[field];
-      const element = document.querySelector<HTMLElement>(
-        `[name="${field}"], #${field}, [data-field="${field}"]`
-      );
+      const element = document.querySelector<HTMLElement>(`[name="${field}"], #${field}, [data-field="${field}"]`);
       if (element) {
         element.removeAttribute('aria-invalid');
         element.classList.remove('has-error');
@@ -133,9 +133,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
     } else {
       // Clear all errors
       Object.keys(errorsRef.current).forEach((f) => {
-        const element = document.querySelector<HTMLElement>(
-          `[name="${f}"], #${f}, [data-field="${f}"]`
-        );
+        const element = document.querySelector<HTMLElement>(`[name="${f}"], #${f}, [data-field="${f}"]`);
         if (element) {
           element.removeAttribute('aria-invalid');
           element.classList.remove('has-error');

@@ -21,6 +21,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
@@ -35,37 +36,38 @@ Response:
 
 ## Endpoints Overview
 
-| Group | Path | Description |
-|---|---|---|
-| Auth | `/api/auth/*` | Login, profile, password, MFA, password reset |
-| Users | `/api/users/*` | CRUD members, assign instruments/orchestras |
-| Instruments | `/api/instruments/*` | CRUD instruments and aliases |
-| Orchestras | `/api/orchestras/*` | CRUD orchestras, member management |
-| Music Pieces | `/api/music-pieces/*` | Upload, download, metadata, MP3, sharing, ZIP upload |
-| Music Titles | `/api/music-titles/*` | Metadata library (via music-pieces routes) |
-| Music Lists | `/api/music-lists/*` | Setlists and concert programs |
-| Genres | `/api/genres/*` | Music genres/categories |
-| Rehearsals | `/api/rehearsals/*` | Scheduling, default days, attendance, recurring series |
-| Availability | `/api/availability/*` | Personal and team availability management |
-| Concerts | `/api/concerts/*` | Concert management, attendance prediction |
-| Tickets | `/api/tickets/*` | Ticket sales and management |
-| Spond | `/api/spond/*` | Spond configuration and synchronization |
-| Loans | `/api/loans/*` | Loan management, loan history |
-| Issues | `/api/issues/*` | Sheet music error reports |
-| Activity | `/api/activity/*` | Logging and statistics |
-| MusicaInfo | `/api/musicainfo/*` | Metadata lookup via MusicaInfo.net |
-| PDF Tools | `/api/pdf-tools/*` | PDF merge, extract, transpose |
-| Cloud Import | `/api/cloud-import/*` | OneDrive and Google Drive file import |
-| Settings | `/api/settings/*` | Organization settings, theme, SMTP |
-| Backup | `/api/backup/*` | Database backup and restore |
-| Health | `/api/health/*` | System health monitoring (basic and detailed) |
-| Analytics | `/api/analytics/*` | Usage analytics and statistics |
-| Microsoft | `/api/microsoft-auth/*` | Azure Entra SSO |
-| Multi-Association | `/api/multi-association/*` | Multi-tenant management (super admin) |
+| Group             | Path                       | Description                                            |
+| ----------------- | -------------------------- | ------------------------------------------------------ |
+| Auth              | `/api/auth/*`              | Login, profile, password, MFA, password reset          |
+| Users             | `/api/users/*`             | CRUD members, assign instruments/orchestras            |
+| Instruments       | `/api/instruments/*`       | CRUD instruments and aliases                           |
+| Orchestras        | `/api/orchestras/*`        | CRUD orchestras, member management                     |
+| Music Pieces      | `/api/music-pieces/*`      | Upload, download, metadata, MP3, sharing, ZIP upload   |
+| Music Titles      | `/api/music-titles/*`      | Metadata library (via music-pieces routes)             |
+| Music Lists       | `/api/music-lists/*`       | Setlists and concert programs                          |
+| Genres            | `/api/genres/*`            | Music genres/categories                                |
+| Rehearsals        | `/api/rehearsals/*`        | Scheduling, default days, attendance, recurring series |
+| Availability      | `/api/availability/*`      | Personal and team availability management              |
+| Concerts          | `/api/concerts/*`          | Concert management, attendance prediction              |
+| Tickets           | `/api/tickets/*`           | Ticket sales and management                            |
+| Spond             | `/api/spond/*`             | Spond configuration and synchronization                |
+| Loans             | `/api/loans/*`             | Loan management, loan history                          |
+| Issues            | `/api/issues/*`            | Sheet music error reports                              |
+| Activity          | `/api/activity/*`          | Logging and statistics                                 |
+| MusicaInfo        | `/api/musicainfo/*`        | Metadata lookup via MusicaInfo.net                     |
+| PDF Tools         | `/api/pdf-tools/*`         | PDF merge, extract, transpose                          |
+| Cloud Import      | `/api/cloud-import/*`      | OneDrive and Google Drive file import                  |
+| Settings          | `/api/settings/*`          | Organization settings, theme, SMTP                     |
+| Backup            | `/api/backup/*`            | Database backup and restore                            |
+| Health            | `/api/health/*`            | System health monitoring (basic and detailed)          |
+| Analytics         | `/api/analytics/*`         | Usage analytics and statistics                         |
+| Microsoft         | `/api/microsoft-auth/*`    | Azure Entra SSO                                        |
+| Multi-Association | `/api/multi-association/*` | Multi-tenant management (super admin)                  |
 
 ## Common Response Formats
 
 ### Success
+
 ```json
 {
   "id": "uuid",
@@ -74,6 +76,7 @@ Response:
 ```
 
 ### Error
+
 ```json
 {
   "error": "Error message in Dutch"
@@ -81,6 +84,7 @@ Response:
 ```
 
 ### Paginated List
+
 ```json
 {
   "items": [...],
@@ -93,6 +97,7 @@ Response:
 ## Music Pieces
 
 ### Upload Music Piece
+
 ```http
 POST /api/music-pieces
 Content-Type: multipart/form-data
@@ -104,12 +109,14 @@ orchestra_id: "uuid" (optional)
 ```
 
 ### Download Music Piece
+
 ```http
 GET /api/music-pieces/:id/download
 Authorization: Bearer <token>
 ```
 
 ### List Music Pieces
+
 ```http
 GET /api/music-pieces?instrument_id=uuid&orchestra_id=uuid&search=keyword
 ```
@@ -117,6 +124,7 @@ GET /api/music-pieces?instrument_id=uuid&orchestra_id=uuid&search=keyword
 ## Music Lists (Setlists)
 
 ### Create Music List
+
 ```http
 POST /api/music-lists
 Content-Type: application/json
@@ -131,6 +139,7 @@ Content-Type: application/json
 ```
 
 ### Add Piece to List
+
 ```http
 POST /api/music-lists/:id/items
 Content-Type: application/json
@@ -144,10 +153,12 @@ Content-Type: application/json
 ## Rate Limiting
 
 The API has rate limiting enabled:
+
 - General endpoints: 100 requests per 15 minutes
 - Auth endpoints: 5 requests per 15 minutes
 
 When rate limited, you'll receive:
+
 ```http
 HTTP/1.1 429 Too Many Requests
 ```
@@ -164,6 +175,7 @@ Authorization: Bearer <token> (optional)
 ```
 
 Response:
+
 ```typescript
 {
   concert: {
@@ -220,6 +232,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```typescript
 {
   orderId: string;
@@ -254,6 +267,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```typescript
 {
   paymentId: string;
@@ -289,16 +303,21 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```typescript
 {
   valid: boolean;
-  status: "valid" | "used" | "cancelled" | "expired";
+  status: 'valid' | 'used' | 'cancelled' | 'expired';
   ticket: {
     id: string;
     buyerName: string;
     ticketType: string;
-    concert: { id: string; name: string; date: string };
-  };
+    concert: {
+      id: string;
+      name: string;
+      date: string;
+    }
+  }
   message: string;
 }
 ```
@@ -368,6 +387,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 Array<{
   id: string;
@@ -376,7 +396,7 @@ Array<{
   endDate: string;
   templateId: string | null;
   templateName: string | null;
-  status: "draft" | "active" | "completed";
+  status: 'draft' | 'active' | 'completed';
   budgetTotal: number | null;
   budgetAllocated: number | null;
   notes: string | null;
@@ -386,7 +406,7 @@ Array<{
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-}>
+}>;
 ```
 
 ### Create Season
@@ -478,6 +498,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```typescript
 {
   message: string;
@@ -511,6 +532,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 Array<{
   id: string;
@@ -526,7 +548,7 @@ Array<{
   createdBy: { id: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
-}>
+}>;
 ```
 
 ### Get Stage Layout
@@ -537,13 +559,14 @@ Authorization: Bearer <token>
 ```
 
 Response includes `layoutData`:
+
 ```typescript
 {
   positions: Array<{
     id: string;
     x: number;
     y: number;
-    type: "chair" | "stand" | "conductor" | "piano" | "percussion" | "other";
+    type: 'chair' | 'stand' | 'conductor' | 'piano' | 'percussion' | 'other';
     rotation: number;
     label: string | null;
     section: string | null;
@@ -551,7 +574,7 @@ Response includes `layoutData`:
   }>;
   shapes: Array<{
     id: string;
-    type: "rect" | "circle" | "line" | "text";
+    type: 'rect' | 'circle' | 'line' | 'text';
     x: number;
     y: number;
     width?: number;
@@ -649,6 +672,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 Array<{
   id: string;
@@ -656,7 +680,7 @@ Array<{
   lastName: string;
   email: string | null;
   phone: string | null;
-  musicianType: "alumni" | "guest" | "substitute" | "friend";
+  musicianType: 'alumni' | 'guest' | 'substitute' | 'friend';
   notes: string | null;
   isActive: boolean;
   rating: number | null; // 1-5
@@ -667,7 +691,7 @@ Array<{
   createdByName: string;
   createdAt: string;
   updatedAt: string;
-}>
+}>;
 ```
 
 ### Search by Instrument
@@ -759,10 +783,11 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 Array<{
   id: string;
-  eventType: "concert" | "rehearsal";
+  eventType: 'concert' | 'rehearsal';
   eventId: string;
   eventDate: string;
   eventName: string;
@@ -772,8 +797,8 @@ Array<{
   instrumentTuning: string | null;
   positionsNeeded: number;
   positionsFilled: number;
-  urgency: "low" | "normal" | "high" | "critical";
-  status: "open" | "partially_filled" | "filled" | "cancelled";
+  urgency: 'low' | 'normal' | 'high' | 'critical';
+  status: 'open' | 'partially_filled' | 'filled' | 'cancelled';
   notes: string | null;
   deadline: string | null;
   assignmentCount: number;
@@ -782,7 +807,7 @@ Array<{
   createdByName: string;
   createdAt: string;
   updatedAt: string;
-}>
+}>;
 ```
 
 ### Get Suggestions for Event
@@ -963,6 +988,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 {
   holidays: Array<{
@@ -998,6 +1024,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 {
   isHoliday: boolean;
@@ -1077,6 +1104,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 Array<{
   id: string;
@@ -1087,7 +1115,7 @@ Array<{
   isRead: boolean;
   createdAt: string;
   readAt: string | null;
-}>
+}>;
 ```
 
 ### Get Unread Count
@@ -1119,6 +1147,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 {
   newMusic: boolean;
@@ -1180,6 +1209,7 @@ GET /api/notifications/vapid-public-key
 ```
 
 Response:
+
 ```typescript
 {
   publicKey: string;
@@ -1219,6 +1249,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```typescript
 {
   feedUrl: string;
@@ -1279,12 +1310,16 @@ GET /api/calendar/public/:associationSlug?months=3&format=json
 - `format`: `json` or `ics`
 
 Response (JSON):
+
 ```typescript
 {
-  association: { name: string; slug: string };
+  association: {
+    name: string;
+    slug: string;
+  }
   events: Array<{
     id: string;
-    type: "concert" | "rehearsal";
+    type: 'concert' | 'rehearsal';
     title: string;
     date: string;
     startTime: string;
@@ -1313,6 +1348,7 @@ Returns optimized data for display boards/kiosks.
 ## Swagger Documentation
 
 In development mode, Swagger UI is available at:
+
 ```
 http://localhost:3001/api/docs
 ```

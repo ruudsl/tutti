@@ -83,13 +83,15 @@ export default function Practice() {
   });
 
   // Calculated values
-  const dailyGoal = goalsData?.goals.find(g => g.goalType === 'daily');
-  const weeklyGoal = goalsData?.goals.find(g => g.goalType === 'weekly');
+  const dailyGoal = goalsData?.goals.find((g) => g.goalType === 'daily');
+  const weeklyGoal = goalsData?.goals.find((g) => g.goalType === 'weekly');
   const dailyProgress = goalsData?.progress.daily || 0;
   const weeklyProgress = goalsData?.progress.weekly || 0;
 
   const dailyPercentage = dailyGoal ? Math.min(100, Math.round((dailyProgress / dailyGoal.targetMinutes) * 100)) : 0;
-  const weeklyPercentage = weeklyGoal ? Math.min(100, Math.round((weeklyProgress / weeklyGoal.targetMinutes) * 100)) : 0;
+  const weeklyPercentage = weeklyGoal
+    ? Math.min(100, Math.round((weeklyProgress / weeklyGoal.targetMinutes) * 100))
+    : 0;
 
   const formatDuration = (minutes: number): string => {
     if (minutes < 60) return `${minutes} min`;
@@ -214,15 +216,20 @@ export default function Practice() {
       </div>
 
       {/* Stats overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+        }}
+      >
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
               {stats?.currentStreak || 0}
             </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-              {t('practice.streak')}
-            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('practice.streak')}</div>
           </div>
         </div>
         <div className="card">
@@ -230,29 +237,19 @@ export default function Practice() {
             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
               {formatDuration(stats?.weekMinutes || 0)}
             </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-              {t('practice.thisWeek')}
-            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('practice.thisWeek')}</div>
           </div>
         </div>
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-              {formatDuration(stats?.monthMinutes || 0)}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-              {t('practice.thisMonth')}
-            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatDuration(stats?.monthMinutes || 0)}</div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('practice.thisMonth')}</div>
           </div>
         </div>
         <div className="card">
           <div className="card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-              {formatDuration(stats?.totalMinutes || 0)}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-              {t('practice.allTime')}
-            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{formatDuration(stats?.totalMinutes || 0)}</div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('practice.allTime')}</div>
           </div>
         </div>
       </div>
@@ -267,13 +264,23 @@ export default function Practice() {
         </div>
         <div className="card-body">
           {showGoalForm && (
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'end', marginBottom: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'end',
+                marginBottom: '1rem',
+                padding: '1rem',
+                background: 'var(--background)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
               <div className="form-group">
                 <label className="form-label">{t('practice.goalType')}</label>
                 <select
                   className="form-control form-select"
                   value={goalType}
-                  onChange={e => setGoalType(e.target.value as 'daily' | 'weekly')}
+                  onChange={(e) => setGoalType(e.target.value as 'daily' | 'weekly')}
                 >
                   <option value="daily">{t('practice.daily')}</option>
                   <option value="weekly">{t('practice.weekly')}</option>
@@ -285,7 +292,7 @@ export default function Practice() {
                   type="number"
                   className="form-control"
                   value={goalMinutes}
-                  onChange={e => setGoalMinutes(Math.max(1, Math.min(1440, parseInt(e.target.value) || 30)))}
+                  onChange={(e) => setGoalMinutes(Math.max(1, Math.min(1440, parseInt(e.target.value) || 30)))}
                   min={1}
                   max={1440}
                   style={{ width: '100px' }}
@@ -300,7 +307,14 @@ export default function Practice() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             {/* Daily goal */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                }}
+              >
                 <strong>{t('practice.dailyGoal')}</strong>
                 {dailyGoal && (
                   <button
@@ -314,11 +328,28 @@ export default function Practice() {
               </div>
               {dailyGoal ? (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                    <span>{formatDuration(dailyProgress)} / {formatDuration(dailyGoal.targetMinutes)}</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.25rem',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <span>
+                      {formatDuration(dailyProgress)} / {formatDuration(dailyGoal.targetMinutes)}
+                    </span>
                     <span>{dailyPercentage}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '10px', background: 'var(--border)', borderRadius: '5px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '10px',
+                      background: 'var(--border)',
+                      borderRadius: '5px',
+                      overflow: 'hidden',
+                    }}
+                  >
                     <div
                       style={{
                         width: `${dailyPercentage}%`,
@@ -342,7 +373,14 @@ export default function Practice() {
 
             {/* Weekly goal */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                }}
+              >
                 <strong>{t('practice.weeklyGoal')}</strong>
                 {weeklyGoal && (
                   <button
@@ -356,11 +394,28 @@ export default function Practice() {
               </div>
               {weeklyGoal ? (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                    <span>{formatDuration(weeklyProgress)} / {formatDuration(weeklyGoal.targetMinutes)}</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.25rem',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <span>
+                      {formatDuration(weeklyProgress)} / {formatDuration(weeklyGoal.targetMinutes)}
+                    </span>
                     <span>{weeklyPercentage}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '10px', background: 'var(--border)', borderRadius: '5px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '10px',
+                      background: 'var(--border)',
+                      borderRadius: '5px',
+                      overflow: 'hidden',
+                    }}
+                  >
                     <div
                       style={{
                         width: `${weeklyPercentage}%`,
@@ -406,7 +461,9 @@ export default function Practice() {
                   <tr key={piece.id}>
                     <td>
                       <strong>{piece.title}</strong>
-                      {piece.arranger && <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {piece.arranger}</span>}
+                      {piece.arranger && (
+                        <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {piece.arranger}</span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'right' }}>{formatDuration(piece.totalMinutes)}</td>
                     <td style={{ textAlign: 'right' }}>{piece.sessionCount}x</td>
@@ -435,7 +492,9 @@ export default function Practice() {
           {logsLoading ? (
             <SkeletonTable rows={5} columns={4} />
           ) : logs.length === 0 ? (
-            <p className="piece-meta" style={{ padding: '1rem' }}>{t('practice.noSessions')}</p>
+            <p className="piece-meta" style={{ padding: '1rem' }}>
+              {t('practice.noSessions')}
+            </p>
           ) : (
             <table className="data-table">
               <thead>
@@ -447,11 +506,9 @@ export default function Practice() {
                 </tr>
               </thead>
               <tbody>
-                {logs.slice(0, 20).map(log => (
+                {logs.slice(0, 20).map((log) => (
                   <tr key={log.id}>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(log.practicedAt).toLocaleDateString()}
-                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{new Date(log.practicedAt).toLocaleDateString()}</td>
                     <td>
                       <strong>{log.musicTitle.title}</strong>
                       {log.notes && <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{log.notes}</div>}
@@ -487,11 +544,7 @@ export default function Practice() {
               <button className="btn btn-outline" onClick={() => setShowLogForm(false)}>
                 {t('common.cancel')}
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleLogPractice}
-                disabled={!selectedTitleId || logging}
-              >
+              <button className="btn btn-primary" onClick={handleLogPractice} disabled={!selectedTitleId || logging}>
                 {logging ? t('common.loading') : t('practice.log')}
               </button>
             </div>
@@ -504,30 +557,45 @@ export default function Practice() {
               className="form-control"
               placeholder={t('practice.searchPiece')}
               value={titleSearch}
-              onChange={e => setTitleSearch(e.target.value)}
+              onChange={(e) => setTitleSearch(e.target.value)}
               style={{ marginBottom: '0.5rem' }}
             />
-            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+            <div
+              style={{
+                maxHeight: '200px',
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
               {titles.length === 0 ? (
                 <div style={{ padding: '0.75rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
                   {titleSearch ? t('practice.noResults') : t('practice.typeToSearch')}
                 </div>
               ) : (
-                titles.slice(0, 20).filter(title => title.id).map(title => (
-                  <div
-                    key={title.id}
-                    onClick={() => setSelectedTitleId(title.id!)}
-                    style={{
-                      padding: '0.75rem',
-                      cursor: 'pointer',
-                      background: selectedTitleId === title.id ? 'var(--primary-light, rgba(var(--primary-rgb), 0.1))' : 'transparent',
-                      borderBottom: '1px solid var(--border)',
-                    }}
-                  >
-                    <strong>{title.title}</strong>
-                    {title.arranger && <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {title.arranger}</span>}
-                  </div>
-                ))
+                titles
+                  .slice(0, 20)
+                  .filter((title) => title.id)
+                  .map((title) => (
+                    <div
+                      key={title.id}
+                      onClick={() => setSelectedTitleId(title.id!)}
+                      style={{
+                        padding: '0.75rem',
+                        cursor: 'pointer',
+                        background:
+                          selectedTitleId === title.id
+                            ? 'var(--primary-light, rgba(var(--primary-rgb), 0.1))'
+                            : 'transparent',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
+                      <strong>{title.title}</strong>
+                      {title.arranger && (
+                        <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {title.arranger}</span>
+                      )}
+                    </div>
+                  ))
               )}
             </div>
           </div>
@@ -541,14 +609,14 @@ export default function Practice() {
                 max={180}
                 step={5}
                 value={duration}
-                onChange={e => setDuration(parseInt(e.target.value))}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
                 style={{ flex: 1 }}
               />
               <input
                 type="number"
                 className="form-control"
                 value={duration}
-                onChange={e => setDuration(Math.max(1, parseInt(e.target.value) || 30))}
+                onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 30))}
                 min={1}
                 style={{ width: '80px' }}
               />
@@ -561,107 +629,135 @@ export default function Practice() {
             <textarea
               className="form-control"
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               rows={2}
               placeholder={t('practice.notesPlaceholder')}
             />
           </div>
         </BottomSheet>
-      ) : showLogForm && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }} onClick={() => setShowLogForm(false)}>
-          <div className="card" style={{ width: '90%', maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-            <div className="card-header">
-              <h2 className="card-title">{t('practice.logSession')}</h2>
-            </div>
-            <div className="card-body">
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">{t('practice.selectPiece')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder={t('practice.searchPiece')}
-                  value={titleSearch}
-                  onChange={e => setTitleSearch(e.target.value)}
-                  style={{ marginBottom: '0.5rem' }}
-                />
-                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                  {titles.length === 0 ? (
-                    <div style={{ padding: '0.75rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
-                      {titleSearch ? t('practice.noResults') : t('practice.typeToSearch')}
-                    </div>
-                  ) : (
-                    titles.slice(0, 20).filter(title => title.id).map(title => (
-                      <div
-                        key={title.id}
-                        onClick={() => setSelectedTitleId(title.id!)}
-                        style={{
-                          padding: '0.75rem',
-                          cursor: 'pointer',
-                          background: selectedTitleId === title.id ? 'var(--primary-light, rgba(var(--primary-rgb), 0.1))' : 'transparent',
-                          borderBottom: '1px solid var(--border)',
-                        }}
-                      >
-                        <strong>{title.title}</strong>
-                        {title.arranger && <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}> - {title.arranger}</span>}
-                      </div>
-                    ))
-                  )}
-                </div>
+      ) : (
+        showLogForm && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => setShowLogForm(false)}
+          >
+            <div className="card" style={{ width: '90%', maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+              <div className="card-header">
+                <h2 className="card-title">{t('practice.logSession')}</h2>
               </div>
-
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">{t('practice.duration')}</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="card-body">
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">{t('practice.selectPiece')}</label>
                   <input
-                    type="range"
-                    min={5}
-                    max={180}
-                    step={5}
-                    value={duration}
-                    onChange={e => setDuration(parseInt(e.target.value))}
-                    style={{ flex: 1 }}
-                  />
-                  <input
-                    type="number"
+                    type="text"
                     className="form-control"
-                    value={duration}
-                    onChange={e => setDuration(Math.max(1, parseInt(e.target.value) || 30))}
-                    min={1}
-                    style={{ width: '80px' }}
+                    placeholder={t('practice.searchPiece')}
+                    value={titleSearch}
+                    onChange={(e) => setTitleSearch(e.target.value)}
+                    style={{ marginBottom: '0.5rem' }}
                   />
-                  <span style={{ color: 'var(--text-light)' }}>min</span>
+                  <div
+                    style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    {titles.length === 0 ? (
+                      <div style={{ padding: '0.75rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                        {titleSearch ? t('practice.noResults') : t('practice.typeToSearch')}
+                      </div>
+                    ) : (
+                      titles
+                        .slice(0, 20)
+                        .filter((title) => title.id)
+                        .map((title) => (
+                          <div
+                            key={title.id}
+                            onClick={() => setSelectedTitleId(title.id!)}
+                            style={{
+                              padding: '0.75rem',
+                              cursor: 'pointer',
+                              background:
+                                selectedTitleId === title.id
+                                  ? 'var(--primary-light, rgba(var(--primary-rgb), 0.1))'
+                                  : 'transparent',
+                              borderBottom: '1px solid var(--border)',
+                            }}
+                          >
+                            <strong>{title.title}</strong>
+                            {title.arranger && (
+                              <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                                {' '}
+                                - {title.arranger}
+                              </span>
+                            )}
+                          </div>
+                        ))
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">{t('practice.notes')}</label>
-                <textarea
-                  className="form-control"
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder={t('practice.notesPlaceholder')}
-                />
-              </div>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">{t('practice.duration')}</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="range"
+                      min={5}
+                      max={180}
+                      step={5}
+                      value={duration}
+                      onChange={(e) => setDuration(parseInt(e.target.value))}
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={duration}
+                      onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 30))}
+                      min={1}
+                      style={{ width: '80px' }}
+                    />
+                    <span style={{ color: 'var(--text-light)' }}>min</span>
+                  </div>
+                </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                <button className="btn btn-outline" onClick={() => setShowLogForm(false)}>
-                  {t('common.cancel')}
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleLogPractice}
-                  disabled={!selectedTitleId || logging}
-                >
-                  {logging ? t('common.loading') : t('practice.log')}
-                </button>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">{t('practice.notes')}</label>
+                  <textarea
+                    className="form-control"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder={t('practice.notesPlaceholder')}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button className="btn btn-outline" onClick={() => setShowLogForm(false)}>
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleLogPractice}
+                    disabled={!selectedTitleId || logging}
+                  >
+                    {logging ? t('common.loading') : t('practice.log')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       {/* PracticeLogModal - Quick logging for a specific piece */}
@@ -674,11 +770,7 @@ export default function Practice() {
       )}
 
       {/* AudioRecorder - Record practice sessions */}
-      {showAudioRecorder && (
-        <AudioRecorder
-          onClose={handleAudioRecorderClose}
-        />
-      )}
+      {showAudioRecorder && <AudioRecorder onClose={handleAudioRecorderClose} />}
 
       {/* Delete Log Confirmation */}
       {deletingLog && (

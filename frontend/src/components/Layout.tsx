@@ -37,32 +37,50 @@ const navGroups: SidebarNavGroup[] = [
     titleKey: 'nav.dashboard',
     icon: 'home',
     basePaths: ['/'],
-    items: [
-      { path: '/', labelKey: 'nav.dashboard' },
-    ],
+    items: [{ path: '/', labelKey: 'nav.dashboard' }],
   },
   {
     titleKey: 'nav.myMusic',
     icon: 'music',
     basePaths: ['/my-music'],
-    items: [
-      { path: '/my-music', labelKey: 'nav.myMusic' },
-    ],
+    items: [{ path: '/my-music', labelKey: 'nav.myMusic' }],
   },
   {
     titleKey: 'sidebar.agenda',
     icon: 'calendar',
-    basePaths: ['/rehearsals', '/availability', '/concerts', '/my-tickets', '/ticket-sales', '/ticket-scanner', '/holiday-settings', '/season-planner', '/attendance-analytics'],
+    basePaths: [
+      '/rehearsals',
+      '/availability',
+      '/concerts',
+      '/my-tickets',
+      '/ticket-sales',
+      '/ticket-scanner',
+      '/holiday-settings',
+      '/season-planner',
+      '/attendance-analytics',
+    ],
     items: [
       { path: '/rehearsals', labelKey: 'nav.rehearsals' },
       { path: '/availability', labelKey: 'nav.availability' },
-      { path: '/attendance-analytics', labelKey: 'nav.attendanceAnalytics', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/attendance-analytics',
+        labelKey: 'nav.attendanceAnalytics',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/season-planner', labelKey: 'nav.seasonPlanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/season-planner',
+        labelKey: 'nav.seasonPlanner',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
       { path: '/holiday-settings', labelKey: 'nav.holidays', roles: [ROLES.ADMIN] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
-      { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/ticket-scanner',
+        labelKey: 'nav.ticketScanner',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
     ],
   },
   {
@@ -91,29 +109,65 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.orchestra',
     icon: 'music2',
-    basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences', '/stage-designer', '/external-musicians', '/replacement-requests'],
+    basePaths: [
+      '/seating',
+      '/voice-parts',
+      '/occupancy',
+      '/neighbor-preferences',
+      '/stage-designer',
+      '/external-musicians',
+      '/replacement-requests',
+    ],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/voice-parts',
+        labelKey: 'nav.voiceParts',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
       { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/stage-designer', labelKey: 'nav.stageDesigner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/external-musicians', labelKey: 'nav.externalMusicians', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/replacement-requests', labelKey: 'nav.replacementRequests', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/neighbor-preferences',
+        labelKey: 'nav.neighborPreferences',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
+      {
+        path: '/stage-designer',
+        labelKey: 'nav.stageDesigner',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
+      {
+        path: '/external-musicians',
+        labelKey: 'nav.externalMusicians',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
+      {
+        path: '/replacement-requests',
+        labelKey: 'nav.replacementRequests',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
     ],
   },
   {
     titleKey: 'nav.tools',
     icon: 'wrench',
     basePaths: ['/tools'],
-    items: [
-      { path: '/tools', labelKey: 'nav.tools' },
-    ],
+    items: [{ path: '/tools', labelKey: 'nav.tools' }],
   },
   {
     titleKey: 'sidebar.library',
     icon: 'book',
-    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
+    basePaths: [
+      '/lists',
+      '/music-pieces',
+      '/titles',
+      '/upload',
+      '/loans',
+      '/genres',
+      '/statistics',
+      '/pdf-tools',
+      '/imslp',
+    ],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/lists', labelKey: 'nav.lists', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -160,7 +214,20 @@ const navGroups: SidebarNavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: 'settings',
-    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health', '/custom-fields', '/accounting'],
+    basePaths: [
+      '/users',
+      '/orchestras',
+      '/settings',
+      '/payment-settings',
+      '/entra-sync',
+      '/onboarding',
+      '/theme',
+      '/changelog',
+      '/audit-logs',
+      '/health',
+      '/custom-fields',
+      '/accounting',
+    ],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
@@ -238,9 +305,11 @@ export default function Layout() {
   };
 
   const loadBrandSettings = () => {
-    getSettings().then(setBrandSettings).catch((error) => {
-      console.warn('Failed to load brand settings:', error);
-    });
+    getSettings()
+      .then(setBrandSettings)
+      .catch((error) => {
+        console.warn('Failed to load brand settings:', error);
+      });
   };
 
   useEffect(() => {
@@ -260,8 +329,8 @@ export default function Layout() {
   const userRole = user?.role || '';
 
   // Filter nav groups based on user role
-  const visibleGroups = navGroups.filter(group => {
-    const visibleItems = group.items.filter(item => {
+  const visibleGroups = navGroups.filter((group) => {
+    const visibleItems = group.items.filter((item) => {
       if (!item.roles) return true;
       return item.roles.includes(userRole);
     });
@@ -274,17 +343,17 @@ export default function Layout() {
     if (group.basePaths.length === 1 && group.basePaths[0] === '/') {
       return location.pathname === '/';
     }
-    return group.basePaths.some(p => location.pathname.startsWith(p));
+    return group.basePaths.some((p) => location.pathname.startsWith(p));
   };
 
   // Check if a bottom tab is active
-  const isTabActive = (tab: typeof mobileBottomTabs[0]) => {
+  const isTabActive = (tab: (typeof mobileBottomTabs)[0]) => {
     if (tab.exact) return location.pathname === tab.path;
     return location.pathname.startsWith(tab.path);
   };
 
   // Check if current path is not covered by bottom tabs (for "More" highlight)
-  const isMoreActive = !mobileBottomTabs.some(tab => isTabActive(tab));
+  const isMoreActive = !mobileBottomTabs.some((tab) => isTabActive(tab));
 
   return (
     <div className={`app app-with-sidebar ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
@@ -298,7 +367,11 @@ export default function Layout() {
           <button
             className="sidebar-toggle-btn desktop-only"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            aria-label={sidebarCollapsed ? t('nav.expandSidebar', 'Zijbalk uitklappen') : t('nav.collapseSidebar', 'Zijbalk inklappen')}
+            aria-label={
+              sidebarCollapsed
+                ? t('nav.expandSidebar', 'Zijbalk uitklappen')
+                : t('nav.collapseSidebar', 'Zijbalk inklappen')
+            }
           >
             <Icon name={sidebarCollapsed ? 'expand' : 'collapse'} size={20} />
           </button>
@@ -311,8 +384,8 @@ export default function Layout() {
               />
             ) : (
               <Icon name="music" size={22} />
-            )}
-            {' '}{brandSettings?.displayName || 'Tutti'}
+            )}{' '}
+            {brandSettings?.displayName || 'Tutti'}
           </Link>
         </div>
 
@@ -330,11 +403,15 @@ export default function Layout() {
           <RecentItems />
           <AssociationSwitcher />
           <DarkModeToggle />
-          <Link to="/profile" className="user-info header-user-info" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="user-name">{user?.firstName} {user?.lastName}</div>
-            <div className="user-role">
-              {user?.role && t(`roles.${user.role}`)}
+          <Link
+            to="/profile"
+            className="user-info header-user-info"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <div className="user-name">
+              {user?.firstName} {user?.lastName}
             </div>
+            <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
           </Link>
           <button className="btn btn-outline btn-sm" onClick={handleLogout}>
             {t('nav.logout')}
@@ -344,12 +421,15 @@ export default function Layout() {
 
       <div className="app-body">
         {/* Desktop sidebar navigation */}
-        <aside className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t('accessibility.mainNavigation')}>
+        <aside
+          className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
+          aria-label={t('accessibility.mainNavigation')}
+        >
           <nav className="sidebar-main-nav">
-            {visibleGroups.map(group => {
+            {visibleGroups.map((group) => {
               const active = isGroupActive(group);
               const isSingleItem = group.items.length === 1;
-              const visibleItems = group.items.filter(item => {
+              const visibleItems = group.items.filter((item) => {
                 if (!item.roles) return true;
                 return item.roles.includes(userRole);
               });
@@ -392,7 +472,7 @@ export default function Layout() {
                   </NavLink>
                   {active && !sidebarCollapsed && (
                     <ul className="sidebar-group-items">
-                      {visibleItems.map(item => (
+                      {visibleItems.map((item) => (
                         <li key={item.path}>
                           <NavLink
                             to={item.path}
@@ -467,7 +547,7 @@ export default function Layout() {
 
       {/* Mobile bottom tab bar */}
       <nav className="mobile-bottom-tabs" aria-label={t('nav.mobileNavigation', 'Navigatie')}>
-        {mobileBottomTabs.map(tab => (
+        {mobileBottomTabs.map((tab) => (
           <NavLink
             key={tab.path}
             to={tab.path}
@@ -507,15 +587,12 @@ export default function Layout() {
             role="presentation"
             aria-hidden="true"
           />
-          <div
-            className="mobile-menu-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('nav.mobileMenu', 'Menu')}
-          >
+          <div className="mobile-menu-panel" role="dialog" aria-modal="true" aria-label={t('nav.mobileMenu', 'Menu')}>
             <div className="mobile-menu-header">
               <div className="mobile-user-info">
-                <div className="user-name">{user?.firstName} {user?.lastName}</div>
+                <div className="user-name">
+                  {user?.firstName} {user?.lastName}
+                </div>
                 <div className="user-role">{user?.role && t(`roles.${user.role}`)}</div>
               </div>
               <button
@@ -527,8 +604,8 @@ export default function Layout() {
               </button>
             </div>
             <nav className="mobile-menu-nav">
-              {visibleGroups.map(group => {
-                const visibleItems = group.items.filter(item => {
+              {visibleGroups.map((group) => {
+                const visibleItems = group.items.filter((item) => {
                   if (!item.roles) return true;
                   return item.roles.includes(userRole);
                 });
@@ -558,7 +635,7 @@ export default function Layout() {
                       </span>
                       {t(group.titleKey)}
                     </div>
-                    {visibleItems.map(item => (
+                    {visibleItems.map((item) => (
                       <NavLink
                         key={item.path}
                         to={item.path}
@@ -600,7 +677,9 @@ export default function Layout() {
         <Link to="/accessibility" className="feedback-link">
           {t('accessibility.statement', 'Toegankelijkheid')}
         </Link>
-        <span aria-hidden="true" style={{ margin: '0 0.5rem', color: 'var(--text-muted)' }}>|</span>
+        <span aria-hidden="true" style={{ margin: '0 0.5rem', color: 'var(--text-muted)' }}>
+          |
+        </span>
         <a
           href="https://github.com/ruudsl/harmonie/issues"
           target="_blank"
@@ -624,10 +703,7 @@ export default function Layout() {
         <SequenceIndicator />
       </SectionErrorBoundary>
 
-      <OnboardingTour
-        forceShow={showOnboarding || undefined}
-        onClose={() => setShowOnboarding(false)}
-      />
+      <OnboardingTour forceShow={showOnboarding || undefined} onClose={() => setShowOnboarding(false)} />
     </div>
   );
 }

@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  getOrchestra,
-  createMusicList,
-  updateMusicList,
-  deleteMusicList,
-} from '../api';
-import {
-  useOrchestras,
-  useCreateOrchestra,
-  useUpdateOrchestra,
-  useDeleteOrchestra,
-} from '../hooks/useOrchestras';
+import { getOrchestra, createMusicList, updateMusicList, deleteMusicList } from '../api';
+import { useOrchestras, useCreateOrchestra, useUpdateOrchestra, useDeleteOrchestra } from '../hooks/useOrchestras';
 import { queryKeys } from '../lib/queryClient';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -54,8 +44,7 @@ export default function Orchestras() {
 
   // Music list mutations
   const createListMutation = useMutation({
-    mutationFn: ({ name, orchestraId }: { name: string; orchestraId: string }) =>
-      createMusicList(name, orchestraId),
+    mutationFn: ({ name, orchestraId }: { name: string; orchestraId: string }) => createMusicList(name, orchestraId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestra(selectedOrchestraId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
@@ -215,7 +204,8 @@ export default function Orchestras() {
                     <div>
                       <strong>{orchestra.name}</strong>
                       <div className="piece-meta">
-                        {orchestra.memberCount} {t('orchestras.membersCount')} • {orchestra.listCount} {t('orchestras.listsCount')}
+                        {orchestra.memberCount} {t('orchestras.membersCount')} • {orchestra.listCount}{' '}
+                        {t('orchestras.listsCount')}
                       </div>
                     </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -259,7 +249,9 @@ export default function Orchestras() {
                   <h2 className="card-title">{selectedOrchestra.name}</h2>
                 </div>
                 <div className="card-body">
-                  <h3 className="mb-1">{t('orchestras.members')} ({selectedOrchestra.members?.length || 0})</h3>
+                  <h3 className="mb-1">
+                    {t('orchestras.members')} ({selectedOrchestra.members?.length || 0})
+                  </h3>
                   {selectedOrchestra.members?.length > 0 ? (
                     <div className="tags mb-2">
                       {selectedOrchestra.members.map((member: any) => (
@@ -273,7 +265,9 @@ export default function Orchestras() {
                   )}
 
                   <div className="flex justify-between items-center mb-1">
-                    <h3>{t('orchestras.musicLists')} ({selectedOrchestra.lists?.length || 0})</h3>
+                    <h3>
+                      {t('orchestras.musicLists')} ({selectedOrchestra.lists?.length || 0})
+                    </h3>
                     <button className="btn btn-primary btn-sm" onClick={() => setShowAddListModal(true)}>
                       {t('orchestras.addList')}
                     </button>
@@ -294,7 +288,10 @@ export default function Orchestras() {
                         >
                           <div>
                             <strong>{list.name}</strong>
-                            <span className="piece-meta"> ({list.pieceCount} {t('orchestras.pieces')})</span>
+                            <span className="piece-meta">
+                              {' '}
+                              ({list.pieceCount} {t('orchestras.pieces')})
+                            </span>
                           </div>
                           <div className="flex gap-1">
                             <button
@@ -326,7 +323,9 @@ export default function Orchestras() {
           <div className="card">
             <div className="card-body">
               <div className="empty-state">
-                <div className="empty-icon"><Icon name="music2" size={48} /></div>
+                <div className="empty-icon">
+                  <Icon name="music2" size={48} />
+                </div>
                 <p>{t('orchestras.selectToView')}</p>
               </div>
             </div>

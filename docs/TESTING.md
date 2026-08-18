@@ -5,22 +5,26 @@ This document describes the testing strategy, tools, and practices used in the H
 ## Test Stack
 
 ### Frontend Testing
+
 - **Vitest** - Fast unit test runner with native ESM support
 - **React Testing Library** - Testing utilities focused on user behavior
 - **jest-dom** - Custom DOM element matchers
 - **jsdom** - DOM implementation for Node.js
 
 ### Backend Testing
+
 - **Vitest** - Unit and integration testing
 - **In-memory SQLite** - Isolated test database
 - **Mocked dependencies** - Email, logging, and audit trails
 
 ### End-to-End Testing
+
 - **Playwright** - Cross-browser E2E testing
 
 ## Running Tests
 
 ### All Tests
+
 ```bash
 # Run all unit tests (frontend + backend)
 npm run test
@@ -30,6 +34,7 @@ npm run test:all
 ```
 
 ### Frontend Tests
+
 ```bash
 # Run frontend tests once
 npm run test:frontend
@@ -39,6 +44,7 @@ npm run test:watch --workspace=frontend
 ```
 
 ### Backend Tests
+
 ```bash
 # Run backend tests once
 npm run test:backend
@@ -54,6 +60,7 @@ npm run test:integration --workspace=backend
 ```
 
 ### E2E Tests
+
 ```bash
 # Run E2E tests headless
 npm run test:e2e
@@ -68,6 +75,7 @@ npm run test:e2e:headed
 ## Configuration Files
 
 ### Frontend (`frontend/vitest.config.ts`)
+
 ```typescript
 export default defineConfig({
   plugins: [react()],
@@ -77,10 +85,11 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     css: false,
   },
-})
+});
 ```
 
 ### Backend (`backend/vitest.config.ts`)
+
 ```typescript
 export default defineConfig({
   test: {
@@ -90,15 +99,16 @@ export default defineConfig({
     setupFiles: ['src/__tests__/setup.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
-    fileParallelism: false,  // Sequential to avoid DB conflicts
+    fileParallelism: false, // Sequential to avoid DB conflicts
     isolate: true,
   },
-})
+});
 ```
 
 ## Writing Unit Tests
 
 ### Frontend Component Test
+
 ```typescript
 // src/components/__tests__/Pagination.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -114,7 +124,7 @@ describe('Pagination', () => {
         onPageChange={vi.fn()}
       />
     );
-    
+
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
   });
@@ -128,7 +138,7 @@ describe('Pagination', () => {
         onPageChange={onPageChange}
       />
     );
-    
+
     fireEvent.click(screen.getByText('3'));
     expect(onPageChange).toHaveBeenCalledWith(3);
   });
@@ -136,6 +146,7 @@ describe('Pagination', () => {
 ```
 
 ### Frontend Hook Test
+
 ```typescript
 // src/hooks/__tests__/useDebounce.test.ts
 import { renderHook, act } from '@testing-library/react';
@@ -157,10 +168,9 @@ describe('useDebounce', () => {
   });
 
   it('debounces value changes', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 500),
-      { initialProps: { value: 'initial' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 500), {
+      initialProps: { value: 'initial' },
+    });
 
     rerender({ value: 'updated' });
     expect(result.current).toBe('initial');
@@ -175,6 +185,7 @@ describe('useDebounce', () => {
 ```
 
 ### Backend Route Test
+
 ```typescript
 // src/__tests__/routes/auth.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -188,12 +199,10 @@ describe('Auth Routes', () => {
   });
 
   it('should login with valid credentials', async () => {
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'test@example.com',
-        password: 'password123',
-      });
+    const response = await request(app).post('/api/auth/login').send({
+      email: 'test@example.com',
+      password: 'password123',
+    });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
@@ -201,12 +210,10 @@ describe('Auth Routes', () => {
   });
 
   it('should reject invalid credentials', async () => {
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'test@example.com',
-        password: 'wrongpassword',
-      });
+    const response = await request(app).post('/api/auth/login').send({
+      email: 'test@example.com',
+      password: 'wrongpassword',
+    });
 
     expect(response.status).toBe(401);
   });
@@ -236,14 +243,10 @@ describe('Tenant Isolation', () => {
 
   it('should not allow access to other association data', async () => {
     // User from association 1 tries to access association 2 data
-    const response = await request(app)
-      .get('/api/orchestras')
-      .set('Authorization', `Bearer ${association1Token}`);
+    const response = await request(app).get('/api/orchestras').set('Authorization', `Bearer ${association1Token}`);
 
     // Should only see their own orchestras
-    expect(response.body).not.toContainEqual(
-      expect.objectContaining({ associationId: 'association-2-id' })
-    );
+    expect(response.body).not.toContainEqual(expect.objectContaining({ associationId: 'association-2-id' }));
   });
 });
 ```
@@ -251,12 +254,15 @@ describe('Tenant Isolation', () => {
 ## Test Setup Files
 
 ### Frontend Setup (`frontend/src/test/setup.ts`)
+
 ```typescript
 import '@testing-library/jest-dom';
 ```
 
 ### Backend Setup (`backend/src/__tests__/setup.ts`)
+
 Key features:
+
 - Mocks the database module with an in-memory SQLite instance
 - Mocks email utilities to prevent actual email sending
 - Mocks logging to reduce test noise
@@ -280,7 +286,7 @@ vi.mock('../utils/logger', () => ({
 }));
 
 beforeEach(async () => {
-  await testDb.reset();  // Clean state for each test
+  await testDb.reset(); // Clean state for each test
 });
 ```
 
@@ -305,6 +311,7 @@ Tests are run automatically in the CI/CD pipeline:
 5. **E2E Tests** - Playwright end-to-end tests (on merge to main)
 
 ### Running CI Checks Locally
+
 ```bash
 # Lint
 npm run lint
@@ -319,24 +326,28 @@ npm run format
 ## Best Practices
 
 ### General
+
 1. Keep tests focused on a single behavior
 2. Use descriptive test names that explain the expected behavior
 3. Arrange-Act-Assert pattern for test structure
 4. Avoid testing implementation details
 
 ### Frontend
+
 1. Test user interactions, not implementation
 2. Use `screen.getByRole()` over `getByTestId()` when possible
 3. Mock API calls at the fetch/axios level
 4. Test accessibility where relevant
 
 ### Backend
+
 1. Use the test database setup for route tests
 2. Reset database state in `beforeEach`
 3. Test both success and error cases
 4. Verify authorization and tenant isolation
 
 ### Mocking
+
 ```typescript
 // Mock a module
 vi.mock('../api', () => ({

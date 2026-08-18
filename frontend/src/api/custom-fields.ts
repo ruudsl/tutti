@@ -1,7 +1,20 @@
 import api from './client';
 
-export type EntityType = 'user' | 'orchestra' | 'rehearsal' | 'concert' | 'music_piece' | 'loan' | 'instrument' | 'contact';
-export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean' | 'select' | 'multiselect' | 'email' | 'phone' | 'url' | 'file';
+export type EntityType =
+  'user' | 'orchestra' | 'rehearsal' | 'concert' | 'music_piece' | 'loan' | 'instrument' | 'contact';
+export type FieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'datetime'
+  | 'boolean'
+  | 'select'
+  | 'multiselect'
+  | 'email'
+  | 'phone'
+  | 'url'
+  | 'file';
 export type VisibilityType = 'all' | 'admin_only' | 'committee_plus' | 'self_only';
 
 export interface CustomFieldDefinition {
@@ -67,12 +80,17 @@ export const getFieldDefinitionsForEntity = async (entityType: EntityType): Prom
   return data;
 };
 
-export const createFieldDefinition = async (definition: CreateFieldDefinitionData): Promise<{ id: string; message: string }> => {
+export const createFieldDefinition = async (
+  definition: CreateFieldDefinitionData,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/custom-fields/definitions', definition);
   return data;
 };
 
-export const updateFieldDefinition = async (id: string, definition: Partial<CreateFieldDefinitionData>): Promise<void> => {
+export const updateFieldDefinition = async (
+  id: string,
+  definition: Partial<CreateFieldDefinitionData>,
+): Promise<void> => {
   await api.patch(`/custom-fields/definitions/${id}`, definition);
 };
 
@@ -90,7 +108,11 @@ export const getFieldValues = async (entityType: EntityType, entityId: string): 
   return data;
 };
 
-export const setFieldValues = async (entityType: EntityType, entityId: string, values: Record<string, any>): Promise<void> => {
+export const setFieldValues = async (
+  entityType: EntityType,
+  entityId: string,
+  values: Record<string, any>,
+): Promise<void> => {
   await api.post('/custom-fields/values', { entityType, entityId, values });
 };
 

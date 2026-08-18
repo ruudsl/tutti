@@ -1,16 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import {
-  EntityType,
-  FieldType,
-  FieldValueMeta,
-  getFieldValues,
-  setFieldValues,
-} from '../api/custom-fields';
+import { EntityType, FieldType, FieldValueMeta, getFieldValues, setFieldValues } from '../api/custom-fields';
 import { showSuccess, showError } from '../utils/toast';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
-
 
 interface CustomFieldRendererProps {
   entityType: EntityType;
@@ -47,7 +40,9 @@ export function CustomFieldRenderer({
     meta,
   }));
 
-  const visibleFields = showEmpty ? fields : fields.filter(f => f.value !== null && f.value !== undefined && f.value !== '');
+  const visibleFields = showEmpty
+    ? fields
+    : fields.filter((f) => f.value !== null && f.value !== undefined && f.value !== '');
 
   if (visibleFields.length === 0) {
     return null;
@@ -180,7 +175,7 @@ export function CustomFieldFormSection({
   });
 
   const handleChange = (key: string, value: any) => {
-    setLocalValues(prev => ({ ...prev, [key]: value }));
+    setLocalValues((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
 
     if (autoSave) {
@@ -198,7 +193,7 @@ export function CustomFieldFormSection({
   if (isLoading) {
     return (
       <div className={`space-y-3 ${className}`}>
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className="animate-pulse">
             <div className="h-4 bg-base-300 rounded w-24 mb-1" />
             <div className="h-10 bg-base-300 rounded w-full" />
@@ -281,7 +276,9 @@ function FieldInput({ fieldKey, meta, value, onChange, disabled }: FieldInputPro
           </label>
           <input
             id={inputId}
-            type={meta.type === 'email' ? 'email' : meta.type === 'url' ? 'url' : meta.type === 'phone' ? 'tel' : 'text'}
+            type={
+              meta.type === 'email' ? 'email' : meta.type === 'url' ? 'url' : meta.type === 'phone' ? 'tel' : 'text'
+            }
             className={baseInputClass}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
@@ -433,10 +430,7 @@ function FieldInput({ fieldKey, meta, value, onChange, disabled }: FieldInputPro
             {meta.options?.map((opt) => {
               const isSelected = selectedValues.includes(opt);
               return (
-                <label
-                  key={opt}
-                  className={`badge cursor-pointer ${isSelected ? 'badge-primary' : 'badge-outline'}`}
-                >
+                <label key={opt} className={`badge cursor-pointer ${isSelected ? 'badge-primary' : 'badge-outline'}`}>
                   <input
                     type="checkbox"
                     className="hidden"
@@ -510,42 +504,23 @@ export function CustomFieldsSection({
     <div className={`card bg-base-100 shadow-sm ${className}`}>
       <div className="card-body">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="card-title text-base">
-            {title || t('customFields.additionalFields')}
-          </h3>
+          <h3 className="card-title text-base">{title || t('customFields.additionalFields')}</h3>
           {editable && !isEditing && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setIsEditing(true)}
-            >
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsEditing(true)}>
               {t('common.edit')}
             </button>
           )}
         </div>
 
         {isEditing ? (
-          <CustomFieldFormSection
-            entityType={entityType}
-            entityId={entityId}
-            onSaved={() => setIsEditing(false)}
-          />
+          <CustomFieldFormSection entityType={entityType} entityId={entityId} onSaved={() => setIsEditing(false)} />
         ) : (
-          <CustomFieldRenderer
-            entityType={entityType}
-            entityId={entityId}
-            layout="horizontal"
-            showEmpty={false}
-          />
+          <CustomFieldRenderer entityType={entityType} entityId={entityId} layout="horizontal" showEmpty={false} />
         )}
 
         {isEditing && (
           <div className="mt-2">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setIsEditing(false)}
-            >
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIsEditing(false)}>
               {t('common.cancel')}
             </button>
           </div>

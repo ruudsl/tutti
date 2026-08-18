@@ -11,20 +11,23 @@ const tokenStore = new Map<string, { token: string; createdAt: number }>();
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 // Clean up expired tokens periodically
-setInterval(() => {
+setInterval(
+  () => {
     const now = Date.now();
     for (const [key, value] of tokenStore.entries()) {
-        if (now - value.createdAt > TOKEN_TTL_MS) {
-            tokenStore.delete(key);
-        }
+      if (now - value.createdAt > TOKEN_TTL_MS) {
+        tokenStore.delete(key);
+      }
     }
-}, 60 * 60 * 1000); // Clean up every hour
+  },
+  60 * 60 * 1000,
+); // Clean up every hour
 
 /**
  * Generate a cryptographically secure CSRF token
  */
 function generateCsrfToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex');
 }
 
 /**
@@ -32,9 +35,9 @@ function generateCsrfToken(): string {
  * This helps bind the token to a specific client
  */
 function getClientId(req: Request): string {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    const userAgent = req.get('User-Agent') || 'unknown';
-    return crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex').substring(0, 16);
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const userAgent = req.get('User-Agent') || 'unknown';
+  return crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex').substring(0, 16);
 }
 
 /**
@@ -45,25 +48,25 @@ function getClientId(req: Request): string {
  * - Webhook endpoints
  */
 const CSRF_EXEMPT_ROUTES: RegExp[] = [
-    /^\/api\/auth\/login$/,
-    /^\/api\/auth\/register$/,
-    /^\/api\/auth\/refresh$/,
-    /^\/api\/auth\/forgot-password$/,
-    /^\/api\/auth\/reset-password$/,
-    /^\/api\/auth\/microsoft\/.*/,
-    /^\/api\/health$/,
-    /^\/api\/settings\/theme$/, // Public theme endpoint
-    /^\/api\/settings\/branding$/, // Public branding endpoint
-    /^\/api\/settings\/logo\/.*/, // Public logo serving
-    /^\/api\/changelog$/,
-    /^\/api\/tickets\/webhooks\/payment$/, // Payment provider webhook (authenticated via signature verification)
+  /^\/api\/auth\/login$/,
+  /^\/api\/auth\/register$/,
+  /^\/api\/auth\/refresh$/,
+  /^\/api\/auth\/forgot-password$/,
+  /^\/api\/auth\/reset-password$/,
+  /^\/api\/auth\/microsoft\/.*/,
+  /^\/api\/health$/,
+  /^\/api\/settings\/theme$/, // Public theme endpoint
+  /^\/api\/settings\/branding$/, // Public branding endpoint
+  /^\/api\/settings\/logo\/.*/, // Public logo serving
+  /^\/api\/changelog$/,
+  /^\/api\/tickets\/webhooks\/payment$/, // Payment provider webhook (authenticated via signature verification)
 ];
 
 /**
  * Check if a route is exempt from CSRF protection
  */
 function isExemptRoute(path: string): boolean {
-    return CSRF_EXEMPT_ROUTES.some(pattern => pattern.test(path));
+  return CSRF_EXEMPT_ROUTES.some((pattern) => pattern.test(path));
 }
 
 /**
@@ -71,33 +74,33 @@ function isExemptRoute(path: string): boolean {
  * This should be called on initial page load or when starting a session
  */
 export function csrfTokenMiddleware(req: Request, res: Response, next: NextFunction) {
-    if (!config.csrfEnabled) {
-        return next();
-    }
+  if (!config.csrfEnabled) {
+    return next();
+  }
 
-    const clientId = getClientId(req);
-    let tokenEntry = tokenStore.get(clientId);
+  const clientId = getClientId(req);
+  let tokenEntry = tokenStore.get(clientId);
 
-    // Generate new token if none exists or if expired
-    if (!tokenEntry || Date.now() - tokenEntry.createdAt > TOKEN_TTL_MS) {
-        const token = generateCsrfToken();
-        tokenEntry = { token, createdAt: Date.now() };
-        tokenStore.set(clientId, tokenEntry);
-    }
+  // Generate new token if none exists or if expired
+  if (!tokenEntry || Date.now() - tokenEntry.createdAt > TOKEN_TTL_MS) {
+    const token = generateCsrfToken();
+    tokenEntry = { token, createdAt: Date.now() };
+    tokenStore.set(clientId, tokenEntry);
+  }
 
-    // Set the CSRF token as a cookie (httpOnly: false so JS can read it)
-    res.cookie(config.csrfCookieName, tokenEntry.token, {
-        httpOnly: false, // Allow JavaScript to read the cookie
-        secure: config.isProduction, // HTTPS only in production
-        sameSite: 'strict',
-        maxAge: TOKEN_TTL_MS,
-        path: '/',
-    });
+  // Set the CSRF token as a cookie (httpOnly: false so JS can read it)
+  res.cookie(config.csrfCookieName, tokenEntry.token, {
+    httpOnly: false, // Allow JavaScript to read the cookie
+    secure: config.isProduction, // HTTPS only in production
+    sameSite: 'strict',
+    maxAge: TOKEN_TTL_MS,
+    path: '/',
+  });
 
-    // Also expose via response header for initial fetch
-    res.setHeader('X-CSRF-Token', tokenEntry.token);
+  // Also expose via response header for initial fetch
+  res.setHeader('X-CSRF-Token', tokenEntry.token);
 
-    next();
+  next();
 }
 
 /**
@@ -105,62 +108,62 @@ export function csrfTokenMiddleware(req: Request, res: Response, next: NextFunct
  * Validates token sent in header against the stored token
  */
 export function validateCsrfToken(req: Request, res: Response, next: NextFunction) {
-    if (!config.csrfEnabled) {
-        return next();
-    }
+  if (!config.csrfEnabled) {
+    return next();
+  }
 
-    // Only validate on state-changing methods
-    const method = req.method.toUpperCase();
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-        return next();
-    }
+  // Only validate on state-changing methods
+  const method = req.method.toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return next();
+  }
 
-    // Skip validation for exempt routes
-    if (isExemptRoute(req.path)) {
-        return next();
-    }
+  // Skip validation for exempt routes
+  if (isExemptRoute(req.path)) {
+    return next();
+  }
 
-    // Routes protected by JWT don't need CSRF as they're stateless
-    // Check if Authorization header is present
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        // JWT-protected routes are exempt from CSRF as tokens provide equivalent protection
-        return next();
-    }
+  // Routes protected by JWT don't need CSRF as they're stateless
+  // Check if Authorization header is present
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // JWT-protected routes are exempt from CSRF as tokens provide equivalent protection
+    return next();
+  }
 
-    const clientId = getClientId(req);
-    const storedEntry = tokenStore.get(clientId);
+  const clientId = getClientId(req);
+  const storedEntry = tokenStore.get(clientId);
 
-    if (!storedEntry) {
-        logger.warn('CSRF validation failed: no stored token', {
-            path: req.path,
-            method: req.method,
-            ip: req.ip
-        });
-        return res.status(403).json({
-            error: 'CSRF token missing. Please refresh the page and try again.'
-        });
-    }
+  if (!storedEntry) {
+    logger.warn('CSRF validation failed: no stored token', {
+      path: req.path,
+      method: req.method,
+      ip: req.ip,
+    });
+    return res.status(403).json({
+      error: 'CSRF token missing. Please refresh the page and try again.',
+    });
+  }
 
-    // Get token from header (preferred) or cookie
-    const headerToken = req.headers[config.csrfHeaderName.toLowerCase()] as string;
-    const cookieToken = req.cookies?.[config.csrfCookieName];
+  // Get token from header (preferred) or cookie
+  const headerToken = req.headers[config.csrfHeaderName.toLowerCase()] as string;
+  const cookieToken = req.cookies?.[config.csrfCookieName];
 
-    // Validate: header token must match stored token
-    if (!headerToken || headerToken !== storedEntry.token) {
-        logger.warn('CSRF validation failed: token mismatch', {
-            path: req.path,
-            method: req.method,
-            ip: req.ip,
-            hasHeaderToken: !!headerToken,
-            hasCookieToken: !!cookieToken
-        });
-        return res.status(403).json({
-            error: 'Invalid CSRF token. Please refresh the page and try again.'
-        });
-    }
+  // Validate: header token must match stored token
+  if (!headerToken || headerToken !== storedEntry.token) {
+    logger.warn('CSRF validation failed: token mismatch', {
+      path: req.path,
+      method: req.method,
+      ip: req.ip,
+      hasHeaderToken: !!headerToken,
+      hasCookieToken: !!cookieToken,
+    });
+    return res.status(403).json({
+      error: 'Invalid CSRF token. Please refresh the page and try again.',
+    });
+  }
 
-    next();
+  next();
 }
 
 /**
@@ -168,34 +171,34 @@ export function validateCsrfToken(req: Request, res: Response, next: NextFunctio
  * Useful for SPAs that need to get a token before making requests
  */
 export function getCsrfToken(req: Request, res: Response) {
-    if (!config.csrfEnabled) {
-        return res.json({ csrf: null, enabled: false });
-    }
+  if (!config.csrfEnabled) {
+    return res.json({ csrf: null, enabled: false });
+  }
 
-    const clientId = getClientId(req);
-    let tokenEntry = tokenStore.get(clientId);
+  const clientId = getClientId(req);
+  let tokenEntry = tokenStore.get(clientId);
 
-    if (!tokenEntry || Date.now() - tokenEntry.createdAt > TOKEN_TTL_MS) {
-        const token = generateCsrfToken();
-        tokenEntry = { token, createdAt: Date.now() };
-        tokenStore.set(clientId, tokenEntry);
-    }
+  if (!tokenEntry || Date.now() - tokenEntry.createdAt > TOKEN_TTL_MS) {
+    const token = generateCsrfToken();
+    tokenEntry = { token, createdAt: Date.now() };
+    tokenStore.set(clientId, tokenEntry);
+  }
 
-    // Set cookie as well
-    res.cookie(config.csrfCookieName, tokenEntry.token, {
-        httpOnly: false,
-        secure: config.isProduction,
-        sameSite: 'strict',
-        maxAge: TOKEN_TTL_MS,
-        path: '/',
-    });
+  // Set cookie as well
+  res.cookie(config.csrfCookieName, tokenEntry.token, {
+    httpOnly: false,
+    secure: config.isProduction,
+    sameSite: 'strict',
+    maxAge: TOKEN_TTL_MS,
+    path: '/',
+  });
 
-    res.json({ csrf: tokenEntry.token, enabled: true });
+  res.json({ csrf: tokenEntry.token, enabled: true });
 }
 
 /**
  * Add custom exempt routes programmatically
  */
 export function addCsrfExemptRoute(pattern: RegExp) {
-    CSRF_EXEMPT_ROUTES.push(pattern);
+  CSRF_EXEMPT_ROUTES.push(pattern);
 }

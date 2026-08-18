@@ -8,17 +8,19 @@ const router = Router();
 router.use(authenticateToken);
 
 // GET /api/performances/history - Get performance history for a piece
-router.get('/history', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
-  const titleId = req.query.titleId as string;
-  const title = req.query.title as string;
+router.get(
+  '/history',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const titleId = req.query.titleId as string;
+    const title = req.query.title as string;
 
-  if (!titleId && !title) {
-    res.status(400).json({ error: 'Either titleId or title query parameter is required' });
-    return;
-  }
+    if (!titleId && !title) {
+      res.status(400).json({ error: 'Either titleId or title query parameter is required' });
+      return;
+    }
 
-  let query = `
+    let query = `
     SELECT
       cp.id,
       cp.title,
@@ -33,38 +35,45 @@ router.get('/history', asyncHandler(async (req: AuthRequest, res: Response) => {
     JOIN concerts c ON cp.concert_id = c.id
     WHERE c.association_id = ?
   `;
-  const params: any[] = [associationId];
+    const params: any[] = [associationId];
 
-  if (titleId) {
-    query += ` AND cp.music_title_id = ?`;
-    params.push(titleId);
-  } else if (title) {
-    query += ` AND cp.title LIKE ?`;
-    params.push(`%${title}%`);
-  }
+    if (titleId) {
+      query += ` AND cp.music_title_id = ?`;
+      params.push(titleId);
+    } else if (title) {
+      query += ` AND cp.title LIKE ?`;
+      params.push(`%${title}%`);
+    }
 
-  query += ` ORDER BY c.date DESC`;
+    query += ` ORDER BY c.date DESC`;
 
-  const performances = db.prepare(query).all(...params);
+    const performances = db.prepare(query).all(...params);
 
-  res.json(performances.map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    composer: p.composer,
-    arranger: p.arranger,
-    concertId: p.concert_id,
-    concertName: p.concert_name,
-    concertDate: p.concert_date,
-    concertLocation: p.concert_location,
-    concertType: p.concert_type,
-  })));
-}));
+    res.json(
+      performances.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        composer: p.composer,
+        arranger: p.arranger,
+        concertId: p.concert_id,
+        concertName: p.concert_name,
+        concertDate: p.concert_date,
+        concertLocation: p.concert_location,
+        concertType: p.concert_type,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/last-played - Get when pieces were last played
-router.get('/last-played', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.get(
+  '/last-played',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  const pieces = db.prepare(`
+    const pieces = db
+      .prepare(
+        `
     SELECT
       cp.title,
       cp.composer,
@@ -76,22 +85,31 @@ router.get('/last-played', asyncHandler(async (req: AuthRequest, res: Response) 
     WHERE c.association_id = ?
     GROUP BY cp.title, cp.composer, cp.music_title_id
     ORDER BY MAX(c.date) DESC
-  `).all(associationId);
+  `,
+      )
+      .all(associationId);
 
-  res.json(pieces.map((p: any) => ({
-    title: p.title,
-    composer: p.composer,
-    musicTitleId: p.music_title_id,
-    lastPlayed: p.last_played,
-    timesPlayed: p.times_played,
-  })));
-}));
+    res.json(
+      pieces.map((p: any) => ({
+        title: p.title,
+        composer: p.composer,
+        musicTitleId: p.music_title_id,
+        lastPlayed: p.last_played,
+        timesPlayed: p.times_played,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/never-played - Get pieces in library never played
-router.get('/never-played', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.get(
+  '/never-played',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  const pieces = db.prepare(`
+    const pieces = db
+      .prepare(
+        `
     SELECT mt.id, mt.title, mt.composer
     FROM music_titles mt
     JOIN music_lists ml ON mt.list_id = ml.id
@@ -104,21 +122,30 @@ router.get('/never-played', asyncHandler(async (req: AuthRequest, res: Response)
         WHERE c.association_id = ? AND cp.music_title_id IS NOT NULL
       )
     ORDER BY mt.title
-  `).all(associationId, associationId);
+  `,
+      )
+      .all(associationId, associationId);
 
-  res.json(pieces.map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    composer: p.composer,
-  })));
-}));
+    res.json(
+      pieces.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        composer: p.composer,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/most-played - Get most frequently played pieces
-router.get('/most-played', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+router.get(
+  '/most-played',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-  const pieces = db.prepare(`
+    const pieces = db
+      .prepare(
+        `
     SELECT
       cp.title,
       cp.composer,
@@ -132,23 +159,32 @@ router.get('/most-played', asyncHandler(async (req: AuthRequest, res: Response) 
     GROUP BY cp.title, cp.composer, cp.music_title_id
     ORDER BY COUNT(*) DESC
     LIMIT ?
-  `).all(associationId, limit);
+  `,
+      )
+      .all(associationId, limit);
 
-  res.json(pieces.map((p: any) => ({
-    title: p.title,
-    composer: p.composer,
-    musicTitleId: p.music_title_id,
-    timesPlayed: p.times_played,
-    lastPlayed: p.last_played,
-    firstPlayed: p.first_played,
-  })));
-}));
+    res.json(
+      pieces.map((p: any) => ({
+        title: p.title,
+        composer: p.composer,
+        musicTitleId: p.music_title_id,
+        timesPlayed: p.times_played,
+        lastPlayed: p.last_played,
+        firstPlayed: p.first_played,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/by-year - Get performance statistics by year
-router.get('/by-year', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
+router.get(
+  '/by-year',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
 
-  const stats = db.prepare(`
+    const stats = db
+      .prepare(
+        `
     SELECT
       strftime('%Y', c.date) as year,
       COUNT(DISTINCT c.id) as concert_count,
@@ -159,22 +195,31 @@ router.get('/by-year', asyncHandler(async (req: AuthRequest, res: Response) => {
     WHERE c.association_id = ?
     GROUP BY strftime('%Y', c.date)
     ORDER BY year DESC
-  `).all(associationId);
+  `,
+      )
+      .all(associationId);
 
-  res.json(stats.map((s: any) => ({
-    year: s.year,
-    concertCount: s.concert_count,
-    pieceCount: s.piece_count,
-    uniquePieces: s.unique_pieces,
-  })));
-}));
+    res.json(
+      stats.map((s: any) => ({
+        year: s.year,
+        concertCount: s.concert_count,
+        pieceCount: s.piece_count,
+        uniquePieces: s.unique_pieces,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/by-composer - Get performance statistics by composer
-router.get('/by-composer', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+router.get(
+  '/by-composer',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-  const stats = db.prepare(`
+    const stats = db
+      .prepare(
+        `
     SELECT
       cp.composer,
       COUNT(*) as times_played,
@@ -186,28 +231,37 @@ router.get('/by-composer', asyncHandler(async (req: AuthRequest, res: Response) 
     GROUP BY cp.composer
     ORDER BY COUNT(*) DESC
     LIMIT ?
-  `).all(associationId, limit);
+  `,
+      )
+      .all(associationId, limit);
 
-  res.json(stats.map((s: any) => ({
-    composer: s.composer,
-    timesPlayed: s.times_played,
-    uniquePieces: s.unique_pieces,
-    lastPlayed: s.last_played,
-  })));
-}));
+    res.json(
+      stats.map((s: any) => ({
+        composer: s.composer,
+        timesPlayed: s.times_played,
+        uniquePieces: s.unique_pieces,
+        lastPlayed: s.last_played,
+      })),
+    );
+  }),
+);
 
 // GET /api/performances/search - Search performance history
-router.get('/search', asyncHandler(async (req: AuthRequest, res: Response) => {
-  const associationId = req.user!.associationId;
-  const rawQuery = req.query.q;
-  const query = typeof rawQuery === 'string' ? rawQuery : '';
+router.get(
+  '/search',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const rawQuery = req.query.q;
+    const query = typeof rawQuery === 'string' ? rawQuery : '';
 
-  if (query.length < 2) {
-    res.json([]);
-    return;
-  }
+    if (query.length < 2) {
+      res.json([]);
+      return;
+    }
 
-  const results = db.prepare(`
+    const results = db
+      .prepare(
+        `
     SELECT
       cp.title,
       cp.composer,
@@ -221,16 +275,21 @@ router.get('/search', asyncHandler(async (req: AuthRequest, res: Response) => {
       AND (cp.title LIKE ? OR cp.composer LIKE ?)
     ORDER BY c.date DESC
     LIMIT 50
-  `).all(associationId, `%${query}%`, `%${query}%`);
+  `,
+      )
+      .all(associationId, `%${query}%`, `%${query}%`);
 
-  res.json(results.map((r: any) => ({
-    title: r.title,
-    composer: r.composer,
-    musicTitleId: r.music_title_id,
-    concertId: r.concert_id,
-    concertName: r.concert_name,
-    concertDate: r.concert_date,
-  })));
-}));
+    res.json(
+      results.map((r: any) => ({
+        title: r.title,
+        composer: r.composer,
+        musicTitleId: r.music_title_id,
+        concertId: r.concert_id,
+        concertName: r.concert_name,
+        concertDate: r.concert_date,
+      })),
+    );
+  }),
+);
 
 export default router;

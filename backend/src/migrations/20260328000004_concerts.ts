@@ -11,8 +11,8 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // Concert types (customizable per association)
-    db.exec(`
+  // Concert types (customizable per association)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS concert_types (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -25,8 +25,8 @@ export function up(): void {
         )
     `);
 
-    // Concerts
-    db.exec(`
+  // Concerts
+  db.exec(`
         CREATE TABLE IF NOT EXISTS concerts (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -46,8 +46,8 @@ export function up(): void {
         )
     `);
 
-    // Concert program (played pieces)
-    db.exec(`
+  // Concert program (played pieces)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS concert_program (
             id TEXT PRIMARY KEY,
             concert_id TEXT NOT NULL,
@@ -63,8 +63,8 @@ export function up(): void {
         )
     `);
 
-    // Concert media (photos, videos, audio, posters)
-    db.exec(`
+  // Concert media (photos, videos, audio, posters)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS concert_media (
             id TEXT PRIMARY KEY,
             concert_id TEXT NOT NULL,
@@ -79,8 +79,8 @@ export function up(): void {
         )
     `);
 
-    // Concert attendance (who played)
-    db.exec(`
+  // Concert attendance (who played)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS concert_attendance (
             id TEXT PRIMARY KEY,
             concert_id TEXT NOT NULL,
@@ -94,33 +94,27 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_association ON concerts(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_date ON concerts(date)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_type ON concerts(concert_type)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concert_program_concert ON concert_program(concert_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concert_program_title ON concert_program(music_title_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concert_media_concert ON concert_media(concert_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concert_attendance_concert ON concert_attendance(concert_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_concert_attendance_user ON concert_attendance(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_association ON concerts(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_date ON concerts(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concerts_type ON concerts(concert_type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_program_concert ON concert_program(concert_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_program_title ON concert_program(music_title_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_media_concert ON concert_media(concert_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_attendance_concert ON concert_attendance(concert_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_concert_attendance_user ON concert_attendance(user_id)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'concert_attendance',
-        'concert_media',
-        'concert_program',
-        'concerts',
-        'concert_types',
-    ];
+  const tables = ['concert_attendance', 'concert_media', 'concert_program', 'concerts', 'concert_types'];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

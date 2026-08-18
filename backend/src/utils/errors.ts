@@ -11,9 +11,9 @@
  * The central error handler maps this to a 400 response.
  */
 export class FileValidationError extends Error {
-    constructor(message = 'Alleen PDF bestanden zijn toegestaan.') {
-        super(message);
-        this.name = 'FileValidationError';
-        Error.captureStackTrace(this, this.constructor);
-    }
+  constructor(message = 'Alleen PDF bestanden zijn toegestaan.') {
+    super(message);
+    this.name = 'FileValidationError';
+    Error.captureStackTrace(this, this.constructor);
+  }
 }

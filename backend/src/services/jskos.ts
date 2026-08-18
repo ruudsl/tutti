@@ -66,9 +66,13 @@ function rowToConcept(row: VocabularyCacheRow): JskosConcept {
  * Get a concept by URI from cache
  */
 export function getConcept(uri: string): JskosConcept | null {
-  const row = db.prepare(`
+  const row = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache WHERE uri = ?
-  `).get(uri) as VocabularyCacheRow | undefined;
+  `,
+    )
+    .get(uri) as VocabularyCacheRow | undefined;
 
   if (!row) return null;
   return rowToConcept(row);
@@ -81,9 +85,13 @@ export function getConcepts(uris: string[]): JskosConcept[] {
   if (uris.length === 0) return [];
 
   const placeholders = uris.map(() => '?').join(',');
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache WHERE uri IN (${placeholders})
-  `).all(...uris) as VocabularyCacheRow[];
+  `,
+    )
+    .all(...uris) as VocabularyCacheRow[];
 
   return rows.map(rowToConcept);
 }
@@ -95,7 +103,7 @@ export function searchConcepts(
   query: string,
   type?: 'instrument' | 'genre' | 'composer',
   limit: number = 20,
-  language: string = 'nl'
+  language: string = 'nl',
 ): JskosSearchResult {
   const searchQuery = query.toLowerCase().trim();
 
@@ -156,15 +164,16 @@ export function searchConcepts(
 /**
  * Get all concepts of a specific type
  */
-export function getConceptsByType(
-  type: 'instrument' | 'genre' | 'composer',
-  language: string = 'nl'
-): JskosConcept[] {
-  const rows = db.prepare(`
+export function getConceptsByType(type: 'instrument' | 'genre' | 'composer', language: string = 'nl'): JskosConcept[] {
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache
     WHERE vocabulary_type = ?
     ORDER BY json_extract(pref_label, '$.${language}'), json_extract(pref_label, '$.en')
-  `).all(type) as VocabularyCacheRow[];
+  `,
+    )
+    .all(type) as VocabularyCacheRow[];
 
   return rows.map(rowToConcept);
 }
@@ -172,16 +181,17 @@ export function getConceptsByType(
 /**
  * Get root concepts (concepts without broader)
  */
-export function getRootConcepts(
-  type: 'instrument' | 'genre' | 'composer',
-  language: string = 'nl'
-): JskosConcept[] {
-  const rows = db.prepare(`
+export function getRootConcepts(type: 'instrument' | 'genre' | 'composer', language: string = 'nl'): JskosConcept[] {
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache
     WHERE vocabulary_type = ?
     AND (broader IS NULL OR broader = '[]' OR broader = 'null')
     ORDER BY json_extract(pref_label, '$.${language}'), json_extract(pref_label, '$.en')
-  `).all(type) as VocabularyCacheRow[];
+  `,
+    )
+    .all(type) as VocabularyCacheRow[];
 
   return rows.map(rowToConcept);
 }
@@ -189,16 +199,17 @@ export function getRootConcepts(
 /**
  * Get child concepts (narrower)
  */
-export function getChildConcepts(
-  parentUri: string,
-  language: string = 'nl'
-): JskosConcept[] {
+export function getChildConcepts(parentUri: string, language: string = 'nl'): JskosConcept[] {
   // Find concepts where broader contains parentUri
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache
     WHERE broader LIKE ?
     ORDER BY json_extract(pref_label, '$.${language}'), json_extract(pref_label, '$.en')
-  `).all(`%"${parentUri}"%`) as VocabularyCacheRow[];
+  `,
+    )
+    .all(`%"${parentUri}"%`) as VocabularyCacheRow[];
 
   return rows.map(rowToConcept);
 }
@@ -208,7 +219,7 @@ export function getChildConcepts(
  */
 export function buildHierarchy(
   type: 'instrument' | 'genre' | 'composer',
-  language: string = 'nl'
+  language: string = 'nl',
 ): JskosHierarchyNode[] {
   const allConcepts = getConceptsByType(type, language);
   const conceptMap = new Map<string, JskosHierarchyNode>();
@@ -269,7 +280,8 @@ export function buildHierarchy(
 export function upsertConcept(concept: JskosConcept, ttlHours: number = DEFAULT_CACHE_TTL_HOURS): void {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
 
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO vocabulary_cache (
       uri, vocabulary_type, pref_label, alt_labels, broader, narrower,
       notation, definition, fetched_at, expires_at
@@ -284,7 +296,8 @@ export function upsertConcept(concept: JskosConcept, ttlHours: number = DEFAULT_
       definition = excluded.definition,
       fetched_at = datetime('now'),
       expires_at = excluded.expires_at
-  `).run(
+  `,
+  ).run(
     concept.uri,
     concept.type,
     JSON.stringify(concept.prefLabel),
@@ -293,7 +306,7 @@ export function upsertConcept(concept: JskosConcept, ttlHours: number = DEFAULT_
     concept.narrower ? JSON.stringify(concept.narrower) : null,
     concept.notation || null,
     concept.definition ? JSON.stringify(concept.definition) : null,
-    expiresAt
+    expiresAt,
   );
 }
 
@@ -309,11 +322,15 @@ export function deleteConcept(uri: string): boolean {
  * Get expired concepts that need refreshing
  */
 export function getExpiredConcepts(limit: number = 100): JskosConcept[] {
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM vocabulary_cache
     WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
     LIMIT ?
-  `).all(limit) as VocabularyCacheRow[];
+  `,
+    )
+    .all(limit) as VocabularyCacheRow[];
 
   return rows.map(rowToConcept);
 }
@@ -341,21 +358,31 @@ export function getCacheStats(): {
 } {
   const total = (db.prepare('SELECT COUNT(*) as count FROM vocabulary_cache').get() as { count: number }).count;
 
-  const byTypeRows = db.prepare(`
+  const byTypeRows = db
+    .prepare(
+      `
     SELECT vocabulary_type, COUNT(*) as count
     FROM vocabulary_cache
     GROUP BY vocabulary_type
-  `).all() as Array<{ vocabulary_type: string; count: number }>;
+  `,
+    )
+    .all() as Array<{ vocabulary_type: string; count: number }>;
 
   const byType: Record<string, number> = {};
   for (const row of byTypeRows) {
     byType[row.vocabulary_type] = row.count;
   }
 
-  const expired = (db.prepare(`
+  const expired = (
+    db
+      .prepare(
+        `
     SELECT COUNT(*) as count FROM vocabulary_cache
     WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
-  `).get() as { count: number }).count;
+  `,
+      )
+      .get() as { count: number }
+  ).count;
 
   return { total, byType, expired };
 }
@@ -365,7 +392,7 @@ export function getCacheStats(): {
  */
 export function linkTitleToInstruments(
   titleId: string,
-  instruments: Array<{ uri: string; count?: number; isOptional?: boolean; notes?: string }>
+  instruments: Array<{ uri: string; count?: number; isOptional?: boolean; notes?: string }>,
 ): void {
   // Remove existing links
   db.prepare('DELETE FROM music_title_instruments WHERE music_title_id = ?').run(titleId);
@@ -377,21 +404,19 @@ export function linkTitleToInstruments(
   `);
 
   for (const instr of instruments) {
-    insert.run(
-      titleId,
-      instr.uri,
-      instr.count || 1,
-      instr.isOptional ? 1 : 0,
-      instr.notes || null
-    );
+    insert.run(titleId, instr.uri, instr.count || 1, instr.isOptional ? 1 : 0, instr.notes || null);
   }
 }
 
 /**
  * Get instruments linked to a music title
  */
-export function getTitleInstruments(titleId: string): Array<JskosConcept & { count: number; isOptional: boolean; notes?: string }> {
-  const rows = db.prepare(`
+export function getTitleInstruments(
+  titleId: string,
+): Array<JskosConcept & { count: number; isOptional: boolean; notes?: string }> {
+  const rows = db
+    .prepare(
+      `
     SELECT
       v.uri, v.vocabulary_type, v.pref_label, v.alt_labels, v.broader, v.narrower, v.notation, v.definition,
       i.count, i.is_optional, i.notes
@@ -399,9 +424,11 @@ export function getTitleInstruments(titleId: string): Array<JskosConcept & { cou
     JOIN vocabulary_cache v ON v.uri = i.instrument_uri
     WHERE i.music_title_id = ?
     ORDER BY v.notation, json_extract(v.pref_label, '$.nl')
-  `).all(titleId) as Array<VocabularyCacheRow & { count: number; is_optional: number; notes: string | null }>;
+  `,
+    )
+    .all(titleId) as Array<VocabularyCacheRow & { count: number; is_optional: number; notes: string | null }>;
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     ...rowToConcept(row),
     count: row.count,
     isOptional: Boolean(row.is_optional),
@@ -412,13 +439,12 @@ export function getTitleInstruments(titleId: string): Array<JskosConcept & { cou
 /**
  * Link a music title to vocabulary concepts (genres, styles, etc.)
  */
-export function linkTitleToVocabulary(
-  titleId: string,
-  vocabularyType: string,
-  uris: string[]
-): void {
+export function linkTitleToVocabulary(titleId: string, vocabularyType: string, uris: string[]): void {
   // Remove existing links of this type
-  db.prepare('DELETE FROM music_title_vocabulary WHERE music_title_id = ? AND vocabulary_type = ?').run(titleId, vocabularyType);
+  db.prepare('DELETE FROM music_title_vocabulary WHERE music_title_id = ? AND vocabulary_type = ?').run(
+    titleId,
+    vocabularyType,
+  );
 
   // Insert new links
   const insert = db.prepare(`

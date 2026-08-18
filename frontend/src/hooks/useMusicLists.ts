@@ -55,8 +55,7 @@ export function useCreateMusicList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ name, orchestraId }: { name: string; orchestraId: string }) =>
-      createMusicList(name, orchestraId),
+    mutationFn: ({ name, orchestraId }: { name: string; orchestraId: string }) => createMusicList(name, orchestraId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicLists(variables.orchestraId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
@@ -75,7 +74,16 @@ export function useUpdateMusicList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; name: string; listType?: 'regular' | 'concert'; concertDate?: string | null; concertLocation?: string | null }) => updateMusicList(id, data),
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      name: string;
+      listType?: 'regular' | 'concert';
+      concertDate?: string | null;
+      concertLocation?: string | null;
+    }) => updateMusicList(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['musicLists'] });
       showSuccess('Muzieklijst bijgewerkt');
@@ -112,8 +120,7 @@ export function useAddPieceToList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) =>
-      addPieceToList(listId, pieceId),
+    mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) => addPieceToList(listId, pieceId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
     },
@@ -130,8 +137,7 @@ export function useRemovePieceFromList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) =>
-      removePieceFromList(listId, pieceId),
+    mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) => removePieceFromList(listId, pieceId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
     },
@@ -148,8 +154,7 @@ export function useAddTitleToList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ listId, title }: { listId: string; title: string }) =>
-      addTitleToList(listId, title),
+    mutationFn: ({ listId, title }: { listId: string; title: string }) => addTitleToList(listId, title),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
       showSuccess(`${result.added} stuk(ken) toegevoegd aan lijst`);
@@ -167,8 +172,7 @@ export function useRemoveTitleFromList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ listId, title }: { listId: string; title: string }) =>
-      removeTitleFromList(listId, title),
+    mutationFn: ({ listId, title }: { listId: string; title: string }) => removeTitleFromList(listId, title),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
       showSuccess(`${result.removed} stuk(ken) verwijderd uit lijst`);

@@ -91,7 +91,15 @@ export interface TourDetail extends Tour {
   participants: TourParticipant[];
   days: TourDay[];
   accommodations: TourAccommodation[];
-  transport: { id: string; transportType: string; provider?: string; departureLocation?: string; departureTime?: string; arrivalLocation?: string; arrivalTime?: string }[];
+  transport: {
+    id: string;
+    transportType: string;
+    provider?: string;
+    departureLocation?: string;
+    departureTime?: string;
+    arrivalLocation?: string;
+    arrivalTime?: string;
+  }[];
 }
 
 export interface CreateTourData {
@@ -142,13 +150,16 @@ export async function deleteTour(id: string): Promise<{ message: string }> {
   return response.data;
 }
 
-export async function registerForTour(tourId: string, data?: {
-  roomPreference?: string;
-  dietaryRequirements?: string;
-  emergencyContact?: string;
-  emergencyPhone?: string;
-  notes?: string;
-}): Promise<{ id: string; status: string; message: string }> {
+export async function registerForTour(
+  tourId: string,
+  data?: {
+    roomPreference?: string;
+    dietaryRequirements?: string;
+    emergencyContact?: string;
+    emergencyPhone?: string;
+    notes?: string;
+  },
+): Promise<{ id: string; status: string; message: string }> {
   const response = await api.post(`/tours/${tourId}/register`, data || {});
   return response.data;
 }
@@ -158,7 +169,10 @@ export async function cancelTourRegistration(tourId: string): Promise<{ message:
   return response.data;
 }
 
-export async function addTourAccommodation(tourId: string, data: Partial<TourAccommodation>): Promise<{ id: string; message: string }> {
+export async function addTourAccommodation(
+  tourId: string,
+  data: Partial<TourAccommodation>,
+): Promise<{ id: string; message: string }> {
   const response = await api.post(`/tours/${tourId}/accommodations`, data);
   return response.data;
 }
@@ -195,7 +209,7 @@ export interface AddDayActivityData {
 export async function addDayActivity(
   tourId: string,
   dayId: string,
-  data: AddDayActivityData
+  data: AddDayActivityData,
 ): Promise<{ id: string; message: string }> {
   const response = await api.post(`/tours/${tourId}/days/${dayId}/activities`, data);
   return response.data;
@@ -204,7 +218,7 @@ export async function addDayActivity(
 export async function deleteDayActivity(
   tourId: string,
   dayId: string,
-  activityId: string
+  activityId: string,
 ): Promise<{ message: string }> {
   const response = await api.delete(`/tours/${tourId}/days/${dayId}/activities/${activityId}`);
   return response.data;
@@ -222,7 +236,7 @@ export interface AddTourTransportData {
 
 export async function addTourTransport(
   tourId: string,
-  data: AddTourTransportData
+  data: AddTourTransportData,
 ): Promise<{ id: string; message: string }> {
   const response = await api.post(`/tours/${tourId}/transport`, data);
   return response.data;

@@ -68,7 +68,10 @@ export const getTelegramConfig = async (): Promise<TelegramConfig> => {
   return data;
 };
 
-export const saveTelegramConfig = async (config: { botToken?: string; enabled: boolean }): Promise<{ message: string }> => {
+export const saveTelegramConfig = async (config: {
+  botToken?: string;
+  enabled: boolean;
+}): Promise<{ message: string }> => {
   const { data } = await api.put('/settings/telegram', config);
   return data;
 };

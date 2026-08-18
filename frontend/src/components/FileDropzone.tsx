@@ -34,7 +34,10 @@ export function FileDropzone({
         const errors = rejectedFiles.map((rejection) => {
           const errorMessages = rejection.errors.map((e) => {
             if (e.code === 'file-too-large') {
-              return t('fileDropzone.fileTooLarge', { fileName: rejection.file.name, maxSize: formatFileSize(maxSize) });
+              return t('fileDropzone.fileTooLarge', {
+                fileName: rejection.file.name,
+                maxSize: formatFileSize(maxSize),
+              });
             }
             if (e.code === 'file-invalid-type') {
               return t('fileDropzone.invalidFileType', { fileName: rejection.file.name });
@@ -50,7 +53,7 @@ export function FileDropzone({
         onFilesAccepted(acceptedFiles);
       }
     },
-    [onFilesAccepted, maxSize, t]
+    [onFilesAccepted, maxSize, t],
   );
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
@@ -72,15 +75,11 @@ export function FileDropzone({
       <input {...getInputProps()} />
       {children || (
         <>
-          <div className="dropzone-icon" aria-hidden="true"><Icon name="folder" size={48} /></div>
+          <div className="dropzone-icon" aria-hidden="true">
+            <Icon name="folder" size={48} />
+          </div>
           <p className="dropzone-text">
-            {isDragActive ? (
-              t('fileDropzone.dropHere')
-            ) : (
-              <>
-                {t('fileDropzone.dragOrClick')}
-              </>
-            )}
+            {isDragActive ? t('fileDropzone.dropHere') : <>{t('fileDropzone.dragOrClick')}</>}
           </p>
           <p className="dropzone-text" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
             {t('fileDropzone.pdfOnly', { maxSize: formatFileSize(maxSize) })}

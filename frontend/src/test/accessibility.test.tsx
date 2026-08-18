@@ -39,9 +39,7 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
-        <BrowserRouter>
-          {children}
-        </BrowserRouter>
+        <BrowserRouter>{children}</BrowserRouter>
       </I18nextProvider>
     </QueryClientProvider>
   );
@@ -55,7 +53,7 @@ describe('Real Component Accessibility Tests', () => {
           <Modal title="Test Modal" onClose={() => {}}>
             <p>Modal content here</p>
           </Modal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -68,7 +66,7 @@ describe('Real Component Accessibility Tests', () => {
           <Modal title="Test Modal" onClose={() => {}}>
             <p>Content</p>
           </Modal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const dialog = screen.getByRole('dialog');
@@ -86,7 +84,7 @@ describe('Real Component Accessibility Tests', () => {
           <Modal title="Test" onClose={onClose}>
             <p>Content</p>
           </Modal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       await userEvent.keyboard('{Escape}');
@@ -99,7 +97,7 @@ describe('Real Component Accessibility Tests', () => {
           <Modal title="Test" onClose={() => {}}>
             <p>Content</p>
           </Modal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const closeButton = screen.getByRole('button', { name: /sluiten|close/i });
@@ -111,17 +109,13 @@ describe('Real Component Accessibility Tests', () => {
     it('should have no accessibility violations', async () => {
       const { container } = render(
         <TestWrapper>
-          <FormModal
-            title="Edit User"
-            onClose={() => {}}
-            onSubmit={() => {}}
-          >
+          <FormModal title="Edit User" onClose={() => {}} onSubmit={() => {}}>
             <div>
               <label htmlFor="name">Name</label>
               <input id="name" type="text" />
             </div>
           </FormModal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -131,15 +125,10 @@ describe('Real Component Accessibility Tests', () => {
     it('submit button should be associated with form', () => {
       render(
         <TestWrapper>
-          <FormModal
-            title="Test Form"
-            onClose={() => {}}
-            onSubmit={() => {}}
-            submitLabel="Save"
-          >
+          <FormModal title="Test Form" onClose={() => {}} onSubmit={() => {}} submitLabel="Save">
             <input type="text" aria-label="Test input" />
           </FormModal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const submitButton = screen.getByRole('button', { name: /save|opslaan/i });
@@ -158,7 +147,7 @@ describe('Real Component Accessibility Tests', () => {
             onConfirm={() => {}}
             onCancel={() => {}}
           />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -176,7 +165,7 @@ describe('Real Component Accessibility Tests', () => {
             onConfirm={() => {}}
             onCancel={() => {}}
           />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       expect(screen.getByRole('button', { name: /yes, delete/i })).toBeInTheDocument();
@@ -188,14 +177,8 @@ describe('Real Component Accessibility Tests', () => {
     it('should have no accessibility violations', async () => {
       const { container } = render(
         <TestWrapper>
-          <Pagination
-            page={3}
-            totalPages={10}
-            onPageChange={() => {}}
-            total={100}
-            limit={10}
-          />
-        </TestWrapper>
+          <Pagination page={3} totalPages={10} onPageChange={() => {}} total={100} limit={10} />
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -205,12 +188,8 @@ describe('Real Component Accessibility Tests', () => {
     it('should have proper navigation landmark', () => {
       render(
         <TestWrapper>
-          <Pagination
-            page={1}
-            totalPages={5}
-            onPageChange={() => {}}
-          />
-        </TestWrapper>
+          <Pagination page={1} totalPages={5} onPageChange={() => {}} />
+        </TestWrapper>,
       );
 
       const nav = screen.getByRole('navigation');
@@ -220,12 +199,8 @@ describe('Real Component Accessibility Tests', () => {
     it('should indicate current page', () => {
       render(
         <TestWrapper>
-          <Pagination
-            page={2}
-            totalPages={5}
-            onPageChange={() => {}}
-          />
-        </TestWrapper>
+          <Pagination page={2} totalPages={5} onPageChange={() => {}} />
+        </TestWrapper>,
       );
 
       const currentPage = screen.getByRole('button', { current: 'page' });
@@ -235,12 +210,8 @@ describe('Real Component Accessibility Tests', () => {
     it('previous button should be disabled on first page', () => {
       render(
         <TestWrapper>
-          <Pagination
-            page={1}
-            totalPages={5}
-            onPageChange={() => {}}
-          />
-        </TestWrapper>
+          <Pagination page={1} totalPages={5} onPageChange={() => {}} />
+        </TestWrapper>,
       );
 
       const prevButton = screen.getByRole('button', { name: /previous|vorige/i });
@@ -250,12 +221,8 @@ describe('Real Component Accessibility Tests', () => {
     it('next button should be disabled on last page', () => {
       render(
         <TestWrapper>
-          <Pagination
-            page={5}
-            totalPages={5}
-            onPageChange={() => {}}
-          />
-        </TestWrapper>
+          <Pagination page={5} totalPages={5} onPageChange={() => {}} />
+        </TestWrapper>,
       );
 
       const nextButton = screen.getByRole('button', { name: /next|volgende/i });
@@ -268,7 +235,7 @@ describe('Real Component Accessibility Tests', () => {
       render(
         <TestWrapper>
           <Icon name="home" />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const svg = document.querySelector('svg');
@@ -282,7 +249,7 @@ describe('Real Component Accessibility Tests', () => {
             <Icon name="check" aria-hidden={false} />
             <span>Approve</span>
           </button>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -295,7 +262,7 @@ describe('Real Component Accessibility Tests', () => {
       const { container } = render(
         <TestWrapper>
           <NotFound />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -306,7 +273,7 @@ describe('Real Component Accessibility Tests', () => {
       render(
         <TestWrapper>
           <NotFound />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const heading = screen.getByRole('heading', { level: 1 });
@@ -322,7 +289,7 @@ describe('Real Component Accessibility Tests', () => {
             <button type="button">Action 1</button>
             <button type="button">Action 2</button>
           </Modal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       // Tab through buttons
@@ -337,12 +304,8 @@ describe('Real Component Accessibility Tests', () => {
       const onPageChange = vi.fn();
       render(
         <TestWrapper>
-          <Pagination
-            page={2}
-            totalPages={5}
-            onPageChange={onPageChange}
-          />
-        </TestWrapper>
+          <Pagination page={2} totalPages={5} onPageChange={onPageChange} />
+        </TestWrapper>,
       );
 
       // Focus on page 3 button and press Enter
@@ -358,11 +321,7 @@ describe('Real Component Accessibility Tests', () => {
     it('form inputs in modal should have labels', async () => {
       const { container } = render(
         <TestWrapper>
-          <FormModal
-            title="Add User"
-            onClose={() => {}}
-            onSubmit={() => {}}
-          >
+          <FormModal title="Add User" onClose={() => {}} onSubmit={() => {}}>
             <div className="form-group">
               <label htmlFor="email">Email address</label>
               <input id="email" type="email" required />
@@ -375,7 +334,7 @@ describe('Real Component Accessibility Tests', () => {
               </select>
             </div>
           </FormModal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -385,15 +344,10 @@ describe('Real Component Accessibility Tests', () => {
     it('disabled submit button should indicate state', () => {
       render(
         <TestWrapper>
-          <FormModal
-            title="Test"
-            onClose={() => {}}
-            onSubmit={() => {}}
-            submitDisabled={true}
-          >
+          <FormModal title="Test" onClose={() => {}} onSubmit={() => {}} submitDisabled={true}>
             <p>Form content</p>
           </FormModal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const submitButton = screen.getByRole('button', { name: /save|opslaan/i });
@@ -403,15 +357,10 @@ describe('Real Component Accessibility Tests', () => {
     it('loading state should be announced', () => {
       render(
         <TestWrapper>
-          <FormModal
-            title="Test"
-            onClose={() => {}}
-            onSubmit={() => {}}
-            isSubmitting={true}
-          >
+          <FormModal title="Test" onClose={() => {}} onSubmit={() => {}} isSubmitting={true}>
             <p>Form content</p>
           </FormModal>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const submitButton = screen.getByRole('button', { name: /processing|verwerken|bezig/i });
@@ -430,7 +379,7 @@ describe('Real Component Accessibility Tests', () => {
             onConfirm={() => {}}
             onCancel={() => {}}
           />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -447,7 +396,7 @@ describe('Real Component Accessibility Tests', () => {
             onConfirm={() => {}}
             onCancel={() => {}}
           />
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -470,7 +419,7 @@ describe('Basic Accessibility Patterns', () => {
               <h1>Page Title</h1>
             </main>
           </div>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);
@@ -497,7 +446,7 @@ describe('Basic Accessibility Patterns', () => {
               </tr>
             </tbody>
           </table>
-        </TestWrapper>
+        </TestWrapper>,
       );
 
       const results = await axe(container);

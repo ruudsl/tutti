@@ -11,12 +11,12 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // ===========================================
-    // REHEARSAL PLANNER (Per-piece practice schedules)
-    // ===========================================
+  // ===========================================
+  // REHEARSAL PLANNER (Per-piece practice schedules)
+  // ===========================================
 
-    // Practice schedules per music piece
-    db.exec(`
+  // Practice schedules per music piece
+  db.exec(`
         CREATE TABLE IF NOT EXISTS practice_schedules (
             id TEXT PRIMARY KEY,
             music_title_id TEXT NOT NULL,
@@ -34,8 +34,8 @@ export function up(): void {
         )
     `);
 
-    // Milestones/goals per practice schedule
-    db.exec(`
+  // Milestones/goals per practice schedule
+  db.exec(`
         CREATE TABLE IF NOT EXISTS practice_schedule_milestones (
             id TEXT PRIMARY KEY,
             schedule_id TEXT NOT NULL,
@@ -50,8 +50,8 @@ export function up(): void {
         )
     `);
 
-    // Per-section progress per milestone
-    db.exec(`
+  // Per-section progress per milestone
+  db.exec(`
         CREATE TABLE IF NOT EXISTS practice_section_progress (
             id TEXT PRIMARY KEY,
             milestone_id TEXT NOT NULL,
@@ -67,12 +67,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // SECURITY: IP WHITELIST
-    // ===========================================
+  // ===========================================
+  // SECURITY: IP WHITELIST
+  // ===========================================
 
-    // IP whitelist for admin route access control
-    db.exec(`
+  // IP whitelist for admin route access control
+  db.exec(`
         CREATE TABLE IF NOT EXISTS ip_whitelist (
             id TEXT PRIMARY KEY,
             association_id TEXT,
@@ -87,32 +87,31 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_title ON practice_schedules(music_title_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_orchestra ON practice_schedules(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_date ON practice_schedules(target_date)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_milestones_schedule ON practice_schedule_milestones(schedule_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_section_progress_milestone ON practice_section_progress(milestone_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_practice_section_progress_instrument ON practice_section_progress(instrument_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_ip_whitelist_association ON ip_whitelist(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_ip_whitelist_enabled ON ip_whitelist(is_enabled)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_title ON practice_schedules(music_title_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_orchestra ON practice_schedules(orchestra_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_practice_schedules_date ON practice_schedules(target_date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_practice_milestones_schedule ON practice_schedule_milestones(schedule_id)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_practice_section_progress_milestone ON practice_section_progress(milestone_id)',
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_practice_section_progress_instrument ON practice_section_progress(instrument_id)',
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_ip_whitelist_association ON ip_whitelist(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_ip_whitelist_enabled ON ip_whitelist(is_enabled)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'ip_whitelist',
-        'practice_section_progress',
-        'practice_schedule_milestones',
-        'practice_schedules',
-    ];
+  const tables = ['ip_whitelist', 'practice_section_progress', 'practice_schedule_milestones', 'practice_schedules'];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

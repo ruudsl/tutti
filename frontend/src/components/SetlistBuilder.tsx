@@ -62,15 +62,15 @@ interface SortablePieceItemProps {
   removeFromSetlistTitle: string;
 }
 
-function SortablePieceItem({ piece, index, onRemove, isDark, dragToReorderTitle, removeFromSetlistTitle }: SortablePieceItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: piece.id });
+function SortablePieceItem({
+  piece,
+  index,
+  onRemove,
+  isDark,
+  dragToReorderTitle,
+  removeFromSetlistTitle,
+}: SortablePieceItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: piece.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -86,29 +86,15 @@ function SortablePieceItem({ piece, index, onRemove, isDark, dragToReorderTitle,
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="setlist-piece-item"
-      data-dragging={isDragging}
-    >
-      <div
-        className="setlist-drag-handle"
-        {...attributes}
-        {...listeners}
-        title={dragToReorderTitle}
-      >
+    <div ref={setNodeRef} style={style} className="setlist-piece-item" data-dragging={isDragging}>
+      <div className="setlist-drag-handle" {...attributes} {...listeners} title={dragToReorderTitle}>
         <span className="drag-handle-icon">⋮⋮</span>
       </div>
       <span className="setlist-piece-number">{index + 1}</span>
       <div className="setlist-piece-info">
         <span className="setlist-piece-title">{piece.title}</span>
-        {piece.composer && (
-          <span className="setlist-piece-composer">{piece.composer}</span>
-        )}
-        {piece.arranger && (
-          <span className="setlist-piece-arranger">arr. {piece.arranger}</span>
-        )}
+        {piece.composer && <span className="setlist-piece-composer">{piece.composer}</span>}
+        {piece.arranger && <span className="setlist-piece-arranger">arr. {piece.arranger}</span>}
       </div>
       <span className="setlist-piece-duration">{formatDuration(piece.durationSeconds)}</span>
       <button
@@ -233,9 +219,7 @@ function PieceOverlay({ piece, isDark }: { piece: SetlistPiece; isDark: boolean 
       <div style={{ flex: 1 }}>
         <span style={{ fontWeight: 500, color: 'var(--text)' }}>{piece.title}</span>
         {piece.composer && (
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginLeft: '8px' }}>
-            {piece.composer}
-          </span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)', marginLeft: '8px' }}>{piece.composer}</span>
         )}
       </div>
       <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
@@ -269,15 +253,15 @@ export function SetlistBuilder({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Filter available pieces (exclude already added)
   const filteredAvailablePieces = useMemo(() => {
-    const addedIds = new Set(pieces.map(p => p.id));
+    const addedIds = new Set(pieces.map((p) => p.id));
     return availablePieces
-      .filter(p => !addedIds.has(p.id))
-      .filter(p => {
+      .filter((p) => !addedIds.has(p.id))
+      .filter((p) => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
         return (
@@ -325,7 +309,7 @@ export function SetlistBuilder({
   }, []);
 
   const handleRemovePiece = useCallback((id: string) => {
-    setPieces((prev) => prev.filter(p => p.id !== id));
+    setPieces((prev) => prev.filter((p) => p.id !== id));
     triggerHaptic('light');
   }, []);
 
@@ -350,7 +334,7 @@ export function SetlistBuilder({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const activePiece = activeDragId ? pieces.find(p => p.id === activeDragId) : null;
+  const activePiece = activeDragId ? pieces.find((p) => p.id === activeDragId) : null;
 
   return (
     <div className="setlist-builder">
@@ -371,11 +355,7 @@ export function SetlistBuilder({
         </div>
         <div className="setlist-actions">
           {onCancel && (
-            <button
-              className="btn btn-outline"
-              onClick={onCancel}
-              type="button"
-            >
+            <button className="btn btn-outline" onClick={onCancel} type="button">
               {t('common.cancel')}
             </button>
           )}
@@ -398,7 +378,9 @@ export function SetlistBuilder({
         </div>
         <div className="setlist-stat">
           <Icon name="clock" size={18} />
-          <span>{t('setlistBuilder.totalDuration')}: {totalDuration}</span>
+          <span>
+            {t('setlistBuilder.totalDuration')}: {totalDuration}
+          </span>
         </div>
       </div>
 
@@ -420,10 +402,7 @@ export function SetlistBuilder({
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext
-                items={pieces.map(p => p.id)}
-                strategy={verticalListSortingStrategy}
-              >
+              <SortableContext items={pieces.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                 <div className="setlist-pieces-list">
                   {pieces.map((piece, index) => (
                     <SortablePieceItem
@@ -438,11 +417,7 @@ export function SetlistBuilder({
                   ))}
                 </div>
               </SortableContext>
-              <DragOverlay>
-                {activePiece ? (
-                  <PieceOverlay piece={activePiece} isDark={isDark} />
-                ) : null}
-              </DragOverlay>
+              <DragOverlay>{activePiece ? <PieceOverlay piece={activePiece} isDark={isDark} /> : null}</DragOverlay>
             </DndContext>
           )}
         </div>
@@ -485,13 +460,9 @@ export function SetlistBuilder({
                   <div key={piece.id} className="setlist-available-item">
                     <div className="setlist-available-info">
                       <span className="setlist-available-title">{piece.title}</span>
-                      {piece.composer && (
-                        <span className="setlist-available-composer">{piece.composer}</span>
-                      )}
+                      {piece.composer && <span className="setlist-available-composer">{piece.composer}</span>}
                     </div>
-                    <span className="setlist-available-duration">
-                      {formatDuration(piece.durationSeconds)}
-                    </span>
+                    <span className="setlist-available-duration">{formatDuration(piece.durationSeconds)}</span>
                     <button
                       className="setlist-add-btn"
                       onClick={() => handleAddPiece(piece)}

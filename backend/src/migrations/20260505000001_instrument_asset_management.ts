@@ -14,11 +14,11 @@
 import db from '../database/connection';
 
 export function up(): void {
-    // ===========================================
-    // INSTRUMENT ASSETS (extends equipment)
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT ASSETS (extends equipment)
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_assets (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -90,11 +90,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT VALUATIONS
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT VALUATIONS
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_valuations (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -122,11 +122,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT INSURANCE
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT INSURANCE
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_insurance_policies (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -166,7 +166,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_insurance_coverage (
             id TEXT PRIMARY KEY,
             policy_id TEXT NOT NULL,
@@ -185,7 +185,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_insurance_claims (
             id TEXT PRIMARY KEY,
             policy_id TEXT NOT NULL,
@@ -222,11 +222,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT REPAIRS (extended)
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT REPAIRS (extended)
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_repairs (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -280,11 +280,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT LOANS (extended)
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT LOANS (extended)
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_loans (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -346,11 +346,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT DOCUMENTS
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT DOCUMENTS
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_documents (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -380,11 +380,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT MAINTENANCE SCHEDULES
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT MAINTENANCE SCHEDULES
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_maintenance_schedules (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -417,11 +417,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INSTRUMENT HISTORY/AUDIT LOG
-    // ===========================================
+  // ===========================================
+  // INSTRUMENT HISTORY/AUDIT LOG
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_history (
             id TEXT PRIMARY KEY,
             asset_id TEXT NOT NULL,
@@ -450,73 +450,75 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    // Asset indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_association ON instrument_assets(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_status ON instrument_assets(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_type ON instrument_assets(instrument_type)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_category ON instrument_assets(category)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_assigned ON instrument_assets(assigned_to_user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_serial ON instrument_assets(serial_number)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_barcode ON instrument_assets(barcode)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_deleted ON instrument_assets(deleted_at)');
+  // Asset indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_association ON instrument_assets(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_status ON instrument_assets(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_type ON instrument_assets(instrument_type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_category ON instrument_assets(category)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_assigned ON instrument_assets(assigned_to_user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_serial ON instrument_assets(serial_number)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_barcode ON instrument_assets(barcode)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_assets_deleted ON instrument_assets(deleted_at)');
 
-    // Valuation indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_valuations_asset ON instrument_valuations(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_valuations_date ON instrument_valuations(valuation_date)');
+  // Valuation indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_valuations_asset ON instrument_valuations(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_valuations_date ON instrument_valuations(valuation_date)');
 
-    // Insurance indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_policies_association ON instrument_insurance_policies(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_policies_status ON instrument_insurance_policies(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_coverage_policy ON instrument_insurance_coverage(policy_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_coverage_asset ON instrument_insurance_coverage(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_policy ON instrument_insurance_claims(policy_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_asset ON instrument_insurance_claims(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON instrument_insurance_claims(status)');
+  // Insurance indexes
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_insurance_policies_association ON instrument_insurance_policies(association_id)',
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_policies_status ON instrument_insurance_policies(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_coverage_policy ON instrument_insurance_coverage(policy_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_coverage_asset ON instrument_insurance_coverage(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_policy ON instrument_insurance_claims(policy_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_asset ON instrument_insurance_claims(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON instrument_insurance_claims(status)');
 
-    // Repair indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_asset ON instrument_repairs(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_status ON instrument_repairs(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_priority ON instrument_repairs(priority)');
+  // Repair indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_asset ON instrument_repairs(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_status ON instrument_repairs(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_repairs_priority ON instrument_repairs(priority)');
 
-    // Loan indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_asset ON instrument_loans(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_borrower ON instrument_loans(borrower_user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_status ON instrument_loans(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_dates ON instrument_loans(loan_date, expected_return_date)');
+  // Loan indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_asset ON instrument_loans(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_borrower ON instrument_loans(borrower_user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_status ON instrument_loans(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_loans_dates ON instrument_loans(loan_date, expected_return_date)');
 
-    // Document indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_documents_asset ON instrument_documents(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_documents_type ON instrument_documents(document_type)');
+  // Document indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_documents_asset ON instrument_documents(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_documents_type ON instrument_documents(document_type)');
 
-    // Maintenance schedule indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_maintenance_asset ON instrument_maintenance_schedules(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_maintenance_next ON instrument_maintenance_schedules(next_due)');
+  // Maintenance schedule indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_maintenance_asset ON instrument_maintenance_schedules(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_maintenance_next ON instrument_maintenance_schedules(next_due)');
 
-    // History indexes
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_asset ON instrument_history(asset_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_type ON instrument_history(event_type)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_date ON instrument_history(event_date)');
+  // History indexes
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_asset ON instrument_history(asset_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_type ON instrument_history(event_type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_history_date ON instrument_history(event_date)');
 }
 
 export function down(): void {
-    const tables = [
-        'instrument_history',
-        'instrument_maintenance_schedules',
-        'instrument_documents',
-        'instrument_loans',
-        'instrument_repairs',
-        'instrument_insurance_claims',
-        'instrument_insurance_coverage',
-        'instrument_insurance_policies',
-        'instrument_valuations',
-        'instrument_assets',
-    ];
+  const tables = [
+    'instrument_history',
+    'instrument_maintenance_schedules',
+    'instrument_documents',
+    'instrument_loans',
+    'instrument_repairs',
+    'instrument_insurance_claims',
+    'instrument_insurance_coverage',
+    'instrument_insurance_policies',
+    'instrument_valuations',
+    'instrument_assets',
+  ];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

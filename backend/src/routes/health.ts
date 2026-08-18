@@ -12,197 +12,195 @@ const router = Router();
 
 // Types for health check responses
 interface ServiceStatus {
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    message?: string;
-    latency?: number;
-    details?: Record<string, any>;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  message?: string;
+  latency?: number;
+  details?: Record<string, any>;
 }
 
 interface HealthCheckResponse {
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    timestamp: string;
-    uptime: number;
-    version: string;
-    environment: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  uptime: number;
+  version: string;
+  environment: string;
 }
 
 interface DetailedHealthCheckResponse extends HealthCheckResponse {
-    services: {
-        database: ServiceStatus;
-        disk: ServiceStatus;
-        memory: ServiceStatus;
-    };
-    system: {
-        platform: string;
-        arch: string;
-        nodeVersion: string;
-        cpuCount: number;
-        hostname: string;
-        loadAverage: number[];
-    };
+  services: {
+    database: ServiceStatus;
+    disk: ServiceStatus;
+    memory: ServiceStatus;
+  };
+  system: {
+    platform: string;
+    arch: string;
+    nodeVersion: string;
+    cpuCount: number;
+    hostname: string;
+    loadAverage: number[];
+  };
 }
 
 /**
  * Check database connectivity
  */
 async function checkDatabase(): Promise<ServiceStatus> {
-    const startTime = Date.now();
-    try {
-        // Simple query to check database connectivity
-        const result = db.prepare('SELECT 1 as test').get();
-        const latency = Date.now() - startTime;
+  const startTime = Date.now();
+  try {
+    // Simple query to check database connectivity
+    const result = db.prepare('SELECT 1 as test').get();
+    const latency = Date.now() - startTime;
 
-        if (result && result.test === 1) {
-            // Lightweight existence checks on core tables (no COUNT(*) table scans)
-            db.prepare('SELECT 1 FROM users LIMIT 1').get();
-            db.prepare('SELECT 1 FROM music_pieces LIMIT 1').get();
+    if (result && result.test === 1) {
+      // Lightweight existence checks on core tables (no COUNT(*) table scans)
+      db.prepare('SELECT 1 FROM users LIMIT 1').get();
+      db.prepare('SELECT 1 FROM music_pieces LIMIT 1').get();
 
-            return {
-                status: 'healthy',
-                latency,
-            };
-        }
-
-        return {
-            status: 'unhealthy',
-            message: 'Database query returned unexpected result',
-            latency,
-        };
-    } catch (error) {
-        const latency = Date.now() - startTime;
-        logger.error('Database health check failed', { error: (error as Error).message });
-        return {
-            status: 'unhealthy',
-            message: (error as Error).message,
-            latency,
-        };
+      return {
+        status: 'healthy',
+        latency,
+      };
     }
+
+    return {
+      status: 'unhealthy',
+      message: 'Database query returned unexpected result',
+      latency,
+    };
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    logger.error('Database health check failed', { error: (error as Error).message });
+    return {
+      status: 'unhealthy',
+      message: (error as Error).message,
+      latency,
+    };
+  }
 }
 
 /**
  * Check disk space
  */
 function checkDiskSpace(): ServiceStatus {
+  try {
+    const dataDir = path.resolve(config.dbPath, '..');
+    const uploadDir = path.resolve(config.uploadDir);
+
+    // Get disk stats (Linux/Mac specific, may need adjustment for Windows)
+    const stats = fs.statfsSync(dataDir);
+    const totalSpace = stats.bsize * stats.blocks;
+    const freeSpace = stats.bsize * stats.bfree;
+    const usedSpace = totalSpace - freeSpace;
+    const usedPercentage = (usedSpace / totalSpace) * 100;
+
+    // Get directory sizes
+    let dataDirSize = 0;
+    let uploadDirSize = 0;
+
     try {
-        const dataDir = path.resolve(config.dbPath, '..');
-        const uploadDir = path.resolve(config.uploadDir);
-
-        // Get disk stats (Linux/Mac specific, may need adjustment for Windows)
-        const stats = fs.statfsSync(dataDir);
-        const totalSpace = stats.bsize * stats.blocks;
-        const freeSpace = stats.bsize * stats.bfree;
-        const usedSpace = totalSpace - freeSpace;
-        const usedPercentage = (usedSpace / totalSpace) * 100;
-
-        // Get directory sizes
-        let dataDirSize = 0;
-        let uploadDirSize = 0;
-
-        try {
-            if (fs.existsSync(dataDir)) {
-                dataDirSize = getDirectorySize(dataDir);
-            }
-        } catch {
-            // Ignore errors reading directory size
-        }
-
-        try {
-            if (fs.existsSync(uploadDir)) {
-                uploadDirSize = getDirectorySize(uploadDir);
-            }
-        } catch {
-            // Ignore errors reading directory size
-        }
-
-        const status: 'healthy' | 'degraded' | 'unhealthy' =
-            usedPercentage > 95 ? 'unhealthy' :
-            usedPercentage > 85 ? 'degraded' : 'healthy';
-
-        return {
-            status,
-            message: status !== 'healthy' ? `Disk usage at ${usedPercentage.toFixed(1)}%` : undefined,
-            details: {
-                totalSpaceGB: (totalSpace / (1024 * 1024 * 1024)).toFixed(2),
-                freeSpaceGB: (freeSpace / (1024 * 1024 * 1024)).toFixed(2),
-                usedPercentage: usedPercentage.toFixed(1),
-                dataDirSizeMB: (dataDirSize / (1024 * 1024)).toFixed(2),
-                uploadDirSizeMB: (uploadDirSize / (1024 * 1024)).toFixed(2),
-            },
-        };
-    } catch (error) {
-        logger.error('Disk space check failed', { error: (error as Error).message });
-        return {
-            status: 'unhealthy',
-            message: (error as Error).message,
-        };
+      if (fs.existsSync(dataDir)) {
+        dataDirSize = getDirectorySize(dataDir);
+      }
+    } catch {
+      // Ignore errors reading directory size
     }
+
+    try {
+      if (fs.existsSync(uploadDir)) {
+        uploadDirSize = getDirectorySize(uploadDir);
+      }
+    } catch {
+      // Ignore errors reading directory size
+    }
+
+    const status: 'healthy' | 'degraded' | 'unhealthy' =
+      usedPercentage > 95 ? 'unhealthy' : usedPercentage > 85 ? 'degraded' : 'healthy';
+
+    return {
+      status,
+      message: status !== 'healthy' ? `Disk usage at ${usedPercentage.toFixed(1)}%` : undefined,
+      details: {
+        totalSpaceGB: (totalSpace / (1024 * 1024 * 1024)).toFixed(2),
+        freeSpaceGB: (freeSpace / (1024 * 1024 * 1024)).toFixed(2),
+        usedPercentage: usedPercentage.toFixed(1),
+        dataDirSizeMB: (dataDirSize / (1024 * 1024)).toFixed(2),
+        uploadDirSizeMB: (uploadDirSize / (1024 * 1024)).toFixed(2),
+      },
+    };
+  } catch (error) {
+    logger.error('Disk space check failed', { error: (error as Error).message });
+    return {
+      status: 'unhealthy',
+      message: (error as Error).message,
+    };
+  }
 }
 
 /**
  * Get total size of a directory recursively
  */
 function getDirectorySize(dirPath: string): number {
-    let totalSize = 0;
-    try {
-        const items = fs.readdirSync(dirPath);
-        for (const item of items) {
-            const itemPath = path.join(dirPath, item);
-            const stats = fs.statSync(itemPath);
-            if (stats.isFile()) {
-                totalSize += stats.size;
-            } else if (stats.isDirectory()) {
-                totalSize += getDirectorySize(itemPath);
-            }
-        }
-    } catch {
-        // Ignore permission errors
+  let totalSize = 0;
+  try {
+    const items = fs.readdirSync(dirPath);
+    for (const item of items) {
+      const itemPath = path.join(dirPath, item);
+      const stats = fs.statSync(itemPath);
+      if (stats.isFile()) {
+        totalSize += stats.size;
+      } else if (stats.isDirectory()) {
+        totalSize += getDirectorySize(itemPath);
+      }
     }
-    return totalSize;
+  } catch {
+    // Ignore permission errors
+  }
+  return totalSize;
 }
 
 /**
  * Check memory usage
  */
 function checkMemory(): ServiceStatus {
-    const totalMemory = os.totalmem();
-    const freeMemory = os.freemem();
-    const usedMemory = totalMemory - freeMemory;
-    const usedPercentage = (usedMemory / totalMemory) * 100;
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  const usedMemory = totalMemory - freeMemory;
+  const usedPercentage = (usedMemory / totalMemory) * 100;
 
-    // Process memory
-    const processMemory = process.memoryUsage();
+  // Process memory
+  const processMemory = process.memoryUsage();
 
-    const status: 'healthy' | 'degraded' | 'unhealthy' =
-        usedPercentage > 95 ? 'unhealthy' :
-        usedPercentage > 85 ? 'degraded' : 'healthy';
+  const status: 'healthy' | 'degraded' | 'unhealthy' =
+    usedPercentage > 95 ? 'unhealthy' : usedPercentage > 85 ? 'degraded' : 'healthy';
 
-    return {
-        status,
-        message: status !== 'healthy' ? `Memory usage at ${usedPercentage.toFixed(1)}%` : undefined,
-        details: {
-            totalMemoryMB: (totalMemory / (1024 * 1024)).toFixed(0),
-            freeMemoryMB: (freeMemory / (1024 * 1024)).toFixed(0),
-            usedPercentage: usedPercentage.toFixed(1),
-            processHeapUsedMB: (processMemory.heapUsed / (1024 * 1024)).toFixed(0),
-            processHeapTotalMB: (processMemory.heapTotal / (1024 * 1024)).toFixed(0),
-            processRssMB: (processMemory.rss / (1024 * 1024)).toFixed(0),
-        },
-    };
+  return {
+    status,
+    message: status !== 'healthy' ? `Memory usage at ${usedPercentage.toFixed(1)}%` : undefined,
+    details: {
+      totalMemoryMB: (totalMemory / (1024 * 1024)).toFixed(0),
+      freeMemoryMB: (freeMemory / (1024 * 1024)).toFixed(0),
+      usedPercentage: usedPercentage.toFixed(1),
+      processHeapUsedMB: (processMemory.heapUsed / (1024 * 1024)).toFixed(0),
+      processHeapTotalMB: (processMemory.heapTotal / (1024 * 1024)).toFixed(0),
+      processRssMB: (processMemory.rss / (1024 * 1024)).toFixed(0),
+    },
+  };
 }
 
 /**
  * Calculate overall health status from individual service statuses
  */
 function calculateOverallStatus(services: Record<string, ServiceStatus>): 'healthy' | 'degraded' | 'unhealthy' {
-    const statuses = Object.values(services).map(s => s.status);
+  const statuses = Object.values(services).map((s) => s.status);
 
-    if (statuses.includes('unhealthy')) {
-        return 'unhealthy';
-    }
-    if (statuses.includes('degraded')) {
-        return 'degraded';
-    }
-    return 'healthy';
+  if (statuses.includes('unhealthy')) {
+    return 'unhealthy';
+  }
+  if (statuses.includes('degraded')) {
+    return 'degraded';
+  }
+  return 'healthy';
 }
 
 /**
@@ -218,15 +216,15 @@ function calculateOverallStatus(services: Record<string, ServiceStatus>): 'healt
  *         description: Service is unhealthy
  */
 router.get('/', (req: Request, res: Response) => {
-    const response: HealthCheckResponse = {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: Math.floor(process.uptime()),
-        version: process.env.npm_package_version || '1.0.0',
-        environment: config.nodeEnv,
-    };
+  const response: HealthCheckResponse = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    version: process.env.npm_package_version || '1.0.0',
+    environment: config.nodeEnv,
+  };
 
-    res.status(200).json(response);
+  res.status(200).json(response);
 });
 
 /**
@@ -242,13 +240,13 @@ router.get('/', (req: Request, res: Response) => {
  *         description: Service is not ready (database unavailable)
  */
 router.get('/ready', (req: Request, res: Response) => {
-    try {
-        db.prepare('SELECT 1').get();
-        res.status(200).json({ status: 'ready' });
-    } catch (error) {
-        logger.error('Readiness probe failed', { error: (error as Error).message });
-        res.status(503).json({ status: 'unavailable' });
-    }
+  try {
+    db.prepare('SELECT 1').get();
+    res.status(200).json({ status: 'ready' });
+  } catch (error) {
+    logger.error('Readiness probe failed', { error: (error as Error).message });
+    res.status(503).json({ status: 'unavailable' });
+  }
 });
 
 /**
@@ -267,38 +265,43 @@ router.get('/ready', (req: Request, res: Response) => {
  *       403:
  *         description: Forbidden - Admin only
  */
-router.get('/detailed', authenticateToken, requireRole('admin'), asyncHandler(async (req: Request, res: Response) => {
+router.get(
+  '/detailed',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: Request, res: Response) => {
     const databaseStatus = await checkDatabase();
     const diskStatus = checkDiskSpace();
     const memoryStatus = checkMemory();
 
     const services = {
-        database: databaseStatus,
-        disk: diskStatus,
-        memory: memoryStatus,
+      database: databaseStatus,
+      disk: diskStatus,
+      memory: memoryStatus,
     };
 
     const overallStatus = calculateOverallStatus(services);
 
     const response: DetailedHealthCheckResponse = {
-        status: overallStatus,
-        timestamp: new Date().toISOString(),
-        uptime: Math.floor(process.uptime()),
-        version: process.env.npm_package_version || '1.0.0',
-        environment: config.nodeEnv,
-        services,
-        system: {
-            platform: os.platform(),
-            arch: os.arch(),
-            nodeVersion: process.version,
-            cpuCount: os.cpus().length,
-            hostname: os.hostname(),
-            loadAverage: os.loadavg(),
-        },
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      version: process.env.npm_package_version || '1.0.0',
+      environment: config.nodeEnv,
+      services,
+      system: {
+        platform: os.platform(),
+        arch: os.arch(),
+        nodeVersion: process.version,
+        cpuCount: os.cpus().length,
+        hostname: os.hostname(),
+        loadAverage: os.loadavg(),
+      },
     };
 
     const statusCode = overallStatus === 'unhealthy' ? 503 : 200;
     res.status(statusCode).json(response);
-}));
+  }),
+);
 
 export default router;

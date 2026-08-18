@@ -35,7 +35,7 @@ const variantDefaults: Record<EmptyStateVariant, { icon: IconName; title: string
     title: 'Geen resultaten',
     description: 'We konden geen resultaten vinden die overeenkomen met je zoekopdracht.',
   },
-  'error': {
+  error: {
     icon: 'warning',
     title: 'Er ging iets mis',
     description: 'Er is een fout opgetreden bij het laden van de gegevens.',
@@ -113,24 +113,14 @@ export function EmptyState({
         <Icon name={displayIcon} size={config.iconSize} />
       </div>
 
-      <h3 className={`empty-state-title ${config.titleClass}`}>
-        {displayTitle}
-      </h3>
+      <h3 className={`empty-state-title ${config.titleClass}`}>{displayTitle}</h3>
 
-      {displayDescription && (
-        <p className="empty-state-description">
-          {displayDescription}
-        </p>
-      )}
+      {displayDescription && <p className="empty-state-description">{displayDescription}</p>}
 
       {children}
 
       {actionLabel && onAction && (
-        <button
-          type="button"
-          className="btn btn-primary empty-state-action"
-          onClick={onAction}
-        >
+        <button type="button" className="btn btn-primary empty-state-action" onClick={onAction}>
           {actionLabel}
         </button>
       )}

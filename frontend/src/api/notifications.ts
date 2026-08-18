@@ -65,7 +65,9 @@ export const unlinkTelegram = async (): Promise<void> => {
 };
 
 // WhatsApp
-export const linkWhatsApp = async (phoneNumber: string): Promise<{ message: string; phoneNumber: string; expiresIn: number }> => {
+export const linkWhatsApp = async (
+  phoneNumber: string,
+): Promise<{ message: string; phoneNumber: string; expiresIn: number }> => {
   const { data } = await api.post('/notification-channels/whatsapp/link', { phoneNumber });
   return data;
 };
@@ -74,7 +76,12 @@ export const verifyWhatsApp = async (code: string): Promise<void> => {
   await api.post('/notification-channels/whatsapp/verify', { code });
 };
 
-export const getWhatsAppStatus = async (): Promise<{ linked: boolean; verified: boolean; phoneNumber: string | null; linkedAt: string | null }> => {
+export const getWhatsAppStatus = async (): Promise<{
+  linked: boolean;
+  verified: boolean;
+  phoneNumber: string | null;
+  linkedAt: string | null;
+}> => {
   const { data } = await api.get('/notification-channels/whatsapp/status');
   return data;
 };

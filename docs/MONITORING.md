@@ -22,13 +22,13 @@ Returns basic service status for load balancers and uptime monitors:
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `status` | `healthy`, `degraded`, or `unhealthy` |
-| `timestamp` | Current server time (ISO 8601) |
-| `uptime` | Server uptime in seconds |
-| `version` | Application version from package.json |
-| `environment` | `development`, `production`, etc. |
+| Field         | Description                           |
+| ------------- | ------------------------------------- |
+| `status`      | `healthy`, `degraded`, or `unhealthy` |
+| `timestamp`   | Current server time (ISO 8601)        |
+| `uptime`      | Server uptime in seconds              |
+| `version`     | Application version from package.json |
+| `environment` | `development`, `production`, etc.     |
 
 ### Detailed Health Check
 
@@ -90,19 +90,19 @@ Returns comprehensive system status (admin only):
 
 ### Status Thresholds
 
-| Service | Degraded | Unhealthy |
-|---------|----------|-----------|
-| Disk | >85% used | >95% used |
-| Memory | >85% used | >95% used |
-| Database | - | Connection failed |
+| Service  | Degraded  | Unhealthy         |
+| -------- | --------- | ----------------- |
+| Disk     | >85% used | >95% used         |
+| Memory   | >85% used | >95% used         |
+| Database | -         | Connection failed |
 
 ### HTTP Response Codes
 
-| Status | Code |
-|--------|------|
-| healthy | 200 |
-| degraded | 200 |
-| unhealthy | 503 |
+| Status    | Code |
+| --------- | ---- |
+| healthy   | 200  |
+| degraded  | 200  |
+| unhealthy | 503  |
 
 ## Sentry Error Tracking
 
@@ -133,10 +133,10 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: config.nodeEnv,
   release: process.env.npm_package_version,
-  
+
   // Performance monitoring
   tracesSampleRate: config.isProduction ? 0.1 : 1.0,
-  
+
   // Debug mode in development
   debug: config.isDevelopment,
 });
@@ -200,17 +200,20 @@ setupSentryExpressErrorHandler(app);
 Sentry automatically redacts sensitive information:
 
 **Filtered Headers:**
+
 - `authorization`
 - `cookie`
 - `x-csrf-token`
 
 **Filtered Body Fields:**
+
 - `password`
 - `token`
 - `secret`
 - `apiKey`
 
 **Excluded Breadcrumbs:**
+
 - URLs containing `/auth/login`
 - URLs containing `/auth/reset-password`
 
@@ -235,14 +238,14 @@ The audit log system tracks user actions on entities for compliance and debuggin
 
 ### Logged Actions
 
-| Action | Description |
-|--------|-------------|
-| `create` | Entity created |
+| Action   | Description     |
+| -------- | --------------- |
+| `create` | Entity created  |
 | `update` | Entity modified |
-| `delete` | Entity deleted |
-| `login` | User logged in |
+| `delete` | Entity deleted  |
+| `login`  | User logged in  |
 | `logout` | User logged out |
-| `upload` | File uploaded |
+| `upload` | File uploaded   |
 
 ### Creating Audit Logs
 
@@ -258,7 +261,7 @@ logAuditEvent(
   'Symphony No. 5',
   { title: 'Symphony No. 5', composer: 'Beethoven' },
   req.ip,
-  req.get('user-agent')
+  req.get('user-agent'),
 );
 
 // Update with automatic field change tracking
@@ -271,7 +274,7 @@ logAuditUpdate(
   newUserData,
   ['name', 'email', 'role'], // Fields to track (optional)
   req.ip,
-  req.get('user-agent')
+  req.get('user-agent'),
 );
 ```
 
@@ -285,6 +288,7 @@ const changes = computeFieldChanges(oldData, newData);
 ```
 
 Sensitive fields are automatically redacted:
+
 - `password`
 - `passwordHash`
 - `token`
@@ -300,15 +304,15 @@ Authorization: Bearer <admin-token>
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `page` | number | Page number (default: 1) |
-| `pageSize` | number | Items per page (default: 25, max: 100) |
-| `action` | string | Filter by action type |
-| `entityType` | string | Filter by entity type |
-| `userId` | string | Filter by user ID |
-| `dateFrom` | date | Start date filter |
-| `dateTo` | date | End date filter |
+| Parameter    | Type   | Description                            |
+| ------------ | ------ | -------------------------------------- |
+| `page`       | number | Page number (default: 1)               |
+| `pageSize`   | number | Items per page (default: 25, max: 100) |
+| `action`     | string | Filter by action type                  |
+| `entityType` | string | Filter by entity type                  |
+| `userId`     | string | Filter by user ID                      |
+| `dateFrom`   | date   | Start date filter                      |
+| `dateTo`     | date   | End date filter                        |
 
 **Response:**
 
@@ -324,9 +328,7 @@ Authorization: Bearer <admin-token>
       "entityId": "user_789",
       "entityName": "jane@example.com",
       "changes": {
-        "fields": [
-          { "field": "role", "oldValue": "member", "newValue": "admin" }
-        ],
+        "fields": [{ "field": "role", "oldValue": "member", "newValue": "admin" }],
         "metadata": {
           "trackedFields": "all",
           "changeCount": 1
@@ -351,27 +353,27 @@ The application uses Winston for structured logging (`backend/src/logging/logger
 
 ### Log Levels
 
-| Level | Priority | Use Case |
-|-------|----------|----------|
-| `error` | 0 | Errors requiring immediate attention |
-| `warn` | 1 | Potential issues, deprecated usage |
-| `info` | 2 | Important events (startup, auth) |
-| `debug` | 3 | Development debugging |
+| Level   | Priority | Use Case                             |
+| ------- | -------- | ------------------------------------ |
+| `error` | 0        | Errors requiring immediate attention |
+| `warn`  | 1        | Potential issues, deprecated usage   |
+| `info`  | 2        | Important events (startup, auth)     |
+| `debug` | 3        | Development debugging                |
 
 ### Environment-Based Configuration
 
-| Environment | Default Level | Console Format | File Logging |
-|-------------|---------------|----------------|--------------|
-| Development | `debug` | Colorized, human-readable | No |
-| Production | `info` | JSON | Yes |
+| Environment | Default Level | Console Format            | File Logging |
+| ----------- | ------------- | ------------------------- | ------------ |
+| Development | `debug`       | Colorized, human-readable | No           |
+| Production  | `info`        | JSON                      | Yes          |
 
 ### Log Files (Production)
 
-| File | Level | Max Size | Max Files |
-|------|-------|----------|-----------|
-| `logs/error.log` | error | 10MB | 5 |
-| `logs/combined.log` | all | 10MB | 5 |
-| `logs/access.log` | info | 10MB | 10 |
+| File                | Level | Max Size | Max Files |
+| ------------------- | ----- | -------- | --------- |
+| `logs/error.log`    | error | 10MB     | 5         |
+| `logs/combined.log` | all   | 10MB     | 5         |
+| `logs/access.log`   | info  | 10MB     | 10        |
 
 Files are automatically rotated when they reach max size.
 
@@ -429,8 +431,8 @@ orderLogger.info('Order created', { orderId: '123' });
 ```typescript
 import { requestIdMiddleware, requestLoggerMiddleware } from './logging/requestLogger';
 
-app.use(requestIdMiddleware);  // Adds unique request ID
-app.use(requestLoggerMiddleware);  // Logs incoming requests
+app.use(requestIdMiddleware); // Adds unique request ID
+app.use(requestLoggerMiddleware); // Logs incoming requests
 ```
 
 ## Log Output Formats
@@ -529,6 +531,7 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 ### 6. Set Up Alerts
 
 Configure alerts in Sentry and monitoring tools for:
+
 - Error rate spikes
 - Health check failures
 - Memory/disk threshold breaches

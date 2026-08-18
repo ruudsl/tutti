@@ -95,7 +95,7 @@ export const createInstrumentAsset = async (asset: {
 
 export const updateInstrumentAsset = async (
   id: string,
-  asset: Partial<Parameters<typeof createInstrumentAsset>[0]>
+  asset: Partial<Parameters<typeof createInstrumentAsset>[0]>,
 ): Promise<void> => {
   await api.put(`/instrument-assets/${id}`, asset);
 };
@@ -106,7 +106,7 @@ export const deleteInstrumentAsset = async (id: string): Promise<void> => {
 
 export const recordAssetMaintenance = async (
   id: string,
-  data: { date?: string; notes?: string; cost?: number }
+  data: { date?: string; notes?: string; cost?: number },
 ): Promise<{ nextMaintenanceDue: string }> => {
   const response = await api.post(`/instrument-assets/${id}/record-maintenance`, data);
   return response.data;
@@ -136,7 +136,7 @@ export const createAssetValuation = async (
     conditionAtValuation?: string;
     certificateUrl?: string;
     notes?: string;
-  }
+  },
 ): Promise<{ id: string }> => {
   const { data } = await api.post(`/instrument-assets/${assetId}/valuations`, valuation);
   return data;
@@ -167,7 +167,7 @@ export const createAssetRepair = async (
     warrantyClaimRef?: boolean;
     insuranceClaimId?: string;
     notes?: string;
-  }
+  },
 ): Promise<{ id: string }> => {
   const { data } = await api.post(`/instrument-assets/${assetId}/repairs`, repair);
   return data;
@@ -189,7 +189,7 @@ export const updateAssetRepair = async (
     qualityRating?: number;
     qualityNotes?: string;
     notes?: string;
-  }
+  },
 ): Promise<void> => {
   await api.put(`/instrument-assets/${assetId}/repairs/${repairId}`, update);
 };
@@ -218,7 +218,7 @@ export const createAssetLoan = async (
     rentalFee?: number;
     rentalPeriod?: 'daily' | 'weekly' | 'monthly' | 'yearly';
     notes?: string;
-  }
+  },
 ): Promise<{ id: string }> => {
   const { data } = await api.post(`/instrument-assets/${assetId}/loans`, loan);
   return data;
@@ -234,7 +234,7 @@ export const returnAssetLoan = async (
     returnInspectionNotes?: string;
     damageReported?: string;
     damageCost?: number;
-  }
+  },
 ): Promise<void> => {
   await api.post(`/instrument-assets/${assetId}/loans/${loanId}/return`, returnData);
 };
@@ -263,7 +263,7 @@ export const createAssetDocument = async (
     validUntil?: string;
     isPublic?: boolean;
     tags?: string[];
-  }
+  },
 ): Promise<{ id: string }> => {
   const { data } = await api.post(`/instrument-assets/${assetId}/documents`, document);
   return data;
@@ -279,17 +279,19 @@ export const deleteAssetDocument = async (assetId: string, documentId: string): 
 
 export const getAssetHistory = async (
   assetId: string,
-  params?: { page?: number; limit?: number }
-): Promise<{
-  id: string;
-  eventType: string;
-  eventDate: string;
-  description: string;
-  oldValue?: string;
-  newValue?: string;
-  fieldChanged?: string;
-  user?: { id: string; firstName: string; lastName: string };
-}[]> => {
+  params?: { page?: number; limit?: number },
+): Promise<
+  {
+    id: string;
+    eventType: string;
+    eventDate: string;
+    description: string;
+    oldValue?: string;
+    newValue?: string;
+    fieldChanged?: string;
+    user?: { id: string; firstName: string; lastName: string };
+  }[]
+> => {
   const { data } = await api.get(`/instrument-assets/${assetId}/history`, { params });
   return data;
 };
@@ -320,15 +322,19 @@ export const getInsurancePoliciesSummary = async (): Promise<{
   return data;
 };
 
-export const getExpiringPolicies = async (days?: number): Promise<{
-  id: string;
-  policyNumber: string;
-  providerName: string;
-  endDate: string;
-  coverageAmount: number;
-  autoRenew: boolean;
-  daysUntilExpiry: number;
-}[]> => {
+export const getExpiringPolicies = async (
+  days?: number,
+): Promise<
+  {
+    id: string;
+    policyNumber: string;
+    providerName: string;
+    endDate: string;
+    coverageAmount: number;
+    autoRenew: boolean;
+    daysUntilExpiry: number;
+  }[]
+> => {
   const { data } = await api.get('/instrument-insurance/policies/expiring', { params: { days } });
   return data;
 };
@@ -365,7 +371,7 @@ export const createInsurancePolicy = async (policy: {
 
 export const updateInsurancePolicy = async (
   id: string,
-  policy: Partial<Parameters<typeof createInsurancePolicy>[0]>
+  policy: Partial<Parameters<typeof createInsurancePolicy>[0]>,
 ): Promise<void> => {
   await api.put(`/instrument-insurance/policies/${id}`, policy);
 };
@@ -382,16 +388,13 @@ export const addAssetToPolicyCoverage = async (
     coverageStart: string;
     coverageEnd?: string;
     specialConditions?: string;
-  }
+  },
 ): Promise<{ id: string }> => {
   const { data } = await api.post(`/instrument-insurance/policies/${policyId}/coverage`, coverage);
   return data;
 };
 
-export const removeAssetFromPolicyCoverage = async (
-  policyId: string,
-  coverageId: string
-): Promise<void> => {
+export const removeAssetFromPolicyCoverage = async (policyId: string, coverageId: string): Promise<void> => {
   await api.delete(`/instrument-insurance/policies/${policyId}/coverage/${coverageId}`);
 };
 
@@ -408,15 +411,26 @@ export const getInsuranceClaims = async (filters?: {
   return data;
 };
 
-export const getInsuranceClaim = async (id: string): Promise<InsuranceClaim & {
-  policy: { id: string; policyNumber: string; providerName: string; providerPhone?: string; providerEmail?: string; deductible: number };
-  asset: { id: string; name: string; instrumentType: string; serialNumber?: string; currentValue?: number };
-  documentUrls: string[];
-  photos: string[];
-  witnessInfo?: string;
-  policeReportNumber?: string;
-  resolutionNotes?: string;
-}> => {
+export const getInsuranceClaim = async (
+  id: string,
+): Promise<
+  InsuranceClaim & {
+    policy: {
+      id: string;
+      policyNumber: string;
+      providerName: string;
+      providerPhone?: string;
+      providerEmail?: string;
+      deductible: number;
+    };
+    asset: { id: string; name: string; instrumentType: string; serialNumber?: string; currentValue?: number };
+    documentUrls: string[];
+    photos: string[];
+    witnessInfo?: string;
+    policeReportNumber?: string;
+    resolutionNotes?: string;
+  }
+> => {
   const { data } = await api.get(`/instrument-insurance/claims/${id}`);
   return data;
 };
@@ -448,7 +462,7 @@ export const updateInsuranceClaim = async (
     resolutionDate?: string;
     resolutionNotes?: string;
     documentUrls?: string[];
-  }
+  },
 ): Promise<void> => {
   await api.put(`/instrument-insurance/claims/${id}`, update);
 };

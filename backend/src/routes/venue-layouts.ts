@@ -13,61 +13,63 @@ const router = Router();
 // ==========================================
 
 const seatSchema = z.object({
-    number: z.string().min(1, 'Seat number is required'),
-    type: z.enum(['regular', 'wheelchair', 'companion', 'vip']).default('regular'),
-    x: z.number(),
-    y: z.number(),
-    priceCategory: z.string().default('standard'),
+  number: z.string().min(1, 'Seat number is required'),
+  type: z.enum(['regular', 'wheelchair', 'companion', 'vip']).default('regular'),
+  x: z.number(),
+  y: z.number(),
+  priceCategory: z.string().default('standard'),
 });
 
 const rowSchema = z.object({
-    name: z.string().min(1, 'Row name is required'),
-    seats: z.array(seatSchema),
-    curve: z.number().optional(),
+  name: z.string().min(1, 'Row name is required'),
+  seats: z.array(seatSchema),
+  curve: z.number().optional(),
 });
 
 const sectionSchema = z.object({
-    id: z.string().min(1, 'Section ID is required'),
-    name: z.string().min(1, 'Section name is required'),
-    rows: z.array(rowSchema),
-    x: z.number(),
-    y: z.number(),
-    rotation: z.number().optional(),
+  id: z.string().min(1, 'Section ID is required'),
+  name: z.string().min(1, 'Section name is required'),
+  rows: z.array(rowSchema),
+  x: z.number(),
+  y: z.number(),
+  rotation: z.number().optional(),
 });
 
 const layoutDataSchema = z.object({
-    width: z.number().positive('Width must be positive'),
-    height: z.number().positive('Height must be positive'),
-    sections: z.array(sectionSchema),
+  width: z.number().positive('Width must be positive'),
+  height: z.number().positive('Height must be positive'),
+  sections: z.array(sectionSchema),
 });
 
 const createLayoutSchema = z.object({
-    name: z.string().min(1, 'Name is required'),
-    description: z.string().optional(),
-    layoutData: layoutDataSchema,
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  layoutData: layoutDataSchema,
 });
 
 const updateLayoutSchema = createLayoutSchema.partial();
 
 const bulkSeatsSchema = z.object({
-    seats: z.array(z.object({
-        id: z.string().optional(), // Existing seat ID for update
-        section: z.string().min(1, 'Section is required'),
-        rowName: z.string().min(1, 'Row name is required'),
-        seatNumber: z.string().min(1, 'Seat number is required'),
-        seatType: z.enum(['regular', 'wheelchair', 'companion', 'vip']).default('regular'),
-        xPosition: z.number(),
-        yPosition: z.number(),
-        priceCategory: z.string().default('standard'),
-        isAvailable: z.boolean().default(true),
-    })),
-    deleteOtherSeats: z.boolean().default(false), // If true, delete seats not in the list
+  seats: z.array(
+    z.object({
+      id: z.string().optional(), // Existing seat ID for update
+      section: z.string().min(1, 'Section is required'),
+      rowName: z.string().min(1, 'Row name is required'),
+      seatNumber: z.string().min(1, 'Seat number is required'),
+      seatType: z.enum(['regular', 'wheelchair', 'companion', 'vip']).default('regular'),
+      xPosition: z.number(),
+      yPosition: z.number(),
+      priceCategory: z.string().default('standard'),
+      isAvailable: z.boolean().default(true),
+    }),
+  ),
+  deleteOtherSeats: z.boolean().default(false), // If true, delete seats not in the list
 });
 
 const reserveSeatsSchema = z.object({
-    seatIds: z.array(z.string().uuid()).min(1, 'At least one seat is required'),
-    orderId: z.string().uuid().optional(),
-    reservationMinutes: z.number().int().min(1).max(60).default(15),
+  seatIds: z.array(z.string().uuid()).min(1, 'At least one seat is required'),
+  orderId: z.string().uuid().optional(),
+  reservationMinutes: z.number().int().min(1).max(60).default(15),
 });
 
 // ==========================================
@@ -81,8 +83,13 @@ const reserveSeatsSchema = z.object({
  *     summary: List all venue layouts for the association
  *     tags: [Venue Layouts]
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const layouts = db.prepare(`
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const layouts = db
+      .prepare(
+        `
         SELECT
             id,
             name,
@@ -93,26 +100,29 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         FROM venue_layouts
         WHERE association_id = ?
         ORDER BY name ASC
-    `).all(req.user!.associationId) as {
-        id: string;
-        name: string;
-        description: string | null;
-        capacity: number;
-        created_at: string;
-        updated_at: string;
+    `,
+      )
+      .all(req.user!.associationId) as {
+      id: string;
+      name: string;
+      description: string | null;
+      capacity: number;
+      created_at: string;
+      updated_at: string;
     }[];
 
     res.json({
-        layouts: layouts.map(layout => ({
-            id: layout.id,
-            name: layout.name,
-            description: layout.description,
-            capacity: layout.capacity,
-            createdAt: layout.created_at,
-            updatedAt: layout.updated_at,
-        })),
+      layouts: layouts.map((layout) => ({
+        id: layout.id,
+        name: layout.name,
+        description: layout.description,
+        capacity: layout.capacity,
+        createdAt: layout.created_at,
+        updatedAt: layout.updated_at,
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -121,10 +131,14 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *     summary: Create a new venue layout
  *     tags: [Venue Layouts]
  */
-router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const validation = createLayoutSchema.safeParse(req.body);
     if (!validation.success) {
-        throw new ApiError(400, validation.error.issues[0].message);
+      throw new ApiError(400, validation.error.issues[0].message);
     }
 
     const { name, description, layoutData } = validation.data;
@@ -132,18 +146,20 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
     // Calculate capacity from layout data
     let capacity = 0;
     for (const section of layoutData.sections) {
-        for (const row of section.rows) {
-            capacity += row.seats.length;
-        }
+      for (const row of section.rows) {
+        capacity += row.seats.length;
+      }
     }
 
     const id = uuidv4();
 
     // Insert layout
-    db.prepare(`
+    db.prepare(
+      `
         INSERT INTO venue_layouts (id, association_id, name, description, layout_data, capacity)
         VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, req.user!.associationId, name, description || null, JSON.stringify(layoutData), capacity);
+    `,
+    ).run(id, req.user!.associationId, name, description || null, JSON.stringify(layoutData), capacity);
 
     // Insert individual seats for easy querying
     const insertSeatStmt = db.prepare(`
@@ -152,35 +168,36 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
     `);
 
     for (const section of layoutData.sections) {
-        for (const row of section.rows) {
-            for (const seat of row.seats) {
-                insertSeatStmt.run(
-                    uuidv4(),
-                    id,
-                    section.name,
-                    row.name,
-                    seat.number,
-                    seat.type,
-                    seat.x + section.x,
-                    seat.y + section.y,
-                    seat.priceCategory,
-                    1
-                );
-            }
+      for (const row of section.rows) {
+        for (const seat of row.seats) {
+          insertSeatStmt.run(
+            uuidv4(),
+            id,
+            section.name,
+            row.name,
+            seat.number,
+            seat.type,
+            seat.x + section.x,
+            seat.y + section.y,
+            seat.priceCategory,
+            1,
+          );
         }
+      }
     }
 
     logger.info(`Venue layout created: ${name}`, { id, createdBy: req.user!.id, capacity });
 
     res.status(201).json({
-        id,
-        name,
-        description,
-        capacity,
-        layoutData,
-        message: 'Venue layout created successfully.',
+      id,
+      name,
+      description,
+      capacity,
+      layoutData,
+      message: 'Venue layout created successfully.',
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -189,10 +206,15 @@ router.post('/', authenticateToken, requireRole('admin', 'music_committee'), asy
  *     summary: Get a venue layout with all seats
  *     tags: [Venue Layouts]
  */
-router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/:id',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const layout = db.prepare(`
+    const layout = db
+      .prepare(
+        `
         SELECT
             id,
             association_id,
@@ -204,23 +226,29 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
             updated_at
         FROM venue_layouts
         WHERE id = ? AND association_id = ?
-    `).get(id, req.user!.associationId) as {
-        id: string;
-        association_id: string;
-        name: string;
-        description: string | null;
-        layout_data: string;
-        capacity: number;
-        created_at: string;
-        updated_at: string;
-    } | undefined;
+    `,
+      )
+      .get(id, req.user!.associationId) as
+      | {
+          id: string;
+          association_id: string;
+          name: string;
+          description: string | null;
+          layout_data: string;
+          capacity: number;
+          created_at: string;
+          updated_at: string;
+        }
+      | undefined;
 
     if (!layout) {
-        throw new ApiError(404, 'Venue layout not found');
+      throw new ApiError(404, 'Venue layout not found');
     }
 
     // Get all seats for this layout
-    const seats = db.prepare(`
+    const seats = db
+      .prepare(
+        `
         SELECT
             id,
             section,
@@ -234,39 +262,42 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
         FROM venue_seats
         WHERE layout_id = ?
         ORDER BY section, row_name, seat_number
-    `).all(id) as {
-        id: string;
-        section: string;
-        row_name: string;
-        seat_number: string;
-        seat_type: string;
-        x_position: number;
-        y_position: number;
-        price_category: string;
-        is_available: number;
+    `,
+      )
+      .all(id) as {
+      id: string;
+      section: string;
+      row_name: string;
+      seat_number: string;
+      seat_type: string;
+      x_position: number;
+      y_position: number;
+      price_category: string;
+      is_available: number;
     }[];
 
     res.json({
-        id: layout.id,
-        name: layout.name,
-        description: layout.description,
-        layoutData: JSON.parse(layout.layout_data),
-        capacity: layout.capacity,
-        createdAt: layout.created_at,
-        updatedAt: layout.updated_at,
-        seats: seats.map(seat => ({
-            id: seat.id,
-            section: seat.section,
-            rowName: seat.row_name,
-            seatNumber: seat.seat_number,
-            seatType: seat.seat_type,
-            xPosition: seat.x_position,
-            yPosition: seat.y_position,
-            priceCategory: seat.price_category,
-            isAvailable: Boolean(seat.is_available),
-        })),
+      id: layout.id,
+      name: layout.name,
+      description: layout.description,
+      layoutData: JSON.parse(layout.layout_data),
+      capacity: layout.capacity,
+      createdAt: layout.created_at,
+      updatedAt: layout.updated_at,
+      seats: seats.map((seat) => ({
+        id: seat.id,
+        section: seat.section,
+        rowName: seat.row_name,
+        seatNumber: seat.seat_number,
+        seatType: seat.seat_type,
+        xPosition: seat.x_position,
+        yPosition: seat.y_position,
+        priceCategory: seat.price_category,
+        isAvailable: Boolean(seat.is_available),
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -275,26 +306,38 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res:
  *     summary: Update a venue layout
  *     tags: [Venue Layouts]
  */
-router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const validation = updateLayoutSchema.safeParse(req.body);
     if (!validation.success) {
-        throw new ApiError(400, validation.error.issues[0].message);
+      throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT id FROM venue_layouts WHERE id = ? AND association_id = ?
-    `).get(id, req.user!.associationId);
+    `,
+      )
+      .get(id, req.user!.associationId);
 
     if (!existing) {
-        throw new ApiError(404, 'Venue layout not found');
+      throw new ApiError(404, 'Venue layout not found');
     }
 
     // Check if layout is in use by any concert
-    const inUse = db.prepare(`
+    const inUse = db
+      .prepare(
+        `
         SELECT id, name FROM concerts WHERE venue_layout_id = ? LIMIT 1
-    `).get(id) as { id: string; name: string } | undefined;
+    `,
+      )
+      .get(id) as { id: string; name: string } | undefined;
 
     const { name, description, layoutData } = validation.data;
 
@@ -303,80 +346,83 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
     const values: (string | number | null)[] = [];
 
     if (name !== undefined) {
-        updates.push('name = ?');
-        values.push(name);
+      updates.push('name = ?');
+      values.push(name);
     }
 
     if (description !== undefined) {
-        updates.push('description = ?');
-        values.push(description);
+      updates.push('description = ?');
+      values.push(description);
     }
 
     if (layoutData !== undefined) {
-        // Calculate new capacity
-        let capacity = 0;
-        for (const section of layoutData.sections) {
-            for (const row of section.rows) {
-                capacity += row.seats.length;
-            }
+      // Calculate new capacity
+      let capacity = 0;
+      for (const section of layoutData.sections) {
+        for (const row of section.rows) {
+          capacity += row.seats.length;
         }
+      }
 
-        updates.push('layout_data = ?');
-        values.push(JSON.stringify(layoutData));
-        updates.push('capacity = ?');
-        values.push(capacity);
+      updates.push('layout_data = ?');
+      values.push(JSON.stringify(layoutData));
+      updates.push('capacity = ?');
+      values.push(capacity);
 
-        // If layout is in use, warn but don't block
-        if (inUse) {
-            logger.warn(`Updating venue layout in use by concert: ${inUse.name}`, { layoutId: id, concertId: inUse.id });
-        }
+      // If layout is in use, warn but don't block
+      if (inUse) {
+        logger.warn(`Updating venue layout in use by concert: ${inUse.name}`, { layoutId: id, concertId: inUse.id });
+      }
 
-        // Update seats - delete existing and recreate
-        db.prepare('DELETE FROM venue_seats WHERE layout_id = ?').run(id);
+      // Update seats - delete existing and recreate
+      db.prepare('DELETE FROM venue_seats WHERE layout_id = ?').run(id);
 
-        const insertSeatStmt = db.prepare(`
+      const insertSeatStmt = db.prepare(`
             INSERT INTO venue_seats (id, layout_id, section, row_name, seat_number, seat_type, x_position, y_position, price_category, is_available)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        for (const section of layoutData.sections) {
-            for (const row of section.rows) {
-                for (const seat of row.seats) {
-                    insertSeatStmt.run(
-                        uuidv4(),
-                        id,
-                        section.name,
-                        row.name,
-                        seat.number,
-                        seat.type,
-                        seat.x + section.x,
-                        seat.y + section.y,
-                        seat.priceCategory,
-                        1
-                    );
-                }
-            }
+      for (const section of layoutData.sections) {
+        for (const row of section.rows) {
+          for (const seat of row.seats) {
+            insertSeatStmt.run(
+              uuidv4(),
+              id,
+              section.name,
+              row.name,
+              seat.number,
+              seat.type,
+              seat.x + section.x,
+              seat.y + section.y,
+              seat.priceCategory,
+              1,
+            );
+          }
         }
+      }
     }
 
     if (updates.length > 0) {
-        updates.push('updated_at = CURRENT_TIMESTAMP');
-        values.push(id, req.user!.associationId);
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(id, req.user!.associationId);
 
-        db.prepare(`
+      db.prepare(
+        `
             UPDATE venue_layouts
             SET ${updates.join(', ')}
             WHERE id = ? AND association_id = ?
-        `).run(...values);
+        `,
+      ).run(...values);
     }
 
     logger.info(`Venue layout updated: ${id}`, { updatedBy: req.user!.id });
 
     res.json({
-        message: 'Venue layout updated successfully.',
-        inUseWarning: inUse ? `Layout is in use by concert: ${inUse.name}` : undefined,
+      message: 'Venue layout updated successfully.',
+      inUseWarning: inUse ? `Layout is in use by concert: ${inUse.name}` : undefined,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -385,24 +431,36 @@ router.put('/:id', authenticateToken, requireRole('admin', 'music_committee'), a
  *     summary: Delete a venue layout
  *     tags: [Venue Layouts]
  */
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT id, name FROM venue_layouts WHERE id = ? AND association_id = ?
-    `).get(id, req.user!.associationId) as { id: string; name: string } | undefined;
+    `,
+      )
+      .get(id, req.user!.associationId) as { id: string; name: string } | undefined;
 
     if (!existing) {
-        throw new ApiError(404, 'Venue layout not found');
+      throw new ApiError(404, 'Venue layout not found');
     }
 
     // Check if layout is in use by any concert
-    const inUse = db.prepare(`
+    const inUse = db
+      .prepare(
+        `
         SELECT id, name FROM concerts WHERE venue_layout_id = ?
-    `).all(id) as { id: string; name: string }[];
+    `,
+      )
+      .all(id) as { id: string; name: string }[];
 
     if (inUse.length > 0) {
-        throw new ApiError(409, `Layout is in use by ${inUse.length} concert(s): ${inUse.map(c => c.name).join(', ')}`);
+      throw new ApiError(409, `Layout is in use by ${inUse.length} concert(s): ${inUse.map((c) => c.name).join(', ')}`);
     }
 
     // Delete layout (seats will cascade)
@@ -411,9 +469,10 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
     logger.info(`Venue layout deleted: ${existing.name}`, { id, deletedBy: req.user!.id });
 
     res.json({
-        message: 'Venue layout deleted successfully.',
+      message: 'Venue layout deleted successfully.',
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -422,28 +481,35 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
  *     summary: Bulk add/update seats for a layout
  *     tags: [Venue Layouts]
  */
-router.post('/:id/seats', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/seats',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const validation = bulkSeatsSchema.safeParse(req.body);
     if (!validation.success) {
-        throw new ApiError(400, validation.error.issues[0].message);
+      throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
         SELECT id FROM venue_layouts WHERE id = ? AND association_id = ?
-    `).get(id, req.user!.associationId);
+    `,
+      )
+      .get(id, req.user!.associationId);
 
     if (!existing) {
-        throw new ApiError(404, 'Venue layout not found');
+      throw new ApiError(404, 'Venue layout not found');
     }
 
     const { seats, deleteOtherSeats } = validation.data;
 
     // Get existing seat IDs for reference
     const existingSeats = new Set(
-        (db.prepare('SELECT id FROM venue_seats WHERE layout_id = ?').all(id) as { id: string }[])
-            .map(s => s.id)
+      (db.prepare('SELECT id FROM venue_seats WHERE layout_id = ?').all(id) as { id: string }[]).map((s) => s.id),
     );
 
     const newSeatIds = new Set<string>();
@@ -462,81 +528,95 @@ router.post('/:id/seats', authenticateToken, requireRole('admin', 'music_committ
     `);
 
     for (const seat of seats) {
-        if (seat.id && existingSeats.has(seat.id)) {
-            // Update existing seat
-            updateStmt.run(
-                seat.section,
-                seat.rowName,
-                seat.seatNumber,
-                seat.seatType,
-                seat.xPosition,
-                seat.yPosition,
-                seat.priceCategory,
-                seat.isAvailable ? 1 : 0,
-                seat.id,
-                id
-            );
-            newSeatIds.add(seat.id);
-            updated++;
-        } else {
-            // Create new seat
-            const seatId = seat.id || uuidv4();
-            insertStmt.run(
-                seatId,
-                id,
-                seat.section,
-                seat.rowName,
-                seat.seatNumber,
-                seat.seatType,
-                seat.xPosition,
-                seat.yPosition,
-                seat.priceCategory,
-                seat.isAvailable ? 1 : 0
-            );
-            newSeatIds.add(seatId);
-            created++;
-        }
+      if (seat.id && existingSeats.has(seat.id)) {
+        // Update existing seat
+        updateStmt.run(
+          seat.section,
+          seat.rowName,
+          seat.seatNumber,
+          seat.seatType,
+          seat.xPosition,
+          seat.yPosition,
+          seat.priceCategory,
+          seat.isAvailable ? 1 : 0,
+          seat.id,
+          id,
+        );
+        newSeatIds.add(seat.id);
+        updated++;
+      } else {
+        // Create new seat
+        const seatId = seat.id || uuidv4();
+        insertStmt.run(
+          seatId,
+          id,
+          seat.section,
+          seat.rowName,
+          seat.seatNumber,
+          seat.seatType,
+          seat.xPosition,
+          seat.yPosition,
+          seat.priceCategory,
+          seat.isAvailable ? 1 : 0,
+        );
+        newSeatIds.add(seatId);
+        created++;
+      }
     }
 
     // Delete seats not in the list if requested
     let deleted = 0;
     if (deleteOtherSeats) {
-        const toDelete = Array.from(existingSeats).filter(seatId => !newSeatIds.has(seatId));
-        if (toDelete.length > 0) {
-            // Check if any seats are reserved
-            const reserved = db.prepare(`
+      const toDelete = Array.from(existingSeats).filter((seatId) => !newSeatIds.has(seatId));
+      if (toDelete.length > 0) {
+        // Check if any seats are reserved
+        const reserved = db
+          .prepare(
+            `
                 SELECT s.id, s.seat_number, s.row_name
                 FROM venue_seats s
                 JOIN concert_seat_reservations r ON r.seat_id = s.id
                 WHERE s.id IN (${toDelete.map(() => '?').join(',')})
                 AND r.status IN ('reserved', 'sold')
-            `).all(...toDelete) as { id: string; seat_number: string; row_name: string }[];
+            `,
+          )
+          .all(...toDelete) as { id: string; seat_number: string; row_name: string }[];
 
-            if (reserved.length > 0) {
-                throw new ApiError(409, `Cannot delete seats with active reservations: ${reserved.map(s => `${s.row_name}${s.seat_number}`).join(', ')}`);
-            }
-
-            db.prepare(`DELETE FROM venue_seats WHERE id IN (${toDelete.map(() => '?').join(',')}) AND layout_id = ?`)
-                .run(...toDelete, id);
-            deleted = toDelete.length;
+        if (reserved.length > 0) {
+          throw new ApiError(
+            409,
+            `Cannot delete seats with active reservations: ${reserved.map((s) => `${s.row_name}${s.seat_number}`).join(', ')}`,
+          );
         }
+
+        db.prepare(`DELETE FROM venue_seats WHERE id IN (${toDelete.map(() => '?').join(',')}) AND layout_id = ?`).run(
+          ...toDelete,
+          id,
+        );
+        deleted = toDelete.length;
+      }
     }
 
     // Update capacity
-    const newCapacity = db.prepare('SELECT COUNT(*) as count FROM venue_seats WHERE layout_id = ?').get(id) as { count: number };
-    db.prepare('UPDATE venue_layouts SET capacity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-        .run(newCapacity.count, id);
+    const newCapacity = db.prepare('SELECT COUNT(*) as count FROM venue_seats WHERE layout_id = ?').get(id) as {
+      count: number;
+    };
+    db.prepare('UPDATE venue_layouts SET capacity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(
+      newCapacity.count,
+      id,
+    );
 
     logger.info(`Bulk seat update for layout ${id}`, { created, updated, deleted, updatedBy: req.user!.id });
 
     res.json({
-        message: 'Seats updated successfully.',
-        created,
-        updated,
-        deleted,
-        totalSeats: newCapacity.count,
+      message: 'Seats updated successfully.',
+      created,
+      updated,
+      deleted,
+      totalSeats: newCapacity.count,
     });
-}));
+  }),
+);
 
 // ==========================================
 // CONCERT SEAT ENDPOINTS
@@ -549,11 +629,16 @@ router.post('/:id/seats', authenticateToken, requireRole('admin', 'music_committ
  *     summary: Get seat availability for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.get('/concerts/:id/seats', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/concerts/:id/seats',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id: concertId } = req.params;
 
     // Get concert with layout info
-    const concert = db.prepare(`
+    const concert = db
+      .prepare(
+        `
         SELECT
             c.id,
             c.name,
@@ -565,26 +650,32 @@ router.get('/concerts/:id/seats', authenticateToken, asyncHandler(async (req: Au
         FROM concerts c
         LEFT JOIN venue_layouts vl ON vl.id = c.venue_layout_id
         WHERE c.id = ? AND c.association_id = ?
-    `).get(concertId, req.user!.associationId) as {
-        id: string;
-        name: string;
-        venue_layout_id: string | null;
-        is_seated_event: number;
-        layout_name: string | null;
-        layout_data: string | null;
-        capacity: number | null;
-    } | undefined;
+    `,
+      )
+      .get(concertId, req.user!.associationId) as
+      | {
+          id: string;
+          name: string;
+          venue_layout_id: string | null;
+          is_seated_event: number;
+          layout_name: string | null;
+          layout_data: string | null;
+          capacity: number | null;
+        }
+      | undefined;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert not found');
+      throw new ApiError(404, 'Concert not found');
     }
 
     if (!concert.venue_layout_id || !concert.is_seated_event) {
-        throw new ApiError(400, 'This concert does not have assigned seating');
+      throw new ApiError(400, 'This concert does not have assigned seating');
     }
 
     // Get all seats with their reservation status
-    const seats = db.prepare(`
+    const seats = db
+      .prepare(
+        `
         SELECT
             vs.id,
             vs.section,
@@ -602,19 +693,21 @@ router.get('/concerts/:id/seats', authenticateToken, asyncHandler(async (req: Au
         LEFT JOIN concert_seat_reservations csr ON csr.seat_id = vs.id AND csr.concert_id = ?
         WHERE vs.layout_id = ?
         ORDER BY vs.section, vs.row_name, vs.seat_number
-    `).all(concertId, concert.venue_layout_id) as {
-        id: string;
-        section: string;
-        row_name: string;
-        seat_number: string;
-        seat_type: string;
-        x_position: number;
-        y_position: number;
-        price_category: string;
-        is_available: number;
-        reservation_status: string | null;
-        reserved_at: string | null;
-        reservation_expires_at: string | null;
+    `,
+      )
+      .all(concertId, concert.venue_layout_id) as {
+      id: string;
+      section: string;
+      row_name: string;
+      seat_number: string;
+      seat_type: string;
+      x_position: number;
+      y_position: number;
+      price_category: string;
+      is_available: number;
+      reservation_status: string | null;
+      reserved_at: string | null;
+      reservation_expires_at: string | null;
     }[];
 
     // Calculate availability statistics
@@ -624,65 +717,66 @@ router.get('/concerts/:id/seats', authenticateToken, asyncHandler(async (req: Au
     let sold = 0;
     let blocked = 0;
 
-    const seatsList = seats.map(seat => {
-        let status: 'available' | 'reserved' | 'sold' | 'blocked' = 'available';
+    const seatsList = seats.map((seat) => {
+      let status: 'available' | 'reserved' | 'sold' | 'blocked' = 'available';
 
-        if (!seat.is_available) {
-            status = 'blocked';
-            blocked++;
-        } else if (seat.reservation_status === 'sold') {
-            status = 'sold';
-            sold++;
-        } else if (seat.reservation_status === 'blocked') {
-            status = 'blocked';
-            blocked++;
-        } else if (seat.reservation_status === 'reserved') {
-            // Check if reservation has expired
-            if (seat.reservation_expires_at && seat.reservation_expires_at < now) {
-                status = 'available';
-                available++;
-            } else {
-                status = 'reserved';
-                reserved++;
-            }
+      if (!seat.is_available) {
+        status = 'blocked';
+        blocked++;
+      } else if (seat.reservation_status === 'sold') {
+        status = 'sold';
+        sold++;
+      } else if (seat.reservation_status === 'blocked') {
+        status = 'blocked';
+        blocked++;
+      } else if (seat.reservation_status === 'reserved') {
+        // Check if reservation has expired
+        if (seat.reservation_expires_at && seat.reservation_expires_at < now) {
+          status = 'available';
+          available++;
         } else {
-            available++;
+          status = 'reserved';
+          reserved++;
         }
+      } else {
+        available++;
+      }
 
-        return {
-            id: seat.id,
-            section: seat.section,
-            rowName: seat.row_name,
-            seatNumber: seat.seat_number,
-            seatType: seat.seat_type,
-            xPosition: seat.x_position,
-            yPosition: seat.y_position,
-            priceCategory: seat.price_category,
-            status,
-        };
+      return {
+        id: seat.id,
+        section: seat.section,
+        rowName: seat.row_name,
+        seatNumber: seat.seat_number,
+        seatType: seat.seat_type,
+        xPosition: seat.x_position,
+        yPosition: seat.y_position,
+        priceCategory: seat.price_category,
+        status,
+      };
     });
 
     res.json({
-        concert: {
-            id: concert.id,
-            name: concert.name,
-        },
-        layout: {
-            id: concert.venue_layout_id,
-            name: concert.layout_name,
-            layoutData: concert.layout_data ? JSON.parse(concert.layout_data) : null,
-            capacity: concert.capacity,
-        },
-        seats: seatsList,
-        stats: {
-            total: seats.length,
-            available,
-            reserved,
-            sold,
-            blocked,
-        },
+      concert: {
+        id: concert.id,
+        name: concert.name,
+      },
+      layout: {
+        id: concert.venue_layout_id,
+        name: concert.layout_name,
+        layoutData: concert.layout_data ? JSON.parse(concert.layout_data) : null,
+        capacity: concert.capacity,
+      },
+      seats: seatsList,
+      stats: {
+        total: seats.length,
+        available,
+        reserved,
+        sold,
+        blocked,
+      },
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -691,50 +785,65 @@ router.get('/concerts/:id/seats', authenticateToken, asyncHandler(async (req: Au
  *     summary: Reserve seats temporarily for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.post('/concerts/:id/seats/reserve', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/concerts/:id/seats/reserve',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id: concertId } = req.params;
 
     const validation = reserveSeatsSchema.safeParse(req.body);
     if (!validation.success) {
-        throw new ApiError(400, validation.error.issues[0].message);
+      throw new ApiError(400, validation.error.issues[0].message);
     }
 
     const { seatIds, orderId, reservationMinutes } = validation.data;
 
     // Verify concert exists and has seating
-    const concert = db.prepare(`
+    const concert = db
+      .prepare(
+        `
         SELECT id, name, venue_layout_id, is_seated_event
         FROM concerts
         WHERE id = ? AND association_id = ?
-    `).get(concertId, req.user!.associationId) as {
-        id: string;
-        name: string;
-        venue_layout_id: string | null;
-        is_seated_event: number;
-    } | undefined;
+    `,
+      )
+      .get(concertId, req.user!.associationId) as
+      | {
+          id: string;
+          name: string;
+          venue_layout_id: string | null;
+          is_seated_event: number;
+        }
+      | undefined;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert not found');
+      throw new ApiError(404, 'Concert not found');
     }
 
     if (!concert.venue_layout_id || !concert.is_seated_event) {
-        throw new ApiError(400, 'This concert does not have assigned seating');
+      throw new ApiError(400, 'This concert does not have assigned seating');
     }
 
     // Verify all seats exist and belong to the concert's layout
-    const seats = db.prepare(`
+    const seats = db
+      .prepare(
+        `
         SELECT id FROM venue_seats
         WHERE id IN (${seatIds.map(() => '?').join(',')})
         AND layout_id = ?
-    `).all(...seatIds, concert.venue_layout_id) as { id: string }[];
+    `,
+      )
+      .all(...seatIds, concert.venue_layout_id) as { id: string }[];
 
     if (seats.length !== seatIds.length) {
-        throw new ApiError(400, 'One or more seats do not exist or do not belong to this concert\'s layout');
+      throw new ApiError(400, "One or more seats do not exist or do not belong to this concert's layout");
     }
 
     // Check if any seats are already reserved/sold
     const now = new Date().toISOString();
-    const unavailable = db.prepare(`
+    const unavailable = db
+      .prepare(
+        `
         SELECT s.id, s.seat_number, s.row_name, csr.status
         FROM venue_seats s
         JOIN concert_seat_reservations csr ON csr.seat_id = s.id
@@ -744,15 +853,20 @@ router.post('/concerts/:id/seats/reserve', authenticateToken, asyncHandler(async
             csr.status IN ('sold', 'blocked')
             OR (csr.status = 'reserved' AND csr.reservation_expires_at > ?)
         )
-    `).all(...seatIds, concertId, now) as {
-        id: string;
-        seat_number: string;
-        row_name: string;
-        status: string;
+    `,
+      )
+      .all(...seatIds, concertId, now) as {
+      id: string;
+      seat_number: string;
+      row_name: string;
+      status: string;
     }[];
 
     if (unavailable.length > 0) {
-        throw new ApiError(409, `Seats not available: ${unavailable.map(s => `${s.row_name}${s.seat_number} (${s.status})`).join(', ')}`);
+      throw new ApiError(
+        409,
+        `Seats not available: ${unavailable.map((s) => `${s.row_name}${s.seat_number} (${s.status})`).join(', ')}`,
+      );
     }
 
     // Create/update reservations
@@ -769,23 +883,24 @@ router.post('/concerts/:id/seats/reserve', authenticateToken, asyncHandler(async
     `);
 
     for (const seatId of seatIds) {
-        upsertStmt.run(uuidv4(), concertId, seatId, orderId || null, now, expiresAt);
+      upsertStmt.run(uuidv4(), concertId, seatId, orderId || null, now, expiresAt);
     }
 
     logger.info(`Seats reserved for concert ${concert.name}`, {
-        concertId,
-        seatCount: seatIds.length,
-        orderId,
-        expiresAt,
-        reservedBy: req.user!.id,
+      concertId,
+      seatCount: seatIds.length,
+      orderId,
+      expiresAt,
+      reservedBy: req.user!.id,
     });
 
     res.json({
-        message: 'Seats reserved successfully.',
-        reservedSeats: seatIds,
-        expiresAt,
+      message: 'Seats reserved successfully.',
+      reservedSeats: seatIds,
+      expiresAt,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -794,51 +909,67 @@ router.post('/concerts/:id/seats/reserve', authenticateToken, asyncHandler(async
  *     summary: Release seat reservations for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.delete('/concerts/:id/seats/reserve', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete(
+  '/concerts/:id/seats/reserve',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id: concertId } = req.params;
     const { seatIds, orderId } = req.body as { seatIds?: string[]; orderId?: string };
 
     // Verify concert exists
-    const concert = db.prepare(`
+    const concert = db
+      .prepare(
+        `
         SELECT id, name FROM concerts WHERE id = ? AND association_id = ?
-    `).get(concertId, req.user!.associationId) as { id: string; name: string } | undefined;
+    `,
+      )
+      .get(concertId, req.user!.associationId) as { id: string; name: string } | undefined;
 
     if (!concert) {
-        throw new ApiError(404, 'Concert not found');
+      throw new ApiError(404, 'Concert not found');
     }
 
     let result;
 
     if (orderId) {
-        // Release all reservations for an order
-        result = db.prepare(`
+      // Release all reservations for an order
+      result = db
+        .prepare(
+          `
             DELETE FROM concert_seat_reservations
             WHERE concert_id = ? AND order_id = ? AND status = 'reserved'
-        `).run(concertId, orderId);
+        `,
+        )
+        .run(concertId, orderId);
     } else if (seatIds && seatIds.length > 0) {
-        // Release specific seats
-        result = db.prepare(`
+      // Release specific seats
+      result = db
+        .prepare(
+          `
             DELETE FROM concert_seat_reservations
             WHERE concert_id = ?
             AND seat_id IN (${seatIds.map(() => '?').join(',')})
             AND status = 'reserved'
-        `).run(concertId, ...seatIds);
+        `,
+        )
+        .run(concertId, ...seatIds);
     } else {
-        throw new ApiError(400, 'Either seatIds or orderId is required');
+      throw new ApiError(400, 'Either seatIds or orderId is required');
     }
 
     logger.info(`Seat reservations released for concert ${concert.name}`, {
-        concertId,
-        releasedCount: result.changes,
-        orderId,
-        seatIds,
-        releasedBy: req.user!.id,
+      concertId,
+      releasedCount: result.changes,
+      orderId,
+      seatIds,
+      releasedBy: req.user!.id,
     });
 
     res.json({
-        message: 'Reservations released successfully.',
-        releasedCount: result.changes,
+      message: 'Reservations released successfully.',
+      releasedCount: result.changes,
     });
-}));
+  }),
+);
 
 export default router;

@@ -51,11 +51,7 @@ export function FavoriteButton({ musicTitleId, size = 'md', showLabel = false }:
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
-      <Icon
-        name="heart"
-        size={sizes[size].iconSize}
-        className={isFavorite ? 'is-favorite' : ''}
-      />
+      <Icon name="heart" size={sizes[size].iconSize} className={isFavorite ? 'is-favorite' : ''} />
       {showLabel && <span style={{ fontSize: '0.875rem' }}>{t('favorites.favorite')}</span>}
     </button>
   );

@@ -32,11 +32,7 @@ export const holidayQueryKeys = {
 /**
  * Hook to fetch holidays for a year or date range
  */
-export function useHolidays(params?: {
-  year?: number;
-  startDate?: string;
-  endDate?: string;
-}) {
+export function useHolidays(params?: { year?: number; startDate?: string; endDate?: string }) {
   return useQuery({
     queryKey: holidayQueryKeys.list(params),
     queryFn: () => getHolidays(params),
@@ -62,7 +58,7 @@ export function useCheckHolidayDate(date: string, options?: { enabled?: boolean 
   return useQuery({
     queryKey: holidayQueryKeys.check(date),
     queryFn: () => checkHolidayDate(date),
-    enabled: !!date && (options?.enabled !== false),
+    enabled: !!date && options?.enabled !== false,
     staleTime: 60 * 60 * 1000, // 1 hour - dates don't change often
   });
 }
@@ -121,7 +117,10 @@ export function useUpdateCustomHoliday() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, holiday }: {
+    mutationFn: ({
+      id,
+      holiday,
+    }: {
       id: string;
       holiday: {
         name?: string;

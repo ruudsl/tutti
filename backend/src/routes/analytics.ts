@@ -788,8 +788,7 @@ router.get(
 
     const allowedReportTypes = ['member_activity', 'content_activity', 'detailed_log'] as const;
     const reportType =
-      typeof rawReportType === 'string' &&
-      (allowedReportTypes as readonly string[]).includes(rawReportType)
+      typeof rawReportType === 'string' && (allowedReportTypes as readonly string[]).includes(rawReportType)
         ? rawReportType
         : 'member_activity';
     const reportTypeForLog = reportType.replace(/[\r\n]/g, '');

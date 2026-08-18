@@ -68,7 +68,9 @@ export const getWikiPages = async (): Promise<WikiPage[]> => {
   return data;
 };
 
-export const searchWikiPages = async (query: string): Promise<{ id: string; slug: string; title: string; excerpt: string; updatedAt: string }[]> => {
+export const searchWikiPages = async (
+  query: string,
+): Promise<{ id: string; slug: string; title: string; excerpt: string; updatedAt: string }[]> => {
   const { data } = await api.get('/wiki/search', { params: { q: query } });
   return data;
 };
@@ -78,7 +80,9 @@ export const getWikiPage = async (slug: string): Promise<WikiPageDetail> => {
   return data;
 };
 
-export const createWikiPage = async (page: CreateWikiPageData): Promise<{ id: string; slug: string; message: string }> => {
+export const createWikiPage = async (
+  page: CreateWikiPageData,
+): Promise<{ id: string; slug: string; message: string }> => {
   const { data } = await api.post('/wiki', page);
   return data;
 };
@@ -126,7 +130,10 @@ export const getWikiAttachments = async (slug: string): Promise<WikiAttachment[]
   return data;
 };
 
-export const uploadWikiAttachment = async (slug: string, file: File): Promise<{ id: string; url: string; message: string }> => {
+export const uploadWikiAttachment = async (
+  slug: string,
+  file: File,
+): Promise<{ id: string; url: string; message: string }> => {
   const formData = new FormData();
   formData.append('file', file);
   const { data } = await api.post(`/wiki/${slug}/attachments`, formData, {

@@ -39,7 +39,7 @@ export const getPracticeStats = async (): Promise<PracticeStats> => {
 export const logPractice = async (
   musicTitleId: string,
   durationMinutes: number,
-  notes?: string
+  notes?: string,
 ): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/practice', { musicTitleId, durationMinutes, notes });
   return data;
@@ -75,7 +75,7 @@ export const getPracticeGoals = async (): Promise<PracticeGoalsResponse> => {
 
 export const setPracticeGoal = async (
   goalType: 'daily' | 'weekly',
-  targetMinutes: number
+  targetMinutes: number,
 ): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/practice/goals', { goalType, targetMinutes });
   return data;

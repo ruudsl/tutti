@@ -13,23 +13,23 @@ const router = Router();
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 
 interface FailedImport {
-    id: string;
-    association_id: string;
-    original_filename: string;
-    file_path: string | null;
-    import_type: string;
-    error_message: string;
-    error_code: string | null;
-    metadata_json: string | null;
-    source_info: string | null;
-    list_id: string | null;
-    retry_count: number;
-    max_retries: number;
-    status: string;
-    created_by: string | null;
-    created_at: string;
-    last_retry_at: string | null;
-    recovered_at: string | null;
+  id: string;
+  association_id: string;
+  original_filename: string;
+  file_path: string | null;
+  import_type: string;
+  error_message: string;
+  error_code: string | null;
+  metadata_json: string | null;
+  source_info: string | null;
+  list_id: string | null;
+  retry_count: number;
+  max_retries: number;
+  status: string;
+  created_by: string | null;
+  created_at: string;
+  last_retry_at: string | null;
+  recovered_at: string | null;
 }
 
 /**
@@ -50,7 +50,11 @@ interface FailedImport {
  *       200:
  *         description: List of failed imports
  */
-router.get('/', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status } = req.query;
 
     let query = `
@@ -64,15 +68,16 @@ router.get('/', authenticateToken, requireRole('admin', 'music_committee'), asyn
     const params: any[] = [req.user!.associationId];
 
     if (status) {
-        query += ' AND fi.status = ?';
-        params.push(status);
+      query += ' AND fi.status = ?';
+      params.push(status);
     }
 
     query += ' ORDER BY fi.created_at DESC';
 
     const failedImports = db.prepare(query).all(...params);
 
-    res.json(failedImports.map((fi: any) => ({
+    res.json(
+      failedImports.map((fi: any) => ({
         id: fi.id,
         originalFilename: fi.original_filename,
         filePath: fi.file_path,
@@ -90,8 +95,10 @@ router.get('/', authenticateToken, requireRole('admin', 'music_committee'), asyn
         createdAt: fi.created_at,
         lastRetryAt: fi.last_retry_at,
         recoveredAt: fi.recovered_at,
-    })));
-}));
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -105,8 +112,14 @@ router.get('/', authenticateToken, requireRole('admin', 'music_committee'), asyn
  *       200:
  *         description: Failed imports statistics
  */
-router.get('/stats', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const stats = db.prepare(`
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = db
+      .prepare(
+        `
         SELECT
             COUNT(*) as total,
             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
@@ -115,16 +128,19 @@ router.get('/stats', authenticateToken, requireRole('admin', 'music_committee'),
             SUM(CASE WHEN status = 'dismissed' THEN 1 ELSE 0 END) as dismissed
         FROM failed_imports
         WHERE association_id = ?
-    `).get(req.user!.associationId) as any;
+    `,
+      )
+      .get(req.user!.associationId) as any;
 
     res.json({
-        total: stats?.total || 0,
-        failed: stats?.failed || 0,
-        retrying: stats?.retrying || 0,
-        recovered: stats?.recovered || 0,
-        dismissed: stats?.dismissed || 0,
+      total: stats?.total || 0,
+      failed: stats?.failed || 0,
+      retrying: stats?.retrying || 0,
+      recovered: stats?.recovered || 0,
+      dismissed: stats?.dismissed || 0,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -144,110 +160,123 @@ router.get('/stats', authenticateToken, requireRole('admin', 'music_committee'),
  *       200:
  *         description: Retry initiated
  */
-router.post('/:id/retry', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/retry',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const failedImport = db.prepare(
-        'SELECT * FROM failed_imports WHERE id = ? AND association_id = ?'
-    ).get(id, req.user!.associationId) as FailedImport | undefined;
+    const failedImport = db
+      .prepare('SELECT * FROM failed_imports WHERE id = ? AND association_id = ?')
+      .get(id, req.user!.associationId) as FailedImport | undefined;
 
     if (!failedImport) {
-        throw new ApiError(404, 'Mislukte import niet gevonden.');
+      throw new ApiError(404, 'Mislukte import niet gevonden.');
     }
 
     if (failedImport.status === 'recovered') {
-        throw new ApiError(400, 'Deze import is al hersteld.');
+      throw new ApiError(400, 'Deze import is al hersteld.');
     }
 
     if (failedImport.retry_count >= failedImport.max_retries) {
-        throw new ApiError(400, 'Maximum aantal pogingen bereikt.');
+      throw new ApiError(400, 'Maximum aantal pogingen bereikt.');
     }
 
     // Check if the file still exists (for file-based imports)
     if (failedImport.file_path) {
-        const fullPath = path.join(UPLOAD_DIR, failedImport.file_path);
-        if (!fs.existsSync(fullPath)) {
-            throw new ApiError(400, 'Oorspronkelijk bestand is niet meer beschikbaar.');
-        }
+      const fullPath = path.join(UPLOAD_DIR, failedImport.file_path);
+      if (!fs.existsSync(fullPath)) {
+        throw new ApiError(400, 'Oorspronkelijk bestand is niet meer beschikbaar.');
+      }
     }
 
     // Update status to retrying
-    db.prepare(`
+    db.prepare(
+      `
         UPDATE failed_imports
         SET status = 'retrying',
             retry_count = retry_count + 1,
             last_retry_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    `).run(id);
+    `,
+    ).run(id);
 
     // Get metadata
     const metadata = failedImport.metadata_json ? JSON.parse(failedImport.metadata_json) : {};
 
     // Attempt the import based on type
     try {
-        let pieceId: string | null = null;
+      let pieceId: string | null = null;
 
-        if (failedImport.import_type === 'pdf' && failedImport.file_path) {
-            // Re-process the PDF import
-            pieceId = uuidv4();
+      if (failedImport.import_type === 'pdf' && failedImport.file_path) {
+        // Re-process the PDF import
+        pieceId = uuidv4();
 
-            db.prepare(`
+        db.prepare(
+          `
                 INSERT INTO music_pieces (id, title, arranger, instrument_id, tuning, group_number, clef,
                                          file_path, original_filename, association_id, uploaded_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
-                pieceId,
-                metadata.title || failedImport.original_filename.replace(/\.pdf$/i, ''),
-                metadata.arranger || null,
-                metadata.instrumentId || null,
-                metadata.tuning || null,
-                metadata.groupNumber || null,
-                metadata.clef || null,
-                failedImport.file_path,
-                failedImport.original_filename,
-                req.user!.associationId,
-                req.user!.id
-            );
+            `,
+        ).run(
+          pieceId,
+          metadata.title || failedImport.original_filename.replace(/\.pdf$/i, ''),
+          metadata.arranger || null,
+          metadata.instrumentId || null,
+          metadata.tuning || null,
+          metadata.groupNumber || null,
+          metadata.clef || null,
+          failedImport.file_path,
+          failedImport.original_filename,
+          req.user!.associationId,
+          req.user!.id,
+        );
 
-            // Add to list if specified
-            if (failedImport.list_id) {
-                db.prepare(
-                    'INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)'
-                ).run(failedImport.list_id, pieceId);
-            }
+        // Add to list if specified
+        if (failedImport.list_id) {
+          db.prepare('INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)').run(
+            failedImport.list_id,
+            pieceId,
+          );
         }
+      }
 
-        // Mark as recovered
-        db.prepare(`
+      // Mark as recovered
+      db.prepare(
+        `
             UPDATE failed_imports
             SET status = 'recovered',
                 recovered_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `).run(id);
+        `,
+      ).run(id);
 
-        const sanitizedIdForLog = id.replace(/[\r\n]/g, '');
-        logger.info(`Failed import recovered: ${sanitizedIdForLog}`, {
-            recoveredBy: req.user!.id,
-            pieceId,
-        });
+      const sanitizedIdForLog = id.replace(/[\r\n]/g, '');
+      logger.info(`Failed import recovered: ${sanitizedIdForLog}`, {
+        recoveredBy: req.user!.id,
+        pieceId,
+      });
 
-        res.json({
-            message: 'Import succesvol hersteld.',
-            pieceId,
-        });
-
+      res.json({
+        message: 'Import succesvol hersteld.',
+        pieceId,
+      });
     } catch (error) {
-        // Update error message with new error
-        db.prepare(`
+      // Update error message with new error
+      db.prepare(
+        `
             UPDATE failed_imports
             SET status = 'failed',
                 error_message = ?
             WHERE id = ?
-        `).run((error as Error).message, id);
+        `,
+      ).run((error as Error).message, id);
 
-        throw new ApiError(500, `Herstel mislukt: ${(error as Error).message}`);
+      throw new ApiError(500, `Herstel mislukt: ${(error as Error).message}`);
     }
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -267,21 +296,30 @@ router.post('/:id/retry', authenticateToken, requireRole('admin', 'music_committ
  *       200:
  *         description: Import dismissed
  */
-router.post('/:id/dismiss', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/:id/dismiss',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
         UPDATE failed_imports
         SET status = 'dismissed'
         WHERE id = ? AND association_id = ?
-    `).run(id, req.user!.associationId);
+    `,
+      )
+      .run(id, req.user!.associationId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Mislukte import niet gevonden.');
+      throw new ApiError(404, 'Mislukte import niet gevonden.');
     }
 
     res.json({ message: 'Import genegeerd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -301,29 +339,34 @@ router.post('/:id/dismiss', authenticateToken, requireRole('admin', 'music_commi
  *       200:
  *         description: Failed import deleted
  */
-router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    const failedImport = db.prepare(
-        'SELECT * FROM failed_imports WHERE id = ? AND association_id = ?'
-    ).get(id, req.user!.associationId) as FailedImport | undefined;
+    const failedImport = db
+      .prepare('SELECT * FROM failed_imports WHERE id = ? AND association_id = ?')
+      .get(id, req.user!.associationId) as FailedImport | undefined;
 
     if (!failedImport) {
-        throw new ApiError(404, 'Mislukte import niet gevonden.');
+      throw new ApiError(404, 'Mislukte import niet gevonden.');
     }
 
     // Delete associated temp file if exists and not recovered
     if (failedImport.file_path && failedImport.status !== 'recovered') {
-        const fullPath = path.join(UPLOAD_DIR, failedImport.file_path);
-        if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-        }
+      const fullPath = path.join(UPLOAD_DIR, failedImport.file_path);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
     }
 
     db.prepare('DELETE FROM failed_imports WHERE id = ?').run(id);
 
     res.json({ message: 'Mislukte import verwijderd.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -348,72 +391,83 @@ router.delete('/:id', authenticateToken, requireRole('admin', 'music_committee')
  *       200:
  *         description: Imports dismissed
  */
-router.post('/bulk-dismiss', authenticateToken, requireRole('admin', 'music_committee'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/bulk-dismiss',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { ids } = req.body;
 
     if (!Array.isArray(ids) || ids.length === 0) {
-        throw new ApiError(400, 'Geen imports geselecteerd.');
+      throw new ApiError(400, 'Geen imports geselecteerd.');
     }
 
     const placeholders = ids.map(() => '?').join(', ');
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
         UPDATE failed_imports
         SET status = 'dismissed'
         WHERE id IN (${placeholders}) AND association_id = ?
-    `).run(...ids, req.user!.associationId);
+    `,
+      )
+      .run(...ids, req.user!.associationId);
 
     res.json({
-        message: `${result.changes} imports genegeerd.`,
-        dismissed: result.changes,
+      message: `${result.changes} imports genegeerd.`,
+      dismissed: result.changes,
     });
-}));
+  }),
+);
 
 /**
  * Helper function to record a failed import (called from other routes)
  */
 export function recordFailedImport(
-    associationId: string,
-    originalFilename: string,
-    errorMessage: string,
-    options: {
-        filePath?: string;
-        importType?: string;
-        errorCode?: string;
-        metadata?: Record<string, any>;
-        sourceInfo?: string;
-        listId?: string;
-        createdBy?: string;
-    } = {}
+  associationId: string,
+  originalFilename: string,
+  errorMessage: string,
+  options: {
+    filePath?: string;
+    importType?: string;
+    errorCode?: string;
+    metadata?: Record<string, any>;
+    sourceInfo?: string;
+    listId?: string;
+    createdBy?: string;
+  } = {},
 ): string {
-    const id = uuidv4();
+  const id = uuidv4();
 
-    db.prepare(`
+  db.prepare(
+    `
         INSERT INTO failed_imports (
             id, association_id, original_filename, file_path, import_type,
             error_message, error_code, metadata_json, source_info,
             list_id, created_by
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-        id,
-        associationId,
-        originalFilename,
-        options.filePath || null,
-        options.importType || 'pdf',
-        errorMessage,
-        options.errorCode || null,
-        options.metadata ? JSON.stringify(options.metadata) : null,
-        options.sourceInfo || null,
-        options.listId || null,
-        options.createdBy || null
-    );
+    `,
+  ).run(
+    id,
+    associationId,
+    originalFilename,
+    options.filePath || null,
+    options.importType || 'pdf',
+    errorMessage,
+    options.errorCode || null,
+    options.metadata ? JSON.stringify(options.metadata) : null,
+    options.sourceInfo || null,
+    options.listId || null,
+    options.createdBy || null,
+  );
 
-    logger.warn(`Failed import recorded: ${originalFilename}`, {
-        id,
-        errorMessage,
-        importType: options.importType,
-    });
+  logger.warn(`Failed import recorded: ${originalFilename}`, {
+    id,
+    errorMessage,
+    importType: options.importType,
+  });
 
-    return id;
+  return id;
 }
 
 export default router;

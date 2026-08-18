@@ -12,8 +12,8 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // Equipment maintenance log for detailed maintenance history
-    db.exec(`
+  // Equipment maintenance log for detailed maintenance history
+  db.exec(`
         CREATE TABLE IF NOT EXISTS equipment_maintenance_log (
             id TEXT PRIMARY KEY,
             equipment_id TEXT NOT NULL,
@@ -29,24 +29,24 @@ export function up(): void {
         )
     `);
 
-    // Indexes for efficient querying
-    db.exec('CREATE INDEX IF NOT EXISTS idx_maintenance_log_equipment ON equipment_maintenance_log(equipment_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_maintenance_log_date ON equipment_maintenance_log(maintenance_date)');
+  // Indexes for efficient querying
+  db.exec('CREATE INDEX IF NOT EXISTS idx_maintenance_log_equipment ON equipment_maintenance_log(equipment_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_maintenance_log_date ON equipment_maintenance_log(maintenance_date)');
 
-    // Add maintenance_notes column to equipment table if it doesn't exist
-    // SQLite doesn't support IF NOT EXISTS for ADD COLUMN, so we check first
-    const columns = db.prepare(`PRAGMA table_info(equipment)`).all() as { name: string }[];
-    const hasMaintenanceNotes = columns.some(col => col.name === 'maintenance_notes');
+  // Add maintenance_notes column to equipment table if it doesn't exist
+  // SQLite doesn't support IF NOT EXISTS for ADD COLUMN, so we check first
+  const columns = db.prepare(`PRAGMA table_info(equipment)`).all() as { name: string }[];
+  const hasMaintenanceNotes = columns.some((col) => col.name === 'maintenance_notes');
 
-    if (!hasMaintenanceNotes) {
-        db.exec(`ALTER TABLE equipment ADD COLUMN maintenance_notes TEXT`);
-    }
+  if (!hasMaintenanceNotes) {
+    db.exec(`ALTER TABLE equipment ADD COLUMN maintenance_notes TEXT`);
+  }
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    db.exec('DROP TABLE IF EXISTS equipment_maintenance_log');
-    // Note: SQLite doesn't support DROP COLUMN, so we leave maintenance_notes
+  db.exec('DROP TABLE IF EXISTS equipment_maintenance_log');
+  // Note: SQLite doesn't support DROP COLUMN, so we leave maintenance_notes
 }

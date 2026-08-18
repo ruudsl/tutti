@@ -1,9 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
-import {
-  useKeyboardShortcutsHelp,
-  useKeyboardShortcutsState,
-} from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcutsHelp, useKeyboardShortcutsState } from '../hooks/useKeyboardShortcuts';
 
 interface ShortcutItemProps {
   label: string;
@@ -25,9 +22,7 @@ function ShortcutItem({ label, description }: ShortcutItemProps) {
           {sequenceParts.map((key, index) => (
             <span key={index}>
               <kbd className="shortcut-key">{key}</kbd>
-              {index < sequenceParts.length - 1 && (
-                <span className="shortcut-separator"> </span>
-              )}
+              {index < sequenceParts.length - 1 && <span className="shortcut-separator"> </span>}
             </span>
           ))}
         </span>
@@ -39,9 +34,7 @@ function ShortcutItem({ label, description }: ShortcutItemProps) {
         {parts.map((key, index) => (
           <span key={index}>
             <kbd className="shortcut-key">{key}</kbd>
-            {index < parts.length - 1 && (
-              <span className="shortcut-separator">+</span>
-            )}
+            {index < parts.length - 1 && <span className="shortcut-separator">+</span>}
           </span>
         ))}
       </span>
@@ -69,11 +62,7 @@ function ShortcutCategory({ title, shortcuts }: ShortcutCategoryProps) {
       <h4 className="shortcut-category-title">{t(title)}</h4>
       <div className="shortcut-list">
         {shortcuts.map((shortcut, index) => (
-          <ShortcutItem
-            key={index}
-            label={shortcut.label}
-            description={shortcut.description}
-          />
+          <ShortcutItem key={index} label={shortcut.label} description={shortcut.description} />
         ))}
       </div>
     </div>
@@ -98,12 +87,7 @@ export function KeyboardShortcutsHelp() {
   const categoryOrder = ['general', 'actions', 'navigation'];
 
   return (
-    <Modal
-      title={t('shortcuts.title')}
-      onClose={closeHelp}
-      size="medium"
-      className="keyboard-shortcuts-modal"
-    >
+    <Modal title={t('shortcuts.title')} onClose={closeHelp} size="medium" className="keyboard-shortcuts-modal">
       <div className="keyboard-shortcuts-help">
         <p className="shortcuts-intro">{t('shortcuts.intro')}</p>
 
@@ -112,20 +96,12 @@ export function KeyboardShortcutsHelp() {
             const shortcuts = groupedShortcuts[category];
             if (!shortcuts || shortcuts.length === 0) return null;
 
-            return (
-              <ShortcutCategory
-                key={category}
-                title={categoryTitles[category]}
-                shortcuts={shortcuts}
-              />
-            );
+            return <ShortcutCategory key={category} title={categoryTitles[category]} shortcuts={shortcuts} />;
           })}
         </div>
 
         <div className="shortcuts-footer">
-          <p className="shortcuts-tip">
-            {t('shortcuts.tip')}
-          </p>
+          <p className="shortcuts-tip">{t('shortcuts.tip')}</p>
         </div>
       </div>
 

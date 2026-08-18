@@ -127,12 +127,17 @@ export const getReplacementRequest = async (id: string): Promise<ReplacementRequ
   return data;
 };
 
-export const createReplacementRequest = async (requestData: CreateReplacementRequestData): Promise<{ id: string; message: string }> => {
+export const createReplacementRequest = async (
+  requestData: CreateReplacementRequestData,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/replacement-requests', requestData);
   return data;
 };
 
-export const updateReplacementRequest = async (id: string, requestData: UpdateReplacementRequestData): Promise<{ message: string }> => {
+export const updateReplacementRequest = async (
+  id: string,
+  requestData: UpdateReplacementRequestData,
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/replacement-requests/${id}`, requestData);
   return data;
 };
@@ -142,7 +147,10 @@ export const cancelReplacementRequest = async (id: string): Promise<{ message: s
   return data;
 };
 
-export const inviteMusician = async (requestId: string, inviteData: InviteMusicianData): Promise<{ id: string; message: string }> => {
+export const inviteMusician = async (
+  requestId: string,
+  inviteData: InviteMusicianData,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/replacement-requests/${requestId}/invite`, inviteData);
   return data;
 };
@@ -150,13 +158,16 @@ export const inviteMusician = async (requestId: string, inviteData: InviteMusici
 export const updateAssignment = async (
   requestId: string,
   assignmentId: string,
-  assignmentData: UpdateAssignmentData
+  assignmentData: UpdateAssignmentData,
 ): Promise<{ message: string }> => {
   const { data } = await api.put(`/replacement-requests/${requestId}/assignments/${assignmentId}`, assignmentData);
   return data;
 };
 
-export const getReplacementSuggestions = async (eventId: string, eventType?: string): Promise<ReplacementSuggestion[]> => {
+export const getReplacementSuggestions = async (
+  eventId: string,
+  eventType?: string,
+): Promise<ReplacementSuggestion[]> => {
   const params = new URLSearchParams();
   if (eventType) params.set('eventType', eventType);
 

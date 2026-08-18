@@ -171,12 +171,19 @@ export async function deleteTask(id: string): Promise<{ message: string }> {
 }
 
 // Checklist
-export async function addChecklistItem(taskId: string, content: string): Promise<{ id: string; content: string; isCompleted: boolean; message: string }> {
+export async function addChecklistItem(
+  taskId: string,
+  content: string,
+): Promise<{ id: string; content: string; isCompleted: boolean; message: string }> {
   const response = await api.post(`/tasks/${taskId}/checklist`, { content });
   return response.data;
 }
 
-export async function updateChecklistItem(taskId: string, itemId: string, data: { content?: string; isCompleted?: boolean }): Promise<{ message: string }> {
+export async function updateChecklistItem(
+  taskId: string,
+  itemId: string,
+  data: { content?: string; isCompleted?: boolean },
+): Promise<{ message: string }> {
   const response = await api.put(`/tasks/${taskId}/checklist/${itemId}`, data);
   return response.data;
 }
@@ -232,7 +239,10 @@ export async function createTaskTemplate(data: CreateTaskTemplateData): Promise<
   return response.data;
 }
 
-export async function updateTaskTemplate(id: string, data: Partial<CreateTaskTemplateData>): Promise<{ message: string }> {
+export async function updateTaskTemplate(
+  id: string,
+  data: Partial<CreateTaskTemplateData>,
+): Promise<{ message: string }> {
   const response = await api.put(`/tasks/templates/${id}`, data);
   return response.data;
 }
@@ -244,7 +254,7 @@ export async function deleteTaskTemplate(id: string): Promise<{ message: string 
 
 export async function createTaskFromTemplate(
   templateId: string,
-  data?: { title?: string; assignedTo?: string; dueDate?: string }
+  data?: { title?: string; assignedTo?: string; dueDate?: string },
 ): Promise<{ id: string; title: string; message: string }> {
   const response = await api.post(`/tasks/templates/${templateId}/create-task`, data || {});
   return response.data;
@@ -252,7 +262,7 @@ export async function createTaskFromTemplate(
 
 export async function applyTaskTemplate(
   templateId: string,
-  data?: { listId?: string }
+  data?: { listId?: string },
 ): Promise<{ tasks: { id: string; title: string }[]; message: string }> {
   const response = await api.post(`/tasks/templates/${templateId}/apply`, data || {});
   return response.data;

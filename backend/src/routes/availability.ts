@@ -36,7 +36,10 @@ const router = Router();
  *       200:
  *         description: List of availability entries
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { fromDate, toDate } = req.query;
 
     let query = `
@@ -47,27 +50,30 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     const params: any[] = [req.user!.id];
 
     if (fromDate) {
-        query += ' AND date >= ?';
-        params.push(fromDate);
+      query += ' AND date >= ?';
+      params.push(fromDate);
     }
     if (toDate) {
-        query += ' AND date <= ?';
-        params.push(toDate);
+      query += ' AND date <= ?';
+      params.push(toDate);
     }
 
     query += ' ORDER BY date ASC';
 
     const availability = db.prepare(query).all(...params);
 
-    res.json(availability.map((a: any) => ({
+    res.json(
+      availability.map((a: any) => ({
         id: a.id,
         date: a.date,
         status: a.status,
         notes: a.notes,
         createdAt: a.created_at,
         updatedAt: a.updated_at,
-    })));
-}));
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -93,11 +99,15 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *       200:
  *         description: Team availability for the date
  */
-router.get('/team', authenticateToken, requireRole('admin', 'conductor', 'section_leader'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/team',
+  authenticateToken,
+  requireRole('admin', 'conductor', 'section_leader'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, orchestraId } = req.query;
 
     if (!date) {
-        throw new ApiError(400, 'Datum is verplicht.');
+      throw new ApiError(400, 'Datum is verplicht.');
     }
 
     let query = `
@@ -115,8 +125,8 @@ router.get('/team', authenticateToken, requireRole('admin', 'conductor', 'sectio
     const params: any[] = [date, req.user!.associationId];
 
     if (orchestraId) {
-        query += ' AND u.id IN (SELECT user_id FROM user_orchestras WHERE orchestra_id = ?)';
-        params.push(orchestraId);
+      query += ' AND u.id IN (SELECT user_id FROM user_orchestras WHERE orchestra_id = ?)';
+      params.push(orchestraId);
     }
 
     query += ' ORDER BY u.last_name, u.first_name';
@@ -130,17 +140,18 @@ router.get('/team', authenticateToken, requireRole('admin', 'conductor', 'sectio
     const unknown = teamAvailability.filter((t: any) => !t.status).length;
 
     res.json({
-        date,
-        summary: { available, unavailable, maybe, unknown, total: teamAvailability.length },
-        members: teamAvailability.map((t: any) => ({
-            userId: t.user_id,
-            firstName: t.first_name,
-            lastName: t.last_name,
-            status: t.status || 'unknown',
-            notes: t.notes,
-        })),
+      date,
+      summary: { available, unavailable, maybe, unknown, total: teamAvailability.length },
+      members: teamAvailability.map((t: any) => ({
+        userId: t.user_id,
+        firstName: t.first_name,
+        lastName: t.last_name,
+        status: t.status || 'unknown',
+        notes: t.notes,
+      })),
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -171,48 +182,56 @@ router.get('/team', authenticateToken, requireRole('admin', 'conductor', 'sectio
  *       200:
  *         description: Availability set
  */
-router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, status, notes } = req.body;
 
     if (!date || !status) {
-        throw new ApiError(400, 'Datum en status zijn verplicht.');
+      throw new ApiError(400, 'Datum en status zijn verplicht.');
     }
 
     if (!['available', 'unavailable', 'maybe'].includes(status)) {
-        throw new ApiError(400, 'Ongeldige status.');
+      throw new ApiError(400, 'Ongeldige status.');
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-        throw new ApiError(400, 'Ongeldig datumformaat. Gebruik YYYY-MM-DD.');
+      throw new ApiError(400, 'Ongeldig datumformaat. Gebruik YYYY-MM-DD.');
     }
 
     // Upsert availability
-    const existing = db.prepare(
-        'SELECT id FROM member_availability WHERE user_id = ? AND date = ?'
-    ).get(req.user!.id, date) as { id: string } | undefined;
+    const existing = db
+      .prepare('SELECT id FROM member_availability WHERE user_id = ? AND date = ?')
+      .get(req.user!.id, date) as { id: string } | undefined;
 
     if (existing) {
-        db.prepare(`
+      db.prepare(
+        `
             UPDATE member_availability
             SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `).run(status, notes || null, existing.id);
+        `,
+      ).run(status, notes || null, existing.id);
 
-        res.json({ id: existing.id, message: 'Beschikbaarheid bijgewerkt.' });
+      res.json({ id: existing.id, message: 'Beschikbaarheid bijgewerkt.' });
     } else {
-        const id = uuidv4();
-        db.prepare(`
+      const id = uuidv4();
+      db.prepare(
+        `
             INSERT INTO member_availability (id, user_id, date, status, notes)
             VALUES (?, ?, ?, ?, ?)
-        `).run(id, req.user!.id, date, status, notes || null);
+        `,
+      ).run(id, req.user!.id, date, status, notes || null);
 
-        res.status(201).json({ id, message: 'Beschikbaarheid ingesteld.' });
+      res.status(201).json({ id, message: 'Beschikbaarheid ingesteld.' });
     }
 
     logger.info(`User ${req.user!.id} set availability for ${date}: ${status}`);
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -245,26 +264,29 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: R
  *       200:
  *         description: Availability set for all dates
  */
-router.post('/bulk', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/bulk',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { dates, status, notes } = req.body;
 
     if (!Array.isArray(dates) || dates.length === 0) {
-        throw new ApiError(400, 'Minimaal één datum is verplicht.');
+      throw new ApiError(400, 'Minimaal één datum is verplicht.');
     }
 
     if (dates.length > 90) {
-        throw new ApiError(400, 'Maximaal 90 datums tegelijk.');
+      throw new ApiError(400, 'Maximaal 90 datums tegelijk.');
     }
 
     if (!['available', 'unavailable', 'maybe'].includes(status)) {
-        throw new ApiError(400, 'Ongeldige status.');
+      throw new ApiError(400, 'Ongeldige status.');
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     for (const date of dates) {
-        if (!dateRegex.test(date)) {
-            throw new ApiError(400, `Ongeldig datumformaat: ${date}`);
-        }
+      if (!dateRegex.test(date)) {
+        throw new ApiError(400, `Ongeldig datumformaat: ${date}`);
+      }
     }
 
     const insertStmt = db.prepare(`
@@ -272,34 +294,33 @@ router.post('/bulk', authenticateToken, asyncHandler(async (req: AuthRequest, re
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
 
-    const selectStmt = db.prepare(
-        'SELECT id FROM member_availability WHERE user_id = ? AND date = ?'
-    );
+    const selectStmt = db.prepare('SELECT id FROM member_availability WHERE user_id = ? AND date = ?');
 
     let created = 0;
     let updated = 0;
 
     for (const date of dates) {
-        const existing = selectStmt.get(req.user!.id, date) as { id: string } | undefined;
-        const id = existing?.id || uuidv4();
+      const existing = selectStmt.get(req.user!.id, date) as { id: string } | undefined;
+      const id = existing?.id || uuidv4();
 
-        insertStmt.run(id, req.user!.id, date, status, notes || null);
+      insertStmt.run(id, req.user!.id, date, status, notes || null);
 
-        if (existing) {
-            updated++;
-        } else {
-            created++;
-        }
+      if (existing) {
+        updated++;
+      } else {
+        created++;
+      }
     }
 
     logger.info(`User ${req.user!.id} bulk set availability: ${created} created, ${updated} updated`);
 
     res.json({
-        message: `Beschikbaarheid ingesteld voor ${dates.length} datums.`,
-        created,
-        updated,
+      message: `Beschikbaarheid ingesteld voor ${dates.length} datums.`,
+      created,
+      updated,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -319,16 +340,20 @@ router.post('/bulk', authenticateToken, asyncHandler(async (req: AuthRequest, re
  *       200:
  *         description: Availability removed
  */
-router.delete('/:date', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(
-        'DELETE FROM member_availability WHERE user_id = ? AND date = ?'
-    ).run(req.user!.id, req.params.date);
+router.delete(
+  '/:date',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare('DELETE FROM member_availability WHERE user_id = ? AND date = ?')
+      .run(req.user!.id, req.params.date);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Beschikbaarheid niet gevonden.');
+      throw new ApiError(404, 'Beschikbaarheid niet gevonden.');
     }
 
     res.json({ message: 'Beschikbaarheid verwijderd.' });
-}));
+  }),
+);
 
 export default router;

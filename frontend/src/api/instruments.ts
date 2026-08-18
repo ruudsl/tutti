@@ -6,7 +6,12 @@ export const getInstruments = async (): Promise<Instrument[]> => {
   return data;
 };
 
-export const createInstrument = async (name: string, tuning?: string, clef?: string, aliases?: string[]): Promise<{ id: string }> => {
+export const createInstrument = async (
+  name: string,
+  tuning?: string,
+  clef?: string,
+  aliases?: string[],
+): Promise<{ id: string }> => {
   const { data } = await api.post('/instruments', { name, tuning, clef, aliases });
   return data;
 };

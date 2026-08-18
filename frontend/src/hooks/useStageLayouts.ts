@@ -21,14 +21,11 @@ import { getErrorMessage } from '../utils/errors';
 export const stageLayoutKeys = {
   all: ['stageLayouts'] as const,
   lists: () => [...stageLayoutKeys.all, 'list'] as const,
-  list: (includeTemplates: boolean) =>
-    [...stageLayoutKeys.lists(), { includeTemplates }] as const,
+  list: (includeTemplates: boolean) => [...stageLayoutKeys.lists(), { includeTemplates }] as const,
   details: () => [...stageLayoutKeys.all, 'detail'] as const,
   detail: (id: string) => [...stageLayoutKeys.details(), id] as const,
-  concertStage: (concertId: string) =>
-    ['concertStage', concertId] as const,
-  printCards: (concertId: string) =>
-    ['concertStage', concertId, 'print'] as const,
+  concertStage: (concertId: string) => ['concertStage', concertId] as const,
+  printCards: (concertId: string) => ['concertStage', concertId, 'print'] as const,
 };
 
 /**
@@ -142,8 +139,7 @@ export function useDuplicateStageLayout() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name?: string }) =>
-      duplicateStageLayout(id, name),
+    mutationFn: ({ id, name }: { id: string; name?: string }) => duplicateStageLayout(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stageLayoutKeys.all });
       showSuccess('Podiumindeling gedupliceerd');

@@ -1639,8 +1639,7 @@ router.post(
 
     // Get user's name from database
     const user = db.prepare(`SELECT first_name, last_name FROM users WHERE id = ?`).get(userId) as
-      | { first_name: string; last_name: string }
-      | undefined;
+      { first_name: string; last_name: string } | undefined;
     const userName = user ? `${user.first_name} ${user.last_name}` : userEmail;
 
     // Get the transfer
@@ -1771,8 +1770,7 @@ router.post(
 
     // Get user's name from database
     const user = db.prepare(`SELECT first_name, last_name FROM users WHERE id = ?`).get(userId) as
-      | { first_name: string; last_name: string }
-      | undefined;
+      { first_name: string; last_name: string } | undefined;
     const userName = user ? `${user.first_name} ${user.last_name}` : userEmail;
 
     const validation = initiateTransferSchema.safeParse(req.body);

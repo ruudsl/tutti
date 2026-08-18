@@ -206,8 +206,7 @@ export function useUpdateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateConcert>[1] }) =>
-      updateConcert(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateConcert>[1] }) => updateConcert(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(id) });
@@ -267,10 +266,14 @@ export function useUpdateConcertProgramItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ concertId, programId, item }: {
+    mutationFn: ({
+      concertId,
+      programId,
+      item,
+    }: {
       concertId: string;
       programId: string;
-      item: Parameters<typeof updateConcertProgramItem>[2]
+      item: Parameters<typeof updateConcertProgramItem>[2];
     }) => updateConcertProgramItem(concertId, programId, item),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(concertId) });
@@ -422,8 +425,13 @@ export function useAddConcertAttendance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ concertId, attendance }: { concertId: string; attendance: Parameters<typeof addConcertAttendance>[1] }) =>
-      addConcertAttendance(concertId, attendance),
+    mutationFn: ({
+      concertId,
+      attendance,
+    }: {
+      concertId: string;
+      attendance: Parameters<typeof addConcertAttendance>[1];
+    }) => addConcertAttendance(concertId, attendance),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(concertId) });
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
@@ -462,10 +470,14 @@ export function useUpdateConcertAttendance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ concertId, attendanceId, attendance }: {
+    mutationFn: ({
+      concertId,
+      attendanceId,
+      attendance,
+    }: {
       concertId: string;
       attendanceId: string;
-      attendance: Parameters<typeof updateConcertAttendance>[2]
+      attendance: Parameters<typeof updateConcertAttendance>[2];
     }) => updateConcertAttendance(concertId, attendanceId, attendance),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(concertId) });

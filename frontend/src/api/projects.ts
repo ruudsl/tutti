@@ -39,7 +39,15 @@ export interface ProjectDetail extends Project {
   members: ProjectMember[];
   concerts: { id: string; name: string; date: string; venue?: string; sortOrder: number }[];
   rehearsals: { id: string; date: string; startTime: string; endTime: string; location?: string; sortOrder: number }[];
-  setlist: { id: string; musicTitleId?: string; musicTitleName?: string; customTitle?: string; sortOrder: number; durationMinutes?: number; notes?: string }[];
+  setlist: {
+    id: string;
+    musicTitleId?: string;
+    musicTitleName?: string;
+    customTitle?: string;
+    sortOrder: number;
+    durationMinutes?: number;
+    notes?: string;
+  }[];
 }
 
 export interface CreateProjectData {
@@ -53,7 +61,11 @@ export interface CreateProjectData {
   notes?: string;
 }
 
-export async function getProjects(filters?: { status?: ProjectStatus; type?: ProjectType; orchestraId?: string }): Promise<Project[]> {
+export async function getProjects(filters?: {
+  status?: ProjectStatus;
+  type?: ProjectType;
+  orchestraId?: string;
+}): Promise<Project[]> {
   const params = new URLSearchParams();
   if (filters?.status) params.append('status', filters.status);
   if (filters?.type) params.append('type', filters.type);
@@ -87,7 +99,11 @@ export async function deleteProject(id: string): Promise<{ message: string }> {
   return response.data;
 }
 
-export async function addProjectMember(projectId: string, userId: string, role: string): Promise<{ id: string; message: string }> {
+export async function addProjectMember(
+  projectId: string,
+  userId: string,
+  role: string,
+): Promise<{ id: string; message: string }> {
   const response = await api.post(`/projects/${projectId}/members`, { userId, role });
   return response.data;
 }
@@ -97,7 +113,10 @@ export async function removeProjectMember(projectId: string, memberId: string): 
   return response.data;
 }
 
-export async function addSetlistItem(projectId: string, item: { musicTitleId?: string; customTitle?: string; durationMinutes?: number; notes?: string }): Promise<{ id: string; message: string }> {
+export async function addSetlistItem(
+  projectId: string,
+  item: { musicTitleId?: string; customTitle?: string; durationMinutes?: number; notes?: string },
+): Promise<{ id: string; message: string }> {
   const response = await api.post(`/projects/${projectId}/setlist`, item);
   return response.data;
 }

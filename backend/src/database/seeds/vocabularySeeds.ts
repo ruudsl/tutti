@@ -352,13 +352,13 @@ export const genreSeeds: VocabularySeed[] = [
   {
     uri: 'http://id.loc.gov/authorities/genreForms/gf2014027100',
     vocabulary_type: 'genre',
-    pref_label: { en: 'Polkas', nl: 'Polka\'s', de: 'Polkas' },
+    pref_label: { en: 'Polkas', nl: "Polka's", de: 'Polkas' },
     notation: 'gf2014027100',
   },
   {
     uri: 'http://id.loc.gov/authorities/genreForms/gf2014027117',
     vocabulary_type: 'genre',
-    pref_label: { en: 'Potpourris', nl: 'Potpourri\'s', de: 'Potpourris' },
+    pref_label: { en: 'Potpourris', nl: "Potpourri's", de: 'Potpourris' },
     alt_labels: ['Medleys'],
     notation: 'gf2014027117',
   },
@@ -412,7 +412,7 @@ export const genreSeeds: VocabularySeed[] = [
 export function getVocabularySeedSQL(): string {
   const allSeeds = [...instrumentSeeds, ...genreSeeds];
 
-  const inserts = allSeeds.map(seed => {
+  const inserts = allSeeds.map((seed) => {
     const prefLabel = JSON.stringify(seed.pref_label);
     const altLabels = seed.alt_labels ? JSON.stringify(seed.alt_labels) : 'NULL';
     const broader = seed.broader ? JSON.stringify(seed.broader) : 'NULL';

@@ -23,7 +23,8 @@ export const replacementRequestKeys = {
   list: (filters: Record<string, any>) => [...replacementRequestKeys.lists(), filters] as const,
   details: () => [...replacementRequestKeys.all, 'detail'] as const,
   detail: (id: string) => [...replacementRequestKeys.details(), id] as const,
-  suggestions: (eventId: string, eventType?: string) => [...replacementRequestKeys.all, 'suggestions', eventId, eventType] as const,
+  suggestions: (eventId: string, eventType?: string) =>
+    [...replacementRequestKeys.all, 'suggestions', eventId, eventType] as const,
 };
 
 /**

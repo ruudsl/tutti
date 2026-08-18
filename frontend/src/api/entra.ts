@@ -83,7 +83,12 @@ export const syncEntraUsers = async (createNew: boolean = false): Promise<EntraS
   return data;
 };
 
-export const syncEntraPhotos = async (): Promise<{ message: string; synced: number; skipped: number; failed: number }> => {
+export const syncEntraPhotos = async (): Promise<{
+  message: string;
+  synced: number;
+  skipped: number;
+  failed: number;
+}> => {
   const { data } = await api.post('/entra/sync-photos');
   return data;
 };

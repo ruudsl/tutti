@@ -42,7 +42,7 @@ export const getTeamAvailability = async (date: string, orchestraId?: string): P
 export const setAvailability = async (
   date: string,
   status: 'available' | 'unavailable' | 'maybe',
-  notes?: string
+  notes?: string,
 ): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/availability', { date, status, notes });
   return data;
@@ -51,7 +51,7 @@ export const setAvailability = async (
 export const setBulkAvailability = async (
   dates: string[],
   status: 'available' | 'unavailable' | 'maybe',
-  notes?: string
+  notes?: string,
 ): Promise<{ message: string; created: number; updated: number }> => {
   const { data } = await api.post('/availability/bulk', { dates, status, notes });
   return data;

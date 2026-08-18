@@ -14,13 +14,16 @@ export function MusicTools({ sidebar = false }: MusicToolsProps) {
 
   if (sidebar) {
     return (
-      <div className="music-tools-sidebar" style={{
-        padding: '1rem',
-        borderLeft: '1px solid var(--border)',
-        width: '320px',
-        height: '100%',
-        overflowY: 'auto'
-      }}>
+      <div
+        className="music-tools-sidebar"
+        style={{
+          padding: '1rem',
+          borderLeft: '1px solid var(--border)',
+          width: '320px',
+          height: '100%',
+          overflowY: 'auto',
+        }}
+      >
         <div className="flex gap-2" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${activeTab === 'metronome' ? 'btn-primary' : 'btn-outline'}`}
@@ -69,19 +72,19 @@ export function MusicToolsBar() {
   const [showTools, setShowTools] = useState(false);
 
   return (
-    <div className="music-tools-bar" style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      padding: '0.5rem 1rem',
-      background: 'var(--background)',
-      borderRadius: '0.5rem',
-      marginBottom: '1rem'
-    }}>
-      <button
-        className="btn btn-outline btn-sm"
-        onClick={() => setShowTools(!showTools)}
-      >
+    <div
+      className="music-tools-bar"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        padding: '0.5rem 1rem',
+        background: 'var(--background)',
+        borderRadius: '0.5rem',
+        marginBottom: '1rem',
+      }}
+    >
+      <button className="btn btn-outline btn-sm" onClick={() => setShowTools(!showTools)}>
         {showTools ? t('tools.hideTools') : t('tools.showTools')}
       </button>
 

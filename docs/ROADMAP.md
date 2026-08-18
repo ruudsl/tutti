@@ -4,22 +4,21 @@
 
 > **Status per 2026-08-18:** alle features uit Fase 1 en Fase 2 van dit plan zijn
 > **geïmplementeerd** — elke module heeft een gemounte backend-route (`backend/src/index.ts`)
-> en een frontend-pagina. Dit document blijft bewaard als *blueprint en referentie* voor het
+> en een frontend-pagina. Dit document blijft bewaard als _blueprint en referentie_ voor het
 > ontwerp (schema's, endpoints, acceptance criteria); het is geen openstaande backlog meer.
 > Per feature staat hieronder welke bestanden de implementatie bevatten.
 >
 > Wat wél nog openstaat, staat in de werkpakketten-roadmap: [`../ROADMAP.md`](../ROADMAP.md).
 
-
 ## Effort-schatting (T-shirt sizing)
 
-| Size | Tijd |
-|------|------|
+| Size   | Tijd      |
+| ------ | --------- |
 | **XS** | 1–3 dagen |
-| **S** | 1 week |
-| **M** | 2–3 weken |
-| **L** | 4–6 weken |
-| **XL** | 8+ weken |
+| **S**  | 1 week    |
+| **M**  | 2–3 weken |
+| **L**  | 4–6 weken |
+| **XL** | 8+ weken  |
 
 ## Conventies
 
@@ -33,6 +32,7 @@
 # Inhoudsopgave
 
 ## Fase 1 — Prioriteit HOOG
+
 - ✅ [1.1 Polls / voting module](#11-polls--voting-module)
 - ✅ [1.2 Custom fields per orchestra](#12-custom-fields-per-orchestra)
 - ✅ [1.3 Boekhouding-module](#13-boekhouding-module)
@@ -42,6 +42,7 @@
 - ✅ [1.7 Tasks module](#17-tasks-module)
 
 ## Fase 2 — Prioriteit MIDDEN
+
 - ✅ [2.1 Tour module](#21-tour-module)
 - ✅ [2.2 Probenphasen / Projects](#22-probenphasen--projects)
 - ✅ [2.3 Resource booking](#23-resource-booking)
@@ -55,6 +56,7 @@
 - ✅ [2.11 OpenAPI/Swagger + client libraries](#211-openapi--client-libraries)
 
 ## Bijlagen
+
 - [Bijlage A: Fasering](#bijlage-a-fasering)
 - [Bijlage B: Cross-cutting refactors](#bijlage-b-cross-cutting-refactors)
 - [Bijlage C: Effort summary](#bijlage-c-effort-summary)
@@ -161,12 +163,14 @@ POST   /api/polls/:id/comments
 ## Frontend
 
 **Pages:**
+
 - `PollsList.tsx` — overzicht met filters
 - `PollDetail.tsx` — detail met grafiek + tabel
 - `PollForm.tsx` — create/edit
 - `PollVote.tsx` — stemweergave
 
 **Components:**
+
 - `<PollCard>`
 - `<PollOptionsEditor>`
 - `<PollResultsBar>` — recharts grafiek
@@ -270,10 +274,12 @@ POST   /api/custom-fields/values/bulk
 ## Frontend
 
 **Pages:**
+
 - `Settings/CustomFields/CustomFieldsList.tsx`
 - `Settings/CustomFields/CustomFieldEditor.tsx`
 
 **Components:**
+
 - `<CustomFieldRenderer>` — universele renderer
 - `<CustomFieldFormSection>` — embed in andere forms
 - `<CustomFieldDisplay>` — read-only weergave
@@ -298,6 +304,7 @@ POST   /api/custom-fields/values/bulk
 ## Wat & waarom
 
 Verenigingen hebben nodig:
+
 1. **Contributie-administratie**: jaarlijkse contributie per lid met SEPA-incasso
 2. **Sectie-kassen**: elke sectie heeft een kleine kas
 3. **Subsidies & ANBI**: rapportage ontvangen subsidies, giften
@@ -678,7 +685,7 @@ Nieuwsberichten binnen Tutti met embed-optie voor externe website. Concert-aanko
 >
 > **Status: ✅ Geïmplementeerd** — `backend/src/routes/performances.ts` · `frontend/src/pages/Performances.tsx`
 
-"Wanneer hebben we *Pirates of the Caribbean* voor het laatst gespeeld?" Tracking van uitgevoerde werken per concert.
+"Wanneer hebben we _Pirates of the Caribbean_ voor het laatst gespeeld?" Tracking van uitgevoerde werken per concert.
 
 ---
 
@@ -699,6 +706,7 @@ Publieke kalender embed voor website + lobby-scherm met komende events. ICS-feed
 > **Status: ✅ Geïmplementeerd** — `backend/src/routes/workflows.ts` · `backend/src/services/workflowEngine.ts` · `frontend/src/pages/Workflows.tsx`
 
 Automatische workflows met triggers, condities en acties:
+
 - 30 dagen voor concert: reminder-mail
 - Nieuw lid: welkomst-mail + agenda-uitnodigingen
 - VOG verloopt: waarschuwing naar admin
@@ -751,32 +759,37 @@ Formele API-documentatie met Swagger UI. Gegenereerde TypeScript en PHP clients 
 > planning en dient nu als historisch overzicht.
 
 ## Fase A — Foundation (3 maanden)
-- 1.4 Granular per-user privacy *(M)*
-- 1.5 External contacts *(M)*
-- 1.2 Custom fields *(M)*
+
+- 1.4 Granular per-user privacy _(M)_
+- 1.5 External contacts _(M)_
+- 1.2 Custom fields _(M)_
 
 ## Fase B — Communication (3 maanden)
-- 1.1 Polls module *(M)*
-- 1.6 Email bulk-mailing *(S–M)*
-- 1.7 Tasks module *(S)*
-- 2.4 Posts/news module *(M)*
+
+- 1.1 Polls module _(M)_
+- 1.6 Email bulk-mailing _(S–M)_
+- 1.7 Tasks module _(S)_
+- 2.4 Posts/news module _(M)_
 
 ## Fase C — Finance + API (3 maanden)
-- 1.3 Boekhouding-module *(XL)*
-- 2.11 OpenAPI/Swagger *(M)*
+
+- 1.3 Boekhouding-module _(XL)_
+- 2.11 OpenAPI/Swagger _(M)_
 
 ## Fase D — Operations (3 maanden)
-- 2.1 Tour module *(L)*
-- 2.2 Projects *(M)*
-- 2.3 Resource booking *(M)*
-- 2.8 Equipment inventory *(M)*
+
+- 2.1 Tour module _(L)_
+- 2.2 Projects _(M)_
+- 2.3 Resource booking _(M)_
+- 2.8 Equipment inventory _(M)_
 
 ## Fase E — Automation + Content (3 maanden)
-- 2.7 Workflow automation *(L)*
-- 2.5 Performance histories *(S)*
-- 2.6 Calendar embedding *(M)*
-- 2.10 Wiki module *(M)*
-- 2.9 Outfits module *(XS)*
+
+- 2.7 Workflow automation _(L)_
+- 2.5 Performance histories _(S)_
+- 2.6 Calendar embedding _(M)_
+- 2.10 Wiki module _(M)_
+- 2.9 Outfits module _(XS)_
 
 ---
 
@@ -784,14 +797,14 @@ Formele API-documentatie met Swagger UI. Gegenereerde TypeScript en PHP clients 
 
 Deze refactors helpen meerdere features:
 
-| Refactor | Effort | Beschrijving | Status |
-|----------|--------|--------------|--------|
-| **Migration framework** | XS | Incrementele schema-changes met up/down SQL | ✅ `backend/src/migrations/runner.ts` (29 migraties) |
-| **Generic file-upload** | S | Storage abstraction, mime-type validatie | 🔄 magic-byte validatie in `backend/src/utils/fileValidation.ts`; nog geen storage-abstractie |
-| **Notification service** | S | Email + push + in-app met preferences | ✅ `backend/src/services/notifications.ts` + `routes/notificationChannels.ts` |
-| **Audit log uitbreiden** | XS | Voor-en-na waardes, entity filters | ✅ `backend/src/routes/audit-logs.ts` |
-| **Rich-text editor** | S | Tiptap standaardisatie voor posts/mail/wiki | ⬜ Open — geen Tiptap-dependency aanwezig |
-| **Permission framework** | M | Permission tags, roles als bundles | ⬜ Open — autorisatie loopt nog via rollen in `backend/src/middleware/auth.ts` |
+| Refactor                 | Effort | Beschrijving                                | Status                                                                                        |
+| ------------------------ | ------ | ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Migration framework**  | XS     | Incrementele schema-changes met up/down SQL | ✅ `backend/src/migrations/runner.ts` (29 migraties)                                          |
+| **Generic file-upload**  | S      | Storage abstraction, mime-type validatie    | 🔄 magic-byte validatie in `backend/src/utils/fileValidation.ts`; nog geen storage-abstractie |
+| **Notification service** | S      | Email + push + in-app met preferences       | ✅ `backend/src/services/notifications.ts` + `routes/notificationChannels.ts`                 |
+| **Audit log uitbreiden** | XS     | Voor-en-na waardes, entity filters          | ✅ `backend/src/routes/audit-logs.ts`                                                         |
+| **Rich-text editor**     | S      | Tiptap standaardisatie voor posts/mail/wiki | ⬜ Open — geen Tiptap-dependency aanwezig                                                     |
+| **Permission framework** | M      | Permission tags, roles als bundles          | ⬜ Open — autorisatie loopt nog via rollen in `backend/src/middleware/auth.ts`                |
 
 ---
 
@@ -800,37 +813,37 @@ Deze refactors helpen meerdere features:
 > **Status:** alle features in deze tabel zijn opgeleverd; de schattingen zijn bewaard
 > als referentie voor toekomstige planning.
 
-| Feature | Size | Weken |
-|---------|------|-------|
-| **Fase 1 (HOOG)** | | |
-| 1.1 Polls | M | 2-3 |
-| 1.2 Custom fields | M | 2-3 |
-| 1.3 Boekhouding | XL | 8+ |
-| 1.4 Privacy | M | 3 |
-| 1.5 External contacts | M | 2 |
-| 1.6 Mail bulk | S–M | 1.5 |
-| 1.7 Tasks | S | 1 |
-| **Fase 2 (MIDDEN)** | | |
-| 2.1 Tour | L | 4-5 |
-| 2.2 Projects | M | 2 |
-| 2.3 Resource booking | M | 2 |
-| 2.4 Posts | M | 2.5 |
-| 2.5 Performance histories | S | 1 |
-| 2.6 Calendar embed | M | 2 |
-| 2.7 Routines | L | 4-5 |
-| 2.8 Equipment | M | 2 |
-| 2.9 Outfits | XS | 0.5 |
-| 2.10 Wiki | M | 2 |
-| 2.11 OpenAPI | M | 2 |
-| **Cross-cutting** | | |
-| Migrations | XS | 0.5 |
-| File-upload | S | 1 |
-| Notifications | S | 1 |
-| Audit log | XS | 0.5 |
-| Rich-text | S | 1 |
-| Permissions | M | 2 |
-| **TOTAAL** | | **~52 weken** |
+| Feature                   | Size | Weken         |
+| ------------------------- | ---- | ------------- |
+| **Fase 1 (HOOG)**         |      |               |
+| 1.1 Polls                 | M    | 2-3           |
+| 1.2 Custom fields         | M    | 2-3           |
+| 1.3 Boekhouding           | XL   | 8+            |
+| 1.4 Privacy               | M    | 3             |
+| 1.5 External contacts     | M    | 2             |
+| 1.6 Mail bulk             | S–M  | 1.5           |
+| 1.7 Tasks                 | S    | 1             |
+| **Fase 2 (MIDDEN)**       |      |               |
+| 2.1 Tour                  | L    | 4-5           |
+| 2.2 Projects              | M    | 2             |
+| 2.3 Resource booking      | M    | 2             |
+| 2.4 Posts                 | M    | 2.5           |
+| 2.5 Performance histories | S    | 1             |
+| 2.6 Calendar embed        | M    | 2             |
+| 2.7 Routines              | L    | 4-5           |
+| 2.8 Equipment             | M    | 2             |
+| 2.9 Outfits               | XS   | 0.5           |
+| 2.10 Wiki                 | M    | 2             |
+| 2.11 OpenAPI              | M    | 2             |
+| **Cross-cutting**         |      |               |
+| Migrations                | XS   | 0.5           |
+| File-upload               | S    | 1             |
+| Notifications             | S    | 1             |
+| Audit log                 | XS   | 0.5           |
+| Rich-text                 | S    | 1             |
+| Permissions               | M    | 2             |
+| **TOTAAL**                |      | **~52 weken** |
 
 ---
 
-*Laatst bijgewerkt: 2026-08-18 — statusregels toegevoegd na verificatie tegen de codebase.*
+_Laatst bijgewerkt: 2026-08-18 — statusregels toegevoegd na verificatie tegen de codebase._

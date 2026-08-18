@@ -81,7 +81,7 @@ export default function CustomFieldsAdmin() {
     setDeletingField(field);
   };
 
-  const entityTypeInfo = ENTITY_TYPES.find(e => e.value === selectedEntityType);
+  const entityTypeInfo = ENTITY_TYPES.find((e) => e.value === selectedEntityType);
 
   if (isLoading) {
     return (
@@ -149,14 +149,14 @@ export default function CustomFieldsAdmin() {
               ) : (
                 definitions.map((field) => (
                   <tr key={field.id}>
-                    <td><code>{field.fieldKey}</code></td>
-                    <td>{field.fieldLabel}</td>
                     <td>
-                      {t(FIELD_TYPES.find(f => f.value === field.fieldType)?.labelKey || field.fieldType)}
+                      <code>{field.fieldKey}</code>
                     </td>
+                    <td>{field.fieldLabel}</td>
+                    <td>{t(FIELD_TYPES.find((f) => f.value === field.fieldType)?.labelKey || field.fieldType)}</td>
                     <td>
                       <span className="badge badge-outline">
-                        {t(VISIBILITY_OPTIONS.find(v => v.value === field.visibility)?.labelKey || field.visibility)}
+                        {t(VISIBILITY_OPTIONS.find((v) => v.value === field.visibility)?.labelKey || field.visibility)}
                       </span>
                     </td>
                     <td>
@@ -192,19 +192,10 @@ export default function CustomFieldsAdmin() {
         </div>
       </div>
 
-      {showCreateModal && (
-        <FieldFormModal
-          entityType={selectedEntityType}
-          onClose={() => setShowCreateModal(false)}
-        />
-      )}
+      {showCreateModal && <FieldFormModal entityType={selectedEntityType} onClose={() => setShowCreateModal(false)} />}
 
       {editingField && (
-        <FieldFormModal
-          field={editingField}
-          entityType={selectedEntityType}
-          onClose={() => setEditingField(null)}
-        />
+        <FieldFormModal field={editingField} entityType={selectedEntityType} onClose={() => setEditingField(null)} />
       )}
 
       {/* Delete Field Confirmation */}
@@ -282,7 +273,10 @@ function FieldFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const options = optionsText.split('\n').map(s => s.trim()).filter(Boolean);
+    const options = optionsText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const data = { ...formData, fieldOptions: options.length > 0 ? options : undefined };
 
     if (field) {
@@ -306,7 +300,9 @@ function FieldFormModal({
                 type="text"
                 className="form-control"
                 value={formData.fieldKey}
-                onChange={(e) => setFormData({ ...formData, fieldKey: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+                onChange={(e) =>
+                  setFormData({ ...formData, fieldKey: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })
+                }
                 disabled={!!field}
                 placeholder="my_field_key"
                 required

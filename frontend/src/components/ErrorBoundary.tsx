@@ -91,20 +91,25 @@ class ErrorBoundaryComponent extends Component<Props, State> {
           `${t('errorBoundary.timestamp')}: ${new Date().toISOString()}`,
           `URL: ${window.location.href}`,
           `User Agent: ${navigator.userAgent}`,
-        ].filter(Boolean).join('\n\n');
+        ]
+          .filter(Boolean)
+          .join('\n\n');
 
-        navigator.clipboard.writeText(errorText).then(() => {
-          alert(t('errorBoundary.copiedToClipboard'));
-        }).catch(() => {
-          // Fallback: show in prompt
-          prompt(t('errorBoundary.copyErrorInfo'), errorText);
-        });
+        navigator.clipboard
+          .writeText(errorText)
+          .then(() => {
+            alert(t('errorBoundary.copiedToClipboard'));
+          })
+          .catch(() => {
+            // Fallback: show in prompt
+            prompt(t('errorBoundary.copyErrorInfo'), errorText);
+          });
       }
     }
   };
 
   toggleDetails = (): void => {
-    this.setState(prev => ({ showDetails: !prev.showDetails }));
+    this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   handleGoHome = (): void => {
@@ -128,18 +133,14 @@ class ErrorBoundaryComponent extends Component<Props, State> {
             </div>
 
             <h1>{t('errorBoundary.title')}</h1>
-            <p>
-              {t('errorBoundary.descriptionExtended')}
-            </p>
+            <p>{t('errorBoundary.descriptionExtended')}</p>
 
             {/* Show error details in development or when toggled */}
             {error && (import.meta.env.DEV || showDetails) && (
               <div className="error-boundary-details">
                 <pre>{error.message}</pre>
                 {import.meta.env.DEV && error.stack && (
-                  <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.8 }}>
-                    {error.stack}
-                  </pre>
+                  <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.8 }}>{error.stack}</pre>
                 )}
                 {import.meta.env.DEV && errorInfo?.componentStack && (
                   <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', opacity: 0.6 }}>
@@ -162,18 +163,10 @@ class ErrorBoundaryComponent extends Component<Props, State> {
             )}
 
             <div className="error-boundary-actions">
-              <button
-                className="btn btn-primary"
-                onClick={this.handleRetry}
-                type="button"
-              >
+              <button className="btn btn-primary" onClick={this.handleRetry} type="button">
                 {t('errorBoundary.retry')}
               </button>
-              <button
-                className="btn btn-outline"
-                onClick={this.handleGoHome}
-                type="button"
-              >
+              <button className="btn btn-outline" onClick={this.handleGoHome} type="button">
                 {t('errorBoundary.backToHome')}
               </button>
             </div>
@@ -181,11 +174,7 @@ class ErrorBoundaryComponent extends Component<Props, State> {
             {/* Report error section */}
             {showReportButton && error && (
               <div className="error-boundary-report">
-                <button
-                  type="button"
-                  className="error-boundary-report-btn"
-                  onClick={this.handleReport}
-                >
+                <button type="button" className="error-boundary-report-btn" onClick={this.handleReport}>
                   {t('errorBoundary.reportProblem')}
                 </button>
               </div>

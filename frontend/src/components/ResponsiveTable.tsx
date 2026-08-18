@@ -5,14 +5,7 @@
  * Features sortable columns, column priority system, sticky header, and loading states.
  */
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  ReactNode,
-  CSSProperties,
-  memo,
-} from 'react';
+import { useState, useCallback, useMemo, ReactNode, CSSProperties, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { Icon, IconName } from './Icon';
@@ -130,13 +123,7 @@ function useMediaQuery(query: string): boolean {
 // Skeleton Component
 // ============================================
 
-const SkeletonRow = memo(function SkeletonRow({
-  columnCount,
-  isDark,
-}: {
-  columnCount: number;
-  isDark: boolean;
-}) {
+const SkeletonRow = memo(function SkeletonRow({ columnCount, isDark }: { columnCount: number; isDark: boolean }) {
   return (
     <tr>
       {Array.from({ length: columnCount }).map((_, i) => (
@@ -239,22 +226,25 @@ function ResponsiveTableComponent<T>({
   }, [columns, isMobile]);
 
   // Handle sort click
-  const handleSort = useCallback((columnId: string) => {
-    if (!onSort) return;
+  const handleSort = useCallback(
+    (columnId: string) => {
+      if (!onSort) return;
 
-    let newDirection: SortDirection;
-    if (sortColumn !== columnId) {
-      newDirection = 'asc';
-    } else if (sortDirection === 'asc') {
-      newDirection = 'desc';
-    } else if (sortDirection === 'desc') {
-      newDirection = null;
-    } else {
-      newDirection = 'asc';
-    }
+      let newDirection: SortDirection;
+      if (sortColumn !== columnId) {
+        newDirection = 'asc';
+      } else if (sortDirection === 'asc') {
+        newDirection = 'desc';
+      } else if (sortDirection === 'desc') {
+        newDirection = null;
+      } else {
+        newDirection = 'asc';
+      }
 
-    onSort(columnId, newDirection);
-  }, [sortColumn, sortDirection, onSort]);
+      onSort(columnId, newDirection);
+    },
+    [sortColumn, sortDirection, onSort],
+  );
 
   // Styles
   const tableWrapperStyles: CSSProperties = {
@@ -304,11 +294,16 @@ function ResponsiveTableComponent<T>({
     const isHovered = hoveredRowId === rowId;
 
     return {
-      backgroundColor: striped && index % 2 === 1
-        ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)')
-        : (isHovered && hoverable
-          ? (isDark ? 'var(--surface-hover)' : '#f9fafb')
-          : 'transparent'),
+      backgroundColor:
+        striped && index % 2 === 1
+          ? isDark
+            ? 'rgba(255,255,255,0.02)'
+            : 'rgba(0,0,0,0.02)'
+          : isHovered && hoverable
+            ? isDark
+              ? 'var(--surface-hover)'
+              : '#f9fafb'
+            : 'transparent',
       cursor: onRowClick ? 'pointer' : 'default',
       transition: 'background-color var(--transition-fast)',
     };
@@ -472,11 +467,7 @@ function ResponsiveTableComponent<T>({
 
                   return (
                     <div key={column.id}>
-                      {!isTitle && (
-                        <div style={cardLabelStyles}>
-                          {column.cardLabel ?? column.header}
-                        </div>
-                      )}
+                      {!isTitle && <div style={cardLabelStyles}>{column.cardLabel ?? column.header}</div>}
                       <div
                         style={{
                           ...cardValueStyles,
@@ -528,10 +519,16 @@ function ResponsiveTableComponent<T>({
                 aria-colindex={colIndex + 1}
                 aria-sort={
                   sortColumn === column.id
-                    ? (sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : 'none')
+                    ? sortDirection === 'asc'
+                      ? 'ascending'
+                      : sortDirection === 'desc'
+                        ? 'descending'
+                        : 'none'
                     : undefined
                 }
-                aria-label={column.sortable ? `${column.header}, ${t('accessibility.sortable', 'sorteerbaar')}` : column.header}
+                aria-label={
+                  column.sortable ? `${column.header}, ${t('accessibility.sortable', 'sorteerbaar')}` : column.header
+                }
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                   {column.headerIcon && <Icon name={column.headerIcon} size={14} />}
@@ -565,12 +562,7 @@ function ResponsiveTableComponent<T>({
                 }}
               >
                 {visibleColumns.map((column, colIndex) => (
-                  <td
-                    key={column.id}
-                    style={bodyCellStyles(column)}
-                    role="cell"
-                    aria-colindex={colIndex + 1}
-                  >
+                  <td key={column.id} style={bodyCellStyles(column)} role="cell" aria-colindex={colIndex + 1}>
                     {column.accessor(row)}
                   </td>
                 ))}
@@ -594,7 +586,7 @@ export function createColumn<T>(
   id: string,
   header: string,
   accessor: (row: T) => ReactNode,
-  options?: Partial<Omit<ColumnDefinition<T>, 'id' | 'header' | 'accessor'>>
+  options?: Partial<Omit<ColumnDefinition<T>, 'id' | 'header' | 'accessor'>>,
 ): ColumnDefinition<T> {
   return {
     id,

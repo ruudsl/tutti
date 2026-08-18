@@ -17,11 +17,15 @@ const createExternalMusicianSchema = z.object({
   musicianType: z.enum(['alumni', 'guest', 'substitute', 'friend']),
   notes: z.string().optional().nullable(),
   rating: z.number().min(1).max(5).optional().nullable(),
-  instruments: z.array(z.object({
-    instrumentId: z.string().uuid(),
-    skillLevel: z.enum(['beginner', 'intermediate', 'advanced', 'professional']).optional().nullable(),
-    isPrimary: z.boolean().optional(),
-  })).optional(),
+  instruments: z
+    .array(
+      z.object({
+        instrumentId: z.string().uuid(),
+        skillLevel: z.enum(['beginner', 'intermediate', 'advanced', 'professional']).optional().nullable(),
+        isPrimary: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const updateExternalMusicianSchema = createExternalMusicianSchema.partial().extend({
@@ -86,25 +90,27 @@ router.get(
 
     const musicians = db.prepare(query).all(...params);
 
-    res.json(musicians.map((m: any) => ({
-      id: m.id,
-      firstName: m.first_name,
-      lastName: m.last_name,
-      email: m.email,
-      phone: m.phone,
-      musicianType: m.musician_type,
-      notes: m.notes,
-      isActive: Boolean(m.is_active),
-      rating: m.rating,
-      lastPlayedDate: m.last_played_date,
-      totalPerformances: m.total_performances,
-      instrumentNames: m.instrument_names,
-      createdBy: m.created_by,
-      createdByName: m.created_by_name,
-      createdAt: m.created_at,
-      updatedAt: m.updated_at,
-    })));
-  })
+    res.json(
+      musicians.map((m: any) => ({
+        id: m.id,
+        firstName: m.first_name,
+        lastName: m.last_name,
+        email: m.email,
+        phone: m.phone,
+        musicianType: m.musician_type,
+        notes: m.notes,
+        isActive: Boolean(m.is_active),
+        rating: m.rating,
+        lastPlayedDate: m.last_played_date,
+        totalPerformances: m.total_performances,
+        instrumentNames: m.instrument_names,
+        createdBy: m.created_by,
+        createdByName: m.created_by_name,
+        createdAt: m.created_at,
+        updatedAt: m.updated_at,
+      })),
+    );
+  }),
 );
 
 // GET /api/external-musicians/search - Search by instrument
@@ -143,25 +149,27 @@ router.get(
 
     const musicians = db.prepare(query).all(...params);
 
-    res.json(musicians.map((m: any) => ({
-      id: m.id,
-      firstName: m.first_name,
-      lastName: m.last_name,
-      email: m.email,
-      phone: m.phone,
-      musicianType: m.musician_type,
-      notes: m.notes,
-      isActive: Boolean(m.is_active),
-      rating: m.rating,
-      lastPlayedDate: m.last_played_date,
-      totalPerformances: m.total_performances,
-      skillLevel: m.skill_level,
-      isPrimary: Boolean(m.is_primary),
-      instrumentName: m.instrument_name,
-      instrumentTuning: m.instrument_tuning,
-      createdAt: m.created_at,
-    })));
-  })
+    res.json(
+      musicians.map((m: any) => ({
+        id: m.id,
+        firstName: m.first_name,
+        lastName: m.last_name,
+        email: m.email,
+        phone: m.phone,
+        musicianType: m.musician_type,
+        notes: m.notes,
+        isActive: Boolean(m.is_active),
+        rating: m.rating,
+        lastPlayedDate: m.last_played_date,
+        totalPerformances: m.total_performances,
+        skillLevel: m.skill_level,
+        isPrimary: Boolean(m.is_primary),
+        instrumentName: m.instrument_name,
+        instrumentTuning: m.instrument_tuning,
+        createdAt: m.created_at,
+      })),
+    );
+  }),
 );
 
 // GET /api/external-musicians/:id - Get single musician with instruments
@@ -172,27 +180,37 @@ router.get(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT em.*, u.first_name || ' ' || u.last_name as created_by_name
       FROM external_musicians em
       LEFT JOIN users u ON em.created_by = u.id
       WHERE em.id = ? AND em.association_id = ?
-    `).get(id, associationId) as any;
+    `,
+      )
+      .get(id, associationId) as any;
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
 
-    const instruments = db.prepare(`
+    const instruments = db
+      .prepare(
+        `
       SELECT emi.*, i.name as instrument_name, i.tuning as instrument_tuning
       FROM external_musician_instruments emi
       JOIN instruments i ON emi.instrument_id = i.id
       WHERE emi.external_musician_id = ?
       ORDER BY emi.is_primary DESC, i.name
-    `).all(id);
+    `,
+      )
+      .all(id);
 
     // Get recent assignments
-    const recentAssignments = db.prepare(`
+    const recentAssignments = db
+      .prepare(
+        `
       SELECT ra.*, rr.event_type, rr.event_date, i.name as instrument_name,
         CASE
           WHEN rr.event_type = 'concert' THEN (SELECT title FROM concerts WHERE id = rr.event_id)
@@ -204,7 +222,9 @@ router.get(
       WHERE ra.external_musician_id = ?
       ORDER BY rr.event_date DESC
       LIMIT 10
-    `).all(id);
+    `,
+      )
+      .all(id);
 
     res.json({
       id: musician.id,
@@ -240,7 +260,7 @@ router.get(
         feeAmount: a.fee_amount,
       })),
     });
-  })
+  }),
 );
 
 // POST /api/external-musicians - Add new external musician
@@ -256,12 +276,14 @@ router.post(
     const musicianId = uuidv4();
 
     const insertMusician = db.transaction(() => {
-      db.prepare(`
+      db.prepare(
+        `
         INSERT INTO external_musicians (
           id, association_id, first_name, last_name, email, phone,
           musician_type, notes, rating, created_by
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `,
+      ).run(
         musicianId,
         associationId,
         data.firstName,
@@ -271,7 +293,7 @@ router.post(
         data.musicianType,
         data.notes || null,
         data.rating || null,
-        userId
+        userId,
       );
 
       // Add instruments if provided
@@ -287,7 +309,7 @@ router.post(
             musicianId,
             instrument.instrumentId,
             instrument.skillLevel || null,
-            instrument.isPrimary ? 1 : 0
+            instrument.isPrimary ? 1 : 0,
           );
         }
       }
@@ -304,7 +326,7 @@ router.post(
       id: musicianId,
       message: 'Externe muzikant succesvol toegevoegd',
     });
-  })
+  }),
 );
 
 // PUT /api/external-musicians/:id - Update musician
@@ -317,9 +339,13 @@ router.put(
     const data = updateExternalMusicianSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT id FROM external_musicians WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
@@ -365,9 +391,11 @@ router.put(
       updates.push('updated_at = CURRENT_TIMESTAMP');
       params.push(id);
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE external_musicians SET ${updates.join(', ')} WHERE id = ?
-      `).run(...params);
+      `,
+      ).run(...params);
     }
 
     // Update instruments if provided
@@ -389,7 +417,7 @@ router.put(
               id,
               instrument.instrumentId,
               instrument.skillLevel || null,
-              instrument.isPrimary ? 1 : 0
+              instrument.isPrimary ? 1 : 0,
             );
           }
         }
@@ -401,7 +429,7 @@ router.put(
     logger.info(`External musician updated: ${id}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Externe muzikant succesvol bijgewerkt' });
-  })
+  }),
 );
 
 // DELETE /api/external-musicians/:id - Soft delete musician
@@ -413,23 +441,29 @@ router.delete(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT id FROM external_musicians WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
 
     // Soft delete by setting is_active to false
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE external_musicians SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-    `).run(id);
+    `,
+    ).run(id);
 
     logger.info(`External musician deactivated: ${id}`, { deletedBy: req.user!.id });
 
     res.json({ message: 'Externe muzikant succesvol gedeactiveerd' });
-  })
+  }),
 );
 
 // POST /api/external-musicians/:id/instruments - Add instrument to musician
@@ -442,41 +476,45 @@ router.post(
     const data = addInstrumentSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT id FROM external_musicians WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
 
     // Check if instrument already exists for this musician
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
       SELECT id FROM external_musician_instruments
       WHERE external_musician_id = ? AND instrument_id = ?
-    `).get(id, data.instrumentId);
+    `,
+      )
+      .get(id, data.instrumentId);
 
     if (existing) {
       throw new ApiError(409, 'Instrument is al toegevoegd aan deze muzikant');
     }
 
     const instrumentLinkId = uuidv4();
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO external_musician_instruments (id, external_musician_id, instrument_id, skill_level, is_primary)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
-      instrumentLinkId,
-      id,
-      data.instrumentId,
-      data.skillLevel || null,
-      data.isPrimary ? 1 : 0
-    );
+    `,
+    ).run(instrumentLinkId, id, data.instrumentId, data.skillLevel || null, data.isPrimary ? 1 : 0);
 
     res.status(201).json({
       id: instrumentLinkId,
       message: 'Instrument succesvol toegevoegd',
     });
-  })
+  }),
 );
 
 // DELETE /api/external-musicians/:id/instruments/:instrumentId - Remove instrument
@@ -488,25 +526,33 @@ router.delete(
     const { id, instrumentId } = req.params;
     const associationId = req.user!.associationId;
 
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT id FROM external_musicians WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden');
     }
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       DELETE FROM external_musician_instruments
       WHERE external_musician_id = ? AND instrument_id = ?
-    `).run(id, instrumentId);
+    `,
+      )
+      .run(id, instrumentId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Instrument niet gevonden bij deze muzikant');
     }
 
     res.json({ message: 'Instrument succesvol verwijderd' });
-  })
+  }),
 );
 
 export default router;

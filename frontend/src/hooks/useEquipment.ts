@@ -142,10 +142,14 @@ export function useUpdateEquipmentDamageLog() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ equipmentId, logId, log }: {
+    mutationFn: ({
+      equipmentId,
+      logId,
+      log,
+    }: {
       equipmentId: string;
       logId: string;
-      log: Parameters<typeof updateEquipmentDamageLog>[2]
+      log: Parameters<typeof updateEquipmentDamageLog>[2];
     }) => updateEquipmentDamageLog(equipmentId, logId, log),
     onSuccess: (_, { equipmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
@@ -204,10 +208,14 @@ export function useReturnEquipmentLoan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ equipmentId, loanId, returnData }: {
+    mutationFn: ({
+      equipmentId,
+      loanId,
+      returnData,
+    }: {
       equipmentId: string;
       loanId: string;
-      returnData: Parameters<typeof returnEquipmentLoan>[2]
+      returnData: Parameters<typeof returnEquipmentLoan>[2];
     }) => returnEquipmentLoan(equipmentId, loanId, returnData),
     onSuccess: (_, { equipmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
@@ -227,9 +235,12 @@ export function useRecordEquipmentMaintenance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ equipmentId, maintenance }: {
+    mutationFn: ({
+      equipmentId,
+      maintenance,
+    }: {
       equipmentId: string;
-      maintenance: Parameters<typeof recordEquipmentMaintenance>[1]
+      maintenance: Parameters<typeof recordEquipmentMaintenance>[1];
     }) => recordEquipmentMaintenance(equipmentId, maintenance),
     onSuccess: (_, { equipmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });

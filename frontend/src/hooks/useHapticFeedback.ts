@@ -74,9 +74,7 @@ export function useHapticFeedback() {
     }
   };
 
-  const hapticOnClick = <T extends HTMLElement>(
-    pattern: HapticPattern = 'light'
-  ) => {
+  const hapticOnClick = <T extends HTMLElement>(pattern: HapticPattern = 'light') => {
     return (_e: React.MouseEvent<T> | React.TouchEvent<T>) => {
       haptic(pattern);
     };

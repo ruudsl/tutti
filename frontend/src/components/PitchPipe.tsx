@@ -72,41 +72,44 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
     return audioContextRef.current;
   }, []);
 
-  const playTone = useCallback((frequency: number, noteName: string) => {
-    const ctx = getAudioContext();
+  const playTone = useCallback(
+    (frequency: number, noteName: string) => {
+      const ctx = getAudioContext();
 
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
 
-    // Stop existing tone
-    if (oscillatorRef.current) {
-      oscillatorRef.current.stop();
-      oscillatorRef.current.disconnect();
-    }
+      // Stop existing tone
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop();
+        oscillatorRef.current.disconnect();
+      }
 
-    // Create oscillator and gain nodes
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+      // Create oscillator and gain nodes
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
 
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
 
-    // Smooth envelope for pleasant sound
-    gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.1);
+      // Smooth envelope for pleasant sound
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime + 0.1);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
 
-    oscillator.start();
+      oscillator.start();
 
-    oscillatorRef.current = oscillator;
-    gainNodeRef.current = gainNode;
-    setIsPlaying(true);
-    setActiveNote(noteName);
-  }, [getAudioContext]);
+      oscillatorRef.current = oscillator;
+      gainNodeRef.current = gainNode;
+      setIsPlaying(true);
+      setActiveNote(noteName);
+    },
+    [getAudioContext],
+  );
 
   const stopTone = useCallback(() => {
     if (oscillatorRef.current && gainNodeRef.current && audioContextRef.current) {
@@ -129,13 +132,16 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
     setActiveNote(null);
   }, []);
 
-  const toggleTone = useCallback((frequency: number, noteName: string) => {
-    if (isPlaying && activeNote === noteName) {
-      stopTone();
-    } else {
-      playTone(frequency, noteName);
-    }
-  }, [isPlaying, activeNote, playTone, stopTone]);
+  const toggleTone = useCallback(
+    (frequency: number, noteName: string) => {
+      if (isPlaying && activeNote === noteName) {
+        stopTone();
+      } else {
+        playTone(frequency, noteName);
+      }
+    },
+    [isPlaying, activeNote, playTone, stopTone],
+  );
 
   // Adjust frequency based on tuning pitch (A4 reference)
   const adjustFrequency = (baseFreq: number): number => {
@@ -149,7 +155,7 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             className={`btn ${isPlaying ? 'btn-danger' : 'btn-primary'} btn-sm`}
-            onClick={() => isPlaying ? stopTone() : playTone(tuningPitch, `A${tuningPitch}`)}
+            onClick={() => (isPlaying ? stopTone() : playTone(tuningPitch, `A${tuningPitch}`))}
             title={isPlaying ? t('tools.pitchPipe.stop', 'Stop') : t('tools.pitchPipe.play', 'Speel stemtoon')}
           >
             {isPlaying ? '⏹' : '🎵'} A {tuningPitch}Hz
@@ -178,15 +184,11 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
   return (
     <div className={`pitch-pipe card ${className}`}>
       <div className="card-body">
-        <h4 style={{ marginBottom: '1rem' }}>
-          {t('tools.pitchPipe.title', 'Stemfluit')}
-        </h4>
+        <h4 style={{ marginBottom: '1rem' }}>{t('tools.pitchPipe.title', 'Stemfluit')}</h4>
 
         {/* Tuning pitch selector */}
         <div className="form-group" style={{ marginBottom: '1rem' }}>
-          <label className="form-label">
-            {t('tools.pitchPipe.referencePitch', 'Referentietoon')}
-          </label>
+          <label className="form-label">{t('tools.pitchPipe.referencePitch', 'Referentietoon')}</label>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[440, 442, 443].map((pitch) => (
               <button
@@ -202,14 +204,14 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
 
         {/* Common pitches */}
         <div style={{ marginBottom: '1rem' }}>
-          <label className="form-label">
-            {t('tools.pitchPipe.commonPitches', 'Veelgebruikte tonen')}
-          </label>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-            gap: '8px',
-          }}>
+          <label className="form-label">{t('tools.pitchPipe.commonPitches', 'Veelgebruikte tonen')}</label>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+              gap: '8px',
+            }}
+          >
             {COMMON_PITCHES.map((pitch) => (
               <button
                 key={pitch.name}
@@ -240,17 +242,18 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
         >
           {showAllNotes
             ? t('tools.pitchPipe.hideAllNotes', 'Verberg alle noten')
-            : t('tools.pitchPipe.showAllNotes', 'Toon alle noten')
-          }
+            : t('tools.pitchPipe.showAllNotes', 'Toon alle noten')}
         </button>
 
         {/* All chromatic notes */}
         {showAllNotes && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(6, 1fr)',
-            gap: '6px',
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, 1fr)',
+              gap: '6px',
+            }}
+          >
             {NOTES.map((note) => (
               <button
                 key={`${note.name}${note.octave}`}
@@ -268,11 +271,7 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
         {/* Stop button */}
         {isPlaying && (
           <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-            <button
-              className="btn btn-danger"
-              onClick={stopTone}
-              style={{ minWidth: '120px' }}
-            >
+            <button className="btn btn-danger" onClick={stopTone} style={{ minWidth: '120px' }}>
               {t('tools.pitchPipe.stop', 'Stop')}
             </button>
           </div>

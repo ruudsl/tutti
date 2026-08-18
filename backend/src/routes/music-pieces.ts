@@ -1107,8 +1107,7 @@ router.post(
     `,
       )
       .get(titleId, req.user!.associationId) as
-      | { id: string; title: string; composer: string | null; arranger: string | null }
-      | undefined;
+      { id: string; title: string; composer: string | null; arranger: string | null } | undefined;
 
     if (!title) {
       await fs.promises.unlink(req.file.path).catch(() => {});
@@ -1146,8 +1145,7 @@ router.post(
 
     // Check if music_metadata record exists
     const existingMeta = db.prepare('SELECT id FROM music_metadata WHERE music_title_id = ?').get(titleId) as
-      | { id: string }
-      | undefined;
+      { id: string } | undefined;
 
     const metadataId = existingMeta?.id || uuidv4();
 
@@ -1487,8 +1485,7 @@ router.patch(
 
     // Upsert music_metadata
     const existingMeta = db.prepare('SELECT id FROM music_metadata WHERE music_title_id = ?').get(titleId) as
-      | { id: string }
-      | undefined;
+      { id: string } | undefined;
 
     if (existingMeta) {
       const updates: string[] = [];
@@ -2094,8 +2091,7 @@ router.post(
       if (listId) {
         // Notify the specific orchestra that owns this music list
         const musicList = db.prepare('SELECT orchestra_id FROM music_lists WHERE id = ?').get(listId) as
-          | { orchestra_id: string }
-          | undefined;
+          { orchestra_id: string } | undefined;
         if (musicList?.orchestra_id) {
           notifyOrchestra(musicList.orchestra_id, 'new_music', notifTitle, notifBody, notifData, req.user!.id).catch(
             (err: Error) => logger.error('Failed to send new_music notification', { error: err.message }),
@@ -2476,8 +2472,7 @@ router.delete(
         'SELECT file_path, title, original_filename FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL',
       )
       .get(req.params.id, req.user!.associationId) as
-      | { file_path: string; title: string; original_filename: string }
-      | undefined;
+      { file_path: string; title: string; original_filename: string } | undefined;
 
     if (!piece) {
       throw new ApiError(404, 'Muziekstuk niet gevonden.');

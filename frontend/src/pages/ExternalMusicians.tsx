@@ -31,7 +31,15 @@ const SKILL_LEVEL_LABELS: Record<string, string> = {
   professional: 'Professioneel',
 };
 
-function StarRating({ rating, onChange, readOnly = false }: { rating: number | null; onChange?: (r: number) => void; readOnly?: boolean }) {
+function StarRating({
+  rating,
+  onChange,
+  readOnly = false,
+}: {
+  rating: number | null;
+  onChange?: (r: number) => void;
+  readOnly?: boolean;
+}) {
   const stars = [1, 2, 3, 4, 5];
 
   return (
@@ -202,10 +210,7 @@ export default function ExternalMusicians() {
   const addInstrument = () => {
     setFormData({
       ...formData,
-      instruments: [
-        ...formData.instruments,
-        { instrumentId: '', skillLevel: null, isPrimary: false },
-      ],
+      instruments: [...formData.instruments, { instrumentId: '', skillLevel: null, isPrimary: false }],
     });
   };
 
@@ -260,11 +265,7 @@ export default function ExternalMusicians() {
               />
             </div>
             <div className="form-group mb-0">
-              <select
-                className="form-control"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-              >
+              <select className="form-control" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                 <option value="">{t('externalMusicians.allTypes')}</option>
                 <option value="alumni">{MUSICIAN_TYPE_LABELS.alumni}</option>
                 <option value="guest">{MUSICIAN_TYPE_LABELS.guest}</option>
@@ -331,14 +332,10 @@ export default function ExternalMusicians() {
                       >
                         {musician.firstName} {musician.lastName}
                       </button>
-                      {musician.email && (
-                        <div className="text-muted text-sm">{musician.email}</div>
-                      )}
+                      {musician.email && <div className="text-muted text-sm">{musician.email}</div>}
                     </td>
                     <td>
-                      <span className="badge badge-info">
-                        {MUSICIAN_TYPE_LABELS[musician.musicianType]}
-                      </span>
+                      <span className="badge badge-info">{MUSICIAN_TYPE_LABELS[musician.musicianType]}</span>
                     </td>
                     <td>{musician.instrumentNames || '-'}</td>
                     <td>
@@ -405,9 +402,7 @@ export default function ExternalMusicians() {
               <div>
                 <label className="form-label text-muted">{t('externalMusicians.type')}</label>
                 <p>
-                  <span className="badge badge-info">
-                    {MUSICIAN_TYPE_LABELS[musicianDetail.musicianType]}
-                  </span>
+                  <span className="badge badge-info">{MUSICIAN_TYPE_LABELS[musicianDetail.musicianType]}</span>
                 </p>
               </div>
               <div>
@@ -448,7 +443,9 @@ export default function ExternalMusicians() {
               </div>
               <div>
                 <label className="form-label text-muted">{t('externalMusicians.performances')}</label>
-                <p>{musicianDetail.totalPerformances} {t('externalMusicians.total')}</p>
+                <p>
+                  {musicianDetail.totalPerformances} {t('externalMusicians.total')}
+                </p>
               </div>
             </div>
 
@@ -500,12 +497,19 @@ export default function ExternalMusicians() {
                           {a.eventName || a.eventType} - {a.instrumentName}
                         </td>
                         <td>
-                          <span className={`badge badge-${
-                            a.status === 'completed' ? 'success' :
-                            a.status === 'confirmed' ? 'primary' :
-                            a.status === 'declined' ? 'danger' :
-                            a.status === 'no_show' ? 'warning' : 'secondary'
-                          }`}>
+                          <span
+                            className={`badge badge-${
+                              a.status === 'completed'
+                                ? 'success'
+                                : a.status === 'confirmed'
+                                  ? 'primary'
+                                  : a.status === 'declined'
+                                    ? 'danger'
+                                    : a.status === 'no_show'
+                                      ? 'warning'
+                                      : 'secondary'
+                            }`}
+                          >
                             {a.status}
                           </span>
                         </td>
@@ -593,10 +597,7 @@ export default function ExternalMusicians() {
             </div>
             <div className="form-group">
               <label className="form-label">{t('externalMusicians.rating')}</label>
-              <StarRating
-                rating={formData.rating}
-                onChange={(r) => setFormData({ ...formData, rating: r })}
-              />
+              <StarRating rating={formData.rating} onChange={(r) => setFormData({ ...formData, rating: r })} />
             </div>
           </div>
 
@@ -637,11 +638,7 @@ export default function ExternalMusicians() {
                   />
                   {t('externalMusicians.primary')}
                 </label>
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={() => removeInstrument(index)}
-                >
+                <button type="button" className="btn btn-danger btn-sm" onClick={() => removeInstrument(index)}>
                   <Icon name="trash" size={16} />
                 </button>
               </div>

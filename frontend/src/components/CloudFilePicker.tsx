@@ -78,7 +78,7 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
         setImporting(false);
       }
     },
-    [listId, onImported, t]
+    [listId, onImported, t],
   );
 
   const handleGoogleImport = useCallback(
@@ -99,7 +99,7 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
         setImporting(false);
       }
     },
-    [listId, onImported, t]
+    [listId, onImported, t],
   );
 
   if (!config) return null;
@@ -110,21 +110,12 @@ export function CloudFilePicker({ listId, onImported }: CloudFilePickerProps) {
     <div className="cloud-file-picker">
       <div className="flex gap-1 flex-wrap">
         {config.onedrive.enabled && (
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => setOneDriveOpen(true)}
-            disabled={importing}
-          >
+          <button type="button" className="btn btn-outline" onClick={() => setOneDriveOpen(true)} disabled={importing}>
             <Icon name="cloud" size={18} /> {t('cloudImport.onedrive', 'Importeer uit OneDrive')}
           </button>
         )}
         {config.googleDrive.enabled && (
-          <GoogleDriveButton
-            config={config.googleDrive}
-            disabled={importing}
-            onPick={handleGoogleImport}
-          />
+          <GoogleDriveButton config={config.googleDrive} disabled={importing} onPick={handleGoogleImport} />
         )}
       </div>
 
@@ -166,10 +157,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
     let cancelled = false;
     async function authenticate() {
       try {
-        await loadScript(
-          'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js',
-          'msal-browser-sdk'
-        );
+        await loadScript('https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js', 'msal-browser-sdk');
         if (cancelled) return;
         const msalInstance = new window.msal.PublicClientApplication({
           auth: {
@@ -212,7 +200,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
         if (!response.ok) throw new Error(`Graph API error: ${response.status}`);
         const data = await response.json();
         const filtered = (data.value as OneDriveItem[]).filter(
-          (item) => item.folder || (item.file && item.name.toLowerCase().endsWith('.pdf'))
+          (item) => item.folder || (item.file && item.name.toLowerCase().endsWith('.pdf')),
         );
         setItems(filtered);
       } catch (e) {
@@ -221,7 +209,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
         setLoading(false);
       }
     },
-    [accessToken]
+    [accessToken],
   );
 
   const searchItems = useCallback(
@@ -240,7 +228,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
         if (!response.ok) throw new Error(`Graph API error: ${response.status}`);
         const data = await response.json();
         const filtered = (data.value as OneDriveItem[]).filter(
-          (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
+          (item) => item.file && item.name.toLowerCase().endsWith('.pdf'),
         );
         setItems(filtered);
       } catch (e) {
@@ -249,7 +237,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
         setLoading(false);
       }
     },
-    [accessToken, currentFolderId, loadItems]
+    [accessToken, currentFolderId, loadItems],
   );
 
   useEffect(() => {
@@ -359,9 +347,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
                       <Icon name={item.folder ? 'folder' : 'fileText'} size={18} />
                       <span style={{ flex: 1 }}>{item.name}</span>
                       {item.file && (
-                        <small style={{ color: 'var(--text-muted, #666)' }}>
-                          {(item.size / 1024).toFixed(0)} KB
-                        </small>
+                        <small style={{ color: 'var(--text-muted, #666)' }}>{(item.size / 1024).toFixed(0)} KB</small>
                       )}
                       {item.file && selected.has(item.id) && <Icon name="check" size={16} />}
                     </li>
@@ -375,11 +361,7 @@ function OneDrivePickerModal({ clientId, tenantId, onClose, onPick }: OneDrivePi
           <button className="btn btn-secondary" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleConfirm}
-            disabled={selected.size === 0 || loading}
-          >
+          <button className="btn btn-primary" onClick={handleConfirm} disabled={selected.size === 0 || loading}>
             {t('cloudImport.importSelected', 'Importeer geselecteerde')} ({selected.size})
           </button>
         </div>
@@ -466,12 +448,7 @@ function GoogleDriveButton({ config, disabled, onPick }: GoogleDriveButtonProps)
   };
 
   return (
-    <button
-      type="button"
-      className="btn btn-outline"
-      onClick={openPicker}
-      disabled={disabled || loading}
-    >
+    <button type="button" className="btn btn-outline" onClick={openPicker} disabled={disabled || loading}>
       <Icon name="folder" size={18} />{' '}
       {loading ? t('common.loading', 'Laden...') : t('cloudImport.googleDrive', 'Importeer uit Google Drive')}
     </button>

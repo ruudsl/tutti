@@ -4,32 +4,32 @@ import { TicketEmailData } from '../../services/ticketing';
  * Format date according to English locale
  */
 function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 /**
  * Format currency according to English locale
  */
 function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-GB', {
-        style: 'currency',
-        currency: 'EUR',
-    }).format(amount);
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(amount);
 }
 
 export function getTicketEmailContent(data: TicketEmailData): { subject: string; text: string; html: string } {
-    const formattedDate = formatDate(data.concertDate);
-    const formattedTotal = formatCurrency(data.orderTotal);
+  const formattedDate = formatDate(data.concertDate);
+  const formattedTotal = formatCurrency(data.orderTotal);
 
-    const subject = `Your tickets for ${data.concertName}`;
+  const subject = `Your tickets for ${data.concertName}`;
 
-    const text = `
+  const text = `
 Dear ${data.buyerName},
 
 Thank you for your purchase! Here are your ticket details:
@@ -51,7 +51,7 @@ Best regards,
 The Harmonie Team
 `;
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -122,5 +122,5 @@ The Harmonie Team
 </html>
 `;
 
-    return { subject, text, html };
+  return { subject, text, html };
 }

@@ -23,11 +23,13 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Oplossingen:**
 
 1. **Herstart de backend:**
+
    ```bash
    docker compose restart backend
    ```
 
 2. **Controleer op vastgelopen processen:**
+
    ```bash
    docker compose exec backend ps aux | grep node
    ```
@@ -45,11 +47,13 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Oplossingen:**
 
 1. **Controleer integriteit:**
+
    ```bash
    docker compose exec backend sqlite3 /app/data/tutti.db "PRAGMA integrity_check;"
    ```
 
 2. **Herstel van backup:**
+
    ```bash
    docker compose down
    ./scripts/restore.sh /pad/naar/backup.tar.gz --docker
@@ -66,11 +70,13 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Controleer:**
 
 1. **Bestaat het databasebestand?**
+
    ```bash
    docker compose exec backend ls -la /app/data/
    ```
 
 2. **Zijn de rechten correct?**
+
    ```bash
    docker compose exec backend chmod 664 /app/data/tutti.db
    ```
@@ -91,6 +97,7 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Verhogen:**
 
 1. Pas de omgevingsvariabele aan:
+
    ```env
    MAX_FILE_SIZE=52428800  # 50 MB in bytes
    ```
@@ -103,11 +110,13 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 ### "Invalid file type"
 
 **Toegestane types:**
+
 - Bladmuziek: PDF
 - Audio: MP3, WAV, M4A
 - Bulk: ZIP
 
 **Controleer:**
+
 - Is het bestand daadwerkelijk een PDF? (niet hernoemd van ander formaat)
 - Is het bestand niet corrupt?
 
@@ -116,16 +125,19 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Stappen:**
 
 1. **Controleer backend logs:**
+
    ```bash
    docker compose logs backend --tail=50
    ```
 
 2. **Controleer schijfruimte:**
+
    ```bash
    df -h
    ```
 
 3. **Controleer upload directory:**
+
    ```bash
    docker compose exec backend ls -la /app/uploads/
    ```
@@ -140,6 +152,7 @@ Deze handleiding helpt je bij het oplossen van veelvoorkomende problemen met Tut
 **Controleer:**
 
 1. **Is de ZIP geldig?**
+
    ```bash
    unzip -t mijnbestand.zip
    ```
@@ -179,11 +192,13 @@ EMAIL_FROM=Tutti <noreply@example.com>
 **Stappen:**
 
 1. **Test verbinding:**
+
    ```bash
    nc -zv smtp.example.com 587
    ```
 
 2. **Controleer firewall:**
+
    ```bash
    sudo ufw status
    ```
@@ -197,6 +212,7 @@ EMAIL_FROM=Tutti <noreply@example.com>
 **Oplossingen:**
 
 1. **Configureer SPF-record** in je DNS:
+
    ```
    v=spf1 include:_spf.google.com ~all
    ```
@@ -276,6 +292,7 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Controleer:**
 
 1. Is Entra Sync geconfigureerd?
+
    ```bash
    docker compose exec backend env | grep AZURE
    ```
@@ -297,11 +314,13 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Backend diagnostiek:**
 
 1. **Controleer health endpoint:**
+
    ```bash
    curl http://localhost:3001/api/health
    ```
 
 2. **Bekijk resource gebruik:**
+
    ```bash
    docker stats
    ```
@@ -320,11 +339,13 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Optimalisaties:**
 
 1. **Controleer indices:**
+
    ```bash
    docker compose exec backend sqlite3 /app/data/tutti.db ".indices"
    ```
 
 2. **Analyseer database:**
+
    ```bash
    docker compose exec backend sqlite3 /app/data/tutti.db "ANALYZE;"
    ```
@@ -339,11 +360,13 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Controleer:**
 
 1. **Container statistieken:**
+
    ```bash
    docker stats tutti-backend
    ```
 
 2. **Verhoog memory limit** in `docker-compose.prod.yml`:
+
    ```yaml
    deploy:
      resources:
@@ -373,11 +396,13 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Diagnostiek:**
 
 1. **Bekijk status:**
+
    ```bash
    docker compose ps -a
    ```
 
 2. **Bekijk logs:**
+
    ```bash
    docker compose logs
    ```
@@ -392,12 +417,14 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Oplossingen:**
 
 1. **Vind het proces:**
+
    ```bash
    sudo lsof -i :3001
    sudo lsof -i :5173
    ```
 
 2. **Stop het proces:**
+
    ```bash
    sudo kill -9 <PID>
    ```
@@ -409,6 +436,7 @@ AZURE_REDIRECT_URI=https://tutti.example.com/api/auth/azure/callback
 **Controleer:**
 
 1. **Bestaan de directories?**
+
    ```bash
    ls -la /pad/naar/volumes/
    ```
@@ -435,11 +463,13 @@ docker system df
 **Traefik/Let's Encrypt:**
 
 1. **Controleer Traefik logs:**
+
    ```bash
    docker compose logs traefik
    ```
 
 2. **Forceer vernieuwing:**
+
    ```bash
    docker compose exec traefik rm /letsencrypt/acme.json
    docker compose restart traefik
@@ -524,6 +554,7 @@ CORS_ORIGIN=https://tutti.example.com
 **Controleer:**
 
 1. **Is de backend bereikbaar?**
+
    ```bash
    curl http://localhost:3001/api/health
    ```

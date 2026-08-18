@@ -102,9 +102,7 @@ function validateCloudDownloadUrl(rawUrl: string): string {
   const allowedExactHosts = new Set(['graph.microsoft.com', 'onedrive.live.com']);
   const allowedHostSuffixes = ['.sharepoint.com', '.1drv.com'];
 
-  const allowed =
-    allowedExactHosts.has(hostname) ||
-    allowedHostSuffixes.some((suffix) => hostname.endsWith(suffix));
+  const allowed = allowedExactHosts.has(hostname) || allowedHostSuffixes.some((suffix) => hostname.endsWith(suffix));
 
   if (!allowed) {
     throw new ApiError(400, 'Download URL host is not allowed');
@@ -263,8 +261,7 @@ async function importFiles(
 
     if (listId) {
       const musicList = db.prepare('SELECT orchestra_id FROM music_lists WHERE id = ?').get(listId) as
-        | { orchestra_id: string }
-        | undefined;
+        { orchestra_id: string } | undefined;
       if (musicList?.orchestra_id) {
         notifyOrchestra(musicList.orchestra_id, 'new_music', notifTitle, notifBody, notifData, user.id).catch(
           (err: Error) => logger.error('Failed to send new_music notification', { error: err.message }),

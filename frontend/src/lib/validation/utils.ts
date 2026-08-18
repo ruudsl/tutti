@@ -33,12 +33,21 @@ export function createI18nErrorMap(t: TFunction): z.core.$ZodErrorMap {
           if (issue.minimum === 1) {
             message = t('errors.required', 'This field is required');
           } else {
-            message = t('errors.minLength', { min: issue.minimum, defaultValue: `Minimum ${issue.minimum} characters required` });
+            message = t('errors.minLength', {
+              min: issue.minimum,
+              defaultValue: `Minimum ${issue.minimum} characters required`,
+            });
           }
         } else if (issue.origin === 'number') {
-          message = t('errors.minValue', { min: issue.minimum, defaultValue: `Value must be at least ${issue.minimum}` });
+          message = t('errors.minValue', {
+            min: issue.minimum,
+            defaultValue: `Value must be at least ${issue.minimum}`,
+          });
         } else if (issue.origin === 'array') {
-          message = t('errors.minItems', { min: issue.minimum, defaultValue: `At least ${issue.minimum} items required` });
+          message = t('errors.minItems', {
+            min: issue.minimum,
+            defaultValue: `At least ${issue.minimum} items required`,
+          });
         } else {
           message = issue.message || 'Value is too small';
         }
@@ -46,11 +55,20 @@ export function createI18nErrorMap(t: TFunction): z.core.$ZodErrorMap {
 
       case 'too_big':
         if (issue.origin === 'string') {
-          message = t('errors.maxLength', { max: issue.maximum, defaultValue: `Maximum ${issue.maximum} characters allowed` });
+          message = t('errors.maxLength', {
+            max: issue.maximum,
+            defaultValue: `Maximum ${issue.maximum} characters allowed`,
+          });
         } else if (issue.origin === 'number') {
-          message = t('errors.maxValue', { max: issue.maximum, defaultValue: `Value must be at most ${issue.maximum}` });
+          message = t('errors.maxValue', {
+            max: issue.maximum,
+            defaultValue: `Value must be at most ${issue.maximum}`,
+          });
         } else if (issue.origin === 'array') {
-          message = t('errors.maxItems', { max: issue.maximum, defaultValue: `Maximum ${issue.maximum} items allowed` });
+          message = t('errors.maxItems', {
+            max: issue.maximum,
+            defaultValue: `Maximum ${issue.maximum} items allowed`,
+          });
         } else {
           message = issue.message || 'Value is too large';
         }
@@ -102,11 +120,7 @@ export function createI18nErrorMap(t: TFunction): z.core.$ZodErrorMap {
  * @param t - Optional i18n translation function
  * @returns The validation error message, or undefined if valid
  */
-export function validateField<T extends z.ZodType>(
-  schema: T,
-  value: unknown,
-  t?: TFunction
-): string | undefined {
+export function validateField<T extends z.ZodType>(schema: T, value: unknown, t?: TFunction): string | undefined {
   const errorMap = t ? createI18nErrorMap(t) : undefined;
   const result = schema.safeParse(value, errorMap ? { error: errorMap } : undefined);
 

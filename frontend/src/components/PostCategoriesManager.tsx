@@ -64,8 +64,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCategoryData> }) =>
-      updatePostCategory(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCategoryData> }) => updatePostCategory(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-categories'] });
       showSuccess(t('posts.categories.updated'));
@@ -150,13 +149,8 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
       <div className="space-y-4">
         {/* Header with add button */}
         <div className="flex justify-between items-center">
-          <p className="text-sm text-base-content/70">
-            {t('posts.categories.description')}
-          </p>
-          <button
-            className="btn btn-primary btn-sm gap-1"
-            onClick={() => setShowAddModal(true)}
-          >
+          <p className="text-sm text-base-content/70">{t('posts.categories.description')}</p>
+          <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowAddModal(true)}>
             <Icon name="plus" size={14} aria-hidden={true} />
             {t('posts.categories.add')}
           </button>
@@ -227,9 +221,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
         )}
 
         {/* Footer info */}
-        <p className="text-xs text-base-content/50">
-          {t('posts.categories.deleteNote')}
-        </p>
+        <p className="text-xs text-base-content/50">{t('posts.categories.deleteNote')}</p>
       </div>
 
       {/* Add Category Modal */}
@@ -245,11 +237,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
           isSubmitting={createMutation.isPending}
           submitDisabled={!canSubmit}
         >
-          <CategoryForm
-            formData={formData}
-            setFormData={setFormData}
-            onNameChange={handleNameChange}
-          />
+          <CategoryForm formData={formData} setFormData={setFormData} onNameChange={handleNameChange} />
         </FormModal>
       )}
 
@@ -265,11 +253,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
           isSubmitting={updateMutation.isPending}
           submitDisabled={!canSubmit}
         >
-          <CategoryForm
-            formData={formData}
-            setFormData={setFormData}
-            onNameChange={handleNameChange}
-          />
+          <CategoryForm formData={formData} setFormData={setFormData} onNameChange={handleNameChange} />
         </FormModal>
       )}
 
@@ -330,9 +314,7 @@ function CategoryForm({
           placeholder={t('posts.categories.slugPlaceholder')}
         />
         <label className="label">
-          <span className="label-text-alt text-base-content/60">
-            {t('posts.categories.slugHint')}
-          </span>
+          <span className="label-text-alt text-base-content/60">{t('posts.categories.slugHint')}</span>
         </label>
       </div>
 

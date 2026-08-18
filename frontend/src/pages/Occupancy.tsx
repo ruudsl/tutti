@@ -2,12 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import {
-  getOrchestras,
-  getSeatingSections,
-  getSeatingAssignments,
-  getUsers,
-} from '../api';
+import { getOrchestras, getSeatingSections, getSeatingAssignments, getUsers } from '../api';
 import type { SeatingSection, User } from '../types';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -64,9 +59,7 @@ export default function Occupancy() {
     if (sections.length === 0) return [];
 
     // Get users in this orchestra
-    const orchestraUsers = users.filter(u =>
-      u.orchestras?.some(o => o.id === selectedOrchestraId)
-    );
+    const orchestraUsers = users.filter((u) => u.orchestras?.some((o) => o.id === selectedOrchestraId));
 
     // Create a map of instrument ID to users who play that instrument
     const usersByInstrument = new Map<string, User[]>();
@@ -80,11 +73,11 @@ export default function Occupancy() {
     }
 
     // Create a set of assigned user IDs
-    const assignedUserIds = new Set(assignments.map(a => a.userId));
+    const assignedUserIds = new Set(assignments.map((a) => a.userId));
 
-    return sections.map(section => {
+    return sections.map((section) => {
       // Count assigned members in this section
-      const sectionAssignments = assignments.filter(a => a.sectionId === section.id);
+      const sectionAssignments = assignments.filter((a) => a.sectionId === section.id);
       const assigned = sectionAssignments.length;
 
       // Count potential members (users with matching instruments)
@@ -93,7 +86,7 @@ export default function Occupancy() {
 
       for (const instrument of section.instruments) {
         const usersWithInstrument = usersByInstrument.get(instrument.id) || [];
-        const assignedWithInstrument = usersWithInstrument.filter(u => assignedUserIds.has(u.id)).length;
+        const assignedWithInstrument = usersWithInstrument.filter((u) => assignedUserIds.has(u.id)).length;
 
         instrumentStats.push({
           id: instrument.id,
@@ -123,7 +116,7 @@ export default function Occupancy() {
         assigned: acc.assigned + data.assigned,
         potential: acc.potential + data.potential,
       }),
-      { assigned: 0, potential: 0 }
+      { assigned: 0, potential: 0 },
     );
   }, [occupancyData]);
 
@@ -167,13 +160,11 @@ export default function Occupancy() {
       <div className="form-row" style={{ marginBottom: '1.5rem' }}>
         <div className="form-group" style={{ maxWidth: '300px' }}>
           <label htmlFor="orchestra">{t('seating.selectOrchestra')}</label>
-          <select
-            id="orchestra"
-            value={selectedOrchestraId}
-            onChange={(e) => setSelectedOrchestraId(e.target.value)}
-          >
-            {orchestras.map(o => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+          <select id="orchestra" value={selectedOrchestraId} onChange={(e) => setSelectedOrchestraId(e.target.value)}>
+            {orchestras.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
         </div>
@@ -228,12 +219,14 @@ export default function Occupancy() {
                 </tr>
               </thead>
               <tbody>
-                {occupancyData.map(data => (
+                {occupancyData.map((data) => (
                   <tr key={data.section.id}>
                     <td>
                       <strong>{data.section.name}</strong>
                       <br />
-                      <small className="text-muted">{t('seating.row')} {data.section.rowNumber}</small>
+                      <small className="text-muted">
+                        {t('seating.row')} {data.section.rowNumber}
+                      </small>
                     </td>
                     <td>{data.assigned}</td>
                     <td>{data.potential}</td>
@@ -257,9 +250,7 @@ export default function Occupancy() {
                             }}
                           />
                         </div>
-                        <span>
-                          {data.potential > 0 ? Math.round((data.assigned / data.potential) * 100) : 0}%
-                        </span>
+                        <span>{data.potential > 0 ? Math.round((data.assigned / data.potential) * 100) : 0}%</span>
                       </div>
                     </td>
                     <td>
@@ -275,7 +266,7 @@ export default function Occupancy() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                        {data.instruments.map(instr => (
+                        {data.instruments.map((instr) => (
                           <span
                             key={instr.id}
                             className="badge badge-secondary"

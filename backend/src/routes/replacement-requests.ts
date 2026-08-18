@@ -92,30 +92,32 @@ router.get(
 
     const requests = db.prepare(query).all(...params);
 
-    res.json(requests.map((r: any) => ({
-      id: r.id,
-      eventType: r.event_type,
-      eventId: r.event_id,
-      eventDate: r.event_date,
-      eventName: r.event_name,
-      eventLocation: r.event_location,
-      instrumentId: r.instrument_id,
-      instrumentName: r.instrument_name,
-      instrumentTuning: r.instrument_tuning,
-      positionsNeeded: r.positions_needed,
-      positionsFilled: r.positions_filled,
-      urgency: r.urgency,
-      status: r.status,
-      notes: r.notes,
-      deadline: r.deadline,
-      assignmentCount: r.assignment_count,
-      confirmedCount: r.confirmed_count,
-      createdBy: r.created_by,
-      createdByName: r.created_by_name,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    })));
-  })
+    res.json(
+      requests.map((r: any) => ({
+        id: r.id,
+        eventType: r.event_type,
+        eventId: r.event_id,
+        eventDate: r.event_date,
+        eventName: r.event_name,
+        eventLocation: r.event_location,
+        instrumentId: r.instrument_id,
+        instrumentName: r.instrument_name,
+        instrumentTuning: r.instrument_tuning,
+        positionsNeeded: r.positions_needed,
+        positionsFilled: r.positions_filled,
+        urgency: r.urgency,
+        status: r.status,
+        notes: r.notes,
+        deadline: r.deadline,
+        assignmentCount: r.assignment_count,
+        confirmedCount: r.confirmed_count,
+        createdBy: r.created_by,
+        createdByName: r.created_by_name,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })),
+    );
+  }),
 );
 
 // GET /api/replacement-requests/suggestions/:eventId - Get suggested musicians based on instrument needs
@@ -127,18 +129,24 @@ router.get(
     const associationId = req.user!.associationId;
 
     // Get open requests for this event
-    const requests = db.prepare(`
+    const requests = db
+      .prepare(
+        `
       SELECT rr.*, i.name as instrument_name
       FROM replacement_requests rr
       JOIN instruments i ON rr.instrument_id = i.id
       WHERE rr.event_id = ? AND rr.association_id = ? AND rr.status IN ('open', 'partially_filled')
-    `).all(eventId, associationId);
+    `,
+      )
+      .all(eventId, associationId);
 
     const suggestions = [];
 
     for (const request of requests as any[]) {
       // Find musicians who play this instrument and haven't been invited yet
-      const musicians = db.prepare(`
+      const musicians = db
+        .prepare(
+          `
         SELECT em.*, emi.skill_level, emi.is_primary
         FROM external_musicians em
         JOIN external_musician_instruments emi ON em.id = emi.external_musician_id
@@ -151,7 +159,9 @@ router.get(
           )
         ORDER BY emi.is_primary DESC, em.rating DESC NULLS LAST, em.total_performances DESC
         LIMIT 10
-      `).all(associationId, request.instrument_id, request.id);
+      `,
+        )
+        .all(associationId, request.instrument_id, request.id);
 
       suggestions.push({
         request: {
@@ -179,7 +189,7 @@ router.get(
     }
 
     res.json(suggestions);
-  })
+  }),
 );
 
 // GET /api/replacement-requests/:id - Get request with assignments
@@ -190,7 +200,9 @@ router.get(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const request = db.prepare(`
+    const request = db
+      .prepare(
+        `
       SELECT rr.*, i.name as instrument_name, i.tuning as instrument_tuning,
         u.first_name || ' ' || u.last_name as created_by_name,
         CASE
@@ -205,19 +217,25 @@ router.get(
       JOIN instruments i ON rr.instrument_id = i.id
       LEFT JOIN users u ON rr.created_by = u.id
       WHERE rr.id = ? AND rr.association_id = ?
-    `).get(id, associationId) as any;
+    `,
+      )
+      .get(id, associationId) as any;
 
     if (!request) {
       throw new ApiError(404, 'Verzoek niet gevonden');
     }
 
-    const assignments = db.prepare(`
+    const assignments = db
+      .prepare(
+        `
       SELECT ra.*, em.first_name, em.last_name, em.email, em.phone, em.musician_type, em.rating
       FROM replacement_assignments ra
       JOIN external_musicians em ON ra.external_musician_id = em.id
       WHERE ra.request_id = ?
       ORDER BY ra.invited_at DESC
-    `).all(id);
+    `,
+      )
+      .all(id);
 
     res.json({
       id: request.id,
@@ -255,7 +273,7 @@ router.get(
         notes: a.notes,
       })),
     });
-  })
+  }),
 );
 
 // POST /api/replacement-requests - Create request
@@ -270,26 +288,36 @@ router.post(
 
     // Verify event exists
     if (data.eventType === 'concert') {
-      const concert = db.prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?').get(data.eventId, associationId);
+      const concert = db
+        .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+        .get(data.eventId, associationId);
       if (!concert) {
         throw new ApiError(404, 'Concert niet gevonden');
       }
     } else {
-      const rehearsal = db.prepare(`
+      const rehearsal = db
+        .prepare(
+          `
         SELECT ri.id FROM rehearsal_instances ri
         JOIN rehearsals r ON ri.rehearsal_id = r.id
         WHERE ri.id = ? AND r.association_id = ?
-      `).get(data.eventId, associationId);
+      `,
+        )
+        .get(data.eventId, associationId);
       if (!rehearsal) {
         throw new ApiError(404, 'Repetitie niet gevonden');
       }
     }
 
     // Check for duplicate request
-    const existing = db.prepare(`
+    const existing = db
+      .prepare(
+        `
       SELECT id FROM replacement_requests
       WHERE event_type = ? AND event_id = ? AND instrument_id = ? AND status != 'cancelled'
-    `).get(data.eventType, data.eventId, data.instrumentId);
+    `,
+      )
+      .get(data.eventType, data.eventId, data.instrumentId);
 
     if (existing) {
       throw new ApiError(409, 'Er bestaat al een verzoek voor dit instrument bij dit evenement');
@@ -297,12 +325,14 @@ router.post(
 
     const requestId = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO replacement_requests (
         id, association_id, event_type, event_id, event_date, instrument_id,
         positions_needed, urgency, notes, deadline, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `,
+    ).run(
       requestId,
       associationId,
       data.eventType,
@@ -313,7 +343,7 @@ router.post(
       data.urgency,
       data.notes || null,
       data.deadline || null,
-      userId
+      userId,
     );
 
     logger.info(`Replacement request created for ${data.eventType} ${data.eventId}`, {
@@ -326,7 +356,7 @@ router.post(
       id: requestId,
       message: 'Verzoek succesvol aangemaakt',
     });
-  })
+  }),
 );
 
 // PUT /api/replacement-requests/:id - Update request
@@ -339,9 +369,13 @@ router.put(
     const data = updateRequestSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const request = db.prepare(`
+    const request = db
+      .prepare(
+        `
       SELECT id FROM replacement_requests WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!request) {
       throw new ApiError(404, 'Verzoek niet gevonden');
@@ -375,16 +409,18 @@ router.put(
       updates.push('updated_at = CURRENT_TIMESTAMP');
       params.push(id);
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE replacement_requests SET ${updates.join(', ')} WHERE id = ?
-      `).run(...params);
+      `,
+      ).run(...params);
     }
 
     const safeIdForLog = id.replace(/[\r\n]/g, '');
     logger.info(`Replacement request updated: ${safeIdForLog}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Verzoek succesvol bijgewerkt' });
-  })
+  }),
 );
 
 // DELETE /api/replacement-requests/:id - Cancel request
@@ -396,22 +432,28 @@ router.delete(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const request = db.prepare(`
+    const request = db
+      .prepare(
+        `
       SELECT id FROM replacement_requests WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!request) {
       throw new ApiError(404, 'Verzoek niet gevonden');
     }
 
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE replacement_requests SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?
-    `).run(id);
+    `,
+    ).run(id);
 
     logger.info(`Replacement request cancelled: ${id}`, { cancelledBy: req.user!.id });
 
     res.json({ message: 'Verzoek succesvol geannuleerd' });
-  })
+  }),
 );
 
 // POST /api/replacement-requests/:id/invite - Invite external musician
@@ -424,12 +466,16 @@ router.post(
     const data = inviteSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const request = db.prepare(`
+    const request = db
+      .prepare(
+        `
       SELECT rr.*, i.name as instrument_name
       FROM replacement_requests rr
       JOIN instruments i ON rr.instrument_id = i.id
       WHERE rr.id = ? AND rr.association_id = ?
-    `).get(id, associationId) as any;
+    `,
+      )
+      .get(id, associationId) as any;
 
     if (!request) {
       throw new ApiError(404, 'Verzoek niet gevonden');
@@ -440,21 +486,29 @@ router.post(
     }
 
     // Verify musician exists and is active
-    const musician = db.prepare(`
+    const musician = db
+      .prepare(
+        `
       SELECT em.*, emi.id as has_instrument
       FROM external_musicians em
       LEFT JOIN external_musician_instruments emi ON em.id = emi.external_musician_id AND emi.instrument_id = ?
       WHERE em.id = ? AND em.association_id = ? AND em.is_active = 1
-    `).get(request.instrument_id, data.externalMusicianId, associationId) as any;
+    `,
+      )
+      .get(request.instrument_id, data.externalMusicianId, associationId) as any;
 
     if (!musician) {
       throw new ApiError(404, 'Muzikant niet gevonden of niet actief');
     }
 
     // Check if already invited
-    const existingAssignment = db.prepare(`
+    const existingAssignment = db
+      .prepare(
+        `
       SELECT id FROM replacement_assignments WHERE request_id = ? AND external_musician_id = ?
-    `).get(id, data.externalMusicianId);
+    `,
+      )
+      .get(id, data.externalMusicianId);
 
     if (existingAssignment) {
       throw new ApiError(409, 'Deze muzikant is al uitgenodigd voor dit verzoek');
@@ -462,16 +516,12 @@ router.post(
 
     const assignmentId = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO replacement_assignments (id, request_id, external_musician_id, notes, fee_amount)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
-      assignmentId,
-      id,
-      data.externalMusicianId,
-      data.notes || null,
-      data.feeAmount || null
-    );
+    `,
+    ).run(assignmentId, id, data.externalMusicianId, data.notes || null, data.feeAmount || null);
 
     logger.info(`External musician invited for replacement`, {
       assignmentId,
@@ -497,7 +547,7 @@ router.post(
         ? 'Muzikant uitgenodigd. Let op: automatisch e-mailen is niet geconfigureerd - neem handmatig contact op.'
         : 'Muzikant succesvol uitgenodigd',
     });
-  })
+  }),
 );
 
 // PUT /api/replacement-requests/:id/assignments/:assignmentId - Update assignment status
@@ -510,17 +560,25 @@ router.put(
     const data = updateAssignmentSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const request = db.prepare(`
+    const request = db
+      .prepare(
+        `
       SELECT id FROM replacement_requests WHERE id = ? AND association_id = ?
-    `).get(id, associationId);
+    `,
+      )
+      .get(id, associationId);
 
     if (!request) {
       throw new ApiError(404, 'Verzoek niet gevonden');
     }
 
-    const assignment = db.prepare(`
+    const assignment = db
+      .prepare(
+        `
       SELECT id, status as old_status FROM replacement_assignments WHERE id = ? AND request_id = ?
-    `).get(assignmentId, id) as any;
+    `,
+      )
+      .get(assignmentId, id) as any;
 
     if (!assignment) {
       throw new ApiError(404, 'Uitnodiging niet gevonden');
@@ -547,48 +605,70 @@ router.put(
 
       params.push(assignmentId);
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE replacement_assignments SET ${updates.join(', ')} WHERE id = ?
-      `).run(...params);
+      `,
+      ).run(...params);
 
       // Update request status based on confirmed assignments
       if (data.status === 'confirmed') {
-        const confirmedCount = db.prepare(`
+        const confirmedCount = db
+          .prepare(
+            `
           SELECT COUNT(*) as count FROM replacement_assignments
           WHERE request_id = ? AND status = 'confirmed'
-        `).get(id) as any;
+        `,
+          )
+          .get(id) as any;
 
-        const requestInfo = db.prepare(`
+        const requestInfo = db
+          .prepare(
+            `
           SELECT positions_needed FROM replacement_requests WHERE id = ?
-        `).get(id) as any;
+        `,
+          )
+          .get(id) as any;
 
         const newPositionsFilled = confirmedCount.count;
         const newStatus = newPositionsFilled >= requestInfo.positions_needed ? 'filled' : 'partially_filled';
 
-        db.prepare(`
+        db.prepare(
+          `
           UPDATE replacement_requests
           SET positions_filled = ?, status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(newPositionsFilled, newStatus, id);
+        `,
+        ).run(newPositionsFilled, newStatus, id);
       }
 
       // Update musician stats if completed
       if (data.status === 'completed') {
-        const musicianId = db.prepare(`
+        const musicianId = db
+          .prepare(
+            `
           SELECT external_musician_id FROM replacement_assignments WHERE id = ?
-        `).get(assignmentId) as any;
+        `,
+          )
+          .get(assignmentId) as any;
 
-        const eventDate = db.prepare(`
+        const eventDate = db
+          .prepare(
+            `
           SELECT event_date FROM replacement_requests WHERE id = ?
-        `).get(id) as any;
+        `,
+          )
+          .get(id) as any;
 
-        db.prepare(`
+        db.prepare(
+          `
           UPDATE external_musicians
           SET total_performances = total_performances + 1,
               last_played_date = ?,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(eventDate.event_date, musicianId.external_musician_id);
+        `,
+        ).run(eventDate.event_date, musicianId.external_musician_id);
       }
     });
 
@@ -602,7 +682,7 @@ router.put(
     });
 
     res.json({ message: 'Status succesvol bijgewerkt' });
-  })
+  }),
 );
 
 export default router;

@@ -40,28 +40,16 @@ export function AttendanceGauge({
 
   // Target indicator position
   const targetPercentage = Math.min(target / 100, 1);
-  const targetAngle = (targetPercentage * 360) - 90; // Start from top
+  const targetAngle = targetPercentage * 360 - 90; // Start from top
   const targetRadians = (targetAngle * Math.PI) / 180;
   const targetX = size / 2 + (radius + strokeWidth / 2) * Math.cos(targetRadians);
   const targetY = size / 2 + (radius + strokeWidth / 2) * Math.sin(targetRadians);
 
   return (
     <div style={{ textAlign: 'center' }}>
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        style={{ transform: 'rotate(-90deg)' }}
-      >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
         {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--border)"
-          strokeWidth={strokeWidth}
-        />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={strokeWidth} />
 
         {/* Progress circle */}
         <circle
@@ -109,7 +97,8 @@ export function AttendanceGauge({
             marginTop: size * 0.02,
           }}
         >
-          {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+          {trend > 0 ? '+' : ''}
+          {trend.toFixed(1)}%
         </div>
       )}
 

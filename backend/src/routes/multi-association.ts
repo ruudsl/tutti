@@ -508,8 +508,7 @@ router.post(
 
     // Get association name for the response
     const assocInfo = db.prepare('SELECT name, display_name FROM associations WHERE id = ?').get(associationId) as
-      | { name: string; display_name: string | null }
-      | undefined;
+      { name: string; display_name: string | null } | undefined;
 
     res.json({
       message: 'Vereniging gewisseld.',

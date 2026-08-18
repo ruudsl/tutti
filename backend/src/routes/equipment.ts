@@ -79,27 +79,33 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
 
-    const categories = db.prepare(`
+    const categories = db
+      .prepare(
+        `
       SELECT ec.*, p.name as parent_name,
         (SELECT COUNT(*) FROM equipment_items WHERE category_id = ec.id AND deleted_at IS NULL) as item_count
       FROM equipment_categories ec
       LEFT JOIN equipment_categories p ON ec.parent_id = p.id
       WHERE ec.association_id = ?
       ORDER BY ec.sort_order, ec.name
-    `).all(associationId);
+    `,
+      )
+      .all(associationId);
 
-    res.json(categories.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      parentId: c.parent_id,
-      parentName: c.parent_name,
-      color: c.color,
-      icon: c.icon,
-      sortOrder: c.sort_order,
-      itemCount: c.item_count,
-    })));
-  })
+    res.json(
+      categories.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        parentId: c.parent_id,
+        parentName: c.parent_name,
+        color: c.color,
+        icon: c.icon,
+        sortOrder: c.sort_order,
+        itemCount: c.item_count,
+      })),
+    );
+  }),
 );
 
 // POST /equipment/categories
@@ -112,13 +118,23 @@ router.post(
     const associationId = req.user!.associationId;
     const id = uuidv4();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO equipment_categories (id, association_id, name, description, parent_id, color, icon)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, associationId, data.name, data.description || null, data.parentId || null, data.color || null, data.icon || null);
+    `,
+    ).run(
+      id,
+      associationId,
+      data.name,
+      data.description || null,
+      data.parentId || null,
+      data.color || null,
+      data.icon || null,
+    );
 
     res.status(201).json({ id, message: 'Categorie aangemaakt' });
-  })
+  }),
 );
 
 // DELETE /equipment/categories/:id
@@ -130,16 +146,16 @@ router.delete(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const result = db.prepare(
-      'DELETE FROM equipment_categories WHERE id = ? AND association_id = ?'
-    ).run(id, associationId);
+    const result = db
+      .prepare('DELETE FROM equipment_categories WHERE id = ? AND association_id = ?')
+      .run(id, associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Categorie niet gevonden');
     }
 
     res.json({ message: 'Categorie verwijderd' });
-  })
+  }),
 );
 
 // GET /equipment
@@ -180,27 +196,29 @@ router.get(
 
     const equipment = db.prepare(query).all(...params);
 
-    res.json(equipment.map((e: any) => ({
-      id: e.id,
-      name: e.name,
-      description: e.description,
-      categoryId: e.category_id,
-      categoryName: e.category_name,
-      categoryColor: e.category_color,
-      inventoryNumber: e.inventory_number,
-      serialNumber: e.serial_number,
-      brand: e.brand,
-      model: e.model,
-      equipmentType: e.equipment_type,
-      status: e.status,
-      condition: e.condition,
-      location: e.location,
-      isLoanable: e.is_loanable === 1,
-      currentValue: e.current_value,
-      activeLoans: e.active_loans,
-      imagePath: e.image_path,
-    })));
-  })
+    res.json(
+      equipment.map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        description: e.description,
+        categoryId: e.category_id,
+        categoryName: e.category_name,
+        categoryColor: e.category_color,
+        inventoryNumber: e.inventory_number,
+        serialNumber: e.serial_number,
+        brand: e.brand,
+        model: e.model,
+        equipmentType: e.equipment_type,
+        status: e.status,
+        condition: e.condition,
+        location: e.location,
+        isLoanable: e.is_loanable === 1,
+        currentValue: e.current_value,
+        activeLoans: e.active_loans,
+        imagePath: e.image_path,
+      })),
+    );
+  }),
 );
 
 // GET /equipment/:id
@@ -211,34 +229,46 @@ router.get(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const equipment = db.prepare(`
+    const equipment = db
+      .prepare(
+        `
       SELECT e.*, ec.name as category_name
       FROM equipment_items e
       LEFT JOIN equipment_categories ec ON e.category_id = ec.id
       WHERE e.id = ? AND e.association_id = ? AND e.deleted_at IS NULL
-    `).get(id, associationId) as any;
+    `,
+      )
+      .get(id, associationId) as any;
 
     if (!equipment) {
       throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
-    const loans = db.prepare(`
+    const loans = db
+      .prepare(
+        `
       SELECT el.*, u.first_name || ' ' || u.last_name as user_name
       FROM equipment_loans el
       JOIN users u ON el.user_id = u.id
       WHERE el.equipment_id = ?
       ORDER BY el.checkout_date DESC
       LIMIT 20
-    `).all(id);
+    `,
+      )
+      .all(id);
 
-    const maintenance = db.prepare(`
+    const maintenance = db
+      .prepare(
+        `
       SELECT em.*, u.first_name || ' ' || u.last_name as performed_by_name
       FROM equipment_maintenance em
       LEFT JOIN users u ON em.performed_by = u.id
       WHERE em.equipment_id = ?
       ORDER BY em.performed_date DESC
       LIMIT 20
-    `).all(id);
+    `,
+      )
+      .all(id);
 
     res.json({
       id: equipment.id,
@@ -284,7 +314,7 @@ router.get(
         cost: m.cost,
       })),
     });
-  })
+  }),
 );
 
 // POST /equipment
@@ -299,32 +329,51 @@ router.post(
 
     let inventoryNumber = data.inventoryNumber;
     if (!inventoryNumber) {
-      const count = db.prepare(
-        'SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ?'
-      ).get(associationId) as any;
+      const count = db
+        .prepare('SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ?')
+        .get(associationId) as any;
       inventoryNumber = `EQ-${String(count.count + 1).padStart(5, '0')}`;
     }
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO equipment_items (id, association_id, category_id, name, description,
         inventory_number, serial_number, brand, model, equipment_type, status, condition,
         location, storage_location, purchase_date, purchase_price, current_value,
         depreciation_years, warranty_expiry, maintenance_interval_months, insurance_value,
         insurance_policy, is_loanable, requires_training, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id, associationId, data.categoryId || null, data.name, data.description || null,
-      inventoryNumber, data.serialNumber || null, data.brand || null, data.model || null,
-      data.equipmentType, data.status, data.condition, data.location || null,
-      data.storageLocation || null, data.purchaseDate || null, data.purchasePrice || null,
-      data.currentValue || null, data.depreciationYears || null, data.warrantyExpiry || null,
-      data.maintenanceIntervalMonths || null, data.insuranceValue || null,
-      data.insurancePolicy || null, data.isLoanable ? 1 : 0, data.requiresTraining ? 1 : 0,
-      data.notes || null
+    `,
+    ).run(
+      id,
+      associationId,
+      data.categoryId || null,
+      data.name,
+      data.description || null,
+      inventoryNumber,
+      data.serialNumber || null,
+      data.brand || null,
+      data.model || null,
+      data.equipmentType,
+      data.status,
+      data.condition,
+      data.location || null,
+      data.storageLocation || null,
+      data.purchaseDate || null,
+      data.purchasePrice || null,
+      data.currentValue || null,
+      data.depreciationYears || null,
+      data.warrantyExpiry || null,
+      data.maintenanceIntervalMonths || null,
+      data.insuranceValue || null,
+      data.insurancePolicy || null,
+      data.isLoanable ? 1 : 0,
+      data.requiresTraining ? 1 : 0,
+      data.notes || null,
     );
 
     res.status(201).json({ id, inventoryNumber, message: 'Apparatuur aangemaakt' });
-  })
+  }),
 );
 
 // PATCH /equipment/:id
@@ -337,9 +386,9 @@ router.patch(
     const data = updateEquipmentSchema.parse(req.body);
     const associationId = req.user!.associationId;
 
-    const equipment = db.prepare(
-      'SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
-    ).get(id, associationId);
+    const equipment = db
+      .prepare('SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
 
     if (!equipment) {
       throw new ApiError(404, 'Apparatuur niet gevonden');
@@ -348,11 +397,26 @@ router.patch(
     const updates: string[] = [];
     const params: any[] = [];
 
-    if (data.name !== undefined) { updates.push('name = ?'); params.push(data.name); }
-    if (data.description !== undefined) { updates.push('description = ?'); params.push(data.description); }
-    if (data.status !== undefined) { updates.push('status = ?'); params.push(data.status); }
-    if (data.condition !== undefined) { updates.push('condition = ?'); params.push(data.condition); }
-    if (data.location !== undefined) { updates.push('location = ?'); params.push(data.location); }
+    if (data.name !== undefined) {
+      updates.push('name = ?');
+      params.push(data.name);
+    }
+    if (data.description !== undefined) {
+      updates.push('description = ?');
+      params.push(data.description);
+    }
+    if (data.status !== undefined) {
+      updates.push('status = ?');
+      params.push(data.status);
+    }
+    if (data.condition !== undefined) {
+      updates.push('condition = ?');
+      params.push(data.condition);
+    }
+    if (data.location !== undefined) {
+      updates.push('location = ?');
+      params.push(data.location);
+    }
 
     if (updates.length > 0) {
       updates.push('updated_at = CURRENT_TIMESTAMP');
@@ -360,7 +424,7 @@ router.patch(
     }
 
     res.json({ message: 'Apparatuur bijgewerkt' });
-  })
+  }),
 );
 
 // DELETE /equipment/:id
@@ -372,17 +436,21 @@ router.delete(
     const { id } = req.params;
     const associationId = req.user!.associationId;
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       UPDATE equipment_items SET deleted_at = CURRENT_TIMESTAMP
       WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).run(id, associationId);
+    `,
+      )
+      .run(id, associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
     res.json({ message: 'Apparatuur verwijderd' });
-  })
+  }),
 );
 
 // GET /equipment/loans
@@ -420,19 +488,21 @@ router.get(
 
     const loans = db.prepare(query).all(...params);
 
-    res.json(loans.map((l: any) => ({
-      id: l.id,
-      equipmentId: l.equipment_id,
-      equipmentName: l.equipment_name,
-      inventoryNumber: l.inventory_number,
-      userId: l.user_id,
-      userName: l.user_name,
-      checkoutDate: l.checkout_date,
-      expectedReturnDate: l.expected_return_date,
-      actualReturnDate: l.actual_return_date,
-      status: l.status,
-    })));
-  })
+    res.json(
+      loans.map((l: any) => ({
+        id: l.id,
+        equipmentId: l.equipment_id,
+        equipmentName: l.equipment_name,
+        inventoryNumber: l.inventory_number,
+        userId: l.user_id,
+        userName: l.user_name,
+        checkoutDate: l.checkout_date,
+        expectedReturnDate: l.expected_return_date,
+        actualReturnDate: l.actual_return_date,
+        status: l.status,
+      })),
+    );
+  }),
 );
 
 // POST /equipment/loans
@@ -445,9 +515,13 @@ router.post(
     const associationId = req.user!.associationId;
     const createdBy = req.user!.id;
 
-    const equipment = db.prepare(`
+    const equipment = db
+      .prepare(
+        `
       SELECT * FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).get(data.equipmentId, associationId) as any;
+    `,
+      )
+      .get(data.equipmentId, associationId) as any;
 
     if (!equipment) {
       throw new ApiError(404, 'Apparatuur niet gevonden');
@@ -457,31 +531,43 @@ router.post(
       throw new ApiError(400, 'Dit item kan niet worden uitgeleend');
     }
 
-    const activeLoan = db.prepare(`
+    const activeLoan = db
+      .prepare(
+        `
       SELECT id FROM equipment_loans WHERE equipment_id = ? AND status = 'active'
-    `).get(data.equipmentId);
+    `,
+      )
+      .get(data.equipmentId);
 
     if (activeLoan) {
       throw new ApiError(400, 'Dit item is al uitgeleend');
     }
 
     const id = uuidv4();
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO equipment_loans (id, equipment_id, user_id, checkout_date, expected_return_date,
         condition_at_checkout, checkout_notes, related_concert_id, related_rehearsal_id,
         related_project_id, created_by)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id, data.equipmentId, data.userId, data.expectedReturnDate || null,
-      data.conditionAtCheckout || null, data.checkoutNotes || null,
-      data.relatedConcertId || null, data.relatedRehearsalId || null,
-      data.relatedProjectId || null, createdBy
+    `,
+    ).run(
+      id,
+      data.equipmentId,
+      data.userId,
+      data.expectedReturnDate || null,
+      data.conditionAtCheckout || null,
+      data.checkoutNotes || null,
+      data.relatedConcertId || null,
+      data.relatedRehearsalId || null,
+      data.relatedProjectId || null,
+      createdBy,
     );
 
     db.prepare('UPDATE equipment_items SET status = "in_use" WHERE id = ?').run(data.equipmentId);
 
     res.status(201).json({ id, message: 'Uitlening geregistreerd' });
-  })
+  }),
 );
 
 // PATCH /equipment/loans/:id/return
@@ -495,11 +581,15 @@ router.patch(
     const returnedTo = req.user!.id;
     const associationId = req.user!.associationId;
 
-    const loan = db.prepare(`
+    const loan = db
+      .prepare(
+        `
       SELECT el.*, e.id as equipment_id FROM equipment_loans el
       JOIN equipment_items e ON el.equipment_id = e.id
       WHERE el.id = ? AND e.association_id = ?
-    `).get(id, associationId) as any;
+    `,
+      )
+      .get(id, associationId) as any;
 
     if (!loan) {
       throw new ApiError(404, 'Uitlening niet gevonden');
@@ -509,16 +599,18 @@ router.patch(
       throw new ApiError(400, 'Uitlening is niet actief');
     }
 
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE equipment_loans SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP,
         condition_at_return = ?, return_notes = ?, returned_to = ?
       WHERE id = ?
-    `).run(data.conditionAtReturn || null, data.returnNotes || null, returnedTo, id);
+    `,
+    ).run(data.conditionAtReturn || null, data.returnNotes || null, returnedTo, id);
 
     db.prepare('UPDATE equipment_items SET status = "available" WHERE id = ?').run(loan.equipment_id);
 
     res.json({ message: 'Inlevering geregistreerd' });
-  })
+  }),
 );
 
 // POST /equipment/:id/maintenance
@@ -532,31 +624,45 @@ router.post(
     const associationId = req.user!.associationId;
     const createdBy = req.user!.id;
 
-    const equipment = db.prepare(
-      'SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL'
-    ).get(id, associationId);
+    const equipment = db
+      .prepare('SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
 
     if (!equipment) {
       throw new ApiError(404, 'Apparatuur niet gevonden');
     }
 
     const maintenanceId = uuidv4();
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO equipment_maintenance (id, equipment_id, maintenance_type, description,
         performed_date, performed_by, external_provider, cost, parts_replaced,
         next_maintenance_date, notes, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      maintenanceId, id, data.maintenanceType, data.description, data.performedDate,
-      data.performedBy || null, data.externalProvider || null, data.cost || null,
-      data.partsReplaced || null, data.nextMaintenanceDate || null, data.notes || null, createdBy
+    `,
+    ).run(
+      maintenanceId,
+      id,
+      data.maintenanceType,
+      data.description,
+      data.performedDate,
+      data.performedBy || null,
+      data.externalProvider || null,
+      data.cost || null,
+      data.partsReplaced || null,
+      data.nextMaintenanceDate || null,
+      data.notes || null,
+      createdBy,
     );
 
-    db.prepare('UPDATE equipment_items SET last_maintenance = ?, next_maintenance = ? WHERE id = ?')
-      .run(data.performedDate, data.nextMaintenanceDate || null, id);
+    db.prepare('UPDATE equipment_items SET last_maintenance = ?, next_maintenance = ? WHERE id = ?').run(
+      data.performedDate,
+      data.nextMaintenanceDate || null,
+      id,
+    );
 
     res.status(201).json({ id: maintenanceId, message: 'Onderhoud geregistreerd' });
-  })
+  }),
 );
 
 // GET /equipment/stats
@@ -567,26 +673,42 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
 
-    const totalItems = db.prepare(`
+    const totalItems = db
+      .prepare(
+        `
       SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ? AND deleted_at IS NULL
-    `).get(associationId) as any;
+    `,
+      )
+      .get(associationId) as any;
 
-    const byStatus = db.prepare(`
+    const byStatus = db
+      .prepare(
+        `
       SELECT status, COUNT(*) as count FROM equipment_items
       WHERE association_id = ? AND deleted_at IS NULL
       GROUP BY status
-    `).all(associationId);
+    `,
+      )
+      .all(associationId);
 
-    const activeLoans = db.prepare(`
+    const activeLoans = db
+      .prepare(
+        `
       SELECT COUNT(*) as count FROM equipment_loans el
       JOIN equipment_items e ON el.equipment_id = e.id
       WHERE e.association_id = ? AND el.status = 'active'
-    `).get(associationId) as any;
+    `,
+      )
+      .get(associationId) as any;
 
-    const totalValue = db.prepare(`
+    const totalValue = db
+      .prepare(
+        `
       SELECT SUM(current_value) as total FROM equipment_items
       WHERE association_id = ? AND deleted_at IS NULL AND status NOT IN ('retired', 'lost', 'sold')
-    `).get(associationId) as any;
+    `,
+      )
+      .get(associationId) as any;
 
     res.json({
       totalItems: totalItems.count,
@@ -594,7 +716,7 @@ router.get(
       activeLoans: activeLoans.count,
       totalValue: totalValue.total || 0,
     });
-  })
+  }),
 );
 
 // =====================================================
@@ -616,15 +738,21 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
 
-    const item = db.prepare(`
+    const item = db
+      .prepare(
+        `
       SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).get(req.params.id, associationId);
+    `,
+      )
+      .get(req.params.id, associationId);
 
     if (!item) {
       throw new ApiError(404, 'Item niet gevonden.');
     }
 
-    const reports = db.prepare(`
+    const reports = db
+      .prepare(
+        `
       SELECT d.*,
              u1.first_name || ' ' || u1.last_name AS reported_by_name,
              u2.first_name || ' ' || u2.last_name AS repaired_by_name
@@ -633,23 +761,27 @@ router.get(
       LEFT JOIN users u2 ON d.repaired_by = u2.id
       WHERE d.item_id = ?
       ORDER BY d.created_at DESC
-    `).all(req.params.id);
+    `,
+      )
+      .all(req.params.id);
 
-    res.json(reports.map((r: any) => ({
-      id: r.id,
-      description: r.description,
-      severity: r.severity,
-      photos: r.photos ? JSON.parse(r.photos) : [],
-      repairCost: r.repair_cost,
-      repairedAt: r.repaired_at,
-      repairedBy: r.repaired_by,
-      repairedByName: r.repaired_by_name,
-      notes: r.notes,
-      reportedBy: r.reported_by,
-      reportedByName: r.reported_by_name,
-      createdAt: r.created_at,
-    })));
-  })
+    res.json(
+      reports.map((r: any) => ({
+        id: r.id,
+        description: r.description,
+        severity: r.severity,
+        photos: r.photos ? JSON.parse(r.photos) : [],
+        repairCost: r.repair_cost,
+        repairedAt: r.repaired_at,
+        repairedBy: r.repaired_by,
+        repairedByName: r.repaired_by_name,
+        notes: r.notes,
+        reportedBy: r.reported_by,
+        reportedByName: r.reported_by_name,
+        createdAt: r.created_at,
+      })),
+    );
+  }),
 );
 
 // POST /equipment/:id/damage - Report damage
@@ -660,9 +792,13 @@ router.post(
     const associationId = req.user!.associationId;
     const data = createDamageReportSchema.parse(req.body);
 
-    const item = db.prepare(`
+    const item = db
+      .prepare(
+        `
       SELECT id, condition FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).get(req.params.id, associationId) as any;
+    `,
+      )
+      .get(req.params.id, associationId) as any;
 
     if (!item) {
       throw new ApiError(404, 'Item niet gevonden.');
@@ -671,10 +807,12 @@ router.post(
     const reportId = uuidv4();
     const now = new Date().toISOString();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO equipment_damage_reports (id, item_id, reported_by, description, severity, photos, repair_cost, notes, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `,
+    ).run(
       reportId,
       req.params.id,
       req.user!.id,
@@ -683,7 +821,7 @@ router.post(
       data.photos ? JSON.stringify(data.photos) : null,
       data.repairCost || null,
       data.notes || null,
-      now
+      now,
     );
 
     // Update item condition based on severity
@@ -696,15 +834,18 @@ router.post(
 
     const newCondition = conditionMap[data.severity];
     if (newCondition) {
-      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?')
-        .run(newCondition, data.severity === 'unusable' ? 'repair' : item.status, req.params.id);
+      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?').run(
+        newCondition,
+        data.severity === 'unusable' ? 'repair' : item.status,
+        req.params.id,
+      );
     }
 
     res.status(201).json({
       id: reportId,
       message: 'Schade gerapporteerd.',
     });
-  })
+  }),
 );
 
 // PATCH /equipment/:id/damage/:reportId - Update damage report (mark as repaired)
@@ -716,17 +857,25 @@ router.patch(
     const associationId = req.user!.associationId;
     const { repairedAt, repairCost, notes } = req.body;
 
-    const item = db.prepare(`
+    const item = db
+      .prepare(
+        `
       SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).get(req.params.id, associationId);
+    `,
+      )
+      .get(req.params.id, associationId);
 
     if (!item) {
       throw new ApiError(404, 'Item niet gevonden.');
     }
 
-    const report = db.prepare(`
+    const report = db
+      .prepare(
+        `
       SELECT id FROM equipment_damage_reports WHERE id = ? AND item_id = ?
-    `).get(req.params.reportId, req.params.id);
+    `,
+      )
+      .get(req.params.reportId, req.params.id);
 
     if (!report) {
       throw new ApiError(404, 'Schaderapport niet gevonden.');
@@ -757,12 +906,15 @@ router.patch(
 
     // If marked as repaired, update item condition
     if (repairedAt) {
-      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?')
-        .run('good', 'available', req.params.id);
+      db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?').run(
+        'good',
+        'available',
+        req.params.id,
+      );
     }
 
     res.json({ message: 'Schaderapport bijgewerkt.' });
-  })
+  }),
 );
 
 // DELETE /equipment/:id/damage/:reportId - Delete damage report
@@ -773,24 +925,32 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
 
-    const item = db.prepare(`
+    const item = db
+      .prepare(
+        `
       SELECT id FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
-    `).get(req.params.id, associationId);
+    `,
+      )
+      .get(req.params.id, associationId);
 
     if (!item) {
       throw new ApiError(404, 'Item niet gevonden.');
     }
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       DELETE FROM equipment_damage_reports WHERE id = ? AND item_id = ?
-    `).run(req.params.reportId, req.params.id);
+    `,
+      )
+      .run(req.params.reportId, req.params.id);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Schaderapport niet gevonden.');
     }
 
     res.json({ message: 'Schaderapport verwijderd.' });
-  })
+  }),
 );
 
 export default router;

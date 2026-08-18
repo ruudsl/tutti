@@ -78,11 +78,14 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   }, [selectedIndex]);
 
   // Handle result selection
-  const handleSelect = useCallback((result: SearchResult) => {
-    saveRecentSearch(query);
-    navigate(result.path);
-    onClose();
-  }, [query, navigate, onClose, saveRecentSearch]);
+  const handleSelect = useCallback(
+    (result: SearchResult) => {
+      saveRecentSearch(query);
+      navigate(result.path);
+      onClose();
+    },
+    [query, navigate, onClose, saveRecentSearch],
+  );
 
   // Handle Enter key
   const handleEnter = useCallback(() => {
@@ -108,7 +111,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
   // Handle filter change
   const handleFilterChange = (key: keyof SearchFilters, value: string | undefined) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [key]: value || undefined,
     }));
@@ -128,7 +131,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     <div className="global-search-overlay" onClick={onClose} role="presentation">
       <div
         className="global-search-modal"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={t('search.title', 'Zoeken')}
@@ -145,8 +148,8 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               className="global-search-input"
               placeholder={t('search.placeholder', 'Zoek muziek, leden, lijsten...')}
               value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => {
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
                 handleKeyDown(e);
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -189,7 +192,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               <select
                 id="filter-type"
                 value={filters.type || ''}
-                onChange={e => handleFilterChange('type', e.target.value)}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
               >
                 <option value="">{t('search.allTypes', 'Alle types')}</option>
                 <option value="music">{t('search.typeMusic', 'Muziek')}</option>
@@ -209,21 +212,17 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             <div className="global-search-section">
               <div className="global-search-section-header">
                 <h3>{t('search.recentSearches', 'Recente zoekopdrachten')}</h3>
-                <button
-                  className="global-search-clear"
-                  onClick={clearRecentSearches}
-                >
+                <button className="global-search-clear" onClick={clearRecentSearches}>
                   {t('search.clearAll', 'Alles wissen')}
                 </button>
               </div>
               <ul className="global-search-recent-list" role="listbox">
-                {recentSearches.map(recent => (
+                {recentSearches.map((recent) => (
                   <li key={recent.id} className="global-search-recent-item">
-                    <button
-                      className="global-search-recent-query"
-                      onClick={() => handleRecentClick(recent)}
-                    >
-                      <span className="recent-icon" aria-hidden="true">{'\u23F3'}</span>
+                    <button className="global-search-recent-query" onClick={() => handleRecentClick(recent)}>
+                      <span className="recent-icon" aria-hidden="true">
+                        {'\u23F3'}
+                      </span>
                       {recent.query}
                     </button>
                     <button
@@ -246,10 +245,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
               <ul className="global-search-suggestions" role="listbox">
                 {suggestions.map((suggestion, index) => (
                   <li key={index}>
-                    <button
-                      className="global-search-suggestion"
-                      onClick={() => handleSuggestionClick(suggestion)}
-                    >
+                    <button className="global-search-suggestion" onClick={() => handleSuggestionClick(suggestion)}>
                       {suggestion}
                     </button>
                   </li>
@@ -269,7 +265,9 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           {/* No results */}
           {query && !isLoading && !hasResults && !showSuggestions && (
             <div className="global-search-empty" role="status" aria-live="polite">
-              <span className="empty-icon" aria-hidden="true">{'\u2049'}</span>
+              <span className="empty-icon" aria-hidden="true">
+                {'\u2049'}
+              </span>
               <p>{t('search.noResults', 'Geen resultaten gevonden')}</p>
               <p className="empty-hint">{t('search.tryDifferent', 'Probeer een andere zoekterm')}</p>
             </div>
@@ -287,7 +285,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     {categoryLabels[type as keyof typeof categoryLabels]?.label || type}
                   </h3>
                   <ul className="global-search-result-list">
-                    {typeResults.map(result => {
+                    {typeResults.map((result) => {
                       const index = getFlatIndex();
                       const isSelected = index === selectedIndex;
                       return (
@@ -308,9 +306,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                             </span>
                             <div className="result-content">
                               <span className="result-title">{result.title}</span>
-                              {result.subtitle && (
-                                <span className="result-subtitle">{result.subtitle}</span>
-                              )}
+                              {result.subtitle && <span className="result-subtitle">{result.subtitle}</span>}
                             </div>
                             <span className="result-type-badge">{result.type}</span>
                           </button>
@@ -327,9 +323,16 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         {/* Search footer */}
         <div className="global-search-footer">
           <div className="global-search-hints">
-            <span><kbd>{'\u2191'}</kbd><kbd>{'\u2193'}</kbd> {t('search.navigate', 'navigeren')}</span>
-            <span><kbd>Enter</kbd> {t('search.select', 'selecteren')}</span>
-            <span><kbd>ESC</kbd> {t('search.close', 'sluiten')}</span>
+            <span>
+              <kbd>{'\u2191'}</kbd>
+              <kbd>{'\u2193'}</kbd> {t('search.navigate', 'navigeren')}
+            </span>
+            <span>
+              <kbd>Enter</kbd> {t('search.select', 'selecteren')}
+            </span>
+            <span>
+              <kbd>ESC</kbd> {t('search.close', 'sluiten')}
+            </span>
           </div>
         </div>
       </div>
@@ -343,7 +346,7 @@ export function useGlobalSearch() {
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+  const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
 
   // Listen for Cmd+K / Ctrl+K
   useEffect(() => {
@@ -352,8 +355,8 @@ export function useGlobalSearch() {
       if (
         !isOpen &&
         (e.target instanceof HTMLInputElement ||
-         e.target instanceof HTMLTextAreaElement ||
-         e.target instanceof HTMLSelectElement)
+          e.target instanceof HTMLTextAreaElement ||
+          e.target instanceof HTMLSelectElement)
       ) {
         return;
       }

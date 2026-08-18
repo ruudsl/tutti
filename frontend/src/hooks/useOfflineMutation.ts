@@ -69,7 +69,7 @@ export function useOfflineMutation<TData, TVariables>(
     onError?: (error: Error) => void;
     invalidateKeys?: string[][];
     mutationKey?: string;
-  }
+  },
 ) {
   const queryClient = useQueryClient();
 
@@ -79,8 +79,8 @@ export function useOfflineMutation<TData, TVariables>(
     if (queue.length === 0) return;
 
     const mutationKey = options?.mutationKey || 'default';
-    const relevantItems = queue.filter((item) =>
-      (item as QueuedMutation & { mutationKey?: string }).mutationKey === mutationKey
+    const relevantItems = queue.filter(
+      (item) => (item as QueuedMutation & { mutationKey?: string }).mutationKey === mutationKey,
     );
 
     for (const item of relevantItems) {

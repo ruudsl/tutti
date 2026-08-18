@@ -18,7 +18,7 @@ Harmonie is beschikbaar als Progressive Web App (PWA). Dit betekent dat je de we
 ### Stap-voor-stap installatie
 
 1. **Open Safari** op je iPhone of iPad
-   - *Let op: De installatie werkt alleen via Safari, niet via Chrome of andere browsers*
+   - _Let op: De installatie werkt alleen via Safari, niet via Chrome of andere browsers_
 
 2. **Ga naar de Harmonie website**
    - Typ de URL van je vereniging in de adresbalk
@@ -80,30 +80,30 @@ Harmonie is beschikbaar als Progressive Web App (PWA). Dit betekent dat je de we
 
 ### Volledig werkend
 
-| Functie | Beschikbaar |
-|---------|-------------|
-| Bladmuziek bekijken | Ja |
-| Bladmuziek downloaden | Ja |
-| PDF annotaties | Ja |
-| Repetities bekijken | Ja |
-| Beschikbaarheid doorgeven | Ja |
-| Concertprogramma bekijken | Ja |
-| Dashboard | Ja |
-| Profiel bewerken | Ja |
-| Zoeken | Ja |
-| Berichten lezen | Ja |
-| Peilingen invullen | Ja |
-| Taken beheren | Ja |
+| Functie                   | Beschikbaar |
+| ------------------------- | ----------- |
+| Bladmuziek bekijken       | Ja          |
+| Bladmuziek downloaden     | Ja          |
+| PDF annotaties            | Ja          |
+| Repetities bekijken       | Ja          |
+| Beschikbaarheid doorgeven | Ja          |
+| Concertprogramma bekijken | Ja          |
+| Dashboard                 | Ja          |
+| Profiel bewerken          | Ja          |
+| Zoeken                    | Ja          |
+| Berichten lezen           | Ja          |
+| Peilingen invullen        | Ja          |
+| Taken beheren             | Ja          |
 
 ### Offline werkend (na eerste keer laden)
 
-| Functie | Offline |
-|---------|---------|
-| Eerder bekeken bladmuziek | Ja |
-| Dashboard (gecachte data) | Ja |
-| PDF's in cache | Ja |
-| Repetitieschema | Gedeeltelijk* |
-| Beschikbaarheid wijzigen | Wachtlijst** |
+| Functie                   | Offline       |
+| ------------------------- | ------------- |
+| Eerder bekeken bladmuziek | Ja            |
+| Dashboard (gecachte data) | Ja            |
+| PDF's in cache            | Ja            |
+| Repetitieschema           | Gedeeltelijk* |
+| Beschikbaarheid wijzigen  | Wachtlijst**  |
 
 *Gecachte gegevens worden getoond, nieuwe data pas na verbinding
 **Wijzigingen worden opgeslagen en gesynchroniseerd wanneer je weer online bent
@@ -133,18 +133,19 @@ Harmonie is beschikbaar als Progressive Web App (PWA). Dit betekent dat je de we
 
 ### Notificatie-instellingen per type
 
-| Type | Beschrijving |
-|------|--------------|
-| Nieuwe muziek | Wanneer er nieuwe bladmuziek wordt toegevoegd |
-| Repetitie wijzigingen | Bij wijzigingen in het repetitierooster |
-| Zitplaats updates | Bij wijzigingen in de opstelling |
-| Chat berichten | Nieuwe berichten in je stemgroep |
-| Oefen herinneringen | Herinneringen om te oefenen |
-| Concert herinneringen | Herinneringen voor aankomende concerten |
+| Type                  | Beschrijving                                  |
+| --------------------- | --------------------------------------------- |
+| Nieuwe muziek         | Wanneer er nieuwe bladmuziek wordt toegevoegd |
+| Repetitie wijzigingen | Bij wijzigingen in het repetitierooster       |
+| Zitplaats updates     | Bij wijzigingen in de opstelling              |
+| Chat berichten        | Nieuwe berichten in je stemgroep              |
+| Oefen herinneringen   | Herinneringen om te oefenen                   |
+| Concert herinneringen | Herinneringen voor aankomende concerten       |
 
 ### Problemen oplossen
 
 **Geen notificaties ontvangen?**
+
 1. Controleer de app-instellingen op je telefoon
 2. Zorg dat notificaties zijn toegestaan voor de Harmonie app
 3. Controleer of "Niet storen" uit staat
@@ -157,6 +158,7 @@ Harmonie is beschikbaar als Progressive Web App (PWA). Dit betekent dat je de we
 ### Automatische caching
 
 De app slaat automatisch op:
+
 - Bezochte pagina's
 - Bekeken PDF's
 - Je bladmuziek (Mijn Muziek)
@@ -165,6 +167,7 @@ De app slaat automatisch op:
 ### Gegevens vooraf laden
 
 Voor belangrijke repetities of concerten:
+
 1. Open de app terwijl je wifi hebt
 2. Navigeer naar de muzieklijst die je nodig hebt
 3. Open elk PDF bestand dat je nodig hebt
@@ -179,6 +182,7 @@ Voor belangrijke repetities of concerten:
 ### Synchronisatie
 
 Wanneer je weer online komt:
+
 - Wijzigingen in beschikbaarheid worden verzonden
 - Nieuwe data wordt opgehaald
 - Je ziet een melding dat synchronisatie voltooid is
@@ -194,12 +198,14 @@ De app zelf is klein (enkele MB). PDF bestanden worden lokaal opgeslagen en kunn
 ### Kan ik de cache wissen?
 
 Ja, via je telefooninstellingen:
+
 - **iOS**: Instellingen > Safari > Geavanceerd > Websitegegevens
 - **Android**: Instellingen > Apps > Harmonie > Opslag > Cache wissen
 
 ### Werkt de app ook op desktop?
 
 Ja! Je kunt de PWA ook installeren op:
+
 - Windows (via Chrome of Edge)
 - macOS (via Chrome of Safari)
 - Linux (via Chrome)
@@ -212,6 +218,7 @@ Ja! Je kunt de PWA ook installeren op:
 ### Wordt de app automatisch bijgewerkt?
 
 Ja. Wanneer er een nieuwe versie beschikbaar is:
+
 1. Je krijgt een melding in de app
 2. Klik op "Bijwerken" om de nieuwe versie te laden
 3. De app herstart met de nieuwste functies

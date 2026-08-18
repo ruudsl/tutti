@@ -12,7 +12,7 @@ import db from '../database/connection';
  */
 export function up(): void {
   // Add venue_name column to stage_layouts if it doesn't exist
-  const stageLayoutsInfo = db.prepare("PRAGMA table_info(stage_layouts)").all() as Array<{ name: string }>;
+  const stageLayoutsInfo = db.prepare('PRAGMA table_info(stage_layouts)').all() as Array<{ name: string }>;
   const hasVenueName = stageLayoutsInfo.some((col) => col.name === 'venue_name');
   const hasThumbnailUrl = stageLayoutsInfo.some((col) => col.name === 'thumbnail_url');
 

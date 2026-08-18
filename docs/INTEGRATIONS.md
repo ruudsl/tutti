@@ -4,25 +4,25 @@ This document describes all third-party integrations available in Harmonie, incl
 
 ## Overview
 
-| Category | Service | Status | Purpose |
-|----------|---------|--------|---------|
-| Payment | Mollie | Optional | Payment processing (iDEAL, credit card, PayPal) |
-| Payment | Stripe | Optional | Payment processing (international) |
-| Cloud Storage | OneDrive | Optional | Import sheet music from Microsoft cloud |
-| Cloud Storage | Google Drive | Optional | Import sheet music from Google cloud |
-| Calendar | Spond | Optional | Attendance sync for rehearsals |
-| Calendar | iCal | Built-in | Export events to any calendar app |
-| Calendar | Google Calendar | Optional | Two-way calendar sync |
-| SSO | Microsoft Entra ID | Optional | Single sign-on and user sync |
-| SSO | Google | Optional | Social login for guest checkout |
-| SSO | Facebook | Optional | Social login for guest checkout |
-| Messaging | WhatsApp | Optional | Member notifications |
-| Messaging | Telegram | Optional | Member notifications |
-| Messaging | Twilio SMS | Optional | SMS notifications via WhatsApp |
-| Music | Spotify | Optional | Search and link streaming tracks |
-| Music | Apple Music | Optional | Search and link streaming tracks |
-| Music | MusicaInfo | Built-in | Sheet music metadata lookup |
-| Monitoring | Sentry | Optional | Error tracking and performance |
+| Category      | Service            | Status   | Purpose                                         |
+| ------------- | ------------------ | -------- | ----------------------------------------------- |
+| Payment       | Mollie             | Optional | Payment processing (iDEAL, credit card, PayPal) |
+| Payment       | Stripe             | Optional | Payment processing (international)              |
+| Cloud Storage | OneDrive           | Optional | Import sheet music from Microsoft cloud         |
+| Cloud Storage | Google Drive       | Optional | Import sheet music from Google cloud            |
+| Calendar      | Spond              | Optional | Attendance sync for rehearsals                  |
+| Calendar      | iCal               | Built-in | Export events to any calendar app               |
+| Calendar      | Google Calendar    | Optional | Two-way calendar sync                           |
+| SSO           | Microsoft Entra ID | Optional | Single sign-on and user sync                    |
+| SSO           | Google             | Optional | Social login for guest checkout                 |
+| SSO           | Facebook           | Optional | Social login for guest checkout                 |
+| Messaging     | WhatsApp           | Optional | Member notifications                            |
+| Messaging     | Telegram           | Optional | Member notifications                            |
+| Messaging     | Twilio SMS         | Optional | SMS notifications via WhatsApp                  |
+| Music         | Spotify            | Optional | Search and link streaming tracks                |
+| Music         | Apple Music        | Optional | Search and link streaming tracks                |
+| Music         | MusicaInfo         | Built-in | Sheet music metadata lookup                     |
+| Monitoring    | Sentry             | Optional | Error tracking and performance                  |
 
 ---
 
@@ -33,6 +33,7 @@ This document describes all third-party integrations available in Harmonie, incl
 Mollie is a European payment service provider, ideal for Dutch and Belgian organizations. Supports iDEAL, credit cards, Bancontact, PayPal, and more.
 
 **What it does:**
+
 - Process ticket payments for concerts
 - Support multiple payment methods popular in Europe
 - Handle refunds programmatically
@@ -52,6 +53,7 @@ MOLLIE_API_KEY=live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Notes:**
+
 - Use test API keys (starting with `test_`) during development
 - Webhook URL: `https://your-domain.com/api/payments/mollie/webhook`
 - Supported payment methods: iDEAL, creditcard, bancontact, paypal
@@ -63,6 +65,7 @@ MOLLIE_API_KEY=live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Stripe is a global payment platform with excellent international support. Recommended for international organizations.
 
 **What it does:**
+
 - Process ticket payments via Stripe Checkout
 - Support cards, iDEAL, Bancontact, and more
 - Handle refunds
@@ -85,6 +88,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Notes:**
+
 - Use test keys (starting with `sk_test_`) during development
 - Webhook URL: `https://your-domain.com/api/payments/stripe/webhook`
 - Configure these events: `checkout.session.completed`, `checkout.session.expired`
@@ -98,6 +102,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Import sheet music directly from Microsoft OneDrive or SharePoint.
 
 **What it does:**
+
 - Browse OneDrive/SharePoint files from within Harmonie
 - Import PDF files as music pieces
 - Parse filenames to auto-fill metadata (title, arranger, instrument)
@@ -119,6 +124,7 @@ microsoft_enabled = 1
 ```
 
 **Required Azure AD Permissions:**
+
 - `Files.Read` - Read user files
 - `Files.Read.All` - Read all files (for SharePoint)
 - `User.Read` - Basic profile
@@ -130,6 +136,7 @@ microsoft_enabled = 1
 Import sheet music from Google Drive.
 
 **What it does:**
+
 - Browse Google Drive files from within Harmonie
 - Import PDF files as music pieces
 - Support Google Picker API for file selection
@@ -159,6 +166,7 @@ google_drive_enabled = 1
 Sync rehearsal attendance with [Spond](https://spond.com/), a popular team management app for sports and music groups.
 
 **What it does:**
+
 - Import rehearsal events from Spond
 - Sync attendance responses (accepted/declined)
 - Two-way attendance updates
@@ -176,6 +184,7 @@ Per-association configuration via admin panel. Credentials are stored encrypted 
 4. Configure sync direction (import/export/both)
 
 **Security:**
+
 - Passwords are encrypted using AES-256-GCM before storage
 - Encryption key is derived from the JWT secret
 
@@ -186,6 +195,7 @@ Per-association configuration via admin panel. Credentials are stored encrypted 
 Built-in iCal feed generation for subscribing to Harmonie events in any calendar app.
 
 **What it does:**
+
 - Generate personal iCal feeds per user
 - Include rehearsals and/or concerts based on preferences
 - Export single events as .ics files
@@ -198,6 +208,7 @@ Built-in iCal feed generation for subscribing to Harmonie events in any calendar
 3. Subscribe in your calendar app (Google Calendar, Apple Calendar, Outlook)
 
 **Feed URL Format:**
+
 ```
 https://your-domain.com/api/calendar/feed/{userId}?token={feedToken}
 ```
@@ -209,6 +220,7 @@ https://your-domain.com/api/calendar/feed/{userId}?token={feedToken}
 Two-way sync with Google Calendar.
 
 **What it does:**
+
 - Push Harmonie events to Google Calendar
 - Create calendar events for rehearsals and concerts
 - Support multiple Google calendars
@@ -236,6 +248,7 @@ google_calendar_client_secret = 'your-client-secret'
 Full single sign-on and user provisioning from Microsoft 365.
 
 **What it does:**
+
 - Single sign-on for members
 - Import users from Entra ID
 - Sync profile photos from Microsoft 365
@@ -259,10 +272,12 @@ microsoft_enabled = 1
 ```
 
 **Required Azure AD Permissions:**
+
 - `User.Read.All` (Application) - Read all user profiles
 - `User.Read` (Delegated) - Sign-in and read profile
 
 **Features:**
+
 - Job title to instrument mapping (e.g., "1st Clarinet" -> Clarinet instrument)
 - Department to orchestra mapping (comma-separated departments supported)
 - Profile photo sync from Microsoft 365
@@ -274,6 +289,7 @@ microsoft_enabled = 1
 Social login for guest ticket checkout.
 
 **What it does:**
+
 - Allow ticket buyers to authenticate via Google
 - Pre-fill checkout with name and email from Google profile
 - No full registration required for ticket purchases
@@ -302,6 +318,7 @@ SOCIAL_AUTH_CALLBACK_URL=https://your-domain.com
 Social login for guest ticket checkout.
 
 **What it does:**
+
 - Allow ticket buyers to authenticate via Facebook
 - Pre-fill checkout with name and email from Facebook profile
 - No full registration required for ticket purchases
@@ -333,6 +350,7 @@ SOCIAL_AUTH_CALLBACK_URL=https://your-domain.com
 Send notifications to members via WhatsApp using the official Meta Business API.
 
 **What it does:**
+
 - Send rehearsal reminders
 - Send concert notifications
 - Verify phone numbers via WhatsApp
@@ -356,6 +374,7 @@ WHATSAPP_WEBHOOK_VERIFY_TOKEN=random-string-for-verification
 4. Configure webhook for delivery receipts
 
 **Required Templates:**
+
 - `harmonie_notification` - General notifications
 - `harmonie_verification` - Phone verification codes
 
@@ -366,6 +385,7 @@ WHATSAPP_WEBHOOK_VERIFY_TOKEN=random-string-for-verification
 Alternative WhatsApp integration via Twilio.
 
 **What it does:**
+
 - Same functionality as Meta API
 - Easier setup via Twilio
 - Pay-per-message pricing
@@ -380,6 +400,7 @@ TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 ```
 
 **Notes:**
+
 - Use Twilio sandbox number for testing
 - Production requires WhatsApp Business profile approval
 
@@ -390,6 +411,7 @@ TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 Send notifications via Telegram bot.
 
 **What it does:**
+
 - Send rehearsal and concert notifications
 - Account linking via bot commands
 - Rich message formatting (HTML)
@@ -409,6 +431,7 @@ TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIjKlmnOPQrstUVwxYZ
 3. Set up webhook: `https://your-domain.com/api/telegram/webhook`
 
 **Bot Commands:**
+
 - `/start` - Link Telegram account
 - `/stop` - Unlink and stop notifications
 - `/settings` - View notification preferences
@@ -423,6 +446,7 @@ TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIjKlmnOPQrstUVwxYZ
 Search and link Spotify tracks to music pieces.
 
 **What it does:**
+
 - Search Spotify for recordings of music pieces
 - Store Spotify track links with pieces
 - Display album art and preview URLs
@@ -443,6 +467,7 @@ SPOTIFY_CLIENT_SECRET=your-client-secret
 3. No redirect URI needed (uses Client Credentials flow)
 
 **Notes:**
+
 - Uses Netherlands (NL) market by default
 - Token refresh handled automatically
 
@@ -453,6 +478,7 @@ SPOTIFY_CLIENT_SECRET=your-client-secret
 Search and link Apple Music tracks to music pieces.
 
 **What it does:**
+
 - Search Apple Music for recordings
 - Store Apple Music links with pieces
 - Display album art and preview URLs
@@ -480,6 +506,7 @@ APPLE_MUSIC_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY--
 Search the MusicaInfo.net database for sheet music metadata.
 
 **What it does:**
+
 - Search for wind band/orchestra sheet music
 - Retrieve metadata: composer, arranger, duration, difficulty, instrumentation
 - Auto-fill music piece metadata
@@ -495,6 +522,7 @@ Built-in, no configuration required. Uses web scraping with browser-like headers
 3. Select a result to import metadata
 
 **Notes:**
+
 - Requires internet connection
 - Respects robots.txt and rate limiting
 - Parse duration into seconds for programmatic use
@@ -508,6 +536,7 @@ Built-in, no configuration required. Uses web scraping with browser-like headers
 Error tracking and performance monitoring.
 
 **What it does:**
+
 - Capture and report errors automatically
 - Track performance with traces
 - Filter sensitive data (passwords, tokens)
@@ -528,6 +557,7 @@ SENTRY_DSN=https://xxxx@xxxx.ingest.sentry.io/xxxx
 3. Set environment variable
 
 **Features:**
+
 - Automatic Express.js integration
 - Breadcrumb filtering for sensitive URLs
 - User context tracking (after authentication)
@@ -540,21 +570,21 @@ SENTRY_DSN=https://xxxx@xxxx.ingest.sentry.io/xxxx
 
 Some integrations can be configured globally (environment variables) or per-association (database):
 
-| Integration | Global (ENV) | Per-Association (DB) |
-|-------------|--------------|----------------------|
-| Mollie | Yes | No |
-| Stripe | Yes | No |
-| OneDrive | No | Yes |
-| Google Drive | No | Yes |
-| Spond | No | Yes |
-| Microsoft Entra | No | Yes |
-| Google OAuth | Yes | No |
-| Facebook OAuth | Yes | No |
-| WhatsApp | Both | Yes |
-| Telegram | Both | Yes |
-| Spotify | Yes | No |
-| Apple Music | Yes | No |
-| Sentry | Yes | No |
+| Integration     | Global (ENV) | Per-Association (DB) |
+| --------------- | ------------ | -------------------- |
+| Mollie          | Yes          | No                   |
+| Stripe          | Yes          | No                   |
+| OneDrive        | No           | Yes                  |
+| Google Drive    | No           | Yes                  |
+| Spond           | No           | Yes                  |
+| Microsoft Entra | No           | Yes                  |
+| Google OAuth    | Yes          | No                   |
+| Facebook OAuth  | Yes          | No                   |
+| WhatsApp        | Both         | Yes                  |
+| Telegram        | Both         | Yes                  |
+| Spotify         | Yes          | No                   |
+| Apple Music     | Yes          | No                   |
+| Sentry          | Yes          | No                   |
 
 Per-association configuration allows multi-tenant setups where each association has their own integration credentials.
 
@@ -581,21 +611,25 @@ Per-association configuration allows multi-tenant setups where each association 
 ### Common Issues
 
 **Payment not processing:**
+
 - Check API key is correct (live vs. test)
 - Verify webhook URL is accessible from the internet
 - Check Mollie/Stripe dashboard for error details
 
 **OneDrive/Google Drive not working:**
+
 - Verify OAuth credentials are correct
 - Check redirect URIs match exactly
 - Ensure required API permissions are granted
 
 **WhatsApp messages not sending:**
+
 - Verify phone number ID and access token
 - Check message templates are approved
 - For Twilio: verify WhatsApp sender is approved
 
 **Entra sync failing:**
+
 - Check `User.Read.All` permission is granted (Application, not Delegated)
 - Verify tenant ID is correct
 - Check admin consent was given for the application
@@ -603,12 +637,14 @@ Per-association configuration allows multi-tenant setups where each association 
 ### Logs
 
 Integration-related logs are tagged with the service name:
+
 - `Mollie payment creation failed`
 - `Spotify authentication failed`
 - `Spond login failed`
 - `Telegram message sent successfully`
 
 Check logs with:
+
 ```bash
 # Development
 npm run dev 2>&1 | grep -i "mollie\|stripe\|spond\|telegram"

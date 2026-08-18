@@ -97,18 +97,21 @@ function VirtualizedListInner<T>(
     loading = false,
     overscanCount = 5,
   }: VirtualizedListProps<T>,
-  ref: React.ForwardedRef<ListImperativeAPI>
+  ref: React.ForwardedRef<ListImperativeAPI>,
 ) {
   // Create row props object for react-window v2
-  const rowProps: RowProps<T> = useMemo(() => ({
-    items,
-    renderItem,
-  }), [items, renderItem]);
+  const rowProps: RowProps<T> = useMemo(
+    () => ({
+      items,
+      renderItem,
+    }),
+    [items, renderItem],
+  );
 
   // Create row height function
   const rowHeight = useCallback(
-    (index: number) => getItemHeight ? getItemHeight(index) : itemHeight,
-    [getItemHeight, itemHeight]
+    (index: number) => (getItemHeight ? getItemHeight(index) : itemHeight),
+    [getItemHeight, itemHeight],
   );
 
   if (loading) {
@@ -152,15 +155,19 @@ function VirtualizedListInner<T>(
       defaultHeight={height}
       rowCount={items.length}
       rowHeight={rowHeight}
-      rowComponent={RowComponent as (props: {
-        ariaAttributes: {
-          'aria-posinset': number;
-          'aria-setsize': number;
-          role: 'listitem';
-        };
-        index: number;
-        style: CSSProperties;
-      } & RowProps<T>) => ReactElement | null}
+      rowComponent={
+        RowComponent as (
+          props: {
+            ariaAttributes: {
+              'aria-posinset': number;
+              'aria-setsize': number;
+              role: 'listitem';
+            };
+            index: number;
+            style: CSSProperties;
+          } & RowProps<T>,
+        ) => ReactElement | null
+      }
       rowProps={rowProps}
       overscanCount={overscanCount}
       style={{ height }}
@@ -169,7 +176,7 @@ function VirtualizedListInner<T>(
 }
 
 export const VirtualizedList = forwardRef(VirtualizedListInner) as <T>(
-  props: VirtualizedListProps<T> & { ref?: React.ForwardedRef<ListImperativeAPI> }
+  props: VirtualizedListProps<T> & { ref?: React.ForwardedRef<ListImperativeAPI> },
 ) => ReturnType<typeof VirtualizedListInner>;
 
 /**

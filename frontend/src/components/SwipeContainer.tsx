@@ -54,39 +54,48 @@ export function SwipeContainer({
     isActive: false,
   });
 
-  const handleSwipeStart = useCallback((direction: SwipeDirection | null) => {
-    setSwipeState(prev => ({
-      ...prev,
-      isActive: true,
-      direction,
-    }));
-    onSwipeStart?.(direction);
-  }, [onSwipeStart]);
-
-  const handleSwipeMove = useCallback((deltaX: number, deltaY: number, velocity: number) => {
-    if (visualFeedback) {
-      // Clamp the delta values
-      const clampedDeltaX = Math.max(-maxTransform, Math.min(maxTransform, deltaX));
-      const clampedDeltaY = Math.max(-maxTransform, Math.min(maxTransform, deltaY));
-
-      setSwipeState(prev => ({
+  const handleSwipeStart = useCallback(
+    (direction: SwipeDirection | null) => {
+      setSwipeState((prev) => ({
         ...prev,
-        deltaX: clampedDeltaX,
-        deltaY: clampedDeltaY,
+        isActive: true,
+        direction,
       }));
-    }
-    onSwipeMove?.(deltaX, deltaY, velocity);
-  }, [visualFeedback, maxTransform, onSwipeMove]);
+      onSwipeStart?.(direction);
+    },
+    [onSwipeStart],
+  );
 
-  const handleSwipeEnd = useCallback((completed: boolean, direction: SwipeDirection | null) => {
-    setSwipeState({
-      deltaX: 0,
-      deltaY: 0,
-      direction: null,
-      isActive: false,
-    });
-    onSwipeEnd?.(completed, direction);
-  }, [onSwipeEnd]);
+  const handleSwipeMove = useCallback(
+    (deltaX: number, deltaY: number, velocity: number) => {
+      if (visualFeedback) {
+        // Clamp the delta values
+        const clampedDeltaX = Math.max(-maxTransform, Math.min(maxTransform, deltaX));
+        const clampedDeltaY = Math.max(-maxTransform, Math.min(maxTransform, deltaY));
+
+        setSwipeState((prev) => ({
+          ...prev,
+          deltaX: clampedDeltaX,
+          deltaY: clampedDeltaY,
+        }));
+      }
+      onSwipeMove?.(deltaX, deltaY, velocity);
+    },
+    [visualFeedback, maxTransform, onSwipeMove],
+  );
+
+  const handleSwipeEnd = useCallback(
+    (completed: boolean, direction: SwipeDirection | null) => {
+      setSwipeState({
+        deltaX: 0,
+        deltaY: 0,
+        direction: null,
+        isActive: false,
+      });
+      onSwipeEnd?.(completed, direction);
+    },
+    [onSwipeEnd],
+  );
 
   const { ref } = useSwipeGesture<HTMLDivElement>(
     {
@@ -98,13 +107,12 @@ export function SwipeContainer({
       onSwipeMove: handleSwipeMove,
       onSwipeEnd: handleSwipeEnd,
     },
-    swipeOptions
+    swipeOptions,
   );
 
   // Calculate opacity based on swipe distance
-  const opacityReduction = visualFeedback && swipeState.isActive
-    ? Math.abs(swipeState.deltaX) / maxTransform * 0.3
-    : 0;
+  const opacityReduction =
+    visualFeedback && swipeState.isActive ? (Math.abs(swipeState.deltaX) / maxTransform) * 0.3 : 0;
 
   const containerStyle: CSSProperties = {
     ...style,
@@ -113,17 +121,18 @@ export function SwipeContainer({
     overflow: 'hidden',
   };
 
-  const contentStyle: CSSProperties = visualFeedback && swipeState.isActive
-    ? {
-        transform: `translateX(${swipeState.deltaX}px)`,
-        opacity: 1 - opacityReduction,
-        transition: 'none',
-      }
-    : {
-        transform: 'translateX(0)',
-        opacity: 1,
-        transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
-      };
+  const contentStyle: CSSProperties =
+    visualFeedback && swipeState.isActive
+      ? {
+          transform: `translateX(${swipeState.deltaX}px)`,
+          opacity: 1 - opacityReduction,
+          transition: 'none',
+        }
+      : {
+          transform: 'translateX(0)',
+          opacity: 1,
+          transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
+        };
 
   const baseIndicatorStyle: CSSProperties = {
     position: 'absolute',

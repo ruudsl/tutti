@@ -13,17 +13,20 @@ export const updatePaymentSettings = async (settings: {
   return data;
 };
 
-export const updatePaymentMethodFee = async (method: string, fee: {
-  customerFee: number;
-  isEnabled?: boolean;
-}): Promise<{ success: boolean }> => {
+export const updatePaymentMethodFee = async (
+  method: string,
+  fee: {
+    customerFee: number;
+    isEnabled?: boolean;
+  },
+): Promise<{ success: boolean }> => {
   const { data } = await api.put(`/payment-settings/fees/${method}`, fee);
   return data;
 };
 
 export const connectMollie = async (
   apiKey: string,
-  mode?: 'live' | 'test'
+  mode?: 'live' | 'test',
 ): Promise<{
   success: boolean;
   profileId: string;

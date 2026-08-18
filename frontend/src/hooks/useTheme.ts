@@ -43,11 +43,24 @@ export function useTheme() {
     if (!t) {
       // Remove all custom theme properties, revert to CSS defaults
       const props = [
-        '--primary', '--primary-dark', '--secondary', '--success', '--danger', '--warning',
-        '--background', '--surface', '--text', '--text-light', '--border',
-        '--font-family', '--font-size-base', '--radius', '--radius-sm', '--radius-lg',
+        '--primary',
+        '--primary-dark',
+        '--secondary',
+        '--success',
+        '--danger',
+        '--warning',
+        '--background',
+        '--surface',
+        '--text',
+        '--text-light',
+        '--border',
+        '--font-family',
+        '--font-size-base',
+        '--radius',
+        '--radius-sm',
+        '--radius-lg',
       ];
-      props.forEach(p => root.style.removeProperty(p));
+      props.forEach((p) => root.style.removeProperty(p));
       return;
     }
 

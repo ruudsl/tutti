@@ -31,7 +31,10 @@ const router = Router();
  *       200:
  *         description: List of recently viewed items
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { type, limit = '20' } = req.query;
 
     let query = `
@@ -42,8 +45,8 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
     const params: any[] = [req.user!.id];
 
     if (type) {
-        query += ' AND item_type = ?';
-        params.push(type);
+      query += ' AND item_type = ?';
+      params.push(type);
     }
 
     query += ' ORDER BY viewed_at DESC LIMIT ?';
@@ -51,14 +54,17 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
 
     const items = db.prepare(query).all(...params);
 
-    res.json(items.map((i: any) => ({
+    res.json(
+      items.map((i: any) => ({
         id: i.id,
         itemType: i.item_type,
         itemId: i.item_id,
         itemTitle: i.item_title,
         viewedAt: i.viewed_at,
-    })));
-}));
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -90,35 +96,43 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *       201:
  *         description: View recorded
  */
-router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { itemType, itemId, itemTitle } = req.body;
 
     if (!itemType || !itemId || !itemTitle) {
-        res.status(400).json({ error: 'itemType, itemId en itemTitle zijn verplicht.' });
-        return;
+      res.status(400).json({ error: 'itemType, itemId en itemTitle zijn verplicht.' });
+      return;
     }
 
     // Remove existing view of the same item to update timestamp
-    db.prepare(
-        'DELETE FROM user_recent_views WHERE user_id = ? AND item_type = ? AND item_id = ?'
-    ).run(req.user!.id, itemType, itemId);
+    db.prepare('DELETE FROM user_recent_views WHERE user_id = ? AND item_type = ? AND item_id = ?').run(
+      req.user!.id,
+      itemType,
+      itemId,
+    );
 
     // Insert new view
     const id = uuidv4();
     db.prepare(
-        'INSERT INTO user_recent_views (id, user_id, item_type, item_id, item_title) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO user_recent_views (id, user_id, item_type, item_id, item_title) VALUES (?, ?, ?, ?, ?)',
     ).run(id, req.user!.id, itemType, itemId, itemTitle);
 
     // Keep only last 100 views per user
-    db.prepare(`
+    db.prepare(
+      `
         DELETE FROM user_recent_views
         WHERE user_id = ? AND id NOT IN (
             SELECT id FROM user_recent_views WHERE user_id = ? ORDER BY viewed_at DESC LIMIT 100
         )
-    `).run(req.user!.id, req.user!.id);
+    `,
+    ).run(req.user!.id, req.user!.id);
 
     res.status(201).json({ message: 'Bekeken item opgeslagen.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -132,9 +146,13 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: R
  *       200:
  *         description: History cleared
  */
-router.delete('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     db.prepare('DELETE FROM user_recent_views WHERE user_id = ?').run(req.user!.id);
     res.json({ message: 'Geschiedenis gewist.' });
-}));
+  }),
+);
 
 export default router;

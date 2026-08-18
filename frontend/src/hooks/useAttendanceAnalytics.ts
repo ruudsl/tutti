@@ -39,14 +39,17 @@ export type {
 export const attendanceAnalyticsKeys = {
   all: ['attendanceAnalytics'] as const,
   overview: (orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'overview', orchestraId] as const,
-  trends: (months: number, orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'trends', months, orchestraId] as const,
+  trends: (months: number, orchestraId?: string) =>
+    [...attendanceAnalyticsKeys.all, 'trends', months, orchestraId] as const,
   bySection: (orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'bySection', orchestraId] as const,
   byMember: (options?: { limit?: number; sortBy?: string; orchestraId?: string }) =>
     [...attendanceAnalyticsKeys.all, 'byMember', options] as const,
   atRisk: (orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'atRisk', orchestraId] as const,
-  predictions: (limit: number, orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'predictions', limit, orchestraId] as const,
+  predictions: (limit: number, orchestraId?: string) =>
+    [...attendanceAnalyticsKeys.all, 'predictions', limit, orchestraId] as const,
   byDayOfWeek: (orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'byDayOfWeek', orchestraId] as const,
-  leaderboard: (limit: number, orchestraId?: string) => [...attendanceAnalyticsKeys.all, 'leaderboard', limit, orchestraId] as const,
+  leaderboard: (limit: number, orchestraId?: string) =>
+    [...attendanceAnalyticsKeys.all, 'leaderboard', limit, orchestraId] as const,
 };
 
 /**

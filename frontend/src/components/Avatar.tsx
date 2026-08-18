@@ -33,7 +33,7 @@ function generateColorFromName(name: string): number {
     hash = hash & hash; // Convert to 32-bit integer
   }
   // Return hue between 0-360, avoiding red (danger color) range
-  const hue = Math.abs(hash) % 300 + 30; // Skip 0-30 (reds) and 330-360 (reds)
+  const hue = (Math.abs(hash) % 300) + 30; // Skip 0-30 (reds) and 330-360 (reds)
   return hue > 330 ? hue - 300 : hue;
 }
 
@@ -150,22 +150,12 @@ export function Avatar({
       {...interactiveProps}
     >
       {showImage ? (
-        <img
-          src={src}
-          alt={alt || name}
-          onError={handleImageError}
-          loading="lazy"
-        />
+        <img src={src} alt={alt || name} onError={handleImageError} loading="lazy" />
       ) : (
         <span aria-hidden="true">{initials}</span>
       )}
 
-      {status && (
-        <span
-          className={`avatar-status avatar-status-${status}`}
-          aria-label={getStatusLabel(status)}
-        />
-      )}
+      {status && <span className={`avatar-status avatar-status-${status}`} aria-label={getStatusLabel(status)} />}
 
       {/* Dark mode background color override via CSS custom property */}
       <style>{`
@@ -207,12 +197,7 @@ interface AvatarGroupProps {
   className?: string;
 }
 
-export function AvatarGroup({
-  avatars,
-  max = 4,
-  size = 'sm',
-  className = '',
-}: AvatarGroupProps) {
+export function AvatarGroup({ avatars, max = 4, size = 'sm', className = '' }: AvatarGroupProps) {
   const visibleAvatars = avatars.slice(0, max);
   const remainingCount = avatars.length - max;
 
@@ -233,12 +218,7 @@ export function AvatarGroup({
             position: 'relative',
           }}
         >
-          <Avatar
-            name={avatar.name}
-            src={avatar.src}
-            size={size}
-            className="avatar-group-item"
-          />
+          <Avatar name={avatar.name} src={avatar.src} size={size} className="avatar-group-item" />
         </div>
       ))}
 

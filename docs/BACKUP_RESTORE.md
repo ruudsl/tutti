@@ -300,12 +300,12 @@ Periodically test restores in a staging environment:
 
 ### Recovery Time Objectives
 
-| Scenario | Expected Recovery Time |
-|----------|----------------------|
-| Database corruption | 15-30 minutes |
-| Server failure (with hot standby) | 5-10 minutes |
-| Full infrastructure rebuild | 1-4 hours |
-| Complete disaster (from offsite backup) | 2-8 hours |
+| Scenario                                | Expected Recovery Time |
+| --------------------------------------- | ---------------------- |
+| Database corruption                     | 15-30 minutes          |
+| Server failure (with hot standby)       | 5-10 minutes           |
+| Full infrastructure rebuild             | 1-4 hours              |
+| Complete disaster (from offsite backup) | 2-8 hours              |
 
 ### Best Practices
 
@@ -333,21 +333,25 @@ In case of data issues, consider:
 ### Common Issues
 
 **Backup download fails**
+
 - Check available disk space
 - Verify admin permissions
 - Check network timeout settings
 
 **Restore fails with "Invalid backup file"**
+
 - Ensure file is a valid ZIP archive
 - Check file was not corrupted during transfer
 - Verify backup was created by Harmonie
 
 **Files missing after restore**
+
 - Check manifest.json for file mappings
 - Verify uploads directory permissions
 - Check backup included all expected files
 
 **Database locked during backup**
+
 - Ensure no other processes are writing
 - Use SQLite's backup API for consistency
 - Consider enabling WAL mode

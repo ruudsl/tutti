@@ -106,9 +106,7 @@ export function BulkSelectionProvider({
   initialSelection = [],
   onSelectionChange,
 }: BulkSelectionProviderProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(initialSelection)
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelection));
   const lastSelectedRef = useRef<string | null>(null);
   const itemIdsRef = useRef(itemIds);
   itemIdsRef.current = itemIds;
@@ -236,11 +234,7 @@ export function BulkSelectionProvider({
     isSelectionActive,
   };
 
-  return (
-    <BulkSelectionContext.Provider value={value}>
-      {children}
-    </BulkSelectionContext.Provider>
-  );
+  return <BulkSelectionContext.Provider value={value}>{children}</BulkSelectionContext.Provider>;
 }
 
 // ============================================
@@ -289,7 +283,7 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
     height: box,
     minWidth: box,
     borderRadius: 'var(--radius-sm)',
-    border: `2px solid ${checked ? 'var(--primary)' : (isDark ? 'var(--border-strong)' : '#d1d5db')}`,
+    border: `2px solid ${checked ? 'var(--primary)' : isDark ? 'var(--border-strong)' : '#d1d5db'}`,
     backgroundColor: checked ? 'var(--primary)' : 'transparent',
     cursor: 'pointer',
     transition: 'all var(--transition-fast)',
@@ -320,14 +314,10 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
         aria-label={label ?? t('common.selectItem', { id: itemId })}
       />
       <span style={checkboxStyles}>
-        {checked && (
-          <Icon name="check" size={check} style={{ color: 'white' }} aria-hidden={true} />
-        )}
+        {checked && <Icon name="check" size={check} style={{ color: 'white' }} aria-hidden={true} />}
       </span>
       {label && (
-        <span style={{ fontSize: 'var(--font-size-sm)', color: isDark ? 'var(--text)' : '#374151' }}>
-          {label}
-        </span>
+        <span style={{ fontSize: 'var(--font-size-sm)', color: isDark ? 'var(--text)' : '#374151' }}>{label}</span>
       )}
     </label>
   );
@@ -377,8 +367,8 @@ export const SelectAllCheckbox = memo(function SelectAllCheckbox({
     height: box,
     minWidth: box,
     borderRadius: 'var(--radius-sm)',
-    border: `2px solid ${(isAllSelected || isIndeterminate) ? 'var(--primary)' : (isDark ? 'var(--border-strong)' : '#d1d5db')}`,
-    backgroundColor: (isAllSelected || isIndeterminate) ? 'var(--primary)' : 'transparent',
+    border: `2px solid ${isAllSelected || isIndeterminate ? 'var(--primary)' : isDark ? 'var(--border-strong)' : '#d1d5db'}`,
+    backgroundColor: isAllSelected || isIndeterminate ? 'var(--primary)' : 'transparent',
     cursor: 'pointer',
     transition: 'all var(--transition-fast)',
     ...style,
@@ -410,17 +400,11 @@ export const SelectAllCheckbox = memo(function SelectAllCheckbox({
         aria-label={`${label} (${selectedCount} van ${allIds.length} geselecteerd)`}
       />
       <span style={checkboxStyles}>
-        {isAllSelected && (
-          <Icon name="check" size={icon} style={{ color: 'white' }} aria-hidden={true} />
-        )}
-        {isIndeterminate && (
-          <Icon name="line" size={icon} style={{ color: 'white' }} aria-hidden={true} />
-        )}
+        {isAllSelected && <Icon name="check" size={icon} style={{ color: 'white' }} aria-hidden={true} />}
+        {isIndeterminate && <Icon name="line" size={icon} style={{ color: 'white' }} aria-hidden={true} />}
       </span>
       {showLabel && (
-        <span style={{ fontSize: 'var(--font-size-sm)', color: isDark ? 'var(--text)' : '#374151' }}>
-          {label}
-        </span>
+        <span style={{ fontSize: 'var(--font-size-sm)', color: isDark ? 'var(--text)' : '#374151' }}>{label}</span>
       )}
     </label>
   );
@@ -497,11 +481,7 @@ export const FloatingActionBar = memo(function FloatingActionBar({
     borderRadius: 'var(--radius-sm)',
     fontSize: 'var(--font-size-sm)',
     fontWeight: 'var(--font-weight-medium)',
-    color: isDisabled
-      ? 'var(--text-muted)'
-      : isDestructive
-        ? 'var(--danger)'
-        : (isDark ? 'var(--text)' : '#374151'),
+    color: isDisabled ? 'var(--text-muted)' : isDestructive ? 'var(--danger)' : isDark ? 'var(--text)' : '#374151',
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     opacity: isDisabled ? 0.5 : 1,
     transition: 'background-color var(--transition-fast)',
@@ -608,7 +588,7 @@ export const FloatingActionBar = memo(function FloatingActionBar({
         </button>
       </div>
     </>,
-    document.body
+    document.body,
   );
 });
 
@@ -623,7 +603,7 @@ export function createDefaultBulkActions(
     onMove?: (ids: string[]) => void | Promise<void>;
     onExport?: (ids: string[]) => void | Promise<void>;
   },
-  t: (key: string) => string
+  t: (key: string) => string,
 ): BulkAction[] {
   const actions: BulkAction[] = [];
 

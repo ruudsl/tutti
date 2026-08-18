@@ -153,88 +153,181 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
   }, []);
 
   // Default navigation shortcuts (memoized so identity is stable across renders)
-  const defaultShortcuts = useMemo<Shortcut[]>(() => [
-    // General
-    {
-      key: '?',
-      action: () => setGlobalState({ isHelpOpen: true }),
-      description: 'shortcuts.showHelp',
-      category: 'general',
-    },
-    {
-      key: 'Escape',
-      action: () => {
-        if (globalState.isHelpOpen) {
-          setGlobalState({ isHelpOpen: false });
-        }
-        emitShortcutEvent('close');
+  const defaultShortcuts = useMemo<Shortcut[]>(
+    () => [
+      // General
+      {
+        key: '?',
+        action: () => setGlobalState({ isHelpOpen: true }),
+        description: 'shortcuts.showHelp',
+        category: 'general',
       },
-      description: 'shortcuts.closeModal',
-      category: 'general',
-    },
-
-    // Ctrl/Cmd shortcuts
-    {
-      key: 'k',
-      ctrl: true,
-      action: () => emitShortcutEvent('openSearch'),
-      description: 'shortcuts.openSearch',
-      category: 'actions',
-    },
-    {
-      key: 'n',
-      ctrl: true,
-      action: () => emitShortcutEvent('newItem'),
-      description: 'shortcuts.newItem',
-      category: 'actions',
-    },
-    {
-      key: 's',
-      ctrl: true,
-      action: () => emitShortcutEvent('save'),
-      description: 'shortcuts.save',
-      category: 'actions',
-    },
-
-    // Go-to navigation (G + key sequences)
-    { key: 'h', sequence: 'g', action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
-    { key: 'm', sequence: 'g', action: () => navigate('/my-music'), description: 'shortcuts.goMyMusic', category: 'navigation' },
-    { key: 's', sequence: 'g', action: () => navigate('/settings'), description: 'shortcuts.goSettings', category: 'navigation' },
-    { key: 'l', sequence: 'g', action: () => navigate('/lists'), description: 'shortcuts.goLists', category: 'navigation' },
-    { key: 'r', sequence: 'g', action: () => navigate('/rehearsals'), description: 'shortcuts.goRehearsals', category: 'navigation' },
-    { key: 'p', sequence: 'g', action: () => navigate('/profile'), description: 'shortcuts.goProfile', category: 'navigation' },
-    { key: 't', sequence: 'g', action: () => navigate('/titles'), description: 'shortcuts.goTitles', category: 'navigation' },
-    { key: 'c', sequence: 'g', action: () => navigate('/concerts'), description: 'shortcuts.goConcerts', category: 'navigation' },
-    { key: 'u', sequence: 'g', action: () => navigate('/upload'), description: 'shortcuts.goUpload', category: 'navigation' },
-
-    // Alt + key navigation (legacy support)
-    { key: 'h', alt: true, action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
-    { key: 'm', alt: true, action: () => navigate('/my-music'), description: 'shortcuts.goMyMusic', category: 'navigation' },
-    { key: 'l', alt: true, action: () => navigate('/lists'), description: 'shortcuts.goLists', category: 'navigation' },
-    { key: 't', alt: true, action: () => navigate('/titles'), description: 'shortcuts.goTitles', category: 'navigation' },
-    { key: 'u', alt: true, action: () => navigate('/upload'), description: 'shortcuts.goUpload', category: 'navigation' },
-    { key: 'r', alt: true, action: () => navigate('/rehearsals'), description: 'shortcuts.goRehearsals', category: 'navigation' },
-    { key: 'p', alt: true, action: () => navigate('/profile'), description: 'shortcuts.goProfile', category: 'navigation' },
-    { key: 's', alt: true, action: () => navigate('/settings'), description: 'shortcuts.goSettings', category: 'navigation' },
-    {
-      key: '/',
-      ctrl: true,
-      action: () => {
-        const searchInput = document.querySelector(
-          'input[type="search"], input[placeholder*="zoek"], input[placeholder*="Zoek"], input[placeholder*="search"], input[placeholder*="Search"]'
-        ) as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-        }
+      {
+        key: 'Escape',
+        action: () => {
+          if (globalState.isHelpOpen) {
+            setGlobalState({ isHelpOpen: false });
+          }
+          emitShortcutEvent('close');
+        },
+        description: 'shortcuts.closeModal',
+        category: 'general',
       },
-      description: 'shortcuts.focusSearch',
-      category: 'actions',
-    },
-  ], [navigate]);
+
+      // Ctrl/Cmd shortcuts
+      {
+        key: 'k',
+        ctrl: true,
+        action: () => emitShortcutEvent('openSearch'),
+        description: 'shortcuts.openSearch',
+        category: 'actions',
+      },
+      {
+        key: 'n',
+        ctrl: true,
+        action: () => emitShortcutEvent('newItem'),
+        description: 'shortcuts.newItem',
+        category: 'actions',
+      },
+      {
+        key: 's',
+        ctrl: true,
+        action: () => emitShortcutEvent('save'),
+        description: 'shortcuts.save',
+        category: 'actions',
+      },
+
+      // Go-to navigation (G + key sequences)
+      { key: 'h', sequence: 'g', action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
+      {
+        key: 'm',
+        sequence: 'g',
+        action: () => navigate('/my-music'),
+        description: 'shortcuts.goMyMusic',
+        category: 'navigation',
+      },
+      {
+        key: 's',
+        sequence: 'g',
+        action: () => navigate('/settings'),
+        description: 'shortcuts.goSettings',
+        category: 'navigation',
+      },
+      {
+        key: 'l',
+        sequence: 'g',
+        action: () => navigate('/lists'),
+        description: 'shortcuts.goLists',
+        category: 'navigation',
+      },
+      {
+        key: 'r',
+        sequence: 'g',
+        action: () => navigate('/rehearsals'),
+        description: 'shortcuts.goRehearsals',
+        category: 'navigation',
+      },
+      {
+        key: 'p',
+        sequence: 'g',
+        action: () => navigate('/profile'),
+        description: 'shortcuts.goProfile',
+        category: 'navigation',
+      },
+      {
+        key: 't',
+        sequence: 'g',
+        action: () => navigate('/titles'),
+        description: 'shortcuts.goTitles',
+        category: 'navigation',
+      },
+      {
+        key: 'c',
+        sequence: 'g',
+        action: () => navigate('/concerts'),
+        description: 'shortcuts.goConcerts',
+        category: 'navigation',
+      },
+      {
+        key: 'u',
+        sequence: 'g',
+        action: () => navigate('/upload'),
+        description: 'shortcuts.goUpload',
+        category: 'navigation',
+      },
+
+      // Alt + key navigation (legacy support)
+      { key: 'h', alt: true, action: () => navigate('/'), description: 'shortcuts.goHome', category: 'navigation' },
+      {
+        key: 'm',
+        alt: true,
+        action: () => navigate('/my-music'),
+        description: 'shortcuts.goMyMusic',
+        category: 'navigation',
+      },
+      {
+        key: 'l',
+        alt: true,
+        action: () => navigate('/lists'),
+        description: 'shortcuts.goLists',
+        category: 'navigation',
+      },
+      {
+        key: 't',
+        alt: true,
+        action: () => navigate('/titles'),
+        description: 'shortcuts.goTitles',
+        category: 'navigation',
+      },
+      {
+        key: 'u',
+        alt: true,
+        action: () => navigate('/upload'),
+        description: 'shortcuts.goUpload',
+        category: 'navigation',
+      },
+      {
+        key: 'r',
+        alt: true,
+        action: () => navigate('/rehearsals'),
+        description: 'shortcuts.goRehearsals',
+        category: 'navigation',
+      },
+      {
+        key: 'p',
+        alt: true,
+        action: () => navigate('/profile'),
+        description: 'shortcuts.goProfile',
+        category: 'navigation',
+      },
+      {
+        key: 's',
+        alt: true,
+        action: () => navigate('/settings'),
+        description: 'shortcuts.goSettings',
+        category: 'navigation',
+      },
+      {
+        key: '/',
+        ctrl: true,
+        action: () => {
+          const searchInput = document.querySelector(
+            'input[type="search"], input[placeholder*="zoek"], input[placeholder*="Zoek"], input[placeholder*="search"], input[placeholder*="Search"]',
+          ) as HTMLInputElement;
+          if (searchInput) {
+            searchInput.focus();
+          }
+        },
+        description: 'shortcuts.focusSearch',
+        category: 'actions',
+      },
+    ],
+    [navigate],
+  );
 
   const allShortcuts = useMemo(
     () => [...defaultShortcuts, ...additionalShortcuts],
-    [defaultShortcuts, additionalShortcuts]
+    [defaultShortcuts, additionalShortcuts],
   );
 
   const handleKeyDown = useCallback(
@@ -268,7 +361,7 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
             !s.ctrl &&
             !s.alt &&
             !s.shift &&
-            !s.meta
+            !s.meta,
         );
 
         clearSequence();
@@ -281,9 +374,7 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
       }
 
       // Check if this could be the start of a sequence
-      const couldBeSequence = allShortcuts.some(
-        (s) => s.sequence?.toLowerCase() === e.key.toLowerCase()
-      );
+      const couldBeSequence = allShortcuts.some((s) => s.sequence?.toLowerCase() === e.key.toLowerCase());
 
       if (couldBeSequence && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
         pendingKeyRef.current = e.key;
@@ -300,9 +391,7 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
         // Skip sequence shortcuts
         if (shortcut.sequence) continue;
 
-        const ctrlMatch = shortcut.ctrl
-          ? e.ctrlKey || e.metaKey
-          : !e.ctrlKey && !e.metaKey;
+        const ctrlMatch = shortcut.ctrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
         const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey;
         const altMatch = shortcut.alt ? e.altKey : !e.altKey;
 
@@ -321,7 +410,7 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
         }
       }
     },
-    [allShortcuts, clearSequence]
+    [allShortcuts, clearSequence],
   );
 
   useEffect(() => {
@@ -367,9 +456,7 @@ export function useKeyboardShortcutsHelp() {
   const shortcuts = useKeyboardShortcuts();
 
   const getShortcutLabel = (shortcut: Shortcut): string => {
-    const isMac =
-      typeof navigator !== 'undefined' &&
-      navigator.platform.toLowerCase().includes('mac');
+    const isMac = typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac');
     const parts: string[] = [];
 
     if (shortcut.sequence) {
@@ -399,9 +486,7 @@ export function useKeyboardShortcutsHelp() {
       if (!acc[category]) acc[category] = [];
 
       // Filter out duplicates (alt shortcuts that duplicate sequence shortcuts)
-      const existing = acc[category].find(
-        (s) => s.description === shortcut.description
-      );
+      const existing = acc[category].find((s) => s.description === shortcut.description);
       if (!existing) {
         acc[category].push({
           label: getShortcutLabel(shortcut),
@@ -411,7 +496,7 @@ export function useKeyboardShortcutsHelp() {
 
       return acc;
     },
-    {} as Record<string, { label: string; description: string }[]>
+    {} as Record<string, { label: string; description: string }[]>,
   );
 
   return groupedShortcuts;
@@ -437,11 +522,7 @@ export function useKeyboardShortcutsHelp() {
  * }
  * ```
  */
-export function useShortcutEvent(
-  event: string,
-  callback: () => void,
-  deps: React.DependencyList = []
-) {
+export function useShortcutEvent(event: string, callback: () => void, deps: React.DependencyList = []) {
   useEffect(() => {
     const listener: ShortcutEventListener = (e) => {
       if (e === event) {

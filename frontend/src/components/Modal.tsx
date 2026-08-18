@@ -37,7 +37,15 @@ interface ModalProps {
  * - Focus trap
  * - Unique ARIA IDs per instance
  */
-export function Modal({ title, children, onClose, footer, size = 'medium', className = '', swipeToDismiss = false }: ModalProps) {
+export function Modal({
+  title,
+  children,
+  onClose,
+  footer,
+  size = 'medium',
+  className = '',
+  swipeToDismiss = false,
+}: ModalProps) {
   const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<Element | null>(null);
@@ -55,21 +63,27 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
     }
   }, [swipeToDismiss, onClose]);
 
-  const handleSwipeMove = useCallback((_deltaX: number, deltaY: number) => {
-    if (!swipeToDismiss) return;
-    // Only track downward swipes
-    if (deltaY > 0) {
-      setSwipeOffset(Math.min(deltaY * 0.5, 150));
-    }
-  }, [swipeToDismiss]);
+  const handleSwipeMove = useCallback(
+    (_deltaX: number, deltaY: number) => {
+      if (!swipeToDismiss) return;
+      // Only track downward swipes
+      if (deltaY > 0) {
+        setSwipeOffset(Math.min(deltaY * 0.5, 150));
+      }
+    },
+    [swipeToDismiss],
+  );
 
-  const handleSwipeEnd = useCallback((completed: boolean) => {
-    if (swipeOffset > 80 || completed) {
-      onClose();
-    } else {
-      setSwipeOffset(0);
-    }
-  }, [swipeOffset, onClose]);
+  const handleSwipeEnd = useCallback(
+    (completed: boolean) => {
+      if (swipeOffset > 80 || completed) {
+        onClose();
+      } else {
+        setSwipeOffset(0);
+      }
+    },
+    [swipeOffset, onClose],
+  );
 
   const { ref: swipeRef } = useSwipeGesture<HTMLDivElement>(
     {
@@ -81,7 +95,7 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
       threshold: 50,
       preventScrollOnVerticalSwipe: false,
       disabled: !swipeToDismiss,
-    }
+    },
   );
 
   // Focus trap and cleanup - run only once on mount
@@ -174,24 +188,15 @@ export function Modal({ title, children, onClose, footer, size = 'medium', class
         }}
       >
         <div className="modal-header">
-          <h3 className="modal-title" id={titleId}>{title}</h3>
-          <button
-            className="modal-close"
-            onClick={onClose}
-            aria-label={t('accessibility.closeModal')}
-            type="button"
-          >
+          <h3 className="modal-title" id={titleId}>
+            {title}
+          </h3>
+          <button className="modal-close" onClick={onClose} aria-label={t('accessibility.closeModal')} type="button">
             <Icon name="close" size={20} />
           </button>
         </div>
-        <div className="modal-body">
-          {children}
-        </div>
-        {footer && (
-          <div className="modal-footer">
-            {footer}
-          </div>
-        )}
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>
   );
@@ -234,21 +239,11 @@ export function FormModal({
       size={size}
       footer={
         <>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
+          <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>
             {cancelLabel || t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            form={formId}
-            className="btn btn-primary"
-            disabled={isSubmitting || submitDisabled}
-          >
-            {isSubmitting ? t('accessibility.processing') : (submitLabel || t('common.save'))}
+          <button type="submit" form={formId} className="btn btn-primary" disabled={isSubmitting || submitDisabled}>
+            {isSubmitting ? t('accessibility.processing') : submitLabel || t('common.save')}
           </button>
         </>
       }

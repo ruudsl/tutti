@@ -11,22 +11,22 @@
  */
 
 export {
-    // Core types
-    Migration,
-    MigrationRecord,
-    MigrationStatus,
+  // Core types
+  Migration,
+  MigrationRecord,
+  MigrationStatus,
 
-    // Functions
-    initMigrationsTable,
-    getAppliedMigrations,
-    isMigrationApplied,
-    recordMigration,
-    removeMigrationRecord,
-    getLastAppliedMigration,
-    loadMigrationFiles,
-    getPendingMigrations,
-    runMigrations,
-    rollbackLastMigration,
-    getMigrationStatus,
-    createMigrationFile,
+  // Functions
+  initMigrationsTable,
+  getAppliedMigrations,
+  isMigrationApplied,
+  recordMigration,
+  removeMigrationRecord,
+  getLastAppliedMigration,
+  loadMigrationFiles,
+  getPendingMigrations,
+  runMigrations,
+  rollbackLastMigration,
+  getMigrationStatus,
+  createMigrationFile,
 } from './runner';

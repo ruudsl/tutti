@@ -18,7 +18,7 @@ export function NotificationBell() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { data: unreadCount } = useUnreadNotificationCount();
-  const count = typeof unreadCount === 'number' ? unreadCount : (unreadCount as any)?.count ?? 0;
+  const count = typeof unreadCount === 'number' ? unreadCount : ((unreadCount as any)?.count ?? 0);
 
   // Close dropdown on escape and click outside
   useEffect(() => {
@@ -51,18 +51,10 @@ export function NotificationBell() {
         <span className="notification-bell-icon" aria-hidden="true">
           <Icon name="bell" size={18} />
         </span>
-        {count > 0 && (
-          <span className="notification-bell-badge">
-            {count > 99 ? '99+' : count}
-          </span>
-        )}
+        {count > 0 && <span className="notification-bell-badge">{count > 99 ? '99+' : count}</span>}
       </button>
       {isOpen && (
-        <div
-          className="notification-bell-dropdown"
-          role="region"
-          aria-label={t('notifications.title', 'Meldingen')}
-        >
+        <div className="notification-bell-dropdown" role="region" aria-label={t('notifications.title', 'Meldingen')}>
           <NotificationDropdown onClose={() => setIsOpen(false)} />
         </div>
       )}
@@ -110,7 +102,9 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
   return (
     <div className="notification-dropdown-panel" role="region" aria-labelledby="notification-header">
       <div className="notification-dropdown-header">
-        <span id="notification-header" className="text-semibold">{t('notifications.title', 'Meldingen')}</span>
+        <span id="notification-header" className="text-semibold">
+          {t('notifications.title', 'Meldingen')}
+        </span>
         <button
           className="btn btn-outline btn-sm"
           onClick={() => markAllRead.mutate()}
@@ -120,12 +114,7 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
           {t('notifications.markAllRead', 'Alles als gelezen')}
         </button>
       </div>
-      <div
-        className="notification-dropdown-body"
-        role="list"
-        aria-live="polite"
-        aria-busy={isLoading}
-      >
+      <div className="notification-dropdown-body" role="list" aria-live="polite" aria-busy={isLoading}>
         {isLoading ? (
           <div className="notification-loading" role="status">
             <div className="spinner" aria-hidden="true"></div>
@@ -161,7 +150,11 @@ function NotificationDropdown({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               {!notification.isRead && (
-                <span className="notification-item-dot" aria-hidden="true" title={t('notifications.unread', 'Ongelezen')}></span>
+                <span
+                  className="notification-item-dot"
+                  aria-hidden="true"
+                  title={t('notifications.unread', 'Ongelezen')}
+                ></span>
               )}
             </button>
           ))
@@ -212,7 +205,11 @@ export function NotificationPreferencesForm() {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center p-4"><span className="loading loading-spinner" /></div>;
+    return (
+      <div className="flex justify-center p-4">
+        <span className="loading loading-spinner" />
+      </div>
+    );
   }
 
   return (

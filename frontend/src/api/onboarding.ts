@@ -116,7 +116,11 @@ export const getM365GroupMappings = async (): Promise<M365GroupMapping[]> => {
   return data;
 };
 
-export const createM365GroupMapping = async (mappingData: { orchestraId?: string; groupName: string; groupType?: string }): Promise<{ id: string; message: string }> => {
+export const createM365GroupMapping = async (mappingData: {
+  orchestraId?: string;
+  groupName: string;
+  groupType?: string;
+}): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/onboarding/m365-groups', mappingData);
   return data;
 };
@@ -137,7 +141,10 @@ export const getInstrumentJobTitleMappings = async (): Promise<InstrumentJobTitl
   return data;
 };
 
-export const createInstrumentJobTitleMapping = async (mappingData: { instrumentId: string; jobTitle: string }): Promise<{ id: string; message: string }> => {
+export const createInstrumentJobTitleMapping = async (mappingData: {
+  instrumentId: string;
+  jobTitle: string;
+}): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/onboarding/job-titles', mappingData);
   return data;
 };

@@ -58,7 +58,10 @@ export interface PerformanceSearchResult {
   concertDate: string;
 }
 
-export const getPerformanceHistory = async (params: { titleId?: string; title?: string }): Promise<PerformanceHistoryItem[]> => {
+export const getPerformanceHistory = async (params: {
+  titleId?: string;
+  title?: string;
+}): Promise<PerformanceHistoryItem[]> => {
   const { data } = await api.get('/performances/history', { params });
   return data;
 };

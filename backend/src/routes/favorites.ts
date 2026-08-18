@@ -20,8 +20,13 @@ const router = Router();
  *       200:
  *         description: List of favorite music titles
  */
-router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const favorites = db.prepare(`
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const favorites = db
+      .prepare(
+        `
         SELECT mt.id, mt.title, mt.arranger, mt.youtube_url, mt.duration_seconds, mt.grade,
                uf.created_at as favorited_at,
                (SELECT COUNT(*) FROM music_pieces mp WHERE mp.title = mt.title AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '') AND mp.association_id = ?) as piece_count
@@ -29,9 +34,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         JOIN music_titles mt ON uf.music_title_id = mt.id
         WHERE uf.user_id = ? AND mt.association_id = ?
         ORDER BY uf.created_at DESC
-    `).all(req.user!.associationId, req.user!.id, req.user!.associationId);
+    `,
+      )
+      .all(req.user!.associationId, req.user!.id, req.user!.associationId);
 
-    res.json(favorites.map((f: any) => ({
+    res.json(
+      favorites.map((f: any) => ({
         id: f.id,
         title: f.title,
         arranger: f.arranger,
@@ -40,8 +48,10 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
         grade: f.grade,
         pieceCount: f.piece_count,
         favoritedAt: f.favorited_at,
-    })));
-}));
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -66,33 +76,39 @@ router.get('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Re
  *       201:
  *         description: Added to favorites
  */
-router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = addFavoriteSchema.parse(req.body);
 
     // Check if title exists and belongs to user's association
-    const title = db.prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
-        .get(data.musicTitleId, req.user!.associationId);
+    const title = db
+      .prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
+      .get(data.musicTitleId, req.user!.associationId);
     if (!title) {
-        throw new ApiError(404, 'Titel niet gevonden.');
+      throw new ApiError(404, 'Titel niet gevonden.');
     }
 
     // Check if already favorited
-    const existing = db.prepare(
-        'SELECT * FROM user_favorites WHERE user_id = ? AND music_title_id = ?'
-    ).get(req.user!.id, data.musicTitleId);
+    const existing = db
+      .prepare('SELECT * FROM user_favorites WHERE user_id = ? AND music_title_id = ?')
+      .get(req.user!.id, data.musicTitleId);
 
     if (existing) {
-        throw new ApiError(409, 'Deze titel staat al in je favorieten.');
+      throw new ApiError(409, 'Deze titel staat al in je favorieten.');
     }
 
-    db.prepare(
-        'INSERT INTO user_favorites (user_id, music_title_id) VALUES (?, ?)'
-    ).run(req.user!.id, data.musicTitleId);
+    db.prepare('INSERT INTO user_favorites (user_id, music_title_id) VALUES (?, ?)').run(
+      req.user!.id,
+      data.musicTitleId,
+    );
 
     logger.info(`User ${req.user!.id} added favorite: ${data.musicTitleId}`);
 
     res.status(201).json({ message: 'Toegevoegd aan favorieten.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -112,19 +128,23 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: R
  *       200:
  *         description: Removed from favorites
  */
-router.delete('/:musicTitleId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = db.prepare(
-        'DELETE FROM user_favorites WHERE user_id = ? AND music_title_id = ?'
-    ).run(req.user!.id, req.params.musicTitleId);
+router.delete(
+  '/:musicTitleId',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = db
+      .prepare('DELETE FROM user_favorites WHERE user_id = ? AND music_title_id = ?')
+      .run(req.user!.id, req.params.musicTitleId);
 
     if (result.changes === 0) {
-        throw new ApiError(404, 'Favoriet niet gevonden.');
+      throw new ApiError(404, 'Favoriet niet gevonden.');
     }
 
     logger.info(`User ${req.user!.id} removed favorite: ${req.params.musicTitleId}`);
 
     res.json({ message: 'Verwijderd uit favorieten.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -144,15 +164,23 @@ router.delete('/:musicTitleId', authenticateToken, asyncHandler(async (req: Auth
  *       200:
  *         description: Favorite status
  */
-router.get('/check/:musicTitleId', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get(
+  '/check/:musicTitleId',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Only return true if the title belongs to user's association
-    const favorite = db.prepare(`
+    const favorite = db
+      .prepare(
+        `
         SELECT uf.* FROM user_favorites uf
         JOIN music_titles mt ON uf.music_title_id = mt.id
         WHERE uf.user_id = ? AND uf.music_title_id = ? AND mt.association_id = ?
-    `).get(req.user!.id, req.params.musicTitleId, req.user!.associationId);
+    `,
+      )
+      .get(req.user!.id, req.params.musicTitleId, req.user!.associationId);
 
     res.json({ isFavorite: !!favorite });
-}));
+  }),
+);
 
 export default router;

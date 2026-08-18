@@ -59,9 +59,7 @@ export const ConfirmDialog = memo(function ConfirmDialog({
 
       // Focus trap
       if (e.key === 'Tab' && dialogRef.current) {
-        const focusableElements = Array.from(
-          dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])')
-        );
+        const focusableElements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled])'));
         if (focusableElements.length === 0) return;
 
         const firstElement = focusableElements[0];
@@ -102,13 +100,10 @@ export const ConfirmDialog = memo(function ConfirmDialog({
         tabIndex={-1}
       >
         <div className="modal-header">
-          <h3 className="modal-title" id={titleId}>{title}</h3>
-          <button
-            className="modal-close"
-            onClick={onCancel}
-            aria-label={t('accessibility.closeModal')}
-            type="button"
-          >
+          <h3 className="modal-title" id={titleId}>
+            {title}
+          </h3>
+          <button className="modal-close" onClick={onCancel} aria-label={t('accessibility.closeModal')} type="button">
             <Icon name="close" size={20} />
           </button>
         </div>
@@ -116,12 +111,7 @@ export const ConfirmDialog = memo(function ConfirmDialog({
           {typeof message === 'string' ? <p>{message}</p> : message}
         </div>
         <div className="modal-footer">
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <button type="button" className="btn btn-outline" onClick={onCancel} disabled={isLoading}>
             {cancelLabel || t('common.cancel')}
           </button>
           <button
@@ -131,7 +121,7 @@ export const ConfirmDialog = memo(function ConfirmDialog({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? t('accessibility.processing') : (confirmLabel || t('common.confirm'))}
+            {isLoading ? t('accessibility.processing') : confirmLabel || t('common.confirm')}
           </button>
         </div>
       </div>

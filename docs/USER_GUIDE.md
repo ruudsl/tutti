@@ -29,6 +29,7 @@ Als je vereniging Microsoft-integratie heeft ingeschakeld, kun je ook inloggen v
 ### Twee-factor authenticatie (MFA)
 
 Als MFA is ingeschakeld voor je account:
+
 1. Open je authenticator app (zoals Google Authenticator of Authy)
 2. Voer de 6-cijferige code in
 3. Klik op **Verifieren**
@@ -47,27 +48,33 @@ Als MFA is ingeschakeld voor je account:
 Na het inloggen kom je op het dashboard. Hier vind je:
 
 ### Welkomstblok
+
 - Je naam en rol binnen de vereniging
 - Snelle toegang tot je profiel
 
 ### Mijn Orkesten
+
 - Overzicht van de orkesten waarvan je lid bent
 - Klik op een orkest om direct naar de muziek te gaan
 
 ### Mijn Instrumenten
+
 - Je toegewezen instrumenten met stemming en sleutel
 - Dit bepaalt welke bladmuziek je te zien krijgt
 
 ### Aankomende repetities
+
 - De eerstvolgende repetities op een rij
 - Je kunt direct je beschikbaarheid aangeven
 
 ### Recente activiteit
+
 - Nieuw toegevoegde muziek
 - Wijzigingen in repetities
 - Berichten en meldingen
 
 ### Dashboard aanpassen
+
 - Klik op **Aanpassen** (rechtsboven)
 - Sleep widgets om ze te verplaatsen
 - Verberg of toon widgets naar wens
@@ -108,6 +115,7 @@ Dit is je persoonlijke muziekbibliotheek, gefilterd op jouw instrumenten.
 ### PDF weergave
 
 De ingebouwde PDF viewer biedt:
+
 - Zoomen met pinch of knoppen
 - Volledig scherm weergave
 - Navigeren tussen pagina's
@@ -120,6 +128,7 @@ De ingebouwde PDF viewer biedt:
 ### Repetitie overzicht
 
 Ga naar **Repetities** in het menu om te zien:
+
 - Datum, tijd en locatie
 - Type (regulier, extra, geannuleerd)
 - Aanwezigheidspercentage
@@ -138,6 +147,7 @@ Ga naar **Repetities** in het menu om te zien:
 ### Bulk beschikbaarheid
 
 Voor meerdere data tegelijk:
+
 1. Ga naar **Beschikbaarheid** in het menu
 2. Selecteer de periode
 3. Geef voor elke datum je status aan
@@ -156,6 +166,7 @@ Voor meerdere data tegelijk:
 ### Concert overzicht
 
 Ga naar **Concerten** om te zien:
+
 - Datum en locatie
 - Programma (repertoire)
 - Je rol in het concert
@@ -169,6 +180,7 @@ Ga naar **Concerten** om te zien:
 ### Kaartjes kopen
 
 Als je vereniging kaartverkoop heeft ingeschakeld:
+
 1. Klik op **Tickets kopen** bij het concert
 2. Selecteer het type kaartje en aantal
 3. Vul je gegevens in
@@ -178,6 +190,7 @@ Als je vereniging kaartverkoop heeft ingeschakeld:
 ### Mijn Tickets
 
 Ga naar **Mijn Tickets** om:
+
 - Je gekochte kaartjes te bekijken
 - QR-codes te tonen (digitaal of om af te drukken)
 - Kaartjes over te dragen naar iemand anders
@@ -189,6 +202,7 @@ Ga naar **Mijn Tickets** om:
 ### Berichten
 
 Onder **Berichten** in het menu vind je:
+
 - Nieuwsberichten van het bestuur
 - Aankondigingen over concerten en repetities
 - Categorieen om berichten te filteren
@@ -196,6 +210,7 @@ Onder **Berichten** in het menu vind je:
 ### Peilingen
 
 Neem deel aan verenigingspeilingen:
+
 1. Ga naar **Peilingen**
 2. Bekijk openstaande peilingen
 3. Breng je stem uit
@@ -204,6 +219,7 @@ Neem deel aan verenigingspeilingen:
 ### Taken
 
 Als er taken aan je zijn toegewezen:
+
 1. Ga naar **Taken**
 2. Bekijk je openstaande taken
 3. Markeer taken als voltooid wanneer je klaar bent
@@ -222,6 +238,7 @@ Als er taken aan je zijn toegewezen:
 ### Profiel bewerken
 
 Ga naar **Profiel** om:
+
 - Je naam en foto aan te passen
 - Je e-mailadres te bekijken
 - Je rol te zien
@@ -237,6 +254,7 @@ Ga naar **Profiel** om:
 ### MFA instellen
 
 Voor extra beveiliging:
+
 1. Ga naar **Profiel > Twee-factor authenticatie**
 2. Klik op **MFA instellen**
 3. Scan de QR-code met je authenticator app
@@ -251,6 +269,7 @@ Voor extra beveiliging:
 ### Privacy-instellingen
 
 Onder **Profiel > Privacy** kun je instellen:
+
 - Wie je contactgegevens kan zien
 - Of je zichtbaar bent in het smoelenboek
 - Welke informatie je deelt met commissieleden
@@ -291,6 +310,7 @@ Gebruik sneltoetsen om sneller te werken. Druk op **?** om alle sneltoetsen te b
 Zie ook: [KEYBOARD_SHORTCUTS.md](KEYBOARD_SHORTCUTS.md)
 
 Enkele handige sneltoetsen:
+
 - **G H** - Ga naar Dashboard (Home)
 - **G M** - Ga naar Mijn Muziek
 - **G R** - Ga naar Repetities
@@ -300,6 +320,7 @@ Enkele handige sneltoetsen:
 ### Snel zoeken
 
 Druk op **Ctrl+K** (Windows) of **Cmd+K** (Mac) om de snelzoekfunctie te openen:
+
 - Zoek naar muziekstukken, leden, repetities
 - Navigeer snel naar elke pagina
 - Typ en selecteer met pijltjestoetsen
@@ -317,6 +338,7 @@ Druk op **Ctrl+K** (Windows) of **Cmd+K** (Mac) om de snelzoekfunctie te openen:
 ### PDF annotaties
 
 Tijdens het bekijken van bladmuziek kun je:
+
 - Notities toevoegen
 - Markeringen maken
 - Deze worden lokaal opgeslagen
@@ -324,12 +346,14 @@ Tijdens het bekijken van bladmuziek kun je:
 ### Metronoom en stemapparaat
 
 Onder **Tools** vind je:
+
 - Een metronoom om op tempo te oefenen
 - Een stemapparaat om je instrument te stemmen
 
 ### Problemen melden
 
 Zie je een fout in de bladmuziek (verkeerde noten, ontbrekende pagina's)?
+
 1. Open het muziekstuk
 2. Klik op **Melding maken**
 3. Beschrijf het probleem

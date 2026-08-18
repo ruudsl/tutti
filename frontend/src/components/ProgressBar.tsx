@@ -55,9 +55,7 @@ export function ProgressBar({
       {(label || showPercentage) && (
         <div className="progress-header">
           {label && <span className="progress-label">{label}</span>}
-          {showPercentage && !indeterminate && (
-            <span className="progress-percentage">{Math.round(clampedValue)}%</span>
-          )}
+          {showPercentage && !indeterminate && <span className="progress-percentage">{Math.round(clampedValue)}%</span>}
         </div>
       )}
       <div
@@ -93,13 +91,7 @@ interface UploadProgressProps {
   onCancel?: () => void;
 }
 
-export function UploadProgress({
-  filename,
-  progress,
-  status = 'uploading',
-  error,
-  onCancel,
-}: UploadProgressProps) {
+export function UploadProgress({ filename, progress, status = 'uploading', error, onCancel }: UploadProgressProps) {
   const getVariant = () => {
     switch (status) {
       case 'complete':
@@ -133,12 +125,7 @@ export function UploadProgress({
           {filename.length > 40 ? `${filename.substring(0, 37)}...` : filename}
         </span>
         {status === 'uploading' && onCancel && (
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={onCancel}
-            aria-label="Annuleren"
-          >
+          <button type="button" className="btn btn-sm btn-ghost" onClick={onCancel} aria-label="Annuleren">
             X
           </button>
         )}
@@ -173,17 +160,11 @@ interface MultiUploadProgressProps {
   onCancelAll?: () => void;
 }
 
-export function MultiUploadProgress({
-  uploads,
-  onCancel,
-  onCancelAll,
-}: MultiUploadProgressProps) {
-  const activeUploads = uploads.filter(u => u.status === 'uploading' || u.status === 'processing');
-  const completedUploads = uploads.filter(u => u.status === 'complete').length;
-  const failedUploads = uploads.filter(u => u.status === 'error').length;
-  const totalProgress = uploads.length > 0
-    ? uploads.reduce((sum, u) => sum + u.progress, 0) / uploads.length
-    : 0;
+export function MultiUploadProgress({ uploads, onCancel, onCancelAll }: MultiUploadProgressProps) {
+  const activeUploads = uploads.filter((u) => u.status === 'uploading' || u.status === 'processing');
+  const completedUploads = uploads.filter((u) => u.status === 'complete').length;
+  const failedUploads = uploads.filter((u) => u.status === 'error').length;
+  const totalProgress = uploads.length > 0 ? uploads.reduce((sum, u) => sum + u.progress, 0) / uploads.length : 0;
 
   if (uploads.length === 0) return null;
 
@@ -196,21 +177,12 @@ export function MultiUploadProgress({
             : `${completedUploads} voltooid${failedUploads > 0 ? `, ${failedUploads} mislukt` : ''}`}
         </span>
         {activeUploads.length > 0 && onCancelAll && (
-          <button
-            type="button"
-            className="btn btn-sm btn-outline"
-            onClick={onCancelAll}
-          >
+          <button type="button" className="btn btn-sm btn-outline" onClick={onCancelAll}>
             Alles annuleren
           </button>
         )}
       </div>
-      <ProgressBar
-        value={totalProgress}
-        variant={failedUploads > 0 ? 'warning' : 'primary'}
-        size="md"
-        showPercentage
-      />
+      <ProgressBar value={totalProgress} variant={failedUploads > 0 ? 'warning' : 'primary'} size="md" showPercentage />
       <div className="multi-upload-list">
         {uploads.slice(-5).map((upload) => (
           <UploadProgress
@@ -222,11 +194,7 @@ export function MultiUploadProgress({
             onCancel={onCancel ? () => onCancel(upload.id) : undefined}
           />
         ))}
-        {uploads.length > 5 && (
-          <div className="multi-upload-more">
-            en {uploads.length - 5} meer bestanden...
-          </div>
-        )}
+        {uploads.length > 5 && <div className="multi-upload-more">en {uploads.length - 5} meer bestanden...</div>}
       </div>
     </div>
   );

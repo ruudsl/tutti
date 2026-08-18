@@ -34,7 +34,9 @@ export const getMyPrivacySettings = async (): Promise<Record<string, PrivacySett
   return data;
 };
 
-export const updateMyPrivacySettings = async (settings: { fieldName: string; visibility: PrivacyVisibility; customFieldId?: string }[]): Promise<void> => {
+export const updateMyPrivacySettings = async (
+  settings: { fieldName: string; visibility: PrivacyVisibility; customFieldId?: string }[],
+): Promise<void> => {
   await api.put('/privacy-settings/my-settings', { settings });
 };
 
@@ -49,7 +51,14 @@ export const getPrivacyDefaults = async (): Promise<AssociationPrivacyDefault[]>
   return data;
 };
 
-export const updatePrivacyDefaults = async (defaults: { fieldName: string; defaultVisibility: PrivacyVisibility; purposeStatement?: string; isRequired?: boolean }[]): Promise<void> => {
+export const updatePrivacyDefaults = async (
+  defaults: {
+    fieldName: string;
+    defaultVisibility: PrivacyVisibility;
+    purposeStatement?: string;
+    isRequired?: boolean;
+  }[],
+): Promise<void> => {
   await api.put('/privacy-settings/defaults', { defaults });
 };
 
@@ -63,7 +72,9 @@ export const getMyConsents = async (): Promise<PrivacyConsent[]> => {
   return data;
 };
 
-export const recordConsent = async (consentVersion: string): Promise<{ id: string; message: string; alreadyConsented?: boolean }> => {
+export const recordConsent = async (
+  consentVersion: string,
+): Promise<{ id: string; message: string; alreadyConsented?: boolean }> => {
   const { data } = await api.post('/privacy-settings/consent', { consentVersion });
   return data;
 };

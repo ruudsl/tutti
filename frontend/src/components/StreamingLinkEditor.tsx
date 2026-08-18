@@ -75,13 +75,13 @@ export function StreamingLinkEditor({
 
   const handleSelectTrack = (track: SearchResult) => {
     if (track.platform === 'spotify') {
-      setLinks(prev => ({
+      setLinks((prev) => ({
         ...prev,
         spotify_url: track.url,
         spotify_preview_url: track.previewUrl || undefined,
       }));
     } else if (track.platform === 'apple') {
-      setLinks(prev => ({
+      setLinks((prev) => ({
         ...prev,
         apple_music_url: track.url,
         apple_music_preview_url: track.previewUrl || undefined,
@@ -94,21 +94,21 @@ export function StreamingLinkEditor({
 
   const handleRemoveLink = (platform: 'spotify' | 'apple' | 'youtube') => {
     if (platform === 'spotify') {
-      setLinks(prev => {
+      setLinks((prev) => {
         const newLinks = { ...prev };
         delete newLinks.spotify_url;
         delete newLinks.spotify_preview_url;
         return newLinks;
       });
     } else if (platform === 'apple') {
-      setLinks(prev => {
+      setLinks((prev) => {
         const newLinks = { ...prev };
         delete newLinks.apple_music_url;
         delete newLinks.apple_music_preview_url;
         return newLinks;
       });
     } else if (platform === 'youtube') {
-      setLinks(prev => {
+      setLinks((prev) => {
         const newLinks = { ...prev };
         delete newLinks.youtube_music_url;
         return newLinks;
@@ -167,9 +167,7 @@ export function StreamingLinkEditor({
     <div style={{ minWidth: '400px' }}>
       {/* Current Links */}
       <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{ marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>
-          {t('streaming.currentLinks')}
-        </h4>
+        <h4 style={{ marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>{t('streaming.currentLinks')}</h4>
 
         {!links.spotify_url && !links.apple_music_url && !links.youtube_music_url ? (
           <p style={{ color: 'var(--text-light)', fontSize: '0.875rem', fontStyle: 'italic' }}>
@@ -178,15 +176,17 @@ export function StreamingLinkEditor({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {links.spotify_url && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.5rem',
-                backgroundColor: '#1DB95415',
-                borderRadius: '0.25rem',
-                border: '1px solid #1DB95450',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem',
+                  backgroundColor: '#1DB95415',
+                  borderRadius: '0.25rem',
+                  border: '1px solid #1DB95450',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#1DB954', fontWeight: 500 }}>Spotify</span>
                   <a
@@ -210,15 +210,17 @@ export function StreamingLinkEditor({
             )}
 
             {links.apple_music_url && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.5rem',
-                backgroundColor: '#FA243C15',
-                borderRadius: '0.25rem',
-                border: '1px solid #FA243C50',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem',
+                  backgroundColor: '#FA243C15',
+                  borderRadius: '0.25rem',
+                  border: '1px solid #FA243C50',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#FA243C', fontWeight: 500 }}>Apple Music</span>
                   <a
@@ -242,15 +244,17 @@ export function StreamingLinkEditor({
             )}
 
             {links.youtube_music_url && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.5rem',
-                backgroundColor: '#FF000015',
-                borderRadius: '0.25rem',
-                border: '1px solid #FF000050',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem',
+                  backgroundColor: '#FF000015',
+                  borderRadius: '0.25rem',
+                  border: '1px solid #FF000050',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ color: '#FF0000', fontWeight: 500 }}>YouTube Music</span>
                   <a
@@ -278,16 +282,14 @@ export function StreamingLinkEditor({
 
       {/* Manual URL Input */}
       <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{ marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>
-          {t('streaming.manualEntry')}
-        </h4>
+        <h4 style={{ marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 600 }}>{t('streaming.manualEntry')}</h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <input
             type="url"
             className="form-control"
             placeholder={t('streaming.youtubeMusicUrlPlaceholder')}
             value={links.youtube_music_url || ''}
-            onChange={(e) => setLinks(prev => ({ ...prev, youtube_music_url: e.target.value || undefined }))}
+            onChange={(e) => setLinks((prev) => ({ ...prev, youtube_music_url: e.target.value || undefined }))}
             style={{ fontSize: '0.875rem' }}
           />
         </div>
@@ -356,13 +358,15 @@ export function StreamingLinkEditor({
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div style={{
-            marginTop: '0.5rem',
-            maxHeight: '300px',
-            overflowY: 'auto',
-            border: '1px solid var(--border)',
-            borderRadius: '0.25rem',
-          }}>
+          <div
+            style={{
+              marginTop: '0.5rem',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              border: '1px solid var(--border)',
+              borderRadius: '0.25rem',
+            }}
+          >
             {searchResults.map((track) => (
               <div
                 key={track.id}
@@ -391,7 +395,15 @@ export function StreamingLinkEditor({
                   <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {track.name}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-light)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {track.artist} - {track.album}
                   </div>
                 </div>
@@ -417,11 +429,7 @@ export function StreamingLinkEditor({
                 )}
 
                 {/* Select button */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectTrack(track)}
-                  className="btn btn-sm btn-primary"
-                >
+                <button type="button" onClick={() => handleSelectTrack(track)} className="btn btn-sm btn-primary">
                   {t('common.select')}
                 </button>
               </div>
@@ -441,12 +449,7 @@ export function StreamingLinkEditor({
         <button type="button" className="btn btn-outline" onClick={onClose}>
           {t('common.cancel')}
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
+        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
           {isSaving ? t('common.loading') : t('common.save')}
         </button>
       </div>

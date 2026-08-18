@@ -59,15 +59,18 @@ export const createUser = async (userData: {
   return data;
 };
 
-export const updateUser = async (id: string, userData: {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
-  password?: string;
-  instrumentIds?: string[];
-  orchestraIds?: string[];
-}): Promise<void> => {
+export const updateUser = async (
+  id: string,
+  userData: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    password?: string;
+    instrumentIds?: string[];
+    orchestraIds?: string[];
+  },
+): Promise<void> => {
   await api.put(`/users/${id}`, userData);
 };
 

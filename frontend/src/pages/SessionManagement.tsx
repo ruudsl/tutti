@@ -102,7 +102,11 @@ export default function SessionManagement() {
   const [confirmRevokeAll, setConfirmRevokeAll] = useState(false);
   const [sessionToRevoke, setSessionToRevoke] = useState<Session | null>(null);
 
-  const { data: sessions = [], isLoading, error } = useQuery({
+  const {
+    data: sessions = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['sessions'],
     queryFn: getSessions,
   });
@@ -131,7 +135,7 @@ export default function SessionManagement() {
     },
   });
 
-  const otherSessions = sessions.filter(s => !s.isCurrent);
+  const otherSessions = sessions.filter((s) => !s.isCurrent);
 
   if (isLoading) {
     return (
@@ -169,31 +173,28 @@ export default function SessionManagement() {
       <p className="piece-meta mb-3">{t('sessions.description')}</p>
 
       <div className="flex flex-col gap-2">
-        {sessions.map(session => {
+        {sessions.map((session) => {
           const ua = parseUserAgent(session.userAgent);
 
           return (
-            <div
-              key={session.id}
-              className={`session-card ${session.isCurrent ? 'current' : ''}`}
-            >
+            <div key={session.id} className={`session-card ${session.isCurrent ? 'current' : ''}`}>
               <div className="session-info">
-                <span className="session-icon"><Icon name={ua.icon} size={24} /></span>
+                <span className="session-icon">
+                  <Icon name={ua.icon} size={24} />
+                </span>
                 <div className="session-details">
                   <div className="session-device">
                     {ua.device}
-                    {session.isCurrent && (
-                      <span className="session-current-badge">
-                        {t('sessions.currentSession')}
-                      </span>
-                    )}
+                    {session.isCurrent && <span className="session-current-badge">{t('sessions.currentSession')}</span>}
                   </div>
                   <div className="session-meta">
                     <span>
                       {t('sessions.lastActive')}: {formatRelativeTime(session.lastActive || session.createdAt)}
                     </span>
                     {session.ipAddress && (
-                      <span>{t('sessions.ipAddress')}: {session.ipAddress}</span>
+                      <span>
+                        {t('sessions.ipAddress')}: {session.ipAddress}
+                      </span>
                     )}
                     <span>
                       {t('sessions.createdAt')}: {new Date(session.createdAt).toLocaleString()}
@@ -217,7 +218,9 @@ export default function SessionManagement() {
 
         {sessions.length === 0 && (
           <div className="empty-state">
-            <div className="empty-icon"><Icon name="lock" size={48} /></div>
+            <div className="empty-icon">
+              <Icon name="lock" size={48} />
+            </div>
             <p>{t('sessions.noSessions')}</p>
           </div>
         )}

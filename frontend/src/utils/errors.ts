@@ -141,11 +141,7 @@ export function getErrorMessage(error: unknown): string {
  * @param language - The current language code (e.g., 'nl', 'en', 'de')
  * @returns A user-friendly error message in the correct language
  */
-export function getLocalizedErrorMessage(
-  error: unknown,
-  t: TFunction,
-  language: string = 'nl'
-): string {
+export function getLocalizedErrorMessage(error: unknown, t: TFunction, language: string = 'nl'): string {
   // Handle Axios errors - prefer server-provided message
   if (isAxiosError(error)) {
     const data = error.response?.data;
@@ -202,11 +198,7 @@ export function logError(context: string, error: unknown): void {
  * Create an error handler function for use in catch blocks
  * that logs and shows appropriate messages
  */
-export function createErrorHandler(
-  context: string,
-  t?: TFunction,
-  language?: string
-): (error: unknown) => string {
+export function createErrorHandler(context: string, t?: TFunction, language?: string): (error: unknown) => string {
   return (error: unknown) => {
     logError(context, error);
     if (t) {

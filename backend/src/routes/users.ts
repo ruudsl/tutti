@@ -510,8 +510,7 @@ router.post(
     // Send a welcome email (best effort: account creation must not fail on email issues)
     try {
       const association = db.prepare('SELECT name FROM associations WHERE id = ?').get(req.user!.associationId) as
-        | { name: string }
-        | undefined;
+        { name: string } | undefined;
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const { subject, text, html } = getWelcomeEmail({
@@ -712,8 +711,7 @@ router.delete(
         'SELECT first_name, last_name, email FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL',
       )
       .get(req.params.id, req.user!.associationId) as
-      | { first_name: string; last_name: string; email: string }
-      | undefined;
+      { first_name: string; last_name: string; email: string } | undefined;
 
     if (!userToDelete) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');

@@ -29,7 +29,7 @@ export default function ShareTarget() {
 
         setTimeout(() => {
           navigate('/my-music', {
-            state: { sharedContent: { title, text, url: sharedUrl } }
+            state: { sharedContent: { title, text, url: sharedUrl } },
           });
         }, 1500);
         return;
@@ -109,21 +109,22 @@ export default function ShareTarget() {
   }
 
   return (
-    <div className="page-container" style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '60vh'
-    }}>
+    <div
+      className="page-container"
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '60vh',
+      }}
+    >
       <div className="card" style={{ maxWidth: '400px', textAlign: 'center' }}>
         <div className="card-body">
           {status === 'processing' && (
             <>
               <div className="spinner mb-3" style={{ margin: '0 auto' }} />
               <h2>{t('shareTarget.processing', 'Verwerken...')}</h2>
-              <p className="text-muted">
-                {t('shareTarget.processingMessage', 'Je gedeelde bestand wordt verwerkt')}
-              </p>
+              <p className="text-muted">{t('shareTarget.processingMessage', 'Je gedeelde bestand wordt verwerkt')}</p>
             </>
           )}
 

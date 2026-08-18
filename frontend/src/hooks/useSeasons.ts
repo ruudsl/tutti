@@ -81,8 +81,7 @@ export function useUpdateSeason() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateSeason>[1] }) =>
-      updateSeason(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateSeason>[1] }) => updateSeason(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: seasonQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: seasonQueryKeys.detail(id) });
@@ -194,8 +193,7 @@ export function useRemoveSeasonEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ seasonId, eventId }: { seasonId: string; eventId: string }) =>
-      removeSeasonEvent(seasonId, eventId),
+    mutationFn: ({ seasonId, eventId }: { seasonId: string; eventId: string }) => removeSeasonEvent(seasonId, eventId),
     onSuccess: (_, { seasonId }) => {
       queryClient.invalidateQueries({ queryKey: seasonQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: seasonQueryKeys.detail(seasonId) });

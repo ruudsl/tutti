@@ -11,12 +11,12 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // ===========================================
-    // REHEARSAL MANAGEMENT
-    // ===========================================
+  // ===========================================
+  // REHEARSAL MANAGEMENT
+  // ===========================================
 
-    // Default rehearsal days (weekly recurring)
-    db.exec(`
+  // Default rehearsal days (weekly recurring)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS rehearsal_default_days (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -31,8 +31,8 @@ export function up(): void {
         )
     `);
 
-    // Individual rehearsals
-    db.exec(`
+  // Individual rehearsals
+  db.exec(`
         CREATE TABLE IF NOT EXISTS rehearsals (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -52,8 +52,8 @@ export function up(): void {
         )
     `);
 
-    // Rehearsal pieces
-    db.exec(`
+  // Rehearsal pieces
+  db.exec(`
         CREATE TABLE IF NOT EXISTS rehearsal_pieces (
             id TEXT PRIMARY KEY,
             rehearsal_id TEXT NOT NULL,
@@ -64,12 +64,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // SPOND INTEGRATION
-    // ===========================================
+  // ===========================================
+  // SPOND INTEGRATION
+  // ===========================================
 
-    // Spond configuration
-    db.exec(`
+  // Spond configuration
+  db.exec(`
         CREATE TABLE IF NOT EXISTS spond_config (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL UNIQUE,
@@ -83,8 +83,8 @@ export function up(): void {
         )
     `);
 
-    // Spond groups per orchestra
-    db.exec(`
+  // Spond groups per orchestra
+  db.exec(`
         CREATE TABLE IF NOT EXISTS spond_orchestra_groups (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL UNIQUE,
@@ -95,8 +95,8 @@ export function up(): void {
         )
     `);
 
-    // Spond member links
-    db.exec(`
+  // Spond member links
+  db.exec(`
         CREATE TABLE IF NOT EXISTS spond_member_links (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -111,8 +111,8 @@ export function up(): void {
         )
     `);
 
-    // Rehearsal attendance
-    db.exec(`
+  // Rehearsal attendance
+  db.exec(`
         CREATE TABLE IF NOT EXISTS rehearsal_attendance (
             id TEXT PRIMARY KEY,
             rehearsal_id TEXT NOT NULL,
@@ -125,34 +125,34 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_email ON spond_member_links(spond_member_email)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsals_association ON rehearsals(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsals_date ON rehearsals(date)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_pieces_rehearsal ON rehearsal_pieces(rehearsal_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_attendance_rehearsal ON rehearsal_attendance(rehearsal_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_spond_id ON spond_member_links(spond_member_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_user ON spond_member_links(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_spond_member_links_email ON spond_member_links(spond_member_email)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsals_association ON rehearsals(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsals_date ON rehearsals(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_pieces_rehearsal ON rehearsal_pieces(rehearsal_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_attendance_rehearsal ON rehearsal_attendance(rehearsal_id)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'rehearsal_attendance',
-        'spond_member_links',
-        'spond_orchestra_groups',
-        'spond_config',
-        'rehearsal_pieces',
-        'rehearsals',
-        'rehearsal_default_days',
-    ];
+  const tables = [
+    'rehearsal_attendance',
+    'spond_member_links',
+    'spond_orchestra_groups',
+    'spond_config',
+    'rehearsal_pieces',
+    'rehearsals',
+    'rehearsal_default_days',
+  ];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

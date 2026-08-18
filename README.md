@@ -9,7 +9,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-*[Nederlandse versie](README.nl.md) · [Deutsche Version](README.de.md)*
+_[Nederlandse versie](README.nl.md) · [Deutsche Version](README.de.md)_
 
 A complete web application for managing sheet music, rehearsals, concert programs, and member organization for concert bands and brass bands.
 
@@ -30,12 +30,12 @@ See [docs/FEATURES.md](docs/FEATURES.md) for the complete feature list.
 
 ## Screenshots
 
-| Dashboard | Tools |
-|---|---|
+| Dashboard                                    | Tools                                       |
+| -------------------------------------------- | ------------------------------------------- |
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Music Pieces](docs/screenshots/tools.png) |
 
-| Upload | Instrument |
-|---|---|
+| Upload                                 | Instrument                                            |
+| -------------------------------------- | ----------------------------------------------------- |
 | ![Upload](docs/screenshots/upload.png) | ![Music Lists](docs/screenshots/instrumentbeheer.png) |
 
 ## Quick Start
@@ -63,12 +63,14 @@ npm run dev
 ```
 
 The application is now available at:
+
 - **Frontend:** http://localhost:5173
 - **Backend API:** http://localhost:3001
 
 ### Default Credentials
 
 On first start, an admin account is automatically created:
+
 - **Email:** `admin@harmonie.nl`
 - **Password:** Generated and shown in console output
 
@@ -101,6 +103,7 @@ Title_arranger_instrument_key_groupnumber_clef.pdf
 ```
 
 Examples:
+
 - `The Pacific_Ted Ricketts_Baritone_Bb__sol.pdf`
 - `Shannon Song_Rowwen Heze_Alto Saxophone_Eb_1.pdf`
 
@@ -108,10 +111,10 @@ Examples:
 
 ### Recommended Setup
 
-| Component | Platform |
-|---|---|
-| Frontend | [Vercel](https://vercel.com) |
-| Backend | [Render.com](https://render.com) |
+| Component | Platform                         |
+| --------- | -------------------------------- |
+| Frontend  | [Vercel](https://vercel.com)     |
+| Backend   | [Render.com](https://render.com) |
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
 
@@ -129,46 +132,46 @@ See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for self-hosting options.
 
 ### User Documentation
 
-| Document | Description |
-|---|---|
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | Complete user guide (Dutch) |
-| [FEATURES.md](docs/FEATURES.md) | Complete feature list |
-| [KEYBOARD_SHORTCUTS.md](docs/KEYBOARD_SHORTCUTS.md) | Keyboard shortcuts reference |
-| [MOBILE_APP.md](docs/MOBILE_APP.md) | Mobile/PWA guide |
-| [FAQ.md](docs/FAQ.md) | Frequently asked questions (Dutch) |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Troubleshooting guide (Dutch) |
+| Document                                            | Description                        |
+| --------------------------------------------------- | ---------------------------------- |
+| [USER_GUIDE.md](docs/USER_GUIDE.md)                 | Complete user guide (Dutch)        |
+| [FEATURES.md](docs/FEATURES.md)                     | Complete feature list              |
+| [KEYBOARD_SHORTCUTS.md](docs/KEYBOARD_SHORTCUTS.md) | Keyboard shortcuts reference       |
+| [MOBILE_APP.md](docs/MOBILE_APP.md)                 | Mobile/PWA guide                   |
+| [FAQ.md](docs/FAQ.md)                               | Frequently asked questions (Dutch) |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)       | Troubleshooting guide (Dutch)      |
 
 ### Admin & Operations
 
-| Document | Description |
-|---|---|
-| [ADMIN.md](docs/ADMIN.md) | Administration guide |
-| [ROLE_PERMISSIONS.md](docs/ROLE_PERMISSIONS.md) | Role-based permissions matrix |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide (Render/Vercel/Docker) |
-| [SELF_HOSTING.md](docs/SELF_HOSTING.md) | Self-hosting guide |
-| [MONITORING.md](docs/MONITORING.md) | Monitoring & observability |
+| Document                                        | Description                             |
+| ----------------------------------------------- | --------------------------------------- |
+| [ADMIN.md](docs/ADMIN.md)                       | Administration guide                    |
+| [ROLE_PERMISSIONS.md](docs/ROLE_PERMISSIONS.md) | Role-based permissions matrix           |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md)             | Deployment guide (Render/Vercel/Docker) |
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md)         | Self-hosting guide                      |
+| [MONITORING.md](docs/MONITORING.md)             | Monitoring & observability              |
 
 ### Developer Documentation
 
-| Document | Description |
-|---|---|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
-| [DATABASE.md](docs/DATABASE.md) | Database schema & ERD |
-| [API.md](docs/API.md) | REST API documentation |
-| [AUTHENTICATION.md](docs/AUTHENTICATION.md) | Auth flows & JWT/MFA |
-| [WEBSOCKET.md](docs/WEBSOCKET.md) | WebSocket events reference |
-| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend state patterns |
-| [HOOKS.md](docs/HOOKS.md) | React hooks documentation |
-| [TESTING.md](docs/TESTING.md) | Testing strategy & guidelines |
-| [THEMING.md](docs/THEMING.md) | Theming system |
+| Document                                        | Description                   |
+| ----------------------------------------------- | ----------------------------- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)         | System architecture           |
+| [DATABASE.md](docs/DATABASE.md)                 | Database schema & ERD         |
+| [API.md](docs/API.md)                           | REST API documentation        |
+| [AUTHENTICATION.md](docs/AUTHENTICATION.md)     | Auth flows & JWT/MFA          |
+| [WEBSOCKET.md](docs/WEBSOCKET.md)               | WebSocket events reference    |
+| [STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md) | Frontend state patterns       |
+| [HOOKS.md](docs/HOOKS.md)                       | React hooks documentation     |
+| [TESTING.md](docs/TESTING.md)                   | Testing strategy & guidelines |
+| [THEMING.md](docs/THEMING.md)                   | Theming system                |
 
 ### Integration & Compliance
 
-| Document | Description |
-|---|---|
-| [INTEGRATIONS.md](docs/INTEGRATIONS.md) | Third-party integrations |
-| [GDPR.md](docs/GDPR.md) | GDPR compliance guide |
-| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email template reference |
+| Document                                      | Description                        |
+| --------------------------------------------- | ---------------------------------- |
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md)       | Third-party integrations           |
+| [GDPR.md](docs/GDPR.md)                       | GDPR compliance guide              |
+| [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email template reference           |
 | [PRINT_TEMPLATES.md](docs/PRINT_TEMPLATES.md) | Print templates (tickets, posters) |
 
 ### Architecture Decisions
@@ -185,13 +188,13 @@ See [SECURITY.md](SECURITY.md) for our security policy and how to report vulnera
 
 ## Tech Stack
 
-| Backend | Frontend |
-|---|---|
-| Node.js 20+ | React 18 |
-| Express 4.x | Vite 5.x |
-| TypeScript 5.x | TanStack Query 5.x |
-| SQLite (sql.js) | React Router 6.x |
-| JWT + TOTP MFA | i18next (NL/EN/DE) |
+| Backend         | Frontend           |
+| --------------- | ------------------ |
+| Node.js 20+     | React 18           |
+| Express 4.x     | Vite 5.x           |
+| TypeScript 5.x  | TanStack Query 5.x |
+| SQLite (sql.js) | React Router 6.x   |
+| JWT + TOTP MFA  | i18next (NL/EN/DE) |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technology list.
 
