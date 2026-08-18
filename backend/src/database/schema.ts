@@ -2800,6 +2800,41 @@ CREATE TABLE IF NOT EXISTS project_concerts (
     FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
 );
 
+-- Concrete instanties van een repetitie(serie).
+--
+-- rehearsals is de serie/afspraak, rehearsal_instances is de losse
+-- gebeurtenis waar projecten, resource bookings, equipment loans en
+-- vervangingsverzoeken naar verwijzen. De tabel ontbrak eerder volledig,
+-- terwijl project_rehearsals, resource_bookings en equipment_loans er een
+-- foreign key naartoe hebben: daardoor faalde elke DELETE op een tabel in
+-- die keten (waaronder de GDPR-purge van gebruikers) met
+-- "no such table: main.rehearsal_instances".
+--
+-- Alle kolommen buiten id zijn nullable: de bestaande call sites in
+-- routes/polls.ts vullen onderling verschillende subsets.
+CREATE TABLE IF NOT EXISTS rehearsal_instances (
+    id TEXT PRIMARY KEY,
+    rehearsal_id TEXT,
+    association_id TEXT,
+    orchestra_id TEXT,
+    date TEXT,
+    start_time TEXT,
+    end_time TEXT,
+    location TEXT,
+    status TEXT DEFAULT 'scheduled', -- scheduled, cancelled, completed
+    notes TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rehearsal_instances_rehearsal ON rehearsal_instances(rehearsal_id);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_instances_date ON rehearsal_instances(date);
+
 -- Link projects to rehearsals
 CREATE TABLE IF NOT EXISTS project_rehearsals (
     project_id TEXT NOT NULL,

@@ -7,461 +7,71 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const initSqlJs = require('sql.js');
 
-const testSchema = `
--- Associations
-CREATE TABLE IF NOT EXISTS associations (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    display_name TEXT,
-    logo_path TEXT,
-    theme_json TEXT,
-    microsoft_client_id TEXT,
-    microsoft_client_secret TEXT,
-    microsoft_tenant_id TEXT,
-    microsoft_enabled BOOLEAN DEFAULT 0,
-    smtp_host TEXT,
-    smtp_port INTEGER DEFAULT 587,
-    smtp_secure BOOLEAN DEFAULT 0,
-    smtp_user TEXT,
-    smtp_pass TEXT,
-    smtp_from TEXT,
-    smtp_enabled BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+import { schema } from '../database/schema';
 
--- Orchestras
-CREATE TABLE IF NOT EXISTS orchestras (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    association_id TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE
-);
+/**
+ * The tests run against the real schema (src/database/schema.ts) instead of a
+ * hand-maintained copy. The copy that used to live here had drifted: tables
+ * and columns added since it was written (music_titles.streaming_links,
+ * shared_music_access, ...) were missing, so route tests hit "no such table"
+ * errors and had to assert on `[200, 500]` to stay green.
+ *
+ * Tables that only exist in a migration (and not in schema.ts) are still
+ * absent here; those routes cannot be integration-tested yet.
+ */
+const testSchema = schema;
 
--- Instruments
-CREATE TABLE IF NOT EXISTS instruments (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    tuning TEXT,
-    clef TEXT DEFAULT 'sol',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(name, tuning, clef)
-);
+/**
+ * Apply the schema statement by statement, mirroring what
+ * database/connection.ts does on a real database: an index whose column is
+ * only added by a later migration is skipped instead of aborting the whole
+ * schema. Anything else still throws, so a genuinely broken schema fails the
+ * test run loudly.
+ */
+function applySchema(db: any): void {
+  for (const statement of testSchema.split(';')) {
+    const trimmed = statement.trim();
+    if (!trimmed) continue;
 
--- Instrument aliases
-CREATE TABLE IF NOT EXISTS instrument_aliases (
-    id TEXT PRIMARY KEY,
-    instrument_id TEXT NOT NULL,
-    alias TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE,
-    UNIQUE(instrument_id, alias)
-);
+    try {
+      db.run(trimmed);
+    } catch (err: any) {
+      const message: string = err?.message ?? '';
+      if (message.includes('no such column') && trimmed.includes('CREATE INDEX')) continue;
+      if (message.includes('already exists')) continue;
+      throw err;
+    }
+  }
+}
 
--- Users
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member',
-    status TEXT NOT NULL DEFAULT 'active',
-    association_id TEXT,
-    mfa_secret TEXT,
-    mfa_enabled BOOLEAN DEFAULT 0,
-    microsoft_id TEXT,
-    profile_photo_path TEXT,
-    private_email TEXT,
-    last_login DATETIME,
-    onboarded_at DATETIME,
-    offboarded_at DATETIME,
-    password_changed_at TEXT,
-    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-    locked_until TEXT,
-    deleted_at DATETIME DEFAULT NULL,
-    email_before_delete TEXT DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE SET NULL
-);
+/**
+ * Tables added after the initial schema live only in src/migrations. Running
+ * them here gives the tests the same set of tables a freshly migrated
+ * production database has, instead of only the subset in schema.ts.
+ *
+ * Statements that are already satisfied by schema.ts (duplicate table/column)
+ * are skipped, mirroring the tolerant behaviour of the real migration runner.
+ */
+async function applyMigrations(): Promise<void> {
+  const { loadMigrationFiles } = await import('../migrations/runner');
+  const migrations = await loadMigrationFiles();
 
--- User sessions
-CREATE TABLE IF NOT EXISTS user_sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    token_hash TEXT NOT NULL,
-    ip_address TEXT,
-    user_agent TEXT,
-    last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,
-    revoked_at TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- User instruments
-CREATE TABLE IF NOT EXISTS user_instruments (
-    user_id TEXT NOT NULL,
-    instrument_id TEXT NOT NULL,
-    PRIMARY KEY (user_id, instrument_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE
-);
-
--- User orchestras
-CREATE TABLE IF NOT EXISTS user_orchestras (
-    user_id TEXT NOT NULL,
-    orchestra_id TEXT NOT NULL,
-    PRIMARY KEY (user_id, orchestra_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
-);
-
--- Music lists
-CREATE TABLE IF NOT EXISTS music_lists (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    orchestra_id TEXT NOT NULL,
-    position INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT 1,
-    list_type TEXT NOT NULL DEFAULT 'regular',
-    concert_date TEXT,
-    concert_location TEXT,
-    deleted_at DATETIME DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE CASCADE
-);
-
--- Music pieces
-CREATE TABLE IF NOT EXISTS music_pieces (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    arranger TEXT,
-    instrument_id TEXT,
-    tuning TEXT,
-    group_number TEXT,
-    clef TEXT,
-    file_path TEXT NOT NULL,
-    original_filename TEXT NOT NULL,
-    youtube_url TEXT,
-    association_id TEXT NOT NULL,
-    is_shared BOOLEAN DEFAULT 0,
-    uploaded_by TEXT,
-    deleted_at DATETIME DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE SET NULL,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
-);
-
--- Music list pieces
-CREATE TABLE IF NOT EXISTS music_list_pieces (
-    music_list_id TEXT NOT NULL,
-    music_piece_id TEXT NOT NULL,
-    position INTEGER DEFAULT 0,
-    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (music_list_id, music_piece_id),
-    FOREIGN KEY (music_list_id) REFERENCES music_lists(id) ON DELETE CASCADE,
-    FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
-);
-
--- Music titles
-CREATE TABLE IF NOT EXISTS music_titles (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    composer TEXT,
-    arranger TEXT,
-    youtube_url TEXT,
-    description TEXT,
-    duration_seconds INTEGER DEFAULT 0,
-    grade TEXT,
-    mp3_file_path TEXT,
-    is_shared BOOLEAN DEFAULT 0,
-    internal_notes TEXT,
-    association_id TEXT NOT NULL,
-    deleted_at DATETIME DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    UNIQUE(title, arranger, association_id)
-);
-
--- User favorites
-CREATE TABLE IF NOT EXISTS user_favorites (
-    user_id TEXT NOT NULL,
-    music_title_id TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, music_title_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
-);
-
--- User recent views
-CREATE TABLE IF NOT EXISTS user_recent_views (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    item_type TEXT NOT NULL,
-    item_id TEXT NOT NULL,
-    item_title TEXT NOT NULL,
-    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Practice logs
-CREATE TABLE IF NOT EXISTS practice_logs (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    music_title_id TEXT NOT NULL,
-    duration_minutes INTEGER NOT NULL,
-    notes TEXT,
-    practiced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
-);
-
--- PDF annotations
-CREATE TABLE IF NOT EXISTS pdf_annotations (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    music_piece_id TEXT NOT NULL,
-    page_number INTEGER NOT NULL,
-    annotation_type TEXT NOT NULL,
-    x_position REAL NOT NULL,
-    y_position REAL NOT NULL,
-    width REAL,
-    height REAL,
-    content TEXT,
-    color TEXT DEFAULT '#FFFF00',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (music_piece_id) REFERENCES music_pieces(id) ON DELETE CASCADE
-);
-
--- Password reset tokens (token column stores a SHA-256 hash)
-CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    token TEXT NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    used BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- MFA recovery codes (SHA-256 hashes only)
-CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    code_hash TEXT NOT NULL,
-    used_at TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Rehearsal default days
-CREATE TABLE IF NOT EXISTS rehearsal_default_days (
-    id TEXT PRIMARY KEY,
-    association_id TEXT NOT NULL,
-    orchestra_id TEXT,
-    day_of_week INTEGER NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT NOT NULL,
-    location TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL
-);
-
--- Rehearsals
-CREATE TABLE IF NOT EXISTS rehearsals (
-    id TEXT PRIMARY KEY,
-    association_id TEXT NOT NULL,
-    orchestra_id TEXT,
-    date TEXT NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT NOT NULL,
-    location TEXT,
-    type TEXT NOT NULL DEFAULT 'regular',
-    notes TEXT,
-    spond_event_id TEXT,
-    created_by TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    FOREIGN KEY (orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-);
-
--- Rehearsal pieces
-CREATE TABLE IF NOT EXISTS rehearsal_pieces (
-    id TEXT PRIMARY KEY,
-    rehearsal_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    notes TEXT,
-    sort_order INTEGER DEFAULT 0,
-    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE
-);
-
--- Rehearsal attendance
-CREATE TABLE IF NOT EXISTS rehearsal_attendance (
-    id TEXT PRIMARY KEY,
-    rehearsal_id TEXT NOT NULL,
-    user_id TEXT,
-    spond_member_id TEXT,
-    member_name TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'unknown',
-    FOREIGN KEY (rehearsal_id) REFERENCES rehearsals(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-);
-
--- Activity log
-CREATE TABLE IF NOT EXISTS activity_log (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    action TEXT NOT NULL,
-    details TEXT,
-    ip_address TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Audit logs (simplified for tests)
-CREATE TABLE IF NOT EXISTS audit_logs (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    action TEXT NOT NULL,
-    entity_type TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    entity_name TEXT,
-    details TEXT,
-    ip_address TEXT,
-    user_agent TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Notifications
-CREATE TABLE IF NOT EXISTS notifications (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    type TEXT NOT NULL,
-    title TEXT NOT NULL,
-    body TEXT,
-    data TEXT,
-    is_read BOOLEAN DEFAULT 0,
-    read_at DATETIME,
-    sent_push BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Notification preferences
-CREATE TABLE IF NOT EXISTS notification_preferences (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL UNIQUE,
-    new_music BOOLEAN DEFAULT 1,
-    rehearsal_changes BOOLEAN DEFAULT 1,
-    seating_updates BOOLEAN DEFAULT 1,
-    chat_messages BOOLEAN DEFAULT 1,
-    practice_reminders BOOLEAN DEFAULT 1,
-    concert_reminders BOOLEAN DEFAULT 1,
-    email_enabled BOOLEAN DEFAULT 1,
-    push_enabled BOOLEAN DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Push subscriptions
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    endpoint TEXT NOT NULL UNIQUE,
-    p256dh_key TEXT NOT NULL,
-    auth_key TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Concert types
-CREATE TABLE IF NOT EXISTS concert_types (
-    id TEXT PRIMARY KEY,
-    association_id TEXT NOT NULL,
-    value TEXT NOT NULL,
-    label TEXT NOT NULL,
-    sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    UNIQUE(association_id, value)
-);
-
--- Concerts
-CREATE TABLE IF NOT EXISTS concerts (
-    id TEXT PRIMARY KEY,
-    association_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    date TEXT NOT NULL,
-    end_date TEXT,
-    location TEXT,
-    venue_type TEXT,
-    concert_type TEXT DEFAULT 'concert',
-    description TEXT,
-    notes TEXT,
-    wheelchair_spaces INTEGER DEFAULT 0,
-    companion_spaces INTEGER DEFAULT 0,
-    hearing_loop_available BOOLEAN DEFAULT 0,
-    accessible_parking_info TEXT,
-    accessibility_info TEXT,
-    accessibility_contact_email TEXT,
-    accessibility_contact_phone TEXT,
-    created_by TEXT,
-    deleted_at DATETIME DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-);
-
--- Concert program items
-CREATE TABLE IF NOT EXISTS concert_program_items (
-    id TEXT PRIMARY KEY,
-    concert_id TEXT NOT NULL,
-    music_title_id TEXT,
-    title TEXT NOT NULL,
-    composer TEXT,
-    arranger TEXT,
-    sort_order INTEGER DEFAULT 0,
-    notes TEXT,
-    part_of_set TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
-    FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE SET NULL
-);
-
--- Concert media
-CREATE TABLE IF NOT EXISTS concert_media (
-    id TEXT PRIMARY KEY,
-    concert_id TEXT NOT NULL,
-    media_type TEXT NOT NULL,
-    url TEXT,
-    file_path TEXT,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE
-);
-
--- Concert attendance
-CREATE TABLE IF NOT EXISTS concert_attendance (
-    id TEXT PRIMARY KEY,
-    concert_id TEXT NOT NULL,
-    user_id TEXT,
-    member_name TEXT NOT NULL,
-    instrument_played TEXT,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (concert_id) REFERENCES concerts(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-);
-`;
+  for (const migration of migrations) {
+    try {
+      migration.up();
+    } catch (err: any) {
+      const message: string = err?.message ?? '';
+      if (
+        message.includes('already exists') ||
+        message.includes('duplicate column name') ||
+        message.includes('no such column')
+      ) {
+        continue;
+      }
+      throw new Error(`Test migration ${migration.version} failed: ${message}`, { cause: err });
+    }
+  }
+}
 
 class PreparedStatement {
   private wrapper: TestDatabaseWrapper;
@@ -489,6 +99,8 @@ class TestDatabaseWrapper {
   private db: any = null;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private sqlJs: any = null;
+  private emptySnapshot: Uint8Array | null = null;
   private inTransaction: boolean = false;
 
   async init(): Promise<void> {
@@ -497,10 +109,17 @@ class TestDatabaseWrapper {
 
     this.initPromise = (async () => {
       const SQL = await initSqlJs();
+      this.sqlJs = SQL;
       this.db = new SQL.Database();
       this.db.run('PRAGMA foreign_keys = ON');
-      this.db.run(testSchema);
+      applySchema(this.db);
       this.initialized = true;
+      // Migrations run through the mocked connection module, which resolves
+      // to this wrapper, so they must run after `initialized` is set.
+      await applyMigrations();
+      // Snapshot the fully migrated, empty database so reset() is a restore
+      // instead of re-running ~200 DDL statements before every test.
+      this.emptySnapshot = this.db.export();
     })();
 
     return this.initPromise;
@@ -509,11 +128,13 @@ class TestDatabaseWrapper {
   async reset(): Promise<void> {
     if (!this.db) return;
 
-    // Drop and recreate all tables
-    const SQL = await initSqlJs();
-    this.db = new SQL.Database();
+    // Restore the empty, fully migrated snapshot taken during init().
+    const SQL = this.sqlJs ?? (await initSqlJs());
+    this.db = this.emptySnapshot ? new SQL.Database(this.emptySnapshot) : new SQL.Database();
     this.db.run('PRAGMA foreign_keys = ON');
-    this.db.run(testSchema);
+    if (!this.emptySnapshot) {
+      applySchema(this.db);
+    }
   }
 
   private ensureInit(): any {
