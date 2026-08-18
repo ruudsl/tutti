@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { generateSecret, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
 import db from '../database/connection';
@@ -35,7 +35,12 @@ const loginRateLimiter = rateLimit({
   // The limiter's in-memory store persists across tests within a file,
   // so deliberate failed-login tests would trip it for later tests.
   skip: () => process.env.NODE_ENV === 'test',
-  keyGenerator: (req) => req.ip || 'unknown',
+  // req.ip rechtstreeks als sleutel gebruiken telt elk IPv6-adres apart.
+  // Een aanvaller met een /64 heeft er 2^64 en komt dus nooit aan de limiet;
+  // de bescherming tegen brute force op inloggen is dan alleen nog van
+  // toepassing op IPv4. ipKeyGenerator normaliseert IPv6 naar het toegewezen
+  // blok en laat IPv4 ongemoeid.
+  keyGenerator: (req) => (req.ip ? ipKeyGenerator(req.ip) : 'unknown'),
 });
 
 // Rate limiter for password reset: 3 attempts per hour per email
@@ -47,9 +52,14 @@ const passwordResetRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Rate limit by email address (normalized to lowercase)
-    const email = req.body?.email?.toLowerCase?.() || req.ip || 'unknown';
-    return `pwd-reset:${email}`;
+    // Bij voorkeur op e-mailadres, want daar gaat het verzoek over. Zonder
+    // e-mail in de body valt hij terug op het IP, en dan geldt hetzelfde
+    // IPv6-verhaal als bij de inloglimiet hierboven.
+    const email = req.body?.email?.toLowerCase?.();
+    if (email) {
+      return `pwd-reset:${email}`;
+    }
+    return `pwd-reset:${req.ip ? ipKeyGenerator(req.ip) : 'unknown'}`;
   },
 });
 
