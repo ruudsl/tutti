@@ -13,22 +13,27 @@ export default function Changelog() {
 
   // Simple markdown to HTML conversion for changelog
   const renderMarkdown = (content: string): string => {
-    return content
-      // Headers
-      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-      .replace(/^## \[(.+?)\] - (.+)$/gm, '<h3 class="changelog-version"><span class="version">$1</span> <span class="date">$2</span></h3>')
-      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^# (.+)$/gm, '<h2>$1</h2>')
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Lists
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      // Wrap consecutive li elements in ul
-      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-      // Paragraphs (non-empty lines that aren't already wrapped)
-      .replace(/^(?!<[hul]|$)(.+)$/gm, '<p>$1</p>')
-      // Line breaks
-      .replace(/\n\n/g, '\n');
+    return (
+      content
+        // Headers
+        .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+        .replace(
+          /^## \[(.+?)\] - (.+)$/gm,
+          '<h3 class="changelog-version"><span class="version">$1</span> <span class="date">$2</span></h3>',
+        )
+        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+        // Bold
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // Lists
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Wrap consecutive li elements in ul
+        .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+        // Paragraphs (non-empty lines that aren't already wrapped)
+        .replace(/^(?!<[hul]|$)(.+)$/gm, '<p>$1</p>')
+        // Line breaks
+        .replace(/\n\n/g, '\n')
+    );
   };
 
   return (
@@ -46,11 +51,7 @@ export default function Changelog() {
             </div>
           )}
 
-          {error && (
-            <div className="alert alert-danger">
-              {t('errors.generic')}
-            </div>
-          )}
+          {error && <div className="alert alert-danger">{t('errors.generic')}</div>}
 
           {data && (
             <div

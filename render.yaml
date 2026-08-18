@@ -39,7 +39,7 @@ services:
       - key: MP3_UPLOAD_DIR
         value: /opt/render/project/data/uploads/mp3
       - key: FRONTEND_URL
-        sync: false  # Set this manually in Render dashboard after deploying frontend
+        sync: false # Set this manually in Render dashboard after deploying frontend
     disk:
       name: harmonie-data
       mountPath: /opt/render/project/data

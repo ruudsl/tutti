@@ -1,4 +1,5 @@
 # Verwerkersovereenkomst Template
+
 # Data Processing Agreement (DPA)
 
 > **Instructie:** Dit is een template verwerkersovereenkomst voor verenigingen die Tutti hosten voor andere verenigingen, of voor SaaS-aanbieders van Tutti. Vervang alle tekst tussen [haakjes] met uw specifieke gegevens.
@@ -10,6 +11,7 @@
 ## Partijen
 
 **Verwerkingsverantwoordelijke:**
+
 - Naam: [Naam Vereniging/Organisatie]
 - Adres: [Adres]
 - KvK-nummer: [KvK-nummer]
@@ -17,6 +19,7 @@
 - Hierna te noemen: "Verwerkingsverantwoordelijke"
 
 **Verwerker:**
+
 - Naam: [Naam Hostingprovider/SaaS-aanbieder]
 - Adres: [Adres]
 - KvK-nummer: [KvK-nummer]
@@ -56,9 +59,11 @@ In deze overeenkomst wordt verstaan onder:
 De Verwerker verbindt zich tot het volgende:
 
 ### 3.1 Geheimhouding
+
 - De Verwerker zorgt ervoor dat alle personen die toegang hebben tot persoonsgegevens gebonden zijn aan geheimhouding.
 
 ### 3.2 Beveiligingsmaatregelen
+
 De Verwerker implementeert passende technische en organisatorische maatregelen, waaronder:
 
 - Versleuteling van data in transit (TLS 1.2+) en at rest
@@ -69,12 +74,15 @@ De Verwerker implementeert passende technische en organisatorische maatregelen, 
 - Incidentresponsprocedures
 
 ### 3.3 Subverwerkers
+
 - De Verwerker schakelt geen subverwerkers in zonder voorafgaande schriftelijke toestemming van de Verwerkingsverantwoordelijke.
 - De huidige goedgekeurde subverwerkers zijn opgenomen in Bijlage B.
 - Bij wijzigingen wordt de Verwerkingsverantwoordelijke 30 dagen vooraf geïnformeerd.
 
 ### 3.4 Bijstand
+
 De Verwerker staat de Verwerkingsverantwoordelijke bij met:
+
 - Verzoeken van betrokkenen (inzage, rectificatie, wissing, etc.)
 - Meldplicht datalekken
 - Gegevensbeschermingseffectbeoordelingen (DPIA)
@@ -86,6 +94,7 @@ De Verwerker staat de Verwerkingsverantwoordelijke bij met:
 4.1 De Verwerker stelt de Verwerkingsverantwoordelijke binnen **5 werkdagen** op de hoogte van verzoeken van betrokkenen.
 
 4.2 De Verwerker ondersteunt de Verwerkingsverantwoordelijke technisch bij het voldoen aan verzoeken, met inbegrip van:
+
 - Export van persoonsgegevens (JSON/ZIP formaat)
 - Verwijdering van persoonsgegevens
 - Rectificatie van persoonsgegevens
@@ -97,6 +106,7 @@ De Verwerker staat de Verwerkingsverantwoordelijke bij met:
 5.1 De Verwerker meldt een datalek aan de Verwerkingsverantwoordelijke **binnen 24 uur** na ontdekking.
 
 5.2 De melding bevat minimaal:
+
 - Aard van het datalek
 - Categorieën en aantal betrokkenen
 - Waarschijnlijke gevolgen
@@ -111,6 +121,7 @@ De Verwerker staat de Verwerkingsverantwoordelijke bij met:
 6.1 De Verwerker stelt alle informatie beschikbaar die nodig is om naleving van deze overeenkomst aan te tonen.
 
 6.2 De Verwerkingsverantwoordelijke heeft het recht om audits uit te (laten) voeren, mits:
+
 - Minimaal 14 dagen vooraf aangekondigd
 - Tijdens reguliere werkuren
 - Met inachtneming van vertrouwelijkheid
@@ -122,6 +133,7 @@ De Verwerker staat de Verwerkingsverantwoordelijke bij met:
 ## Artikel 7 - Doorgifte buiten de EER
 
 7.1 De Verwerker verwerkt persoonsgegevens uitsluitend binnen de Europese Economische Ruimte (EER), tenzij:
+
 - De Verwerkingsverantwoordelijke vooraf schriftelijk toestemming geeft
 - Er adequate waarborgen zijn (adequaatheidsbesluit, standaardcontractbepalingen)
 
@@ -134,6 +146,7 @@ De Verwerker staat de Verwerkingsverantwoordelijke bij met:
 8.1 Deze overeenkomst treedt in werking op de ingangsdatum en loopt zolang de Verwerker persoonsgegevens verwerkt namens de Verwerkingsverantwoordelijke.
 
 8.2 Bij beëindiging van de overeenkomst zal de Verwerker, naar keuze van de Verwerkingsverantwoordelijke:
+
 - Alle persoonsgegevens retourneren in een gangbaar formaat, of
 - Alle persoonsgegevens veilig wissen
 
@@ -189,12 +202,12 @@ Handtekening: ________________________
 
 ## 1. Doeleinden van verwerking
 
-| Doeleinde | Beschrijving |
-|-----------|--------------|
-| Ledenadministratie | Beheer van leden en hun gegevens voor de muziekvereniging |
-| Toegangsbeheer | Authenticatie en autorisatie voor de Tutti-applicatie |
-| Repetitie- en concertbeheer | Planning en aanwezigheidsregistratie |
-| Muziekbeheer | Toegang tot en beheer van muziekpartijen |
+| Doeleinde                   | Beschrijving                                              |
+| --------------------------- | --------------------------------------------------------- |
+| Ledenadministratie          | Beheer van leden en hun gegevens voor de muziekvereniging |
+| Toegangsbeheer              | Authenticatie en autorisatie voor de Tutti-applicatie     |
+| Repetitie- en concertbeheer | Planning en aanwezigheidsregistratie                      |
+| Muziekbeheer                | Toegang tot en beheer van muziekpartijen                  |
 
 ## 2. Categorieën persoonsgegevens
 
@@ -212,37 +225,40 @@ Handtekening: ________________________
 
 ## 4. Bewaartermijnen
 
-| Gegevenstype | Bewaartermijn |
-|--------------|---------------|
+| Gegevenstype          | Bewaartermijn              |
+| --------------------- | -------------------------- |
 | Actieve ledengegevens | Duur lidmaatschap + 2 jaar |
-| Sessiegegevens | 90 dagen |
-| Auditlogs | 1 jaar |
-| Back-ups | 30 dagen (rolling) |
+| Sessiegegevens        | 90 dagen                   |
+| Auditlogs             | 1 jaar                     |
+| Back-ups              | 30 dagen (rolling)         |
 
 ---
 
 # BIJLAGE B - Subverwerkers
 
-| Subverwerker | Dienst | Locatie | Waarborgen |
-|--------------|--------|---------|------------|
-| [Naam] | [Hosting/Cloud] | [Land] | [Certificering/SCC] |
-| [Naam] | [E-mail] | [Land] | [Certificering/SCC] |
+| Subverwerker | Dienst          | Locatie | Waarborgen          |
+| ------------ | --------------- | ------- | ------------------- |
+| [Naam]       | [Hosting/Cloud] | [Land]  | [Certificering/SCC] |
+| [Naam]       | [E-mail]        | [Land]  | [Certificering/SCC] |
 
 ---
 
 # BIJLAGE C - Technische en organisatorische maatregelen
 
 ## 1. Fysieke beveiliging
+
 - Datacenter met ISO 27001 certificering
 - Toegangscontrole met badge/biometrie
 - 24/7 bewaking
 
 ## 2. Netwerkbeveiliging
+
 - Firewall en intrusion detection
 - DDoS-bescherming
 - Netwerksegmentatie
 
 ## 3. Applicatiebeveiliging
+
 - HTTPS/TLS 1.2+ voor alle verbindingen
 - Wachtwoord hashing (bcrypt)
 - Sessiebeveiliging met secure cookies
@@ -250,20 +266,23 @@ Handtekening: ________________________
 - Rate limiting
 
 ## 4. Databeveiliging
+
 - Encryptie at rest (AES-256)
 - Dagelijkse versleutelde back-ups
 - Multi-tenant isolatie op database-niveau
 
 ## 5. Toegangscontrole
+
 - Role-based access control (RBAC)
 - Principe van minimale rechten
 - Audit logging van alle toegang
 
 ## 6. Incidentbeheer
+
 - 24/7 monitoring
 - Incidentresponsplan
 - Gedefinieerde escalatieprocedure
 
 ---
 
-*Dit document is een template en geen juridisch advies. Raadpleeg een juridisch adviseur voor uw specifieke situatie. Template opgesteld voor gebruik met Tutti, open source software onder MIT-licentie.*
+_Dit document is een template en geen juridisch advies. Raadpleeg een juridisch adviseur voor uw specifieke situatie. Template opgesteld voor gebruik met Tutti, open source software onder MIT-licentie._

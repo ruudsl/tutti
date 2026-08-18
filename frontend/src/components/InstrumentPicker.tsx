@@ -46,7 +46,7 @@ export function InstrumentPicker({ value, onChange, disabled }: InstrumentPicker
   }, []);
 
   const handleSelect = (concept: VocabularyConcept) => {
-    const exists = value.some(i => i.uri === concept.uri);
+    const exists = value.some((i) => i.uri === concept.uri);
     if (!exists) {
       onChange([
         ...value,
@@ -64,15 +64,15 @@ export function InstrumentPicker({ value, onChange, disabled }: InstrumentPicker
   };
 
   const handleRemove = (uri: string) => {
-    onChange(value.filter(i => i.uri !== uri));
+    onChange(value.filter((i) => i.uri !== uri));
   };
 
   const handleUpdateCount = (uri: string, count: number) => {
-    onChange(value.map(i => (i.uri === uri ? { ...i, count: Math.max(1, count) } : i)));
+    onChange(value.map((i) => (i.uri === uri ? { ...i, count: Math.max(1, count) } : i)));
   };
 
   const handleToggleOptional = (uri: string) => {
-    onChange(value.map(i => (i.uri === uri ? { ...i, isOptional: !i.isOptional } : i)));
+    onChange(value.map((i) => (i.uri === uri ? { ...i, isOptional: !i.isOptional } : i)));
   };
 
   return (
@@ -159,7 +159,7 @@ export function InstrumentPicker({ value, onChange, disabled }: InstrumentPicker
               <li className="px-4 py-2 text-base-content/60">{t('metadata.noResults')}</li>
             ) : (
               searchResults.instruments.map((concept) => {
-                const isSelected = value.some(i => i.uri === concept.uri);
+                const isSelected = value.some((i) => i.uri === concept.uri);
                 return (
                   <li key={concept.uri}>
                     <button

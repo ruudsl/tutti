@@ -373,8 +373,7 @@ router.get(
     `,
       )
       .get(req.params.listId, req.user!.associationId) as
-      | { id: string; name: string; orchestra_name: string }
-      | undefined;
+      { id: string; name: string; orchestra_name: string } | undefined;
 
     if (!list) {
       return res.status(404).json({ error: 'Muzieklijst niet gevonden.' });

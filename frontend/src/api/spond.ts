@@ -30,7 +30,9 @@ export const syncSpond = async (): Promise<SpondSyncResult> => {
   return data;
 };
 
-export const syncSpondRehearsal = async (rehearsalId: string): Promise<{ message: string; attendanceCount: number }> => {
+export const syncSpondRehearsal = async (
+  rehearsalId: string,
+): Promise<{ message: string; attendanceCount: number }> => {
   const { data } = await api.post(`/spond/sync/${rehearsalId}`);
   return data;
 };
@@ -41,7 +43,11 @@ export const getSpondOrchestraGroups = async (): Promise<SpondOrchestraGroup[]> 
   return data;
 };
 
-export const setSpondOrchestraGroup = async (orchestraId: string, spondGroupId: string | null, spondGroupName?: string): Promise<void> => {
+export const setSpondOrchestraGroup = async (
+  orchestraId: string,
+  spondGroupId: string | null,
+  spondGroupName?: string,
+): Promise<void> => {
   await api.put(`/spond/orchestra-groups/${orchestraId}`, { spondGroupId, spondGroupName });
 };
 
@@ -51,7 +57,11 @@ export const getSpondMemberLinks = async (): Promise<SpondMemberLink[]> => {
   return data;
 };
 
-export const createSpondMemberLink = async (spondMemberId: string, userId: string, spondMemberName?: string): Promise<void> => {
+export const createSpondMemberLink = async (
+  spondMemberId: string,
+  userId: string,
+  spondMemberName?: string,
+): Promise<void> => {
   await api.post('/spond/member-links', { spondMemberId, userId, spondMemberName });
 };
 
@@ -60,7 +70,10 @@ export const deleteSpondMemberLink = async (id: string): Promise<void> => {
 };
 
 // Spond Attendance (bidirectional sync)
-export const updateMyAttendance = async (rehearsalId: string, accepted: boolean): Promise<{
+export const updateMyAttendance = async (
+  rehearsalId: string,
+  accepted: boolean,
+): Promise<{
   message: string;
   status: string;
   spondSynced: boolean;
@@ -69,7 +82,9 @@ export const updateMyAttendance = async (rehearsalId: string, accepted: boolean)
   return data;
 };
 
-export const getMyAttendanceStatus = async (rehearsalId: string): Promise<{
+export const getMyAttendanceStatus = async (
+  rehearsalId: string,
+): Promise<{
   status: string;
   canSyncToSpond: boolean;
 }> => {

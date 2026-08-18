@@ -36,15 +36,16 @@ export default function AuditLogs() {
   // React Query for audit logs
   const { data, isLoading, error } = useQuery({
     queryKey: ['auditLogs', page, pageSize, actionFilter, entityFilter, userFilter, dateFrom, dateTo],
-    queryFn: () => getAuditLogs({
-      page,
-      pageSize,
-      action: actionFilter || undefined,
-      entityType: entityFilter || undefined,
-      userId: userFilter || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-    }),
+    queryFn: () =>
+      getAuditLogs({
+        page,
+        pageSize,
+        action: actionFilter || undefined,
+        entityType: entityFilter || undefined,
+        userId: userFilter || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      }),
     staleTime: 30 * 1000, // 30 seconds for logs
   });
 
@@ -91,7 +92,10 @@ export default function AuditLogs() {
               <select
                 className="form-control form-select"
                 value={actionFilter}
-                onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setActionFilter(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('common.all')}</option>
                 <option value="create">{t('auditLogs.actions.create')}</option>
@@ -109,7 +113,10 @@ export default function AuditLogs() {
               <select
                 className="form-control form-select"
                 value={entityFilter}
-                onChange={(e) => { setEntityFilter(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setEntityFilter(e.target.value);
+                  setPage(1);
+                }}
               >
                 <option value="">{t('common.all')}</option>
                 <option value="user">{t('auditLogs.entities.user')}</option>
@@ -129,7 +136,10 @@ export default function AuditLogs() {
                 type="date"
                 className="form-control"
                 value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
 
@@ -139,7 +149,10 @@ export default function AuditLogs() {
                 type="date"
                 className="form-control"
                 value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
 
@@ -171,9 +184,7 @@ export default function AuditLogs() {
           </h2>
         </div>
         <div className="card-body flush">
-          {error && (
-            <div className="alert alert-danger">{t('auditLogs.errorLoading')}</div>
-          )}
+          {error && <div className="alert alert-danger">{t('auditLogs.errorLoading')}</div>}
 
           {isLoading ? (
             <table className="table">
@@ -194,7 +205,9 @@ export default function AuditLogs() {
             </table>
           ) : logs.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
+              <div className="empty-icon">
+                <Icon name="clipboard" size={48} />
+              </div>
               <p>{t('auditLogs.noLogs')}</p>
             </div>
           ) : (
@@ -211,9 +224,7 @@ export default function AuditLogs() {
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id}>
-                    <td className="text-nowrap text-sm">
-                      {formatDate(log.createdAt)}
-                    </td>
+                    <td className="text-nowrap text-sm">{formatDate(log.createdAt)}</td>
                     <td>{log.userName}</td>
                     <td>
                       <span className="audit-action">
@@ -225,9 +236,7 @@ export default function AuditLogs() {
                       <span className="badge badge-secondary">
                         {t(`auditLogs.entities.${log.entityType}`, { defaultValue: log.entityType })}
                       </span>
-                      {log.entityName && (
-                        <span className="ml-1 text-sm">{log.entityName}</span>
-                      )}
+                      {log.entityName && <span className="ml-1 text-sm">{log.entityName}</span>}
                     </td>
                     <td>{formatChanges(log.changes)}</td>
                   </tr>
@@ -238,13 +247,7 @@ export default function AuditLogs() {
         </div>
       </div>
 
-      {totalPages > 1 && (
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-        />
-      )}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
     </div>
   );
 }

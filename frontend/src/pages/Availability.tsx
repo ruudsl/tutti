@@ -121,9 +121,9 @@ export default function Availability() {
   const handleBulkSet = async (status: AvailabilityStatus) => {
     // Set availability for all weekdays in the current month
     const dates = calendarDays
-      .filter(d => d.getMonth() === currentMonth.getMonth() && d.getDay() !== 0 && d.getDay() !== 6)
-      .filter(d => d >= today)
-      .map(d => d.toISOString().split('T')[0]);
+      .filter((d) => d.getMonth() === currentMonth.getMonth() && d.getDay() !== 0 && d.getDay() !== 6)
+      .filter((d) => d >= today)
+      .map((d) => d.toISOString().split('T')[0]);
 
     if (dates.length === 0) {
       showError(t('availability.noFutureDates'));
@@ -140,11 +140,11 @@ export default function Availability() {
   };
 
   const handlePrevMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
   const handleToday = () => {
@@ -153,10 +153,14 @@ export default function Availability() {
 
   const getStatusColor = (status: string | undefined): string => {
     switch (status) {
-      case 'available': return 'var(--success)';
-      case 'unavailable': return 'var(--danger)';
-      case 'maybe': return 'var(--warning, orange)';
-      default: return 'transparent';
+      case 'available':
+        return 'var(--success)';
+      case 'unavailable':
+        return 'var(--danger)';
+      case 'maybe':
+        return 'var(--warning, orange)';
+      default:
+        return 'transparent';
     }
   };
 
@@ -178,7 +182,15 @@ export default function Availability() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>{t('availability.title')}</h1>
         {isManager && (
-          <div style={{ display: 'flex', gap: '0', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '0',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              overflow: 'hidden',
+            }}
+          >
             <button
               onClick={() => setViewMode('my')}
               style={{
@@ -231,9 +243,7 @@ export default function Availability() {
           <div className="card mb-3">
             <div className="card-body">
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                  {t('availability.bulkSet')}:
-                </span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('availability.bulkSet')}:</span>
                 <button
                   className="btn btn-sm"
                   style={{ backgroundColor: 'var(--success)', color: 'white' }}
@@ -267,7 +277,7 @@ export default function Availability() {
             <div className="card-body flush" style={{ padding: '0.5rem' }}>
               {/* Day headers */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
-                {[1, 2, 3, 4, 5, 6, 0].map(dayNum => (
+                {[1, 2, 3, 4, 5, 6, 0].map((dayNum) => (
                   <div
                     key={dayNum}
                     style={{
@@ -285,7 +295,7 @@ export default function Availability() {
 
               {/* Calendar cells */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-                {calendarDays.map(day => {
+                {calendarDays.map((day) => {
                   const dateStr = day.toISOString().split('T')[0];
                   const entry = availabilityMap.get(dateStr);
                   const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
@@ -408,15 +418,26 @@ export default function Availability() {
             <div className="card-body">
               <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--success)' }} />
+                  <span
+                    style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--success)' }}
+                  />
                   {t('availability.statuses.available')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--warning, orange)' }} />
+                  <span
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--warning, orange)',
+                    }}
+                  />
                   {t('availability.statuses.maybe')}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--danger)' }} />
+                  <span
+                    style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--danger)' }}
+                  />
                   {t('availability.statuses.unavailable')}
                 </div>
               </div>
@@ -437,7 +458,7 @@ export default function Availability() {
                     type="date"
                     className="form-control"
                     value={selectedDate || ''}
-                    onChange={e => setSelectedDate(e.target.value)}
+                    onChange={(e) => setSelectedDate(e.target.value)}
                   />
                 </div>
                 {orchestras.length > 0 && (
@@ -446,11 +467,13 @@ export default function Availability() {
                     <select
                       className="form-control form-select"
                       value={orchestraFilter}
-                      onChange={e => setOrchestraFilter(e.target.value)}
+                      onChange={(e) => setOrchestraFilter(e.target.value)}
                     >
                       <option value="">{t('rehearsals.allOrchestras')}</option>
-                      {orchestras.map(o => (
-                        <option key={o.id} value={o.id}>{o.name}</option>
+                      {orchestras.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -463,25 +486,45 @@ export default function Availability() {
           {selectedDate && teamData && (
             <div className="card">
               <div className="card-header">
-                <h2 className="card-title">{t('availability.teamFor')} {selectedDate}</h2>
+                <h2 className="card-title">
+                  {t('availability.teamFor')} {selectedDate}
+                </h2>
               </div>
               <div className="card-body">
                 {/* Summary */}
                 <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--success)' }} />
+                    <span
+                      style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--success)' }}
+                    />
                     <strong>{teamData.summary.available}</strong> {t('availability.statuses.available')}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--warning, orange)' }} />
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--warning, orange)',
+                      }}
+                    />
                     <strong>{teamData.summary.maybe}</strong> {t('availability.statuses.maybe')}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--danger)' }} />
+                    <span
+                      style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--danger)' }}
+                    />
                     <strong>{teamData.summary.unavailable}</strong> {t('availability.statuses.unavailable')}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--secondary)' }} />
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--secondary)',
+                      }}
+                    />
                     <strong>{teamData.summary.unknown}</strong> {t('availability.statuses.unknown')}
                   </div>
                 </div>
@@ -490,7 +533,13 @@ export default function Availability() {
                 {teamLoading ? (
                   <SkeletonTable rows={8} columns={3} />
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '0.5rem',
+                    }}
+                  >
                     {teamData.members.map((member: TeamMember) => (
                       <div
                         key={member.userId}

@@ -7,6 +7,7 @@ All notable changes to this application are documented here.
 ### Added
 
 #### Events & Performance Planner
+
 - **Complete event management** — Manage events with detailed location info, schedules and programs
 - **Transport coordination** — Register cars/buses with drivers, passengers and meeting points
 - **Packing lists** — Create packing lists with templates, track progress per item, assign responsible persons
@@ -15,6 +16,7 @@ All notable changes to this application are documented here.
 - **Location management** — Manage favorite locations with facilities (power, changing rooms, parking)
 
 #### Multiple Associations
+
 - **Multi-tenant support** — One installation for multiple orchestras/associations
 - **Super admin panel** — Manage all associations, subscriptions and limits
 - **Membership** — Users can be members of multiple associations
@@ -23,6 +25,7 @@ All notable changes to this application are documented here.
 - **Activity log** — Audit trail of all important actions per association
 
 ### Technical
+
 - 20+ new database tables for events, locations, transport, packing lists and multi-tenant
 - Full API with ~50 new endpoints
 - React Query hooks for all new functionality
@@ -33,6 +36,7 @@ All notable changes to this application are documented here.
 ### Added
 
 #### WP3: Accessibility (WCAG 2.1 AA)
+
 - **Keyboard navigation** — Full application keyboard accessible with visible focus indicators
 - **Skip links** — Direct navigation to main content for screen reader users
 - **ARIA labels** — Correct ARIA attributes for all interactive elements, modals and forms
@@ -40,17 +44,20 @@ All notable changes to this application are documented here.
 - **Accessibility tests** — Comprehensive jest-axe tests for all components
 
 #### WP4: Docker & Self-hosting
+
 - **Docker Compose** — Complete production setup with Nginx reverse proxy, Let's Encrypt SSL, and health checks
 - **Multi-architecture** — Docker images for AMD64 and ARM64 (Apple Silicon, Raspberry Pi)
 - **Backup volumes** — Automatic volume mounts for database and uploads
 
 #### WP5: Music Metadata & Interoperability
+
 - **MusicXML import** — Parse MusicXML files for automatic metadata extraction
 - **JSKOS vocabularies** — Standardized genre classification via JSKOS/SKOS
 - **Dublin Core export** — Metadata export conforming to Dublin Core standard
 - **IIIF manifest** — Sheet music available via IIIF protocol
 
 #### WP6: GDPR & Privacy-by-Design
+
 - **Data export** — Users can download all their data (JSON)
 - **Deletion requests** — Self-service account deletion with 30-day retention period
 - **Retention settings** — Configurable retention periods per data type
@@ -59,11 +66,13 @@ All notable changes to this application are documented here.
 - **Consent tracking** — Recording of user consents
 
 #### WP7: Community & Governance
+
 - **Code of Conduct** — Contributor Covenant code of conduct
 - **Contributing Guide** — Guidelines for contributing to the project
 - **Security Policy** — Responsible disclosure policy
 
 #### WP8: CI/CD & Test Coverage
+
 - **GitHub Actions** — Automated CI/CD pipeline with parallel testing
 - **CodeQL** — SAST security scanning for vulnerabilities
 - **Dependabot** — Automatic dependency updates
@@ -71,6 +80,7 @@ All notable changes to this application are documented here.
 - **Multi-tenant tests** — Data isolation tests between organizations
 
 #### WP10: PWA & Mobile UX
+
 - **App shortcuts** — Direct access to My Music, Rehearsals, Tickets from homescreen
 - **Share Target** — Receive PDF files via native share dialog
 - **Push notifications** — Native push notifications with click handling and navigation
@@ -78,11 +88,13 @@ All notable changes to this application are documented here.
 - **Enhanced caching** — Smart cache strategies per content type
 
 ### Improved
+
 - **156 missing English translations** — Full parity between NL/EN/DE
 - **Accessibility tests** — Tests on real components instead of mock HTML
 - **Service worker** — Custom SW with workbox for push and offline functionality
 
 ### Tests
+
 - Backend: 265+ tests
 - Frontend: 85+ tests (including accessibility)
 - E2E coverage for critical user flows
@@ -90,6 +102,7 @@ All notable changes to this application are documented here.
 ## [1.11.0] - 2026-04-25
 
 ### Added
+
 - **Cloud import (OneDrive/SharePoint & Google Drive)** — Import sheet music directly from OneDrive/SharePoint or Google Drive without downloading first. Files are fetched server-side using access tokens and parsed like regular uploads
 - **Google Drive settings** — Separate configuration card in Settings for OAuth Client ID and API Key (Picker API + Drive API)
 - **Role-based User Guide** — Guide sections are filtered by user role (member, conductor, music_committee, admin) with comprehensive HTML content in all three languages
@@ -98,6 +111,7 @@ All notable changes to this application are documented here.
 - **iOS-style bottom sheets on mobile** — Modals on smartphones slide up from below with a "grabber" handle and safe-area padding, per Apple HIG
 
 ### Improved (Apple HIG alignment)
+
 - **Tap targets** — Minimum 44×44pt for all buttons (Apple HIG requirement), including icon-only buttons
 - **Border radius** — Buttons 10px, cards 14px, modals 16-20px for a more natural iOS feel
 - **Animation easing** — Replaced with iOS easing curves (`cubic-bezier(0.25, 0.1, 0.25, 1)`) plus spring curve for playful animations
@@ -109,12 +123,14 @@ All notable changes to this application are documented here.
 - **Language switcher relocated** — From top navigation bar to user settings (profile)
 
 ### Documentation
+
 - **Cloud import in READMEs** — Added to README.md, README.nl.md and README.de.md including architecture diagrams, configuration instructions (OAuth setup) and API endpoint references
 - **Changelog translations** — Full English and German changelogs with all versions
 
 ## [1.10.0] - 2026-04-24
 
 ### Added
+
 - **In-app PDF viewer** — View sheet music directly in the app without downloading first. Supports zoom, swipe navigation between pages, click-and-drag panning when zoomed, and dark mode for better readability
 - **PDF annotations** — Members can add personal per-page notes to sheet music with color selection. Annotations are private and persist across sessions
 - **Offline PDF caching** — "Make available offline" button per music list caches all PDFs for offline use. Green checkmarks show which pieces are cached
@@ -131,6 +147,7 @@ All notable changes to this application are documented here.
 - **German README** — Complete README.de.md translation with architecture diagrams
 
 ### Improved
+
 - Global search button (🔍) added to the header
 - Dashboard widget empty states with icons and action links
 - Architecture diagrams in READMEs updated to reflect all current external services (Mollie, Telegram, WhatsApp, Web Push, IMSLP, Spotify, Apple Music)
@@ -139,18 +156,21 @@ All notable changes to this application are documented here.
 - Tokens are masked in settings API responses for better security
 
 ### Fixed
+
 - PDF viewer "Could not load PDF" error — blob URLs were passed as raw data instead of as a URL
 - PDF viewer zoom had no visible effect — canvas `maxWidth: 100%` constraints scaled it back down
 - PDF viewer panning/scrolling when zoomed — canvas in flex container now gets `flex-shrink: 0` when zoomed
 - Missing translations on the practice schedule page (`common.orchestra`, `common.notes`, `music.title`, etc.)
 
 ### Tests
+
 - 47 new tests added (annotations route, instruments route, pdfCache utility)
 - Total test coverage: backend 249 tests (+30), frontend 59 tests (+17)
 
 ## [1.9.0] - 2026-03-30
 
 ### Added
+
 - **Push notifications** — Web push notifications with VAPID for new music pieces, rehearsal changes and announcements. Supports multiple channels: push, email, WhatsApp and Telegram
 - **Notification preferences** — Users can configure which channel they want to receive notifications per notification type
 - **Global search** — Unified search (Cmd+K / Ctrl+K) across music pieces, members, orchestras, lists and rehearsals with autocomplete and recent searches
@@ -159,6 +179,7 @@ All notable changes to this application are documented here.
 - **PWA support** — Progressive Web App with service worker, offline page and install capability
 
 ### Improved
+
 - Notification center with dropdown for recent notifications and preferences
 - Keyboard navigation in search results (arrow keys, Home/End)
 - Search suggestions with 200ms debounce for better performance
@@ -166,12 +187,14 @@ All notable changes to this application are documented here.
 ## [1.8.1] - 2026-03-28
 
 ### Fixed
+
 - **Trust proxy configuration** - Added Express `trust proxy` setting for production environments behind a reverse proxy (e.g., Render, Nginx), enabling express-rate-limit to work correctly with X-Forwarded-For headers
 - **TypeScript build** - Excluded test files from production build to prevent missing devDependencies errors
 
 ## [1.8.0] - 2026-02-27
 
 ### Added
+
 - **Orchestra section** - New section with voice parts, occupancy and neighbor preferences
 - **Hybrid navigation** - Context sidebar with improved navigation experience
 - **Bidirectional Spond sync** - Sync attendance to and from Spond
@@ -183,6 +206,7 @@ All notable changes to this application are documented here.
 - **Seating visualization** - Member count and chairs per row display
 
 ### Fixed
+
 - Spond sync now uses spond_member_id from attendance record
 - User name lookup from database instead of JWT token
 - Match attendance status by member name as fallback
@@ -195,6 +219,7 @@ All notable changes to this application are documented here.
 ## [1.7.0] - 2026-02-10
 
 ### Added
+
 - **Equipment and uniform management** - Manage instruments, uniforms and accessories with member assignments
 - **Concert management** - Plan concerts with date, location and repertoire
 - **Buma/Stemra export** - Export concert programs for copyright reporting
@@ -208,6 +233,7 @@ All notable changes to this application are documented here.
 - **Additional instrument aliases** - More aliases for existing instruments
 
 ### Improved
+
 - Improved error handling in the backend
 - Extended API documentation
 - Music lists layout and PDF button visibility
@@ -215,12 +241,14 @@ All notable changes to this application are documented here.
 - WCAG 2.1 AA accessibility improvements
 
 ### Fixed
+
 - Spond bulk sync: clears stale event links before re-matching
 - Spond sync for same-day rehearsals with duplicate attendance
 
 ## [1.6.0] - 2026-02-07
 
 ### Added
+
 - **PDF page previews** - Thumbnails of all pages visible when splitting, with adjustable size
 - **PDF split with instrument selection** - Instrument dropdown with tuning and clef, automatic numbering for the same instrument
 - **Save PDF as music piece** - Save split PDFs directly as music pieces in the library
@@ -232,10 +260,12 @@ All notable changes to this application are documented here.
 - **Multilingual changelog** - Changelog available in Dutch, English and German
 
 ### Improved
+
 - Backup now uses original filenames instead of UUID names
 - Filenames in PDF split preserve spaces within field values
 
 ### Fixed
+
 - PDF download authentication now works correctly (token as query parameter)
 - Local PDF.js worker for better compatibility
 - Results no longer disappear after saving as music piece
@@ -243,6 +273,7 @@ All notable changes to this application are documented here.
 ## [1.5.0] - 2026-02-05
 
 ### Added
+
 - **Last login visible** - User overview now shows when a user last logged in
 - **SMTP settings via UI** - Email settings can now be configured through the admin settings, including test email function
 - **Extended genre list** - Genres replaced with extended English list of 48 genres
@@ -250,33 +281,39 @@ All notable changes to this application are documented here.
 - **Additional instrument aliases** - More aliases for existing instruments (Baritone Saxophone, Horn, Drumset, etc.)
 
 ### Fixed
+
 - Rehearsal deletion now works reliably (changes() timing fix)
 
 ## [1.4.0] - 2026-02-04
 
 ### Added
+
 - **Microsoft 365 / Entra ID login** - Users can log in with their Microsoft 365 account
 - **Language detection** - Automatic language detection based on browser settings
 - **Onboarding tours** - Guided tours for new users per role
 
 ### Fixed
+
 - Metronome volume fix (first click as loud as the rest)
 - Auto-logout and rate limiting improvements
 
 ## [1.3.0] - 2026-02-03
 
 ### Added
+
 - **Bulk selection and deletion** - Select and delete multiple music pieces at once
 - **New list during upload** - Create a new list directly during upload
 - **Conductor role** - Separate role for conductors with access to rehearsal planning
 
 ### Improved
+
 - Orchestra grouping on My Music page
 - Download .pdf_ extension fix
 
 ## [1.2.0] - 2026-02-02
 
 ### Added
+
 - **Theme system** - Colors, fonts and styling customizable per association
 - **Configurable logo and name** - Association name and logo on login screen and navigation
 - **Rehearsal planning** - Plan rehearsals with repertoire and Spond integration
@@ -285,6 +322,7 @@ All notable changes to this application are documented here.
 ## [1.1.0] - 2026-02-01
 
 ### Added
+
 - **Backup and restore** - Full database and file backup/restore
 - **WCAG 2.1 AA accessibility** - Improved accessibility for screen readers
 - **Multilingual** - Dutch, English and German supported
@@ -292,6 +330,7 @@ All notable changes to this application are documented here.
 ## [1.0.0] - 2026-01-15
 
 ### First release
+
 - Music library management
 - User and orchestra management
 - PDF upload and processing

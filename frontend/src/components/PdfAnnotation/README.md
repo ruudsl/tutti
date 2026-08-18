@@ -21,18 +21,20 @@ This system provides a rich set of tools for musicians to annotate their sheet m
 The main component that orchestrates the annotation experience.
 
 **Props:**
+
 ```tsx
 interface PdfAnnotatorProps {
-  musicPieceId: string;    // ID of the music piece being annotated
-  pageNumber: number;      // Current page number
-  pageWidth: number;       // Width of the PDF page
-  pageHeight: number;      // Height of the PDF page
-  scale: number;           // Current zoom scale
-  onClose?: () => void;    // Optional close callback
+  musicPieceId: string; // ID of the music piece being annotated
+  pageNumber: number; // Current page number
+  pageWidth: number; // Width of the PDF page
+  pageHeight: number; // Height of the PDF page
+  scale: number; // Current zoom scale
+  onClose?: () => void; // Optional close callback
 }
 ```
 
 **Features:**
+
 - Manages annotation state (add, update, delete)
 - Handles undo/redo stacks
 - Loads and saves annotations (online and offline)
@@ -44,6 +46,7 @@ interface PdfAnnotatorProps {
 The drawing canvas that renders annotations and handles user input.
 
 **Responsibilities:**
+
 - Renders all existing annotations
 - Handles pointer/touch events for drawing
 - Supports high-DPI displays
@@ -51,6 +54,7 @@ The drawing canvas that renders annotations and handles user input.
 - Text input for text annotations
 
 **Supported Operations:**
+
 - Freehand drawing with smooth bezier curves
 - Shape drawing (preview while drawing)
 - Stamp placement on click
@@ -62,6 +66,7 @@ The drawing canvas that renders annotations and handles user input.
 The user interface for selecting tools and options.
 
 **Features:**
+
 - Tool selection (select, freehand, highlight, text, stamp, shape, eraser)
 - Color picker with preset colors
 - Stroke width selection
@@ -77,6 +82,7 @@ The user interface for selecting tools and options.
 TypeScript definitions for all annotation-related types.
 
 **Key Types:**
+
 ```tsx
 type AnnotationType = 'freehand' | 'highlight' | 'text' | 'stamp' | 'shape';
 type ShapeType = 'rectangle' | 'circle' | 'line' | 'arrow';
@@ -108,13 +114,7 @@ function MusicViewer() {
   return (
     <div style={{ position: 'relative' }}>
       <PdfPage />
-      <PdfAnnotator
-        musicPieceId="piece-123"
-        pageNumber={1}
-        pageWidth={595}
-        pageHeight={842}
-        scale={1.5}
-      />
+      <PdfAnnotator musicPieceId="piece-123" pageNumber={1} pageWidth={595} pageHeight={842} scale={1.5} />
     </div>
   );
 }
@@ -143,17 +143,17 @@ The component automatically syncs between online and offline storage.
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| 1 | Select tool |
-| 2 | Freehand drawing |
-| 3 | Highlighter |
-| 4 | Text annotation |
-| 5 | Stamp tool |
-| 6 | Shape tool |
-| 7 | Eraser |
-| Ctrl+Z | Undo |
-| Ctrl+Y / Ctrl+Shift+Z | Redo |
+| Key                   | Action           |
+| --------------------- | ---------------- |
+| 1                     | Select tool      |
+| 2                     | Freehand drawing |
+| 3                     | Highlighter      |
+| 4                     | Text annotation  |
+| 5                     | Stamp tool       |
+| 6                     | Shape tool       |
+| 7                     | Eraser           |
+| Ctrl+Z                | Undo             |
+| Ctrl+Y / Ctrl+Shift+Z | Redo             |
 
 ## Styling
 

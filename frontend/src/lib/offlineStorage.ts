@@ -5,15 +5,7 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type {
-  User,
-  Instrument,
-  Orchestra,
-  MusicPiece,
-  MusicTitle,
-  Rehearsal,
-  Genre,
-} from '../types';
+import type { User, Instrument, Orchestra, MusicPiece, MusicTitle, Rehearsal, Genre } from '../types';
 
 // Types for stored data
 export interface StoredFavorite {
@@ -252,10 +244,7 @@ export async function saveMusicPieces(pieces: MusicPiece[]): Promise<void> {
   const tx = db.transaction('musicPieces', 'readwrite');
   const cachedAt = new Date().toISOString();
 
-  await Promise.all([
-    ...pieces.map((piece) => tx.store.put({ ...piece, cachedAt })),
-    tx.done,
-  ]);
+  await Promise.all([...pieces.map((piece) => tx.store.put({ ...piece, cachedAt })), tx.done]);
   await updateSyncMetadata('musicPieces');
 }
 
@@ -285,7 +274,7 @@ export async function getMusicPieces(filters?: {
       (p) =>
         p.title.toLowerCase().includes(searchLower) ||
         p.arranger?.toLowerCase().includes(searchLower) ||
-        p.instrumentName?.toLowerCase().includes(searchLower)
+        p.instrumentName?.toLowerCase().includes(searchLower),
     );
   }
 
@@ -322,26 +311,19 @@ export async function saveMusicTitles(titles: MusicTitle[]): Promise<void> {
   await updateSyncMetadata('musicTitles');
 }
 
-export async function getMusicTitles(filters?: {
-  search?: string;
-  genreId?: string;
-}): Promise<MusicTitle[]> {
+export async function getMusicTitles(filters?: { search?: string; genreId?: string }): Promise<MusicTitle[]> {
   const db = await getDB();
   let titles = await db.getAll('musicTitles');
 
   if (filters?.search) {
     const searchLower = filters.search.toLowerCase();
     titles = titles.filter(
-      (t) =>
-        t.title.toLowerCase().includes(searchLower) ||
-        t.arranger?.toLowerCase().includes(searchLower)
+      (t) => t.title.toLowerCase().includes(searchLower) || t.arranger?.toLowerCase().includes(searchLower),
     );
   }
 
   if (filters?.genreId) {
-    titles = titles.filter((t) =>
-      t.genres?.some((g) => g.id === filters.genreId)
-    );
+    titles = titles.filter((t) => t.genres?.some((g) => g.id === filters.genreId));
   }
 
   return titles;
@@ -361,10 +343,7 @@ export async function saveOrchestras(orchestras: Orchestra[]): Promise<void> {
   const tx = db.transaction('orchestras', 'readwrite');
   const cachedAt = new Date().toISOString();
 
-  await Promise.all([
-    ...orchestras.map((orchestra) => tx.store.put({ ...orchestra, cachedAt })),
-    tx.done,
-  ]);
+  await Promise.all([...orchestras.map((orchestra) => tx.store.put({ ...orchestra, cachedAt })), tx.done]);
   await updateSyncMetadata('orchestras');
 }
 
@@ -392,10 +371,7 @@ export async function saveInstruments(instruments: Instrument[]): Promise<void> 
   const tx = db.transaction('instruments', 'readwrite');
   const cachedAt = new Date().toISOString();
 
-  await Promise.all([
-    ...instruments.map((instrument) => tx.store.put({ ...instrument, cachedAt })),
-    tx.done,
-  ]);
+  await Promise.all([...instruments.map((instrument) => tx.store.put({ ...instrument, cachedAt })), tx.done]);
   await updateSyncMetadata('instruments');
 }
 
@@ -423,10 +399,7 @@ export async function saveGenres(genres: Genre[]): Promise<void> {
   const tx = db.transaction('genres', 'readwrite');
   const cachedAt = new Date().toISOString();
 
-  await Promise.all([
-    ...genres.map((genre) => tx.store.put({ ...genre, cachedAt })),
-    tx.done,
-  ]);
+  await Promise.all([...genres.map((genre) => tx.store.put({ ...genre, cachedAt })), tx.done]);
   await updateSyncMetadata('genres');
 }
 
@@ -450,10 +423,7 @@ export async function saveFavorites(favorites: StoredFavorite[]): Promise<void> 
 
   // Clear existing and add new
   await tx.store.clear();
-  await Promise.all([
-    ...favorites.map((favorite) => tx.store.put(favorite)),
-    tx.done,
-  ]);
+  await Promise.all([...favorites.map((favorite) => tx.store.put(favorite)), tx.done]);
   await updateSyncMetadata('favorites');
 }
 
@@ -493,10 +463,7 @@ export async function saveRecentViews(views: StoredRecentView[]): Promise<void> 
 
   // Clear existing and add new
   await tx.store.clear();
-  await Promise.all([
-    ...views.map((view) => tx.store.put(view)),
-    tx.done,
-  ]);
+  await Promise.all([...views.map((view) => tx.store.put(view)), tx.done]);
   await updateSyncMetadata('recentViews');
 }
 
@@ -540,10 +507,7 @@ export async function saveRehearsals(rehearsals: Rehearsal[]): Promise<void> {
   const tx = db.transaction('rehearsals', 'readwrite');
   const cachedAt = new Date().toISOString();
 
-  await Promise.all([
-    ...rehearsals.map((rehearsal) => tx.store.put({ ...rehearsal, cachedAt })),
-    tx.done,
-  ]);
+  await Promise.all([...rehearsals.map((rehearsal) => tx.store.put({ ...rehearsal, cachedAt })), tx.done]);
   await updateSyncMetadata('rehearsals');
 }
 
@@ -626,7 +590,9 @@ export interface PendingMutation {
   retryCount: number;
 }
 
-export async function addPendingMutation(mutation: Omit<PendingMutation, 'id' | 'createdAt' | 'retryCount'>): Promise<number> {
+export async function addPendingMutation(
+  mutation: Omit<PendingMutation, 'id' | 'createdAt' | 'retryCount'>,
+): Promise<number> {
   const db = await getDB();
   const id = await db.add('pendingMutations', {
     ...mutation,
@@ -705,9 +671,7 @@ export async function getStorageEstimate(): Promise<{
     return {
       used: estimate.usage ?? 0,
       quota: estimate.quota ?? 0,
-      percentage: estimate.quota
-        ? Math.round(((estimate.usage ?? 0) / estimate.quota) * 100)
-        : 0,
+      percentage: estimate.quota ? Math.round(((estimate.usage ?? 0) / estimate.quota) * 100) : 0,
     };
   }
   return null;

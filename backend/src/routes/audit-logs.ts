@@ -75,16 +75,10 @@ router.use(authenticateToken, requireRole('admin'), ipWhitelistMiddleware);
  *       200:
  *         description: Paginated list of audit logs
  */
-router.get('/', asyncHandler(async (req, res) => {
-    const {
-      page = 1,
-      pageSize = 25,
-      action,
-      entityType,
-      userId,
-      dateFrom,
-      dateTo,
-    } = req.query;
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const { page = 1, pageSize = 25, action, entityType, userId, dateFrom, dateTo } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(pageSize as string, 10) || 25));
@@ -155,7 +149,7 @@ router.get('/', asyncHandler(async (req, res) => {
     const logs = db.prepare(logsQuery).all(...params, limit, offset);
 
     // Parse changes JSON for display
-    const logsWithParsedChanges = (logs as any[]).map(log => ({
+    const logsWithParsedChanges = (logs as any[]).map((log) => ({
       ...log,
       changes: log.changes ? JSON.parse(log.changes) : null,
     }));
@@ -166,7 +160,8 @@ router.get('/', asyncHandler(async (req, res) => {
       page: pageNum,
       pageSize: limit,
     });
-}));
+  }),
+);
 
 export default router;
 
@@ -180,7 +175,7 @@ export default router;
 export function computeFieldChanges(
   oldData: Record<string, unknown>,
   newData: Record<string, unknown>,
-  fieldsToTrack?: string[]
+  fieldsToTrack?: string[],
 ): FieldChange[] {
   const changes: FieldChange[] = [];
   // Get unique fields from both old and new data
@@ -256,16 +251,18 @@ export function logAuditEvent(
   entityName?: string,
   changes?: AuditChanges | object,
   ipAddress?: string,
-  userAgent?: string
+  userAgent?: string,
 ): void {
   try {
     const id = uuidv4();
     const changesJson = changes ? JSON.stringify(changes) : null;
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, entity_name, changes, ip_address, user_agent, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).run(id, userId, action, entityType, entityId, entityName, changesJson, ipAddress, userAgent);
+    `,
+    ).run(id, userId, action, entityType, entityId, entityName, changesJson, ipAddress, userAgent);
 
     const safeAction = sanitizeForLog(action);
     const safeEntityType = sanitizeForLog(entityType);
@@ -302,7 +299,7 @@ export function logAuditUpdate(
   newData: Record<string, unknown>,
   fieldsToTrack?: string[],
   ipAddress?: string,
-  userAgent?: string
+  userAgent?: string,
 ): void {
   const fieldChanges = computeFieldChanges(oldData, newData, fieldsToTrack);
 

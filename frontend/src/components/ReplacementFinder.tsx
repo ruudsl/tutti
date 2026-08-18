@@ -70,10 +70,10 @@ export function ReplacementFinder({
   const [urgency, setUrgency] = useState<'low' | 'normal' | 'high' | 'critical'>('normal');
 
   const { data: instruments = [] } = useInstruments();
-  const { data: musicians = [], isLoading } = useExternalMusicianSearch(
-    selectedInstrumentId || null,
-    { skillLevel: skillFilter || undefined, activeOnly: true }
-  );
+  const { data: musicians = [], isLoading } = useExternalMusicianSearch(selectedInstrumentId || null, {
+    skillLevel: skillFilter || undefined,
+    activeOnly: true,
+  });
 
   const createRequestMutation = useCreateReplacementRequest();
   const inviteMutation = useInviteMusician();
@@ -121,11 +121,7 @@ export function ReplacementFinder({
   if (!isOpen) return null;
 
   return (
-    <Modal
-      title={t('replacementFinder.title')}
-      onClose={onClose}
-      size="large"
-    >
+    <Modal title={t('replacementFinder.title')} onClose={onClose} size="large">
       <div className="space-y-4">
         {/* Event info */}
         {eventName && (
@@ -155,11 +151,7 @@ export function ReplacementFinder({
           </div>
           <div className="form-group mb-0">
             <label className="form-label">{t('replacementFinder.skillLevel')}</label>
-            <select
-              className="form-control"
-              value={skillFilter}
-              onChange={(e) => setSkillFilter(e.target.value)}
-            >
+            <select className="form-control" value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)}>
               <option value="">{t('replacementFinder.allLevels')}</option>
               <option value="beginner">{SKILL_LEVEL_LABELS.beginner}</option>
               <option value="intermediate">{SKILL_LEVEL_LABELS.intermediate}</option>
@@ -170,11 +162,7 @@ export function ReplacementFinder({
           {!existingRequestId && eventId && (
             <div className="form-group mb-0">
               <label className="form-label">{t('replacementFinder.urgency')}</label>
-              <select
-                className="form-control"
-                value={urgency}
-                onChange={(e) => setUrgency(e.target.value as any)}
-              >
+              <select className="form-control" value={urgency} onChange={(e) => setUrgency(e.target.value as any)}>
                 <option value="low">{t('replacementFinder.urgencyLow')}</option>
                 <option value="normal">{t('replacementFinder.urgencyNormal')}</option>
                 <option value="high">{t('replacementFinder.urgencyHigh')}</option>
@@ -208,24 +196,20 @@ export function ReplacementFinder({
                   {musicians.map((musician) => (
                     <tr key={musician.id}>
                       <td>
-                        <strong>{musician.firstName} {musician.lastName}</strong>
+                        <strong>
+                          {musician.firstName} {musician.lastName}
+                        </strong>
                         {musician.isPrimary && (
                           <span className="badge badge-primary ml-1" title={t('replacementFinder.primaryInstrument')}>
                             <Icon name="check" size={12} />
                           </span>
                         )}
-                        {musician.email && (
-                          <div className="text-muted text-sm">{musician.email}</div>
-                        )}
+                        {musician.email && <div className="text-muted text-sm">{musician.email}</div>}
                       </td>
                       <td>
-                        <span className="badge badge-info">
-                          {MUSICIAN_TYPE_LABELS[musician.musicianType]}
-                        </span>
+                        <span className="badge badge-info">{MUSICIAN_TYPE_LABELS[musician.musicianType]}</span>
                       </td>
-                      <td>
-                        {musician.skillLevel ? SKILL_LEVEL_LABELS[musician.skillLevel] : '-'}
-                      </td>
+                      <td>{musician.skillLevel ? SKILL_LEVEL_LABELS[musician.skillLevel] : '-'}</td>
                       <td>
                         <StarDisplay rating={musician.rating} />
                       </td>
@@ -233,7 +217,8 @@ export function ReplacementFinder({
                         {musician.totalPerformances}
                         {musician.lastPlayedDate && (
                           <div className="text-muted text-sm">
-                            {t('replacementFinder.lastPlayed')}: {new Date(musician.lastPlayedDate).toLocaleDateString()}
+                            {t('replacementFinder.lastPlayed')}:{' '}
+                            {new Date(musician.lastPlayedDate).toLocaleDateString()}
                           </div>
                         )}
                       </td>
@@ -305,11 +290,7 @@ export function ReplacementFinder({
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setInvitingMusician(null)}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => setInvitingMusician(null)}>
                   {t('common.cancel')}
                 </button>
                 <button

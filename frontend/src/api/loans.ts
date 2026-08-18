@@ -34,13 +34,16 @@ export const createLoan = async (loan: {
   return data;
 };
 
-export const updateLoan = async (id: string, updates: {
-  borrowerName?: string;
-  borrowerEmail?: string;
-  borrowerOrganization?: string;
-  notes?: string;
-  expectedReturn?: string;
-}): Promise<Loan> => {
+export const updateLoan = async (
+  id: string,
+  updates: {
+    borrowerName?: string;
+    borrowerEmail?: string;
+    borrowerOrganization?: string;
+    notes?: string;
+    expectedReturn?: string;
+  },
+): Promise<Loan> => {
   const { data } = await api.put(`/loans/${id}`, updates);
   return data;
 };

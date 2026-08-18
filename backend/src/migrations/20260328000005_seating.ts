@@ -11,8 +11,8 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // Seating sections (rows in the arrangement)
-    db.exec(`
+  // Seating sections (rows in the arrangement)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_sections (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL,
@@ -25,8 +25,8 @@ export function up(): void {
         )
     `);
 
-    // Instrument groups within a section/row
-    db.exec(`
+  // Instrument groups within a section/row
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_section_instruments (
             id TEXT PRIMARY KEY,
             section_id TEXT NOT NULL,
@@ -39,8 +39,8 @@ export function up(): void {
         )
     `);
 
-    // Fixed seat assignments (who normally sits where)
-    db.exec(`
+  // Fixed seat assignments (who normally sits where)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_assignments (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL,
@@ -58,8 +58,8 @@ export function up(): void {
         )
     `);
 
-    // Neighbor relationships (seating preferences)
-    db.exec(`
+  // Neighbor relationships (seating preferences)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_neighbors (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL,
@@ -74,8 +74,8 @@ export function up(): void {
         )
     `);
 
-    // Per-rehearsal seating (generated based on attendees)
-    db.exec(`
+  // Per-rehearsal seating (generated based on attendees)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS rehearsal_seating (
             id TEXT PRIMARY KEY,
             rehearsal_id TEXT NOT NULL,
@@ -94,32 +94,34 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_sections_orchestra ON seating_sections(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_section_instruments_section ON seating_section_instruments(section_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_assignments_orchestra ON seating_assignments(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_assignments_user ON seating_assignments(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_neighbors_orchestra ON seating_neighbors(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_neighbors_user ON seating_neighbors(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_seating_rehearsal ON rehearsal_seating(rehearsal_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_sections_orchestra ON seating_sections(orchestra_id)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_seating_section_instruments_section ON seating_section_instruments(section_id)',
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_assignments_orchestra ON seating_assignments(orchestra_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_assignments_user ON seating_assignments(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_neighbors_orchestra ON seating_neighbors(orchestra_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_neighbors_user ON seating_neighbors(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_rehearsal_seating_rehearsal ON rehearsal_seating(rehearsal_id)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'rehearsal_seating',
-        'seating_neighbors',
-        'seating_assignments',
-        'seating_section_instruments',
-        'seating_sections',
-    ];
+  const tables = [
+    'rehearsal_seating',
+    'seating_neighbors',
+    'seating_assignments',
+    'seating_section_instruments',
+    'seating_sections',
+  ];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

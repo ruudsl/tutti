@@ -12,11 +12,11 @@ import db from '../database/connection';
 import logger from './logger';
 
 export interface SessionRecord {
-    id: string;
-    user_id: string;
-    token_hash: string;
-    revoked_at: string | null;
-    expires_at: string;
+  id: string;
+  user_id: string;
+  token_hash: string;
+  revoked_at: string | null;
+  expires_at: string;
 }
 
 /** How often (at most) a session's last_active is written to the database. */
@@ -29,16 +29,16 @@ const MAX_TRACKED_SESSIONS = 10000;
 const lastActivityWrite = new Map<string, number>();
 
 export function hashToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 /**
  * Find a session (revoked or not) by its token hash.
  */
 export function findSessionByTokenHash(tokenHash: string): SessionRecord | undefined {
-    return db.prepare(
-        'SELECT id, user_id, token_hash, revoked_at, expires_at FROM user_sessions WHERE token_hash = ? LIMIT 1'
-    ).get(tokenHash) as SessionRecord | undefined;
+  return db
+    .prepare('SELECT id, user_id, token_hash, revoked_at, expires_at FROM user_sessions WHERE token_hash = ? LIMIT 1')
+    .get(tokenHash) as SessionRecord | undefined;
 }
 
 /**
@@ -50,34 +50,36 @@ export function findSessionByTokenHash(tokenHash: string): SessionRecord | undef
  *                  Falls back to `expiresInDays` from now.
  */
 export function registerSession(
-    userId: string,
-    token: string,
-    ipAddress: string | undefined,
-    userAgent: string | undefined,
-    expiresInDays: number = 7,
-    expiresAt?: Date
+  userId: string,
+  token: string,
+  ipAddress: string | undefined,
+  userAgent: string | undefined,
+  expiresInDays: number = 7,
+  expiresAt?: Date,
 ): string {
-    const id = uuidv4();
-    const tokenHash = hashToken(token);
+  const id = uuidv4();
+  const tokenHash = hashToken(token);
 
-    let expiry = expiresAt;
-    if (!expiry) {
-        expiry = new Date();
-        expiry.setDate(expiry.getDate() + expiresInDays);
-    }
+  let expiry = expiresAt;
+  if (!expiry) {
+    expiry = new Date();
+    expiry.setDate(expiry.getDate() + expiresInDays);
+  }
 
-    db.prepare(`
+  db.prepare(
+    `
         INSERT INTO user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at)
         VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, userId, tokenHash, ipAddress || null, userAgent || null, expiry.toISOString());
+    `,
+  ).run(id, userId, tokenHash, ipAddress || null, userAgent || null, expiry.toISOString());
 
-    // Clean up expired sessions (also removes stale revoked ones once expired)
-    db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')").run();
+  // Clean up expired sessions (also removes stale revoked ones once expired)
+  db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')").run();
 
-    // Fresh row already has last_active = now; no need to write again for a while
-    rememberActivityWrite(tokenHash);
+  // Fresh row already has last_active = now; no need to write again for a while
+  rememberActivityWrite(tokenHash);
 
-    return id;
+  return id;
 }
 
 /**
@@ -85,40 +87,38 @@ export function registerSession(
  * per session per ACTIVITY_UPDATE_INTERVAL_MS.
  */
 export function updateSessionActivity(token: string): void {
-    updateSessionActivityByHash(hashToken(token));
+  updateSessionActivityByHash(hashToken(token));
 }
 
 export function updateSessionActivityByHash(tokenHash: string): void {
-    const now = Date.now();
-    const lastWrite = lastActivityWrite.get(tokenHash);
+  const now = Date.now();
+  const lastWrite = lastActivityWrite.get(tokenHash);
 
-    if (lastWrite !== undefined && now - lastWrite < ACTIVITY_UPDATE_INTERVAL_MS) {
-        return; // throttled
-    }
+  if (lastWrite !== undefined && now - lastWrite < ACTIVITY_UPDATE_INTERVAL_MS) {
+    return; // throttled
+  }
 
-    db.prepare(
-        'UPDATE user_sessions SET last_active = CURRENT_TIMESTAMP WHERE token_hash = ?'
-    ).run(tokenHash);
+  db.prepare('UPDATE user_sessions SET last_active = CURRENT_TIMESTAMP WHERE token_hash = ?').run(tokenHash);
 
-    rememberActivityWrite(tokenHash);
+  rememberActivityWrite(tokenHash);
 }
 
 function rememberActivityWrite(tokenHash: string): void {
-    const now = Date.now();
+  const now = Date.now();
 
-    if (lastActivityWrite.size >= MAX_TRACKED_SESSIONS) {
-        // Prune stale entries; if everything is fresh, drop the map entirely
-        for (const [hash, ts] of lastActivityWrite) {
-            if (now - ts >= ACTIVITY_UPDATE_INTERVAL_MS) {
-                lastActivityWrite.delete(hash);
-            }
-        }
-        if (lastActivityWrite.size >= MAX_TRACKED_SESSIONS) {
-            lastActivityWrite.clear();
-        }
+  if (lastActivityWrite.size >= MAX_TRACKED_SESSIONS) {
+    // Prune stale entries; if everything is fresh, drop the map entirely
+    for (const [hash, ts] of lastActivityWrite) {
+      if (now - ts >= ACTIVITY_UPDATE_INTERVAL_MS) {
+        lastActivityWrite.delete(hash);
+      }
     }
+    if (lastActivityWrite.size >= MAX_TRACKED_SESSIONS) {
+      lastActivityWrite.clear();
+    }
+  }
 
-    lastActivityWrite.set(tokenHash, now);
+  lastActivityWrite.set(tokenHash, now);
 }
 
 /**
@@ -131,22 +131,30 @@ function rememberActivityWrite(tokenHash: string): void {
  * @returns number of sessions revoked
  */
 export function revokeUserSessions(userId: string, exceptTokenHash?: string): number {
-    let result;
-    if (exceptTokenHash) {
-        result = db.prepare(`
+  let result;
+  if (exceptTokenHash) {
+    result = db
+      .prepare(
+        `
             UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
             WHERE user_id = ? AND token_hash != ? AND revoked_at IS NULL
-        `).run(userId, exceptTokenHash);
-    } else {
-        result = db.prepare(`
+        `,
+      )
+      .run(userId, exceptTokenHash);
+  } else {
+    result = db
+      .prepare(
+        `
             UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
             WHERE user_id = ? AND revoked_at IS NULL
-        `).run(userId);
-    }
+        `,
+      )
+      .run(userId);
+  }
 
-    if (result.changes > 0) {
-        logger.info(`Revoked ${result.changes} session(s) for user ${userId}`);
-    }
+  if (result.changes > 0) {
+    logger.info(`Revoked ${result.changes} session(s) for user ${userId}`);
+  }
 
-    return result.changes;
+  return result.changes;
 }

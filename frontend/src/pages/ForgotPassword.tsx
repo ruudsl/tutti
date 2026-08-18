@@ -46,12 +46,8 @@ export default function ForgotPassword() {
             <h1>{t('forgotPassword.successTitle')}</h1>
           </div>
           <div className="login-body">
-            <div className="alert alert-success mb-2">
-              {t('forgotPassword.successMessage')}
-            </div>
-            <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>
-              {t('forgotPassword.checkSpam')}
-            </p>
+            <div className="alert alert-success mb-2">{t('forgotPassword.successMessage')}</div>
+            <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>{t('forgotPassword.checkSpam')}</p>
             <Link to="/login" className="btn btn-primary" style={{ width: '100%' }}>
               {t('forgotPassword.backToLogin')}
             </Link>
@@ -73,19 +69,15 @@ export default function ForgotPassword() {
         </div>
         <div className="login-body">
           {error && (
-            <div
-              ref={errorRef}
-              className="alert alert-danger mb-2"
-              role="alert"
-              aria-live="assertive"
-              tabIndex={-1}
-            >
+            <div ref={errorRef} className="alert alert-danger mb-2" role="alert" aria-live="assertive" tabIndex={-1}>
               {error}
             </div>
           )}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="forgot-email" className="form-label">{t('common.email')}</label>
+              <label htmlFor="forgot-email" className="form-label">
+                {t('common.email')}
+              </label>
               <input
                 ref={emailInputRef}
                 id="forgot-email"
@@ -99,12 +91,7 @@ export default function ForgotPassword() {
                 aria-describedby={error ? 'forgot-error' : undefined}
               />
             </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              disabled={isSubmitting}
-            >
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={isSubmitting}>
               {isSubmitting ? t('forgotPassword.sending') : t('forgotPassword.sendLink')}
             </button>
           </form>

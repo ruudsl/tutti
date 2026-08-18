@@ -34,8 +34,10 @@ const typeToPaths: Record<RecentView['itemType'], (itemId: string) => string> = 
 
 // Map item types to icons
 const typeToIcon: Record<RecentView['itemType'], string> = {
-  music_piece: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3', // music note
-  music_title: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // document
+  music_piece:
+    'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3', // music note
+  music_title:
+    'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', // document
   music_list: 'M4 6h16M4 10h16M4 14h16M4 18h16', // list
   rehearsal: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', // calendar
   concert: 'M15 5l-5 5-5-5m10 4l-5 5-5-5', // stage/concert
@@ -62,18 +64,21 @@ const DEFAULT_LIMIT = 10;
 
 export function useRecentItems(category: ItemCategory = 'all', limit: number = DEFAULT_LIMIT) {
   // Map category to API type parameter
-  const apiType = category === 'all' ? undefined : (() => {
-    switch (category) {
-      case 'music':
-        return undefined; // Filter client-side for music types
-      case 'lists':
-        return 'music_list';
-      case 'rehearsals':
-        return undefined; // Filter client-side for rehearsal/concert
-      default:
-        return undefined;
-    }
-  })();
+  const apiType =
+    category === 'all'
+      ? undefined
+      : (() => {
+          switch (category) {
+            case 'music':
+              return undefined; // Filter client-side for music types
+            case 'lists':
+              return 'music_list';
+            case 'rehearsals':
+              return undefined; // Filter client-side for rehearsal/concert
+            default:
+              return undefined;
+          }
+        })();
 
   // Fetch more items than needed for client-side filtering
   const fetchLimit = category === 'all' ? limit : limit * 3;
@@ -87,27 +92,21 @@ export function useRecentItems(category: ItemCategory = 'all', limit: number = D
 
     // Client-side filtering for categories that span multiple types
     if (category === 'music') {
-      filtered = views.filter(
-        (v) => v.itemType === 'music_piece' || v.itemType === 'music_title'
-      );
+      filtered = views.filter((v) => v.itemType === 'music_piece' || v.itemType === 'music_title');
     } else if (category === 'rehearsals') {
-      filtered = views.filter(
-        (v) => v.itemType === 'rehearsal' || v.itemType === 'concert'
-      );
+      filtered = views.filter((v) => v.itemType === 'rehearsal' || v.itemType === 'concert');
     }
 
-    return filtered
-      .slice(0, limit)
-      .map((view) => ({
-        id: view.id,
-        type: view.itemType,
-        itemId: view.itemId,
-        title: view.itemTitle,
-        viewedAt: new Date(view.viewedAt),
-        category: typeToCategory[view.itemType],
-        path: typeToPaths[view.itemType](view.itemId),
-        icon: typeToIcon[view.itemType],
-      }));
+    return filtered.slice(0, limit).map((view) => ({
+      id: view.id,
+      type: view.itemType,
+      itemId: view.itemId,
+      title: view.itemTitle,
+      viewedAt: new Date(view.viewedAt),
+      category: typeToCategory[view.itemType],
+      path: typeToPaths[view.itemType](view.itemId),
+      icon: typeToIcon[view.itemType],
+    }));
   }, [views, category, limit]);
 
   // Group items by category

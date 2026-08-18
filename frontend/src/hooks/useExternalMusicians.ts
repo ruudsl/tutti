@@ -21,7 +21,8 @@ export const externalMusicianKeys = {
   list: (filters: Record<string, any>) => [...externalMusicianKeys.lists(), filters] as const,
   details: () => [...externalMusicianKeys.all, 'detail'] as const,
   detail: (id: string) => [...externalMusicianKeys.details(), id] as const,
-  search: (instrumentId: string, options?: Record<string, any>) => [...externalMusicianKeys.all, 'search', instrumentId, options] as const,
+  search: (instrumentId: string, options?: Record<string, any>) =>
+    [...externalMusicianKeys.all, 'search', instrumentId, options] as const,
 };
 
 /**
@@ -55,7 +56,7 @@ export function useExternalMusician(id: string | null) {
  */
 export function useExternalMusicianSearch(
   instrumentId: string | null,
-  options?: { skillLevel?: string; activeOnly?: boolean }
+  options?: { skillLevel?: string; activeOnly?: boolean },
 ) {
   return useQuery({
     queryKey: externalMusicianKeys.search(instrumentId || '', options),
@@ -89,8 +90,7 @@ export function useUpdateExternalMusician() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateExternalMusicianData }) =>
-      updateExternalMusician(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateExternalMusicianData }) => updateExternalMusician(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: externalMusicianKeys.all });
       queryClient.invalidateQueries({ queryKey: externalMusicianKeys.detail(id) });

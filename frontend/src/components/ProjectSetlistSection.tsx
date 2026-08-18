@@ -46,14 +46,7 @@ interface SortableSetlistItemProps {
 }
 
 function SortableSetlistItem({ item, index }: SortableSetlistItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -65,9 +58,7 @@ function SortableSetlistItem({ item, index }: SortableSetlistItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-4 p-3 bg-base-200 rounded-lg ${
-        isDragging ? 'shadow-lg z-10' : ''
-      }`}
+      className={`flex items-center gap-4 p-3 bg-base-200 rounded-lg ${isDragging ? 'shadow-lg z-10' : ''}`}
     >
       <div
         className="cursor-grab active:cursor-grabbing text-base-content/50 hover:text-base-content p-1"
@@ -77,23 +68,19 @@ function SortableSetlistItem({ item, index }: SortableSetlistItemProps) {
         role="button"
         tabIndex={0}
       >
-        <span className="text-lg select-none" aria-hidden={true}>&#8942;&#8942;</span>
+        <span className="text-lg select-none" aria-hidden={true}>
+          &#8942;&#8942;
+        </span>
       </div>
       <span className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-medium flex-shrink-0">
         {index + 1}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">
-          {item.musicTitleName || item.customTitle}
-        </div>
-        {item.notes && (
-          <div className="text-sm text-base-content/60 truncate">{item.notes}</div>
-        )}
+        <div className="font-medium truncate">{item.musicTitleName || item.customTitle}</div>
+        {item.notes && <div className="text-sm text-base-content/60 truncate">{item.notes}</div>}
       </div>
       {item.durationMinutes && (
-        <span className="text-sm text-base-content/70 flex-shrink-0">
-          {item.durationMinutes} min
-        </span>
+        <span className="text-sm text-base-content/70 flex-shrink-0">{item.durationMinutes} min</span>
       )}
     </div>
   );
@@ -109,14 +96,10 @@ function SetlistItemOverlay({ item, index }: { item: SetlistItem; index: number 
         {index + 1}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">
-          {item.musicTitleName || item.customTitle}
-        </div>
+        <div className="font-medium truncate">{item.musicTitleName || item.customTitle}</div>
       </div>
       {item.durationMinutes && (
-        <span className="text-sm text-base-content/70 flex-shrink-0">
-          {item.durationMinutes} min
-        </span>
+        <span className="text-sm text-base-content/70 flex-shrink-0">{item.durationMinutes} min</span>
       )}
     </div>
   );
@@ -127,9 +110,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
   const queryClient = useQueryClient();
 
   // Local state for optimistic updates during drag
-  const [items, setItems] = useState<SetlistItem[]>(
-    [...project.setlist].sort((a, b) => a.sortOrder - b.sortOrder)
-  );
+  const [items, setItems] = useState<SetlistItem[]>([...project.setlist].sort((a, b) => a.sortOrder - b.sortOrder));
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -148,7 +129,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const reorderMutation = useMutation({
@@ -228,11 +209,7 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
         </div>
         {hasChanges && (
           <div className="flex items-center gap-2">
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={handleCancelChanges}
-              disabled={reorderMutation.isPending}
-            >
+            <button className="btn btn-sm btn-ghost" onClick={handleCancelChanges} disabled={reorderMutation.isPending}>
               {t('common.cancel')}
             </button>
             <button
@@ -258,21 +235,14 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={items.map((item) => item.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {items.map((item, index) => (
               <SortableSetlistItem key={item.id} item={item} index={index} />
             ))}
           </div>
         </SortableContext>
-        <DragOverlay>
-          {activeItem ? (
-            <SetlistItemOverlay item={activeItem} index={activeIndex} />
-          ) : null}
-        </DragOverlay>
+        <DragOverlay>{activeItem ? <SetlistItemOverlay item={activeItem} index={activeIndex} /> : null}</DragOverlay>
       </DndContext>
 
       {/* Help text */}

@@ -85,11 +85,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
   };
 
   return (
-    <Modal
-      title={t('imslp.searchTitle')}
-      onClose={onClose}
-      size="large"
-    >
+    <Modal title={t('imslp.searchTitle')} onClose={onClose} size="large">
       <form onSubmit={handleSearch} className="mb-2">
         <div className="grid grid-2 gap-1">
           <div className="form-group mb-0">
@@ -115,20 +111,11 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
           </div>
         </div>
         <div className="flex gap-1 mt-1">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={!query.trim() || searching}
-          >
+          <button type="submit" className="btn btn-primary" disabled={!query.trim() || searching}>
             {searching ? t('common.loading') : t('common.search')}
           </button>
           {searchUrl && (
-            <a
-              href={searchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline"
-            >
+            <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
               {t('imslp.openOnImslp')}
             </a>
           )}
@@ -137,11 +124,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
 
       {selectedWork ? (
         <div>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm mb-1"
-            onClick={() => setSelectedWork(null)}
-          >
+          <button type="button" className="btn btn-outline btn-sm mb-1" onClick={() => setSelectedWork(null)}>
             {t('common.back')}
           </button>
 
@@ -152,13 +135,19 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
             <div className="card-body">
               <div className="piece-meta">
                 {selectedWork.composer && (
-                  <span><strong>{t('imslp.composer')}:</strong> {selectedWork.composer}</span>
+                  <span>
+                    <strong>{t('imslp.composer')}:</strong> {selectedWork.composer}
+                  </span>
                 )}
                 {selectedWork.key && (
-                  <span><strong>{t('imslp.key')}:</strong> {selectedWork.key}</span>
+                  <span>
+                    <strong>{t('imslp.key')}:</strong> {selectedWork.key}
+                  </span>
                 )}
                 {selectedWork.instrumentation && (
-                  <span><strong>{t('imslp.instrumentation')}:</strong> {selectedWork.instrumentation}</span>
+                  <span>
+                    <strong>{t('imslp.instrumentation')}:</strong> {selectedWork.instrumentation}
+                  </span>
                 )}
               </div>
               <div className="mt-1">
@@ -178,12 +167,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
           {selectedWork.scores.length === 0 ? (
             <div className="empty-state">
               <p>{t('imslp.noScoresFound')}</p>
-              <a
-                href={selectedWork.permalink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline"
-              >
+              <a href={selectedWork.permalink} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
                 {t('imslp.browseOnImslp')}
               </a>
             </div>
@@ -197,9 +181,17 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
                         <strong style={{ wordBreak: 'break-word' }}>{score.description || score.filename}</strong>
                         <div className="piece-meta" style={{ marginTop: '0.25rem' }}>
                           {score.publisher && <span>{score.publisher}</span>}
-                          {score.editor && <span>{t('imslp.editor')}: {score.editor}</span>}
+                          {score.editor && (
+                            <span>
+                              {t('imslp.editor')}: {score.editor}
+                            </span>
+                          )}
                           {score.fileSize && <span>{score.fileSize}</span>}
-                          {score.pageCount > 0 && <span>{score.pageCount} {t('imslp.pages')}</span>}
+                          {score.pageCount > 0 && (
+                            <span>
+                              {score.pageCount} {t('imslp.pages')}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1" style={{ flexShrink: 0 }}>
@@ -234,12 +226,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
             <div className="empty-state">
               <p>{t('imslp.noResults')}</p>
               {searchUrl && (
-                <a
-                  href={searchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline"
-                >
+                <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
                   {t('imslp.searchOnImslp')}
                 </a>
               )}
@@ -248,9 +235,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
 
           {works.length > 0 && (
             <div className="imslp-works-list">
-              <p className="text-light mb-1">
-                {t('imslp.resultsCount', { count: works.length })}
-              </p>
+              <p className="text-light mb-1">{t('imslp.resultsCount', { count: works.length })}</p>
               {works.map((work) => (
                 <div
                   key={work.id}
@@ -289,9 +274,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
       )}
 
       <div className="mt-2 text-light" style={{ fontSize: '0.75rem' }}>
-        <p>
-          {t('imslp.disclaimer')}
-        </p>
+        <p>{t('imslp.disclaimer')}</p>
       </div>
     </Modal>
   );

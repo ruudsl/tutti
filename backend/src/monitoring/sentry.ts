@@ -5,7 +5,7 @@ import logger from '../logging/logger';
 
 // Extended config type for Sentry DSN
 interface SentryConfig {
-    sentryDsn?: string;
+  sentryDsn?: string;
 }
 
 const extendedConfig = config as typeof config & SentryConfig;
@@ -15,76 +15,72 @@ const extendedConfig = config as typeof config & SentryConfig;
  * Only initializes if SENTRY_DSN is configured in environment
  */
 export function initSentry(): void {
-    const dsn = process.env.SENTRY_DSN || extendedConfig.sentryDsn;
+  const dsn = process.env.SENTRY_DSN || extendedConfig.sentryDsn;
 
-    if (!dsn) {
-        logger.info('Sentry DSN not configured - error monitoring disabled');
-        return;
-    }
+  if (!dsn) {
+    logger.info('Sentry DSN not configured - error monitoring disabled');
+    return;
+  }
 
-    Sentry.init({
-        dsn,
-        environment: config.nodeEnv,
-        release: process.env.npm_package_version || '1.0.0',
+  Sentry.init({
+    dsn,
+    environment: config.nodeEnv,
+    release: process.env.npm_package_version || '1.0.0',
 
-        // Performance monitoring
-        tracesSampleRate: config.isProduction ? 0.1 : 1.0,
+    // Performance monitoring
+    tracesSampleRate: config.isProduction ? 0.1 : 1.0,
 
-        // Enable debug mode in development
-        debug: config.isDevelopment,
+    // Enable debug mode in development
+    debug: config.isDevelopment,
 
-        // Integrations
-        integrations: [
-            // HTTP integration for tracing requests
-            Sentry.httpIntegration(),
-            // Express integration
-            Sentry.expressIntegration(),
-        ],
+    // Integrations
+    integrations: [
+      // HTTP integration for tracing requests
+      Sentry.httpIntegration(),
+      // Express integration
+      Sentry.expressIntegration(),
+    ],
 
-        // Filter sensitive data
-        beforeSend(event) {
-            // Remove sensitive headers
-            if (event.request?.headers) {
-                delete event.request.headers.authorization;
-                delete event.request.headers.cookie;
-                delete event.request.headers['x-csrf-token'];
-            }
+    // Filter sensitive data
+    beforeSend(event) {
+      // Remove sensitive headers
+      if (event.request?.headers) {
+        delete event.request.headers.authorization;
+        delete event.request.headers.cookie;
+        delete event.request.headers['x-csrf-token'];
+      }
 
-            // Remove sensitive data from request body
-            if (event.request?.data) {
-                const sensitiveFields = ['password', 'token', 'secret', 'apiKey'];
-                const data = typeof event.request.data === 'string'
-                    ? JSON.parse(event.request.data)
-                    : event.request.data;
+      // Remove sensitive data from request body
+      if (event.request?.data) {
+        const sensitiveFields = ['password', 'token', 'secret', 'apiKey'];
+        const data = typeof event.request.data === 'string' ? JSON.parse(event.request.data) : event.request.data;
 
-                sensitiveFields.forEach(field => {
-                    if (data[field]) {
-                        data[field] = '[REDACTED]';
-                    }
-                });
+        sensitiveFields.forEach((field) => {
+          if (data[field]) {
+            data[field] = '[REDACTED]';
+          }
+        });
 
-                event.request.data = typeof event.request.data === 'string'
-                    ? JSON.stringify(data)
-                    : data;
-            }
+        event.request.data = typeof event.request.data === 'string' ? JSON.stringify(data) : data;
+      }
 
-            return event;
-        },
+      return event;
+    },
 
-        // Filter breadcrumbs
-        beforeBreadcrumb(breadcrumb) {
-            // Don't record sensitive URLs
-            if (breadcrumb.category === 'http' && breadcrumb.data?.url) {
-                const sensitivePatterns = ['/auth/login', '/auth/reset-password'];
-                if (sensitivePatterns.some(pattern => breadcrumb.data?.url?.includes(pattern))) {
-                    return null;
-                }
-            }
-            return breadcrumb;
-        },
-    });
+    // Filter breadcrumbs
+    beforeBreadcrumb(breadcrumb) {
+      // Don't record sensitive URLs
+      if (breadcrumb.category === 'http' && breadcrumb.data?.url) {
+        const sensitivePatterns = ['/auth/login', '/auth/reset-password'];
+        if (sensitivePatterns.some((pattern) => breadcrumb.data?.url?.includes(pattern))) {
+          return null;
+        }
+      }
+      return breadcrumb;
+    },
+  });
 
-    logger.info('Sentry error monitoring initialized', { environment: config.nodeEnv });
+  logger.info('Sentry error monitoring initialized', { environment: config.nodeEnv });
 }
 
 /**
@@ -92,44 +88,44 @@ export function initSentry(): void {
  * Call this after authentication to track errors by user
  */
 export function setUserContext(user: { id: string; email?: string; role?: string }): void {
-    Sentry.setUser({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-    });
+  Sentry.setUser({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  });
 }
 
 /**
  * Clear user context (call on logout)
  */
 export function clearUserContext(): void {
-    Sentry.setUser(null);
+  Sentry.setUser(null);
 }
 
 /**
  * Add custom tags to Sentry events
  */
 export function setTags(tags: Record<string, string>): void {
-    Object.entries(tags).forEach(([key, value]) => {
-        Sentry.setTag(key, value);
-    });
+  Object.entries(tags).forEach(([key, value]) => {
+    Sentry.setTag(key, value);
+  });
 }
 
 /**
  * Capture an exception manually
  */
 export function captureException(error: Error, context?: Record<string, any>): string {
-    if (context) {
-        Sentry.setContext('additional', context);
-    }
-    return Sentry.captureException(error);
+  if (context) {
+    Sentry.setContext('additional', context);
+  }
+  return Sentry.captureException(error);
 }
 
 /**
  * Capture a message manually
  */
 export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info'): string {
-    return Sentry.captureMessage(message, level);
+  return Sentry.captureMessage(message, level);
 }
 
 /**
@@ -137,36 +133,36 @@ export function captureMessage(message: string, level: Sentry.SeverityLevel = 'i
  * This should be added after all routes but before the main error handler
  */
 export const sentryErrorHandler: ErrorRequestHandler = (
-    err: Error,
-    req: Request,
-    res: Response,
-    next: NextFunction
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ): void => {
-    // Add request context
-    Sentry.setContext('request', {
-        method: req.method,
-        url: req.url,
-        query: req.query,
-        params: req.params,
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
+  // Add request context
+  Sentry.setContext('request', {
+    method: req.method,
+    url: req.url,
+    query: req.query,
+    params: req.params,
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  // Add user context if available
+  const user = (req as any).user;
+  if (user) {
+    setUserContext({
+      id: user.id,
+      email: user.email,
+      role: user.role,
     });
+  }
 
-    // Add user context if available
-    const user = (req as any).user;
-    if (user) {
-        setUserContext({
-            id: user.id,
-            email: user.email,
-            role: user.role,
-        });
-    }
+  // Capture the exception
+  Sentry.captureException(err);
 
-    // Capture the exception
-    Sentry.captureException(err);
-
-    // Pass to the next error handler
-    next(err);
+  // Pass to the next error handler
+  next(err);
 };
 
 /**
@@ -174,39 +170,39 @@ export const sentryErrorHandler: ErrorRequestHandler = (
  * This should be called to configure Sentry's Express integration
  */
 export function setupSentryExpressErrorHandler(app: any): void {
-    Sentry.setupExpressErrorHandler(app);
+  Sentry.setupExpressErrorHandler(app);
 }
 
 /**
  * Setup global unhandled rejection and exception handlers
  */
 export function setupGlobalErrorHandlers(): void {
-    process.on('unhandledRejection', (reason: unknown) => {
-        const error = reason instanceof Error ? reason : new Error(String(reason));
-        logger.error('Unhandled Promise Rejection:', { reason: String(reason) });
-        Sentry.captureException(error, {
-            tags: { type: 'unhandledRejection' },
-        });
+  process.on('unhandledRejection', (reason: unknown) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error('Unhandled Promise Rejection:', { reason: String(reason) });
+    Sentry.captureException(error, {
+      tags: { type: 'unhandledRejection' },
+    });
+  });
+
+  process.on('uncaughtException', (error: Error) => {
+    logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
+    Sentry.captureException(error, {
+      tags: { type: 'uncaughtException' },
     });
 
-    process.on('uncaughtException', (error: Error) => {
-        logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
-        Sentry.captureException(error, {
-            tags: { type: 'uncaughtException' },
-        });
-
-        // Flush events before exit
-        Sentry.close(2000).then(() => {
-            process.exit(1);
-        });
+    // Flush events before exit
+    Sentry.close(2000).then(() => {
+      process.exit(1);
     });
+  });
 }
 
 /**
  * Flush pending Sentry events (useful before shutdown)
  */
 export async function flushSentry(timeout = 2000): Promise<boolean> {
-    return Sentry.close(timeout);
+  return Sentry.close(timeout);
 }
 
 export { Sentry };

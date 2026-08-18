@@ -51,11 +51,14 @@ export function Metronome({ compact = false }: MetronomeProps) {
     osc.stop(time + 0.05);
   }, []);
 
-  const scheduleNote = useCallback((beatNumber: number, time: number) => {
-    const isAccent = beatNumber === 0;
-    createClick(time, isAccent);
-    setCurrentBeat(beatNumber);
-  }, [createClick]);
+  const scheduleNote = useCallback(
+    (beatNumber: number, time: number) => {
+      const isAccent = beatNumber === 0;
+      createClick(time, isAccent);
+      setCurrentBeat(beatNumber);
+    },
+    [createClick],
+  );
 
   const scheduler = useCallback(() => {
     if (!audioContextRef.current || !isPlayingRef.current) return;
@@ -129,7 +132,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
     tapTimesRef.current.push(now);
 
     // Keep only taps within last 3 seconds
-    tapTimesRef.current = tapTimesRef.current.filter(t => now - t < 3000);
+    tapTimesRef.current = tapTimesRef.current.filter((t) => now - t < 3000);
 
     if (tapTimesRef.current.length >= 2) {
       const intervals = [];
@@ -173,9 +176,8 @@ export function Metronome({ compact = false }: MetronomeProps) {
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: isPlaying && currentBeat === i
-                    ? (i === 0 ? 'var(--danger)' : 'var(--primary)')
-                    : 'var(--border)',
+                  backgroundColor:
+                    isPlaying && currentBeat === i ? (i === 0 ? 'var(--danger)' : 'var(--primary)') : 'var(--border)',
                   transition: 'background-color 0.05s',
                 }}
               />
@@ -191,29 +193,37 @@ export function Metronome({ compact = false }: MetronomeProps) {
       <div className="card-body">
         <h4 style={{ marginBottom: '1rem' }}>{t('tools.metronome.title')}</h4>
 
-        <div className="beat-display" style={{
-          textAlign: 'center',
-          marginBottom: '1rem',
-          padding: '1rem',
-          background: 'var(--background)',
-          borderRadius: '0.5rem'
-        }}>
-          <div style={{
-            fontSize: '3rem',
-            fontWeight: 'bold',
-            fontFamily: 'monospace',
-            color: isPlaying ? 'var(--primary)' : 'var(--text-light)'
-          }}>
+        <div
+          className="beat-display"
+          style={{
+            textAlign: 'center',
+            marginBottom: '1rem',
+            padding: '1rem',
+            background: 'var(--background)',
+            borderRadius: '0.5rem',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '3rem',
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              color: isPlaying ? 'var(--primary)' : 'var(--text-light)',
+            }}
+          >
             {bpm}
           </div>
           <div style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>{t('tools.metronome.bpm')}</div>
 
-          <div className="beat-indicators" style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '8px',
-            marginTop: '1rem'
-          }}>
+          <div
+            className="beat-indicators"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '8px',
+              marginTop: '1rem',
+            }}
+          >
             {Array.from({ length: beatsPerMeasure }).map((_, i) => (
               <div
                 key={i}
@@ -221,9 +231,8 @@ export function Metronome({ compact = false }: MetronomeProps) {
                   width: i === 0 ? '20px' : '16px',
                   height: i === 0 ? '20px' : '16px',
                   borderRadius: '50%',
-                  backgroundColor: isPlaying && currentBeat === i
-                    ? (i === 0 ? 'var(--danger)' : 'var(--primary)')
-                    : 'var(--border)',
+                  backgroundColor:
+                    isPlaying && currentBeat === i ? (i === 0 ? 'var(--danger)' : 'var(--primary)') : 'var(--border)',
                   transition: 'background-color 0.05s',
                 }}
               />
@@ -267,11 +276,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
           >
             {isPlaying ? `⏹ ${t('tools.metronome.stop')}` : `▶ ${t('tools.metronome.start')}`}
           </button>
-          <button
-            className="btn btn-outline"
-            onClick={handleTapTempo}
-            title={t('tools.metronome.tapTitle')}
-          >
+          <button className="btn btn-outline" onClick={handleTapTempo} title={t('tools.metronome.tapTitle')}>
             {t('tools.metronome.tap')}
           </button>
         </div>

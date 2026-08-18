@@ -15,13 +15,17 @@ export const logActivity = async (actionType: string, entityType: string, entity
   await api.post('/activity/log', { actionType, entityType, entityId });
 };
 
-export const getRecentActivity = async (limit: number = 5): Promise<{
-  id: string;
-  actionType: string;
-  entityType: string;
-  entityName?: string;
-  createdAt: string;
-}[]> => {
+export const getRecentActivity = async (
+  limit: number = 5,
+): Promise<
+  {
+    id: string;
+    actionType: string;
+    entityType: string;
+    entityName?: string;
+    createdAt: string;
+  }[]
+> => {
   const { data } = await api.get('/activity/recent', { params: { limit } });
   return data;
 };

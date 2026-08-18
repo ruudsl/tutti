@@ -23,7 +23,7 @@ const getContextActions = (
   pathname: string,
   t: (key: string) => string,
   _userRole: string,
-  onOpenSearch?: () => void
+  onOpenSearch?: () => void,
 ): QuickAction[] => {
   const commonActions: QuickAction[] = [
     {
@@ -292,7 +292,7 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
   const allActions = getContextActions(location.pathname, t, user?.role || 'member', onOpenSearch);
 
   // Filter actions based on user role
-  const actions = allActions.filter(action => {
+  const actions = allActions.filter((action) => {
     if (!action.requiresRole) return true;
     if (!user?.role) return false;
     return action.requiresRole.includes(user.role) || user.role === ROLES.ADMIN;
@@ -332,7 +332,7 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
       // Ctrl+. to toggle quick actions
       if (e.ctrlKey && e.key === '.') {
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setIsOpen((prev) => !prev);
         return;
       }
 
@@ -348,13 +348,13 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
         // Arrow navigation
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          setSelectedIndex(prev => (prev < actions.length - 1 ? prev + 1 : 0));
+          setSelectedIndex((prev) => (prev < actions.length - 1 ? prev + 1 : 0));
           return;
         }
 
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          setSelectedIndex(prev => (prev > 0 ? prev - 1 : actions.length - 1));
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : actions.length - 1));
           return;
         }
 
@@ -366,9 +366,7 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
         }
 
         // Shortcut keys
-        const action = actions.find(
-          a => a.shortcut?.toLowerCase() === e.key.toLowerCase()
-        );
+        const action = actions.find((a) => a.shortcut?.toLowerCase() === e.key.toLowerCase());
         if (action) {
           e.preventDefault();
           handleAction(action);
@@ -386,33 +384,30 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
   }, [location.pathname]);
 
   // Handle action execution
-  const handleAction = useCallback((action: QuickAction) => {
-    setIsOpen(false);
-    setSelectedIndex(-1);
+  const handleAction = useCallback(
+    (action: QuickAction) => {
+      setIsOpen(false);
+      setSelectedIndex(-1);
 
-    if (action.onClick) {
-      action.onClick();
-    } else if (action.path) {
-      navigate(action.path);
-    }
-  }, [navigate]);
+      if (action.onClick) {
+        action.onClick();
+      } else if (action.path) {
+        navigate(action.path);
+      }
+    },
+    [navigate],
+  );
 
   // Toggle menu
   const toggleMenu = useCallback(() => {
-    setIsOpen(prev => !prev);
+    setIsOpen((prev) => !prev);
     setSelectedIndex(-1);
   }, []);
 
   return (
     <>
       {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="quick-actions-backdrop"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      {isOpen && <div className="quick-actions-backdrop" onClick={() => setIsOpen(false)} aria-hidden="true" />}
 
       {/* Action Menu */}
       {isOpen && (
@@ -424,9 +419,7 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
         >
           <div className="quick-actions-header">
             <span className="quick-actions-title">{t('quickActions.title', 'Snelle acties')}</span>
-            <span className="quick-actions-context">
-              {t('quickActions.contextHint', 'Acties voor deze pagina')}
-            </span>
+            <span className="quick-actions-context">{t('quickActions.contextHint', 'Acties voor deze pagina')}</span>
           </div>
           <ul className="quick-actions-list">
             {actions.map((action, index) => (
@@ -442,18 +435,19 @@ export function QuickActionsMenu({ onOpenSearch }: QuickActionsMenuProps) {
                     {action.icon}
                   </span>
                   <span className="quick-action-label">{action.label}</span>
-                  {action.shortcut && (
-                    <kbd className="quick-action-shortcut">
-                      {action.shortcut}
-                    </kbd>
-                  )}
+                  {action.shortcut && <kbd className="quick-action-shortcut">{action.shortcut}</kbd>}
                 </button>
               </li>
             ))}
           </ul>
           <div className="quick-actions-footer">
-            <span><kbd>{'\u2191'}</kbd><kbd>{'\u2193'}</kbd> navigeren</span>
-            <span><kbd>Enter</kbd> selecteren</span>
+            <span>
+              <kbd>{'\u2191'}</kbd>
+              <kbd>{'\u2193'}</kbd> navigeren
+            </span>
+            <span>
+              <kbd>Enter</kbd> selecteren
+            </span>
           </div>
         </div>
       )}

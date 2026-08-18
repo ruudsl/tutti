@@ -74,30 +74,22 @@ export default function MockPayment() {
     <div className="mock-payment-page">
       <div className="mock-payment-container">
         <div className="payment-card">
-          <div className="dev-banner">
-            DEVELOPMENT MODE - Mock Payment
-          </div>
+          <div className="dev-banner">DEVELOPMENT MODE - Mock Payment</div>
 
           <h2>{t('tickets.selectPaymentMethod')}</h2>
 
           <div className="order-info">
-            <p><strong>Order ID:</strong> {orderId}</p>
+            <p>
+              <strong>Order ID:</strong> {orderId}
+            </p>
           </div>
 
           <div className="payment-options">
-            <button
-              className="btn btn-primary btn-large"
-              onClick={handlePay}
-              disabled={processing}
-            >
+            <button className="btn btn-primary btn-large" onClick={handlePay} disabled={processing}>
               {processing ? t('common.loading') : 'Betaling Simuleren (Succes)'}
             </button>
 
-            <button
-              className="btn btn-outline"
-              onClick={handleCancel}
-              disabled={processing}
-            >
+            <button className="btn btn-outline" onClick={handleCancel} disabled={processing}>
               {t('common.cancel')}
             </button>
           </div>

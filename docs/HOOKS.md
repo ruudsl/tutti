@@ -19,6 +19,7 @@ This document describes all custom React hooks available in the Harmonie Muziek 
 These hooks wrap React Query for data fetching and mutations.
 
 ### useUsers
+
 Manage user data with CRUD operations.
 
 ```typescript
@@ -40,6 +41,7 @@ const deleteUser = useDeleteUser();
 ```
 
 ### useConcerts
+
 Concert management with program, media, and attendance.
 
 ```typescript
@@ -60,6 +62,7 @@ const addAttendance = useAddConcertAttendanceBulk();
 ```
 
 ### useMusicPieces
+
 Music library management.
 
 ```typescript
@@ -70,6 +73,7 @@ const { data: titles } = useMusicTitles({ orchestraId });
 ```
 
 ### useMusicLists
+
 Manage music lists (setlists, practice lists).
 
 ```typescript
@@ -80,6 +84,7 @@ const { data: list } = useMusicList(listId);
 ```
 
 ### useOrchestras
+
 Orchestra management.
 
 ```typescript
@@ -90,6 +95,7 @@ const { data: orchestra } = useOrchestra(orchestraId);
 ```
 
 ### useInstruments
+
 Instrument reference data.
 
 ```typescript
@@ -99,6 +105,7 @@ const { data: instruments } = useInstruments();
 ```
 
 ### useGenres
+
 Music genre management.
 
 ```typescript
@@ -108,6 +115,7 @@ const { data: genres } = useGenres();
 ```
 
 ### useFavorites
+
 User's favorite music pieces.
 
 ```typescript
@@ -121,6 +129,7 @@ await toggleFavorite(musicTitleId, isFavorite(musicTitleId));
 ```
 
 ### useNotifications
+
 User notifications.
 
 ```typescript
@@ -130,6 +139,7 @@ const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificatio
 ```
 
 ### useTickets
+
 Ticket sales and management.
 
 ```typescript
@@ -141,6 +151,7 @@ const { data: stats } = useTicketStats(concertId);
 ```
 
 ### useEquipment
+
 Equipment inventory management.
 
 ```typescript
@@ -151,6 +162,7 @@ const { data: types } = useEquipmentTypes();
 ```
 
 ### useUniforms
+
 Uniform inventory and assignments.
 
 ```typescript
@@ -161,6 +173,7 @@ const { data: sets } = useUniformSets();
 ```
 
 ### useEvents
+
 Event calendar.
 
 ```typescript
@@ -170,6 +183,7 @@ const { data: events } = useEvents({ from: startDate, to: endDate });
 ```
 
 ### useRehearsalForm
+
 Rehearsal creation/editing form state.
 
 ```typescript
@@ -179,6 +193,7 @@ const { form, setField, validate, reset } = useRehearsalForm(initialData);
 ```
 
 ### useAudioRecordings
+
 Audio recording management for practice.
 
 ```typescript
@@ -188,6 +203,7 @@ const { recordings, upload, deleteRecording } = useAudioRecordings(musicPieceId)
 ```
 
 ### usePractice
+
 Practice session tracking.
 
 ```typescript
@@ -198,6 +214,7 @@ const { data: logs } = usePracticeLogs(musicTitleId);
 ```
 
 ### usePracticeSchedules
+
 Practice schedule management.
 
 ```typescript
@@ -207,6 +224,7 @@ const { schedules, createSchedule, updateSchedule } = usePracticeSchedules();
 ```
 
 ### useInstrumentAssets
+
 Instrument asset tracking.
 
 ```typescript
@@ -216,6 +234,7 @@ const { data: assets } = useInstrumentAssets(instrumentId);
 ```
 
 ### useExternalMusicians
+
 Guest/external musician management.
 
 ```typescript
@@ -225,6 +244,7 @@ const { data: externals } = useExternalMusicians();
 ```
 
 ### useReplacementRequests
+
 Replacement/substitute requests.
 
 ```typescript
@@ -234,6 +254,7 @@ const { requests, createRequest, respondToRequest } = useReplacementRequests();
 ```
 
 ### useStageLayouts
+
 Stage layout management.
 
 ```typescript
@@ -243,6 +264,7 @@ const { layouts, createLayout, updateLayout } = useStageLayouts();
 ```
 
 ### useSeasons
+
 Season planning.
 
 ```typescript
@@ -252,6 +274,7 @@ const { data: seasons, currentSeason } = useSeasons();
 ```
 
 ### useHolidays
+
 Holiday calendar.
 
 ```typescript
@@ -261,6 +284,7 @@ const { holidays } = useHolidays(year);
 ```
 
 ### useAttendanceAnalytics
+
 Attendance statistics and reporting.
 
 ```typescript
@@ -270,6 +294,7 @@ const { data: analytics } = useAttendanceAnalytics({ from, to, orchestraId });
 ```
 
 ### useVocabulary
+
 Custom vocabulary/terminology management.
 
 ```typescript
@@ -279,6 +304,7 @@ const { vocabulary, updateTerm } = useVocabulary();
 ```
 
 ### useDashboardWidgets
+
 Dashboard widget configuration.
 
 ```typescript
@@ -288,6 +314,7 @@ const { widgets, reorderWidgets, toggleWidget } = useDashboardWidgets();
 ```
 
 ### useSectionChat
+
 Section-specific chat functionality.
 
 ```typescript
@@ -297,6 +324,7 @@ const { messages, sendMessage, isLoading } = useSectionChat(sectionId);
 ```
 
 ### useMultiAssociation
+
 Multi-association membership support.
 
 ```typescript
@@ -306,6 +334,7 @@ const { associations, currentAssociation, switchAssociation } = useMultiAssociat
 ```
 
 ### useSpondIntegration
+
 Spond calendar integration.
 
 ```typescript
@@ -319,6 +348,7 @@ const { isConnected, syncEvents, disconnect } = useSpondIntegration();
 ## UI State Hooks
 
 ### useDarkMode
+
 Dark mode preference with system detection.
 
 ```typescript
@@ -327,11 +357,12 @@ import { useDarkMode } from '../hooks/useDarkMode';
 const { isDark, mode, toggleDarkMode, setDarkMode } = useDarkMode();
 
 // mode can be: 'light' | 'dark' | 'system'
-toggleDarkMode();  // Cycles through: light -> dark -> system -> light
+toggleDarkMode(); // Cycles through: light -> dark -> system -> light
 setDarkMode('dark');
 ```
 
 ### useTheme
+
 Dynamic theme customization.
 
 ```typescript
@@ -341,27 +372,30 @@ const { theme, setTheme, primaryColor, setPrimaryColor } = useTheme();
 ```
 
 ### useIsMobile
+
 Responsive breakpoint detection.
 
 ```typescript
 import { useIsMobile, useMediaQuery } from '../hooks/useIsMobile';
 
-const isMobile = useIsMobile();  // Default: < 768px
-const isMobile = useIsMobile(640);  // Custom breakpoint
+const isMobile = useIsMobile(); // Default: < 768px
+const isMobile = useIsMobile(640); // Custom breakpoint
 
 const isLargeScreen = useMediaQuery('(min-width: 1024px)');
 ```
 
 ### useDocumentTitle
+
 Set document title with i18n support.
 
 ```typescript
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
-useDocumentTitle('pages.concerts.title');  // Uses i18n key
+useDocumentTitle('pages.concerts.title'); // Uses i18n key
 ```
 
 ### useLazyLoad
+
 Lazy loading for components/images.
 
 ```typescript
@@ -375,6 +409,7 @@ const { ref, isVisible } = useLazyLoad();
 ```
 
 ### useUploadProgress
+
 File upload progress tracking.
 
 ```typescript
@@ -386,6 +421,7 @@ await upload(file, '/api/upload');
 ```
 
 ### useAsyncAction
+
 Async operation state management.
 
 ```typescript
@@ -397,6 +433,7 @@ await execute(params);
 ```
 
 ### useRecentViews
+
 Track recently viewed items.
 
 ```typescript
@@ -408,6 +445,7 @@ trackView(musicPieceId);
 ```
 
 ### useRecentItems
+
 Generic recent items tracking.
 
 ```typescript
@@ -421,6 +459,7 @@ const { items, addItem, clearItems } = useRecentItems('searches', 10);
 ## Form Hooks
 
 ### useFormValidation
+
 Accessible form validation with focus management.
 
 ```typescript
@@ -434,10 +473,10 @@ const { focusFirstError, setFieldError, clearErrors, hasError, getError } = useF
 const handleSubmit = (e) => {
   e.preventDefault();
   clearErrors();
-  
+
   const errors = validate(formData);
   if (errors.length > 0) {
-    focusFirstError(errors);  // Focuses first error field, announces to screen readers
+    focusFirstError(errors); // Focuses first error field, announces to screen readers
     return;
   }
   // Submit...
@@ -445,6 +484,7 @@ const handleSubmit = (e) => {
 ```
 
 ### useDebounce
+
 Debounce values and callbacks.
 
 ```typescript
@@ -464,6 +504,7 @@ const debouncedSave = useDebouncedCallback((data) => {
 ## Mobile/PWA Hooks
 
 ### usePWAInstall
+
 PWA installation prompt.
 
 ```typescript
@@ -477,6 +518,7 @@ if (canInstall) {
 ```
 
 ### useSwipeGesture
+
 Touch swipe gesture detection.
 
 ```typescript
@@ -499,6 +541,7 @@ const { ref, bind } = useSwipeGesture({
 ```
 
 ### usePullToRefresh
+
 Pull-to-refresh for mobile.
 
 ```typescript
@@ -520,6 +563,7 @@ const { ref, isPulling, isRefreshing, progress, pullDistance } = usePullToRefres
 ```
 
 ### useHapticFeedback
+
 Haptic feedback for touch interactions.
 
 ```typescript
@@ -535,6 +579,7 @@ haptic('success');  // Patterns: 'light', 'medium', 'heavy', 'success', 'warning
 ```
 
 ### useBluetoothPedal
+
 Bluetooth foot pedal support for page turning.
 
 ```typescript
@@ -555,6 +600,7 @@ useEffect(() => {
 ## Offline Support Hooks
 
 ### useOffline
+
 Network status and offline data sync.
 
 ```typescript
@@ -574,34 +620,33 @@ const {
 
 // Offline-first data loading
 const { data, isLoading, error, isFromCache } = useOfflineData(
-  fetchOnline,     // Function to fetch from server
-  getCached,       // Function to get from IndexedDB
-  cacheData,       // Function to save to IndexedDB
-  [dependency]     // Deps array
+  fetchOnline, // Function to fetch from server
+  getCached, // Function to get from IndexedDB
+  cacheData, // Function to save to IndexedDB
+  [dependency], // Deps array
 );
 ```
 
 ### useOfflineMutation
+
 Queue mutations while offline.
 
 ```typescript
 import { useOfflineMutation, usePendingMutationsCount } from '../hooks/useOfflineMutation';
 
-const mutation = useOfflineMutation(
-  (data) => api.updateItem(data),
-  {
-    onSuccess: (data) => showSuccess('Saved'),
-    onError: (error) => showError(error.message),
-    invalidateKeys: [['items']],
-    mutationKey: 'updateItem',
-  }
-);
+const mutation = useOfflineMutation((data) => api.updateItem(data), {
+  onSuccess: (data) => showSuccess('Saved'),
+  onError: (error) => showError(error.message),
+  invalidateKeys: [['items']],
+  mutationKey: 'updateItem',
+});
 
 // Check pending offline mutations
 const pendingCount = usePendingMutationsCount();
 ```
 
 ### useOfflineData
+
 Offline-first data fetching with caching.
 
 ```typescript
@@ -615,6 +660,7 @@ const { data, isLoading, isFromCache } = useOfflineData(musicPieceId);
 ## Navigation Hooks
 
 ### useKeyboardShortcuts
+
 Global keyboard shortcuts.
 
 ```typescript
@@ -649,6 +695,7 @@ useShortcutEvent('save', () => {
 ```
 
 ### useSearch
+
 Global search functionality.
 
 ```typescript
@@ -671,6 +718,7 @@ const {
 ```
 
 ### usePrefetch
+
 Prefetch data on hover for faster navigation.
 
 ```typescript
@@ -697,6 +745,7 @@ const { onMouseEnter, onMouseLeave, onClick, onFocus } = usePrefetch(
 ## Utility Hooks
 
 ### useAttendance
+
 Attendance tracking and reporting.
 
 ```typescript
@@ -710,6 +759,7 @@ const { status, updateAttendance, canSyncToSpond } = useMyAttendance();
 ```
 
 ### useWebSocket
+
 Real-time WebSocket connection.
 
 ```typescript
@@ -736,7 +786,7 @@ const {
 // Subscribe to events
 useEffect(() => {
   const unsubscribe = onChatMessage((message) => {
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   });
   return unsubscribe;
 }, []);
@@ -747,11 +797,13 @@ useEffect(() => {
 ## Hook Dependencies
 
 Most data fetching hooks depend on:
+
 - `@tanstack/react-query` for caching and state
 - `../lib/queryClient` for query keys and configuration
 - `../api` for API calls
 
 UI hooks typically use:
+
 - React's built-in hooks (`useState`, `useEffect`, `useCallback`, etc.)
 - `react-router-dom` for navigation
 - `react-i18next` for translations

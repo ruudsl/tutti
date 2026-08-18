@@ -106,7 +106,7 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
     if (selectedItems.size === cachedItems.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(cachedItems.map(item => item.url)));
+      setSelectedItems(new Set(cachedItems.map((item) => item.url)));
     }
   }
 
@@ -148,16 +148,11 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
     }
   }
 
-
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: '600px', maxHeight: '80vh' }}
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="modal" style={{ maxWidth: '600px', maxHeight: '80vh' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t('offline.manager', 'Offline Opslag')}</h2>
           <button className="btn btn-ghost" onClick={onClose} aria-label="Sluiten">
@@ -174,25 +169,18 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
             <>
               <div className="flex justify-between items-center mb-3">
                 <div>
-                  <strong>{t('offline.totalSize', 'Totale grootte')}:</strong>{' '}
-                  {formatSize(totalSize)}
+                  <strong>{t('offline.totalSize', 'Totale grootte')}:</strong> {formatSize(totalSize)}
                 </div>
                 <div className="flex gap-2">
                   {cachedItems.length > 0 && (
                     <>
-                      <button
-                        className="btn btn-sm btn-outline"
-                        onClick={selectAll}
-                      >
+                      <button className="btn btn-sm btn-outline" onClick={selectAll}>
                         {selectedItems.size === cachedItems.length
                           ? t('common.deselectAll', 'Deselecteer alles')
                           : t('common.selectAll', 'Selecteer alles')}
                       </button>
                       {selectedItems.size > 0 && (
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={deleteSelected}
-                        >
+                        <button className="btn btn-sm btn-danger" onClick={deleteSelected}>
                           <Icon name="trash" size={14} />
                           {t('common.delete', 'Verwijderen')} ({selectedItems.size})
                         </button>
@@ -205,16 +193,17 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
               {cachedItems.length === 0 ? (
                 <div className="text-center text-muted py-4">
                   <Icon name="cloudOff" size={48} />
-                  <p className="mt-2">
-                    {t('offline.noItems', 'Geen items in offline opslag')}
-                  </p>
+                  <p className="mt-2">{t('offline.noItems', 'Geen items in offline opslag')}</p>
                   <p className="text-sm">
-                    {t('offline.noItemsHint', 'Bekijk partituren om ze automatisch beschikbaar te maken voor offline gebruik')}
+                    {t(
+                      'offline.noItemsHint',
+                      'Bekijk partituren om ze automatisch beschikbaar te maken voor offline gebruik',
+                    )}
                   </p>
                 </div>
               ) : (
                 <div className="offline-items">
-                  {cachedItems.map(item => (
+                  {cachedItems.map((item) => (
                     <div
                       key={item.url}
                       className={`offline-item ${selectedItems.has(item.url) ? 'selected' : ''}`}
@@ -226,9 +215,7 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
                         padding: '0.75rem',
                         borderRadius: '0.5rem',
                         cursor: 'pointer',
-                        background: selectedItems.has(item.url)
-                          ? 'var(--primary-light)'
-                          : 'var(--surface)',
+                        background: selectedItems.has(item.url) ? 'var(--primary-light)' : 'var(--surface)',
                         marginBottom: '0.5rem',
                         border: '1px solid var(--border)',
                       }}
@@ -237,23 +224,20 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
                         type="checkbox"
                         checked={selectedItems.has(item.url)}
                         onChange={() => {}}
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                       />
-                      <Icon
-                        name={item.type === 'pdf' ? 'fileText' : 'music'}
-                        size={20}
-                      />
+                      <Icon name={item.type === 'pdf' ? 'fileText' : 'music'} size={20} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}>
+                        <div
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {item.name}
                         </div>
-                        <div className="text-muted text-sm">
-                          {formatSize(item.size)}
-                        </div>
+                        <div className="text-muted text-sm">{formatSize(item.size)}</div>
                       </div>
                     </div>
                   ))}

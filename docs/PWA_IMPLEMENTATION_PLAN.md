@@ -1,6 +1,7 @@
 # PWA Implementatieplan - Harmonie Muziek App
 
 ## Huidige Situatie
+
 - **Framework**: React 18 + Vite 5 + TypeScript
 - **PWA Status**: Geen implementatie aanwezig
 - **Caching**: Alleen React Query (5 min stale time) + localStorage voor auth
@@ -11,11 +12,13 @@
 ## Fase 1: Basis PWA Setup
 
 ### 1.1 Installatie Dependencies
+
 ```bash
 npm install -D vite-plugin-pwa workbox-window
 ```
 
 ### 1.2 Web App Manifest (`manifest.webmanifest`)
+
 Locatie: `frontend/public/manifest.webmanifest`
 
 ```json
@@ -93,12 +96,13 @@ Locatie: `frontend/public/manifest.webmanifest`
 ```
 
 ### 1.3 Vite PWA Plugin Configuratie
+
 Bestand: `frontend/vite.config.ts`
 
 ```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
@@ -111,11 +115,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           // Zie Fase 2 voor caching strategieën
-        ]
-      }
-    })
-  ]
-})
+        ],
+      },
+    }),
+  ],
+});
 ```
 
 ---
@@ -139,9 +143,9 @@ runtimeCaching: [
       },
       networkTimeoutSeconds: 10,
       cacheableResponse: {
-        statuses: [0, 200]
-      }
-    }
+        statuses: [0, 200],
+      },
+    },
   },
   // Muziekbestanden (MP3) - Cache First
   {
@@ -153,8 +157,8 @@ runtimeCaching: [
         maxEntries: 50,
         maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dagen
       },
-      rangeRequests: true
-    }
+      rangeRequests: true,
+    },
   },
   // PDF bestanden - Cache First
   {
@@ -165,8 +169,8 @@ runtimeCaching: [
       expiration: {
         maxEntries: 100,
         maxAgeSeconds: 60 * 60 * 24 * 7, // 7 dagen
-      }
-    }
+      },
+    },
   },
   // Afbeeldingen - Cache First
   {
@@ -177,8 +181,8 @@ runtimeCaching: [
       expiration: {
         maxEntries: 200,
         maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dagen
-      }
-    }
+      },
+    },
   },
   // Fonts - Cache First
   {
@@ -189,16 +193,16 @@ runtimeCaching: [
       expiration: {
         maxEntries: 20,
         maxAgeSeconds: 60 * 60 * 24 * 365, // 1 jaar
-      }
-    }
+      },
+    },
   },
   // Google Fonts
   {
     urlPattern: /^https:\/\/fonts\.googleapis\.com/,
     handler: 'StaleWhileRevalidate',
     options: {
-      cacheName: 'google-fonts-stylesheets'
-    }
+      cacheName: 'google-fonts-stylesheets',
+    },
   },
   {
     urlPattern: /^https:\/\/fonts\.gstatic\.com/,
@@ -207,23 +211,23 @@ runtimeCaching: [
       cacheName: 'google-fonts-webfonts',
       expiration: {
         maxEntries: 30,
-        maxAgeSeconds: 60 * 60 * 24 * 365
-      }
-    }
-  }
-]
+        maxAgeSeconds: 60 * 60 * 24 * 365,
+      },
+    },
+  },
+];
 ```
 
 ### 2.2 Caching Strategie per Resource Type
 
-| Resource Type | Strategie | Cache Duur | Reden |
-|--------------|-----------|------------|-------|
-| App Shell (HTML/CSS/JS) | Precache | Permanent | Snelle initiële load |
-| API Data | Network First | 24 uur | Verse data, offline fallback |
-| Muziekbestanden | Cache First | 30 dagen | Grote bestanden, zelden gewijzigd |
-| PDF Partituren | Cache First | 7 dagen | Grote bestanden |
-| Afbeeldingen | Cache First | 30 dagen | Statisch |
-| Fonts | Cache First | 1 jaar | Nooit gewijzigd |
+| Resource Type           | Strategie     | Cache Duur | Reden                             |
+| ----------------------- | ------------- | ---------- | --------------------------------- |
+| App Shell (HTML/CSS/JS) | Precache      | Permanent  | Snelle initiële load              |
+| API Data                | Network First | 24 uur     | Verse data, offline fallback      |
+| Muziekbestanden         | Cache First   | 30 dagen   | Grote bestanden, zelden gewijzigd |
+| PDF Partituren          | Cache First   | 7 dagen    | Grote bestanden                   |
+| Afbeeldingen            | Cache First   | 30 dagen   | Statisch                          |
+| Fonts                   | Cache First   | 1 jaar     | Nooit gewijzigd                   |
 
 ---
 
@@ -322,7 +326,7 @@ export function useOfflineMutation<TData, TVariables>(
   options?: {
     onSuccess?: (data: TData) => void;
     invalidateKeys?: string[][];
-  }
+  },
 ) {
   const queryClient = useQueryClient();
 
@@ -344,7 +348,7 @@ export function useOfflineMutation<TData, TVariables>(
       }
 
       // Invalidate caches na sync
-      options?.invalidateKeys?.forEach(key => {
+      options?.invalidateKeys?.forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key });
       });
     };
@@ -487,11 +491,7 @@ import webpush from 'web-push';
 const router = express.Router();
 
 // VAPID keys genereren: npx web-push generate-vapid-keys
-webpush.setVapidDetails(
-  'mailto:admin@harmonie.nl',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+webpush.setVapidDetails('mailto:admin@harmonie.nl', process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
 
 // Subscription opslaan
 router.post('/subscribe', async (req, res) => {
@@ -507,12 +507,15 @@ router.post('/send', async (req, res) => {
   const subscription = await db.getPushSubscription(userId);
 
   if (subscription) {
-    await webpush.sendNotification(subscription, JSON.stringify({
-      title,
-      body,
-      url,
-      icon: '/icons/icon-192x192.png',
-    }));
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify({
+        title,
+        body,
+        url,
+        icon: '/icons/icon-192x192.png',
+      }),
+    );
   }
   res.json({ success: true });
 });
@@ -555,6 +558,7 @@ export function usePushNotifications() {
 ## Implementatie Volgorde
 
 ### Sprint 1: Basis PWA (Week 1-2)
+
 - [x] Plan uitwerken
 - [x] Dependencies installeren (`vite-plugin-pwa`)
 - [x] Manifest bestand aanmaken
@@ -564,6 +568,7 @@ export function usePushNotifications() {
 - [ ] Testen installatie op mobiel
 
 ### Sprint 2: Caching & Offline (Week 3-4)
+
 - [x] Runtime caching configureren
 - [x] React Query persistence toevoegen
 - [x] Offline indicator component
@@ -571,12 +576,14 @@ export function usePushNotifications() {
 - [ ] Testen offline functionaliteit
 
 ### Sprint 3: UX Verbeteringen (Week 5)
+
 - [x] Install prompt component
 - [x] Update notification component
 - [x] Vertalingen toevoegen (NL/EN/DE)
 - [x] Styling voor PWA elementen
 
 ### Sprint 4: Push Notifications (Week 6 - Optioneel)
+
 - [x] VAPID keys configuratie (env vars gedocumenteerd)
 - [x] Backend push endpoints (web-push in notifications.ts)
 - [x] Frontend push registration (in NotificationCenter.tsx)
@@ -620,11 +627,13 @@ frontend/
 ## Testing Checklist
 
 ### Lighthouse PWA Audit
+
 - [ ] Installable
 - [ ] PWA Optimized
 - [ ] Offline capable
 
 ### Handmatige Tests
+
 - [ ] App installeren op Android
 - [ ] App installeren op iOS (Safari)
 - [ ] Offline navigatie werkt
@@ -633,6 +642,7 @@ frontend/
 - [ ] Queued mutations syncen na reconnect
 
 ### Browser Support
+
 - [ ] Chrome (Desktop & Android)
 - [ ] Safari (iOS & macOS)
 - [ ] Firefox
@@ -644,32 +654,33 @@ frontend/
 
 ### Sprint 5: Notificaties & Offline (Week 7-8)
 
-| # | Feature | Prioriteit | Beschrijving |
-|---|---------|------------|--------------|
-| 1 | **Service Worker push handler** | Hoog | Push notificaties ontvangen ook als browser/app gesloten is. Vereist `push` en `notificationclick` event handlers in SW. |
-| 2 | **Rich notifications met actions** | Hoog | Notificaties met knoppen zoals "Accepteren" / "Afwijzen" voor repetitie-uitnodigingen. Gebruikt `actions` array in `showNotification()`. |
-| 3 | **Background Sync API** | Medium | Native browser API voor automatisch synchroniseren van mutations wanneer verbinding terugkeert. Robuuster dan handmatige queue. |
-| 4 | **Selective offline mode** | Hoog | Gebruiker kan specifieke muzieklijsten/concerten markeren voor offline gebruik. Download PDFs + metadata naar IndexedDB. |
+| #   | Feature                            | Prioriteit | Beschrijving                                                                                                                             |
+| --- | ---------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Service Worker push handler**    | Hoog       | Push notificaties ontvangen ook als browser/app gesloten is. Vereist `push` en `notificationclick` event handlers in SW.                 |
+| 2   | **Rich notifications met actions** | Hoog       | Notificaties met knoppen zoals "Accepteren" / "Afwijzen" voor repetitie-uitnodigingen. Gebruikt `actions` array in `showNotification()`. |
+| 3   | **Background Sync API**            | Medium     | Native browser API voor automatisch synchroniseren van mutations wanneer verbinding terugkeert. Robuuster dan handmatige queue.          |
+| 4   | **Selective offline mode**         | Hoog       | Gebruiker kan specifieke muzieklijsten/concerten markeren voor offline gebruik. Download PDFs + metadata naar IndexedDB.                 |
 
 ### Sprint 6: Device Integratie (Week 9-10)
 
-| # | Feature | Prioriteit | Beschrijving |
-|---|---------|------------|--------------|
-| 5 | **App Shortcuts** | Medium | Snelkoppelingen bij lang-drukken op app-icoon: "Nieuwe upload", "Mijn muziek", "Repetities". Configureren in manifest `shortcuts` array. |
-| 6 | **Web Share API** | Medium | Deel concerten/muziekstukken naar WhatsApp, e-mail, etc. via native OS share sheet. `navigator.share()` met title, text, url. |
-| 7 | **Share Target API** | Medium | App verschijnt in OS share menu. Gebruiker kan PDF vanuit Files/Verkenner direct naar Tutti delen voor import. Vereist manifest `share_target`. |
-| 8 | **Wake Lock API** | Laag | Scherm blijft aan tijdens oefenen of partituur bekijken. `navigator.wakeLock.request('screen')`. |
-| 9 | **Badging API** | Laag | Toon ongelezen notificaties als badge op app-icoon (Android/Windows/macOS). `navigator.setAppBadge(count)`. |
+| #   | Feature              | Prioriteit | Beschrijving                                                                                                                                    |
+| --- | -------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5   | **App Shortcuts**    | Medium     | Snelkoppelingen bij lang-drukken op app-icoon: "Nieuwe upload", "Mijn muziek", "Repetities". Configureren in manifest `shortcuts` array.        |
+| 6   | **Web Share API**    | Medium     | Deel concerten/muziekstukken naar WhatsApp, e-mail, etc. via native OS share sheet. `navigator.share()` met title, text, url.                   |
+| 7   | **Share Target API** | Medium     | App verschijnt in OS share menu. Gebruiker kan PDF vanuit Files/Verkenner direct naar Tutti delen voor import. Vereist manifest `share_target`. |
+| 8   | **Wake Lock API**    | Laag       | Scherm blijft aan tijdens oefenen of partituur bekijken. `navigator.wakeLock.request('screen')`.                                                |
+| 9   | **Badging API**      | Laag       | Toon ongelezen notificaties als badge op app-icoon (Android/Windows/macOS). `navigator.setAppBadge(count)`.                                     |
 
 ### Sprint 7: UX & Conversie (Week 11-12)
 
-| # | Feature | Prioriteit | Beschrijving |
-|---|---------|------------|--------------|
-| 10 | **Custom install prompt** | Medium | Eigen UI met uitleg waarom installeren handig is (offline, snelheid, notificaties). Hogere conversie dan standaard browser prompt. |
+| #   | Feature                   | Prioriteit | Beschrijving                                                                                                                       |
+| --- | ------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 10  | **Custom install prompt** | Medium     | Eigen UI met uitleg waarom installeren handig is (offline, snelheid, notificaties). Hogere conversie dan standaard browser prompt. |
 
 ### Implementatie Details
 
 #### 1. Service Worker Push Handler
+
 ```typescript
 // In custom service worker (sw.ts)
 self.addEventListener('push', (event) => {
@@ -680,7 +691,7 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192x192.svg',
       badge: '/icons/badge-72x72.png',
       data: { url: data.url },
-    })
+    }),
   );
 });
 
@@ -691,6 +702,7 @@ self.addEventListener('notificationclick', (event) => {
 ```
 
 #### 5. App Shortcuts (manifest.webmanifest)
+
 ```json
 {
   "shortcuts": [
@@ -717,6 +729,7 @@ self.addEventListener('notificationclick', (event) => {
 ```
 
 #### 6. Web Share API
+
 ```typescript
 async function shareContent(title: string, text: string, url: string) {
   if (navigator.share) {
@@ -729,6 +742,7 @@ async function shareContent(title: string, text: string, url: string) {
 ```
 
 #### 7. Share Target (manifest.webmanifest)
+
 ```json
 {
   "share_target": {
@@ -746,29 +760,29 @@ async function shareContent(title: string, text: string, url: string) {
 
 ## Geschatte Impact
 
-| Metric | Verwachte Verbetering |
-|--------|----------------------|
+| Metric                 | Verwachte Verbetering    |
+| ---------------------- | ------------------------ |
 | First Contentful Paint | -40% (app shell caching) |
-| Time to Interactive | -30% (precaching) |
-| Offline Availability | 0% → 80% |
-| User Engagement | +25% (installatie) |
-| Return Visits | +35% (home screen icon) |
+| Time to Interactive    | -30% (precaching)        |
+| Offline Availability   | 0% → 80%                 |
+| User Engagement        | +25% (installatie)       |
+| Return Visits          | +35% (home screen icon)  |
 
 ---
 
 ## Risico's & Mitigatie
 
-| Risico | Mitigatie |
-|--------|-----------|
-| Cache invalidation bugs | Versioning in cache names |
-| Stale data tonen | NetworkFirst voor API calls |
-| Storage quota overschrijden | Expiration policies per cache |
-| iOS beperkingen | Fallback messaging, geen push |
+| Risico                       | Mitigatie                     |
+| ---------------------------- | ----------------------------- |
+| Cache invalidation bugs      | Versioning in cache names     |
+| Stale data tonen             | NetworkFirst voor API calls   |
+| Storage quota overschrijden  | Expiration policies per cache |
+| iOS beperkingen              | Fallback messaging, geen push |
 | Service worker update issues | `skipWaiting` + update prompt |
 
 ---
 
-*Document versie: 1.3*
-*Aangemaakt: 2026-02-10*
-*Laatst bijgewerkt: 2026-04-26*
-*Status: Fase 1-4 geïmplementeerd - Fase 5 gepland (10 features)*
+_Document versie: 1.3_
+_Aangemaakt: 2026-02-10_
+_Laatst bijgewerkt: 2026-04-26_
+_Status: Fase 1-4 geïmplementeerd - Fase 5 gepland (10 features)_

@@ -11,35 +11,39 @@ MusicXML is de standaard voor uitwisseling van muzieknotatie. Tutti ondersteunt 
 ### Ondersteunde elementen
 
 #### Work Element (`<work>`)
-| Element | Beschrijving | Database veld |
-|---------|--------------|---------------|
+
+| Element         | Beschrijving                                              | Database veld                |
+| --------------- | --------------------------------------------------------- | ---------------------------- |
 | `<work-number>` | Opus nummer of catalogusnummer (bijv. "Op. 67", "K. 545") | `music_metadata.work_number` |
-| `<work-title>` | Titel van het complete werk | `music_titles.title` |
+| `<work-title>`  | Titel van het complete werk                               | `music_titles.title`         |
 
 #### Movement (`<movement-number>`, `<movement-title>`)
-| Element | Beschrijving | Database veld |
-|---------|--------------|---------------|
+
+| Element             | Beschrijving               | Database veld                    |
+| ------------------- | -------------------------- | -------------------------------- |
 | `<movement-number>` | Deelnummer binnen het werk | `music_metadata.movement_number` |
-| `<movement-title>` | Titel van het deel | `music_metadata.movement_title` |
+| `<movement-title>`  | Titel van het deel         | `music_metadata.movement_title`  |
 
 #### Identification Element (`<identification>`)
-| Element | Beschrijving | Database veld |
-|---------|--------------|---------------|
-| `<creator type="composer">` | Componist | `music_titles.composer` |
-| `<creator type="arranger">` | Arrangeur | `music_titles.arranger` |
-| `<creator type="lyricist">` | Tekstschrijver | `music_metadata.lyricist` |
-| `<creator type="poet">` | Dichter (voor liederen) | `music_metadata.lyricist` |
-| `<rights>` | Copyright informatie | `music_metadata.rights` |
-| `<source>` | Bron (bijv. uitgever, editie) | `music_metadata.source` |
-| `<encoding><software>` | Software die het bestand maakte | `music_metadata.encoding_software` |
-| `<encoding><encoding-date>` | Datum van encoding | `music_metadata.encoding_date` |
+
+| Element                     | Beschrijving                    | Database veld                      |
+| --------------------------- | ------------------------------- | ---------------------------------- |
+| `<creator type="composer">` | Componist                       | `music_titles.composer`            |
+| `<creator type="arranger">` | Arrangeur                       | `music_titles.arranger`            |
+| `<creator type="lyricist">` | Tekstschrijver                  | `music_metadata.lyricist`          |
+| `<creator type="poet">`     | Dichter (voor liederen)         | `music_metadata.lyricist`          |
+| `<rights>`                  | Copyright informatie            | `music_metadata.rights`            |
+| `<source>`                  | Bron (bijv. uitgever, editie)   | `music_metadata.source`            |
+| `<encoding><software>`      | Software die het bestand maakte | `music_metadata.encoding_software` |
+| `<encoding><encoding-date>` | Datum van encoding              | `music_metadata.encoding_date`     |
 
 #### Part List (`<part-list>`)
-| Element | Beschrijving | Database veld |
-|---------|--------------|---------------|
-| `<score-part><part-name>` | Naam van de partij | `music_metadata.parts` (JSONB) |
-| `<score-part><part-abbreviation>` | Afkorting | `music_metadata.parts` (JSONB) |
-| `<score-instrument>` | Instrument details | `music_metadata.parts` (JSONB) |
+
+| Element                           | Beschrijving       | Database veld                  |
+| --------------------------------- | ------------------ | ------------------------------ |
+| `<score-part><part-name>`         | Naam van de partij | `music_metadata.parts` (JSONB) |
+| `<score-part><part-abbreviation>` | Afkorting          | `music_metadata.parts` (JSONB) |
+| `<score-instrument>`              | Instrument details | `music_metadata.parts` (JSONB) |
 
 ### Voorbeeld MusicXML header
 
@@ -80,6 +84,7 @@ MusicXML is de standaard voor uitwisseling van muzieknotatie. Tutti ondersteunt 
 ### Niet-ondersteunde elementen
 
 Tutti importeert **alleen metadata**, niet de muzieknotatie zelf. De volgende elementen worden genegeerd:
+
 - `<part>` (muzieknotatie)
 - `<measure>` (maten)
 - `<note>` (noten)
@@ -95,6 +100,7 @@ JSKOS (JSON for Knowledge Organization Systems) is een JSON-LD formaat voor thes
 ### Ondersteunde vocabularies
 
 #### 1. Instrumenten (IAML Medium of Performance)
+
 Gebaseerd op de UNIMARC codes voor muziekinstrumenten.
 
 ```json
@@ -105,23 +111,27 @@ Gebaseerd op de UNIMARC codes voor muziekinstrumenten.
     "nl": "Fluit",
     "de": "Flöte"
   },
-  "broader": [{
-    "uri": "http://iflastandards.info/ns/unimarc/terms/mop/s",
-    "prefLabel": {"en": "Woodwinds"}
-  }]
+  "broader": [
+    {
+      "uri": "http://iflastandards.info/ns/unimarc/terms/mop/s",
+      "prefLabel": { "en": "Woodwinds" }
+    }
+  ]
 }
 ```
 
 **Hoofdcategorieën:**
-| Code | Instrument familie |
-|------|-------------------|
-| `s` | Houtblazers (Woodwinds) |
-| `b` | Koperblazers (Brass) |
-| `p` | Slagwerk (Percussion) |
-| `t` | Strijkers (Strings) |
-| `k` | Keyboards |
+
+| Code | Instrument familie      |
+| ---- | ----------------------- |
+| `s`  | Houtblazers (Woodwinds) |
+| `b`  | Koperblazers (Brass)    |
+| `p`  | Slagwerk (Percussion)   |
+| `t`  | Strijkers (Strings)     |
+| `k`  | Keyboards               |
 
 #### 2. Genres (LCGFT - Library of Congress Genre/Form Terms)
+
 Voor muziekgenres en vormen.
 
 ```json
@@ -130,24 +140,28 @@ Voor muziekgenres en vormen.
   "prefLabel": {
     "en": "Marches"
   },
-  "broader": [{
-    "uri": "http://id.loc.gov/authorities/genreForms/gf2014026891",
-    "prefLabel": {"en": "Instrumental music"}
-  }]
+  "broader": [
+    {
+      "uri": "http://id.loc.gov/authorities/genreForms/gf2014026891",
+      "prefLabel": { "en": "Instrumental music" }
+    }
+  ]
 }
 ```
 
 **Veelgebruikte genres voor harmonieorkesten:**
-| URI suffix | Genre |
-|------------|-------|
-| `gf2014026951` | Marches |
-| `gf2014027048` | Overtures |
-| `gf2014027188` | Suites |
-| `gf2014027245` | Waltzes |
+
+| URI suffix     | Genre      |
+| -------------- | ---------- |
+| `gf2014026951` | Marches    |
+| `gf2014027048` | Overtures  |
+| `gf2014027188` | Suites     |
+| `gf2014027245` | Waltzes    |
 | `gf2014026971` | Symphonies |
-| `gf2014026870` | Fanfares |
+| `gf2014026870` | Fanfares   |
 
 #### 3. Componisten (GND - Gemeinsame Normdatei)
+
 Duitse nationale autoriteitsbestand, ook voor internationale componisten.
 
 ```json
@@ -156,10 +170,7 @@ Duitse nationale autoriteitsbestand, ook voor internationale componisten.
   "prefLabel": {
     "de": "Beethoven, Ludwig van"
   },
-  "altLabel": [
-    "Ludwig van Beethoven",
-    "Beethoven"
-  ],
+  "altLabel": ["Ludwig van Beethoven", "Beethoven"],
   "dateOfBirth": "1770",
   "dateOfDeath": "1827"
 }
@@ -177,9 +188,11 @@ Voor instrumenten of termen die niet in standaard vocabularies voorkomen, gebrui
     "nl": "Bugel",
     "de": "Flügelhorn"
   },
-  "inScheme": [{
-    "uri": "tutti:scheme/instruments"
-  }]
+  "inScheme": [
+    {
+      "uri": "tutti:scheme/instruments"
+    }
+  ]
 }
 ```
 
@@ -195,33 +208,33 @@ Uitbreiding op `music_titles` voor MusicXML-specifieke metadata.
 CREATE TABLE music_metadata (
     id TEXT PRIMARY KEY,
     music_title_id TEXT NOT NULL UNIQUE,
-    
+
     -- MusicXML work info
     work_number TEXT,           -- "Op. 67", "K. 545"
     movement_number INTEGER,
     movement_title TEXT,
-    
+
     -- Additional creators
     lyricist TEXT,
-    
+
     -- Rights and source
     rights TEXT,                -- Copyright info
     source TEXT,                -- Publisher, edition
-    
+
     -- Encoding info
     encoding_software TEXT,
     encoding_date DATE,
-    
+
     -- Structured data (JSONB)
     parts JSONB,                -- Instrumentation from part-list
-    
+
     -- Original MusicXML for round-trip
     musicxml_raw TEXT,
-    
+
     -- Timestamps
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE
 );
 ```
@@ -234,19 +247,19 @@ Cache voor externe JSKOS vocabularies.
 CREATE TABLE vocabulary_cache (
     uri TEXT PRIMARY KEY,
     vocabulary_type TEXT NOT NULL,  -- 'instrument', 'genre', 'composer'
-    
+
     -- Labels (multilingual)
     pref_label JSONB NOT NULL,      -- {"en": "...", "nl": "...", "de": "..."}
     alt_labels JSONB,               -- ["alias1", "alias2"]
-    
+
     -- Hierarchy
     broader JSONB,                  -- Parent concepts
     narrower JSONB,                 -- Child concepts
-    
+
     -- Extra metadata
     notation TEXT,                  -- Short code (e.g., "sca" for flute)
     definition JSONB,               -- Scope notes
-    
+
     -- Cache management
     source_url TEXT,                -- Where we fetched this from
     fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -265,7 +278,7 @@ CREATE TABLE music_title_instruments (
     count INTEGER DEFAULT 1,        -- Aantal van dit instrument
     is_optional BOOLEAN DEFAULT 0,  -- Optionele partij
     notes TEXT,                     -- "1st chair only", "cued in Trumpet"
-    
+
     PRIMARY KEY (music_title_id, instrument_uri),
     FOREIGN KEY (music_title_id) REFERENCES music_titles(id) ON DELETE CASCADE,
     FOREIGN KEY (instrument_uri) REFERENCES vocabulary_cache(uri) ON DELETE CASCADE
@@ -278,28 +291,28 @@ CREATE TABLE music_title_instruments (
 
 ### Metadata
 
-| Method | Endpoint | Beschrijving |
-|--------|----------|--------------|
-| `GET` | `/api/music-titles/:id/metadata` | Volledige metadata ophalen |
-| `PATCH` | `/api/music-titles/:id/metadata` | Metadata bijwerken |
-| `POST` | `/api/music-titles/:id/musicxml` | MusicXML uploaden en parsen |
-| `GET` | `/api/music-titles/:id/musicxml` | MusicXML exporteren |
+| Method  | Endpoint                         | Beschrijving                |
+| ------- | -------------------------------- | --------------------------- |
+| `GET`   | `/api/music-titles/:id/metadata` | Volledige metadata ophalen  |
+| `PATCH` | `/api/music-titles/:id/metadata` | Metadata bijwerken          |
+| `POST`  | `/api/music-titles/:id/musicxml` | MusicXML uploaden en parsen |
+| `GET`   | `/api/music-titles/:id/musicxml` | MusicXML exporteren         |
 
 ### Vocabularies
 
-| Method | Endpoint | Beschrijving |
-|--------|----------|--------------|
-| `GET` | `/api/vocabularies/instruments?q=` | Instrumenten zoeken |
-| `GET` | `/api/vocabularies/instruments/tree` | Instrumenten hiërarchie |
-| `GET` | `/api/vocabularies/genres?q=` | Genres zoeken |
-| `GET` | `/api/vocabularies/genres/tree` | Genre hiërarchie |
+| Method | Endpoint                             | Beschrijving            |
+| ------ | ------------------------------------ | ----------------------- |
+| `GET`  | `/api/vocabularies/instruments?q=`   | Instrumenten zoeken     |
+| `GET`  | `/api/vocabularies/instruments/tree` | Instrumenten hiërarchie |
+| `GET`  | `/api/vocabularies/genres?q=`        | Genres zoeken           |
+| `GET`  | `/api/vocabularies/genres/tree`      | Genre hiërarchie        |
 
 ### Interoperabiliteit
 
-| Method | Endpoint | Beschrijving |
-|--------|----------|--------------|
-| `GET` | `/api/orchestras/:id/repertoire.json` | Repertoire als JSON-LD |
-| `GET` | `/api/orchestras/:id/repertoire.xml` | Repertoire als MusicXML bundle |
+| Method | Endpoint                              | Beschrijving                   |
+| ------ | ------------------------------------- | ------------------------------ |
+| `GET`  | `/api/orchestras/:id/repertoire.json` | Repertoire als JSON-LD         |
+| `GET`  | `/api/orchestras/:id/repertoire.xml`  | Repertoire als MusicXML bundle |
 
 ---
 
@@ -348,10 +361,7 @@ Autocomplete component voor het selecteren van instrumenten.
 ```tsx
 import { InstrumentPicker } from '../components/InstrumentPicker';
 
-<InstrumentPicker
-  value={selectedInstruments}
-  onChange={setSelectedInstruments}
-/>
+<InstrumentPicker value={selectedInstruments} onChange={setSelectedInstruments} />;
 ```
 
 ### GenrePicker
@@ -361,10 +371,7 @@ Multi-select component voor genres.
 ```tsx
 import { GenrePicker } from '../components/GenrePicker';
 
-<GenrePicker
-  value={selectedGenreUris}
-  onChange={setSelectedGenreUris}
-/>
+<GenrePicker value={selectedGenreUris} onChange={setSelectedGenreUris} />;
 ```
 
 ### MusicXMLUpload
@@ -374,14 +381,10 @@ Drag & drop component voor MusicXML uploads.
 ```tsx
 import { MusicXMLUpload } from '../components/MusicXMLUpload';
 
-<MusicXMLUpload
-  titleId={titleId}
-  hasExistingData={hasMetadata}
-  onSuccess={() => refetch()}
-/>
+<MusicXMLUpload titleId={titleId} hasExistingData={hasMetadata} onSuccess={() => refetch()} />;
 ```
 
 ---
 
-*Document versie: 1.1*  
-*Laatst bijgewerkt: 2026-04-26*
+_Document versie: 1.1_  
+_Laatst bijgewerkt: 2026-04-26_

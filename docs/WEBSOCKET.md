@@ -5,6 +5,7 @@ This document describes the WebSocket implementation for real-time features in t
 ## Overview
 
 The application uses Socket.IO for real-time bidirectional communication, enabling:
+
 - Live chat messaging
 - Typing indicators
 - Real-time seating updates
@@ -33,7 +34,7 @@ export function initWebSocket(httpServer: HttpServer): Server {
   });
 
   // ... authentication and event handlers
-  
+
   return io;
 }
 ```
@@ -51,8 +52,7 @@ interface AuthenticatedSocket extends Socket {
 
 io.use(async (socket: AuthenticatedSocket, next) => {
   try {
-    const token = socket.handshake.auth.token || 
-                  socket.handshake.headers.authorization?.replace('Bearer ', '');
+    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
       return next(new Error('Authentication required'));
@@ -63,10 +63,8 @@ io.use(async (socket: AuthenticatedSocket, next) => {
     socket.associationId = decoded.associationId;
 
     // Get user's orchestra memberships
-    const orchestras = db.prepare(
-      'SELECT orchestra_id FROM user_orchestras WHERE user_id = ?'
-    ).all(decoded.id);
-    socket.orchestraIds = orchestras.map(o => o.orchestra_id);
+    const orchestras = db.prepare('SELECT orchestra_id FROM user_orchestras WHERE user_id = ?').all(decoded.id);
+    socket.orchestraIds = orchestras.map((o) => o.orchestra_id);
 
     next();
   } catch (err) {
@@ -93,7 +91,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   // Join orchestra rooms (for orchestra-specific chat)
   if (socket.orchestraIds) {
-    socket.orchestraIds.forEach(id => socket.join(`orchestra:${id}`));
+    socket.orchestraIds.forEach((id) => socket.join(`orchestra:${id}`));
   }
 });
 ```
@@ -102,24 +100,24 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
 ### Server-Emitted Events
 
-| Event | Room | Payload | Description |
-|-------|------|---------|-------------|
-| `chat:message` | `orchestra:{id}` or `association:{id}` | `ChatMessage` | New chat message |
-| `chat:typing` | `orchestra:{id}` or `association:{id}` | `TypingIndicator` | User typing status |
-| `seating:updated` | `association:{id}` | `SeatingUpdate` | Seat assignment change |
-| `notification:new` | `user:{id}` | `Notification` | New notification |
-| `presence:updated` | `association:{id}` | `PresenceUpdate` | User online/page update |
-| `presence:offline` | `association:{id}` | `{ userId }` | User disconnected |
-| `error` | `user:{id}` | `{ message }` | Error message |
+| Event              | Room                                   | Payload           | Description             |
+| ------------------ | -------------------------------------- | ----------------- | ----------------------- |
+| `chat:message`     | `orchestra:{id}` or `association:{id}` | `ChatMessage`     | New chat message        |
+| `chat:typing`      | `orchestra:{id}` or `association:{id}` | `TypingIndicator` | User typing status      |
+| `seating:updated`  | `association:{id}`                     | `SeatingUpdate`   | Seat assignment change  |
+| `notification:new` | `user:{id}`                            | `Notification`    | New notification        |
+| `presence:updated` | `association:{id}`                     | `PresenceUpdate`  | User online/page update |
+| `presence:offline` | `association:{id}`                     | `{ userId }`      | User disconnected       |
+| `error`            | `user:{id}`                            | `{ message }`     | Error message           |
 
 ### Client-Emitted Events
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `chat:message` | `{ content, orchestraId? }` | Send chat message |
-| `chat:typing` | `{ isTyping, orchestraId? }` | Update typing indicator |
-| `seating:update` | `{ concertId, seatId, userId }` | Update seat assignment |
-| `presence:update` | `{ page }` | Update current page/presence |
+| Event             | Payload                         | Description                  |
+| ----------------- | ------------------------------- | ---------------------------- |
+| `chat:message`    | `{ content, orchestraId? }`     | Send chat message            |
+| `chat:typing`     | `{ isTyping, orchestraId? }`    | Update typing indicator      |
+| `seating:update`  | `{ concertId, seatId, userId }` | Update seat assignment       |
+| `presence:update` | `{ page }`                      | Update current page/presence |
 
 ## Event Payloads
 
@@ -178,9 +176,8 @@ interface Notification {
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 
-const SOCKET_URL = import.meta.env.VITE_WS_URL || 
-                   import.meta.env.VITE_API_URL?.replace('/api', '') || 
-                   'http://localhost:3001';
+const SOCKET_URL =
+  import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
 export function useWebSocket() {
   const { user } = useAuth();
@@ -221,23 +218,17 @@ import { useWebSocket } from '../hooks/useWebSocket';
 function ChatComponent({ orchestraId }: { orchestraId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const { 
-    isConnected, 
-    sendChatMessage, 
-    setTyping, 
-    onChatMessage, 
-    onTyping 
-  } = useWebSocket();
+  const { isConnected, sendChatMessage, setTyping, onChatMessage, onTyping } = useWebSocket();
 
   useEffect(() => {
     // Subscribe to new messages
     const unsubMessage = onChatMessage((message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages((prev) => [...prev, message]);
     });
 
     // Subscribe to typing indicators
     const unsubTyping = onTyping(({ userId, isTyping }) => {
-      setTypingUsers(prev => {
+      setTypingUsers((prev) => {
         const next = new Set(prev);
         if (isTyping) {
           next.add(userId);
@@ -283,11 +274,7 @@ function SeatingChart({ concertId }: { concertId: string }) {
   useEffect(() => {
     const unsubscribe = onSeatingUpdate((update) => {
       if (update.concertId === concertId) {
-        setSeats(prev => prev.map(seat => 
-          seat.id === update.seatId 
-            ? { ...seat, userId: update.userId }
-            : seat
-        ));
+        setSeats((prev) => prev.map((seat) => (seat.id === update.seatId ? { ...seat, userId: update.userId } : seat)));
       }
     });
 
@@ -300,12 +287,8 @@ function SeatingChart({ concertId }: { concertId: string }) {
 
   return (
     <div className="seating-chart">
-      {seats.map(seat => (
-        <SeatButton 
-          key={seat.id}
-          seat={seat}
-          onAssign={handleSeatAssign}
-        />
+      {seats.map((seat) => (
+        <SeatButton key={seat.id} seat={seat} onAssign={handleSeatAssign} />
       ))}
     </div>
   );
@@ -323,13 +306,13 @@ function NotificationListener() {
     const unsubscribe = onNotification((notification) => {
       // Add to notification store
       addNotification(notification);
-      
+
       // Show toast
       toast({
         title: notification.title,
         description: notification.body,
       });
-      
+
       // Trigger browser notification if permitted
       if (Notification.permission === 'granted') {
         new Notification(notification.title, {
@@ -367,13 +350,16 @@ export function emitToOrchestra(orchestraId: string, event: string, data: any): 
 }
 
 // Send notification to user
-export function emitNotification(userId: string, notification: {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  data?: any;
-}): void {
+export function emitNotification(
+  userId: string,
+  notification: {
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    data?: any;
+  },
+): void {
   io?.to(`user:${userId}`).emit('notification:new', notification);
 }
 ```
@@ -385,7 +371,7 @@ import { emitNotification, emitToAssociation } from '../websocket';
 
 router.post('/concerts/:id/attendance', authenticateToken, async (req, res) => {
   // ... create attendance record ...
-  
+
   // Notify user
   emitNotification(userId, {
     id: crypto.randomUUID(),
@@ -394,14 +380,14 @@ router.post('/concerts/:id/attendance', authenticateToken, async (req, res) => {
     body: `Je aanwezigheid voor ${concert.name} is bevestigd.`,
     data: { concertId: concert.id },
   });
-  
+
   // Broadcast to association
   emitToAssociation(req.user.associationId, 'attendance:updated', {
     concertId: concert.id,
     userId,
     status: 'present',
   });
-  
+
   res.json({ success: true });
 });
 ```
@@ -413,18 +399,18 @@ The client automatically handles reconnection:
 ```typescript
 const socket = io(SOCKET_URL, {
   reconnection: true,
-  reconnectionAttempts: 5,     // Try 5 times
-  reconnectionDelay: 1000,     // Start with 1s delay
-  reconnectionDelayMax: 5000,  // Max 5s delay
+  reconnectionAttempts: 5, // Try 5 times
+  reconnectionDelay: 1000, // Start with 1s delay
+  reconnectionDelayMax: 5000, // Max 5s delay
 });
 
 // Connection events
 socket.on('connect', () => {
-  setState(prev => ({ ...prev, isConnected: true }));
+  setState((prev) => ({ ...prev, isConnected: true }));
 });
 
 socket.on('disconnect', () => {
-  setState(prev => ({ ...prev, isConnected: false }));
+  setState((prev) => ({ ...prev, isConnected: false }));
 });
 
 socket.on('connect_error', (error) => {
@@ -437,7 +423,7 @@ socket.on('connect_error', (error) => {
 ```tsx
 function ConnectionStatus({ connected }: { connected: boolean }) {
   if (connected) return null;
-  
+
   return (
     <div className="connection-banner warning">
       <WarningIcon />
@@ -478,25 +464,25 @@ import { io as ioClient, Socket } from 'socket.io-client';
 
 describe('WebSocket', () => {
   let socket: Socket;
-  
+
   beforeEach((done) => {
     socket = ioClient('http://localhost:3001', {
       auth: { token: testUserToken },
     });
     socket.on('connect', done);
   });
-  
+
   afterEach(() => {
     socket.disconnect();
   });
-  
+
   it('should receive chat messages', (done) => {
     socket.on('chat:message', (message) => {
       expect(message).toHaveProperty('id');
       expect(message).toHaveProperty('content', 'Test message');
       done();
     });
-    
+
     socket.emit('chat:message', { content: 'Test message' });
   });
 });
@@ -504,8 +490,8 @@ describe('WebSocket', () => {
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `FRONTEND_URL` | Allowed CORS origin | `http://localhost:5173` |
-| `JWT_SECRET` | Secret for JWT verification | Required |
-| `VITE_WS_URL` | WebSocket server URL (frontend) | Derived from API URL |
+| Variable       | Description                     | Default                 |
+| -------------- | ------------------------------- | ----------------------- |
+| `FRONTEND_URL` | Allowed CORS origin             | `http://localhost:5173` |
+| `JWT_SECRET`   | Secret for JWT verification     | Required                |
+| `VITE_WS_URL`  | WebSocket server URL (frontend) | Derived from API URL    |

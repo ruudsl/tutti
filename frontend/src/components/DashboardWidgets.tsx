@@ -85,7 +85,9 @@ export function WidgetContainer({
               <option value="large">{t('dashboard.sizeLarge')}</option>
               <option value="full">{t('dashboard.sizeFull')}</option>
             </select>
-            <span className="widget-drag-handle" title={t('dashboard.dragToReorder')}>⋮⋮</span>
+            <span className="widget-drag-handle" title={t('dashboard.dragToReorder')}>
+              ⋮⋮
+            </span>
           </div>
         </div>
       )}
@@ -134,10 +136,7 @@ export function DashboardEditToggle({
 
   return (
     <div className="dashboard-edit-toggle">
-      <button
-        className={`btn ${isEditMode ? 'btn-primary' : 'btn-outline'} btn-sm`}
-        onClick={onToggle}
-      >
+      <button className={`btn ${isEditMode ? 'btn-primary' : 'btn-outline'} btn-sm`} onClick={onToggle}>
         {isEditMode ? t('dashboard.doneEditing') : t('dashboard.customizeDashboard')}
       </button>
       {isEditMode && (
@@ -239,7 +238,9 @@ function TasksWidget() {
                     {task.title}
                   </Link>
                   {task.dueDate && (
-                    <span className={`text-xs ${new Date(task.dueDate) < new Date() ? 'text-red-500' : 'text-base-content/50'}`}>
+                    <span
+                      className={`text-xs ${new Date(task.dueDate) < new Date() ? 'text-red-500' : 'text-base-content/50'}`}
+                    >
                       {new Date(task.dueDate).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -256,7 +257,9 @@ function TasksWidget() {
               <Icon name="checkCircle" size={32} />
             </span>
             <p className="text-light text-sm">{t('widgets.noTasks')}</p>
-            <Link to="/tasks" className="btn btn-outline btn-sm mt-1">{t('nav.tasks')}</Link>
+            <Link to="/tasks" className="btn btn-outline btn-sm mt-1">
+              {t('nav.tasks')}
+            </Link>
           </div>
         )}
       </div>
@@ -380,9 +383,13 @@ function FavoritesWidget() {
           </ul>
         ) : (
           <div className="widget-empty-state">
-            <span className="widget-empty-icon" aria-hidden="true">⭐</span>
+            <span className="widget-empty-icon" aria-hidden="true">
+              ⭐
+            </span>
             <p className="text-light text-sm">{t('widgets.noFavorites')}</p>
-            <Link to="/my-music" className="btn btn-outline btn-sm mt-1">{t('nav.myMusic')}</Link>
+            <Link to="/my-music" className="btn btn-outline btn-sm mt-1">
+              {t('nav.myMusic')}
+            </Link>
           </div>
         )}
       </div>
@@ -437,18 +444,14 @@ export function UpcomingRehearsalsWidget() {
                   })}
                 </div>
                 <div className="rehearsal-details">
-                  {rehearsal.orchestra_name && (
-                    <span className="rehearsal-orchestra">{rehearsal.orchestra_name}</span>
-                  )}
+                  {rehearsal.orchestra_name && <span className="rehearsal-orchestra">{rehearsal.orchestra_name}</span>}
                   {rehearsal.start_time && (
                     <span className="rehearsal-time">
                       {rehearsal.start_time}
                       {rehearsal.end_time ? ` – ${rehearsal.end_time}` : ''}
                     </span>
                   )}
-                  {rehearsal.location && (
-                    <span className="rehearsal-location">{rehearsal.location}</span>
-                  )}
+                  {rehearsal.location && <span className="rehearsal-location">{rehearsal.location}</span>}
                 </div>
               </li>
             ))}
@@ -459,7 +462,9 @@ export function UpcomingRehearsalsWidget() {
               <Icon name="calendar" size={32} />
             </span>
             <p className="text-light text-sm">{t('widgets.noUpcomingRehearsals')}</p>
-            <Link to="/rehearsals" className="btn btn-outline btn-sm mt-1">{t('nav.rehearsals')}</Link>
+            <Link to="/rehearsals" className="btn btn-outline btn-sm mt-1">
+              {t('nav.rehearsals')}
+            </Link>
           </div>
         )}
       </div>
@@ -478,11 +483,11 @@ export function RecentActivityWidget() {
       </div>
       <div className="widget-body">
         <div className="widget-empty-state">
-            <span className="widget-empty-icon" aria-hidden="true">
-              <Icon name="clipboard" size={32} />
-            </span>
-            <p className="text-light text-sm">{t('widgets.noRecentActivity')}</p>
-          </div>
+          <span className="widget-empty-icon" aria-hidden="true">
+            <Icon name="clipboard" size={32} />
+          </span>
+          <p className="text-light text-sm">{t('widgets.noRecentActivity')}</p>
+        </div>
       </div>
     </div>
   );

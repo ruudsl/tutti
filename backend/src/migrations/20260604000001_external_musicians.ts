@@ -54,8 +54,12 @@ export function up(): void {
   `);
 
   // Indexes for external musician instruments
-  db.exec('CREATE INDEX IF NOT EXISTS idx_external_musician_instruments_musician ON external_musician_instruments(external_musician_id)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_external_musician_instruments_instrument ON external_musician_instruments(instrument_id)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_external_musician_instruments_musician ON external_musician_instruments(external_musician_id)',
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_external_musician_instruments_instrument ON external_musician_instruments(instrument_id)',
+  );
 
   // Replacement requests (when orchestra needs substitutes)
   db.exec(`
@@ -105,7 +109,9 @@ export function up(): void {
 
   // Indexes for replacement assignments
   db.exec('CREATE INDEX IF NOT EXISTS idx_replacement_assignments_request ON replacement_assignments(request_id)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_replacement_assignments_musician ON replacement_assignments(external_musician_id)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_replacement_assignments_musician ON replacement_assignments(external_musician_id)',
+  );
   db.exec('CREATE INDEX IF NOT EXISTS idx_replacement_assignments_status ON replacement_assignments(status)');
 }
 

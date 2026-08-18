@@ -136,7 +136,7 @@ export function Breadcrumbs() {
     items.push({ label: t('nav.dashboard'), path: '/' });
 
     // Check if we have a matching nested route
-    const matchNestedRoute = (): { config: typeof nestedRouteConfig[string]; pattern: string } | null => {
+    const matchNestedRoute = (): { config: (typeof nestedRouteConfig)[string]; pattern: string } | null => {
       for (const pattern of Object.keys(nestedRouteConfig)) {
         const patternSegments = pattern.split('/').filter(Boolean);
         if (patternSegments.length !== pathSegments.length) continue;
@@ -265,7 +265,7 @@ export function Breadcrumbs() {
     item: BreadcrumbItem,
     index: number,
     _isLast: boolean,
-    showSeparator: boolean = true
+    showSeparator: boolean = true,
   ) => (
     <li key={index} className="breadcrumbs-item">
       {item.path ? (
@@ -333,15 +333,13 @@ export function Breadcrumbs() {
               renderBreadcrumbItem(
                 item,
                 index + visibleStart.length + collapsedItems.length,
-                index === visibleEnd.length - 1
-              )
+                index === visibleEnd.length - 1,
+              ),
             )}
           </>
         ) : (
           // Normal rendering without collapse
-          breadcrumbs.map((item, index) =>
-            renderBreadcrumbItem(item, index, index === breadcrumbs.length - 1)
-          )
+          breadcrumbs.map((item, index) => renderBreadcrumbItem(item, index, index === breadcrumbs.length - 1))
         )}
       </ol>
 
@@ -471,11 +469,7 @@ export function Breadcrumbs() {
 }
 
 // Hook to set dynamic breadcrumb context
-export function useBreadcrumbContext(
-  path: string,
-  label: string | undefined,
-  parentPath?: string
-) {
+export function useBreadcrumbContext(path: string, label: string | undefined, parentPath?: string) {
   useEffect(() => {
     if (label) {
       setBreadcrumbContext(path, label, parentPath);

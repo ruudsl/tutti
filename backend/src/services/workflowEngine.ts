@@ -30,16 +30,18 @@ export async function executeWorkflow(
   triggeredBy: 'manual' | 'schedule' | 'event' | 'date_field',
   userId?: string,
   entityType?: string,
-  entityId?: string
+  entityId?: string,
 ): Promise<{ executionId: string; success: boolean; error?: string }> {
   const executionId = uuidv4();
   const now = new Date().toISOString();
 
   // Create execution record
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO workflow_executions (id, workflow_id, triggered_by, triggered_by_user_id, entity_type, entity_id, status, started_at, created_at)
     VALUES (?, ?, ?, ?, ?, ?, 'running', ?, ?)
-  `).run(executionId, workflowId, triggeredBy, userId || null, entityType || null, entityId || null, now, now);
+  `,
+  ).run(executionId, workflowId, triggeredBy, userId || null, entityType || null, entityId || null, now, now);
 
   const context: ExecutionContext = {
     workflowId,
@@ -60,11 +62,15 @@ export async function executeWorkflow(
     }
 
     // Get workflow actions
-    const actions = db.prepare(`
+    const actions = db
+      .prepare(
+        `
       SELECT * FROM workflow_actions
       WHERE workflow_id = ? AND is_active = 1
       ORDER BY action_order
-    `).all(workflowId) as WorkflowAction[];
+    `,
+      )
+      .all(workflowId) as WorkflowAction[];
 
     context.log.push(`Found ${actions.length} actions to execute`);
 
@@ -74,23 +80,26 @@ export async function executeWorkflow(
     }
 
     // Mark as completed
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE workflow_executions
       SET status = 'completed', completed_at = ?, execution_log = ?
       WHERE id = ?
-    `).run(new Date().toISOString(), JSON.stringify(context.log), executionId);
+    `,
+    ).run(new Date().toISOString(), JSON.stringify(context.log), executionId);
 
     return { executionId, success: true };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     context.log.push(`ERROR: ${errorMessage}`);
 
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE workflow_executions
       SET status = 'failed', completed_at = ?, error_message = ?, execution_log = ?
       WHERE id = ?
-    `).run(new Date().toISOString(), errorMessage, JSON.stringify(context.log), executionId);
+    `,
+    ).run(new Date().toISOString(), errorMessage, JSON.stringify(context.log), executionId);
 
     return { executionId, success: false, error: errorMessage };
   }
@@ -149,11 +158,15 @@ async function executeSendEmail(config: Record<string, any>, context: ExecutionC
   } else if (recipientType === 'entity_user' && context.entityData?.email) {
     recipients = [context.entityData.email];
   } else if (recipientType === 'all_members') {
-    const members = db.prepare(`
+    const members = db
+      .prepare(
+        `
       SELECT email FROM users
       WHERE association_id = ? AND status = 'active' AND deleted_at IS NULL
-    `).all(context.associationId) as { email: string }[];
-    recipients = members.map(m => m.email);
+    `,
+      )
+      .all(context.associationId) as { email: string }[];
+    recipients = members.map((m) => m.email);
   }
 
   if (recipients.length === 0) {
@@ -192,11 +205,15 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
   } else if (recipientType === 'entity_user' && context.entityData?.userId) {
     userIds = [context.entityData.userId];
   } else if (recipientType === 'all_members') {
-    const members = db.prepare(`
+    const members = db
+      .prepare(
+        `
       SELECT id FROM users
       WHERE association_id = ? AND status = 'active' AND deleted_at IS NULL
-    `).all(context.associationId) as { id: string }[];
-    userIds = members.map(m => m.id);
+    `,
+      )
+      .all(context.associationId) as { id: string }[];
+    userIds = members.map((m) => m.id);
   }
 
   const now = new Date().toISOString();
@@ -204,10 +221,12 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
   const processedMessage = replaceVariables(message || '', context);
 
   for (const userId of userIds) {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO notifications (id, user_id, title, message, type, priority, created_at)
       VALUES (?, ?, ?, ?, 'workflow', ?, ?)
-    `).run(uuidv4(), userId, processedTitle, processedMessage, priority || 'medium', now);
+    `,
+    ).run(uuidv4(), userId, processedTitle, processedMessage, priority || 'medium', now);
   }
 
   context.log.push(`Created ${userIds.length} notifications`);
@@ -238,10 +257,12 @@ async function executeCreateTask(config: Record<string, any>, context: Execution
   const processedTitle = replaceVariables(title || 'New Task', context);
   const processedDescription = replaceVariables(description || '', context);
 
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO tasks (id, association_id, title, description, assigned_to, due_date, priority, status, created_by, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
-  `).run(
+  `,
+  ).run(
     taskId,
     context.associationId,
     processedTitle,
@@ -251,7 +272,7 @@ async function executeCreateTask(config: Record<string, any>, context: Execution
     priority || 'medium',
     context.userId || null,
     now,
-    now
+    now,
   );
 
   context.log.push(`Task created: ${processedTitle}`);
@@ -274,8 +295,11 @@ async function executeUpdateField(config: Record<string, any>, context: Executio
   const processedValue = replaceVariables(String(fieldValue), context);
 
   try {
-    db.prepare(`UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`)
-      .run(processedValue, new Date().toISOString(), context.entityId);
+    db.prepare(`UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`).run(
+      processedValue,
+      new Date().toISOString(),
+      context.entityId,
+    );
     context.log.push(`Updated ${entityType}.${fieldName} to ${processedValue}`);
   } catch (error) {
     context.log.push(`Failed to update field: ${error}`);
@@ -291,15 +315,21 @@ async function executeAddToGroup(config: Record<string, any>, context: Execution
     return;
   }
 
-  const exists = db.prepare(`
+  const exists = db
+    .prepare(
+      `
     SELECT id FROM group_members WHERE group_id = ? AND user_id = ?
-  `).get(groupId, targetUserId);
+  `,
+    )
+    .get(groupId, targetUserId);
 
   if (!exists) {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO group_members (id, group_id, user_id, created_at)
       VALUES (?, ?, ?, ?)
-    `).run(uuidv4(), groupId, targetUserId, new Date().toISOString());
+    `,
+    ).run(uuidv4(), groupId, targetUserId, new Date().toISOString());
     context.log.push(`Added user ${targetUserId} to group ${groupId}`);
   } else {
     context.log.push('User already in group');
@@ -315,9 +345,13 @@ async function executeRemoveFromGroup(config: Record<string, any>, context: Exec
     return;
   }
 
-  const result = db.prepare(`
+  const result = db
+    .prepare(
+      `
     DELETE FROM group_members WHERE group_id = ? AND user_id = ?
-  `).run(groupId, targetUserId);
+  `,
+    )
+    .run(groupId, targetUserId);
 
   if (result.changes > 0) {
     context.log.push(`Removed user ${targetUserId} from group ${groupId}`);
@@ -355,7 +389,7 @@ async function executeWebhook(config: Record<string, any>, context: ExecutionCon
 async function executeDelay(config: Record<string, any>, context: ExecutionContext): Promise<void> {
   const { minutes } = config;
   if (minutes && minutes > 0) {
-    await new Promise(resolve => setTimeout(resolve, Math.min(minutes, 5) * 60 * 1000));
+    await new Promise((resolve) => setTimeout(resolve, Math.min(minutes, 5) * 60 * 1000));
     context.log.push(`Delayed ${Math.min(minutes, 5)} minutes`);
   }
 }
@@ -442,7 +476,9 @@ export function processScheduledWorkflows(): void {
   const currentTime = now.toTimeString().slice(0, 5);
 
   // Find workflows with schedule triggers that match current time
-  const triggers = db.prepare(`
+  const triggers = db
+    .prepare(
+      `
     SELECT t.*, w.id as workflow_id, w.association_id
     FROM workflow_triggers t
     JOIN workflows w ON t.workflow_id = w.id
@@ -451,21 +487,23 @@ export function processScheduledWorkflows(): void {
       AND w.is_active = 1
       AND w.deleted_at IS NULL
       AND t.time_of_day = ?
-  `).all(currentTime) as any[];
+  `,
+    )
+    .all(currentTime) as any[];
 
   for (const trigger of triggers) {
     // Check if cron matches (simplified - just check time)
-    executeWorkflow(
-      trigger.workflow_id,
-      trigger.association_id,
-      'schedule'
-    ).catch(err => console.error(`Scheduled workflow ${trigger.workflow_id} failed:`, err));
+    executeWorkflow(trigger.workflow_id, trigger.association_id, 'schedule').catch((err) =>
+      console.error(`Scheduled workflow ${trigger.workflow_id} failed:`, err),
+    );
   }
 }
 
 export function processDateFieldWorkflows(): void {
   // Find workflows with date_field triggers
-  const triggers = db.prepare(`
+  const triggers = db
+    .prepare(
+      `
     SELECT t.*, w.id as workflow_id, w.association_id
     FROM workflow_triggers t
     JOIN workflows w ON t.workflow_id = w.id
@@ -475,7 +513,9 @@ export function processDateFieldWorkflows(): void {
       AND w.deleted_at IS NULL
       AND t.date_field_entity IS NOT NULL
       AND t.date_field_name IS NOT NULL
-  `).all() as any[];
+  `,
+    )
+    .all() as any[];
 
   for (const trigger of triggers) {
     const tableName = getTableName(trigger.date_field_entity);
@@ -494,10 +534,14 @@ export function processDateFieldWorkflows(): void {
     const targetDateStr = targetDate.toISOString().split('T')[0];
 
     try {
-      const entities = db.prepare(`
+      const entities = db
+        .prepare(
+          `
         SELECT id FROM ${tableName}
         WHERE DATE(${trigger.date_field_name}) = ?
-      `).all(targetDateStr) as { id: string }[];
+      `,
+        )
+        .all(targetDateStr) as { id: string }[];
 
       for (const entity of entities) {
         executeWorkflow(
@@ -506,8 +550,8 @@ export function processDateFieldWorkflows(): void {
           'date_field',
           undefined,
           trigger.date_field_entity,
-          entity.id
-        ).catch(err => console.error(`Date field workflow failed:`, err));
+          entity.id,
+        ).catch((err) => console.error(`Date field workflow failed:`, err));
       }
     } catch (err) {
       console.error(`Error processing date field trigger:`, err);

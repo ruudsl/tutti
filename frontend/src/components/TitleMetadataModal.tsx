@@ -71,7 +71,7 @@ export function TitleMetadataModal({
     description: title.description || '',
     durationStr: formatDurationForForm(title.durationSeconds),
     grade: title.grade || '',
-    genreIds: title.genres?.map(g => g.id) || [],
+    genreIds: title.genres?.map((g) => g.id) || [],
     isShared: title.isShared || false,
     internalNotes: title.internalNotes || '',
     // Extended metadata (WP5)
@@ -100,24 +100,20 @@ export function TitleMetadataModal({
       const meta = extendedMeta.metadata || {};
 
       // Transform instruments with multilingual labels
-      const instruments = (extendedMeta.instruments || []).map((i: {
-        uri: string;
-        count: number;
-        isOptional: boolean;
-        notes?: string;
-        label?: Record<string, string>;
-      }) => ({
-        uri: i.uri,
-        count: i.count,
-        isOptional: i.isOptional,
-        notes: i.notes,
-        label: i.label?.[lang] || i.label?.en || i.uri,
-      }));
+      const instruments = (extendedMeta.instruments || []).map(
+        (i: { uri: string; count: number; isOptional: boolean; notes?: string; label?: Record<string, string> }) => ({
+          uri: i.uri,
+          count: i.count,
+          isOptional: i.isOptional,
+          notes: i.notes,
+          label: i.label?.[lang] || i.label?.en || i.uri,
+        }),
+      );
 
       // Extract genre URIs
       const genreUris = (extendedMeta.genres || []).map((g: { uri: string }) => g.uri);
 
-      setForm(f => ({
+      setForm((f) => ({
         ...f,
         workNumber: meta.workNumber || '',
         movementNumber: meta.movementNumber?.toString() || '',
@@ -186,7 +182,7 @@ export function TitleMetadataModal({
   };
 
   const applyMusicaInfoDetail = (detail: MusicaInfoDetail) => {
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
       durationStr: detail.duration || f.durationStr,
       grade: detail.difficulty || f.grade,
@@ -227,11 +223,9 @@ export function TitleMetadataModal({
   };
 
   const toggleGenre = (genreId: string) => {
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
-      genreIds: f.genreIds.includes(genreId)
-        ? f.genreIds.filter(id => id !== genreId)
-        : [...f.genreIds, genreId],
+      genreIds: f.genreIds.includes(genreId) ? f.genreIds.filter((id) => id !== genreId) : [...f.genreIds, genreId],
     }));
   };
 
@@ -254,13 +248,7 @@ export function TitleMetadataModal({
         <div className="form-group">
           <label className="form-label">{t('myMusic.table.title')}</label>
           <div className="flex gap-2">
-            <input
-              type="text"
-              className="form-control"
-              value={title.title}
-              disabled
-              style={{ flex: 1 }}
-            />
+            <input type="text" className="form-control" value={title.title} disabled style={{ flex: 1 }} />
             <div className="dropdown" style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -287,7 +275,14 @@ export function TitleMetadataModal({
                   minWidth: '200px',
                 }}
               >
-                <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                <div
+                  style={{
+                    padding: '0.5rem',
+                    borderBottom: '1px solid var(--border)',
+                    fontWeight: 'bold',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   {t('titles.searchOnSites')}:
                 </div>
                 {searchSheetMusicWebsites(title.title).map((site) => (
@@ -316,17 +311,21 @@ export function TitleMetadataModal({
         {title.arranger && (
           <div className="form-group">
             <label className="form-label">{t('titles.arranger')}</label>
-            <input
-              type="text"
-              className="form-control"
-              value={title.arranger}
-              disabled
-            />
+            <input type="text" className="form-control" value={title.arranger} disabled />
           </div>
         )}
 
         {/* WP5: Extended Music Metadata Section */}
-        <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', overflow: 'visible' }}>
+        <div
+          className="form-group"
+          style={{
+            background: 'var(--background)',
+            padding: '0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid var(--border)',
+            overflow: 'visible',
+          }}
+        >
           <div
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
             onClick={() => setShowExtendedMeta(!showExtendedMeta)}
@@ -335,7 +334,9 @@ export function TitleMetadataModal({
             <strong style={{ fontSize: '0.875rem', flex: 1 }}>{t('metadata.extendedMetadata')}</strong>
             {loadingExtendedMeta && <span className="loading loading-spinner loading-sm" />}
             {extendedMeta?.metadata?.parts?.length > 0 && (
-              <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>MusicXML</span>
+              <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
+                MusicXML
+              </span>
             )}
           </div>
 
@@ -356,35 +357,41 @@ export function TitleMetadataModal({
               {/* Work/Movement Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.workNumber')}</label>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                    {t('metadata.workNumber')}
+                  </label>
                   <input
                     type="text"
                     className="form-control"
                     value={form.workNumber}
-                    onChange={(e) => setForm(f => ({ ...f, workNumber: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, workNumber: e.target.value }))}
                     placeholder="Op. 21, BWV 1004"
                     style={{ fontSize: '0.875rem' }}
                   />
                 </div>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.movementNumber')}</label>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                    {t('metadata.movementNumber')}
+                  </label>
                   <input
                     type="number"
                     className="form-control"
                     value={form.movementNumber}
-                    onChange={(e) => setForm(f => ({ ...f, movementNumber: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, movementNumber: e.target.value }))}
                     min="1"
                     style={{ fontSize: '0.875rem' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.movementTitle')}</label>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                  {t('metadata.movementTitle')}
+                </label>
                 <input
                   type="text"
                   className="form-control"
                   value={form.movementTitle}
-                  onChange={(e) => setForm(f => ({ ...f, movementTitle: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, movementTitle: e.target.value }))}
                   placeholder="Allegro con brio"
                   style={{ fontSize: '0.875rem' }}
                 />
@@ -392,30 +399,33 @@ export function TitleMetadataModal({
 
               {/* Instruments */}
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.instruments')}</label>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                  {t('metadata.instruments')}
+                </label>
                 <InstrumentPicker
                   value={form.instruments}
-                  onChange={(instruments) => setForm(f => ({ ...f, instruments }))}
+                  onChange={(instruments) => setForm((f) => ({ ...f, instruments }))}
                 />
               </div>
 
               {/* JSKOS Genres */}
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.jskosGenres')}</label>
-                <GenrePicker
-                  value={form.genreUris}
-                  onChange={(genreUris) => setForm(f => ({ ...f, genreUris }))}
-                />
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                  {t('metadata.jskosGenres')}
+                </label>
+                <GenrePicker value={form.genreUris} onChange={(genreUris) => setForm((f) => ({ ...f, genreUris }))} />
               </div>
 
               {/* Additional Credits */}
               <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.lyricist')}</label>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                  {t('metadata.lyricist')}
+                </label>
                 <input
                   type="text"
                   className="form-control"
                   value={form.lyricist}
-                  onChange={(e) => setForm(f => ({ ...f, lyricist: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, lyricist: e.target.value }))}
                   style={{ fontSize: '0.875rem' }}
                 />
               </div>
@@ -423,23 +433,27 @@ export function TitleMetadataModal({
               {/* Rights & Source */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.rights')}</label>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                    {t('metadata.rights')}
+                  </label>
                   <input
                     type="text"
                     className="form-control"
                     value={form.rights}
-                    onChange={(e) => setForm(f => ({ ...f, rights: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, rights: e.target.value }))}
                     placeholder="Public Domain, CC BY-SA"
                     style={{ fontSize: '0.875rem' }}
                   />
                 </div>
                 <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>{t('metadata.source')}</label>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                    {t('metadata.source')}
+                  </label>
                   <input
                     type="text"
                     className="form-control"
                     value={form.source}
-                    onChange={(e) => setForm(f => ({ ...f, source: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
                     placeholder="IMSLP, Archive.org"
                     style={{ fontSize: '0.875rem' }}
                   />
@@ -450,8 +464,23 @@ export function TitleMetadataModal({
         </div>
 
         {/* MusicaInfo.net lookup section */}
-        <div className="form-group" style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: musicaInfoResults || musicaInfoDetail || musicaInfoError ? '0.5rem' : 0 }}>
+        <div
+          className="form-group"
+          style={{
+            background: 'var(--background)',
+            padding: '0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: musicaInfoResults || musicaInfoDetail || musicaInfoError ? '0.5rem' : 0,
+            }}
+          >
             <strong style={{ fontSize: '0.875rem', flex: 1 }}>MusicaInfo.net</strong>
             <button
               type="button"
@@ -465,11 +494,24 @@ export function TitleMetadataModal({
           </div>
 
           {musicaInfoError && (
-            <div style={{ color: 'var(--danger)', fontSize: '0.8rem', padding: '0.5rem', background: 'var(--danger-bg, #fee)', borderRadius: '0.25rem' }}>
+            <div
+              style={{
+                color: 'var(--danger)',
+                fontSize: '0.8rem',
+                padding: '0.5rem',
+                background: 'var(--danger-bg, #fee)',
+                borderRadius: '0.25rem',
+              }}
+            >
               {musicaInfoError}
               {musicaInfoSearchUrl && (
                 <div style={{ marginTop: '0.25rem' }}>
-                  <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>
+                  <a
+                    href={musicaInfoSearchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--primary)' }}
+                  >
                     {t('titles.musicaInfoOpenManually')}
                   </a>
                 </div>
@@ -480,7 +522,12 @@ export function TitleMetadataModal({
           {musicaInfoResults && musicaInfoResults.length === 0 && (
             <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
               {t('titles.musicaInfoNoResults')}
-              <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>
+              <a
+                href={musicaInfoSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}
+              >
                 {t('titles.musicaInfoOpenManually')}
               </a>
             </div>
@@ -504,12 +551,15 @@ export function TitleMetadataModal({
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div
+                      style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
                       {result.title}
                     </div>
                     {result.composer && (
                       <div style={{ color: 'var(--text-light)', fontSize: '0.75rem' }}>
-                        {result.composer}{result.arranger ? ` / ${result.arranger}` : ''}
+                        {result.composer}
+                        {result.arranger ? ` / ${result.arranger}` : ''}
                       </div>
                     )}
                   </div>
@@ -524,7 +574,12 @@ export function TitleMetadataModal({
                 </div>
               ))}
               <div style={{ padding: '0.25rem 0.5rem', textAlign: 'center' }}>
-                <a href={musicaInfoSearchUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontSize: '0.75rem' }}>
+                <a
+                  href={musicaInfoSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', fontSize: '0.75rem' }}
+                >
                   {t('titles.musicaInfoOpenManually')}
                 </a>
               </div>
@@ -532,13 +587,41 @@ export function TitleMetadataModal({
           )}
 
           {musicaInfoDetail && (
-            <div style={{ fontSize: '0.8rem', background: 'white', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border)' }}>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                background: 'white',
+                padding: '0.5rem',
+                borderRadius: '0.25rem',
+                border: '1px solid var(--border)',
+              }}
+            >
               <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{musicaInfoDetail.title}</div>
-              {musicaInfoDetail.composer && <div>{t('titles.musicaInfoComposer')}: {musicaInfoDetail.composer}</div>}
-              {musicaInfoDetail.arranger && <div>{t('titles.arranger')}: {musicaInfoDetail.arranger}</div>}
-              {musicaInfoDetail.duration && <div>{t('titles.durationFormat')}: <strong>{musicaInfoDetail.duration}</strong></div>}
-              {musicaInfoDetail.difficulty && <div>{t('titles.difficulty')}: <strong>{musicaInfoDetail.difficulty}</strong></div>}
-              {musicaInfoDetail.publisher && <div>{t('titles.musicaInfoPublisher')}: {musicaInfoDetail.publisher}</div>}
+              {musicaInfoDetail.composer && (
+                <div>
+                  {t('titles.musicaInfoComposer')}: {musicaInfoDetail.composer}
+                </div>
+              )}
+              {musicaInfoDetail.arranger && (
+                <div>
+                  {t('titles.arranger')}: {musicaInfoDetail.arranger}
+                </div>
+              )}
+              {musicaInfoDetail.duration && (
+                <div>
+                  {t('titles.durationFormat')}: <strong>{musicaInfoDetail.duration}</strong>
+                </div>
+              )}
+              {musicaInfoDetail.difficulty && (
+                <div>
+                  {t('titles.difficulty')}: <strong>{musicaInfoDetail.difficulty}</strong>
+                </div>
+              )}
+              {musicaInfoDetail.publisher && (
+                <div>
+                  {t('titles.musicaInfoPublisher')}: {musicaInfoDetail.publisher}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <button
                   type="button"
@@ -552,7 +635,9 @@ export function TitleMetadataModal({
                   type="button"
                   className="btn btn-outline"
                   style={{ fontSize: '0.8rem', padding: '0.25rem 0.75rem' }}
-                  onClick={() => { setMusicaInfoDetail(null); }}
+                  onClick={() => {
+                    setMusicaInfoDetail(null);
+                  }}
                 >
                   {t('common.cancel')}
                 </button>
@@ -569,7 +654,7 @@ export function TitleMetadataModal({
               className="form-control"
               value={form.youtubeUrl}
               onChange={(e) => {
-                setForm(f => ({ ...f, youtubeUrl: e.target.value }));
+                setForm((f) => ({ ...f, youtubeUrl: e.target.value }));
                 setYoutubeMeta(null);
               }}
               placeholder="https://www.youtube.com/watch?v=..."
@@ -586,9 +671,19 @@ export function TitleMetadataModal({
             </button>
           </div>
           {youtubeMeta && (
-            <div className="piece-meta" style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'var(--background)', borderRadius: '0.25rem' }}>
+            <div
+              className="piece-meta"
+              style={{
+                marginTop: '0.5rem',
+                padding: '0.5rem',
+                background: 'var(--background)',
+                borderRadius: '0.25rem',
+              }}
+            >
               <strong>{youtubeMeta.title}</strong>
-              <div>{t('titles.by')}: {youtubeMeta.author}</div>
+              <div>
+                {t('titles.by')}: {youtubeMeta.author}
+              </div>
             </div>
           )}
         </div>
@@ -598,7 +693,7 @@ export function TitleMetadataModal({
             type="text"
             className="form-control"
             value={form.durationStr}
-            onChange={(e) => setForm(f => ({ ...f, durationStr: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, durationStr: e.target.value }))}
             placeholder="3:45"
             pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
           />
@@ -609,7 +704,7 @@ export function TitleMetadataModal({
             type="text"
             className="form-control"
             value={form.grade}
-            onChange={(e) => setForm(f => ({ ...f, grade: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value }))}
             placeholder={t('titles.difficultyPlaceholder')}
           />
         </div>
@@ -619,7 +714,7 @@ export function TitleMetadataModal({
           <textarea
             className="form-control"
             value={form.description}
-            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
             placeholder={t('titles.descriptionPlaceholder')}
           />
@@ -629,7 +724,7 @@ export function TitleMetadataModal({
           <textarea
             className="form-control"
             value={form.internalNotes}
-            onChange={(e) => setForm(f => ({ ...f, internalNotes: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, internalNotes: e.target.value }))}
             rows={2}
             placeholder={t('titles.internalNotesPlaceholder')}
             style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
@@ -671,11 +766,9 @@ export function TitleMetadataModal({
               type="checkbox"
               className="form-check-input"
               checked={form.isShared}
-              onChange={(e) => setForm(f => ({ ...f, isShared: e.target.checked }))}
+              onChange={(e) => setForm((f) => ({ ...f, isShared: e.target.checked }))}
             />
-            <span style={{ marginLeft: '0.5rem' }}>
-              {t('titles.sharingAllowed')}
-            </span>
+            <span style={{ marginLeft: '0.5rem' }}>{t('titles.sharingAllowed')}</span>
           </label>
         </div>
       </form>

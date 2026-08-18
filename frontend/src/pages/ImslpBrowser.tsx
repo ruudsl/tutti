@@ -76,10 +76,7 @@ export default function ImslpBrowser() {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       queryClient.invalidateQueries({ queryKey: ['musicTitles'] });
 
-      setRecentImports(prev => [
-        { title: result.title, pieceId: result.musicPieceId },
-        ...prev.slice(0, 4),
-      ]);
+      setRecentImports((prev) => [{ title: result.title, pieceId: result.musicPieceId }, ...prev.slice(0, 4)]);
     } catch (error: any) {
       showError(error.response?.data?.error || t('imslp.importError'));
     } finally {
@@ -91,12 +88,7 @@ export default function ImslpBrowser() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>{t('imslp.browserTitle')}</h1>
-        <a
-          href="https://imslp.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-outline"
-        >
+        <a href="https://imslp.org" target="_blank" rel="noopener noreferrer" className="btn btn-outline">
           {t('imslp.openImslp')}
         </a>
       </div>
@@ -173,12 +165,7 @@ export default function ImslpBrowser() {
               )}
             </h2>
             {searchUrl && (
-              <a
-                href={searchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline btn-sm"
-              >
+              <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
                 {t('imslp.openOnImslp')}
               </a>
             )}
@@ -188,22 +175,21 @@ export default function ImslpBrowser() {
 
             {!searching && !hasSearched && (
               <div className="empty-state">
-                <div className="empty-icon"><Icon name="fileText" size={48} /></div>
+                <div className="empty-icon">
+                  <Icon name="fileText" size={48} />
+                </div>
                 <p>{t('imslp.searchPrompt')}</p>
               </div>
             )}
 
             {!searching && hasSearched && works.length === 0 && (
               <div className="empty-state">
-                <div className="empty-icon"><Icon name="search" size={48} /></div>
+                <div className="empty-icon">
+                  <Icon name="search" size={48} />
+                </div>
                 <p>{t('imslp.noResults')}</p>
                 {searchUrl && (
-                  <a
-                    href={searchUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-outline"
-                  >
+                  <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline">
                     {t('imslp.searchOnImslp')}
                   </a>
                 )}
@@ -252,7 +238,9 @@ export default function ImslpBrowser() {
           <div className="card-body">
             {!selectedWork ? (
               <div className="empty-state">
-                <div className="empty-icon"><Icon name="clipboard" size={48} /></div>
+                <div className="empty-icon">
+                  <Icon name="clipboard" size={48} />
+                </div>
                 <p>{t('imslp.selectWorkPrompt')}</p>
               </div>
             ) : (
@@ -325,7 +313,11 @@ export default function ImslpBrowser() {
                         </div>
                         <div className="piece-meta" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                           {score.publisher && <span>{score.publisher}</span>}
-                          {score.editor && <span>{t('imslp.editor')}: {score.editor}</span>}
+                          {score.editor && (
+                            <span>
+                              {t('imslp.editor')}: {score.editor}
+                            </span>
+                          )}
                           {score.fileSize && <span>{score.fileSize}</span>}
                         </div>
                         <div className="flex gap-1">

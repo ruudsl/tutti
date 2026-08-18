@@ -65,11 +65,11 @@ export function AriaLiveProvider({ children }: AriaLiveProviderProps) {
   const announce = useCallback((message: string, politeness: AriaLivePoliteness = 'polite') => {
     const id = `announcement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    setAnnouncements(prev => [...prev, { id, message, politeness }]);
+    setAnnouncements((prev) => [...prev, { id, message, politeness }]);
 
     // Clear the announcement after it's been read
     setTimeout(() => {
-      setAnnouncements(prev => prev.filter(a => a.id !== id));
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     }, 1000);
   }, []);
 
@@ -100,8 +100,8 @@ export function AriaLiveProvider({ children }: AriaLiveProviderProps) {
         }}
       >
         {announcements
-          .filter(a => a.politeness === 'polite')
-          .map(a => (
+          .filter((a) => a.politeness === 'polite')
+          .map((a) => (
             <span key={a.id}>{a.message}</span>
           ))}
       </div>
@@ -125,8 +125,8 @@ export function AriaLiveProvider({ children }: AriaLiveProviderProps) {
         }}
       >
         {announcements
-          .filter(a => a.politeness === 'assertive')
-          .map(a => (
+          .filter((a) => a.politeness === 'assertive')
+          .map((a) => (
             <span key={a.id}>{a.message}</span>
           ))}
       </div>

@@ -178,8 +178,7 @@ router.post(
     loginSchema.parse({ email, password });
 
     const user = db.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').get(email) as
-      | User
-      | undefined;
+      User | undefined;
 
     if (!user) {
       throw new ApiError(401, 'Ongeldige inloggegevens.');
@@ -405,8 +404,7 @@ router.post(
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
     const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user!.id) as
-      | { password_hash: string }
-      | undefined;
+      { password_hash: string } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
@@ -477,8 +475,7 @@ router.post(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT email, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
-      | { email: string; mfa_enabled: boolean }
-      | undefined;
+      { email: string; mfa_enabled: boolean } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
@@ -555,8 +552,7 @@ router.post(
     }
 
     const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
-      | { mfa_secret: string | null; mfa_enabled: boolean }
-      | undefined;
+      { mfa_secret: string | null; mfa_enabled: boolean } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
@@ -723,8 +719,7 @@ router.get(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = db.prepare('SELECT mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
-      | { mfa_enabled: boolean }
-      | undefined;
+      { mfa_enabled: boolean } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
@@ -785,8 +780,7 @@ router.post(
     }
 
     const user = db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').get(req.user!.id) as
-      | { mfa_secret: string | null; mfa_enabled: boolean }
-      | undefined;
+      { mfa_secret: string | null; mfa_enabled: boolean } | undefined;
 
     if (!user) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');

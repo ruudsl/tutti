@@ -14,16 +14,8 @@ export function BluetoothPedalIndicator({
   showBattery = true,
 }: BluetoothPedalIndicatorProps) {
   const { t } = useTranslation();
-  const {
-    isSupported,
-    isConnected,
-    isConnecting,
-    deviceName,
-    batteryLevel,
-    error,
-    connect,
-    disconnect,
-  } = useBluetoothPedal({ onPageNext, onPagePrevious });
+  const { isSupported, isConnected, isConnecting, deviceName, batteryLevel, error, connect, disconnect } =
+    useBluetoothPedal({ onPageNext, onPagePrevious });
 
   if (!isSupported) {
     return null;
@@ -43,11 +35,7 @@ export function BluetoothPedalIndicator({
               <Icon name={batteryLevel <= 20 ? 'batteryLow' : 'battery'} size={16} /> {batteryLevel}%
             </span>
           )}
-          <button
-            className="btn btn-sm btn-outline"
-            onClick={disconnect}
-            title={t('bluetooth.disconnect')}
-          >
+          <button className="btn btn-sm btn-outline" onClick={disconnect} title={t('bluetooth.disconnect')}>
             {t('bluetooth.disconnect')}
           </button>
         </>
@@ -55,11 +43,7 @@ export function BluetoothPedalIndicator({
         <span>{t('bluetooth.connecting')}</span>
       ) : (
         <>
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={connect}
-            title={t('bluetooth.connectPedal')}
-          >
+          <button className="btn btn-sm btn-primary" onClick={connect} title={t('bluetooth.connectPedal')}>
             {t('bluetooth.connectPedal')}
           </button>
           {error && <span className="text-danger">{error}</span>}

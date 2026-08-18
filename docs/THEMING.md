@@ -37,37 +37,37 @@ The design system is organized into these categories:
 ```css
 :root {
   /* === Colors (2026 palette: indigo core with violet accent) === */
-  --primary: #4f46e5;           /* Main brand color */
-  --primary-dark: #4338ca;      /* Darker variant for hover/active */
+  --primary: #4f46e5; /* Main brand color */
+  --primary-dark: #4338ca; /* Darker variant for hover/active */
   --primary-light: rgba(79, 70, 229, 0.1); /* Light tint for backgrounds */
-  --accent: #8b5cf6;            /* Accent color (purple) */
+  --accent: #8b5cf6; /* Accent color (purple) */
   --gradient-brand: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
-  
-  --secondary: #64748b;         /* Secondary/muted color */
-  --success: #10b981;           /* Success states */
+
+  --secondary: #64748b; /* Secondary/muted color */
+  --success: #10b981; /* Success states */
   --success-light: rgba(16, 185, 129, 0.1);
-  --danger: #ef4444;            /* Error/destructive actions */
+  --danger: #ef4444; /* Error/destructive actions */
   --danger-light: rgba(239, 68, 68, 0.1);
-  --warning: #f59e0b;           /* Warning states */
+  --warning: #f59e0b; /* Warning states */
   --warning-light: rgba(245, 158, 11, 0.1);
-  --info: #3b82f6;              /* Informational */
+  --info: #3b82f6; /* Informational */
   --info-light: rgba(59, 130, 246, 0.1);
 
   /* === Surfaces === */
-  --background: #f7f7fb;        /* Page background */
-  --surface: #ffffff;           /* Card/panel background */
-  --surface-hover: #f1f1f7;     /* Hover state for surfaces */
+  --background: #f7f7fb; /* Page background */
+  --surface: #ffffff; /* Card/panel background */
+  --surface-hover: #f1f1f7; /* Hover state for surfaces */
   --surface-glass: rgba(255, 255, 255, 0.72); /* Glassmorphism effect */
   --glass-blur: saturate(180%) blur(16px);
 
   /* === Text (WCAG 2.1 AA compliant) === */
-  --text: #1a1d2e;              /* Primary text (AAA on white) */
-  --text-light: #45495e;        /* Secondary text (AA on white) */
-  --text-muted: #696e85;        /* Muted/placeholder text (AA on white) */
+  --text: #1a1d2e; /* Primary text (AAA on white) */
+  --text-light: #45495e; /* Secondary text (AA on white) */
+  --text-muted: #696e85; /* Muted/placeholder text (AA on white) */
 
   /* === Borders & Shadows === */
-  --border: #e6e6ef;            /* Default border */
-  --border-strong: #cdcdde;     /* Stronger border for emphasis */
+  --border: #e6e6ef; /* Default border */
+  --border-strong: #cdcdde; /* Stronger border for emphasis */
   --shadow: 0 1px 2px rgba(23, 23, 42, 0.05), 0 1px 4px rgba(23, 23, 42, 0.04);
   --shadow-md: 0 2px 4px rgba(23, 23, 42, 0.05), 0 6px 16px rgba(23, 23, 42, 0.06);
   --shadow-lg: 0 4px 8px rgba(23, 23, 42, 0.06), 0 12px 28px rgba(23, 23, 42, 0.09);
@@ -75,17 +75,17 @@ The design system is organized into these categories:
   --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.35);
 
   /* === Typography === */
-  --font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, 
-                 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-family:
+    'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   --font-size-base: 16px;
-  --font-size-xs: 0.75rem;      /* 12px */
-  --font-size-sm: 0.875rem;     /* 14px */
-  --font-size-md: 1rem;         /* 16px */
-  --font-size-lg: 1.125rem;     /* 18px */
-  --font-size-xl: 1.25rem;      /* 20px */
-  --font-size-2xl: 1.5rem;      /* 24px */
-  --font-size-3xl: 2rem;        /* 32px */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 2rem; /* 32px */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -96,24 +96,24 @@ The design system is organized into these categories:
 
   /* === Spacing (8pt grid, 4pt for fine adjustments) === */
   --space-0: 0;
-  --space-1: 0.25rem;           /* 4px */
-  --space-2: 0.5rem;            /* 8px */
-  --space-3: 0.75rem;           /* 12px */
-  --space-4: 1rem;              /* 16px */
-  --space-5: 1.25rem;           /* 20px */
-  --space-6: 1.5rem;            /* 24px */
-  --space-8: 2rem;              /* 32px */
-  --space-10: 2.5rem;           /* 40px */
-  --space-12: 3rem;             /* 48px */
-  --space-16: 4rem;             /* 64px */
-  --space-20: 5rem;             /* 80px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-20: 5rem; /* 80px */
 
   /* === Border Radius (iOS HIG aligned) === */
-  --radius: 0.875rem;           /* 14px - cards, panels */
-  --radius-sm: 0.625rem;        /* 10px - buttons, inputs */
-  --radius-lg: 1rem;            /* 16px - modals, large surfaces */
-  --radius-xl: 1.25rem;         /* 20px - sheets, prominent containers */
-  --radius-full: 9999px;        /* Fully rounded (pills) */
+  --radius: 0.875rem; /* 14px - cards, panels */
+  --radius-sm: 0.625rem; /* 10px - buttons, inputs */
+  --radius-lg: 1rem; /* 16px - modals, large surfaces */
+  --radius-xl: 1.25rem; /* 20px - sheets, prominent containers */
+  --radius-full: 9999px; /* Fully rounded (pills) */
 
   /* === Touch Target (iOS HIG: 44x44pt minimum) === */
   --tap-target: 44px;
@@ -168,10 +168,10 @@ For a cohesive theme, update all related colors:
   --primary-light: rgba(37, 99, 235, 0.1);
   --accent: #3b82f6;
   --gradient-brand: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  
+
   /* Update focus ring to match */
   --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-  
+
   /* Optional: adjust backgrounds for cohesion */
   --background: #f8fafc;
 }
@@ -220,19 +220,19 @@ Users can toggle dark mode manually. The `data-theme` attribute is added to the 
 
 ```css
 /* Dark mode via attribute */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --background: #0f172a;
   --surface: #1e293b;
   --surface-hover: #334155;
   --surface-glass: rgba(30, 41, 59, 0.72);
-  
+
   --text: #f1f5f9;
   --text-light: #cbd5e1;
   --text-muted: #94a3b8;
-  
+
   --border: #334155;
   --border-strong: #475569;
-  
+
   /* Shadows are more subtle in dark mode */
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.25);
@@ -247,17 +247,17 @@ Some components have specific dark mode styles:
 
 ```css
 /* Sidebar in dark mode */
-[data-theme="dark"] .app-sidebar {
+[data-theme='dark'] .app-sidebar {
   background: var(--surface);
 }
 
-[data-theme="dark"] .sidebar-direct-link:hover,
-[data-theme="dark"] .sidebar-sub-link:hover {
+[data-theme='dark'] .sidebar-direct-link:hover,
+[data-theme='dark'] .sidebar-sub-link:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
 /* Login card in dark mode */
-[data-theme="dark"] .login-card {
+[data-theme='dark'] .login-card {
   background: rgba(30, 41, 59, 0.72);
   border-color: rgba(255, 255, 255, 0.08);
 }
@@ -285,6 +285,7 @@ document.documentElement.setAttribute('data-theme', 'dark');
 The logo is displayed in the sidebar and login page. To customize:
 
 1. **Replace logo files:**
+
    ```
    frontend/public/logo.svg        # Main logo (sidebar)
    frontend/public/logo-light.svg  # Logo for dark backgrounds
@@ -309,6 +310,7 @@ frontend/public/apple-touch-icon.png
 ```
 
 Update `manifest.json`:
+
 ```json
 {
   "name": "My Orchestra",
@@ -333,6 +335,7 @@ Update `manifest.json`:
 ### Favicon
 
 Replace the favicon in `frontend/public/`:
+
 ```
 frontend/public/favicon.ico
 frontend/public/favicon.svg
@@ -341,6 +344,7 @@ frontend/public/favicon.svg
 ### Per-Association Branding
 
 Associations can upload their logo in Admin > Settings > Branding. The logo is stored in:
+
 ```
 uploads/association-logos/{association-id}/logo.png
 ```
@@ -354,15 +358,16 @@ uploads/association-logos/{association-id}/logo.png
 Harmonie uses Inter as the primary font with system font fallbacks:
 
 ```css
---font-family: 'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, 
-               'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+--font-family:
+  'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 ```
 
 ### Using a Custom Font
 
 1. **Import the font** (in `index.html` or CSS):
+
    ```html
-   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
    ```
 
 2. **Override the font variable:**
@@ -420,9 +425,9 @@ Override the font size scale:
 
 ```css
 :root {
-  --font-size-base: 15px;       /* Slightly smaller base */
-  --font-size-xs: 0.7333rem;    /* 11px */
-  --font-size-sm: 0.8667rem;    /* 13px */
+  --font-size-base: 15px; /* Slightly smaller base */
+  --font-size-xs: 0.7333rem; /* 11px */
+  --font-size-sm: 0.8667rem; /* 13px */
   /* ... adjust others as needed */
 }
 ```
@@ -437,7 +442,7 @@ Override the font size scale:
 /* Custom button style */
 .btn-primary {
   background: var(--gradient-brand);
-  border-radius: var(--radius-full);  /* Pill-shaped buttons */
+  border-radius: var(--radius-full); /* Pill-shaped buttons */
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -527,8 +532,14 @@ Create a separate CSS file for your theme:
 
 /* Custom animations */
 @keyframes custom-fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal {
@@ -537,6 +548,7 @@ Create a separate CSS file for your theme:
 ```
 
 Import in your main CSS:
+
 ```css
 @import './custom-theme.css';
 ```
@@ -575,7 +587,7 @@ The design adapts to different screen sizes:
     --font-size-base: 15px;
     --space-4: 0.875rem;
   }
-  
+
   .card {
     border-radius: var(--radius);
   }
@@ -601,13 +613,13 @@ For print-friendly output:
     --text: black;
     --shadow: none;
   }
-  
+
   .app-sidebar,
   .mobile-bottom-tabs,
   .btn {
     display: none !important;
   }
-  
+
   .main-content {
     max-width: none;
     padding: 0;
@@ -638,10 +650,12 @@ For users who prefer reduced motion:
 ### 1. Maintain WCAG Contrast
 
 When changing colors, ensure text contrast meets WCAG 2.1 AA standards:
+
 - Normal text: 4.5:1 contrast ratio
 - Large text (18px+ or 14px+ bold): 3:1 contrast ratio
 
 Tools:
+
 - [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
 - [Colorable](https://colorable.jxnblk.com/)
 
@@ -652,17 +666,25 @@ Always test customizations in both light and dark mode.
 ### 3. Use Semantic Variables
 
 Instead of hardcoding colors:
+
 ```css
 /* Bad */
-.alert { background: #fee2e2; color: #991b1b; }
+.alert {
+  background: #fee2e2;
+  color: #991b1b;
+}
 
 /* Good */
-.alert { background: var(--danger-light); color: var(--danger); }
+.alert {
+  background: var(--danger-light);
+  color: var(--danger);
+}
 ```
 
 ### 4. Respect the 8pt Grid
 
 Keep spacing consistent with the 8pt grid system:
+
 ```css
 /* Good - uses spacing scale */
 .custom-component {
@@ -680,8 +702,11 @@ Keep spacing consistent with the 8pt grid system:
 ### 5. Test Touch Targets
 
 Ensure all interactive elements meet the 44x44px minimum tap target:
+
 ```css
-.btn, .nav-link, .checkbox-item {
+.btn,
+.nav-link,
+.checkbox-item {
   min-height: var(--tap-target);
   min-width: var(--tap-target);
 }

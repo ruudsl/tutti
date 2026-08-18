@@ -20,19 +20,30 @@ const router = Router();
  *       200:
  *         description: List of associations
  */
-router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associations = db.prepare(`
+router.get(
+  '/',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associations = db
+      .prepare(
+        `
         SELECT id, name, created_at
         FROM associations
         ORDER BY name
-    `).all();
+    `,
+      )
+      .all();
 
-    res.json(associations.map((a: any) => ({
+    res.json(
+      associations.map((a: any) => ({
         id: a.id,
         name: a.name,
         createdAt: a.created_at,
-    })));
-}));
+      })),
+    );
+  }),
+);
 
 /**
  * @swagger
@@ -48,27 +59,35 @@ router.get('/', authenticateToken, requireRole('admin'), asyncHandler(async (req
  *       404:
  *         description: Association not found
  */
-router.get('/current', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-    const association = db.prepare(`
+router.get(
+  '/current',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const association = db
+      .prepare(
+        `
         SELECT a.id, a.name, a.created_at,
                (SELECT COUNT(*) FROM users WHERE association_id = a.id) as member_count,
                (SELECT COUNT(*) FROM orchestras WHERE association_id = a.id) as orchestra_count
         FROM associations a
         WHERE a.id = ?
-    `).get(req.user!.associationId) as any;
+    `,
+      )
+      .get(req.user!.associationId) as any;
 
     if (!association) {
-        throw new ApiError(404, 'Vereniging niet gevonden.');
+      throw new ApiError(404, 'Vereniging niet gevonden.');
     }
 
     res.json({
-        id: association.id,
-        name: association.name,
-        createdAt: association.created_at,
-        memberCount: association.member_count,
-        orchestraCount: association.orchestra_count,
+      id: association.id,
+      name: association.name,
+      createdAt: association.created_at,
+      memberCount: association.member_count,
+      orchestraCount: association.orchestra_count,
     });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -95,27 +114,29 @@ router.get('/current', authenticateToken, asyncHandler(async (req: AuthRequest, 
  *       409:
  *         description: Association with this name already exists
  */
-router.put('/current', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put(
+  '/current',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = updateAssociationSchema.parse(req.body);
 
     // Check name uniqueness
-    const existing = db.prepare(
-        'SELECT id FROM associations WHERE LOWER(name) = LOWER(?) AND id != ?'
-    ).get(data.name.trim(), req.user!.associationId);
+    const existing = db
+      .prepare('SELECT id FROM associations WHERE LOWER(name) = LOWER(?) AND id != ?')
+      .get(data.name.trim(), req.user!.associationId);
 
     if (existing) {
-        throw new ApiError(409, 'Vereniging met deze naam bestaat al.');
+      throw new ApiError(409, 'Vereniging met deze naam bestaat al.');
     }
 
-    db.prepare('UPDATE associations SET name = ? WHERE id = ?').run(
-        data.name.trim(),
-        req.user!.associationId
-    );
+    db.prepare('UPDATE associations SET name = ? WHERE id = ?').run(data.name.trim(), req.user!.associationId);
 
     logger.info(`Association updated: ${req.user!.associationId}`, { updatedBy: req.user!.id });
 
     res.json({ message: 'Vereniging succesvol bijgewerkt.' });
-}));
+  }),
+);
 
 /**
  * @swagger
@@ -142,31 +163,31 @@ router.put('/current', authenticateToken, requireRole('admin'), asyncHandler(asy
  *       409:
  *         description: Association with this name already exists
  */
-router.post('/', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = createAssociationSchema.parse(req.body);
 
     // Check if name already exists
-    const existing = db.prepare(
-        'SELECT id FROM associations WHERE LOWER(name) = LOWER(?)'
-    ).get(data.name.trim());
+    const existing = db.prepare('SELECT id FROM associations WHERE LOWER(name) = LOWER(?)').get(data.name.trim());
 
     if (existing) {
-        throw new ApiError(409, 'Vereniging met deze naam bestaat al.');
+      throw new ApiError(409, 'Vereniging met deze naam bestaat al.');
     }
 
     const associationId = uuidv4();
-    db.prepare('INSERT INTO associations (id, name) VALUES (?, ?)').run(
-        associationId,
-        data.name.trim()
-    );
+    db.prepare('INSERT INTO associations (id, name) VALUES (?, ?)').run(associationId, data.name.trim());
 
     logger.info(`Association created: ${data.name}`, { associationId, createdBy: req.user!.id });
 
     res.status(201).json({
-        id: associationId,
-        name: data.name.trim(),
-        message: 'Vereniging succesvol aangemaakt.',
+      id: associationId,
+      name: data.name.trim(),
+      message: 'Vereniging succesvol aangemaakt.',
     });
-}));
+  }),
+);
 
 export default router;

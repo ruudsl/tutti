@@ -30,10 +30,9 @@ export const requiredTextSchema = z.string().min(1).max(500);
 export const urlSchema = z.string().url().optional().or(z.literal(''));
 
 /** Date string in ISO format */
-export const dateSchema = z.string().refine(
-  (val) => !val || !isNaN(Date.parse(val)),
-  { message: 'Invalid date format' }
-);
+export const dateSchema = z
+  .string()
+  .refine((val) => !val || !isNaN(Date.parse(val)), { message: 'Invalid date format' });
 
 /** Time string in HH:mm format */
 export const timeSchema = z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
@@ -56,7 +55,9 @@ export const createUserSchema = z.object({
   password: passwordSchema,
   firstName: nameSchema,
   lastName: nameSchema,
-  role: z.enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor']).default('member'),
+  role: z
+    .enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
+    .default('member'),
   instrumentIds: z.array(z.string()).default([]),
   orchestraIds: z.array(z.string()).default([]),
 });
@@ -69,7 +70,9 @@ export const updateUserSchema = z.object({
   password: optionalPasswordSchema,
   firstName: nameSchema,
   lastName: nameSchema,
-  role: z.enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor']).default('member'),
+  role: z
+    .enum(['member', 'admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'])
+    .default('member'),
   instrumentIds: z.array(z.string()).default([]),
   orchestraIds: z.array(z.string()).default([]),
 });
@@ -97,25 +100,29 @@ export const forgotPasswordSchema = z.object({
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 /** Schema for resetting password */
-export const resetPasswordSchema = z.object({
-  password: passwordSchema,
-  confirmPassword: z.string().min(1),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const resetPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string().min(1),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 /** Schema for changing password */
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: passwordSchema,
-  confirmPassword: z.string().min(1),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
@@ -142,23 +149,28 @@ export type ConcertFormData = z.infer<typeof concertSchema>;
 // ============================================
 
 /** Schema for creating/updating a rehearsal */
-export const rehearsalSchema = z.object({
-  date: z.string().min(1),
-  startTime: timeSchema,
-  endTime: timeSchema,
-  location: z.string().max(200).optional().or(z.literal('')),
-  type: z.string().optional().or(z.literal('')),
-  notes: z.string().max(2000).optional().or(z.literal('')),
-  orchestraId: z.string().optional().or(z.literal('')),
-}).refine((data) => {
-  if (data.startTime && data.endTime) {
-    return data.startTime < data.endTime;
-  }
-  return true;
-}, {
-  message: 'End time must be after start time',
-  path: ['endTime'],
-});
+export const rehearsalSchema = z
+  .object({
+    date: z.string().min(1),
+    startTime: timeSchema,
+    endTime: timeSchema,
+    location: z.string().max(200).optional().or(z.literal('')),
+    type: z.string().optional().or(z.literal('')),
+    notes: z.string().max(2000).optional().or(z.literal('')),
+    orchestraId: z.string().optional().or(z.literal('')),
+  })
+  .refine(
+    (data) => {
+      if (data.startTime && data.endTime) {
+        return data.startTime < data.endTime;
+      }
+      return true;
+    },
+    {
+      message: 'End time must be after start time',
+      path: ['endTime'],
+    },
+  );
 
 export type RehearsalFormData = z.infer<typeof rehearsalSchema>;
 

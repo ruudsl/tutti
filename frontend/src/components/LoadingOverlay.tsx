@@ -52,14 +52,7 @@ export function LoadingOverlay({
       {showSpinner && (
         <div className="loading-spinner" aria-hidden="true">
           <svg className="spinner-svg" viewBox="0 0 50 50">
-            <circle
-              className="spinner-circle"
-              cx="25"
-              cy="25"
-              r="20"
-              fill="none"
-              strokeWidth="4"
-            />
+            <circle className="spinner-circle" cx="25" cy="25" r="20" fill="none" strokeWidth="4" />
           </svg>
         </div>
       )}
@@ -70,11 +63,7 @@ export function LoadingOverlay({
         </div>
       )}
       {cancellable && onCancel && (
-        <button
-          type="button"
-          className="btn btn-outline btn-sm mt-2"
-          onClick={onCancel}
-        >
+        <button type="button" className="btn btn-outline btn-sm mt-2" onClick={onCancel}>
           {t('common.cancel')}
         </button>
       )}
@@ -96,12 +85,7 @@ export function LoadingOverlay({
 
   return (
     <div className={`loading-overlay-container ${className}`}>
-      <div
-        className="loading-overlay loading-overlay-inline"
-        role="alert"
-        aria-live="polite"
-        aria-busy="true"
-      >
+      <div className="loading-overlay loading-overlay-inline" role="alert" aria-live="polite" aria-busy="true">
         {overlayContent}
       </div>
       {children && <div className="loading-overlay-children">{children}</div>}
@@ -121,11 +105,7 @@ interface LoadingIndicatorProps {
   center?: boolean;
 }
 
-export function LoadingIndicator({
-  message,
-  size = 'md',
-  center = false,
-}: LoadingIndicatorProps) {
+export function LoadingIndicator({ message, size = 'md', center = false }: LoadingIndicatorProps) {
   const sizeClass = `loading-indicator-${size}`;
 
   return (
@@ -154,10 +134,7 @@ interface PageLoadingSkeletonProps {
   itemCount?: number;
 }
 
-export function PageLoadingSkeleton({
-  type = 'list',
-  itemCount = 5,
-}: PageLoadingSkeletonProps) {
+export function PageLoadingSkeleton({ type = 'list', itemCount = 5 }: PageLoadingSkeletonProps) {
   if (type === 'dashboard') {
     return (
       <div className="page-skeleton page-skeleton-dashboard">
@@ -167,7 +144,10 @@ export function PageLoadingSkeleton({
         <div className="skeleton-stats-grid">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton-stat-card">
-              <div className="skeleton skeleton-wave" style={{ width: '60%', height: '0.875rem', marginBottom: '0.5rem' }} />
+              <div
+                className="skeleton skeleton-wave"
+                style={{ width: '60%', height: '0.875rem', marginBottom: '0.5rem' }}
+              />
               <div className="skeleton skeleton-wave" style={{ width: '40%', height: '2rem' }} />
             </div>
           ))}
@@ -203,7 +183,10 @@ export function PageLoadingSkeleton({
         </div>
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="skeleton-form-field">
-            <div className="skeleton skeleton-wave" style={{ width: '100px', height: '0.875rem', marginBottom: '0.5rem' }} />
+            <div
+              className="skeleton skeleton-wave"
+              style={{ width: '100px', height: '0.875rem', marginBottom: '0.5rem' }}
+            />
             <div className="skeleton skeleton-wave" style={{ width: '100%', height: '2.5rem' }} />
           </div>
         ))}
@@ -223,9 +206,15 @@ export function PageLoadingSkeleton({
       <div className="skeleton-list">
         {Array.from({ length: itemCount }).map((_, i) => (
           <div key={i} className="skeleton-list-item">
-            <div className="skeleton skeleton-wave" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%' }} />
+            <div
+              className="skeleton skeleton-wave"
+              style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%' }}
+            />
             <div style={{ flex: 1 }}>
-              <div className="skeleton skeleton-wave" style={{ width: '60%', height: '1rem', marginBottom: '0.25rem' }} />
+              <div
+                className="skeleton skeleton-wave"
+                style={{ width: '60%', height: '1rem', marginBottom: '0.25rem' }}
+              />
               <div className="skeleton skeleton-wave" style={{ width: '40%', height: '0.75rem' }} />
             </div>
           </div>

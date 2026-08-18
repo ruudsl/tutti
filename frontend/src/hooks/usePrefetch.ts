@@ -31,11 +31,7 @@ interface PrefetchOptions {
  * );
  * ```
  */
-export function usePrefetch(
-  path: string,
-  prefetch: () => void | Promise<void>,
-  options: PrefetchOptions = {}
-) {
+export function usePrefetch(path: string, prefetch: () => void | Promise<void>, options: PrefetchOptions = {}) {
   const { delay = 100, navigate: shouldNavigate = true } = options;
   const navigate = useNavigate();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -57,19 +53,22 @@ export function usePrefetch(
     }
   }, []);
 
-  const onClick = useCallback((e: React.MouseEvent) => {
-    if (!shouldNavigate) return;
+  const onClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!shouldNavigate) return;
 
-    e.preventDefault();
+      e.preventDefault();
 
-    // Trigger prefetch immediately if not already done
-    if (!prefetchedRef.current) {
-      prefetch();
-      prefetchedRef.current = true;
-    }
+      // Trigger prefetch immediately if not already done
+      if (!prefetchedRef.current) {
+        prefetch();
+        prefetchedRef.current = true;
+      }
 
-    navigate(path);
-  }, [path, navigate, prefetch, shouldNavigate]);
+      navigate(path);
+    },
+    [path, navigate, prefetch, shouldNavigate],
+  );
 
   const onFocus = useCallback(() => {
     if (prefetchedRef.current) return;
@@ -98,7 +97,7 @@ export function getPrefetchLinkProps(
   path: string,
   prefetch: () => void | Promise<void>,
   navigate: (path: string) => void,
-  options: { delay?: number } = {}
+  options: { delay?: number } = {},
 ) {
   const { delay = 100 } = options;
   let timeoutId: NodeJS.Timeout | null = null;

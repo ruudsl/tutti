@@ -17,25 +17,25 @@ type ValidationTarget = 'body' | 'query' | 'params';
  *   router.get('/', validate(listQuerySchema, 'query'), handler);
  */
 export function validate(schema: ZodType, target: ValidationTarget = 'body'): RequestHandler {
-    return (req: Request, res: Response, next: NextFunction): void => {
-        const result = schema.safeParse(req[target]);
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req[target]);
 
-        if (!result.success) {
-            // Handled centrally by errorHandler.ts (ZodError -> 400 + details)
-            next(result.error);
-            return;
-        }
+    if (!result.success) {
+      // Handled centrally by errorHandler.ts (ZodError -> 400 + details)
+      next(result.error);
+      return;
+    }
 
-        if (target === 'body') {
-            req.body = result.data;
-        } else {
-            // req.query and req.params can be getter-only in newer Express
-            // versions; mutate the existing object instead of reassigning.
-            Object.assign(req[target], result.data);
-        }
+    if (target === 'body') {
+      req.body = result.data;
+    } else {
+      // req.query and req.params can be getter-only in newer Express
+      // versions; mutate the existing object instead of reassigning.
+      Object.assign(req[target], result.data);
+    }
 
-        next();
-    };
+    next();
+  };
 }
 
 export default validate;

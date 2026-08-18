@@ -18,7 +18,10 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [microsoftEnabled, setMicrosoftEnabled] = useState(false);
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
-  const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({ displayName: 'Tutti', logoUrl: null });
+  const [branding, setBranding] = useState<{ displayName: string; logoUrl: string | null }>({
+    displayName: 'Tutti',
+    logoUrl: null,
+  });
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -27,13 +30,20 @@ export default function Login() {
   useDocumentTitle('pageTitle.login');
 
   useEffect(() => {
-    api.get('/settings/branding').then(({ data }) => {
-      setBranding(data);
-    }).catch(() => { /* fallback to defaults */ });
+    api
+      .get('/settings/branding')
+      .then(({ data }) => {
+        setBranding(data);
+      })
+      .catch(() => {
+        /* fallback to defaults */
+      });
 
     getMicrosoftEnabled()
       .then(({ enabled }) => setMicrosoftEnabled(enabled))
-      .catch(() => { /* Microsoft not available */ });
+      .catch(() => {
+        /* Microsoft not available */
+      });
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -105,22 +115,14 @@ export default function Login() {
             />
           ) : null}
           <h1>
-            {!branding.logoUrl && (
-              <Icon name="music" size={28} className="login-brand-icon" />
-            )}
+            {!branding.logoUrl && <Icon name="music" size={28} className="login-brand-icon" />}
             {branding.displayName}
           </h1>
         </div>
 
         <form onSubmit={handleSubmit}>
           {error && (
-            <div
-              ref={errorRef}
-              className="alert alert-danger"
-              role="alert"
-              aria-live="assertive"
-              tabIndex={-1}
-            >
+            <div ref={errorRef} className="alert alert-danger" role="alert" aria-live="assertive" tabIndex={-1}>
               {error}
             </div>
           )}
@@ -128,7 +130,9 @@ export default function Login() {
           {!showMfa ? (
             <>
               <div className="form-group">
-                <label htmlFor="email" className="form-label">{t('auth.email')}</label>
+                <label htmlFor="email" className="form-label">
+                  {t('auth.email')}
+                </label>
                 <input
                   ref={emailInputRef}
                   type="email"
@@ -143,7 +147,9 @@ export default function Login() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="password" className="form-label">{t('auth.password')}</label>
+                <label htmlFor="password" className="form-label">
+                  {t('auth.password')}
+                </label>
                 <input
                   type="password"
                   id="password"
@@ -158,13 +164,13 @@ export default function Login() {
             <>
               <div className="alert alert-info" style={{ marginBottom: '1rem' }}>
                 <strong>{t('auth.mfa.title')}</strong>
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem' }}>
-                  {t('auth.mfa.description')}
-                </p>
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem' }}>{t('auth.mfa.description')}</p>
               </div>
 
               <div className="form-group">
-                <label htmlFor="mfaCode" className="form-label">{t('auth.mfa.code')}</label>
+                <label htmlFor="mfaCode" className="form-label">
+                  {t('auth.mfa.code')}
+                </label>
                 <input
                   type="text"
                   id="mfaCode"
@@ -231,10 +237,10 @@ export default function Login() {
               disabled={microsoftLoading}
             >
               <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
               </svg>
               {microsoftLoading ? t('auth.loggingIn') : t('auth.microsoft.loginButton')}
             </button>

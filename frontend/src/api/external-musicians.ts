@@ -93,12 +93,17 @@ export const getExternalMusician = async (id: string): Promise<ExternalMusicianD
   return data;
 };
 
-export const createExternalMusician = async (musicianData: CreateExternalMusicianData): Promise<{ id: string; message: string }> => {
+export const createExternalMusician = async (
+  musicianData: CreateExternalMusicianData,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post('/external-musicians', musicianData);
   return data;
 };
 
-export const updateExternalMusician = async (id: string, musicianData: UpdateExternalMusicianData): Promise<{ message: string }> => {
+export const updateExternalMusician = async (
+  id: string,
+  musicianData: UpdateExternalMusicianData,
+): Promise<{ message: string }> => {
   const { data } = await api.put(`/external-musicians/${id}`, musicianData);
   return data;
 };
@@ -110,7 +115,7 @@ export const deleteExternalMusician = async (id: string): Promise<{ message: str
 
 export const searchExternalMusiciansByInstrument = async (
   instrumentId: string,
-  options?: { skillLevel?: string; activeOnly?: boolean }
+  options?: { skillLevel?: string; activeOnly?: boolean },
 ): Promise<ExternalMusicianSearchResult[]> => {
   const params = new URLSearchParams();
   params.set('instrument', instrumentId);
@@ -127,13 +132,16 @@ export const addInstrumentToMusician = async (
     instrumentId: string;
     skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
     isPrimary?: boolean;
-  }
+  },
 ): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/external-musicians/${musicianId}/instruments`, instrumentData);
   return data;
 };
 
-export const removeInstrumentFromMusician = async (musicianId: string, instrumentId: string): Promise<{ message: string }> => {
+export const removeInstrumentFromMusician = async (
+  musicianId: string,
+  instrumentId: string,
+): Promise<{ message: string }> => {
   const { data } = await api.delete(`/external-musicians/${musicianId}/instruments/${instrumentId}`);
   return data;
 };

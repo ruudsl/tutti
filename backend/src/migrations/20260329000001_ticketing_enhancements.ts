@@ -7,37 +7,37 @@ export const name = 'ticketing_enhancements';
  * Helper to check if a column exists in a table
  */
 function columnExists(table: string, column: string): boolean {
-    const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-    return columns.some(c => c.name === column);
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return columns.some((c) => c.name === column);
 }
 
 /**
  * Helper to add column if it doesn't exist
  */
 function addColumnIfNotExists(table: string, column: string, definition: string): void {
-    if (!columnExists(table, column)) {
-        db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    }
+  if (!columnExists(table, column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 /**
  * Run the migration
  */
 export function up(): void {
-    // =============================================
-    // EARLY-BIRD PRICING
-    // =============================================
+  // =============================================
+  // EARLY-BIRD PRICING
+  // =============================================
 
-    // Add early-bird pricing fields to ticket_types
-    addColumnIfNotExists('ticket_types', 'early_bird_price', 'REAL');
-    addColumnIfNotExists('ticket_types', 'early_bird_end_date', 'DATETIME');
-    addColumnIfNotExists('ticket_types', 'early_bird_quantity', 'INTEGER');
+  // Add early-bird pricing fields to ticket_types
+  addColumnIfNotExists('ticket_types', 'early_bird_price', 'REAL');
+  addColumnIfNotExists('ticket_types', 'early_bird_end_date', 'DATETIME');
+  addColumnIfNotExists('ticket_types', 'early_bird_quantity', 'INTEGER');
 
-    // =============================================
-    // GROUP DISCOUNTS (STAFFEL PRICING)
-    // =============================================
+  // =============================================
+  // GROUP DISCOUNTS (STAFFEL PRICING)
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS ticket_group_discounts (
             id TEXT PRIMARY KEY,
             ticket_type_id TEXT NOT NULL,
@@ -52,11 +52,11 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_group_discounts_ticket_type ON ticket_group_discounts(ticket_type_id);
     `);
 
-    // =============================================
-    // DISCOUNT CODES / VOUCHERS
-    // =============================================
+  // =============================================
+  // DISCOUNT CODES / VOUCHERS
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS discount_codes (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -99,11 +99,11 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_discount_usage_email ON discount_code_usage(user_email);
     `);
 
-    // =============================================
-    // SEAT SELECTION / VENUE LAYOUT
-    // =============================================
+  // =============================================
+  // SEAT SELECTION / VENUE LAYOUT
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         -- Venue layouts for seated events
         CREATE TABLE IF NOT EXISTS venue_layouts (
             id TEXT PRIMARY KEY,
@@ -136,11 +136,11 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_venue_seats_layout ON venue_seats(layout_id);
     `);
 
-    // Link concert to a venue layout
-    addColumnIfNotExists('concerts', 'venue_layout_id', 'TEXT REFERENCES venue_layouts(id) ON DELETE SET NULL');
-    addColumnIfNotExists('concerts', 'is_seated_event', 'BOOLEAN DEFAULT 0');
+  // Link concert to a venue layout
+  addColumnIfNotExists('concerts', 'venue_layout_id', 'TEXT REFERENCES venue_layouts(id) ON DELETE SET NULL');
+  addColumnIfNotExists('concerts', 'is_seated_event', 'BOOLEAN DEFAULT 0');
 
-    db.exec(`
+  db.exec(`
         -- Reserved/sold seats for a concert
         CREATE TABLE IF NOT EXISTS concert_seat_reservations (
             id TEXT PRIMARY KEY,
@@ -162,28 +162,28 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_seat_reservations_order ON concert_seat_reservations(order_id);
     `);
 
-    // =============================================
-    // RESERVATION EXTENSION
-    // =============================================
+  // =============================================
+  // RESERVATION EXTENSION
+  // =============================================
 
-    addColumnIfNotExists('ticket_orders', 'extension_count', 'INTEGER DEFAULT 0');
-    addColumnIfNotExists('ticket_orders', 'max_extensions', 'INTEGER DEFAULT 2');
+  addColumnIfNotExists('ticket_orders', 'extension_count', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('ticket_orders', 'max_extensions', 'INTEGER DEFAULT 2');
 
-    // =============================================
-    // ACCESSIBILITY INFORMATION
-    // =============================================
+  // =============================================
+  // ACCESSIBILITY INFORMATION
+  // =============================================
 
-    addColumnIfNotExists('concerts', 'accessibility_info', 'TEXT');
-    addColumnIfNotExists('concerts', 'wheelchair_spaces', 'INTEGER DEFAULT 0');
-    addColumnIfNotExists('concerts', 'companion_spaces', 'INTEGER DEFAULT 0');
-    addColumnIfNotExists('concerts', 'hearing_loop_available', 'BOOLEAN DEFAULT 0');
-    addColumnIfNotExists('concerts', 'accessible_parking_info', 'TEXT');
+  addColumnIfNotExists('concerts', 'accessibility_info', 'TEXT');
+  addColumnIfNotExists('concerts', 'wheelchair_spaces', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('concerts', 'companion_spaces', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('concerts', 'hearing_loop_available', 'BOOLEAN DEFAULT 0');
+  addColumnIfNotExists('concerts', 'accessible_parking_info', 'TEXT');
 
-    // =============================================
-    // INVOICE GENERATION
-    // =============================================
+  // =============================================
+  // INVOICE GENERATION
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS ticket_invoices (
             id TEXT PRIMARY KEY,
             order_id TEXT NOT NULL UNIQUE,
@@ -220,18 +220,18 @@ export function up(): void {
         );
     `);
 
-    // =============================================
-    // SERVICE FEE SETTINGS
-    // =============================================
+  // =============================================
+  // SERVICE FEE SETTINGS
+  // =============================================
 
-    addColumnIfNotExists('ticket_types', 'service_fee', 'REAL DEFAULT 0');
-    addColumnIfNotExists('ticket_types', 'show_service_fee_separate', 'BOOLEAN DEFAULT 0');
+  addColumnIfNotExists('ticket_types', 'service_fee', 'REAL DEFAULT 0');
+  addColumnIfNotExists('ticket_types', 'show_service_fee_separate', 'BOOLEAN DEFAULT 0');
 
-    // =============================================
-    // TICKET SALES ANALYTICS
-    // =============================================
+  // =============================================
+  // TICKET SALES ANALYTICS
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS ticket_sales_snapshots (
             id TEXT PRIMARY KEY,
             concert_id TEXT NOT NULL,
@@ -249,11 +249,11 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_sales_snapshots_date ON ticket_sales_snapshots(snapshot_date);
     `);
 
-    // =============================================
-    // TICKET TRANSFER
-    // =============================================
+  // =============================================
+  // TICKET TRANSFER
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS ticket_transfers (
             id TEXT PRIMARY KEY,
             ticket_id TEXT NOT NULL,
@@ -272,16 +272,16 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_ticket_transfers_code ON ticket_transfers(transfer_code);
     `);
 
-    // Add transfer tracking to tickets
-    addColumnIfNotExists('tickets', 'original_buyer_email', 'TEXT');
-    addColumnIfNotExists('tickets', 'transfer_count', 'INTEGER DEFAULT 0');
-    addColumnIfNotExists('tickets', 'max_transfers', 'INTEGER DEFAULT 1');
+  // Add transfer tracking to tickets
+  addColumnIfNotExists('tickets', 'original_buyer_email', 'TEXT');
+  addColumnIfNotExists('tickets', 'transfer_count', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('tickets', 'max_transfers', 'INTEGER DEFAULT 1');
 
-    // =============================================
-    // RATE LIMITING / BOT PROTECTION
-    // =============================================
+  // =============================================
+  // RATE LIMITING / BOT PROTECTION
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS checkout_rate_limits (
             id TEXT PRIMARY KEY,
             ip_address TEXT NOT NULL,
@@ -305,19 +305,19 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_blocked_ips_address ON blocked_ips(ip_address);
     `);
 
-    // =============================================
-    // CAPTCHA TRACKING
-    // =============================================
+  // =============================================
+  // CAPTCHA TRACKING
+  // =============================================
 
-    addColumnIfNotExists('ticket_orders', 'captcha_verified', 'BOOLEAN DEFAULT 0');
-    addColumnIfNotExists('ticket_orders', 'ip_address', 'TEXT');
-    addColumnIfNotExists('ticket_orders', 'user_agent', 'TEXT');
+  addColumnIfNotExists('ticket_orders', 'captcha_verified', 'BOOLEAN DEFAULT 0');
+  addColumnIfNotExists('ticket_orders', 'ip_address', 'TEXT');
+  addColumnIfNotExists('ticket_orders', 'user_agent', 'TEXT');
 
-    // =============================================
-    // OFFLINE SCANNER SUPPORT
-    // =============================================
+  // =============================================
+  // OFFLINE SCANNER SUPPORT
+  // =============================================
 
-    db.exec(`
+  db.exec(`
         -- Sync tokens for offline scanner
         CREATE TABLE IF NOT EXISTS scanner_sync_tokens (
             id TEXT PRIMARY KEY,
@@ -350,16 +350,16 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_offline_scans_synced ON offline_scan_queue(synced);
     `);
 
-    // =============================================
-    // DYNAMIC QR CODES
-    // =============================================
+  // =============================================
+  // DYNAMIC QR CODES
+  // =============================================
 
-    // QR code rotation for fraud prevention
-    addColumnIfNotExists('tickets', 'qr_secret', 'TEXT');
-    addColumnIfNotExists('tickets', 'qr_rotation_interval', 'INTEGER DEFAULT 300');
-    addColumnIfNotExists('tickets', 'last_qr_rotation', 'DATETIME');
+  // QR code rotation for fraud prevention
+  addColumnIfNotExists('tickets', 'qr_secret', 'TEXT');
+  addColumnIfNotExists('tickets', 'qr_rotation_interval', 'INTEGER DEFAULT 300');
+  addColumnIfNotExists('tickets', 'last_qr_rotation', 'DATETIME');
 
-    db.exec(`
+  db.exec(`
         -- QR validation attempts (for detecting sharing)
         CREATE TABLE IF NOT EXISTS qr_validation_attempts (
             id TEXT PRIMARY KEY,
@@ -378,25 +378,25 @@ export function up(): void {
         CREATE INDEX IF NOT EXISTS idx_qr_attempts_time ON qr_validation_attempts(validation_time);
     `);
 
-    // =============================================
-    // MULTILINGUAL TICKET EMAILS
-    // =============================================
+  // =============================================
+  // MULTILINGUAL TICKET EMAILS
+  // =============================================
 
-    addColumnIfNotExists('ticket_orders', 'language', "TEXT DEFAULT 'nl'");
+  addColumnIfNotExists('ticket_orders', 'language', "TEXT DEFAULT 'nl'");
 
-    // =============================================
-    // SOCIAL LOGIN TRACKING
-    // =============================================
+  // =============================================
+  // SOCIAL LOGIN TRACKING
+  // =============================================
 
-    addColumnIfNotExists('ticket_orders', 'auth_provider', 'TEXT');
+  addColumnIfNotExists('ticket_orders', 'auth_provider', 'TEXT');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    // Drop all new tables
-    db.exec(`
+  // Drop all new tables
+  db.exec(`
         DROP TABLE IF EXISTS qr_validation_attempts;
         DROP TABLE IF EXISTS offline_scan_queue;
         DROP TABLE IF EXISTS scanner_sync_tokens;
@@ -414,6 +414,6 @@ export function down(): void {
         DROP TABLE IF EXISTS ticket_group_discounts;
     `);
 
-    // Note: SQLite doesn't support DROP COLUMN, so we can't fully rollback
-    // In production, you would need to recreate tables without the new columns
+  // Note: SQLite doesn't support DROP COLUMN, so we can't fully rollback
+  // In production, you would need to recreate tables without the new columns
 }

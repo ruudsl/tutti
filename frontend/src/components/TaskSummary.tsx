@@ -68,17 +68,12 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(['todo', 'in_progress', 'review', 'done'] as TaskStatus[]).map((status) => (
-              <div
-                key={status}
-                className={`rounded-lg p-3 ${STATUS_COLORS[status]}`}
-              >
+              <div key={status} className={`rounded-lg p-3 ${STATUS_COLORS[status]}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <Icon name={STATUS_ICONS[status]} size={14} aria-hidden={true} />
                   <span className="text-xs font-medium">{t(`tasks.status.${status}`)}</span>
                 </div>
-                <div className="text-2xl font-bold">
-                  {summary.statusSummary[status] || 0}
-                </div>
+                <div className="text-2xl font-bold">{summary.statusSummary[status] || 0}</div>
               </div>
             ))}
           </div>
@@ -112,10 +107,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                   />
                   <span className="flex-1 truncate text-sm">{task.title}</span>
                   {task.listName && (
-                    <span
-                      className="badge badge-xs"
-                      style={{ backgroundColor: task.listColor || undefined }}
-                    >
+                    <span className="badge badge-xs" style={{ backgroundColor: task.listColor || undefined }}>
                       {task.listName}
                     </span>
                   )}
@@ -156,11 +148,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                 >
                   <Icon name={STATUS_ICONS[task.status]} size={14} className="text-error" aria-hidden={true} />
                   <span className="flex-1 truncate text-sm">{task.title}</span>
-                  {task.assignedToName && (
-                    <span className="text-xs text-base-content/50">
-                      {task.assignedToName}
-                    </span>
-                  )}
+                  {task.assignedToName && <span className="text-xs text-base-content/50">{task.assignedToName}</span>}
                   {task.dueDate && (
                     <span className="text-xs text-error font-medium">
                       {new Date(task.dueDate).toLocaleDateString()}
@@ -199,10 +187,7 @@ export function TaskSummary({ onTaskClick, compact = false }: TaskSummaryProps) 
                   <Icon name="checkCircle" size={14} className="text-success" aria-hidden={true} />
                   <span className="flex-1 truncate text-sm line-through">{task.title}</span>
                   {task.listName && (
-                    <span
-                      className="badge badge-xs"
-                      style={{ backgroundColor: task.listColor || undefined }}
-                    >
+                    <span className="badge badge-xs" style={{ backgroundColor: task.listColor || undefined }}>
                       {task.listName}
                     </span>
                   )}

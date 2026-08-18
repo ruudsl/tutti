@@ -11,12 +11,12 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // ===========================================
-    // AUDIO RECORDER (Rehearsal recordings)
-    // ===========================================
+  // ===========================================
+  // AUDIO RECORDER (Rehearsal recordings)
+  // ===========================================
 
-    // Audio recordings of rehearsals/sections
-    db.exec(`
+  // Audio recordings of rehearsals/sections
+  db.exec(`
         CREATE TABLE IF NOT EXISTS audio_recordings (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -42,12 +42,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // SECTION CHAT
-    // ===========================================
+  // ===========================================
+  // SECTION CHAT
+  // ===========================================
 
-    // Chat channels per section/instrument group
-    db.exec(`
+  // Chat channels per section/instrument group
+  db.exec(`
         CREATE TABLE IF NOT EXISTS section_chat_channels (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL,
@@ -61,8 +61,8 @@ export function up(): void {
         )
     `);
 
-    // Chat messages
-    db.exec(`
+  // Chat messages
+  db.exec(`
         CREATE TABLE IF NOT EXISTS section_chat_messages (
             id TEXT PRIMARY KEY,
             channel_id TEXT NOT NULL,
@@ -79,8 +79,8 @@ export function up(): void {
         )
     `);
 
-    // Read status per user per channel
-    db.exec(`
+  // Read status per user per channel
+  db.exec(`
         CREATE TABLE IF NOT EXISTS section_chat_read_status (
             id TEXT PRIMARY KEY,
             channel_id TEXT NOT NULL,
@@ -94,37 +94,32 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_association ON audio_recordings(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_orchestra ON audio_recordings(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_rehearsal ON audio_recordings(rehearsal_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_title ON audio_recordings(music_title_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_user ON audio_recordings(recorded_by)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_date ON audio_recordings(created_at)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_channels_orchestra ON section_chat_channels(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_channels_instrument ON section_chat_channels(instrument_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_channel ON section_chat_messages(channel_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_user ON section_chat_messages(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_date ON section_chat_messages(created_at)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_channel ON section_chat_read_status(channel_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_user ON section_chat_read_status(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_association ON audio_recordings(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_orchestra ON audio_recordings(orchestra_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_rehearsal ON audio_recordings(rehearsal_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_title ON audio_recordings(music_title_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_user ON audio_recordings(recorded_by)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_audio_recordings_date ON audio_recordings(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_channels_orchestra ON section_chat_channels(orchestra_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_channels_instrument ON section_chat_channels(instrument_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_channel ON section_chat_messages(channel_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_user ON section_chat_messages(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_messages_date ON section_chat_messages(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_channel ON section_chat_read_status(channel_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_section_chat_read_status_user ON section_chat_read_status(user_id)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'section_chat_read_status',
-        'section_chat_messages',
-        'section_chat_channels',
-        'audio_recordings',
-    ];
+  const tables = ['section_chat_read_status', 'section_chat_messages', 'section_chat_channels', 'audio_recordings'];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

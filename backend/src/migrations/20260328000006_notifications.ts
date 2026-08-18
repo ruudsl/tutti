@@ -11,12 +11,12 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // ===========================================
-    // SEATING NOTIFICATIONS (WhatsApp/Webhook)
-    // ===========================================
+  // ===========================================
+  // SEATING NOTIFICATIONS (WhatsApp/Webhook)
+  // ===========================================
 
-    // Seating notification settings per orchestra
-    db.exec(`
+  // Seating notification settings per orchestra
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_notification_settings (
             id TEXT PRIMARY KEY,
             orchestra_id TEXT NOT NULL UNIQUE,
@@ -36,8 +36,8 @@ export function up(): void {
         )
     `);
 
-    // Seating notification logs
-    db.exec(`
+  // Seating notification logs
+  db.exec(`
         CREATE TABLE IF NOT EXISTS seating_notification_logs (
             id TEXT PRIMARY KEY,
             rehearsal_id TEXT NOT NULL,
@@ -51,12 +51,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // GENERAL NOTIFICATIONS
-    // ===========================================
+  // ===========================================
+  // GENERAL NOTIFICATIONS
+  // ===========================================
 
-    // Notification preferences per user
-    db.exec(`
+  // Notification preferences per user
+  db.exec(`
         CREATE TABLE IF NOT EXISTS notification_preferences (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL UNIQUE,
@@ -74,8 +74,8 @@ export function up(): void {
         )
     `);
 
-    // Notifications queue/history
-    db.exec(`
+  // Notifications queue/history
+  db.exec(`
         CREATE TABLE IF NOT EXISTS notifications (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -92,32 +92,36 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_notification_settings_orchestra ON seating_notification_settings(orchestra_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_rehearsal ON seating_notification_logs(rehearsal_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_status ON seating_notification_logs(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_date ON notifications(created_at)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_seating_notification_settings_orchestra ON seating_notification_settings(orchestra_id)',
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_rehearsal ON seating_notification_logs(rehearsal_id)',
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_seating_notification_logs_status ON seating_notification_logs(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notifications_date ON notifications(created_at)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'notifications',
-        'notification_preferences',
-        'seating_notification_logs',
-        'seating_notification_settings',
-    ];
+  const tables = [
+    'notifications',
+    'notification_preferences',
+    'seating_notification_logs',
+    'seating_notification_settings',
+  ];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

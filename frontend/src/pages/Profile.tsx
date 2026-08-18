@@ -125,7 +125,8 @@ export default function Profile() {
               <strong>{t('profile.role')}:</strong> {user?.role ? t(`roles.${user.role}`) : '-'}
             </div>
             <div className="mb-2">
-              <strong>{t('profile.mfaStatus')}:</strong> {user?.mfaEnabled ? t('profile.mfaEnabled') : t('profile.mfaDisabled')}
+              <strong>{t('profile.mfaStatus')}:</strong>{' '}
+              {user?.mfaEnabled ? t('profile.mfaEnabled') : t('profile.mfaDisabled')}
             </div>
             <div className="mb-2">
               <strong>{t('profile.language')}:</strong>
@@ -142,12 +143,8 @@ export default function Profile() {
             <span className="card-title">{t('profile.changePassword.title')}</span>
           </div>
           <div className="card-body">
-            {passwordError && (
-              <div className="alert alert-error mb-2">{passwordError}</div>
-            )}
-            {passwordSuccess && (
-              <div className="alert alert-success mb-2">{passwordSuccess}</div>
-            )}
+            {passwordError && <div className="alert alert-error mb-2">{passwordError}</div>}
+            {passwordSuccess && <div className="alert alert-success mb-2">{passwordSuccess}</div>}
             <form onSubmit={handlePasswordChange}>
               <div className="form-group">
                 <label className="form-label">{t('profile.changePassword.current')}</label>
@@ -181,11 +178,7 @@ export default function Profile() {
                   minLength={8}
                 />
               </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isChangingPassword}
-              >
+              <button type="submit" className="btn btn-primary" disabled={isChangingPassword}>
                 {isChangingPassword ? t('profile.changePassword.changing') : t('profile.changePassword.button')}
               </button>
             </form>
@@ -194,14 +187,7 @@ export default function Profile() {
       </div>
 
       {/* Custom Fields */}
-      {user?.id && (
-        <CustomFieldsSection
-          entityType="user"
-          entityId={user.id}
-          editable={true}
-          className="mt-3"
-        />
-      )}
+      {user?.id && <CustomFieldsSection entityType="user" entityId={user.id} editable={true} className="mt-3" />}
 
       {/* MFA Section */}
       <div className="card mt-2">
@@ -209,26 +195,16 @@ export default function Profile() {
           <span className="card-title">{t('profile.mfa.title')}</span>
         </div>
         <div className="card-body">
-          {mfaError && (
-            <div className="alert alert-error mb-2">{mfaError}</div>
-          )}
-          {mfaSuccess && (
-            <div className="alert alert-success mb-2">{mfaSuccess}</div>
-          )}
+          {mfaError && <div className="alert alert-error mb-2">{mfaError}</div>}
+          {mfaSuccess && <div className="alert alert-success mb-2">{mfaSuccess}</div>}
 
           {!user?.mfaEnabled ? (
             // MFA not enabled
             <>
               {!mfaSetup ? (
                 <div>
-                  <p className="mb-2">
-                    {t('profile.mfa.setupDescription')}
-                  </p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleSetupMfa}
-                    disabled={isSettingUpMfa}
-                  >
+                  <p className="mb-2">{t('profile.mfa.setupDescription')}</p>
+                  <button className="btn btn-primary" onClick={handleSetupMfa} disabled={isSettingUpMfa}>
                     {isSettingUpMfa ? t('profile.mfa.settingUp') : t('profile.mfa.setupButton')}
                   </button>
                 </div>
@@ -239,7 +215,9 @@ export default function Profile() {
                     <img src={mfaSetup.qrCode} alt="MFA QR Code" style={{ maxWidth: '200px' }} />
                   </div>
                   <p className="mb-2">
-                    <small>{t('profile.mfa.manualCode')} <code>{mfaSetup.secret}</code></small>
+                    <small>
+                      {t('profile.mfa.manualCode')} <code>{mfaSetup.secret}</code>
+                    </small>
                   </p>
                   <form onSubmit={handleEnableMfa}>
                     <div className="form-group">
@@ -258,11 +236,7 @@ export default function Profile() {
                       <button type="submit" className="btn btn-primary">
                         {t('profile.mfa.enableButton')}
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setMfaSetup(null)}
-                      >
+                      <button type="button" className="btn btn-secondary" onClick={() => setMfaSetup(null)}>
                         {t('common.cancel')}
                       </button>
                     </div>
@@ -287,11 +261,7 @@ export default function Profile() {
                     required
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="btn btn-danger"
-                  disabled={isDisablingMfa}
-                >
+                <button type="submit" className="btn btn-danger" disabled={isDisablingMfa}>
                   {isDisablingMfa ? t('profile.mfa.disabling') : t('profile.mfa.disableButton')}
                 </button>
               </form>

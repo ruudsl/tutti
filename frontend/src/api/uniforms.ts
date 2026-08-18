@@ -65,19 +65,22 @@ export const createUniformItemsBulk = async (item: {
   return data;
 };
 
-export const updateUniformItem = async (id: string, item: {
-  itemType?: string;
-  sizeStandard?: string;
-  sizeLength?: number;
-  sizeWidth?: number;
-  color?: string;
-  condition?: string;
-  status?: string;
-  currentUserId?: string | null;
-  notes?: string;
-  purchaseDate?: string;
-  purchasePrice?: number;
-}): Promise<void> => {
+export const updateUniformItem = async (
+  id: string,
+  item: {
+    itemType?: string;
+    sizeStandard?: string;
+    sizeLength?: number;
+    sizeWidth?: number;
+    color?: string;
+    condition?: string;
+    status?: string;
+    currentUserId?: string | null;
+    notes?: string;
+    purchaseDate?: string;
+    purchasePrice?: number;
+  },
+): Promise<void> => {
   await api.put(`/uniforms/items/${id}`, item);
 };
 
@@ -85,20 +88,26 @@ export const deleteUniformItem = async (id: string): Promise<void> => {
   await api.delete(`/uniforms/items/${id}`);
 };
 
-export const assignUniformItem = async (itemId: string, assignment: {
-  userId: string;
-  assignedDate: string;
-  conditionAtAssignment?: string;
-  notes?: string;
-}): Promise<{ id: string }> => {
+export const assignUniformItem = async (
+  itemId: string,
+  assignment: {
+    userId: string;
+    assignedDate: string;
+    conditionAtAssignment?: string;
+    notes?: string;
+  },
+): Promise<{ id: string }> => {
   const { data } = await api.post(`/uniforms/items/${itemId}/assign`, assignment);
   return data;
 };
 
-export const returnUniformItem = async (itemId: string, returnData: {
-  returnedDate: string;
-  conditionAtReturn?: string;
-}): Promise<void> => {
+export const returnUniformItem = async (
+  itemId: string,
+  returnData: {
+    returnedDate: string;
+    conditionAtReturn?: string;
+  },
+): Promise<void> => {
   await api.post(`/uniforms/items/${itemId}/return`, returnData);
 };
 
@@ -121,11 +130,14 @@ export const createUniformSet = async (set: {
   return data;
 };
 
-export const updateUniformSet = async (id: string, set: {
-  name?: string;
-  description?: string;
-  requirements?: { itemType: string; quantity: number }[];
-}): Promise<void> => {
+export const updateUniformSet = async (
+  id: string,
+  set: {
+    name?: string;
+    description?: string;
+    requirements?: { itemType: string; quantity: number }[];
+  },
+): Promise<void> => {
   await api.put(`/uniforms/sets/${id}`, set);
 };
 

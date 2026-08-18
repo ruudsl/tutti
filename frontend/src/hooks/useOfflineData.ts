@@ -8,15 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as offlineStorage from '../lib/offlineStorage';
 import * as api from '../api';
-import type {
-  User,
-  Instrument,
-  Orchestra,
-  MusicPiece,
-  MusicTitle,
-  Rehearsal,
-  Genre,
-} from '../types';
+import type { User, Instrument, Orchestra, MusicPiece, MusicTitle, Rehearsal, Genre } from '../types';
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
 
@@ -136,9 +128,8 @@ export function useOfflineData(): OfflineDataHook {
       try {
         const allMetadata = await offlineStorage.getAllSyncMetadata();
         const latestSync = allMetadata.reduce(
-          (latest, meta) =>
-            meta.lastSyncAt > (latest || '') ? meta.lastSyncAt : latest,
-          null as string | null
+          (latest, meta) => (meta.lastSyncAt > (latest || '') ? meta.lastSyncAt : latest),
+          null as string | null,
         );
 
         const pendingCount = (await offlineStorage.getPendingMutations()).length;
@@ -159,110 +150,113 @@ export function useOfflineData(): OfflineDataHook {
   /**
    * Sync a single entity from API to IndexedDB
    */
-  const syncEntity = useCallback(async (entity: SyncableEntity): Promise<void> => {
-    if (!navigator.onLine) {
-      throw new Error('Cannot sync while offline');
-    }
-
-    setSyncState((prev) => ({
-      ...prev,
-      progress: {
-        ...prev.progress,
-        currentEntity: entity,
-      },
-    }));
-
-    try {
-      switch (entity) {
-        case 'userProfile': {
-          const user = await api.getProfile();
-          await offlineStorage.saveUserProfile(user);
-          break;
-        }
-
-        case 'orchestras': {
-          const orchestras = await api.getOrchestras();
-          await offlineStorage.saveOrchestras(orchestras);
-          break;
-        }
-
-        case 'instruments': {
-          const instruments = await api.getInstruments();
-          await offlineStorage.saveInstruments(instruments);
-          break;
-        }
-
-        case 'genres': {
-          const genres = await api.getGenres();
-          await offlineStorage.saveGenres(genres);
-          break;
-        }
-
-        case 'musicPieces': {
-          // Sync all music pieces (could be paginated in future)
-          const pieces = await api.getMusicPieces();
-          await offlineStorage.saveMusicPieces(pieces);
-          break;
-        }
-
-        case 'musicTitles': {
-          const titles = await api.getMusicTitles();
-          await offlineStorage.saveMusicTitles(titles);
-          break;
-        }
-
-        case 'favorites': {
-          const favorites = await api.getFavorites();
-          // Transform API favorites to stored format
-          const storedFavorites: offlineStorage.StoredFavorite[] = favorites.map((f: any) => ({
-            id: f.id,
-            musicTitleId: f.id || f.music_title_id,
-            title: f.title,
-            arranger: f.arranger,
-            addedAt: f.created_at || new Date().toISOString(),
-          }));
-          await offlineStorage.saveFavorites(storedFavorites);
-          break;
-        }
-
-        case 'recentViews': {
-          const views = await api.getRecentViews();
-          // Transform API views to stored format
-          const storedViews: offlineStorage.StoredRecentView[] = views.map((v: any) => ({
-            id: v.id,
-            itemType: v.itemType || v.item_type,
-            itemId: v.itemId || v.item_id,
-            itemTitle: v.itemTitle || v.item_title,
-            viewedAt: v.viewedAt || v.viewed_at,
-          }));
-          await offlineStorage.saveRecentViews(storedViews);
-          break;
-        }
-
-        case 'rehearsals': {
-          // Get rehearsals for the next 3 months and past month
-          const now = new Date();
-          const pastMonth = new Date(now);
-          pastMonth.setMonth(pastMonth.getMonth() - 1);
-          const futureMonths = new Date(now);
-          futureMonths.setMonth(futureMonths.getMonth() + 3);
-
-          const rehearsals = await api.getRehearsals(
-            pastMonth.toISOString().split('T')[0],
-            futureMonths.toISOString().split('T')[0]
-          );
-          await offlineStorage.saveRehearsals(rehearsals);
-          break;
-        }
+  const syncEntity = useCallback(
+    async (entity: SyncableEntity): Promise<void> => {
+      if (!navigator.onLine) {
+        throw new Error('Cannot sync while offline');
       }
 
-      // Invalidate relevant query cache
-      queryClient.invalidateQueries({ queryKey: [entity] });
-    } catch (error) {
-      console.error(`Failed to sync ${entity}:`, error);
-      throw error;
-    }
-  }, [queryClient]);
+      setSyncState((prev) => ({
+        ...prev,
+        progress: {
+          ...prev.progress,
+          currentEntity: entity,
+        },
+      }));
+
+      try {
+        switch (entity) {
+          case 'userProfile': {
+            const user = await api.getProfile();
+            await offlineStorage.saveUserProfile(user);
+            break;
+          }
+
+          case 'orchestras': {
+            const orchestras = await api.getOrchestras();
+            await offlineStorage.saveOrchestras(orchestras);
+            break;
+          }
+
+          case 'instruments': {
+            const instruments = await api.getInstruments();
+            await offlineStorage.saveInstruments(instruments);
+            break;
+          }
+
+          case 'genres': {
+            const genres = await api.getGenres();
+            await offlineStorage.saveGenres(genres);
+            break;
+          }
+
+          case 'musicPieces': {
+            // Sync all music pieces (could be paginated in future)
+            const pieces = await api.getMusicPieces();
+            await offlineStorage.saveMusicPieces(pieces);
+            break;
+          }
+
+          case 'musicTitles': {
+            const titles = await api.getMusicTitles();
+            await offlineStorage.saveMusicTitles(titles);
+            break;
+          }
+
+          case 'favorites': {
+            const favorites = await api.getFavorites();
+            // Transform API favorites to stored format
+            const storedFavorites: offlineStorage.StoredFavorite[] = favorites.map((f: any) => ({
+              id: f.id,
+              musicTitleId: f.id || f.music_title_id,
+              title: f.title,
+              arranger: f.arranger,
+              addedAt: f.created_at || new Date().toISOString(),
+            }));
+            await offlineStorage.saveFavorites(storedFavorites);
+            break;
+          }
+
+          case 'recentViews': {
+            const views = await api.getRecentViews();
+            // Transform API views to stored format
+            const storedViews: offlineStorage.StoredRecentView[] = views.map((v: any) => ({
+              id: v.id,
+              itemType: v.itemType || v.item_type,
+              itemId: v.itemId || v.item_id,
+              itemTitle: v.itemTitle || v.item_title,
+              viewedAt: v.viewedAt || v.viewed_at,
+            }));
+            await offlineStorage.saveRecentViews(storedViews);
+            break;
+          }
+
+          case 'rehearsals': {
+            // Get rehearsals for the next 3 months and past month
+            const now = new Date();
+            const pastMonth = new Date(now);
+            pastMonth.setMonth(pastMonth.getMonth() - 1);
+            const futureMonths = new Date(now);
+            futureMonths.setMonth(futureMonths.getMonth() + 3);
+
+            const rehearsals = await api.getRehearsals(
+              pastMonth.toISOString().split('T')[0],
+              futureMonths.toISOString().split('T')[0],
+            );
+            await offlineStorage.saveRehearsals(rehearsals);
+            break;
+          }
+        }
+
+        // Invalidate relevant query cache
+        queryClient.invalidateQueries({ queryKey: [entity] });
+      } catch (error) {
+        console.error(`Failed to sync ${entity}:`, error);
+        throw error;
+      }
+    },
+    [queryClient],
+  );
 
   /**
    * Sync all entities from API to IndexedDB
@@ -449,27 +443,24 @@ export function useOfflineData(): OfflineDataHook {
       }
       return offlineStorage.getMusicPieces(filters);
     },
-    []
+    [],
   );
 
-  const getMusicTitles = useCallback(
-    async (filters?: { search?: string; genreId?: string }): Promise<MusicTitle[]> => {
-      if (navigator.onLine) {
-        try {
-          const titles = await api.getMusicTitles(filters);
-          // Only cache if no filters
-          if (!filters?.search && !filters?.genreId) {
-            await offlineStorage.saveMusicTitles(titles);
-          }
-          return titles;
-        } catch {
-          // Fall through to offline
+  const getMusicTitles = useCallback(async (filters?: { search?: string; genreId?: string }): Promise<MusicTitle[]> => {
+    if (navigator.onLine) {
+      try {
+        const titles = await api.getMusicTitles(filters);
+        // Only cache if no filters
+        if (!filters?.search && !filters?.genreId) {
+          await offlineStorage.saveMusicTitles(titles);
         }
+        return titles;
+      } catch {
+        // Fall through to offline
       }
-      return offlineStorage.getMusicTitles(filters);
-    },
-    []
-  );
+    }
+    return offlineStorage.getMusicTitles(filters);
+  }, []);
 
   const getOrchestras = useCallback(async (): Promise<Orchestra[]> => {
     if (navigator.onLine) {
@@ -553,7 +544,7 @@ export function useOfflineData(): OfflineDataHook {
       }
       return offlineStorage.getRecentViews(type, limit);
     },
-    []
+    [],
   );
 
   const getRehearsals = useCallback(
@@ -569,7 +560,7 @@ export function useOfflineData(): OfflineDataHook {
       }
       return offlineStorage.getRehearsals(filters);
     },
-    []
+    [],
   );
 
   const clearOfflineData = useCallback(async (): Promise<void> => {
@@ -603,9 +594,7 @@ export function useOfflineData(): OfflineDataHook {
  * Hook to track online/offline status
  */
 export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -668,9 +657,7 @@ export function useSyncStatus(): {
     lastSyncAt: syncState.lastSyncAt,
     pendingMutations: syncState.pendingMutations,
     syncProgress:
-      syncState.progress.total > 0
-        ? Math.round((syncState.progress.current / syncState.progress.total) * 100)
-        : 0,
+      syncState.progress.total > 0 ? Math.round((syncState.progress.current / syncState.progress.total) * 100) : 0,
     currentEntity: syncState.progress.currentEntity,
     error: syncState.error,
   };

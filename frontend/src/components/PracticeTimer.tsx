@@ -25,11 +25,7 @@ interface PracticeTimerProps {
  * Practice timer with goals tracking.
  * Helps musicians track their practice time with preset or custom goals.
  */
-export function PracticeTimer({
-  musicPieceName,
-  onSessionEnd,
-  compact = false,
-}: PracticeTimerProps) {
+export function PracticeTimer({ musicPieceName, onSessionEnd, compact = false }: PracticeTimerProps) {
   const { t } = useTranslation();
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -71,7 +67,9 @@ export function PracticeTimer({
           }
           // Play a notification sound if available
           try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR0JNYvL06RkFQQynNrUhUcN');
+            const audio = new Audio(
+              'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR0JNYvL06RkFQQynNrUhUcN',
+            );
             audio.volume = 0.3;
             audio.play().catch(() => {});
           } catch {
@@ -159,17 +157,17 @@ export function PracticeTimer({
     return (
       <div className="practice-timer-compact">
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{
-            fontSize: '1.25rem',
-            fontWeight: 'bold',
-            fontFamily: 'monospace',
-            color: isGoalReached ? 'var(--success)' : 'var(--text)',
-          }}>
+          <span
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              color: isGoalReached ? 'var(--success)' : 'var(--text)',
+            }}
+          >
             {formatTime(elapsedSeconds)}
           </span>
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>
-            / {goalMinutes}min
-          </span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-light)' }}>/ {goalMinutes}min</span>
           <button
             className={`btn ${isRunning ? 'btn-warning' : 'btn-primary'} btn-sm`}
             onClick={isRunning ? handlePause : handleStart}
@@ -177,10 +175,7 @@ export function PracticeTimer({
             {isRunning ? '⏸' : '▶'}
           </button>
           {(isRunning || elapsedSeconds > 0) && (
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={handleStop}
-            >
+            <button className="btn btn-danger btn-sm" onClick={handleStop}>
               ⏹
             </button>
           )}
@@ -192,71 +187,79 @@ export function PracticeTimer({
   return (
     <div className="practice-timer card">
       <div className="card-body">
-        <h4 style={{ marginBottom: '1rem' }}>
-          {t('tools.practiceTimer.title', 'Oefentimer')}
-        </h4>
+        <h4 style={{ marginBottom: '1rem' }}>{t('tools.practiceTimer.title', 'Oefentimer')}</h4>
 
         {/* Current piece info */}
         {musicPieceName && (
-          <div style={{
-            backgroundColor: 'var(--background)',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-          }}>
-            <span style={{ color: 'var(--text-light)' }}>
-              {t('tools.practiceTimer.practicing', 'Oefenen')}:
-            </span>{' '}
+          <div
+            style={{
+              backgroundColor: 'var(--background)',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}
+          >
+            <span style={{ color: 'var(--text-light)' }}>{t('tools.practiceTimer.practicing', 'Oefenen')}:</span>{' '}
             <span style={{ fontWeight: 500 }}>{musicPieceName}</span>
           </div>
         )}
 
         {/* Timer display */}
-        <div style={{
-          textAlign: 'center',
-          padding: '2rem 1rem',
-          backgroundColor: 'var(--background)',
-          borderRadius: '12px',
-          marginBottom: '1rem',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '2rem 1rem',
+            backgroundColor: 'var(--background)',
+            borderRadius: '12px',
+            marginBottom: '1rem',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
           {/* Progress bar background */}
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            width: `${progress}%`,
-            height: '100%',
-            backgroundColor: isGoalReached ? 'var(--success-light)' : 'var(--primary-light)',
-            transition: 'width 1s linear, background-color 0.3s',
-          }} />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: `${progress}%`,
+              height: '100%',
+              backgroundColor: isGoalReached ? 'var(--success-light)' : 'var(--primary-light)',
+              transition: 'width 1s linear, background-color 0.3s',
+            }}
+          />
 
           {/* Timer text */}
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{
-              fontSize: '3.5rem',
-              fontWeight: 'bold',
-              fontFamily: 'monospace',
-              color: isGoalReached ? 'var(--success)' : isRunning ? 'var(--primary)' : 'var(--text)',
-              lineHeight: 1,
-            }}>
+            <div
+              style={{
+                fontSize: '3.5rem',
+                fontWeight: 'bold',
+                fontFamily: 'monospace',
+                color: isGoalReached ? 'var(--success)' : isRunning ? 'var(--primary)' : 'var(--text)',
+                lineHeight: 1,
+              }}
+            >
               {formatTime(elapsedSeconds)}
             </div>
-            <div style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-light)',
-              marginTop: '0.5rem',
-            }}>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-light)',
+                marginTop: '0.5rem',
+              }}
+            >
               {t('tools.practiceTimer.goal', 'Doel')}: {goalMinutes} {t('tools.practiceTimer.minutes', 'minuten')}
             </div>
             {isGoalReached && (
-              <div style={{
-                marginTop: '0.5rem',
-                color: 'var(--success)',
-                fontWeight: 500,
-              }}>
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  color: 'var(--success)',
+                  fontWeight: 500,
+                }}
+              >
                 {t('tools.practiceTimer.goalReached', 'Doel bereikt!')}
               </div>
             )}
@@ -266,44 +269,28 @@ export function PracticeTimer({
         {/* Controls */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '1rem' }}>
           {!isRunning && elapsedSeconds === 0 && (
-            <button
-              className="btn btn-primary"
-              onClick={handleStart}
-              style={{ minWidth: '120px' }}
-            >
+            <button className="btn btn-primary" onClick={handleStart} style={{ minWidth: '120px' }}>
               <Icon name="play" size={18} style={{ marginRight: '8px' }} />
               {t('tools.practiceTimer.start', 'Start')}
             </button>
           )}
 
           {isRunning && (
-            <button
-              className="btn btn-warning"
-              onClick={handlePause}
-              style={{ minWidth: '100px' }}
-            >
+            <button className="btn btn-warning" onClick={handlePause} style={{ minWidth: '100px' }}>
               <Icon name="pause" size={18} style={{ marginRight: '8px' }} />
               {t('tools.practiceTimer.pause', 'Pauze')}
             </button>
           )}
 
           {!isRunning && elapsedSeconds > 0 && (
-            <button
-              className="btn btn-primary"
-              onClick={handleStart}
-              style={{ minWidth: '100px' }}
-            >
+            <button className="btn btn-primary" onClick={handleStart} style={{ minWidth: '100px' }}>
               <Icon name="play" size={18} style={{ marginRight: '8px' }} />
               {t('tools.practiceTimer.resume', 'Verder')}
             </button>
           )}
 
           {(isRunning || elapsedSeconds > 0) && (
-            <button
-              className="btn btn-danger"
-              onClick={handleStop}
-              style={{ minWidth: '100px' }}
-            >
+            <button className="btn btn-danger" onClick={handleStop} style={{ minWidth: '100px' }}>
               <Icon name="stop" size={18} style={{ marginRight: '8px' }} />
               {t('tools.practiceTimer.stop', 'Stop')}
             </button>
@@ -312,10 +299,7 @@ export function PracticeTimer({
 
         {/* Goal picker */}
         <div>
-          <button
-            className="btn btn-link"
-            onClick={() => setShowGoalPicker(!showGoalPicker)}
-          >
+          <button className="btn btn-link" onClick={() => setShowGoalPicker(!showGoalPicker)}>
             {t('tools.practiceTimer.changeGoal', 'Doel wijzigen')}
           </button>
 
@@ -343,11 +327,7 @@ export function PracticeTimer({
                   max={480}
                   style={{ width: '120px' }}
                 />
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={handleCustomGoal}
-                  disabled={!customGoal}
-                >
+                <button className="btn btn-outline btn-sm" onClick={handleCustomGoal} disabled={!customGoal}>
                   {t('common.apply', 'Toepassen')}
                 </button>
               </div>

@@ -31,7 +31,15 @@ export interface WorkflowTrigger {
 
 export interface WorkflowAction {
   id: string;
-  actionType: 'send_email' | 'send_notification' | 'create_task' | 'update_field' | 'add_to_group' | 'remove_from_group' | 'webhook' | 'delay';
+  actionType:
+    | 'send_email'
+    | 'send_notification'
+    | 'create_task'
+    | 'update_field'
+    | 'add_to_group'
+    | 'remove_from_group'
+    | 'webhook'
+    | 'delay';
   actionOrder: number;
   config: Record<string, unknown>;
   conditions?: Record<string, unknown>;
@@ -104,7 +112,10 @@ export const deleteWorkflow = async (id: string): Promise<{ message: string }> =
   return data;
 };
 
-export const addWorkflowTrigger = async (workflowId: string, trigger: Omit<WorkflowTrigger, 'id' | 'isActive'>): Promise<{ id: string; message: string }> => {
+export const addWorkflowTrigger = async (
+  workflowId: string,
+  trigger: Omit<WorkflowTrigger, 'id' | 'isActive'>,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/workflows/${workflowId}/triggers`, trigger);
   return data;
 };
@@ -114,7 +125,10 @@ export const removeWorkflowTrigger = async (workflowId: string, triggerId: strin
   return data;
 };
 
-export const addWorkflowAction = async (workflowId: string, action: Omit<WorkflowAction, 'id' | 'isActive'>): Promise<{ id: string; message: string }> => {
+export const addWorkflowAction = async (
+  workflowId: string,
+  action: Omit<WorkflowAction, 'id' | 'isActive'>,
+): Promise<{ id: string; message: string }> => {
   const { data } = await api.post(`/workflows/${workflowId}/actions`, action);
   return data;
 };
@@ -127,7 +141,7 @@ export const removeWorkflowAction = async (workflowId: string, actionId: string)
 export const updateWorkflowTrigger = async (
   workflowId: string,
   triggerId: string,
-  updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>>
+  updates: Partial<Omit<WorkflowTrigger, 'id' | 'isActive'>>,
 ): Promise<{ message: string }> => {
   const { data } = await api.patch(`/workflows/${workflowId}/triggers/${triggerId}`, updates);
   return data;
@@ -136,7 +150,7 @@ export const updateWorkflowTrigger = async (
 export const updateWorkflowAction = async (
   workflowId: string,
   actionId: string,
-  updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>>
+  updates: Partial<Omit<WorkflowAction, 'id' | 'isActive'>>,
 ): Promise<{ message: string }> => {
   const { data } = await api.patch(`/workflows/${workflowId}/actions/${actionId}`, updates);
   return data;
@@ -147,7 +161,10 @@ export const runWorkflow = async (id: string): Promise<{ executionId: string; me
   return data;
 };
 
-export const getWorkflowExecutions = async (id: string, params?: { limit?: number; offset?: number }): Promise<{
+export const getWorkflowExecutions = async (
+  id: string,
+  params?: { limit?: number; offset?: number },
+): Promise<{
   executions: WorkflowExecution[];
   total: number;
   limit: number;

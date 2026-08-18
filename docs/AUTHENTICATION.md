@@ -5,6 +5,7 @@ This document describes the authentication flows and security features implement
 ## Overview
 
 The application supports multiple authentication methods:
+
 - Email/password login with optional MFA
 - Microsoft Entra ID (Azure AD) SSO
 - Social login (Google, Facebook) for guest checkout
@@ -18,10 +19,10 @@ Authentication uses JSON Web Tokens (JWT) with the following payload:
 
 ```typescript
 interface UserPayload {
-  id: string;           // User UUID
-  email: string;        // User email
-  role: string;         // User role (admin, member, etc.)
-  associationId: string | null;  // Tenant/association ID
+  id: string; // User UUID
+  email: string; // User email
+  role: string; // User role (admin, member, etc.)
+  associationId: string | null; // Tenant/association ID
 }
 ```
 
@@ -43,7 +44,7 @@ export function generateToken(user: {
       associationId: user.association_id,
     },
     config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }  // Default: 7 days
+    { expiresIn: config.jwtExpiresIn }, // Default: 7 days
   );
 }
 ```
@@ -79,7 +80,7 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
   const token = authHeader?.split(' ')[1] || (req.query.token as string);
 
   if (!token) {
-    return next();  // Continue without user context
+    return next(); // Continue without user context
   }
 
   try {
@@ -108,6 +109,7 @@ Content-Type: application/json
 ```
 
 **Response (success):**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
@@ -150,6 +152,7 @@ Content-Type: application/json
 ### Rate Limiting
 
 Login attempts are rate-limited:
+
 - **5 attempts per 15 minutes per IP address**
 - Returns 429 Too Many Requests when exceeded
 
@@ -165,6 +168,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```json
 {
   "secret": "JBSWY3DPEHPK3PXP",
@@ -225,15 +229,19 @@ interface MicrosoftConfig {
 ### SSO Flow
 
 1. **Check Availability**
+
 ```
 GET /api/auth/microsoft/enabled
 ```
 
 2. **Initiate Login**
+
 ```
 GET /api/auth/microsoft/login
 ```
+
 Returns:
+
 ```json
 {
   "authUrl": "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize?..."
@@ -241,6 +249,7 @@ Returns:
 ```
 
 3. **Handle Callback**
+
 ```
 POST /api/auth/microsoft/callback
 Content-Type: application/json
@@ -275,21 +284,25 @@ Social login is used for guest ticket purchases, not full account login.
 ### Google OAuth
 
 1. **Check Availability**
+
 ```
 GET /api/auth/social/google/enabled
 ```
 
 2. **Get Auth URL**
+
 ```
 GET /api/auth/social/google?returnUrl=/tickets/concert-123
 ```
 
 3. **Handle Callback**
+
 ```
 GET /api/auth/social/google/callback?code=...&state=...
 ```
 
 Returns guest checkout token:
+
 ```json
 {
   "token": "eyJ...",
@@ -344,6 +357,7 @@ Content-Type: application/json
 ```
 
 **Security features:**
+
 - Rate limited: 3 requests per hour per email
 - Returns success even for non-existent emails (prevents enumeration)
 - Invalidates any existing reset tokens for the user
@@ -379,6 +393,7 @@ Authorization: Bearer <token>
 ```
 
 Response:
+
 ```json
 [
   {
@@ -441,7 +456,12 @@ router.get('/admin-only', authenticateToken, requireRole('admin'), handler);
 router.get('/conductor-plus', authenticateToken, requireMinRole('conductor'), handler);
 
 // Section leader with instrument check
-router.put('/sections/:id', authenticateToken, requireSectionLeader(req => req.params.instrumentId), handler);
+router.put(
+  '/sections/:id',
+  authenticateToken,
+  requireSectionLeader((req) => req.params.instrumentId),
+  handler,
+);
 ```
 
 ## Frontend Integration
@@ -456,7 +476,7 @@ localStorage.setItem('token', response.token);
 const token = localStorage.getItem('token');
 fetch('/api/endpoint', {
   headers: {
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   },
 });
 ```
@@ -500,28 +520,34 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 ## Security Considerations
 
 ### Token Storage
+
 - JWT tokens are stored in `localStorage`
 - Consider `httpOnly` cookies for enhanced security in future versions
 
 ### CSRF Protection
+
 - State parameter used in OAuth flows
 - CSRF middleware available (can be enabled via `CSRF_ENABLED` env var)
 
 ### Password Requirements
+
 - Minimum 8 characters
 - Validated on both client and server
 
 ### Rate Limiting
+
 - Login: 5 attempts per 15 minutes per IP
 - Password reset: 3 requests per hour per email
 
 ### Audit Logging
+
 - Login events are logged with IP and user agent
 - Password changes logged
 - MFA enable/disable logged
 - Session revocations logged
 
 ### Token Expiry
+
 - Default JWT expiry: 7 days (configurable via `JWT_EXPIRES_IN`)
 - Password reset tokens: 1 hour
 - Guest checkout tokens: 30 minutes

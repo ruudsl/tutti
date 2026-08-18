@@ -60,12 +60,15 @@ export default function MusicPieces() {
   const debouncedSearch = useDebounce(search, 300);
 
   // Build filters object
-  const filters = useMemo(() => ({
-    search: debouncedSearch || undefined,
-    instrumentId: filterInstrument || undefined,
-    page,
-    pageSize: PAGE_SIZE,
-  }), [debouncedSearch, filterInstrument, page]);
+  const filters = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      instrumentId: filterInstrument || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    [debouncedSearch, filterInstrument, page],
+  );
 
   // Reset page when filters change
   const handleSearchChange = (value: string) => {
@@ -146,7 +149,7 @@ export default function MusicPieces() {
   };
 
   const handleToggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -161,7 +164,7 @@ export default function MusicPieces() {
     if (selectedIds.size === pieces.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(pieces.map(p => p.id)));
+      setSelectedIds(new Set(pieces.map((p) => p.id)));
     }
   };
 
@@ -177,66 +180,78 @@ export default function MusicPieces() {
 
   const handleBulkInstrumentChange = () => {
     if (selectedIds.size === 0) return;
-    bulkUpdateMutation.mutate({
-      pieceIds: Array.from(selectedIds),
-      updates: { instrumentId: bulkInstrumentId || null },
-    }, {
-      onSuccess: () => {
-        setSelectedIds(new Set());
-        setShowBulkInstrumentModal(false);
-        setBulkInstrumentId('');
+    bulkUpdateMutation.mutate(
+      {
+        pieceIds: Array.from(selectedIds),
+        updates: { instrumentId: bulkInstrumentId || null },
       },
-    });
+      {
+        onSuccess: () => {
+          setSelectedIds(new Set());
+          setShowBulkInstrumentModal(false);
+          setBulkInstrumentId('');
+        },
+      },
+    );
   };
 
   const handleBulkAddToList = () => {
     if (selectedIds.size === 0 || !bulkListId) return;
-    bulkUpdateMutation.mutate({
-      pieceIds: Array.from(selectedIds),
-      updates: { addToListId: bulkListId },
-    }, {
-      onSuccess: () => {
-        setSelectedIds(new Set());
-        setShowBulkAddToListModal(false);
-        setBulkListId('');
+    bulkUpdateMutation.mutate(
+      {
+        pieceIds: Array.from(selectedIds),
+        updates: { addToListId: bulkListId },
       },
-    });
+      {
+        onSuccess: () => {
+          setSelectedIds(new Set());
+          setShowBulkAddToListModal(false);
+          setBulkListId('');
+        },
+      },
+    );
   };
 
   const handleBulkRemoveFromList = () => {
     if (selectedIds.size === 0 || !bulkListId) return;
-    bulkUpdateMutation.mutate({
-      pieceIds: Array.from(selectedIds),
-      updates: { removeFromListId: bulkListId },
-    }, {
-      onSuccess: () => {
-        setSelectedIds(new Set());
-        setShowBulkRemoveFromListModal(false);
-        setBulkListId('');
+    bulkUpdateMutation.mutate(
+      {
+        pieceIds: Array.from(selectedIds),
+        updates: { removeFromListId: bulkListId },
       },
-    });
+      {
+        onSuccess: () => {
+          setSelectedIds(new Set());
+          setShowBulkRemoveFromListModal(false);
+          setBulkListId('');
+        },
+      },
+    );
   };
 
   const handleUpdatePiece = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPiece) return;
 
-    updateMutation.mutate({
-      id: editingPiece.id,
-      data: {
-        title: editingPiece.title,
-        arranger: editingPiece.arranger || undefined,
-        instrumentId: editingPiece.instrumentId || undefined,
-        tuning: editingPiece.tuning || undefined,
-        groupNumber: editingPiece.groupNumber || undefined,
-        clef: editingPiece.clef || undefined,
-        youtubeUrl: editingPiece.youtubeUrl || undefined,
+    updateMutation.mutate(
+      {
+        id: editingPiece.id,
+        data: {
+          title: editingPiece.title,
+          arranger: editingPiece.arranger || undefined,
+          instrumentId: editingPiece.instrumentId || undefined,
+          tuning: editingPiece.tuning || undefined,
+          groupNumber: editingPiece.groupNumber || undefined,
+          clef: editingPiece.clef || undefined,
+          youtubeUrl: editingPiece.youtubeUrl || undefined,
+        },
       },
-    }, {
-      onSuccess: () => {
-        setEditingPiece(null);
+      {
+        onSuccess: () => {
+          setEditingPiece(null);
+        },
       },
-    });
+    );
   };
 
   if (isLoading) {
@@ -260,8 +275,12 @@ export default function MusicPieces() {
           disabled={refreshMutation.isPending}
           title={t('musicPieces.refreshLinks')}
         >
-          {refreshMutation.isPending ? t('musicPieces.refreshing') : (
-            <><Icon name="refresh" size={16} /> {t('musicPieces.refreshLinks')}</>
+          {refreshMutation.isPending ? (
+            t('musicPieces.refreshing')
+          ) : (
+            <>
+              <Icon name="refresh" size={16} /> {t('musicPieces.refreshLinks')}
+            </>
           )}
         </button>
       </div>
@@ -270,7 +289,9 @@ export default function MusicPieces() {
         <div className="card-body">
           <div className="filter-bar">
             <div className="form-group filter-search">
-              <label htmlFor="pieces-search" className="sr-only">{t('common.search')}</label>
+              <label htmlFor="pieces-search" className="sr-only">
+                {t('common.search')}
+              </label>
               <input
                 id="pieces-search"
                 type="text"
@@ -281,7 +302,9 @@ export default function MusicPieces() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="pieces-instrument-filter" className="sr-only">{t('myMusic.table.instrument')}</label>
+              <label htmlFor="pieces-instrument-filter" className="sr-only">
+                {t('myMusic.table.instrument')}
+              </label>
               <select
                 id="pieces-instrument-filter"
                 className="form-control form-select"
@@ -298,12 +321,7 @@ export default function MusicPieces() {
               </select>
             </div>
             <div className="form-group">
-              <SortDropdown
-                options={DEFAULT_MUSIC_SORT_OPTIONS}
-                value={sortState}
-                onChange={setSortState}
-                compact
-              />
+              <SortDropdown options={DEFAULT_MUSIC_SORT_OPTIONS} value={sortState} onChange={setSortState} compact />
             </div>
           </div>
         </div>
@@ -311,7 +329,9 @@ export default function MusicPieces() {
 
       <div className="card">
         <div className="card-header flex justify-between items-center">
-          <span className="card-title">{totalPieces} {t('musicPieces.count')}</span>
+          <span className="card-title">
+            {totalPieces} {t('musicPieces.count')}
+          </span>
           {canManage && selectedIds.size > 0 && (
             <div className="flex gap-1 items-center">
               <span className="text-sm text-light">
@@ -442,7 +462,9 @@ export default function MusicPieces() {
                   <th scope="col">{t('myMusic.table.instrument')}</th>
                   <th scope="col">{t('myMusic.table.tuning')}</th>
                   <th scope="col">{t('myMusic.table.number')}</th>
-                  <th scope="col"><span className="sr-only">{t('common.actions')}</span></th>
+                  <th scope="col">
+                    <span className="sr-only">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -535,7 +557,9 @@ export default function MusicPieces() {
               variant={search || filterInstrument ? 'no-results' : 'no-items'}
               icon="music"
               title={search || filterInstrument ? t('musicPieces.noResultsTitle') : t('musicPieces.noPiecesTitle')}
-              description={search || filterInstrument ? t('musicPieces.noResultsDescription') : t('musicPieces.noPieces')}
+              description={
+                search || filterInstrument ? t('musicPieces.noResultsDescription') : t('musicPieces.noPieces')
+              }
             />
           )}
         </div>
@@ -637,9 +661,7 @@ export default function MusicPieces() {
                 onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
                 placeholder={t('musicPieces.edit.youtubePlaceholder')}
               />
-              <small className="text-light">
-                {t('musicPieces.edit.youtubeNote')}
-              </small>
+              <small className="text-light">{t('musicPieces.edit.youtubeNote')}</small>
             </div>
           </>
         </FormModal>
@@ -672,9 +694,7 @@ export default function MusicPieces() {
       {/* Bulk Change Instrument Modal */}
       {showBulkInstrumentModal && (
         <Modal title={t('bulk.changeInstrument')} onClose={() => setShowBulkInstrumentModal(false)}>
-          <p className="text-light mb-2">
-            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
-          </p>
+          <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
           <div className="form-group">
             <label className="form-label">{t('musicPieces.edit.instrument')}</label>
             <select
@@ -689,9 +709,7 @@ export default function MusicPieces() {
                 </option>
               ))}
             </select>
-            <small className="text-light">
-              {t('bulk.instrumentHelp')}
-            </small>
+            <small className="text-light">{t('bulk.instrumentHelp')}</small>
           </div>
           <div className="flex gap-1 justify-end mt-2">
             <button
@@ -717,9 +735,7 @@ export default function MusicPieces() {
       {/* Bulk Add to List Modal */}
       {showBulkAddToListModal && (
         <Modal title={t('bulk.addToList')} onClose={() => setShowBulkAddToListModal(false)}>
-          <p className="text-light mb-2">
-            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
-          </p>
+          <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
           <div className="form-group">
             <label className="form-label">{t('bulk.selectList')}</label>
             <select
@@ -759,9 +775,7 @@ export default function MusicPieces() {
       {/* Bulk Remove from List Modal */}
       {showBulkRemoveFromListModal && (
         <Modal title={t('bulk.removeFromList')} onClose={() => setShowBulkRemoveFromListModal(false)}>
-          <p className="text-light mb-2">
-            {t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}
-          </p>
+          <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
           <div className="form-group">
             <label className="form-label">{t('bulk.selectList')}</label>
             <select

@@ -108,7 +108,12 @@ export async function getResourceCategories(): Promise<ResourceCategory[]> {
   return response.data;
 }
 
-export async function createResourceCategory(data: { name: string; description?: string; color?: string; icon?: string }): Promise<{ id: string; message: string }> {
+export async function createResourceCategory(data: {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+}): Promise<{ id: string; message: string }> {
   const response = await api.post('/resources/categories', data);
   return response.data;
 }
@@ -119,7 +124,11 @@ export async function deleteResourceCategory(id: string): Promise<{ message: str
 }
 
 // Resources
-export async function getResources(filters?: { type?: ResourceType; categoryId?: string; active?: boolean }): Promise<Resource[]> {
+export async function getResources(filters?: {
+  type?: ResourceType;
+  categoryId?: string;
+  active?: boolean;
+}): Promise<Resource[]> {
   const params = new URLSearchParams();
   if (filters?.type) params.append('type', filters.type);
   if (filters?.categoryId) params.append('categoryId', filters.categoryId);
@@ -149,7 +158,13 @@ export async function deleteResource(id: string): Promise<{ message: string }> {
 }
 
 // Bookings
-export async function getResourceBookings(filters?: { resourceId?: string; status?: BookingStatus; startDate?: string; endDate?: string; myBookings?: boolean }): Promise<ResourceBooking[]> {
+export async function getResourceBookings(filters?: {
+  resourceId?: string;
+  status?: BookingStatus;
+  startDate?: string;
+  endDate?: string;
+  myBookings?: boolean;
+}): Promise<ResourceBooking[]> {
   const params = new URLSearchParams();
   if (filters?.resourceId) params.append('resourceId', filters.resourceId);
   if (filters?.status) params.append('status', filters.status);
@@ -160,7 +175,9 @@ export async function getResourceBookings(filters?: { resourceId?: string; statu
   return response.data;
 }
 
-export async function createResourceBooking(data: CreateBookingData): Promise<{ id: string; status: BookingStatus; message: string }> {
+export async function createResourceBooking(
+  data: CreateBookingData,
+): Promise<{ id: string; status: BookingStatus; message: string }> {
   const response = await api.post('/resources/bookings', data);
   return response.data;
 }
@@ -190,7 +207,10 @@ export interface AddAvailabilityData {
   endDate?: string; // ISO date for date range rules
 }
 
-export async function addResourceAvailability(resourceId: string, data: AddAvailabilityData): Promise<{ id: string; message: string }> {
+export async function addResourceAvailability(
+  resourceId: string,
+  data: AddAvailabilityData,
+): Promise<{ id: string; message: string }> {
   const response = await api.post(`/resources/${resourceId}/availability`, data);
   return response.data;
 }
@@ -201,7 +221,10 @@ export async function deleteResourceAvailability(resourceId: string, ruleId: str
 }
 
 // Category management
-export async function updateResourceCategory(categoryId: string, data: { name?: string; color?: string; icon?: string }): Promise<{ message: string }> {
+export async function updateResourceCategory(
+  categoryId: string,
+  data: { name?: string; color?: string; icon?: string },
+): Promise<{ message: string }> {
   const response = await api.patch(`/resources/categories/${categoryId}`, data);
   return response.data;
 }

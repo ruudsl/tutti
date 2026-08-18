@@ -2,7 +2,13 @@ import { useState, useEffect, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { checkConsent, recordConsent, getMyPrivacySettings, updateMyPrivacySettings, type PrivacyVisibility } from '../api/privacy-settings';
+import {
+  checkConsent,
+  recordConsent,
+  getMyPrivacySettings,
+  updateMyPrivacySettings,
+  type PrivacyVisibility,
+} from '../api/privacy-settings';
 import { Icon } from './Icon';
 import { showSuccess, showError } from '../utils/toast';
 
@@ -71,8 +77,7 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (settings: { fieldName: string; visibility: PrivacyVisibility }[]) =>
-      updateMyPrivacySettings(settings),
+    mutationFn: (settings: { fieldName: string; visibility: PrivacyVisibility }[]) => updateMyPrivacySettings(settings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['privacy-settings'] });
       showSuccess(t('privacy.saved'));
@@ -100,7 +105,7 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
   };
 
   const handlePrivacyChange = (fieldName: string, visibility: PrivacyVisibility) => {
-    setPrivacySettings(prev => ({ ...prev, [fieldName]: visibility }));
+    setPrivacySettings((prev) => ({ ...prev, [fieldName]: visibility }));
   };
 
   if (step === 'loading' || step === 'done') {
@@ -162,15 +167,9 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
               </ul>
             </div>
 
-            <p className="text-sm text-base-content/60 mb-6">
-              {t('privacy.consentNote')}
-            </p>
+            <p className="text-sm text-base-content/60 mb-6">{t('privacy.consentNote')}</p>
 
-            <button
-              className="btn btn-primary w-full"
-              onClick={handleConsent}
-              disabled={consentMutation.isPending}
-            >
+            <button className="btn btn-primary w-full" onClick={handleConsent} disabled={consentMutation.isPending}>
               {consentMutation.isPending ? t('common.loading') : t('privacy.agreeAndContinue')}
             </button>
           </div>
@@ -190,37 +189,37 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
               </div>
             ) : (
               <div className="space-y-4 mb-6">
-                {currentSettings && Object.entries(currentSettings).map(([fieldName, setting]) => (
-                  <div key={fieldName} className="flex items-center justify-between gap-4 p-3 bg-base-200 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{setting.fieldLabel || fieldName}</div>
-                      {setting.purposeStatement && (
-                        <div className="text-sm text-base-content/60">{setting.purposeStatement}</div>
-                      )}
-                      {setting.isRequired && (
-                        <div className="text-xs text-warning">{t('privacy.requiredByAssociation')}</div>
-                      )}
+                {currentSettings &&
+                  Object.entries(currentSettings).map(([fieldName, setting]) => (
+                    <div key={fieldName} className="flex items-center justify-between gap-4 p-3 bg-base-200 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{setting.fieldLabel || fieldName}</div>
+                        {setting.purposeStatement && (
+                          <div className="text-sm text-base-content/60">{setting.purposeStatement}</div>
+                        )}
+                        {setting.isRequired && (
+                          <div className="text-xs text-warning">{t('privacy.requiredByAssociation')}</div>
+                        )}
+                      </div>
+                      <select
+                        className="select select-bordered select-sm"
+                        value={privacySettings[fieldName] || setting.visibility}
+                        onChange={(e) => handlePrivacyChange(fieldName, e.target.value as PrivacyVisibility)}
+                        disabled={setting.isRequired}
+                      >
+                        {visibilityOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <select
-                      className="select select-bordered select-sm"
-                      value={privacySettings[fieldName] || setting.visibility}
-                      onChange={(e) => handlePrivacyChange(fieldName, e.target.value as PrivacyVisibility)}
-                      disabled={setting.isRequired}
-                    >
-                      {visibilityOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
 
             <div className="flex gap-3">
-              <button
-                className="btn btn-ghost flex-1"
-                onClick={handleSkipPrivacy}
-              >
+              <button className="btn btn-ghost flex-1" onClick={handleSkipPrivacy}>
                 {t('privacy.skipForNow')}
               </button>
               <button
@@ -232,9 +231,7 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
               </button>
             </div>
 
-            <p className="text-sm text-base-content/60 text-center mt-4">
-              {t('privacy.canChangeAnytime')}
-            </p>
+            <p className="text-sm text-base-content/60 text-center mt-4">{t('privacy.canChangeAnytime')}</p>
           </div>
         )}
       </div>

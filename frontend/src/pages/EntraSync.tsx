@@ -116,7 +116,7 @@ export default function EntraSync() {
           u.displayName.toLowerCase().includes(query) ||
           u.email.toLowerCase().includes(query) ||
           (u.jobTitle && u.jobTitle.toLowerCase().includes(query)) ||
-          (u.department && u.department.toLowerCase().includes(query))
+          (u.department && u.department.toLowerCase().includes(query)),
       );
     }
 
@@ -342,25 +342,13 @@ export default function EntraSync() {
 
             {/* Actions */}
             <div className="flex gap-2 mb-3 flex-wrap">
-              <button
-                className="btn btn-primary"
-                onClick={loadEntraUsers}
-                disabled={isLoadingUsers}
-              >
+              <button className="btn btn-primary" onClick={loadEntraUsers} disabled={isLoadingUsers}>
                 {isLoadingUsers ? t('common.loading') : t('entraSync.refresh')}
               </button>
-              <button
-                className="btn btn-outline"
-                onClick={() => handleSyncAll(false)}
-                disabled={isSyncing}
-              >
+              <button className="btn btn-outline" onClick={() => handleSyncAll(false)} disabled={isSyncing}>
                 {isSyncing ? t('common.loading') : t('entraSync.syncExisting')}
               </button>
-              <button
-                className="btn btn-outline"
-                onClick={() => handleSyncAll(true)}
-                disabled={isSyncing}
-              >
+              <button className="btn btn-outline" onClick={() => handleSyncAll(true)} disabled={isSyncing}>
                 {isSyncing ? t('common.loading') : t('entraSync.syncAndCreate')}
               </button>
               <button
@@ -401,14 +389,8 @@ export default function EntraSync() {
                 className="flex gap-2 mb-3 items-center"
                 style={{ background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '0.5rem' }}
               >
-                <span>
-                  {t('entraSync.selectedCount', { count: selectedUserIds.size })}
-                </span>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={handleImportSelected}
-                  disabled={isImporting}
-                >
+                <span>{t('entraSync.selectedCount', { count: selectedUserIds.size })}</span>
+                <button className="btn btn-primary btn-sm" onClick={handleImportSelected} disabled={isImporting}>
                   {isImporting ? t('common.loading') : t('entraSync.importSelected')}
                 </button>
                 <button className="btn btn-outline btn-sm" onClick={clearSelection}>
@@ -649,16 +631,10 @@ export default function EntraSync() {
                       </td>
                       <td>
                         <div className="flex gap-1">
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => openEditMappingModal(mapping)}
-                          >
+                          <button className="btn btn-outline btn-sm" onClick={() => openEditMappingModal(mapping)}>
                             {t('common.edit')}
                           </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => setDeletingMapping(mapping)}
-                          >
+                          <button className="btn btn-danger btn-sm" onClick={() => setDeletingMapping(mapping)}>
                             {t('common.delete')}
                           </button>
                         </div>

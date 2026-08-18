@@ -60,7 +60,9 @@ export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: Practice
         />
       </div>
       <div className="form-group">
-        <label className="form-label">{t('practice.notes')} ({t('common.optional')})</label>
+        <label className="form-label">
+          {t('practice.notes')} ({t('common.optional')})
+        </label>
         <textarea
           className="form-control"
           value={notes}

@@ -287,8 +287,7 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     // Get instrument name before deletion for audit log
     const instrumentToDelete = db.prepare('SELECT name FROM instruments WHERE id = ?').get(req.params.id) as
-      | { name: string }
-      | undefined;
+      { name: string } | undefined;
 
     if (!instrumentToDelete) {
       throw new ApiError(404, 'Instrument niet gevonden.');

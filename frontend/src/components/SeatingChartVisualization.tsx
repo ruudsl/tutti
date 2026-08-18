@@ -10,10 +10,10 @@ interface Props {
 
 // Color palette for different instrument groups
 const INSTRUMENT_COLORS: Record<string, string> = {
-  'Flute': '#4A90D9',
-  'Piccolo': '#4A90D9',
-  'Oboe': '#5C9EE8',
-  'Clarinet': '#6BB3F7',
+  Flute: '#4A90D9',
+  Piccolo: '#4A90D9',
+  Oboe: '#5C9EE8',
+  Clarinet: '#6BB3F7',
   'Bass Clarinet': '#6BB3F7',
   'Eb Clarinet': '#6BB3F7',
   'Alto Clarinet': '#6BB3F7',
@@ -22,20 +22,20 @@ const INSTRUMENT_COLORS: Record<string, string> = {
   'Baritone Saxophone': '#E8A435',
   'Soprano Saxophone': '#E8A435',
   'French Horn': '#9B59B6',
-  'Trumpet': '#E74C3C',
-  'Cornet': '#E74C3C',
-  'Flugelhorn': '#E74C3C',
-  'Euphonium': '#27AE60',
-  'Tuba': '#27AE60',
-  'Trombone': '#2ECC71',
+  Trumpet: '#E74C3C',
+  Cornet: '#E74C3C',
+  Flugelhorn: '#E74C3C',
+  Euphonium: '#27AE60',
+  Tuba: '#27AE60',
+  Trombone: '#2ECC71',
   'Bass Trombone': '#2ECC71',
-  'Piano': '#95A5A6',
-  'Guitar': '#8E44AD',
+  Piano: '#95A5A6',
+  Guitar: '#8E44AD',
   'Electric Bass': '#8E44AD',
   'String Bass': '#8E44AD',
-  'Percussion': '#F39C12',
-  'Timpani': '#F39C12',
-  'Mallets': '#F39C12',
+  Percussion: '#F39C12',
+  Timpani: '#F39C12',
+  Mallets: '#F39C12',
 };
 
 const DEFAULT_COLOR = '#7F8C8D';
@@ -73,8 +73,8 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
     const CURVE_FACTOR = 0.15; // How much the rows curve (0 = flat, 1 = semicircle)
 
     // Separate conductors from regular seats
-    const conductors = chart.seats.filter(s => s.isConductor || s.rowNumber === 0);
-    const regularSeats = chart.seats.filter(s => !s.isConductor && s.rowNumber !== 0);
+    const conductors = chart.seats.filter((s) => s.isConductor || s.rowNumber === 0);
+    const regularSeats = chart.seats.filter((s) => !s.isConductor && s.rowNumber !== 0);
 
     // Group seats by row
     const rowsMap = new Map<number, SeatingChartSeat[]>();
@@ -94,7 +94,7 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
       }));
 
     // Find max seats in a row
-    const maxSeatsInRow = Math.max(...rows.map(r => r.seats.length), 1);
+    const maxSeatsInRow = Math.max(...rows.map((r) => r.seats.length), 1);
 
     // Calculate SVG dimensions
     const chartWidth = maxSeatsInRow * (SEAT_WIDTH + SEAT_GAP) - SEAT_GAP + PADDING * 2;
@@ -110,9 +110,10 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
 
       row.seats.forEach((seat, seatIndex) => {
         // Calculate curve offset (seats in the middle are lower/higher)
-        const normalizedPos = row.seats.length > 1
-          ? (seatIndex / (row.seats.length - 1)) * 2 - 1 // -1 to 1
-          : 0;
+        const normalizedPos =
+          row.seats.length > 1
+            ? (seatIndex / (row.seats.length - 1)) * 2 - 1 // -1 to 1
+            : 0;
         const curveOffset = (1 - normalizedPos * normalizedPos) * CURVE_FACTOR * rowIndex * 10;
 
         seatPositions.push({
@@ -164,37 +165,14 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
           {layout.conductors.length > 0 ? (
             // Show actual conductor(s)
             layout.conductors.map((conductor, index) => {
-              const offsetX = layout.conductors.length > 1
-                ? (index - (layout.conductors.length - 1) / 2) * 90
-                : 0;
+              const offsetX = layout.conductors.length > 1 ? (index - (layout.conductors.length - 1) / 2) * 90 : 0;
               return (
                 <g key={conductor.id} transform={`translate(${offsetX}, 0)`}>
-                  <rect
-                    x={-35}
-                    y={-25}
-                    width={70}
-                    height={45}
-                    rx={8}
-                    fill="#1a1a2e"
-                    stroke="#e94560"
-                    strokeWidth={2}
-                  />
-                  <text
-                    y={-5}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="11"
-                    fontWeight="600"
-                  >
+                  <rect x={-35} y={-25} width={70} height={45} rx={8} fill="#1a1a2e" stroke="#e94560" strokeWidth={2} />
+                  <text y={-5} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
                     {conductor.memberName.split(' ')[0].substring(0, 8)}
                   </text>
-                  <text
-                    y={12}
-                    textAnchor="middle"
-                    fill="#e94560"
-                    fontSize="9"
-                    fontWeight="500"
-                  >
+                  <text y={12} textAnchor="middle" fill="#e94560" fontSize="9" fontWeight="500">
                     {t('seating.conductor')}
                   </text>
                 </g>
@@ -206,13 +184,7 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
               <circle r="20" fill="var(--primary-color, #3498db)" opacity="0.2" />
               <circle r="15" fill="var(--primary-color, #3498db)" opacity="0.4" />
               <circle r="5" fill="var(--primary-color, #3498db)" />
-              <text
-                y="35"
-                textAnchor="middle"
-                fill="var(--text-color, #333)"
-                fontSize="12"
-                fontWeight="500"
-              >
+              <text y="35" textAnchor="middle" fill="var(--text-color, #333)" fontSize="12" fontWeight="500">
                 {t('seating.conductor')}
               </text>
             </>
@@ -296,7 +268,11 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
                 fontSize="10"
                 opacity="0.9"
               >
-                {seat.memberName.split(' ').slice(1).map(n => n[0]).join('')}
+                {seat.memberName
+                  .split(' ')
+                  .slice(1)
+                  .map((n) => n[0])
+                  .join('')}
               </text>
             </g>
           );
@@ -316,30 +292,29 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
       </svg>
 
       {/* Summary stats */}
-      <div className="seating-summary" style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '24px',
-        justifyContent: 'center',
-        marginTop: '16px',
-        padding: '12px 16px',
-        background: 'var(--surface-color, white)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color, #eee)',
-      }}>
+      <div
+        className="seating-summary"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '24px',
+          justifyContent: 'center',
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'var(--surface-color, white)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color, #eee)',
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary-color, #3498db)' }}>
-            {chart.seats.filter(s => !s.isConductor && s.rowNumber !== 0).length}
+            {chart.seats.filter((s) => !s.isConductor && s.rowNumber !== 0).length}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
-            {t('seating.totalMembers')}
-          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>{t('seating.totalMembers')}</div>
         </div>
         {layout.conductors.length > 0 && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e94560' }}>
-              {layout.conductors.length}
-            </div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e94560' }}>{layout.conductors.length}</div>
             <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
               {layout.conductors.length === 1 ? t('seating.conductor') : t('seating.conductors')}
             </div>
@@ -350,9 +325,10 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
             {t('seating.chairsPerRow')}
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            {layout.rows.map(row => (
+            {layout.rows.map((row) => (
               <div key={row.rowNumber} style={{ fontSize: '11px', color: 'var(--text-light-color, #666)' }}>
-                <span style={{ fontWeight: '600' }}>{t('seating.rowLabel', { row: row.rowNumber })}:</span> {row.seats.length}
+                <span style={{ fontWeight: '600' }}>{t('seating.rowLabel', { row: row.rowNumber })}:</span>{' '}
+                {row.seats.length}
               </div>
             ))}
           </div>
@@ -379,9 +355,7 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
         >
           <div style={{ fontWeight: 600, marginBottom: '4px' }}>{hoveredSeat.memberName}</div>
           {hoveredSeat.instrumentName && (
-            <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>
-              {hoveredSeat.instrumentName}
-            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-light-color, #666)' }}>{hoveredSeat.instrumentName}</div>
           )}
           {hoveredSeat.sectionName && (
             <div style={{ fontSize: '11px', color: 'var(--text-light-color, #888)', marginTop: '2px' }}>
@@ -392,28 +366,33 @@ export default function SeatingChartVisualization({ chart, onSeatClick, highligh
       )}
 
       {/* Legend */}
-      <div className="seating-legend" style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '12px',
-        justifyContent: 'center',
-        marginTop: '16px',
-        padding: '12px',
-        background: 'var(--surface-color, white)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color, #eee)',
-      }}>
+      <div
+        className="seating-legend"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          justifyContent: 'center',
+          marginTop: '16px',
+          padding: '12px',
+          background: 'var(--surface-color, white)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color, #eee)',
+        }}
+      >
         {Object.entries(INSTRUMENT_COLORS)
-          .filter(([key]) => chart.seats.some(s => s.instrumentName?.includes(key)))
+          .filter(([key]) => chart.seats.some((s) => s.instrumentName?.includes(key)))
           .slice(0, 12) // Limit legend items
           .map(([name, color]) => (
             <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '3px',
-                backgroundColor: color,
-              }} />
+              <span
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '3px',
+                  backgroundColor: color,
+                }}
+              />
               <span style={{ fontSize: '12px', color: 'var(--text-color, #333)' }}>{name}</span>
             </div>
           ))}

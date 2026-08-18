@@ -15,11 +15,13 @@ node --version  # Moet v18.0.0 of hoger zijn
 **Mogelijke oorzaken en oplossingen:**
 
 1. **Verouderde npm versie**
+
    ```bash
    npm install -g npm@latest
    ```
 
 2. **Cache problemen**
+
    ```bash
    npm cache clean --force
    rm -rf node_modules package-lock.json
@@ -76,6 +78,7 @@ Wacht 15 minuten of vraag een beheerder om je account te deblokkeren.
 ### Microsoft SSO werkt niet
 
 **Controleer bij je beheerder:**
+
 - Is SSO geconfigureerd voor je organisatie?
 - Is je Microsoft-account gekoppeld?
 - Zijn de Azure Entra ID-instellingen correct?
@@ -86,10 +89,10 @@ Wacht 15 minuten of vraag een beheerder om je account te deblokkeren.
 
 ### Welke bestandsformaten worden ondersteund?
 
-| Type | Formaten |
-|------|----------|
-| Bladmuziek | PDF |
-| Audio | MP3, WAV, M4A |
+| Type        | Formaten        |
+| ----------- | --------------- |
+| Bladmuziek  | PDF             |
+| Audio       | MP3, WAV, M4A   |
 | Bulk upload | ZIP (met PDF's) |
 
 ### Het uploaden mislukt
@@ -110,10 +113,12 @@ Titel_arrangeur_instrument_toonsoort_groepnummer_sleutel.pdf
 ```
 
 **Voorbeelden:**
+
 - `Bohemian Rhapsody_arr. Wasson_Klarinet_Bb_1_sol.pdf`
 - `Abba Gold_Ron Sebregts_Altsax_Eb__sol.pdf`
 
 **Onderdelen:**
+
 - **Titel** — Naam van het muziekstuk
 - **Arrangeur** — Naam van de arrangeur
 - **Instrument** — Volledig instrument of afkorting
@@ -152,18 +157,21 @@ De browser toont automatisch een "Installeren" optie wanneer je de app gebruikt.
 ### Hoe installeer ik Tutti op mijn telefoon?
 
 **iPhone/iPad (Safari):**
+
 1. Open Tutti in Safari
 2. Tik op het deel-icoon (vierkant met pijl omhoog)
 3. Scroll naar "Zet op beginscherm"
 4. Tik op "Voeg toe"
 
 **Android (Chrome):**
+
 1. Open Tutti in Chrome
 2. Tik op de drie puntjes (menu)
 3. Kies "Toevoegen aan startscherm"
 4. Bevestig de installatie
 
 **Desktop (Chrome/Edge):**
+
 1. Open Tutti in je browser
 2. Klik op het installatie-icoon in de adresbalk
 3. Klik op "Installeren"
@@ -171,6 +179,7 @@ De browser toont automatisch een "Installeren" optie wanneer je de app gebruikt.
 ### De PWA werkt niet goed
 
 **Probeer:**
+
 1. **Cache wissen** — Instellingen > Opslag > Wis gegevens
 2. **Opnieuw installeren** — Verwijder en installeer de app opnieuw
 3. **Browser updaten** — Gebruik de nieuwste versie van je browser
@@ -182,6 +191,7 @@ De browser toont automatisch een "Installeren" optie wanneer je de app gebruikt.
 ### Welke talen worden ondersteund?
 
 Tutti ondersteunt drie talen:
+
 - **Nederlands** (standaard)
 - **Engels**
 - **Duits**
@@ -196,6 +206,7 @@ Tutti ondersteunt drie talen:
 ### Kan ik vertalingen verbeteren?
 
 Ja! Tutti is open source. Vertalingen staan in:
+
 ```
 frontend/src/locales/
   nl.json  # Nederlands
@@ -211,13 +222,13 @@ Maak een pull request met je verbeteringen.
 
 ### Welke rollen zijn er?
 
-| Rol | Rechten |
-|-----|---------|
-| **Lid** | Eigen bladmuziek bekijken/downloaden, profiel beheren |
-| **Sectie-leider** | Alle lid-rechten + eigen instrumentsectie beheren |
-| **Dirigent** | Alle lid-rechten + repetities en concertprogramma's beheren |
+| Rol                 | Rechten                                                                          |
+| ------------------- | -------------------------------------------------------------------------------- |
+| **Lid**             | Eigen bladmuziek bekijken/downloaden, profiel beheren                            |
+| **Sectie-leider**   | Alle lid-rechten + eigen instrumentsectie beheren                                |
+| **Dirigent**        | Alle lid-rechten + repetities en concertprogramma's beheren                      |
 | **Muziekcommissie** | Alle dirigent-rechten + muziek uploaden, instrumenten beheren, issues afhandelen |
-| **Beheerder** | Volledige toegang: ledenbeheer, instellingen, backup/restore |
+| **Beheerder**       | Volledige toegang: ledenbeheer, instellingen, backup/restore                     |
 
 ### Ik kan bepaalde functies niet zien
 
@@ -229,6 +240,7 @@ Je rechten worden bepaald door je rol. Neem contact op met je organisatiebeheerd
 - **Super-admin** — Platform-niveau toegang tot alle organisaties
 
 Super-admins kunnen:
+
 - Alle organisaties beheren
 - Nieuwe organisaties aanmaken
 - Andere super-admins aanwijzen
@@ -240,11 +252,13 @@ Super-admins kunnen:
 ### Hoe maak ik een backup?
 
 **Als beheerder:**
+
 1. Ga naar Instellingen > Backup
 2. Klik op "Backup maken"
 3. Download het ZIP-bestand
 
 **Via CLI (Docker):**
+
 ```bash
 ./scripts/backup.sh --docker /pad/naar/backups
 ```
@@ -252,12 +266,14 @@ Super-admins kunnen:
 ### Hoe herstel ik een backup?
 
 **Als beheerder:**
+
 1. Ga naar Instellingen > Backup
 2. Klik op "Backup herstellen"
 3. Upload het ZIP-bestand
 4. Bevestig het herstel (let op: dit overschrijft alle data!)
 
 **Via CLI (Docker):**
+
 ```bash
 docker compose down
 ./scripts/restore.sh backup.tar.gz --docker
@@ -273,6 +289,7 @@ docker compose up -d
 ### Hoe lang worden backups bewaard?
 
 Dit hangt af van je configuratie. Wij raden aan:
+
 - **Dagelijkse backups** — Bewaar minimaal 7 dagen
 - **Wekelijkse backups** — Bewaar minimaal 4 weken
 - **Maandelijkse backups** — Bewaar minimaal 12 maanden
@@ -291,6 +308,7 @@ Dit hangt af van je configuratie. Wij raden aan:
 ### Werkt Tutti met Spond?
 
 Ja! Tutti kan integreren met Spond voor automatische aanwezigheidsregistratie:
+
 1. Ga naar Instellingen > Integraties
 2. Configureer je Spond-API-gegevens
 3. Koppel je orkesten aan Spond-groepen
@@ -298,6 +316,7 @@ Ja! Tutti kan integreren met Spond voor automatische aanwezigheidsregistratie:
 ### Hoe werkt de metronoom/stemapparaat?
 
 Tutti heeft ingebouwde muziektools:
+
 1. Klik op "Tools" in het menu
 2. Kies "Metronoom" of "Stemapparaat"
 3. De tools werken direct in je browser

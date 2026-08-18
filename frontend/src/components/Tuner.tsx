@@ -26,7 +26,7 @@ function frequencyToNote(frequency: number): { note: string; octave: number; cen
   return {
     note: NOTE_NAMES[noteIndex],
     octave,
-    cents
+    cents,
   };
 }
 
@@ -127,8 +127,8 @@ export function Tuner({ compact = false }: TunerProps) {
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
-          autoGainControl: false
-        }
+          autoGainControl: false,
+        },
       });
       streamRef.current = stream;
 
@@ -161,7 +161,7 @@ export function Tuner({ compact = false }: TunerProps) {
     }
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
@@ -213,41 +213,50 @@ export function Tuner({ compact = false }: TunerProps) {
           </button>
           {isListening && note ? (
             <>
-              <span style={{
-                fontFamily: 'monospace',
-                fontSize: '1.25rem',
-                fontWeight: 'bold',
-                minWidth: '40px',
-                textAlign: 'center'
-              }}>
-                {note}{octave}
+              <span
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  minWidth: '40px',
+                  textAlign: 'center',
+                }}
+              >
+                {note}
+                {octave}
               </span>
-              <div style={{
-                width: '60px',
-                height: '8px',
-                background: 'var(--border)',
-                borderRadius: '4px',
-                position: 'relative'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '-2px',
-                  width: '2px',
-                  height: '12px',
-                  background: 'var(--text-light)'
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  left: `${50 + cents}%`,
-                  top: '-1px',
-                  width: '8px',
-                  height: '10px',
-                  background: getCentsColor(cents),
-                  borderRadius: '2px',
-                  transform: 'translateX(-50%)',
-                  transition: 'left 0.1s'
-                }} />
+              <div
+                style={{
+                  width: '60px',
+                  height: '8px',
+                  background: 'var(--border)',
+                  borderRadius: '4px',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '-2px',
+                    width: '2px',
+                    height: '12px',
+                    background: 'var(--text-light)',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${50 + cents}%`,
+                    top: '-1px',
+                    width: '8px',
+                    height: '10px',
+                    background: getCentsColor(cents),
+                    borderRadius: '2px',
+                    transform: 'translateX(-50%)',
+                    transition: 'left 0.1s',
+                  }}
+                />
               </div>
             </>
           ) : isListening ? (
@@ -270,92 +279,114 @@ export function Tuner({ compact = false }: TunerProps) {
           </div>
         )}
 
-        <div className="tuner-display" style={{
-          textAlign: 'center',
-          marginBottom: '1rem',
-          padding: '1.5rem',
-          background: 'var(--background)',
-          borderRadius: '0.5rem'
-        }}>
+        <div
+          className="tuner-display"
+          style={{
+            textAlign: 'center',
+            marginBottom: '1rem',
+            padding: '1.5rem',
+            background: 'var(--background)',
+            borderRadius: '0.5rem',
+          }}
+        >
           {isListening && note ? (
             <>
-              <div style={{
-                fontSize: '4rem',
-                fontWeight: 'bold',
-                fontFamily: 'monospace',
-                color: getCentsColor(cents),
-                lineHeight: 1
-              }}>
-                {note}<span style={{ fontSize: '2rem' }}>{octave}</span>
+              <div
+                style={{
+                  fontSize: '4rem',
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace',
+                  color: getCentsColor(cents),
+                  lineHeight: 1,
+                }}
+              >
+                {note}
+                <span style={{ fontSize: '2rem' }}>{octave}</span>
               </div>
-              <div style={{
-                fontSize: '1rem',
-                color: 'var(--text-light)',
-                marginTop: '0.5rem'
-              }}>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  color: 'var(--text-light)',
+                  marginTop: '0.5rem',
+                }}
+              >
                 {frequency} Hz
               </div>
 
               {/* Cents meter */}
-              <div style={{
-                marginTop: '1.5rem',
-                position: 'relative',
-                height: '30px'
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  left: '10%',
-                  right: '10%',
-                  top: '10px',
-                  height: '10px',
-                  background: 'linear-gradient(to right, var(--danger), var(--warning), var(--success), var(--warning), var(--danger))',
-                  borderRadius: '5px'
-                }} />
-                {/* Center marker */}
-                <div style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '0',
-                  width: '2px',
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  position: 'relative',
                   height: '30px',
-                  background: 'var(--text)',
-                  transform: 'translateX(-50%)'
-                }} />
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '10%',
+                    right: '10%',
+                    top: '10px',
+                    height: '10px',
+                    background:
+                      'linear-gradient(to right, var(--danger), var(--warning), var(--success), var(--warning), var(--danger))',
+                    borderRadius: '5px',
+                  }}
+                />
+                {/* Center marker */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '0',
+                    width: '2px',
+                    height: '30px',
+                    background: 'var(--text)',
+                    transform: 'translateX(-50%)',
+                  }}
+                />
                 {/* Current position indicator */}
-                <div style={{
-                  position: 'absolute',
-                  left: `${50 + (cents * 0.4)}%`,
-                  top: '5px',
-                  width: '4px',
-                  height: '20px',
-                  background: 'white',
-                  border: '2px solid var(--text)',
-                  borderRadius: '2px',
-                  transform: 'translateX(-50%)',
-                  transition: 'left 0.1s ease-out'
-                }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${50 + cents * 0.4}%`,
+                    top: '5px',
+                    width: '4px',
+                    height: '20px',
+                    background: 'white',
+                    border: '2px solid var(--text)',
+                    borderRadius: '2px',
+                    transform: 'translateX(-50%)',
+                    transition: 'left 0.1s ease-out',
+                  }}
+                />
               </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: '0.5rem',
-                fontSize: '0.75rem',
-                color: 'var(--text-light)'
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '0.5rem',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-light)',
+                }}
+              >
                 <span>-50</span>
                 <span style={{ fontWeight: cents > -5 && cents < 5 ? 'bold' : 'normal' }}>
-                  {cents > 0 ? '+' : ''}{cents} cent
+                  {cents > 0 ? '+' : ''}
+                  {cents} cent
                 </span>
                 <span>+50</span>
               </div>
             </>
           ) : (
-            <div style={{
-              fontSize: '2rem',
-              color: 'var(--text-light)',
-              padding: '2rem 0'
-            }}>
+            <div
+              style={{
+                fontSize: '2rem',
+                color: 'var(--text-light)',
+                padding: '2rem 0',
+              }}
+            >
               {isListening ? t('tools.tuner.listening') : t('tools.tuner.clickToStart')}
             </div>
           )}
@@ -371,12 +402,14 @@ export function Tuner({ compact = false }: TunerProps) {
         </button>
 
         {isListening && (
-          <p style={{
-            marginTop: '1rem',
-            fontSize: '0.875rem',
-            color: 'var(--text-light)',
-            textAlign: 'center'
-          }}>
+          <p
+            style={{
+              marginTop: '1rem',
+              fontSize: '0.875rem',
+              color: 'var(--text-light)',
+              textAlign: 'center',
+            }}
+          >
             {t('tools.tuner.tuningHelp')}
           </p>
         )}

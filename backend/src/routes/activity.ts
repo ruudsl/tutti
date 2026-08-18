@@ -34,21 +34,27 @@ const router = Router();
  *       201:
  *         description: Activity logged
  */
-router.post('/log', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { actionType, entityType, entityId, metadata } = req.body;
+router.post(
+  '/log',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { actionType, entityType, entityId, metadata } = req.body;
 
-  if (!actionType || !entityType || !entityId) {
-    return res.status(400).json({ error: 'actionType, entityType en entityId zijn verplicht' });
-  }
+    if (!actionType || !entityType || !entityId) {
+      return res.status(400).json({ error: 'actionType, entityType en entityId zijn verplicht' });
+    }
 
-  const id = uuidv4();
-  db.prepare(`
+    const id = uuidv4();
+    db.prepare(
+      `
     INSERT INTO activity_log (id, user_id, action_type, entity_type, entity_id, metadata)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, req.user!.id, actionType, entityType, entityId, metadata ? JSON.stringify(metadata) : null);
+  `,
+    ).run(id, req.user!.id, actionType, entityType, entityId, metadata ? JSON.stringify(metadata) : null);
 
-  res.status(201).json({ success: true, id });
-}));
+    res.status(201).json({ success: true, id });
+  }),
+);
 
 /**
  * @swagger
@@ -69,16 +75,22 @@ router.post('/log', authenticateToken, asyncHandler(async (req: AuthRequest, res
  *       200:
  *         description: Activity statistics
  */
-router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { period = '30' } = req.query;
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { period = '30' } = req.query;
 
-  const days = parseInt(period as string) || 30;
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  const startDateStr = startDate.toISOString().split('T')[0];
+    const days = parseInt(period as string) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString().split('T')[0];
 
-  // Top 10 most viewed/downloaded pieces
-  const topPieces = db.prepare(`
+    // Top 10 most viewed/downloaded pieces
+    const topPieces = db
+      .prepare(
+        `
     SELECT
       mp.id,
       mp.title,
@@ -93,10 +105,14 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     GROUP BY mp.id
     ORDER BY count DESC
     LIMIT 10
-  `).all(startDateStr, req.user!.associationId);
+  `,
+      )
+      .all(startDateStr, req.user!.associationId);
 
-  // Activity by day
-  const recentActivity = db.prepare(`
+    // Activity by day
+    const recentActivity = db
+      .prepare(
+        `
     SELECT
       date(al.created_at) as date,
       SUM(CASE WHEN al.action_type = 'download' THEN 1 ELSE 0 END) as downloads,
@@ -108,10 +124,14 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     GROUP BY date(al.created_at)
     ORDER BY date DESC
     LIMIT 30
-  `).all(startDateStr, req.user!.associationId);
+  `,
+      )
+      .all(startDateStr, req.user!.associationId);
 
-  // Top users by activity
-  const userActivity = db.prepare(`
+    // Top users by activity
+    const userActivity = db
+      .prepare(
+        `
     SELECT
       u.id,
       u.first_name || ' ' || u.last_name as name,
@@ -124,10 +144,14 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     GROUP BY u.id
     ORDER BY (downloads + views) DESC
     LIMIT 10
-  `).all(startDateStr, req.user!.associationId);
+  `,
+      )
+      .all(startDateStr, req.user!.associationId);
 
-  // Total stats
-  const totals = db.prepare(`
+    // Total stats
+    const totals = db
+      .prepare(
+        `
     SELECT
       COUNT(*) as total_activities,
       COUNT(DISTINCT al.user_id) as active_users,
@@ -137,16 +161,19 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     JOIN users u ON al.user_id = u.id
     WHERE al.created_at >= ?
       AND u.association_id = ?
-  `).get(startDateStr, req.user!.associationId);
+  `,
+      )
+      .get(startDateStr, req.user!.associationId);
 
-  res.json({
-    topPieces,
-    recentActivity,
-    userActivity,
-    totals,
-    period: days,
-  });
-}));
+    res.json({
+      topPieces,
+      recentActivity,
+      userActivity,
+      totals,
+      period: days,
+    });
+  }),
+);
 
 /**
  * @swagger
@@ -166,10 +193,16 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
  *       200:
  *         description: List of recent activities
  */
-router.get('/feed', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { limit = '50' } = req.query;
+router.get(
+  '/feed',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { limit = '50' } = req.query;
 
-  const activities = db.prepare(`
+    const activities = db
+      .prepare(
+        `
     SELECT
       al.id,
       al.action_type,
@@ -187,9 +220,12 @@ router.get('/feed', authenticateToken, requireRole('music_committee', 'admin'), 
     WHERE u.association_id = ?
     ORDER BY al.created_at DESC
     LIMIT ?
-  `).all(req.user!.associationId, parseInt(limit as string));
+  `,
+      )
+      .all(req.user!.associationId, parseInt(limit as string));
 
-  res.json(activities);
-}));
+    res.json(activities);
+  }),
+);
 
 export default router;

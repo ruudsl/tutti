@@ -32,9 +32,7 @@ clientsClaim();
 registerRoute(
   ({ request, url }) => {
     // Match GET requests to API endpoints (except auth)
-    return request.method === 'GET' &&
-           url.pathname.startsWith('/api/') &&
-           !url.pathname.startsWith('/api/auth');
+    return request.method === 'GET' && url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth');
   },
   new NetworkFirst({
     cacheName: 'api-cache',
@@ -48,16 +46,18 @@ registerRoute(
       }),
     ],
     networkTimeoutSeconds: 5, // Faster fallback to cache when network is slow
-  })
+  }),
 );
 
 // Background sync for POST/PUT/DELETE API requests when offline
 registerRoute(
   ({ request, url }) => {
     // Match mutating requests to API endpoints
-    return ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) &&
-           url.pathname.startsWith('/api/') &&
-           !url.pathname.startsWith('/api/auth');
+    return (
+      ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) &&
+      url.pathname.startsWith('/api/') &&
+      !url.pathname.startsWith('/api/auth')
+    );
   },
   new NetworkFirst({
     cacheName: 'api-mutations-cache',
@@ -77,7 +77,7 @@ registerRoute(
       }),
     ],
     networkTimeoutSeconds: 10,
-  })
+  }),
 );
 
 // User profile - StaleWhileRevalidate
@@ -94,7 +94,7 @@ registerRoute(
         statuses: [0, 200],
       }),
     ],
-  })
+  }),
 );
 
 // Music pieces metadata
@@ -111,7 +111,7 @@ registerRoute(
         statuses: [0, 200],
       }),
     ],
-  })
+  }),
 );
 
 // Reference data (orchestras, instruments, genres)
@@ -128,7 +128,7 @@ registerRoute(
         statuses: [0, 200],
       }),
     ],
-  })
+  }),
 );
 
 // Favorites and recent views
@@ -146,7 +146,7 @@ registerRoute(
       }),
     ],
     networkTimeoutSeconds: 5,
-  })
+  }),
 );
 
 // Rehearsals
@@ -164,7 +164,7 @@ registerRoute(
       }),
     ],
     networkTimeoutSeconds: 10,
-  })
+  }),
 );
 
 // Music files (MP3)
@@ -178,7 +178,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
       }),
     ],
-  })
+  }),
 );
 
 // PDF files
@@ -192,7 +192,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 14, // 14 days
       }),
     ],
-  })
+  }),
 );
 
 // Images
@@ -206,7 +206,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
       }),
     ],
-  })
+  }),
 );
 
 // Fonts
@@ -220,7 +220,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
       }),
     ],
-  })
+  }),
 );
 
 // Google Fonts Stylesheets
@@ -228,7 +228,7 @@ registerRoute(
   /^https:\/\/fonts\.googleapis\.com/,
   new StaleWhileRevalidate({
     cacheName: 'google-fonts-stylesheets',
-  })
+  }),
 );
 
 // Google Fonts Webfonts
@@ -242,7 +242,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
       }),
     ],
-  })
+  }),
 );
 
 // ============================================================================
@@ -341,7 +341,7 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
         }
       }
       return self.clients.openWindow(targetUrl);
-    })
+    }),
   );
 });
 
@@ -368,7 +368,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
           pushEvent.oldSubscription?.options || {
             userVisibleOnly: true,
             applicationServerKey: null,
-          }
+          },
         );
 
         await fetch('/api/notifications/push-subscription', {
@@ -386,7 +386,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
       } catch (error) {
         console.error('Failed to resubscribe to push notifications:', error);
       }
-    })()
+    })(),
   );
 });
 

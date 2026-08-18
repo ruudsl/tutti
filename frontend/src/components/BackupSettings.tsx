@@ -97,32 +97,44 @@ export default function BackupSettings() {
         <h3 className="card-title">{t('backup.title')}</h3>
       </div>
       <div className="card-body">
-        <p style={{ marginBottom: '1rem' }}>
-          {t('backup.description')}
-        </p>
+        <p style={{ marginBottom: '1rem' }}>{t('backup.description')}</p>
 
         {info && (
-          <div style={{
-            background: 'var(--bg-secondary)',
-            padding: '1rem',
-            borderRadius: '0.25rem',
-            marginBottom: '1rem',
-          }}>
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              padding: '1rem',
+              borderRadius: '0.25rem',
+              marginBottom: '1rem',
+            }}
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
               <div>
-                <div className="text-light" style={{ fontSize: '0.875rem' }}>{t('backup.database')}</div>
+                <div className="text-light" style={{ fontSize: '0.875rem' }}>
+                  {t('backup.database')}
+                </div>
                 <div style={{ fontWeight: 'bold' }}>{info.database.sizeFormatted}</div>
               </div>
               <div>
-                <div className="text-light" style={{ fontSize: '0.875rem' }}>{t('backup.pdfFiles')}</div>
-                <div style={{ fontWeight: 'bold' }}>{info.pdfFiles.count} ({info.pdfFiles.sizeFormatted})</div>
+                <div className="text-light" style={{ fontSize: '0.875rem' }}>
+                  {t('backup.pdfFiles')}
+                </div>
+                <div style={{ fontWeight: 'bold' }}>
+                  {info.pdfFiles.count} ({info.pdfFiles.sizeFormatted})
+                </div>
               </div>
               <div>
-                <div className="text-light" style={{ fontSize: '0.875rem' }}>{t('backup.mp3Files')}</div>
-                <div style={{ fontWeight: 'bold' }}>{info.mp3Files.count} ({info.mp3Files.sizeFormatted})</div>
+                <div className="text-light" style={{ fontSize: '0.875rem' }}>
+                  {t('backup.mp3Files')}
+                </div>
+                <div style={{ fontWeight: 'bold' }}>
+                  {info.mp3Files.count} ({info.mp3Files.sizeFormatted})
+                </div>
               </div>
               <div>
-                <div className="text-light" style={{ fontSize: '0.875rem' }}>{t('backup.total')}</div>
+                <div className="text-light" style={{ fontSize: '0.875rem' }}>
+                  {t('backup.total')}
+                </div>
                 <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{info.total.sizeFormatted}</div>
               </div>
             </div>
@@ -130,11 +142,7 @@ export default function BackupSettings() {
         )}
 
         <div className="flex gap-2">
-          <button
-            className="btn btn-primary"
-            onClick={handleDownload}
-            disabled={downloading || restoring}
-          >
+          <button className="btn btn-primary" onClick={handleDownload} disabled={downloading || restoring}>
             {downloading ? t('backup.downloading') : t('backup.download')}
           </button>
 
@@ -145,13 +153,7 @@ export default function BackupSettings() {
           >
             {restoring ? t('backup.restoring') : t('backup.restore')}
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".zip"
-            style={{ display: 'none' }}
-            onChange={handleFileSelect}
-          />
+          <input ref={fileInputRef} type="file" accept=".zip" style={{ display: 'none' }} onChange={handleFileSelect} />
         </div>
 
         <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>

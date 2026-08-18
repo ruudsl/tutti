@@ -74,11 +74,12 @@ export default function MusicListManager() {
   // React Query for titles
   const { data: titles = [] } = useQuery({
     queryKey: ['musicTitles', listId, search, genreFilter],
-    queryFn: () => getMusicTitles({
-      search: search || undefined,
-      listId: listId!,
-      genreId: genreFilter || undefined,
-    }),
+    queryFn: () =>
+      getMusicTitles({
+        search: search || undefined,
+        listId: listId!,
+        genreId: genreFilter || undefined,
+      }),
     enabled: !!listId,
     staleTime: 5 * 60 * 1000,
   });
@@ -103,7 +104,7 @@ export default function MusicListManager() {
   // Also reset if current selection doesn't exist in the list (e.g., after association switch)
   useEffect(() => {
     if (orchestras.length > 0) {
-      const currentExists = orchestras.some(o => o.id === selectedOrchestra);
+      const currentExists = orchestras.some((o) => o.id === selectedOrchestra);
       if (!selectedOrchestra || !currentExists) {
         setSelectedOrchestra(orchestras[0].id);
       }
@@ -125,7 +126,6 @@ export default function MusicListManager() {
   const refreshTitles = () => {
     queryClient.invalidateQueries({ queryKey: ['musicTitles', listId, search, genreFilter] });
   };
-
 
   const handleSelectOrchestra = (orchId: string) => {
     setSelectedOrchestra(orchId);
@@ -257,7 +257,10 @@ export default function MusicListManager() {
     queryClient.setQueryData(['musicLists', selectedOrchestra], newLists);
 
     try {
-      await reorderMusicLists(selectedOrchestra, newLists.map(l => l.id));
+      await reorderMusicLists(
+        selectedOrchestra,
+        newLists.map((l) => l.id),
+      );
     } catch (error: any) {
       alert(error.response?.data?.error || 'Fout bij wijzigen volgorde');
       refreshLists();
@@ -268,7 +271,10 @@ export default function MusicListManager() {
     if (!selectedList) return;
 
     try {
-      await reorderTitlesInList(selectedList.id, newTitleOrder.map(t => t.title));
+      await reorderTitlesInList(
+        selectedList.id,
+        newTitleOrder.map((t) => t.title),
+      );
       // Update local state to reflect new order
       refreshSelectedList();
     } catch (error: any) {
@@ -321,17 +327,27 @@ export default function MusicListManager() {
   };
 
   // Group pieces by title for display
-  const titlesOnList = selectedList?.pieces
-    ? [...new Set(selectedList.pieces.map(p => p.title))]
-    : [];
+  const titlesOnList = selectedList?.pieces ? [...new Set(selectedList.pieces.map((p) => p.title))] : [];
 
   if (isLoading) {
     return (
       <div>
         <h1 className="mb-3">{t('lists.manageTitle')}</h1>
         <div className="grid grid-3" style={{ gridTemplateColumns: '250px 250px 1fr' }}>
-          <div className="card"><div className="card-body">{[1,2,3].map(i => <SkeletonListItem key={i} />)}</div></div>
-          <div className="card"><div className="card-body">{[1,2,3,4].map(i => <SkeletonListItem key={i} />)}</div></div>
+          <div className="card">
+            <div className="card-body">
+              {[1, 2, 3].map((i) => (
+                <SkeletonListItem key={i} />
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-body">
+              {[1, 2, 3, 4].map((i) => (
+                <SkeletonListItem key={i} />
+              ))}
+            </div>
+          </div>
           <SkeletonCard />
         </div>
       </div>
@@ -387,10 +403,7 @@ export default function MusicListManager() {
                     opacity: list.isActive === false ? 0.6 : 1,
                   }}
                 >
-                  <div
-                    onClick={() => handleSelectList(list)}
-                    style={{ cursor: 'pointer', marginBottom: '0.25rem' }}
-                  >
+                  <div onClick={() => handleSelectList(list)} style={{ cursor: 'pointer', marginBottom: '0.25rem' }}>
                     <strong>{list.name}</strong>
                     {list.listType === 'concert' && (
                       <span className="badge badge-warning" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
@@ -414,7 +427,19 @@ export default function MusicListManager() {
                       title={list.isActive !== false ? t('lists.activeToggle') : t('lists.inactiveToggle')}
                       style={{ minWidth: '2rem' }}
                     >
-                      {list.isActive !== false ? <Icon name="check" size={16} /> : <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid currentColor', display: 'inline-block' }} />}
+                      {list.isActive !== false ? (
+                        <Icon name="check" size={16} />
+                      ) : (
+                        <span
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            border: '1.5px solid currentColor',
+                            display: 'inline-block',
+                          }}
+                        />
+                      )}
                     </button>
                     <button
                       className="btn btn-outline btn-sm"
@@ -485,14 +510,12 @@ export default function MusicListManager() {
                   />
                 </div>
                 <div className="form-group" style={{ width: '200px', marginBottom: 0 }}>
-                  <select
-                    className="form-control"
-                    value={genreFilter}
-                    onChange={(e) => setGenreFilter(e.target.value)}
-                  >
+                  <select className="form-control" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)}>
                     <option value="">{t('titles.allGenres')}</option>
                     {genres.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -501,25 +524,28 @@ export default function MusicListManager() {
               {/* Titles on list with drag-and-drop */}
               {titlesOnList.length > 0 && (
                 <div className="mb-2">
-                  <h3 className="mb-1">{t('lists.onThisList')} ({titlesOnList.length} {t('lists.titles')})</h3>
+                  <h3 className="mb-1">
+                    {t('lists.onThisList')} ({titlesOnList.length} {t('lists.titles')})
+                  </h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '0.5rem' }}>
                     Sleep items om de volgorde te wijzigen
                   </p>
                   <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                     <SortableList
-                      items={titlesOnList.map(title => ({ id: title, title }))}
+                      items={titlesOnList.map((title) => ({ id: title, title }))}
                       onReorder={handleReorderTitles}
                       keyExtractor={(item) => item.id}
                       renderItem={(item) => {
-                        const piecesForTitle = selectedList.pieces.filter(p => p.title === item.title);
-                        const titleData = titles.find(t => t.title === item.title);
+                        const piecesForTitle = selectedList.pieces.filter((p) => p.title === item.title);
+                        const titleData = titles.find((t) => t.title === item.title);
                         return (
                           <DraggableListItem>
                             <div className="flex justify-between items-center" style={{ width: '100%' }}>
                               <div style={{ flex: 1 }}>
                                 <strong>{item.title}</strong>
                                 <span className="piece-meta">
-                                  {' '}({piecesForTitle.length} {t('lists.parts')})
+                                  {' '}
+                                  ({piecesForTitle.length} {t('lists.parts')})
                                   {titleData?.durationSeconds ? ` • ${formatDuration(titleData.durationSeconds)}` : ''}
                                 </span>
                                 {titleData?.youtubeUrl && (
@@ -536,7 +562,7 @@ export default function MusicListManager() {
                                 )}
                                 {titleData?.genres && titleData.genres.length > 0 && (
                                   <div style={{ marginTop: '0.25rem' }}>
-                                    {titleData.genres.map(g => (
+                                    {titleData.genres.map((g) => (
                                       <span
                                         key={g.id}
                                         className="badge badge-secondary"
@@ -577,9 +603,9 @@ export default function MusicListManager() {
               {/* Available titles */}
               <h3 className="mb-1">{t('lists.availablePieces')}</h3>
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {titles.filter(t => !t.onList).length > 0 ? (
+                {titles.filter((t) => !t.onList).length > 0 ? (
                   titles
-                    .filter(t => !t.onList)
+                    .filter((t) => !t.onList)
                     .map((title) => (
                       <div
                         key={title.title}
@@ -611,7 +637,7 @@ export default function MusicListManager() {
                           </div>
                           {title.genres && title.genres.length > 0 && (
                             <div style={{ marginTop: '0.25rem' }}>
-                              {title.genres.map(g => (
+                              {title.genres.map((g) => (
                                 <span
                                   key={g.id}
                                   className="badge badge-secondary"
@@ -631,10 +657,7 @@ export default function MusicListManager() {
                           >
                             <Icon name="pencil" size={16} />
                           </button>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleAddTitle(title.title)}
-                          >
+                          <button className="btn btn-primary btn-sm" onClick={() => handleAddTitle(title.title)}>
                             {t('common.add')}
                           </button>
                         </div>
@@ -661,7 +684,12 @@ export default function MusicListManager() {
       {showAddListModal && (
         <FormModal
           title={t('lists.newList')}
-          onClose={() => { setShowAddListModal(false); setListFormType('regular'); setListFormConcertDate(''); setListFormConcertLocation(''); }}
+          onClose={() => {
+            setShowAddListModal(false);
+            setListFormType('regular');
+            setListFormConcertDate('');
+            setListFormConcertLocation('');
+          }}
           onSubmit={handleCreateList}
           submitLabel={t('common.add')}
         >
@@ -716,11 +744,7 @@ export default function MusicListManager() {
 
       {/* Edit List Modal */}
       {editingList && (
-        <FormModal
-          title={t('lists.renameList')}
-          onClose={() => setEditingList(null)}
-          onSubmit={handleUpdateList}
-        >
+        <FormModal title={t('lists.renameList')} onClose={() => setEditingList(null)} onSubmit={handleUpdateList}>
           <div className="form-group">
             <label className="form-label">{t('common.name')}</label>
             <input

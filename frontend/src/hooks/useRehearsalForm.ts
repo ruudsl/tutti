@@ -119,11 +119,11 @@ export function useRehearsalForm() {
   }, []);
 
   const updateForm = useCallback((updates: Partial<RehearsalFormData>) => {
-    setForm(prev => ({ ...prev, ...updates }));
+    setForm((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const updateDefaultForm = useCallback((updates: Partial<DefaultRehearsalFormData>) => {
-    setDefaultForm(prev => ({ ...prev, ...updates }));
+    setDefaultForm((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const resetGenerate = useCallback(() => {
@@ -216,15 +216,15 @@ export function useRehearsalPieces() {
   }, []);
 
   const addPiece = useCallback(() => {
-    setPieces(prev => [...prev, { title: '', notes: '' }]);
+    setPieces((prev) => [...prev, { title: '', notes: '' }]);
   }, []);
 
   const removePiece = useCallback((index: number) => {
-    setPieces(prev => prev.filter((_, i) => i !== index));
+    setPieces((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const updatePiece = useCallback((index: number, updates: Partial<{ title: string; notes: string }>) => {
-    setPieces(prev => prev.map((p, i) => i === index ? { ...p, ...updates } : p));
+    setPieces((prev) => prev.map((p, i) => (i === index ? { ...p, ...updates } : p)));
   }, []);
 
   return {

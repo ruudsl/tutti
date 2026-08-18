@@ -24,10 +24,14 @@ const router = Router();
  *       200:
  *         description: List of loans
  */
-router.get('/', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { status } = req.query;
+router.get(
+  '/',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { status } = req.query;
 
-  let query = `
+    let query = `
     SELECT
       l.id,
       l.music_title_id,
@@ -49,22 +53,29 @@ router.get('/', authenticateToken, requireRole('music_committee', 'admin'), asyn
     WHERE mt.association_id = ?
   `;
 
-  const params: any[] = [req.user!.associationId];
+    const params: any[] = [req.user!.associationId];
 
-  if (status && status !== 'all') {
-    query += ' AND l.status = ?';
-    params.push(status);
-  }
+    if (status && status !== 'all') {
+      query += ' AND l.status = ?';
+      params.push(status);
+    }
 
-  query += ' ORDER BY l.date_out DESC';
+    query += ' ORDER BY l.date_out DESC';
 
-  const loans = db.prepare(query).all(...params);
-  res.json(loans);
-}));
+    const loans = db.prepare(query).all(...params);
+    res.json(loans);
+  }),
+);
 
 // Get loan statistics
-router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const stats = db.prepare(`
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = db
+      .prepare(
+        `
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
@@ -73,10 +84,13 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE mt.association_id = ?
-  `).get(req.user!.associationId);
+  `,
+      )
+      .get(req.user!.associationId);
 
-  // Update overdue loans
-  db.prepare(`
+    // Update overdue loans
+    db.prepare(
+      `
     UPDATE loans
     SET status = 'overdue'
     WHERE status = 'active'
@@ -85,16 +99,22 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
       AND music_title_id IN (
         SELECT id FROM music_titles WHERE association_id = ?
       )
-  `).run(req.user!.associationId);
+  `,
+    ).run(req.user!.associationId);
 
-  res.json(stats);
-}));
+    res.json(stats);
+  }),
+);
 
 // Get titles available for lending
-router.get('/available-titles', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { search } = req.query;
+router.get(
+  '/available-titles',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { search } = req.query;
 
-  let query = `
+    let query = `
     SELECT
       mt.id,
       mt.title,
@@ -104,18 +124,19 @@ router.get('/available-titles', authenticateToken, requireRole('music_committee'
     WHERE mt.association_id = ?
   `;
 
-  const params: any[] = [req.user!.associationId];
+    const params: any[] = [req.user!.associationId];
 
-  if (search) {
-    query += ' AND (mt.title LIKE ? OR mt.arranger LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
-  }
+    if (search) {
+      query += ' AND (mt.title LIKE ? OR mt.arranger LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
 
-  query += ' ORDER BY mt.title LIMIT 50';
+    query += ' ORDER BY mt.title LIMIT 50';
 
-  const titles = db.prepare(query).all(...params);
-  res.json(titles);
-}));
+    const titles = db.prepare(query).all(...params);
+    res.json(titles);
+  }),
+);
 
 /**
  * @swagger
@@ -152,39 +173,51 @@ router.get('/available-titles', authenticateToken, requireRole('music_committee'
  *       404:
  *         description: Title not found
  */
-router.post('/', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { musicTitleId, borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { musicTitleId, borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
 
-  if (!musicTitleId || !borrowerName) {
-    return res.status(400).json({ error: 'Titel en naam van lener zijn verplicht' });
-  }
+    if (!musicTitleId || !borrowerName) {
+      return res.status(400).json({ error: 'Titel en naam van lener zijn verplicht' });
+    }
 
-  // Verify the title exists and belongs to user's association
-  const title = db.prepare(`
+    // Verify the title exists and belongs to user's association
+    const title = db
+      .prepare(
+        `
     SELECT id FROM music_titles WHERE id = ? AND association_id = ?
-  `).get(musicTitleId, req.user!.associationId);
+  `,
+      )
+      .get(musicTitleId, req.user!.associationId);
 
-  if (!title) {
-    return res.status(404).json({ error: 'Titel niet gevonden' });
-  }
+    if (!title) {
+      return res.status(404).json({ error: 'Titel niet gevonden' });
+    }
 
-  const loanId = uuidv4();
+    const loanId = uuidv4();
 
-  db.prepare(`
+    db.prepare(
+      `
     INSERT INTO loans (id, music_title_id, borrower_name, borrower_email, borrower_organization, notes, expected_return, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    loanId,
-    musicTitleId,
-    borrowerName,
-    borrowerEmail || null,
-    borrowerOrganization || null,
-    notes || null,
-    expectedReturn || null,
-    req.user!.id
-  );
+  `,
+    ).run(
+      loanId,
+      musicTitleId,
+      borrowerName,
+      borrowerEmail || null,
+      borrowerOrganization || null,
+      notes || null,
+      expectedReturn || null,
+      req.user!.id,
+    );
 
-  const loan = db.prepare(`
+    const loan = db
+      .prepare(
+        `
     SELECT
       l.*,
       mt.title as title_name,
@@ -192,29 +225,41 @@ router.post('/', authenticateToken, requireRole('music_committee', 'admin'), asy
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ?
-  `).get(loanId);
+  `,
+      )
+      .get(loanId);
 
-  res.status(201).json(loan);
-}));
+    res.status(201).json(loan);
+  }),
+);
 
 // Update a loan
-router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const { borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { borrowerName, borrowerEmail, borrowerOrganization, notes, expectedReturn } = req.body;
 
-  // Verify the loan exists and belongs to user's association
-  const loan = db.prepare(`
+    // Verify the loan exists and belongs to user's association
+    const loan = db
+      .prepare(
+        `
     SELECT l.id
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ? AND mt.association_id = ?
-  `).get(id, req.user!.associationId);
+  `,
+      )
+      .get(id, req.user!.associationId);
 
-  if (!loan) {
-    return res.status(404).json({ error: 'Uitlening niet gevonden' });
-  }
+    if (!loan) {
+      return res.status(404).json({ error: 'Uitlening niet gevonden' });
+    }
 
-  db.prepare(`
+    db.prepare(
+      `
     UPDATE loans
     SET borrower_name = COALESCE(?, borrower_name),
         borrower_email = ?,
@@ -222,16 +267,12 @@ router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), a
         notes = ?,
         expected_return = ?
     WHERE id = ?
-  `).run(
-    borrowerName,
-    borrowerEmail || null,
-    borrowerOrganization || null,
-    notes || null,
-    expectedReturn || null,
-    id
-  );
+  `,
+    ).run(borrowerName, borrowerEmail || null, borrowerOrganization || null, notes || null, expectedReturn || null, id);
 
-  const updated = db.prepare(`
+    const updated = db
+      .prepare(
+        `
     SELECT
       l.*,
       mt.title as title_name,
@@ -239,10 +280,13 @@ router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), a
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ?
-  `).get(id);
+  `,
+      )
+      .get(id);
 
-  res.json(updated);
-}));
+    res.json(updated);
+  }),
+);
 
 /**
  * @swagger
@@ -266,32 +310,44 @@ router.put('/:id', authenticateToken, requireRole('music_committee', 'admin'), a
  *       404:
  *         description: Loan not found
  */
-router.post('/:id/return', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+router.post(
+  '/:id/return',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
 
-  // Verify the loan exists and belongs to user's association
-  const loan = db.prepare(`
+    // Verify the loan exists and belongs to user's association
+    const loan = db
+      .prepare(
+        `
     SELECT l.id, l.status
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ? AND mt.association_id = ?
-  `).get(id, req.user!.associationId) as any;
+  `,
+      )
+      .get(id, req.user!.associationId) as any;
 
-  if (!loan) {
-    return res.status(404).json({ error: 'Uitlening niet gevonden' });
-  }
+    if (!loan) {
+      return res.status(404).json({ error: 'Uitlening niet gevonden' });
+    }
 
-  if (loan.status === 'returned') {
-    return res.status(400).json({ error: 'Uitlening is al geretourneerd' });
-  }
+    if (loan.status === 'returned') {
+      return res.status(400).json({ error: 'Uitlening is al geretourneerd' });
+    }
 
-  db.prepare(`
+    db.prepare(
+      `
     UPDATE loans
     SET status = 'returned', date_returned = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(id);
+  `,
+    ).run(id);
 
-  const updated = db.prepare(`
+    const updated = db
+      .prepare(
+        `
     SELECT
       l.*,
       mt.title as title_name,
@@ -299,30 +355,42 @@ router.post('/:id/return', authenticateToken, requireRole('music_committee', 'ad
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ?
-  `).get(id);
+  `,
+      )
+      .get(id);
 
-  res.json(updated);
-}));
+    res.json(updated);
+  }),
+);
 
 // Delete a loan
-router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
 
-  // Verify the loan exists and belongs to user's association
-  const loan = db.prepare(`
+    // Verify the loan exists and belongs to user's association
+    const loan = db
+      .prepare(
+        `
     SELECT l.id
     FROM loans l
     JOIN music_titles mt ON l.music_title_id = mt.id
     WHERE l.id = ? AND mt.association_id = ?
-  `).get(id, req.user!.associationId);
+  `,
+      )
+      .get(id, req.user!.associationId);
 
-  if (!loan) {
-    return res.status(404).json({ error: 'Uitlening niet gevonden' });
-  }
+    if (!loan) {
+      return res.status(404).json({ error: 'Uitlening niet gevonden' });
+    }
 
-  db.prepare('DELETE FROM loans WHERE id = ?').run(id);
-  res.json({ success: true });
-}));
+    db.prepare('DELETE FROM loans WHERE id = ?').run(id);
+    res.json({ success: true });
+  }),
+);
 
 /**
  * @swagger
@@ -342,19 +410,29 @@ router.delete('/:id', authenticateToken, requireRole('admin'), asyncHandler(asyn
  *       200:
  *         description: Loan history for the title
  */
-router.get('/title/:titleId/history', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { titleId } = req.params;
+router.get(
+  '/title/:titleId/history',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { titleId } = req.params;
 
-  // Verify title belongs to user's association
-  const title = db.prepare(`
+    // Verify title belongs to user's association
+    const title = db
+      .prepare(
+        `
     SELECT id, title, arranger FROM music_titles WHERE id = ? AND association_id = ?
-  `).get(titleId, req.user!.associationId) as { id: string; title: string; arranger: string | null } | undefined;
+  `,
+      )
+      .get(titleId, req.user!.associationId) as { id: string; title: string; arranger: string | null } | undefined;
 
-  if (!title) {
-    return res.status(404).json({ error: 'Titel niet gevonden' });
-  }
+    if (!title) {
+      return res.status(404).json({ error: 'Titel niet gevonden' });
+    }
 
-  const loans = db.prepare(`
+    const loans = db
+      .prepare(
+        `
     SELECT
       l.id,
       l.borrower_name,
@@ -371,45 +449,49 @@ router.get('/title/:titleId/history', authenticateToken, requireRole('music_comm
     JOIN users u ON l.created_by = u.id
     WHERE l.music_title_id = ?
     ORDER BY l.date_out DESC
-  `).all(titleId);
+  `,
+      )
+      .all(titleId);
 
-  // Calculate statistics
-  const totalLoans = loans.length;
-  const activeLoans = loans.filter((l: any) => l.status === 'active' || l.status === 'overdue').length;
-  const avgLoanDurationDays = loans
-    .filter((l: any) => l.date_returned)
-    .map((l: any) => {
-      const start = new Date(l.date_out);
-      const end = new Date(l.date_returned);
-      return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    })
-    .reduce((sum, days, _, arr) => sum + days / arr.length, 0) || 0;
+    // Calculate statistics
+    const totalLoans = loans.length;
+    const activeLoans = loans.filter((l: any) => l.status === 'active' || l.status === 'overdue').length;
+    const avgLoanDurationDays =
+      loans
+        .filter((l: any) => l.date_returned)
+        .map((l: any) => {
+          const start = new Date(l.date_out);
+          const end = new Date(l.date_returned);
+          return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        })
+        .reduce((sum, days, _, arr) => sum + days / arr.length, 0) || 0;
 
-  res.json({
-    title: {
-      id: title.id,
-      title: title.title,
-      arranger: title.arranger,
-    },
-    statistics: {
-      totalLoans,
-      activeLoans,
-      avgLoanDurationDays: Math.round(avgLoanDurationDays),
-    },
-    loans: loans.map((l: any) => ({
-      id: l.id,
-      borrowerName: l.borrower_name,
-      borrowerEmail: l.borrower_email,
-      borrowerOrganization: l.borrower_organization,
-      notes: l.notes,
-      dateOut: l.date_out,
-      expectedReturn: l.expected_return,
-      dateReturned: l.date_returned,
-      status: l.status,
-      createdAt: l.created_at,
-      createdByName: l.created_by_name,
-    })),
-  });
-}));
+    res.json({
+      title: {
+        id: title.id,
+        title: title.title,
+        arranger: title.arranger,
+      },
+      statistics: {
+        totalLoans,
+        activeLoans,
+        avgLoanDurationDays: Math.round(avgLoanDurationDays),
+      },
+      loans: loans.map((l: any) => ({
+        id: l.id,
+        borrowerName: l.borrower_name,
+        borrowerEmail: l.borrower_email,
+        borrowerOrganization: l.borrower_organization,
+        notes: l.notes,
+        dateOut: l.date_out,
+        expectedReturn: l.expected_return,
+        dateReturned: l.date_returned,
+        status: l.status,
+        createdAt: l.created_at,
+        createdByName: l.created_by_name,
+      })),
+    });
+  }),
+);
 
 export default router;

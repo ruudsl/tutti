@@ -6,52 +6,52 @@ Harmonie ondersteunt diverse sneltoetsen om sneller te navigeren en te werken. D
 
 Navigatiesneltoetsen werken met **G** (Go) gevolgd door een tweede toets. Druk eerst op **G**, wacht even, en druk dan de tweede toets.
 
-| Sneltoets | Actie |
-|-----------|-------|
-| **G H** | Ga naar Dashboard (Home) |
-| **G M** | Ga naar Mijn Muziek |
-| **G L** | Ga naar Lijsten |
-| **G T** | Ga naar Titels |
-| **G R** | Ga naar Repetities |
-| **G C** | Ga naar Concerten |
-| **G S** | Ga naar Instellingen |
-| **G P** | Ga naar Profiel |
-| **G U** | Ga naar Uploaden |
+| Sneltoets | Actie                    |
+| --------- | ------------------------ |
+| **G H**   | Ga naar Dashboard (Home) |
+| **G M**   | Ga naar Mijn Muziek      |
+| **G L**   | Ga naar Lijsten          |
+| **G T**   | Ga naar Titels           |
+| **G R**   | Ga naar Repetities       |
+| **G C**   | Ga naar Concerten        |
+| **G S**   | Ga naar Instellingen     |
+| **G P**   | Ga naar Profiel          |
+| **G U**   | Ga naar Uploaden         |
 
 ### Alternatieve navigatie (Alt-toetsen)
 
 Dezelfde navigatie is ook beschikbaar met de Alt-toets (of Option op Mac):
 
-| Windows | Mac | Actie |
-|---------|-----|-------|
-| **Alt+H** | **Option+H** | Ga naar Dashboard |
-| **Alt+M** | **Option+M** | Ga naar Mijn Muziek |
-| **Alt+L** | **Option+L** | Ga naar Lijsten |
-| **Alt+T** | **Option+T** | Ga naar Titels |
-| **Alt+R** | **Option+R** | Ga naar Repetities |
+| Windows   | Mac          | Actie                |
+| --------- | ------------ | -------------------- |
+| **Alt+H** | **Option+H** | Ga naar Dashboard    |
+| **Alt+M** | **Option+M** | Ga naar Mijn Muziek  |
+| **Alt+L** | **Option+L** | Ga naar Lijsten      |
+| **Alt+T** | **Option+T** | Ga naar Titels       |
+| **Alt+R** | **Option+R** | Ga naar Repetities   |
 | **Alt+S** | **Option+S** | Ga naar Instellingen |
-| **Alt+P** | **Option+P** | Ga naar Profiel |
-| **Alt+U** | **Option+U** | Ga naar Uploaden |
+| **Alt+P** | **Option+P** | Ga naar Profiel      |
+| **Alt+U** | **Option+U** | Ga naar Uploaden     |
 
 ---
 
 ## Acties
 
-| Windows | Mac | Actie |
-|---------|-----|-------|
-| **Ctrl+K** | **Cmd+K** | Open snel zoeken |
-| **Ctrl+N** | **Cmd+N** | Nieuw item aanmaken |
+| Windows    | Mac       | Actie                    |
+| ---------- | --------- | ------------------------ |
+| **Ctrl+K** | **Cmd+K** | Open snel zoeken         |
+| **Ctrl+N** | **Cmd+N** | Nieuw item aanmaken      |
 | **Ctrl+S** | **Cmd+S** | Huidig formulier opslaan |
-| **Ctrl+/** | **Cmd+/** | Focus op zoekveld |
+| **Ctrl+/** | **Cmd+/** | Focus op zoekveld        |
 
 ---
 
 ## Algemeen
 
-| Sneltoets | Actie |
-|-----------|-------|
-| **?** | Toon sneltoetsen overzicht |
-| **Escape** | Sluit dialoog of modal |
+| Sneltoets  | Actie                      |
+| ---------- | -------------------------- |
+| **?**      | Toon sneltoetsen overzicht |
+| **Escape** | Sluit dialoog of modal     |
 
 ---
 
@@ -60,6 +60,7 @@ Dezelfde navigatie is ook beschikbaar met de Alt-toets (of Option op Mac):
 ### Sequentie-sneltoetsen (G + toets)
 
 De **G**-sneltoetsen werken als een sequentie:
+
 1. Druk op **G** en laat los
 2. Je ziet "Wacht op tweede toets..." verschijnen
 3. Druk binnen 1 seconde de tweede toets (bijv. **H** voor Home)
@@ -85,24 +86,24 @@ Sommige pagina's hebben extra sneltoetsen die context-specifiek zijn. Deze worde
 
 ### PDF Viewer
 
-| Sneltoets | Actie |
-|-----------|-------|
-| **+** of **=** | Inzoomen |
-| **-** | Uitzoomen |
-| **0** | Zoom resetten |
-| **Pijl links** | Vorige pagina |
+| Sneltoets       | Actie           |
+| --------------- | --------------- |
+| **+** of **=**  | Inzoomen        |
+| **-**           | Uitzoomen       |
+| **0**           | Zoom resetten   |
+| **Pijl links**  | Vorige pagina   |
 | **Pijl rechts** | Volgende pagina |
-| **Home** | Eerste pagina |
-| **End** | Laatste pagina |
+| **Home**        | Eerste pagina   |
+| **End**         | Laatste pagina  |
 
 ### Lijsten en tabellen
 
-| Sneltoets | Actie |
-|-----------|-------|
-| **Pijl omhoog** | Vorig item selecteren |
-| **Pijl omlaag** | Volgend item selecteren |
-| **Enter** | Item openen |
-| **Spatie** | Item selecteren/deselecteren |
+| Sneltoets       | Actie                        |
+| --------------- | ---------------------------- |
+| **Pijl omhoog** | Vorig item selecteren        |
+| **Pijl omlaag** | Volgend item selecteren      |
+| **Enter**       | Item openen                  |
+| **Spatie**      | Item selecteren/deselecteren |
 
 ---
 

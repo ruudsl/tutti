@@ -28,10 +28,10 @@ The collection includes built-in variables that you can configure:
 
 ### Collection Variables
 
-| Variable | Default Value | Description |
-|----------|---------------|-------------|
-| `baseUrl` | `http://localhost:3001/api` | Base URL for the API |
-| `token` | (empty) | JWT authentication token (auto-populated on login) |
+| Variable  | Default Value               | Description                                        |
+| --------- | --------------------------- | -------------------------------------------------- |
+| `baseUrl` | `http://localhost:3001/api` | Base URL for the API                               |
+| `token`   | (empty)                     | JWT authentication token (auto-populated on login) |
 
 ### Updating Variables
 
@@ -67,6 +67,7 @@ The Login request includes a test script that automatically saves the JWT token 
 ### MFA (Multi-Factor Authentication)
 
 If MFA is enabled for your account:
+
 1. First login attempt will return `{ "requiresMfa": true }`
 2. Include the MFA code in your second login attempt:
    ```json
@@ -82,23 +83,27 @@ If MFA is enabled for your account:
 The collection is organized into the following folders:
 
 ### Auth
+
 - Login / Logout
 - Password management (change, forgot, reset)
 - MFA setup and management
 
 ### Users
+
 - CRUD operations for user management (admin only)
 - User directory (member lookup)
 - Profile photo management
 - GDPR data export
 
 ### Music Pieces
+
 - List and search music pieces
 - Upload PDFs (single and bulk via ZIP)
 - Download music piece files
 - Manage title metadata (YouTube links, grades, genres)
 
 ### Rehearsals
+
 - Schedule management
 - Default days (recurring schedule)
 - Generate rehearsals from defaults
@@ -106,6 +111,7 @@ The collection is organized into the following folders:
 - Attendance tracking and summaries
 
 ### Concerts
+
 - Concert CRUD operations
 - Program management
 - Concert types configuration
@@ -114,10 +120,12 @@ The collection is organized into the following folders:
 - Buma/Stemra export
 
 ### Tickets
+
 - View available tickets (public)
 - Create ticket orders (public)
 
 ### Settings
+
 - Association settings (name, display name)
 - Theme customization
 - Logo management
@@ -127,30 +135,31 @@ The collection is organized into the following folders:
 
 Different endpoints require different roles:
 
-| Role | Access Level |
-|------|--------------|
-| `admin` | Full access to all endpoints |
-| `music_committee` | Can manage music pieces, concerts, rehearsals |
-| `conductor` | Can manage rehearsals |
-| `member` | Read access to their own data, limited write access |
+| Role              | Access Level                                        |
+| ----------------- | --------------------------------------------------- |
+| `admin`           | Full access to all endpoints                        |
+| `music_committee` | Can manage music pieces, concerts, rehearsals       |
+| `conductor`       | Can manage rehearsals                               |
+| `member`          | Read access to their own data, limited write access |
 
 ## Common Response Codes
 
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad Request - Invalid input |
-| 401 | Unauthorized - Not authenticated |
-| 403 | Forbidden - Insufficient permissions |
-| 404 | Not Found |
-| 409 | Conflict - Resource already exists |
-| 429 | Too Many Requests - Rate limited |
-| 500 | Internal Server Error |
+| Code | Description                          |
+| ---- | ------------------------------------ |
+| 200  | Success                              |
+| 201  | Created                              |
+| 400  | Bad Request - Invalid input          |
+| 401  | Unauthorized - Not authenticated     |
+| 403  | Forbidden - Insufficient permissions |
+| 404  | Not Found                            |
+| 409  | Conflict - Resource already exists   |
+| 429  | Too Many Requests - Rate limited     |
+| 500  | Internal Server Error                |
 
 ## Rate Limiting
 
 The API implements rate limiting:
+
 - Login: 5 attempts per 15 minutes per IP
 - Password reset: 3 attempts per hour per email
 - General API: Standard rate limits apply
@@ -160,6 +169,7 @@ The API implements rate limiting:
 ### Testing File Uploads
 
 For endpoints that accept file uploads (music pieces, logos, photos):
+
 1. In Postman, select the **Body** tab
 2. Choose **form-data**
 3. For file fields, change the type from "Text" to "File"
@@ -168,6 +178,7 @@ For endpoints that accept file uploads (music pieces, logos, photos):
 ### Viewing Response Data
 
 Many endpoints return paginated data. The response includes:
+
 ```json
 {
   "data": [...],
@@ -181,6 +192,7 @@ Many endpoints return paginated data. The response includes:
 ### Using Path Variables
 
 For endpoints with path parameters (e.g., `/users/:id`):
+
 1. The parameter is shown as `:id` in the URL
 2. Go to the **Params** tab
 3. Update the value in the **Path Variables** section

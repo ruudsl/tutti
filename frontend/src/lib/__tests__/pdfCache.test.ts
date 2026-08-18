@@ -96,7 +96,7 @@ describe('pdfCache', () => {
         expect.stringContaining('/music-pieces/piece-1/download'),
         expect.objectContaining({
           headers: { Authorization: 'Bearer test-token' },
-        })
+        }),
       );
       expect(mockCache._store.size).toBe(1);
     });
@@ -167,11 +167,7 @@ describe('pdfCache', () => {
     it('should cache all pieces in the list', async () => {
       fetchMock.mockResolvedValue(new Response('content', { status: 200 }));
 
-      const count = await cacheListPdfs([
-        { id: 'piece-1' },
-        { id: 'piece-2' },
-        { id: 'piece-3' },
-      ]);
+      const count = await cacheListPdfs([{ id: 'piece-1' }, { id: 'piece-2' }, { id: 'piece-3' }]);
 
       expect(count).toBe(3);
       expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -181,10 +177,7 @@ describe('pdfCache', () => {
       fetchMock.mockResolvedValue(new Response('content', { status: 200 }));
       const onProgress = vi.fn();
 
-      await cacheListPdfs(
-        [{ id: 'piece-1' }, { id: 'piece-2' }],
-        onProgress
-      );
+      await cacheListPdfs([{ id: 'piece-1' }, { id: 'piece-2' }], onProgress);
 
       expect(onProgress).toHaveBeenCalledTimes(2);
       expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
@@ -197,11 +190,7 @@ describe('pdfCache', () => {
         .mockResolvedValueOnce(new Response('not found', { status: 404 }))
         .mockResolvedValueOnce(new Response('content', { status: 200 }));
 
-      const count = await cacheListPdfs([
-        { id: 'piece-1' },
-        { id: 'piece-2' },
-        { id: 'piece-3' },
-      ]);
+      const count = await cacheListPdfs([{ id: 'piece-1' }, { id: 'piece-2' }, { id: 'piece-3' }]);
 
       expect(count).toBe(2);
     });

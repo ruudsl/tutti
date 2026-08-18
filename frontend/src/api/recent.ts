@@ -13,11 +13,7 @@ export const getRecentViews = async (type?: string, limit?: number): Promise<Rec
   return data;
 };
 
-export const recordView = async (
-  itemType: string,
-  itemId: string,
-  itemTitle: string
-): Promise<{ message: string }> => {
+export const recordView = async (itemType: string, itemId: string, itemTitle: string): Promise<{ message: string }> => {
   const { data } = await api.post('/recent', { itemType, itemId, itemTitle });
   return data;
 };

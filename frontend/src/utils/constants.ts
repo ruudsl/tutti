@@ -24,7 +24,7 @@ export const ROLES = {
 } as const;
 
 /** Type representing valid role values */
-export type Role = typeof ROLES[keyof typeof ROLES];
+export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 /**
  * Application route paths.

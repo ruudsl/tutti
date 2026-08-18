@@ -24,14 +24,7 @@ interface SortableItemProps {
 }
 
 export function SortableItem({ id, children, disabled }: SortableItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, disabled });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -70,7 +63,7 @@ export function SortableList<T extends { id: string }>({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -85,16 +78,8 @@ export function SortableList<T extends { id: string }>({
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={items.map(keyExtractor)}
-        strategy={verticalListSortingStrategy}
-        disabled={disabled}
-      >
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={items.map(keyExtractor)} strategy={verticalListSortingStrategy} disabled={disabled}>
         {items.map((item, index) => (
           <SortableItem key={keyExtractor(item)} id={keyExtractor(item)} disabled={disabled}>
             {renderItem(item, index)}

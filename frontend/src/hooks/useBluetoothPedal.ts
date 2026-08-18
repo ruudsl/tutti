@@ -86,7 +86,7 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
   // Check Web Bluetooth support
   useEffect(() => {
     const isSupported = 'bluetooth' in navigator;
-    setState(prev => ({ ...prev, isSupported }));
+    setState((prev) => ({ ...prev, isSupported }));
   }, []);
 
   // Handle keyboard events (many Bluetooth pedals send keyboard events)
@@ -111,11 +111,11 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
   // Connect to Bluetooth device
   const connect = useCallback(async () => {
     if (!navigator.bluetooth) {
-      setState(prev => ({ ...prev, error: 'Bluetooth not supported' }));
+      setState((prev) => ({ ...prev, error: 'Bluetooth not supported' }));
       return;
     }
 
-    setState(prev => ({ ...prev, isConnecting: true, error: null }));
+    setState((prev) => ({ ...prev, isConnecting: true, error: null }));
 
     try {
       // Request device with optional services
@@ -128,7 +128,7 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
 
       // Listen for disconnection
       device.addEventListener('gattserverdisconnected', () => {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isConnected: false,
           deviceName: null,
@@ -146,7 +146,7 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
           const batteryLevelChar = await batteryService.getCharacteristic('battery_level');
           const value = await batteryLevelChar.readValue();
           const batteryLevel = value.getUint8(0);
-          setState(prev => ({ ...prev, batteryLevel }));
+          setState((prev) => ({ ...prev, batteryLevel }));
 
           // Subscribe to battery level changes
           await batteryLevelChar.startNotifications();
@@ -154,7 +154,7 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
             const target = event.target as BluetoothGATTCharacteristicType;
             const level = target.value?.getUint8(0);
             if (level !== undefined) {
-              setState(prev => ({ ...prev, batteryLevel: level }));
+              setState((prev) => ({ ...prev, batteryLevel: level }));
             }
           });
         } catch {
@@ -180,14 +180,14 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
         }
       }
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isConnected: true,
         isConnecting: false,
         deviceName: device.name || 'Unknown Device',
       }));
     } catch (error: any) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isConnecting: false,
         error: error.message || 'Failed to connect',
@@ -202,9 +202,11 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
 
     // Many page turners use simple single-byte reports
     // 0x01 or similar for "next", 0x02 for "previous"
-    if (byte0 === 0x01 || byte0 === 0x4F) { // Right arrow or custom "next"
+    if (byte0 === 0x01 || byte0 === 0x4f) {
+      // Right arrow or custom "next"
       optionsRef.current.onPageNext?.();
-    } else if (byte0 === 0x02 || byte0 === 0x50) { // Left arrow or custom "prev"
+    } else if (byte0 === 0x02 || byte0 === 0x50) {
+      // Left arrow or custom "prev"
       optionsRef.current.onPagePrevious?.();
     } else if (byte0 !== 0) {
       // Unknown action, pass to custom handler
@@ -219,7 +221,7 @@ export function useBluetoothPedal(options: BluetoothPedalOptions = {}) {
     }
     deviceRef.current = null;
     characteristicRef.current = null;
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isConnected: false,
       deviceName: null,

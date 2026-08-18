@@ -110,12 +110,7 @@ export const RecentItems = memo(function RecentItems({ limit = 10 }: RecentItems
       </button>
 
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="recent-items-dropdown"
-          role="menu"
-          aria-label={t('recentItems.title')}
-        >
+        <div ref={dropdownRef} className="recent-items-dropdown" role="menu" aria-label={t('recentItems.title')}>
           <div className="recent-items-header">
             <h3 className="recent-items-title">{t('recentItems.title')}</h3>
           </div>
@@ -132,9 +127,7 @@ export const RecentItems = memo(function RecentItems({ limit = 10 }: RecentItems
               >
                 {t(categoryTranslationKeys[category])}
                 {category !== 'all' && groupedItems[category].length > 0 && (
-                  <span className="recent-items-count">
-                    {groupedItems[category].length}
-                  </span>
+                  <span className="recent-items-count">{groupedItems[category].length}</span>
                 )}
               </button>
             ))}
@@ -147,9 +140,7 @@ export const RecentItems = memo(function RecentItems({ limit = 10 }: RecentItems
                 {t('common.loading')}
               </div>
             ) : error ? (
-              <div className="recent-items-error">
-                {t('recentItems.error')}
-              </div>
+              <div className="recent-items-error">{t('recentItems.error')}</div>
             ) : !hasItems ? (
               <div className="recent-items-empty">
                 <svg
@@ -171,25 +162,14 @@ export const RecentItems = memo(function RecentItems({ limit = 10 }: RecentItems
               <ul className="recent-items-list">
                 {items.map((item) => (
                   <li key={item.id} className="recent-item">
-                    <Link
-                      to={item.path}
-                      className="recent-item-link"
-                      onClick={() => setIsOpen(false)}
-                      role="menuitem"
-                    >
-                      <span className="recent-item-icon-wrapper">
-                        {renderIcon(item)}
-                      </span>
+                    <Link to={item.path} className="recent-item-link" onClick={() => setIsOpen(false)} role="menuitem">
+                      <span className="recent-item-icon-wrapper">{renderIcon(item)}</span>
                       <span className="recent-item-content">
                         <span className="recent-item-title">{item.title}</span>
                         <span className="recent-item-meta">
-                          <span className="recent-item-type">
-                            {t(itemTypeTranslationKeys[item.type])}
-                          </span>
+                          <span className="recent-item-type">{t(itemTypeTranslationKeys[item.type])}</span>
                           <span className="recent-item-separator">-</span>
-                          <span className="recent-item-time">
-                            {formatRelativeTime(item.viewedAt, t)}
-                          </span>
+                          <span className="recent-item-time">{formatRelativeTime(item.viewedAt, t)}</span>
                         </span>
                       </span>
                     </Link>

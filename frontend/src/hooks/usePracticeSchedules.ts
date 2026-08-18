@@ -69,11 +69,7 @@ interface CreateScheduleData {
   }>;
 }
 
-export function usePracticeSchedules(filters?: {
-  orchestraId?: string;
-  musicTitleId?: string;
-  upcoming?: boolean;
-}) {
+export function usePracticeSchedules(filters?: { orchestraId?: string; musicTitleId?: string; upcoming?: boolean }) {
   return useQuery({
     queryKey: ['practice-schedules', filters],
     queryFn: async () => {
@@ -145,7 +141,10 @@ export function useAddMilestone() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ scheduleId, ...data }: {
+    mutationFn: async ({
+      scheduleId,
+      ...data
+    }: {
       scheduleId: string;
       title: string;
       description?: string;
@@ -165,7 +164,10 @@ export function useUpdateMilestone() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ milestoneId, ...data }: {
+    mutationFn: async ({
+      milestoneId,
+      ...data
+    }: {
       milestoneId: string;
       title?: string;
       description?: string;
@@ -200,16 +202,22 @@ export function useUpdateSectionProgress() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ milestoneId, instrumentId, status, notes }: {
+    mutationFn: async ({
+      milestoneId,
+      instrumentId,
+      status,
+      notes,
+    }: {
       milestoneId: string;
       instrumentId: string;
       status: 'pending' | 'in_progress' | 'completed';
       notes?: string;
     }) => {
-      const response = await api.post(
-        `/practice-schedules/milestones/${milestoneId}/section-progress`,
-        { instrumentId, status, notes }
-      );
+      const response = await api.post(`/practice-schedules/milestones/${milestoneId}/section-progress`, {
+        instrumentId,
+        status,
+        notes,
+      });
       return response.data;
     },
     onSuccess: () => {

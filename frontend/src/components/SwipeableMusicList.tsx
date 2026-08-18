@@ -54,24 +54,27 @@ export function SwipeableMusicList<T extends MusicItem>({
 
   const currentIndex = controlledIndex ?? internalIndex;
 
-  const goToIndex = useCallback((newIndex: number) => {
-    let targetIndex = newIndex;
+  const goToIndex = useCallback(
+    (newIndex: number) => {
+      let targetIndex = newIndex;
 
-    if (loop) {
-      if (newIndex < 0) {
-        targetIndex = items.length - 1;
-      } else if (newIndex >= items.length) {
-        targetIndex = 0;
+      if (loop) {
+        if (newIndex < 0) {
+          targetIndex = items.length - 1;
+        } else if (newIndex >= items.length) {
+          targetIndex = 0;
+        }
+      } else {
+        targetIndex = Math.max(0, Math.min(newIndex, items.length - 1));
       }
-    } else {
-      targetIndex = Math.max(0, Math.min(newIndex, items.length - 1));
-    }
 
-    if (targetIndex !== currentIndex) {
-      setInternalIndex(targetIndex);
-      onItemChange?.(targetIndex, items[targetIndex]);
-    }
-  }, [currentIndex, items, loop, onItemChange]);
+      if (targetIndex !== currentIndex) {
+        setInternalIndex(targetIndex);
+        onItemChange?.(targetIndex, items[targetIndex]);
+      }
+    },
+    [currentIndex, items, loop, onItemChange],
+  );
 
   const goToPrevious = useCallback(() => {
     goToIndex(currentIndex - 1);
@@ -88,20 +91,23 @@ export function SwipeableMusicList<T extends MusicItem>({
     setTransitionEnabled(false);
   }, []);
 
-  const handleSwipeMove = useCallback((deltaX: number, _deltaY: number, _velocity: number) => {
-    // Prevent over-swiping when at boundaries
-    if (!loop) {
-      if (currentIndex === 0 && deltaX > 0) {
-        setSwipeOffset(deltaX * 0.3); // Resistance at start
-        return;
+  const handleSwipeMove = useCallback(
+    (deltaX: number, _deltaY: number, _velocity: number) => {
+      // Prevent over-swiping when at boundaries
+      if (!loop) {
+        if (currentIndex === 0 && deltaX > 0) {
+          setSwipeOffset(deltaX * 0.3); // Resistance at start
+          return;
+        }
+        if (currentIndex === items.length - 1 && deltaX < 0) {
+          setSwipeOffset(deltaX * 0.3); // Resistance at end
+          return;
+        }
       }
-      if (currentIndex === items.length - 1 && deltaX < 0) {
-        setSwipeOffset(deltaX * 0.3); // Resistance at end
-        return;
-      }
-    }
-    setSwipeOffset(deltaX);
-  }, [currentIndex, items.length, loop]);
+      setSwipeOffset(deltaX);
+    },
+    [currentIndex, items.length, loop],
+  );
 
   const handleSwipeEnd = useCallback(() => {
     setTransitionEnabled(true);
@@ -132,7 +138,7 @@ export function SwipeableMusicList<T extends MusicItem>({
       threshold,
       disabled: !enableSwipe || items.length <= 1,
       preventScrollOnHorizontalSwipe: true,
-    }
+    },
   );
 
   // Keyboard navigation
@@ -155,9 +161,7 @@ export function SwipeableMusicList<T extends MusicItem>({
   if (items.length === 0) {
     return (
       <div className={`swipeable-music-list swipeable-music-list-empty ${className}`} style={style}>
-        <div style={styles.emptyState}>
-          No items to display
-        </div>
+        <div style={styles.emptyState}>No items to display</div>
       </div>
     );
   }
@@ -240,9 +244,7 @@ export function SwipeableMusicList<T extends MusicItem>({
               onClick={() => goToIndex(index)}
               style={{
                 ...styles.dot,
-                backgroundColor: index === currentIndex
-                  ? 'var(--primary, #3b82f6)'
-                  : 'var(--border-color, #d1d5db)',
+                backgroundColor: index === currentIndex ? 'var(--primary, #3b82f6)' : 'var(--border-color, #d1d5db)',
               }}
               role="tab"
               aria-selected={index === currentIndex}
@@ -279,34 +281,25 @@ export const MusicCard = memo(function MusicCard({
   children,
 }: MusicCardProps) {
   return (
-    <div style={{
-      ...styles.musicCard,
-      transform: isActive ? 'scale(1)' : 'scale(0.95)',
-      opacity: isActive ? 1 : 0.8,
-    }}>
+    <div
+      style={{
+        ...styles.musicCard,
+        transform: isActive ? 'scale(1)' : 'scale(0.95)',
+        opacity: isActive ? 1 : 0.8,
+      }}
+    >
       {item.imageUrl && (
         <div style={styles.musicCardImage}>
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+          <img src={item.imageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
       )}
       <div style={styles.musicCardContent}>
         <h3 style={styles.musicCardTitle}>{item.title}</h3>
-        {item.subtitle && (
-          <p style={styles.musicCardSubtitle}>{item.subtitle}</p>
-        )}
-        {item.metadata && (
-          <p style={styles.musicCardMeta}>{item.metadata}</p>
-        )}
+        {item.subtitle && <p style={styles.musicCardSubtitle}>{item.subtitle}</p>}
+        {item.metadata && <p style={styles.musicCardMeta}>{item.metadata}</p>}
         {children}
         {onAction && (
-          <button
-            onClick={onAction}
-            style={styles.musicCardButton}
-          >
+          <button onClick={onAction} style={styles.musicCardButton}>
             {actionLabel}
           </button>
         )}

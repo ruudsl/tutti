@@ -33,11 +33,8 @@ export default function AccessibilityInfo({
 }: AccessibilityInfoProps) {
   const { t } = useTranslation();
 
-  const hasAnyInfo = wheelchairSpaces > 0 ||
-    companionSpaces > 0 ||
-    hearingLoopAvailable ||
-    accessibleParkingInfo ||
-    additionalInfo;
+  const hasAnyInfo =
+    wheelchairSpaces > 0 || companionSpaces > 0 || hearingLoopAvailable || accessibleParkingInfo || additionalInfo;
 
   if (!hasAnyInfo && variant === 'compact') {
     return null;
@@ -45,11 +42,7 @@ export default function AccessibilityInfo({
 
   if (variant === 'compact') {
     return (
-      <div
-        className="accessibility-info-compact"
-        role="group"
-        aria-label={t('accessibilityInfo.title')}
-      >
+      <div className="accessibility-info-compact" role="group" aria-label={t('accessibilityInfo.title')}>
         {wheelchairSpaces > 0 && (
           <span
             className="accessibility-badge"
@@ -81,9 +74,7 @@ export default function AccessibilityInfo({
             aria-label={t('accessibilityInfo.hearingLoopAvailable')}
           >
             <HearingLoopIcon aria-hidden="true" />
-            <span className="visually-hidden">
-              {t('accessibilityInfo.hearingLoopAvailable')}
-            </span>
+            <span className="visually-hidden">{t('accessibilityInfo.hearingLoopAvailable')}</span>
           </span>
         )}
         {accessibleParkingInfo && (
@@ -93,9 +84,7 @@ export default function AccessibilityInfo({
             aria-label={t('accessibilityInfo.accessibleParking')}
           >
             <ParkingIcon aria-hidden="true" />
-            <span className="visually-hidden">
-              {t('accessibilityInfo.accessibleParking')}
-            </span>
+            <span className="visually-hidden">{t('accessibilityInfo.accessibleParking')}</span>
           </span>
         )}
       </div>
@@ -103,10 +92,7 @@ export default function AccessibilityInfo({
   }
 
   return (
-    <section
-      className="accessibility-info card"
-      aria-labelledby="accessibility-heading"
-    >
+    <section className="accessibility-info card" aria-labelledby="accessibility-heading">
       <div className="card-body">
         <h3 id="accessibility-heading" className="accessibility-info-title">
           <AccessibilityIcon aria-hidden="true" />
@@ -167,12 +153,8 @@ export default function AccessibilityInfo({
 
         {(contactEmail || contactPhone) && (
           <div className="accessibility-contact">
-            <h4 className="accessibility-contact-title">
-              {t('accessibilityInfo.contactTitle')}
-            </h4>
-            <p className="accessibility-contact-description">
-              {t('accessibilityInfo.contactDescription')}
-            </p>
+            <h4 className="accessibility-contact-title">{t('accessibilityInfo.contactTitle')}</h4>
+            <p className="accessibility-contact-description">{t('accessibilityInfo.contactDescription')}</p>
             <div className="accessibility-contact-methods">
               {contactEmail && (
                 <a
@@ -198,11 +180,7 @@ export default function AccessibilityInfo({
           </div>
         )}
 
-        {!hasAnyInfo && (
-          <p className="accessibility-info-none">
-            {t('accessibilityInfo.noInfoAvailable')}
-          </p>
-        )}
+        {!hasAnyInfo && <p className="accessibility-info-none">{t('accessibilityInfo.noInfoAvailable')}</p>}
       </div>
     </section>
   );

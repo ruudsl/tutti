@@ -161,7 +161,9 @@ export function parseMusicXML(xmlContent: string): MusicXMLParseResult {
       // Parse rights
       if (ident.rights) {
         const rights = Array.isArray(ident.rights) ? ident.rights : [ident.rights];
-        const rightsTexts = rights.map((r: string | { '#text'?: string }) => typeof r === 'string' ? r : r['#text']).filter(Boolean);
+        const rightsTexts = rights
+          .map((r: string | { '#text'?: string }) => (typeof r === 'string' ? r : r['#text']))
+          .filter(Boolean);
         if (rightsTexts.length > 0) {
           result.rights = rightsTexts.join(' | ');
         }
@@ -204,15 +206,15 @@ export function parseMusicXML(xmlContent: string): MusicXMLParseResult {
           };
 
           if (part['part-name']) {
-            parsedPart.name = typeof part['part-name'] === 'string'
-              ? part['part-name']
-              : part['part-name']['#text'] || '';
+            parsedPart.name =
+              typeof part['part-name'] === 'string' ? part['part-name'] : part['part-name']['#text'] || '';
           }
 
           if (part['part-abbreviation']) {
-            parsedPart.abbreviation = typeof part['part-abbreviation'] === 'string'
-              ? part['part-abbreviation']
-              : part['part-abbreviation']['#text'];
+            parsedPart.abbreviation =
+              typeof part['part-abbreviation'] === 'string'
+                ? part['part-abbreviation']
+                : part['part-abbreviation']['#text'];
           }
 
           // Try to get instrument name from score-instrument
@@ -246,10 +248,12 @@ export function parseMusicXML(xmlContent: string): MusicXMLParseResult {
   } catch (error) {
     return {
       success: false,
-      errors: [{
-        code: 'PARSE_ERROR',
-        message: error instanceof Error ? error.message : 'Failed to parse MusicXML',
-      }],
+      errors: [
+        {
+          code: 'PARSE_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to parse MusicXML',
+        },
+      ],
       warnings: [],
     };
   }
@@ -273,7 +277,7 @@ export function extractTitle(parsed: ParsedMusicXML): string | null {
  * Extract composer from parsed MusicXML
  */
 export function extractComposer(parsed: ParsedMusicXML): string | null {
-  const composer = parsed.creators.find(c => c.type === 'composer');
+  const composer = parsed.creators.find((c) => c.type === 'composer');
   return composer?.name || null;
 }
 
@@ -281,7 +285,7 @@ export function extractComposer(parsed: ParsedMusicXML): string | null {
  * Extract arranger from parsed MusicXML
  */
 export function extractArranger(parsed: ParsedMusicXML): string | null {
-  const arranger = parsed.creators.find(c => c.type === 'arranger');
+  const arranger = parsed.creators.find((c) => c.type === 'arranger');
   return arranger?.name || null;
 }
 
@@ -289,7 +293,7 @@ export function extractArranger(parsed: ParsedMusicXML): string | null {
  * Extract lyricist from parsed MusicXML
  */
 export function extractLyricist(parsed: ParsedMusicXML): string | null {
-  const lyricist = parsed.creators.find(c => c.type === 'lyricist' || c.type === 'poet');
+  const lyricist = parsed.creators.find((c) => c.type === 'lyricist' || c.type === 'poet');
   return lyricist?.name || null;
 }
 
@@ -297,12 +301,14 @@ export function extractLyricist(parsed: ParsedMusicXML): string | null {
  * Convert parts list to JSON for storage
  */
 export function partsToJson(parts: MusicXMLPart[]): string {
-  return JSON.stringify(parts.map(p => ({
-    id: p.id,
-    name: p.name,
-    abbreviation: p.abbreviation,
-    instrument: p.instrumentName,
-  })));
+  return JSON.stringify(
+    parts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      abbreviation: p.abbreviation,
+      instrument: p.instrumentName,
+    })),
+  );
 }
 
 /**
@@ -324,7 +330,10 @@ export function validateMusicXML(xmlContent: string): MusicXMLValidationError[] 
 
   // Check for MusicXML root element
   if (!xmlContent.includes('score-partwise') && !xmlContent.includes('score-timewise')) {
-    errors.push({ code: 'NOT_MUSICXML', message: 'Not a valid MusicXML file (missing score-partwise or score-timewise)' });
+    errors.push({
+      code: 'NOT_MUSICXML',
+      message: 'Not a valid MusicXML file (missing score-partwise or score-timewise)',
+    });
   }
 
   // Check for basic well-formedness (matching tags)
@@ -344,5 +353,5 @@ export function validateMusicXML(xmlContent: string): MusicXMLValidationError[] 
  */
 export function isCompressedMusicXML(buffer: Buffer): boolean {
   // ZIP files start with PK (0x50 0x4B)
-  return buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4B;
+  return buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b;
 }

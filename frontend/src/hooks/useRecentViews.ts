@@ -10,7 +10,11 @@ export interface RecentView {
 }
 
 export function useRecentViews(type?: string, limit?: number) {
-  const { data: views = [], isLoading, error } = useQuery({
+  const {
+    data: views = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['recentViews', type, limit],
     queryFn: () => getRecentViews(type, limit),
   });

@@ -18,12 +18,12 @@ This guide explains how to deploy Tutti on your own server using Docker.
 
 ### Minimum System Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU | 1 core | 2 cores |
-| RAM | 1 GB | 2 GB |
-| Disk | 10 GB | 20 GB+ |
-| OS | Linux (64-bit) | Ubuntu 22.04 LTS |
+| Resource | Minimum        | Recommended      |
+| -------- | -------------- | ---------------- |
+| CPU      | 1 core         | 2 cores          |
+| RAM      | 1 GB           | 2 GB             |
+| Disk     | 10 GB          | 20 GB+           |
+| OS       | Linux (64-bit) | Ubuntu 22.04 LTS |
 
 ### Software Requirements
 
@@ -73,6 +73,7 @@ open http://localhost:5173
 ```
 
 Default credentials will be shown in the logs on first startup:
+
 ```bash
 docker compose logs backend | grep -i password
 ```
@@ -127,6 +128,7 @@ TRAEFIK_DASHBOARD_AUTH=admin:$$apr1$$...
 ```
 
 Generate the Traefik dashboard password:
+
 ```bash
 # Install htpasswd if needed
 sudo apt install -y apache2-utils
@@ -168,15 +170,15 @@ docker compose logs -f
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DOMAIN` | Yes* | - | Your domain name (production only) |
-| `ACME_EMAIL` | Yes* | - | Email for Let's Encrypt (production only) |
-| `JWT_SECRET` | Yes | - | Secret key for JWT tokens |
-| `JWT_EXPIRES_IN` | No | `7d` | JWT token expiration |
-| `ADMIN_INIT_PASSWORD` | No | (random) | Initial admin password |
-| `LOG_LEVEL` | No | `info` | Log level: debug, info, warn, error |
-| `TRAEFIK_DASHBOARD_AUTH` | Yes* | - | Traefik dashboard auth (production only) |
+| Variable                 | Required | Default  | Description                               |
+| ------------------------ | -------- | -------- | ----------------------------------------- |
+| `DOMAIN`                 | Yes*     | -        | Your domain name (production only)        |
+| `ACME_EMAIL`             | Yes*     | -        | Email for Let's Encrypt (production only) |
+| `JWT_SECRET`             | Yes      | -        | Secret key for JWT tokens                 |
+| `JWT_EXPIRES_IN`         | No       | `7d`     | JWT token expiration                      |
+| `ADMIN_INIT_PASSWORD`    | No       | (random) | Initial admin password                    |
+| `LOG_LEVEL`              | No       | `info`   | Log level: debug, info, warn, error       |
+| `TRAEFIK_DASHBOARD_AUTH` | Yes*     | -        | Traefik dashboard auth (production only)  |
 
 *Required for production deployment with `docker-compose.prod.yml`
 
@@ -184,13 +186,14 @@ docker compose logs -f
 
 Tutti stores data in Docker volumes:
 
-| Volume | Purpose |
-|--------|---------|
-| `tutti-data` | SQLite database |
-| `tutti-uploads` | Uploaded files (PDFs, images) |
+| Volume              | Purpose                       |
+| ------------------- | ----------------------------- |
+| `tutti-data`        | SQLite database               |
+| `tutti-uploads`     | Uploaded files (PDFs, images) |
 | `tutti-letsencrypt` | SSL certificates (production) |
 
 View volume locations:
+
 ```bash
 docker volume inspect tutti-data
 docker volume inspect tutti-uploads
@@ -235,6 +238,7 @@ crontab -e
 ```
 
 Backups are saved as `tutti-backup-YYYYMMDD-HHMMSS.tar.gz` and include:
+
 - SQLite database
 - All uploaded files
 - Backup metadata
@@ -391,12 +395,14 @@ Or set `ADMIN_INIT_PASSWORD` in `.env` and restart (only works if user doesn't e
 ## Security Recommendations
 
 1. **Keep Docker and the system updated**
+
    ```bash
    sudo apt update && sudo apt upgrade -y
    docker compose pull
    ```
 
 2. **Use a firewall**
+
    ```bash
    sudo ufw allow 22/tcp   # SSH
    sudo ufw allow 80/tcp   # HTTP (redirects to HTTPS)
@@ -407,6 +413,7 @@ Or set `ADMIN_INIT_PASSWORD` in `.env` and restart (only works if user doesn't e
 3. **Regular backups** - Set up automated daily backups
 
 4. **Monitor logs** - Check for suspicious activity
+
    ```bash
    docker compose logs -f --tail=100
    ```

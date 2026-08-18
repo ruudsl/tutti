@@ -11,11 +11,11 @@ import db from '../database/connection';
  * Run the migration
  */
 export function up(): void {
-    // ===========================================
-    // SCHOOL HOLIDAYS TABLE
-    // ===========================================
+  // ===========================================
+  // SCHOOL HOLIDAYS TABLE
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS school_holidays (
             id TEXT PRIMARY KEY,
             association_id TEXT,
@@ -34,11 +34,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // ASSOCIATION HOLIDAY SETTINGS TABLE
-    // ===========================================
+  // ===========================================
+  // ASSOCIATION HOLIDAY SETTINGS TABLE
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS association_holiday_settings (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL UNIQUE,
@@ -51,27 +51,24 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_association ON school_holidays(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_region ON school_holidays(region)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_year ON school_holidays(year)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_dates ON school_holidays(start_date, end_date)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_type ON school_holidays(holiday_type)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_association ON school_holidays(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_region ON school_holidays(region)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_year ON school_holidays(year)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_dates ON school_holidays(start_date, end_date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_school_holidays_type ON school_holidays(holiday_type)');
 }
 
 /**
  * Rollback the migration
  */
 export function down(): void {
-    const tables = [
-        'association_holiday_settings',
-        'school_holidays',
-    ];
+  const tables = ['association_holiday_settings', 'school_holidays'];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

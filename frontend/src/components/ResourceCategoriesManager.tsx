@@ -15,15 +15,40 @@ import {
 import { showSuccess, showError } from '../utils/toast';
 
 const AVAILABLE_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-  '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
-  '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
-  '#f43f5e', '#78716c', '#71717a', '#64748b',
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#eab308',
+  '#84cc16',
+  '#22c55e',
+  '#14b8a6',
+  '#06b6d4',
+  '#0ea5e9',
+  '#3b82f6',
+  '#6366f1',
+  '#8b5cf6',
+  '#a855f7',
+  '#d946ef',
+  '#ec4899',
+  '#f43f5e',
+  '#78716c',
+  '#71717a',
+  '#64748b',
 ];
 
 const AVAILABLE_ICONS: IconName[] = [
-  'building', 'truck', 'package', 'music', 'wrench', 'users',
-  'calendar', 'clock', 'mapPin', 'home', 'shield', 'settings',
+  'building',
+  'truck',
+  'package',
+  'music',
+  'wrench',
+  'users',
+  'calendar',
+  'clock',
+  'mapPin',
+  'home',
+  'shield',
+  'settings',
 ];
 
 interface ResourceCategoriesManagerProps {
@@ -75,13 +100,13 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
 
   const handleDragEnd = useCallback(() => {
     if (draggedItem && dragOverIndex !== null) {
-      const currentIndex = categories.findIndex(c => c.id === draggedItem.id);
+      const currentIndex = categories.findIndex((c) => c.id === draggedItem.id);
       if (currentIndex !== dragOverIndex && currentIndex !== -1) {
         // Create new order
         const newOrder = [...categories];
         newOrder.splice(currentIndex, 1);
         newOrder.splice(dragOverIndex, 0, draggedItem);
-        const categoryIds = newOrder.map(c => c.id);
+        const categoryIds = newOrder.map((c) => c.id);
         reorderMutation.mutate(categoryIds);
       }
     }
@@ -95,13 +120,8 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
     <Modal onClose={onClose} title={t('resources.categories.manage')} size="large">
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <p className="text-sm text-base-content/70">
-            {t('resources.categories.description')}
-          </p>
-          <button
-            className="btn btn-sm btn-primary gap-1"
-            onClick={() => setShowAddModal(true)}
-          >
+          <p className="text-sm text-base-content/70">{t('resources.categories.description')}</p>
+          <button className="btn btn-sm btn-primary gap-1" onClick={() => setShowAddModal(true)}>
             <Icon name="plus" size={14} aria-hidden={true} />
             {t('resources.categories.add')}
           </button>
@@ -147,18 +167,16 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
                     style={{ backgroundColor: category.color || '#6366f1' }}
                     aria-hidden={true}
                   />
-                  {category.icon && (
-                    <Icon name={category.icon as IconName} size={18} aria-hidden={true} />
-                  )}
+                  {category.icon && <Icon name={category.icon as IconName} size={18} aria-hidden={true} />}
                   <div>
                     <div className="font-medium">{category.name}</div>
-                    {category.description && (
-                      <div className="text-xs text-base-content/60">{category.description}</div>
-                    )}
+                    {category.description && <div className="text-xs text-base-content/60">{category.description}</div>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="badge badge-sm">{category.resourceCount} {t('resources.title').toLowerCase()}</span>
+                  <span className="badge badge-sm">
+                    {category.resourceCount} {t('resources.title').toLowerCase()}
+                  </span>
                   <button
                     className="btn btn-ghost btn-sm btn-square"
                     onClick={() => setEditingCategory(category)}
@@ -180,9 +198,7 @@ export function ResourceCategoriesManager({ onClose }: ResourceCategoriesManager
           </div>
         )}
 
-        <div className="text-xs text-base-content/50">
-          {t('resources.categories.dragHint')}
-        </div>
+        <div className="text-xs text-base-content/50">{t('resources.categories.dragHint')}</div>
       </div>
 
       {showAddModal && (
@@ -246,8 +262,7 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; color?: string; icon?: string }) =>
-      updateResourceCategory(category!.id, data),
+    mutationFn: (data: { name?: string; color?: string; icon?: string }) => updateResourceCategory(category!.id, data),
     onSuccess: () => {
       showSuccess(t('resources.categories.updated'));
       onSuccess();
@@ -277,10 +292,7 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
   const canSubmit = formData.name.trim().length > 0;
 
   return (
-    <Modal
-      onClose={onClose}
-      title={category ? t('resources.categories.edit') : t('resources.categories.add')}
-    >
+    <Modal onClose={onClose} title={category ? t('resources.categories.edit') : t('resources.categories.add')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
           <label className="label">
@@ -369,14 +381,8 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
           </label>
           <div className="p-3 bg-base-200 rounded-lg" aria-live="polite">
             <div className="flex items-center gap-3">
-              <div
-                className="w-4 h-4 rounded"
-                style={{ backgroundColor: formData.color }}
-                aria-hidden={true}
-              />
-              {formData.icon && (
-                <Icon name={formData.icon as IconName} size={18} aria-hidden={true} />
-              )}
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: formData.color }} aria-hidden={true} />
+              {formData.icon && <Icon name={formData.icon as IconName} size={18} aria-hidden={true} />}
               <span className="font-medium">{formData.name || t('resources.categories.untitled')}</span>
             </div>
           </div>
@@ -386,11 +392,7 @@ function CategoryFormModal({ category, onClose, onSuccess }: CategoryFormModalPr
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={!canSubmit || isPending}
-          >
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit || isPending}>
             {isPending ? <span className="loading loading-spinner loading-sm" /> : null}
             {category ? t('common.save') : t('common.create')}
           </button>

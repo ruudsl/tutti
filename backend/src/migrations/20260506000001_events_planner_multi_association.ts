@@ -10,11 +10,11 @@
 import db from '../database/connection';
 
 export function up(): void {
-    // ===========================================
-    // EVENT LOCATIONS (Venues)
-    // ===========================================
+  // ===========================================
+  // EVENT LOCATIONS (Venues)
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_locations (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -46,11 +46,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // EVENTS (extends concerts)
-    // ===========================================
+  // ===========================================
+  // EVENTS (extends concerts)
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS events (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -97,8 +97,8 @@ export function up(): void {
         )
     `);
 
-    // Event orchestras (which orchestras are performing)
-    db.exec(`
+  // Event orchestras (which orchestras are performing)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_orchestras (
             event_id TEXT NOT NULL,
             orchestra_id TEXT NOT NULL,
@@ -111,11 +111,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // EVENT SCHEDULES / TIMELINES
-    // ===========================================
+  // ===========================================
+  // EVENT SCHEDULES / TIMELINES
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_schedule_items (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -138,11 +138,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // TRANSPORT COORDINATION
-    // ===========================================
+  // ===========================================
+  // TRANSPORT COORDINATION
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_transport (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -169,7 +169,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_transport_passengers (
             id TEXT PRIMARY KEY,
             transport_id TEXT NOT NULL,
@@ -186,7 +186,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_meeting_points (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -203,11 +203,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // PACKING LISTS
-    // ===========================================
+  // ===========================================
+  // PACKING LISTS
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS packing_list_templates (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -222,7 +222,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS packing_list_template_items (
             id TEXT PRIMARY KEY,
             template_id TEXT NOT NULL,
@@ -238,7 +238,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_packing_lists (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -251,7 +251,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_packing_items (
             id TEXT PRIMARY KEY,
             packing_list_id TEXT NOT NULL,
@@ -274,11 +274,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // WEATHER TRACKING
-    // ===========================================
+  // ===========================================
+  // WEATHER TRACKING
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_weather (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -308,7 +308,7 @@ export function up(): void {
         )
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS weather_settings (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL UNIQUE,
@@ -329,11 +329,11 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // EVENT ATTENDANCE & AVAILABILITY
-    // ===========================================
+  // ===========================================
+  // EVENT ATTENDANCE & AVAILABILITY
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         CREATE TABLE IF NOT EXISTS event_attendance (
             id TEXT PRIMARY KEY,
             event_id TEXT NOT NULL,
@@ -355,88 +355,88 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // MULTI-ASSOCIATION SUPPORT
-    // ===========================================
+  // ===========================================
+  // MULTI-ASSOCIATION SUPPORT
+  // ===========================================
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN parent_id TEXT REFERENCES associations(id) ON DELETE SET NULL
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN subscription_tier TEXT DEFAULT 'free'
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN subscription_expires DATETIME
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN max_members INTEGER DEFAULT 100
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN max_orchestras INTEGER DEFAULT 5
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN max_storage_mb INTEGER DEFAULT 5000
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN is_active BOOLEAN DEFAULT 1
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN slug TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_associations_slug ON associations(slug) WHERE slug IS NOT NULL
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN website TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN phone TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN email TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN address TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN city TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN postal_code TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN country TEXT DEFAULT 'Nederland'
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN billing_email TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN kvk_number TEXT
     `);
 
-    db.exec(`
+  db.exec(`
         ALTER TABLE associations ADD COLUMN iban TEXT
     `);
 
-    // Super admins table
-    db.exec(`
+  // Super admins table
+  db.exec(`
         CREATE TABLE IF NOT EXISTS super_admins (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL UNIQUE,
@@ -446,15 +446,17 @@ export function up(): void {
         )
     `);
 
-    // Seed existing admins as super admins
-    const adminUsers = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all() as { id: string }[];
-    for (const user of adminUsers) {
-        db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`)
-            .run(`super-${user.id}`, user.id);
-    }
+  // Seed existing admins as super admins
+  const adminUsers = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all() as { id: string }[];
+  for (const user of adminUsers) {
+    db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`).run(
+      `super-${user.id}`,
+      user.id,
+    );
+  }
 
-    // User membership in multiple associations
-    db.exec(`
+  // User membership in multiple associations
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_associations (
             user_id TEXT NOT NULL,
             association_id TEXT NOT NULL,
@@ -470,8 +472,8 @@ export function up(): void {
         )
     `);
 
-    // Association invitations
-    db.exec(`
+  // Association invitations
+  db.exec(`
         CREATE TABLE IF NOT EXISTS association_invitations (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -487,8 +489,8 @@ export function up(): void {
         )
     `);
 
-    // Cross-association sharing
-    db.exec(`
+  // Cross-association sharing
+  db.exec(`
         CREATE TABLE IF NOT EXISTS association_partnerships (
             id TEXT PRIMARY KEY,
             association_a_id TEXT NOT NULL,
@@ -511,8 +513,8 @@ export function up(): void {
         )
     `);
 
-    // Shared events between associations
-    db.exec(`
+  // Shared events between associations
+  db.exec(`
         CREATE TABLE IF NOT EXISTS shared_events (
             event_id TEXT NOT NULL,
             association_id TEXT NOT NULL,
@@ -527,8 +529,8 @@ export function up(): void {
         )
     `);
 
-    // Association activity log
-    db.exec(`
+  // Association activity log
+  db.exec(`
         CREATE TABLE IF NOT EXISTS association_activity_log (
             id TEXT PRIMARY KEY,
             association_id TEXT NOT NULL,
@@ -544,60 +546,62 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES
-    // ===========================================
+  // ===========================================
+  // INDEXES
+  // ===========================================
 
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_events_association ON events(association_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_events_start_datetime ON events(start_datetime)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_locations_association ON event_locations(association_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_schedule_items_event ON event_schedule_items(event_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_transport_event ON event_transport(event_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_packing_items_list ON event_packing_items(packing_list_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_weather_event ON event_weather(event_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_attendance_event ON event_attendance(event_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_event_attendance_user ON event_attendance(user_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_user_associations_user ON user_associations(user_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_user_associations_association ON user_associations(association_id)`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_association_activity_log_association ON association_activity_log(association_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_events_association ON events(association_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_events_start_datetime ON events(start_datetime)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_locations_association ON event_locations(association_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_schedule_items_event ON event_schedule_items(event_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_transport_event ON event_transport(event_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_packing_items_list ON event_packing_items(packing_list_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_weather_event ON event_weather(event_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_attendance_event ON event_attendance(event_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_event_attendance_user ON event_attendance(user_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_user_associations_user ON user_associations(user_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_user_associations_association ON user_associations(association_id)`);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_association_activity_log_association ON association_activity_log(association_id)`,
+  );
 }
 
 export function down(): void {
-    // Drop indexes
-    db.exec(`DROP INDEX IF EXISTS idx_events_association`);
-    db.exec(`DROP INDEX IF EXISTS idx_events_start_datetime`);
-    db.exec(`DROP INDEX IF EXISTS idx_events_status`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_locations_association`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_schedule_items_event`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_transport_event`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_packing_items_list`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_weather_event`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_attendance_event`);
-    db.exec(`DROP INDEX IF EXISTS idx_event_attendance_user`);
-    db.exec(`DROP INDEX IF EXISTS idx_user_associations_user`);
-    db.exec(`DROP INDEX IF EXISTS idx_user_associations_association`);
-    db.exec(`DROP INDEX IF EXISTS idx_association_activity_log_association`);
+  // Drop indexes
+  db.exec(`DROP INDEX IF EXISTS idx_events_association`);
+  db.exec(`DROP INDEX IF EXISTS idx_events_start_datetime`);
+  db.exec(`DROP INDEX IF EXISTS idx_events_status`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_locations_association`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_schedule_items_event`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_transport_event`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_packing_items_list`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_weather_event`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_attendance_event`);
+  db.exec(`DROP INDEX IF EXISTS idx_event_attendance_user`);
+  db.exec(`DROP INDEX IF EXISTS idx_user_associations_user`);
+  db.exec(`DROP INDEX IF EXISTS idx_user_associations_association`);
+  db.exec(`DROP INDEX IF EXISTS idx_association_activity_log_association`);
 
-    // Drop tables in reverse order
-    db.exec(`DROP TABLE IF EXISTS association_activity_log`);
-    db.exec(`DROP TABLE IF EXISTS shared_events`);
-    db.exec(`DROP TABLE IF EXISTS association_partnerships`);
-    db.exec(`DROP TABLE IF EXISTS association_invitations`);
-    db.exec(`DROP TABLE IF EXISTS user_associations`);
-    db.exec(`DROP TABLE IF EXISTS super_admins`);
-    db.exec(`DROP TABLE IF EXISTS event_attendance`);
-    db.exec(`DROP TABLE IF EXISTS weather_settings`);
-    db.exec(`DROP TABLE IF EXISTS event_weather`);
-    db.exec(`DROP TABLE IF EXISTS event_packing_items`);
-    db.exec(`DROP TABLE IF EXISTS event_packing_lists`);
-    db.exec(`DROP TABLE IF EXISTS packing_list_template_items`);
-    db.exec(`DROP TABLE IF EXISTS packing_list_templates`);
-    db.exec(`DROP TABLE IF EXISTS event_meeting_points`);
-    db.exec(`DROP TABLE IF EXISTS event_transport_passengers`);
-    db.exec(`DROP TABLE IF EXISTS event_transport`);
-    db.exec(`DROP TABLE IF EXISTS event_schedule_items`);
-    db.exec(`DROP TABLE IF EXISTS event_orchestras`);
-    db.exec(`DROP TABLE IF EXISTS events`);
-    db.exec(`DROP TABLE IF EXISTS event_locations`);
+  // Drop tables in reverse order
+  db.exec(`DROP TABLE IF EXISTS association_activity_log`);
+  db.exec(`DROP TABLE IF EXISTS shared_events`);
+  db.exec(`DROP TABLE IF EXISTS association_partnerships`);
+  db.exec(`DROP TABLE IF EXISTS association_invitations`);
+  db.exec(`DROP TABLE IF EXISTS user_associations`);
+  db.exec(`DROP TABLE IF EXISTS super_admins`);
+  db.exec(`DROP TABLE IF EXISTS event_attendance`);
+  db.exec(`DROP TABLE IF EXISTS weather_settings`);
+  db.exec(`DROP TABLE IF EXISTS event_weather`);
+  db.exec(`DROP TABLE IF EXISTS event_packing_items`);
+  db.exec(`DROP TABLE IF EXISTS event_packing_lists`);
+  db.exec(`DROP TABLE IF EXISTS packing_list_template_items`);
+  db.exec(`DROP TABLE IF EXISTS packing_list_templates`);
+  db.exec(`DROP TABLE IF EXISTS event_meeting_points`);
+  db.exec(`DROP TABLE IF EXISTS event_transport_passengers`);
+  db.exec(`DROP TABLE IF EXISTS event_transport`);
+  db.exec(`DROP TABLE IF EXISTS event_schedule_items`);
+  db.exec(`DROP TABLE IF EXISTS event_orchestras`);
+  db.exec(`DROP TABLE IF EXISTS events`);
+  db.exec(`DROP TABLE IF EXISTS event_locations`);
 }

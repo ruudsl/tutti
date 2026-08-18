@@ -98,20 +98,14 @@ export default function PrivacySettings() {
     );
   }
 
-  const customFields = settings
-    ? Object.entries(settings).filter(([key]) => key.startsWith('custom_'))
-    : [];
+  const customFields = settings ? Object.entries(settings).filter(([key]) => key.startsWith('custom_')) : [];
 
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
         <h1>{t('privacy.title')}</h1>
         {hasUnsavedChanges && (
-          <button
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-          >
+          <button className="btn btn-primary" onClick={handleSave} disabled={updateMutation.isPending}>
             <Icon name="check" /> {updateMutation.isPending ? t('common.saving') : t('common.save')}
           </button>
         )}
@@ -136,9 +130,7 @@ export default function PrivacySettings() {
                   <div className="privacy-field-info">
                     <label className="privacy-field-label">
                       {t(`privacy.fields.${fieldName}`)}
-                      {setting?.isRequired && (
-                        <span className="badge badge-warning ml-1">{t('privacy.required')}</span>
-                      )}
+                      {setting?.isRequired && <span className="badge badge-warning ml-1">{t('privacy.required')}</span>}
                     </label>
                     {setting?.purposeStatement && (
                       <small className="text-muted d-block">{setting.purposeStatement}</small>
@@ -147,9 +139,7 @@ export default function PrivacySettings() {
                   <select
                     className="form-control privacy-visibility-select"
                     value={currentValue}
-                    onChange={(e) =>
-                      handleVisibilityChange(fieldName, e.target.value as PrivacyVisibility)
-                    }
+                    onChange={(e) => handleVisibilityChange(fieldName, e.target.value as PrivacyVisibility)}
                     disabled={setting?.isRequired && currentValue === 'admin_only'}
                   >
                     {VISIBILITY_OPTIONS.map((option) => (
@@ -179,9 +169,7 @@ export default function PrivacySettings() {
                   <div className="privacy-field-info">
                     <label className="privacy-field-label">
                       {setting.fieldLabel || fieldName.replace('custom_', '')}
-                      {setting.isRequired && (
-                        <span className="badge badge-warning ml-1">{t('privacy.required')}</span>
-                      )}
+                      {setting.isRequired && <span className="badge badge-warning ml-1">{t('privacy.required')}</span>}
                     </label>
                     {setting.purposeStatement && (
                       <small className="text-muted d-block">{setting.purposeStatement}</small>
@@ -190,9 +178,7 @@ export default function PrivacySettings() {
                   <select
                     className="form-control privacy-visibility-select"
                     value={currentValue}
-                    onChange={(e) =>
-                      handleVisibilityChange(fieldName, e.target.value as PrivacyVisibility)
-                    }
+                    onChange={(e) => handleVisibilityChange(fieldName, e.target.value as PrivacyVisibility)}
                   >
                     {VISIBILITY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>

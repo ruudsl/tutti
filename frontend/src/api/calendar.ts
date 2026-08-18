@@ -36,7 +36,12 @@ export const disconnectGoogle = async (): Promise<void> => {
   await api.post('/calendar/google/disconnect');
 };
 
-export const syncGoogleCalendar = async (): Promise<{ message: string; synced: number; failed: number; total: number }> => {
+export const syncGoogleCalendar = async (): Promise<{
+  message: string;
+  synced: number;
+  failed: number;
+  total: number;
+}> => {
   const { data } = await api.post('/calendar/google/sync');
   return data;
 };

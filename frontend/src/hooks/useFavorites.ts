@@ -40,7 +40,11 @@ import { showSuccess, showError } from '../utils/toast';
 export function useFavorites() {
   const queryClient = useQueryClient();
 
-  const { data: favorites = [], isLoading, error } = useQuery({
+  const {
+    data: favorites = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.favorites,
     queryFn: getFavorites,
   });

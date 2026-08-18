@@ -64,11 +64,7 @@ function isThumbnailCacheValid(thumbnailPath: string, pdfPath: string): boolean 
  * Generate a PDF thumbnail
  * Uses SVG placeholder - canvas-based rendering removed for Docker compatibility
  */
-async function generateThumbnail(
-  pdfPath: string,
-  page: number,
-  width: number
-): Promise<Buffer> {
+async function generateThumbnail(pdfPath: string, page: number, width: number): Promise<Buffer> {
   // Get page count for placeholder
   const { PDFDocument } = await import('pdf-lib');
   const pdfBuffer = fs.readFileSync(pdfPath);
@@ -145,55 +141,59 @@ function generatePlaceholderImage(width: number, height: number, page: number, t
  *       404:
  *         description: PDF file not found
  */
-router.get('/:filename', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { filename } = req.params;
-  const page = parseInt(req.query.page as string, 10) || 1;
-  const size = (req.query.size as ThumbnailSize) || 'medium';
+router.get(
+  '/:filename',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { filename } = req.params;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const size = (req.query.size as ThumbnailSize) || 'medium';
 
-  // Validate size parameter
-  if (!THUMBNAIL_SIZES[size]) {
-    throw new ApiError(400, 'Invalid size. Use: small, medium, or large');
-  }
+    // Validate size parameter
+    if (!THUMBNAIL_SIZES[size]) {
+      throw new ApiError(400, 'Invalid size. Use: small, medium, or large');
+    }
 
-  // Sanitize filename to prevent path traversal
-  const sanitizedFilename = path.basename(filename);
-  const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
+    // Sanitize filename to prevent path traversal
+    const sanitizedFilename = path.basename(filename);
+    const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
 
-  // Check if PDF exists
-  if (!fs.existsSync(pdfPath)) {
-    throw new ApiError(404, 'PDF file not found');
-  }
+    // Check if PDF exists
+    if (!fs.existsSync(pdfPath)) {
+      throw new ApiError(404, 'PDF file not found');
+    }
 
-  // Check cache
-  const cacheKey = getThumbnailCacheKey(pdfPath, page, size);
-  const thumbnailPath = getThumbnailPath(cacheKey);
+    // Check cache
+    const cacheKey = getThumbnailCacheKey(pdfPath, page, size);
+    const thumbnailPath = getThumbnailPath(cacheKey);
 
-  if (isThumbnailCacheValid(thumbnailPath, pdfPath)) {
-    // Return cached thumbnail
-    res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-    res.set('X-Thumbnail-Cache', 'HIT');
-    return res.sendFile(thumbnailPath);
-  }
+    if (isThumbnailCacheValid(thumbnailPath, pdfPath)) {
+      // Return cached thumbnail
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      res.set('X-Thumbnail-Cache', 'HIT');
+      return res.sendFile(thumbnailPath);
+    }
 
-  // Generate new thumbnail
-  try {
-    const width = THUMBNAIL_SIZES[size];
-    const thumbnailBuffer = await generateThumbnail(pdfPath, page, width);
+    // Generate new thumbnail
+    try {
+      const width = THUMBNAIL_SIZES[size];
+      const thumbnailBuffer = await generateThumbnail(pdfPath, page, width);
 
-    // Save to cache
-    fs.writeFileSync(thumbnailPath, thumbnailBuffer);
+      // Save to cache
+      fs.writeFileSync(thumbnailPath, thumbnailBuffer);
 
-    // Return thumbnail
-    res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-    res.set('X-Thumbnail-Cache', 'MISS');
-    res.send(thumbnailBuffer);
-  } catch (error) {
-    logger.error('Failed to generate thumbnail:', error);
-    throw new ApiError(500, 'Failed to generate thumbnail');
-  }
-}));
+      // Return thumbnail
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      res.set('X-Thumbnail-Cache', 'MISS');
+      res.send(thumbnailBuffer);
+    } catch (error) {
+      logger.error('Failed to generate thumbnail:', error);
+      throw new ApiError(500, 'Failed to generate thumbnail');
+    }
+  }),
+);
 
 /**
  * @swagger
@@ -225,32 +225,36 @@ router.get('/:filename', authenticateToken, asyncHandler(async (req: AuthRequest
  *       404:
  *         description: PDF file not found
  */
-router.get('/:filename/info', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { filename } = req.params;
+router.get(
+  '/:filename/info',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { filename } = req.params;
 
-  // Sanitize filename
-  const sanitizedFilename = path.basename(filename);
-  const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
+    // Sanitize filename
+    const sanitizedFilename = path.basename(filename);
+    const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
 
-  // Check if PDF exists
-  if (!fs.existsSync(pdfPath)) {
-    throw new ApiError(404, 'PDF file not found');
-  }
+    // Check if PDF exists
+    if (!fs.existsSync(pdfPath)) {
+      throw new ApiError(404, 'PDF file not found');
+    }
 
-  try {
-    const { PDFDocument } = await import('pdf-lib');
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    res.json({
-      filename: sanitizedFilename,
-      pageCount: pdfDoc.getPageCount(),
-    });
-  } catch (error) {
-    logger.error('Failed to read PDF info:', error);
-    throw new ApiError(500, 'Failed to read PDF information');
-  }
-}));
+      res.json({
+        filename: sanitizedFilename,
+        pageCount: pdfDoc.getPageCount(),
+      });
+    } catch (error) {
+      logger.error('Failed to read PDF info:', error);
+      throw new ApiError(500, 'Failed to read PDF information');
+    }
+  }),
+);
 
 /**
  * @swagger
@@ -273,39 +277,43 @@ router.get('/:filename/info', authenticateToken, asyncHandler(async (req: AuthRe
  *                 total:
  *                   type: integer
  */
-router.post('/cleanup', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  // Only admins can trigger cleanup
-  if (req.user?.role !== 'admin') {
-    throw new ApiError(403, 'Only admins can trigger thumbnail cleanup');
-  }
-
-  let removed = 0;
-
-  try {
-    const thumbnailFiles = fs.readdirSync(THUMBNAIL_DIR);
-    const total = thumbnailFiles.length;
-
-    // For each thumbnail, check if it's older than 7 days
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const now = Date.now();
-
-    for (const file of thumbnailFiles) {
-      const filePath = path.join(THUMBNAIL_DIR, file);
-      const stats = fs.statSync(filePath);
-
-      if (now - stats.mtimeMs > maxAge) {
-        fs.unlinkSync(filePath);
-        removed++;
-      }
+router.post(
+  '/cleanup',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Only admins can trigger cleanup
+    if (req.user?.role !== 'admin') {
+      throw new ApiError(403, 'Only admins can trigger thumbnail cleanup');
     }
 
-    logger.info(`Thumbnail cleanup: removed ${removed}/${total} files`);
-    res.json({ removed, total });
-  } catch (error) {
-    logger.error('Thumbnail cleanup failed:', error);
-    throw new ApiError(500, 'Thumbnail cleanup failed');
-  }
-}));
+    let removed = 0;
+
+    try {
+      const thumbnailFiles = fs.readdirSync(THUMBNAIL_DIR);
+      const total = thumbnailFiles.length;
+
+      // For each thumbnail, check if it's older than 7 days
+      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+      const now = Date.now();
+
+      for (const file of thumbnailFiles) {
+        const filePath = path.join(THUMBNAIL_DIR, file);
+        const stats = fs.statSync(filePath);
+
+        if (now - stats.mtimeMs > maxAge) {
+          fs.unlinkSync(filePath);
+          removed++;
+        }
+      }
+
+      logger.info(`Thumbnail cleanup: removed ${removed}/${total} files`);
+      res.json({ removed, total });
+    } catch (error) {
+      logger.error('Thumbnail cleanup failed:', error);
+      throw new ApiError(500, 'Thumbnail cleanup failed');
+    }
+  }),
+);
 
 /**
  * Clean up old thumbnails periodically (called on startup and every 24 hours)

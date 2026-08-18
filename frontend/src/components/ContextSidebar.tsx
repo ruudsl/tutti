@@ -27,7 +27,11 @@ const navGroups: NavGroup[] = [
       { path: '/concerts', labelKey: 'nav.concerts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
       { path: '/my-tickets', labelKey: 'nav.myTickets' },
       { path: '/ticket-sales', labelKey: 'nav.ticketSales', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
-      { path: '/ticket-scanner', labelKey: 'nav.ticketScanner', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/ticket-scanner',
+        labelKey: 'nav.ticketScanner',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
     ],
   },
   {
@@ -36,9 +40,17 @@ const navGroups: NavGroup[] = [
     basePaths: ['/seating', '/voice-parts', '/occupancy', '/neighbor-preferences'],
     items: [
       { path: '/seating', labelKey: 'nav.seating', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/voice-parts', labelKey: 'nav.voiceParts', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/voice-parts',
+        labelKey: 'nav.voiceParts',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
       { path: '/occupancy', labelKey: 'nav.occupancy', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
-      { path: '/neighbor-preferences', labelKey: 'nav.neighborPreferences', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR] },
+      {
+        path: '/neighbor-preferences',
+        labelKey: 'nav.neighborPreferences',
+        roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR],
+      },
     ],
   },
   {
@@ -54,7 +66,17 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.library',
     icon: 'book',
-    basePaths: ['/lists', '/music-pieces', '/titles', '/upload', '/loans', '/genres', '/statistics', '/pdf-tools', '/imslp'],
+    basePaths: [
+      '/lists',
+      '/music-pieces',
+      '/titles',
+      '/upload',
+      '/loans',
+      '/genres',
+      '/statistics',
+      '/pdf-tools',
+      '/imslp',
+    ],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/lists', labelKey: 'nav.lists', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -79,7 +101,18 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'sidebar.admin',
     icon: 'settings',
-    basePaths: ['/users', '/orchestras', '/settings', '/payment-settings', '/entra-sync', '/onboarding', '/theme', '/changelog', '/audit-logs', '/health'],
+    basePaths: [
+      '/users',
+      '/orchestras',
+      '/settings',
+      '/payment-settings',
+      '/entra-sync',
+      '/onboarding',
+      '/theme',
+      '/changelog',
+      '/audit-logs',
+      '/health',
+    ],
     items: [
       { path: '/users', labelKey: 'nav.members', roles: [ROLES.ADMIN] },
       { path: '/onboarding', labelKey: 'nav.onboarding', roles: [ROLES.ADMIN] },
@@ -101,8 +134,8 @@ export function ContextSidebar() {
   const { user } = useAuth();
 
   // Find the active nav group based on current path
-  const activeGroup = navGroups.find(group =>
-    group.basePaths.some(basePath => location.pathname.startsWith(basePath))
+  const activeGroup = navGroups.find((group) =>
+    group.basePaths.some((basePath) => location.pathname.startsWith(basePath)),
   );
 
   if (!activeGroup) {
@@ -110,7 +143,7 @@ export function ContextSidebar() {
   }
 
   // Filter items based on user role
-  const visibleItems = activeGroup.items.filter(item => {
+  const visibleItems = activeGroup.items.filter((item) => {
     if (!item.roles) return true;
     return user && item.roles.includes(user.role);
   });
@@ -130,12 +163,9 @@ export function ContextSidebar() {
       </div>
       <nav className="sidebar-nav">
         <ul>
-          {visibleItems.map(item => (
+          {visibleItems.map((item) => (
             <li key={item.path}>
-              <NavLink
-                to={item.path}
-                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-              >
+              <NavLink to={item.path} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                 {t(item.labelKey)}
               </NavLink>
             </li>
@@ -150,13 +180,13 @@ export function useHasSidebar(): boolean {
   const location = useLocation();
   const { user } = useAuth();
 
-  const activeGroup = navGroups.find(group =>
-    group.basePaths.some(basePath => location.pathname.startsWith(basePath))
+  const activeGroup = navGroups.find((group) =>
+    group.basePaths.some((basePath) => location.pathname.startsWith(basePath)),
   );
 
   if (!activeGroup) return false;
 
-  const visibleItems = activeGroup.items.filter(item => {
+  const visibleItems = activeGroup.items.filter((item) => {
     if (!item.roles) return true;
     return user && item.roles.includes(user.role);
   });

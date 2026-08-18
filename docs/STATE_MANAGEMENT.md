@@ -5,6 +5,7 @@ This document describes the state management patterns used in the Harmonie Muzie
 ## Overview
 
 The application uses React Query for server state management, providing:
+
 - Automatic caching and background refetching
 - Optimistic updates for better UX
 - Offline support with persistence
@@ -22,8 +23,8 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,      // 5 minutes default
-      gcTime: 1000 * 60 * 60 * 24,   // 24 hours for offline support
+      staleTime: 1000 * 60 * 5, // 5 minutes default
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours for offline support
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -81,19 +82,18 @@ export const queryKeys = {
   users: ['users'] as const,
   instruments: ['instruments'] as const,
   favorites: ['favorites'] as const,
-  
+
   // Parameterized keys
   user: (id: string) => ['users', id] as const,
   concert: (id: string) => ['concerts', id] as const,
-  
+
   // Keys with filters
   musicPieces: (filters?: Record<string, string>) => ['musicPieces', filters] as const,
   concerts: (filters?: Record<string, string>) => ['concerts', filters] as const,
-  
+
   // Nested keys
   concertTickets: (concertId: string) => ['tickets', 'concert', concertId] as const,
-  annotations: (musicPieceId: string, pageNumber?: number) =>
-    ['annotations', musicPieceId, pageNumber] as const,
+  annotations: (musicPieceId: string, pageNumber?: number) => ['annotations', musicPieceId, pageNumber] as const,
 };
 ```
 
@@ -121,7 +121,7 @@ export function useConcert(id: string) {
   return useQuery({
     queryKey: queryKeys.concert(id),
     queryFn: () => getConcert(id),
-    enabled: !!id,  // Only fetch when id is provided
+    enabled: !!id, // Only fetch when id is provided
   });
 }
 ```
@@ -164,7 +164,7 @@ export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: queryKeys.notifications,
     queryFn: getNotifications,
-    select: (data) => data.filter(n => !n.read).length,
+    select: (data) => data.filter((n) => !n.read).length,
   });
 }
 ```
@@ -199,8 +199,7 @@ export function useUpdateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ConcertUpdate }) =>
-      updateConcert(id, data),
+    mutationFn: ({ id, data }: { id: string; data: ConcertUpdate }) => updateConcert(id, data),
     onSuccess: (_, { id }) => {
       // Invalidate specific concert
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(id) });
@@ -224,28 +223,28 @@ export function useToggleFavorite() {
   return useMutation({
     mutationFn: ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
       isFavorite ? removeFavorite(id) : addFavorite(id),
-    
+
     // Optimistically update the cache
     onMutate: async ({ id, isFavorite }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.favorites });
-      
+
       // Snapshot current value
       const previousFavorites = queryClient.getQueryData(queryKeys.favorites);
-      
+
       // Optimistically update
       queryClient.setQueryData(queryKeys.favorites, (old: Favorite[]) => {
         if (isFavorite) {
-          return old.filter(f => f.id !== id);
+          return old.filter((f) => f.id !== id);
         } else {
           return [...old, { id, addedAt: new Date().toISOString() }];
         }
       });
-      
+
       // Return context for rollback
       return { previousFavorites };
     },
-    
+
     // Rollback on error
     onError: (_err, _variables, context) => {
       if (context?.previousFavorites) {
@@ -253,7 +252,7 @@ export function useToggleFavorite() {
       }
       showError('Fout bij bijwerken favorieten');
     },
-    
+
     // Always refetch after success or error
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
@@ -269,32 +268,33 @@ export function useReorderProgram() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ concertId, items }: ReorderParams) =>
-      reorderConcertProgram(concertId, items),
-    
+    mutationFn: ({ concertId, items }: ReorderParams) => reorderConcertProgram(concertId, items),
+
     onMutate: async ({ concertId, items }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.concert(concertId) });
-      
+
       const previousConcert = queryClient.getQueryData(queryKeys.concert(concertId));
-      
+
       // Update program order optimistically
       queryClient.setQueryData(queryKeys.concert(concertId), (old: Concert) => ({
         ...old,
-        program: old.program.map(item => {
-          const newOrder = items.find(i => i.id === item.id);
-          return newOrder ? { ...item, sortOrder: newOrder.sortOrder } : item;
-        }).sort((a, b) => a.sortOrder - b.sortOrder),
+        program: old.program
+          .map((item) => {
+            const newOrder = items.find((i) => i.id === item.id);
+            return newOrder ? { ...item, sortOrder: newOrder.sortOrder } : item;
+          })
+          .sort((a, b) => a.sortOrder - b.sortOrder),
       }));
-      
+
       return { previousConcert };
     },
-    
+
     onError: (_err, { concertId }, context) => {
       if (context?.previousConcert) {
         queryClient.setQueryData(queryKeys.concert(concertId), context.previousConcert);
       }
     },
-    
+
     onSettled: (_, __, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concert(concertId) });
     },
@@ -372,9 +372,7 @@ queryClient.invalidateQueries({ queryKey: ['concerts'] });
 
 // Invalidate with predicate
 queryClient.invalidateQueries({
-  predicate: (query) =>
-    query.queryKey[0] === 'concerts' ||
-    query.queryKey[0] === 'concertStatistics',
+  predicate: (query) => query.queryKey[0] === 'concerts' || query.queryKey[0] === 'concertStatistics',
 });
 
 // Force refetch (bypass staleTime)
@@ -494,15 +492,18 @@ refetch({ cancelRefetch: false });
 ## Local State vs Server State
 
 Use React Query for **server state** (data from API):
+
 - User data, concerts, music pieces
 - Anything that needs caching, syncing, or invalidation
 
 Use React's `useState`/`useReducer` for **local state**:
+
 - Form inputs before submission
 - UI state (modals, menus, tabs)
 - Client-only preferences
 
 Use React Context for **global client state**:
+
 - Authentication state
 - Theme preferences
 - Language settings

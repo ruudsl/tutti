@@ -24,7 +24,9 @@ export interface MusicaInfoDetail {
   articleNumber: string;
 }
 
-export const searchMusicaInfo = async (query: string): Promise<{
+export const searchMusicaInfo = async (
+  query: string,
+): Promise<{
   query: string;
   resultCount: number;
   results: MusicaInfoSearchResult[];
@@ -123,7 +125,7 @@ export const savePdfAsMusicPiece = async (
     tuning?: string;
     groupNumber?: string;
     clef?: string;
-  }
+  },
 ): Promise<{ success: boolean; id: string; title: string; instrumentFound: boolean }> => {
   const { data } = await api.post('/pdf-tools/save-as-music-piece', {
     filepath,

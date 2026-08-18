@@ -40,7 +40,7 @@ export function useAttendance() {
   });
 
   const updateFilters = useCallback((updates: Partial<AttendanceFilters>) => {
-    setFilters(prev => ({ ...prev, ...updates }));
+    setFilters((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const resetFilters = useCallback(() => {
@@ -85,18 +85,18 @@ export function useMyAttendance() {
   const [canSyncToSpond, setCanSyncToSpond] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  const updateAttendance = useCallback(async (
-    newStatus: 'present' | 'absent',
-    onUpdate: (status: 'present' | 'absent') => Promise<void>
-  ) => {
-    setUpdating(true);
-    try {
-      await onUpdate(newStatus);
-      setStatus(newStatus);
-    } finally {
-      setUpdating(false);
-    }
-  }, []);
+  const updateAttendance = useCallback(
+    async (newStatus: 'present' | 'absent', onUpdate: (status: 'present' | 'absent') => Promise<void>) => {
+      setUpdating(true);
+      try {
+        await onUpdate(newStatus);
+        setStatus(newStatus);
+      } finally {
+        setUpdating(false);
+      }
+    },
+    [],
+  );
 
   return {
     status,

@@ -256,8 +256,8 @@ button.section-item {
   margin-bottom: 0.25rem;
 }
 
-.properties-section input[type="text"],
-.properties-section input[type="number"],
+.properties-section input[type='text'],
+.properties-section input[type='number'],
 .properties-section textarea,
 .properties-section select {
   width: 100%;
@@ -268,11 +268,11 @@ button.section-item {
   background: var(--background);
 }
 
-.properties-section input[type="checkbox"] {
+.properties-section input[type='checkbox'] {
   margin-right: 0.5rem;
 }
 
-.properties-section input[type="color"] {
+.properties-section input[type='color'] {
   width: 40px;
   height: 32px;
   padding: 2px;

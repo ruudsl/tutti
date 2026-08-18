@@ -128,10 +128,7 @@ export default function ReplacementRequests() {
   const { data: instruments = [] } = useInstruments();
   const { data: concertsData } = useConcerts();
   const concerts = concertsData?.data || [];
-  const { data: suggestedMusicians = [] } = useExternalMusicianSearch(
-    inviteInstrumentId,
-    { activeOnly: true }
-  );
+  const { data: suggestedMusicians = [] } = useExternalMusicianSearch(inviteInstrumentId, { activeOnly: true });
 
   // Mutations
   const createMutation = useCreateReplacementRequest();
@@ -190,7 +187,7 @@ export default function ReplacementRequests() {
   const handleAssignmentStatusChange = async (
     requestId: string,
     assignment: ReplacementAssignment,
-    newStatus: string
+    newStatus: string,
   ) => {
     await updateAssignmentMutation.mutateAsync({
       requestId,
@@ -238,11 +235,7 @@ export default function ReplacementRequests() {
         <div className="card-body">
           <div className="grid grid-cols-3 gap-2">
             <div className="form-group mb-0">
-              <select
-                className="form-control"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
+              <select className="form-control" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="">{t('replacementRequests.allStatuses')}</option>
                 <option value="open">{STATUS_LABELS.open}</option>
                 <option value="partially_filled">{STATUS_LABELS.partially_filled}</option>
@@ -251,11 +244,7 @@ export default function ReplacementRequests() {
               </select>
             </div>
             <div className="form-group mb-0">
-              <select
-                className="form-control"
-                value={filterUrgency}
-                onChange={(e) => setFilterUrgency(e.target.value)}
-              >
+              <select className="form-control" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
                 <option value="">{t('replacementRequests.allUrgencies')}</option>
                 <option value="low">{URGENCY_LABELS.low}</option>
                 <option value="normal">{URGENCY_LABELS.normal}</option>
@@ -305,16 +294,12 @@ export default function ReplacementRequests() {
                       >
                         {request.eventName || request.eventType}
                       </button>
-                      {request.eventLocation && (
-                        <div className="text-muted text-sm">{request.eventLocation}</div>
-                      )}
+                      {request.eventLocation && <div className="text-muted text-sm">{request.eventLocation}</div>}
                     </td>
                     <td>{new Date(request.eventDate).toLocaleDateString()}</td>
                     <td>
                       {request.instrumentName}
-                      {request.instrumentTuning && (
-                        <span className="text-muted"> ({request.instrumentTuning})</span>
-                      )}
+                      {request.instrumentTuning && <span className="text-muted"> ({request.instrumentTuning})</span>}
                     </td>
                     <td>
                       {request.positionsFilled}/{request.positionsNeeded}
@@ -328,9 +313,7 @@ export default function ReplacementRequests() {
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${STATUS_COLORS[request.status]}`}>
-                        {STATUS_LABELS[request.status]}
-                      </span>
+                      <span className={`badge ${STATUS_COLORS[request.status]}`}>{STATUS_LABELS[request.status]}</span>
                     </td>
                     <td>
                       <div className="flex gap-1">
@@ -409,8 +392,7 @@ export default function ReplacementRequests() {
               <div>
                 <label className="form-label text-muted">{t('replacementRequests.positions')}</label>
                 <p>
-                  {requestDetail.positionsFilled} / {requestDetail.positionsNeeded}{' '}
-                  {t('replacementRequests.filled')}
+                  {requestDetail.positionsFilled} / {requestDetail.positionsNeeded} {t('replacementRequests.filled')}
                 </p>
               </div>
               {requestDetail.deadline && (
@@ -432,10 +414,7 @@ export default function ReplacementRequests() {
               <div className="flex justify-between items-center mb-2">
                 <label className="form-label text-muted mb-0">{t('replacementRequests.invitations')}</label>
                 {canEdit && requestDetail.status !== 'filled' && requestDetail.status !== 'cancelled' && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => openInviteModal(requestDetail)}
-                  >
+                  <button className="btn btn-primary btn-sm" onClick={() => openInviteModal(requestDetail)}>
                     <Icon name="plus" size={16} className="mr-1" />
                     {t('replacementRequests.inviteMusician')}
                   </button>
@@ -457,9 +436,7 @@ export default function ReplacementRequests() {
                       <tr key={assignment.id}>
                         <td>
                           {assignment.firstName} {assignment.lastName}
-                          {assignment.email && (
-                            <div className="text-muted text-sm">{assignment.email}</div>
-                          )}
+                          {assignment.email && <div className="text-muted text-sm">{assignment.email}</div>}
                         </td>
                         <td>
                           <span className={`badge ${ASSIGNMENT_STATUS_COLORS[assignment.status]}`}>
@@ -470,7 +447,8 @@ export default function ReplacementRequests() {
                           {new Date(assignment.invitedAt).toLocaleDateString()}
                           {assignment.respondedAt && (
                             <div className="text-muted text-sm">
-                              {t('replacementRequests.responded')}: {new Date(assignment.respondedAt).toLocaleDateString()}
+                              {t('replacementRequests.responded')}:{' '}
+                              {new Date(assignment.respondedAt).toLocaleDateString()}
                             </div>
                           )}
                         </td>
@@ -663,9 +641,7 @@ export default function ReplacementRequests() {
               ))}
             </select>
             {suggestedMusicians.length === 0 && (
-              <p className="text-muted text-sm mt-1">
-                {t('replacementRequests.noMusiciansForInstrument')}
-              </p>
+              <p className="text-muted text-sm mt-1">{t('replacementRequests.noMusiciansForInstrument')}</p>
             )}
           </div>
 

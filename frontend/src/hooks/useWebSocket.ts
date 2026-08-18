@@ -39,7 +39,8 @@ interface Notification {
 
 type EventCallback<T> = (data: T) => void;
 
-const SOCKET_URL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
+const SOCKET_URL =
+  import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
 /**
  * @description Hook for real-time WebSocket communication with the server.
@@ -113,11 +114,11 @@ export function useWebSocket() {
     });
 
     socket.on('connect', () => {
-      setState(prev => ({ ...prev, isConnected: true }));
+      setState((prev) => ({ ...prev, isConnected: true }));
     });
 
     socket.on('disconnect', () => {
-      setState(prev => ({ ...prev, isConnected: false }));
+      setState((prev) => ({ ...prev, isConnected: false }));
     });
 
     socket.on('connect_error', (error) => {
@@ -134,12 +135,12 @@ export function useWebSocket() {
       'presence:offline',
     ];
 
-    events.forEach(event => {
+    events.forEach((event) => {
       socket.on(event, (data: any) => {
-        setState(prev => ({ ...prev, lastMessage: { event, data } }));
+        setState((prev) => ({ ...prev, lastMessage: { event, data } }));
         const callbacks = listenersRef.current.get(event);
         if (callbacks) {
-          callbacks.forEach(cb => cb(data));
+          callbacks.forEach((cb) => cb(data));
         }
       });
     });
@@ -155,7 +156,7 @@ export function useWebSocket() {
     }
   }, []);
 
-  const subscribe = useCallback(<T,>(event: string, callback: EventCallback<T>) => {
+  const subscribe = useCallback(<T>(event: string, callback: EventCallback<T>) => {
     if (!listenersRef.current.has(event)) {
       listenersRef.current.set(event, new Set());
     }
@@ -173,40 +174,64 @@ export function useWebSocket() {
   }, []);
 
   // Chat-specific methods
-  const sendChatMessage = useCallback((content: string, orchestraId?: string) => {
-    emit('chat:message', { content, orchestraId });
-  }, [emit]);
+  const sendChatMessage = useCallback(
+    (content: string, orchestraId?: string) => {
+      emit('chat:message', { content, orchestraId });
+    },
+    [emit],
+  );
 
-  const setTyping = useCallback((isTyping: boolean, orchestraId?: string) => {
-    emit('chat:typing', { isTyping, orchestraId });
-  }, [emit]);
+  const setTyping = useCallback(
+    (isTyping: boolean, orchestraId?: string) => {
+      emit('chat:typing', { isTyping, orchestraId });
+    },
+    [emit],
+  );
 
-  const onChatMessage = useCallback((callback: EventCallback<ChatMessage>) => {
-    return subscribe('chat:message', callback);
-  }, [subscribe]);
+  const onChatMessage = useCallback(
+    (callback: EventCallback<ChatMessage>) => {
+      return subscribe('chat:message', callback);
+    },
+    [subscribe],
+  );
 
-  const onTyping = useCallback((callback: EventCallback<TypingIndicator>) => {
-    return subscribe('chat:typing', callback);
-  }, [subscribe]);
+  const onTyping = useCallback(
+    (callback: EventCallback<TypingIndicator>) => {
+      return subscribe('chat:typing', callback);
+    },
+    [subscribe],
+  );
 
   // Seating-specific methods
-  const updateSeating = useCallback((concertId: string, seatId: string, userId: string | null) => {
-    emit('seating:update', { concertId, seatId, userId });
-  }, [emit]);
+  const updateSeating = useCallback(
+    (concertId: string, seatId: string, userId: string | null) => {
+      emit('seating:update', { concertId, seatId, userId });
+    },
+    [emit],
+  );
 
-  const onSeatingUpdate = useCallback((callback: EventCallback<SeatingUpdate>) => {
-    return subscribe('seating:updated', callback);
-  }, [subscribe]);
+  const onSeatingUpdate = useCallback(
+    (callback: EventCallback<SeatingUpdate>) => {
+      return subscribe('seating:updated', callback);
+    },
+    [subscribe],
+  );
 
   // Notification methods
-  const onNotification = useCallback((callback: EventCallback<Notification>) => {
-    return subscribe('notification:new', callback);
-  }, [subscribe]);
+  const onNotification = useCallback(
+    (callback: EventCallback<Notification>) => {
+      return subscribe('notification:new', callback);
+    },
+    [subscribe],
+  );
 
   // Presence methods
-  const updatePresence = useCallback((page: string) => {
-    emit('presence:update', { page });
-  }, [emit]);
+  const updatePresence = useCallback(
+    (page: string) => {
+      emit('presence:update', { page });
+    },
+    [emit],
+  );
 
   useEffect(() => {
     if (isAuthenticated) {

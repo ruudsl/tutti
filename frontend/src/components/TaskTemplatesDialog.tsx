@@ -3,12 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Icon } from './Icon';
-import {
-  getTaskTemplates,
-  createTaskFromTemplate,
-  TaskTemplate,
-  TaskPriority,
-} from '../api/tasks';
+import { getTaskTemplates, createTaskFromTemplate, TaskTemplate, TaskPriority } from '../api/tasks';
 import type { TaskList } from '../api/tasks';
 import { showSuccess, showError } from '../utils/toast';
 
@@ -37,9 +32,10 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
   });
 
   const createFromTemplateMutation = useMutation({
-    mutationFn: (templateId: string) => createTaskFromTemplate(templateId, {
-      title: customTitle || undefined,
-    }),
+    mutationFn: (templateId: string) =>
+      createTaskFromTemplate(templateId, {
+        title: customTitle || undefined,
+      }),
     onSuccess: () => {
       showSuccess(t('tasks.taskCreatedFromTemplate'));
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -86,9 +82,7 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
                       <Icon name="clipboard" size={20} className="text-primary" aria-hidden={true} />
                       <div>
                         <h4 className="font-medium">{template.name}</h4>
-                        {template.description && (
-                          <p className="text-sm text-base-content/60">{template.description}</p>
-                        )}
+                        {template.description && <p className="text-sm text-base-content/60">{template.description}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -110,10 +104,7 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
         ) : (
           <div className="space-y-4">
             {/* Back button */}
-            <button
-              className="btn btn-ghost btn-sm gap-1"
-              onClick={() => setSelectedTemplate(null)}
-            >
+            <button className="btn btn-ghost btn-sm gap-1" onClick={() => setSelectedTemplate(null)}>
               <Icon name="chevronLeft" size={16} aria-hidden={true} />
               {t('common.back')}
             </button>
@@ -129,10 +120,7 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
                   {t(`tasks.priority.${selectedTemplate.priority}`)}
                 </span>
                 {selectedTemplate.listName && (
-                  <span
-                    className="badge badge-sm"
-                    style={{ backgroundColor: selectedTemplate.listColor || undefined }}
-                  >
+                  <span className="badge badge-sm" style={{ backgroundColor: selectedTemplate.listColor || undefined }}>
                     {selectedTemplate.listName}
                   </span>
                 )}
@@ -156,7 +144,9 @@ export function TaskTemplatesDialog({ taskLists: _taskLists, onClose, onTasksCre
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t('tasks.taskTitle')} ({t('common.optional')})</span>
+                <span className="label-text">
+                  {t('tasks.taskTitle')} ({t('common.optional')})
+                </span>
               </label>
               <input
                 type="text"

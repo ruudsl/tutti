@@ -41,10 +41,10 @@ export function initWebSocket(httpServer: HttpServer): Server {
       socket.associationId = decoded.associationId;
 
       // Get user's orchestra memberships
-      const orchestras = db.prepare(
-        'SELECT orchestra_id FROM user_orchestras WHERE user_id = ?'
-      ).all(decoded.id) as { orchestra_id: string }[];
-      socket.orchestraIds = orchestras.map(o => o.orchestra_id);
+      const orchestras = db.prepare('SELECT orchestra_id FROM user_orchestras WHERE user_id = ?').all(decoded.id) as {
+        orchestra_id: string;
+      }[];
+      socket.orchestraIds = orchestras.map((o) => o.orchestra_id);
 
       next();
     } catch (err) {
@@ -68,7 +68,7 @@ export function initWebSocket(httpServer: HttpServer): Server {
 
     // Join orchestra rooms
     if (socket.orchestraIds) {
-      socket.orchestraIds.forEach(id => socket.join(`orchestra:${id}`));
+      socket.orchestraIds.forEach((id) => socket.join(`orchestra:${id}`));
     }
 
     // Handle chat messages
@@ -91,10 +91,19 @@ export function initWebSocket(httpServer: HttpServer): Server {
         };
 
         // Store message in database
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO chat_messages (id, association_id, orchestra_id, user_id, content, created_at)
           VALUES (?, ?, ?, ?, ?, ?)
-        `).run(message.id, socket.associationId, data.orchestraId || null, socket.userId, data.content, message.timestamp);
+        `,
+        ).run(
+          message.id,
+          socket.associationId,
+          data.orchestraId || null,
+          socket.userId,
+          data.content,
+          message.timestamp,
+        );
 
         // Broadcast to room
         io?.to(room).emit('chat:message', message);
@@ -171,12 +180,15 @@ export function emitToOrchestra(orchestraId: string, event: string, data: any): 
   io?.to(`orchestra:${orchestraId}`).emit(event, data);
 }
 
-export function emitNotification(userId: string, notification: {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  data?: any;
-}): void {
+export function emitNotification(
+  userId: string,
+  notification: {
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    data?: any;
+  },
+): void {
   io?.to(`user:${userId}`).emit('notification:new', notification);
 }

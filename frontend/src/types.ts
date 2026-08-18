@@ -944,7 +944,10 @@ export interface ConcertAttendance {
  * @property accessibilityContactEmail - Email for accessibility inquiries
  * @property accessibilityContactPhone - Phone for accessibility inquiries
  */
-export interface ConcertDetail extends Omit<Concert, 'programCount' | 'attendanceCount' | 'mediaCount' | 'hasAccessibilityInfo'> {
+export interface ConcertDetail extends Omit<
+  Concert,
+  'programCount' | 'attendanceCount' | 'mediaCount' | 'hasAccessibilityInfo'
+> {
   program: ConcertProgramItem[];
   media: ConcertMedia[];
   attendance: ConcertAttendance[];
@@ -2150,7 +2153,8 @@ export type LoanType = 'standard' | 'trial' | 'long_term' | 'performance';
 /**
  * Type of document attached to an instrument.
  */
-export type DocumentType = 'manual' | 'warranty' | 'certificate' | 'invoice' | 'photo' | 'contract' | 'appraisal' | 'other';
+export type DocumentType =
+  'manual' | 'warranty' | 'certificate' | 'invoice' | 'photo' | 'contract' | 'appraisal' | 'other';
 
 /**
  * Type of insurance policy.

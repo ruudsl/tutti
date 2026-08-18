@@ -140,10 +140,9 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
       if (searchFilters.type) params.append('type', searchFilters.type);
       if (searchFilters.orchestraId) params.append('orchestraId', searchFilters.orchestraId);
 
-      const response = await fetchWithAuth(
-        `${API_BASE}/search?${params.toString()}`,
-        { signal: abortControllerRef.current.signal }
-      );
+      const response = await fetchWithAuth(`${API_BASE}/search?${params.toString()}`, {
+        signal: abortControllerRef.current.signal,
+      });
       const data: SearchResponse = await response.json();
       setResults(data.results);
       setSelectedIndex(-1);
@@ -166,9 +165,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
     }
 
     try {
-      const response = await fetchWithAuth(
-        `${API_BASE}/search/suggestions?q=${encodeURIComponent(searchQuery)}`
-      );
+      const response = await fetchWithAuth(`${API_BASE}/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
       const data: SuggestionsResponse = await response.json();
       setSuggestions(data.suggestions);
     } catch {
@@ -188,19 +185,22 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   }, []);
 
   // Save a search to recent searches
-  const saveRecentSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.trim().length < 2) return;
+  const saveRecentSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery || searchQuery.trim().length < 2) return;
 
-    try {
-      await fetchWithAuth(`${API_BASE}/search/recent`, {
-        method: 'POST',
-        body: JSON.stringify({ query: searchQuery }),
-      });
-      fetchRecentSearches();
-    } catch {
-      // Ignore errors when saving recent search
-    }
-  }, [fetchRecentSearches]);
+      try {
+        await fetchWithAuth(`${API_BASE}/search/recent`, {
+          method: 'POST',
+          body: JSON.stringify({ query: searchQuery }),
+        });
+        fetchRecentSearches();
+      } catch {
+        // Ignore errors when saving recent search
+      }
+    },
+    [fetchRecentSearches],
+  );
 
   // Delete a recent search
   const deleteRecentSearch = useCallback(async (id: string) => {
@@ -208,7 +208,7 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
       await fetchWithAuth(`${API_BASE}/search/recent/${id}`, {
         method: 'DELETE',
       });
-      setRecentSearches(prev => prev.filter(s => s.id !== id));
+      setRecentSearches((prev) => prev.filter((s) => s.id !== id));
     } catch {
       // Ignore errors
     }
@@ -227,28 +227,31 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   }, []);
 
   // Keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const totalItems = results.length;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const totalItems = results.length;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev < totalItems - 1 ? prev + 1 : 0));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : totalItems - 1));
-        break;
-      case 'Home':
-        e.preventDefault();
-        setSelectedIndex(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        setSelectedIndex(totalItems - 1);
-        break;
-    }
-  }, [results.length]);
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev < totalItems - 1 ? prev + 1 : 0));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : totalItems - 1));
+          break;
+        case 'Home':
+          e.preventDefault();
+          setSelectedIndex(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          setSelectedIndex(totalItems - 1);
+          break;
+      }
+    },
+    [results.length],
+  );
 
   // Get the currently selected result
   const getSelectedResult = useCallback((): SearchResult | null => {

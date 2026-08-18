@@ -11,149 +11,139 @@
 
 import db from '../database/connection';
 import {
-    runMigrations,
-    rollbackLastMigration,
-    getMigrationStatus,
-    createMigrationFile,
-    initMigrationsTable,
+  runMigrations,
+  rollbackLastMigration,
+  getMigrationStatus,
+  createMigrationFile,
+  initMigrationsTable,
 } from './runner';
 
 async function main() {
-    const command = process.argv[2];
-    const args = process.argv.slice(3);
+  const command = process.argv[2];
+  const args = process.argv.slice(3);
 
-    // Initialize database connection
-    await db.init();
+  // Initialize database connection
+  await db.init();
 
-    try {
-        switch (command) {
-            case 'up':
-                await handleUp();
-                break;
+  try {
+    switch (command) {
+      case 'up':
+        await handleUp();
+        break;
 
-            case 'down':
-                await handleDown();
-                break;
+      case 'down':
+        await handleDown();
+        break;
 
-            case 'status':
-                await handleStatus();
-                break;
+      case 'status':
+        await handleStatus();
+        break;
 
-            case 'create':
-                handleCreate(args[0]);
-                break;
+      case 'create':
+        handleCreate(args[0]);
+        break;
 
-            default:
-                showHelp();
-                process.exit(1);
-        }
-    } catch (error) {
-        console.error('Error:', error instanceof Error ? error.message : error);
+      default:
+        showHelp();
         process.exit(1);
     }
+  } catch (error) {
+    console.error('Error:', error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 
-    process.exit(0);
+  process.exit(0);
 }
 
 async function handleUp() {
-    console.log('Running pending migrations...\n');
+  console.log('Running pending migrations...\n');
 
-    const { applied, errors } = await runMigrations();
+  const { applied, errors } = await runMigrations();
 
-    if (applied.length === 0 && errors.length === 0) {
-        console.log('No pending migrations.');
-        return;
-    }
+  if (applied.length === 0 && errors.length === 0) {
+    console.log('No pending migrations.');
+    return;
+  }
 
-    console.log('\n--- Summary ---');
+  console.log('\n--- Summary ---');
 
-    if (applied.length > 0) {
-        console.log(`Applied ${applied.length} migration(s):`);
-        applied.forEach(m => console.log(`  - ${m}`));
-    }
+  if (applied.length > 0) {
+    console.log(`Applied ${applied.length} migration(s):`);
+    applied.forEach((m) => console.log(`  - ${m}`));
+  }
 
-    if (errors.length > 0) {
-        console.log(`\nFailed ${errors.length} migration(s):`);
-        errors.forEach(e => console.log(`  - ${e}`));
-        process.exit(1);
-    }
+  if (errors.length > 0) {
+    console.log(`\nFailed ${errors.length} migration(s):`);
+    errors.forEach((e) => console.log(`  - ${e}`));
+    process.exit(1);
+  }
 }
 
 async function handleDown() {
-    console.log('Rolling back last migration...\n');
+  console.log('Rolling back last migration...\n');
 
-    const { rolledBack, error } = await rollbackLastMigration();
+  const { rolledBack, error } = await rollbackLastMigration();
 
-    if (error) {
-        console.error(`Error: ${error}`);
-        process.exit(1);
-    }
+  if (error) {
+    console.error(`Error: ${error}`);
+    process.exit(1);
+  }
 
-    if (rolledBack) {
-        console.log(`\nRolled back: ${rolledBack}`);
-    }
+  if (rolledBack) {
+    console.log(`\nRolled back: ${rolledBack}`);
+  }
 }
 
 async function handleStatus() {
-    console.log('Migration Status\n');
-    console.log('='.repeat(80));
+  console.log('Migration Status\n');
+  console.log('='.repeat(80));
 
-    const status = await getMigrationStatus();
+  const status = await getMigrationStatus();
 
-    if (status.length === 0) {
-        console.log('No migrations found.');
-        return;
-    }
+  if (status.length === 0) {
+    console.log('No migrations found.');
+    return;
+  }
 
-    // Format status table
-    const maxVersionLen = Math.max(...status.map(s => s.version.length), 7);
-    const maxNameLen = Math.max(...status.map(s => s.name.length), 4);
+  // Format status table
+  const maxVersionLen = Math.max(...status.map((s) => s.version.length), 7);
+  const maxNameLen = Math.max(...status.map((s) => s.name.length), 4);
 
-    console.log(
-        'Version'.padEnd(maxVersionLen + 2) +
-        'Name'.padEnd(maxNameLen + 2) +
-        'Status'.padEnd(12) +
-        'Applied At'
-    );
-    console.log('-'.repeat(80));
+  console.log('Version'.padEnd(maxVersionLen + 2) + 'Name'.padEnd(maxNameLen + 2) + 'Status'.padEnd(12) + 'Applied At');
+  console.log('-'.repeat(80));
 
-    for (const s of status) {
-        const statusStr = s.applied ? '✓ Applied' : '○ Pending';
-        const appliedAt = s.applied_at || '-';
+  for (const s of status) {
+    const statusStr = s.applied ? '✓ Applied' : '○ Pending';
+    const appliedAt = s.applied_at || '-';
 
-        console.log(
-            s.version.padEnd(maxVersionLen + 2) +
-            s.name.padEnd(maxNameLen + 2) +
-            statusStr.padEnd(12) +
-            appliedAt
-        );
-    }
+    console.log(s.version.padEnd(maxVersionLen + 2) + s.name.padEnd(maxNameLen + 2) + statusStr.padEnd(12) + appliedAt);
+  }
 
-    console.log('-'.repeat(80));
+  console.log('-'.repeat(80));
 
-    const appliedCount = status.filter(s => s.applied).length;
-    const pendingCount = status.filter(s => !s.applied).length;
+  const appliedCount = status.filter((s) => s.applied).length;
+  const pendingCount = status.filter((s) => !s.applied).length;
 
-    console.log(`\nTotal: ${status.length} | Applied: ${appliedCount} | Pending: ${pendingCount}`);
+  console.log(`\nTotal: ${status.length} | Applied: ${appliedCount} | Pending: ${pendingCount}`);
 }
 
 function handleCreate(name: string | undefined) {
-    if (!name) {
-        console.error('Error: Migration name is required');
-        console.log('Usage: migrate:create <name>');
-        process.exit(1);
-    }
+  if (!name) {
+    console.error('Error: Migration name is required');
+    console.log('Usage: migrate:create <name>');
+    process.exit(1);
+  }
 
-    console.log(`Creating new migration: ${name}`);
+  console.log(`Creating new migration: ${name}`);
 
-    const filepath = createMigrationFile(name);
+  const filepath = createMigrationFile(name);
 
-    console.log(`\nCreated: ${filepath}`);
-    console.log('\nEdit the file to add your migration code.');
+  console.log(`\nCreated: ${filepath}`);
+  console.log('\nEdit the file to add your migration code.');
 }
 
 function showHelp() {
-    console.log(`
+  console.log(`
 Harmonie Database Migration CLI
 
 Usage:
@@ -180,7 +170,7 @@ npm scripts (after adding to package.json):
 }
 
 // Run the CLI
-main().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
 });

@@ -25,9 +25,23 @@ const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: 'stats', type: 'stats', title: 'Statistics', enabled: true, order: 0, size: 'full' },
   { id: 'tasks', type: 'tasks', title: 'My Tasks', enabled: true, order: 1, size: 'medium' },
   { id: 'music-lists', type: 'music-lists', title: 'My Music Lists', enabled: true, order: 2, size: 'medium' },
-  { id: 'upcoming-rehearsals', type: 'upcoming-rehearsals', title: 'Upcoming Rehearsals', enabled: true, order: 3, size: 'medium' },
+  {
+    id: 'upcoming-rehearsals',
+    type: 'upcoming-rehearsals',
+    title: 'Upcoming Rehearsals',
+    enabled: true,
+    order: 3,
+    size: 'medium',
+  },
   { id: 'recent-activity', type: 'recent-activity', title: 'Recent Activity', enabled: true, order: 4, size: 'medium' },
-  { id: 'practice-progress', type: 'practice-progress', title: 'Practice Progress', enabled: true, order: 5, size: 'medium' },
+  {
+    id: 'practice-progress',
+    type: 'practice-progress',
+    title: 'Practice Progress',
+    enabled: true,
+    order: 5,
+    size: 'medium',
+  },
   { id: 'favorites', type: 'favorites', title: 'Favorites', enabled: true, order: 6, size: 'small' },
   { id: 'quick-actions', type: 'quick-actions', title: 'Quick Actions', enabled: true, order: 7, size: 'small' },
   { id: 'announcements', type: 'announcements', title: 'Announcements', enabled: false, order: 8, size: 'full' },
@@ -47,8 +61,8 @@ export function useDashboardWidgets() {
       try {
         const parsed = JSON.parse(stored) as DashboardWidget[];
         // Merge with defaults to handle new widgets
-        const merged = DEFAULT_WIDGETS.map(defaultWidget => {
-          const storedWidget = parsed.find(w => w.id === defaultWidget.id);
+        const merged = DEFAULT_WIDGETS.map((defaultWidget) => {
+          const storedWidget = parsed.find((w) => w.id === defaultWidget.id);
           return storedWidget || defaultWidget;
         });
         setWidgets(merged);
@@ -68,39 +82,45 @@ export function useDashboardWidgets() {
   }, []);
 
   // Toggle widget enabled state
-  const toggleWidget = useCallback((widgetId: string) => {
-    const newWidgets = widgets.map(w =>
-      w.id === widgetId ? { ...w, enabled: !w.enabled } : w
-    );
-    saveWidgets(newWidgets);
-  }, [widgets, saveWidgets]);
+  const toggleWidget = useCallback(
+    (widgetId: string) => {
+      const newWidgets = widgets.map((w) => (w.id === widgetId ? { ...w, enabled: !w.enabled } : w));
+      saveWidgets(newWidgets);
+    },
+    [widgets, saveWidgets],
+  );
 
   // Reorder widgets
-  const reorderWidgets = useCallback((dragIndex: number, hoverIndex: number) => {
-    const newWidgets = [...widgets];
-    const [removed] = newWidgets.splice(dragIndex, 1);
-    newWidgets.splice(hoverIndex, 0, removed);
+  const reorderWidgets = useCallback(
+    (dragIndex: number, hoverIndex: number) => {
+      const newWidgets = [...widgets];
+      const [removed] = newWidgets.splice(dragIndex, 1);
+      newWidgets.splice(hoverIndex, 0, removed);
 
-    // Update order values
-    const reordered = newWidgets.map((w, i) => ({ ...w, order: i }));
-    saveWidgets(reordered);
-  }, [widgets, saveWidgets]);
+      // Update order values
+      const reordered = newWidgets.map((w, i) => ({ ...w, order: i }));
+      saveWidgets(reordered);
+    },
+    [widgets, saveWidgets],
+  );
 
   // Update widget size
-  const setWidgetSize = useCallback((widgetId: string, size: DashboardWidget['size']) => {
-    const newWidgets = widgets.map(w =>
-      w.id === widgetId ? { ...w, size } : w
-    );
-    saveWidgets(newWidgets);
-  }, [widgets, saveWidgets]);
+  const setWidgetSize = useCallback(
+    (widgetId: string, size: DashboardWidget['size']) => {
+      const newWidgets = widgets.map((w) => (w.id === widgetId ? { ...w, size } : w));
+      saveWidgets(newWidgets);
+    },
+    [widgets, saveWidgets],
+  );
 
   // Update widget config
-  const setWidgetConfig = useCallback((widgetId: string, config: Record<string, unknown>) => {
-    const newWidgets = widgets.map(w =>
-      w.id === widgetId ? { ...w, config: { ...w.config, ...config } } : w
-    );
-    saveWidgets(newWidgets);
-  }, [widgets, saveWidgets]);
+  const setWidgetConfig = useCallback(
+    (widgetId: string, config: Record<string, unknown>) => {
+      const newWidgets = widgets.map((w) => (w.id === widgetId ? { ...w, config: { ...w.config, ...config } } : w));
+      saveWidgets(newWidgets);
+    },
+    [widgets, saveWidgets],
+  );
 
   // Reset to defaults
   const resetToDefaults = useCallback(() => {
@@ -108,9 +128,7 @@ export function useDashboardWidgets() {
   }, [saveWidgets]);
 
   // Get enabled widgets sorted by order
-  const enabledWidgets = widgets
-    .filter(w => w.enabled)
-    .sort((a, b) => a.order - b.order);
+  const enabledWidgets = widgets.filter((w) => w.enabled).sort((a, b) => a.order - b.order);
 
   // Get all widgets sorted by order
   const allWidgets = [...widgets].sort((a, b) => a.order - b.order);

@@ -8,6 +8,7 @@
 ## Week 1: Research & Database Schema (15 uur)
 
 ### 1.1 Research MusicXML standaard (4 uur)
+
 - [ ] Analyseer MusicXML 4.0 specification (W3C)
 - [ ] Identificeer relevante metadata velden voor orkestbeheer:
   - `work-title`, `work-number`, `movement-title`, `movement-number`
@@ -19,6 +20,7 @@
 - [ ] Verzamel 5-10 voorbeeld MusicXML bestanden voor testing
 
 ### 1.2 Research JSKOS vocabularies (4 uur)
+
 - [ ] Bestudeer JSKOS specificatie (https://gbv.github.io/jskos/)
 - [ ] Identificeer relevante vocabularies:
   - **IAML Medium of Performance** - instrumentatie
@@ -28,6 +30,7 @@
 - [ ] Documenteer JSON-LD context voor onze implementatie
 
 ### 1.3 Database schema uitbreiding (7 uur)
+
 - [ ] Ontwerp `music_metadata` tabel:
   ```sql
   CREATE TABLE music_metadata (
@@ -71,6 +74,7 @@
 ## Week 2: MusicXML Parser & Import (18 uur)
 
 ### 2.1 MusicXML parser implementatie (10 uur)
+
 - [ ] Installeer XML parsing library (`fast-xml-parser` of `xml2js`)
 - [ ] Maak `MusicXMLParser` service:
   ```typescript
@@ -92,6 +96,7 @@
 - [ ] Unit tests voor parser met diverse MusicXML bestanden
 
 ### 2.2 Import functionaliteit (5 uur)
+
 - [ ] Maak upload endpoint: `POST /api/music-titles/:id/musicxml`
 - [ ] Valideer bestandstype en grootte (max 10MB)
 - [ ] Parse en extraheer metadata
@@ -100,6 +105,7 @@
 - [ ] Foutafhandeling voor corrupte/ongeldige MusicXML
 
 ### 2.3 Batch import (3 uur)
+
 - [ ] CLI script voor bulk import: `npm run import:musicxml <directory>`
 - [ ] Progress logging en error rapport
 - [ ] Dry-run optie voor preview
@@ -109,6 +115,7 @@
 ## Week 3: JSKOS Integratie (15 uur)
 
 ### 3.1 JSKOS client service (6 uur)
+
 - [ ] Maak `JskosService` voor vocabulary lookups:
   ```typescript
   interface JskosService {
@@ -123,6 +130,7 @@
 - [ ] Rate limiting voor externe API calls
 
 ### 3.2 Instrumentatie vocabulary (5 uur)
+
 - [ ] Importeer IAML Medium of Performance vocabulary
 - [ ] Maak mapping van instrument namen naar JSKOS URIs
 - [ ] Autocomplete endpoint: `GET /api/vocabularies/instruments?q=`
@@ -130,6 +138,7 @@
 - [ ] Link bestaande `music_titles.instrumentation` aan JSKOS
 
 ### 3.3 Genre/stijl vocabulary (4 uur)
+
 - [ ] Importeer relevante genre vocabularies
 - [ ] Autocomplete endpoint: `GET /api/vocabularies/genres?q=`
 - [ ] Hiërarchische browse: `GET /api/vocabularies/genres/tree`
@@ -140,6 +149,7 @@
 ## Week 4: API Endpoints & Export (15 uur)
 
 ### 4.1 REST API voor metadata (6 uur)
+
 - [ ] `GET /api/music-titles/:id/metadata` - Volledige metadata
 - [ ] `PATCH /api/music-titles/:id/metadata` - Update metadata
 - [ ] `GET /api/music-titles/:id/musicxml` - Export als MusicXML
@@ -147,6 +157,7 @@
 - [ ] OpenAPI/Swagger documentatie voor nieuwe endpoints
 
 ### 4.2 MusicXML export (5 uur)
+
 - [ ] Maak `MusicXMLGenerator` service
 - [ ] Genereer valide MusicXML 4.0 uit database metadata
 - [ ] Behoud originele MusicXML indien beschikbaar (round-trip)
@@ -154,6 +165,7 @@
 - [ ] Download als ZIP met meerdere bestanden
 
 ### 4.3 Interoperabiliteit endpoints (4 uur)
+
 - [ ] `GET /api/orchestras/:id/repertoire.json` - JSON-LD met JSKOS
 - [ ] `GET /api/shared/repertoire` - Publiek endpoint voor federatie
 - [ ] CORS configuratie voor cross-origin toegang
@@ -164,6 +176,7 @@
 ## Week 5: Migratie, Frontend & Documentatie (12 uur)
 
 ### 5.1 Migratie bestaande data (4 uur)
+
 - [ ] Analyseer bestaande `music_titles` data
 - [ ] Script om componist/arrangeur te extraheren uit titels
 - [ ] Match instrumentatie strings naar JSKOS URIs
@@ -171,6 +184,7 @@
 - [ ] Dry-run en productie migratie
 
 ### 5.2 Frontend integratie (5 uur)
+
 - [ ] Metadata tab toevoegen aan muziekstuk detail pagina
 - [ ] MusicXML upload component met drag & drop
 - [ ] Instrumentatie picker met autocomplete
@@ -178,6 +192,7 @@
 - [ ] Export knop (MusicXML download)
 
 ### 5.3 Documentatie (3 uur)
+
 - [ ] `docs/MUSIC_METADATA.md` - Overzicht van ondersteunde standaarden
 - [ ] API documentatie in Swagger/OpenAPI
 - [ ] Handleiding voor import/export workflows
@@ -190,22 +205,22 @@
 
 ### MusicXML velden mapping
 
-| MusicXML Element | Database veld | Type |
-|------------------|---------------|------|
-| `work/work-title` | `music_titles.title` | VARCHAR |
-| `work/work-number` | `music_metadata.musicxml_work_number` | VARCHAR |
-| `identification/creator[@type='composer']` | `music_metadata.composer` | VARCHAR |
-| `identification/creator[@type='arranger']` | `music_metadata.arranger` | VARCHAR |
-| `identification/rights` | `music_metadata.copyright` | TEXT |
-| `part-list/score-part` | `music_metadata.instrumentation` | JSONB |
+| MusicXML Element                           | Database veld                         | Type    |
+| ------------------------------------------ | ------------------------------------- | ------- |
+| `work/work-title`                          | `music_titles.title`                  | VARCHAR |
+| `work/work-number`                         | `music_metadata.musicxml_work_number` | VARCHAR |
+| `identification/creator[@type='composer']` | `music_metadata.composer`             | VARCHAR |
+| `identification/creator[@type='arranger']` | `music_metadata.arranger`             | VARCHAR |
+| `identification/rights`                    | `music_metadata.copyright`            | TEXT    |
+| `part-list/score-part`                     | `music_metadata.instrumentation`      | JSONB   |
 
 ### JSKOS Vocabularies
 
-| Vocabulary | URI Prefix | Gebruik |
-|------------|------------|---------|
-| IAML MoP | `http://iflastandards.info/ns/unimarc/terms/mop/` | Instrumenten |
-| LCGFT | `http://id.loc.gov/authorities/genreForms/` | Genres |
-| GND | `https://d-nb.info/gnd/` | Componisten, werken |
+| Vocabulary | URI Prefix                                        | Gebruik             |
+| ---------- | ------------------------------------------------- | ------------------- |
+| IAML MoP   | `http://iflastandards.info/ns/unimarc/terms/mop/` | Instrumenten        |
+| LCGFT      | `http://id.loc.gov/authorities/genreForms/`       | Genres              |
+| GND        | `https://d-nb.info/gnd/`                          | Componisten, werken |
 
 ### API Response voorbeeld
 
@@ -222,14 +237,14 @@
     "instrumentation": [
       {
         "uri": "http://iflastandards.info/ns/unimarc/terms/mop/scc",
-        "label": {"en": "Clarinet", "nl": "Klarinet", "de": "Klarinette"},
+        "label": { "en": "Clarinet", "nl": "Klarinet", "de": "Klarinette" },
         "count": 2
       }
     ],
     "genres": [
       {
         "uri": "http://id.loc.gov/authorities/genreForms/gf2014026971",
-        "label": {"en": "Symphonies"}
+        "label": { "en": "Symphonies" }
       }
     ]
   }
@@ -240,12 +255,12 @@
 
 ## Risico's & Mitigatie
 
-| Risico | Impact | Mitigatie |
-|--------|--------|-----------|
-| MusicXML bestanden zijn zeldzaam bij verenigingen | Lage adoptie | Focus op handmatige metadata invoer, MusicXML als bonus |
-| JSKOS endpoints zijn traag of offline | Slechte UX | Agressieve caching, lokale fallback |
-| Vocabularies missen specifieke instrumenten | Incomplete data | Custom vocabulary extensie met `notation:` prefix |
-| Complexiteit van MusicXML overschat | Scope creep | Alleen metadata elementen, geen notatie parsing |
+| Risico                                            | Impact          | Mitigatie                                               |
+| ------------------------------------------------- | --------------- | ------------------------------------------------------- |
+| MusicXML bestanden zijn zeldzaam bij verenigingen | Lage adoptie    | Focus op handmatige metadata invoer, MusicXML als bonus |
+| JSKOS endpoints zijn traag of offline             | Slechte UX      | Agressieve caching, lokale fallback                     |
+| Vocabularies missen specifieke instrumenten       | Incomplete data | Custom vocabulary extensie met `notation:` prefix       |
+| Complexiteit van MusicXML overschat               | Scope creep     | Alleen metadata elementen, geen notatie parsing         |
 
 ---
 
@@ -261,5 +276,5 @@
 
 ---
 
-*Document versie: 1.0*  
-*Aangemaakt: 2026-04-26*
+_Document versie: 1.0_  
+_Aangemaakt: 2026-04-26_

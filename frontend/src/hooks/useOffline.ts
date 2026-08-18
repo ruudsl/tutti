@@ -73,15 +73,14 @@ export function useOffline() {
     }
   }, [isOnline, isSyncing]);
 
-  const resolveConflict = useCallback(async (
-    conflictId: string,
-    resolution: 'useLocal' | 'useServer' | 'merge',
-    mergedData?: any
-  ) => {
-    await syncManager.resolveConflict(conflictId, resolution, mergedData);
-    const conflictList = await syncManager.getConflicts();
-    setConflicts(conflictList);
-  }, []);
+  const resolveConflict = useCallback(
+    async (conflictId: string, resolution: 'useLocal' | 'useServer' | 'merge', mergedData?: any) => {
+      await syncManager.resolveConflict(conflictId, resolution, mergedData);
+      const conflictList = await syncManager.getConflicts();
+      setConflicts(conflictList);
+    },
+    [],
+  );
 
   const clearOfflineData = useCallback(async () => {
     await offlineDb.musicPieces.clear();
@@ -147,7 +146,7 @@ export function useOfflineData<T>(
   fetchOnline: () => Promise<T>,
   getCached: () => Promise<T | undefined>,
   cacheData: (data: T) => Promise<void>,
-  deps: any[] = []
+  deps: any[] = [],
 ) {
   const [data, setData] = useState<T | undefined>();
   const [isLoading, setIsLoading] = useState(true);

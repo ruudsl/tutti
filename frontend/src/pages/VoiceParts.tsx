@@ -4,12 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
-import {
-  getOrchestras,
-  getSeatingSections,
-  getSeatingAssignments,
-  updateSeatingAssignment,
-} from '../api';
+import { getOrchestras, getSeatingSections, getSeatingAssignments, updateSeatingAssignment } from '../api';
 import type { SeatingAssignment } from '../types';
 import { ROLES } from '../utils/constants';
 import { SkeletonTable } from '../components/Skeleton';
@@ -111,7 +106,7 @@ export default function VoiceParts() {
   // Filter sections
   const filteredSections = useMemo(() => {
     if (!filterSection) return sections;
-    return sections.filter(s => s.id === filterSection);
+    return sections.filter((s) => s.id === filterSection);
   }, [sections, filterSection]);
 
   // Common voice labels
@@ -140,26 +135,22 @@ export default function VoiceParts() {
       <div className="form-row" style={{ marginBottom: '1.5rem', gap: '1rem' }}>
         <div className="form-group" style={{ maxWidth: '300px' }}>
           <label htmlFor="orchestra">{t('seating.selectOrchestra')}</label>
-          <select
-            id="orchestra"
-            value={selectedOrchestraId}
-            onChange={(e) => setSelectedOrchestraId(e.target.value)}
-          >
-            {orchestras.map(o => (
-              <option key={o.id} value={o.id}>{o.name}</option>
+          <select id="orchestra" value={selectedOrchestraId} onChange={(e) => setSelectedOrchestraId(e.target.value)}>
+            {orchestras.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
             ))}
           </select>
         </div>
         <div className="form-group" style={{ maxWidth: '300px' }}>
           <label htmlFor="section">{t('voiceParts.filterBySection')}</label>
-          <select
-            id="section"
-            value={filterSection}
-            onChange={(e) => setFilterSection(e.target.value)}
-          >
+          <select id="section" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
             <option value="">{t('common.all')}</option>
-            {sections.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
           </select>
         </div>
@@ -175,7 +166,7 @@ export default function VoiceParts() {
           </div>
         </div>
       ) : (
-        filteredSections.map(section => {
+        filteredSections.map((section) => {
           const sectionAssignments = assignmentsBySection.get(section.id) || [];
 
           return (
@@ -223,7 +214,7 @@ export default function VoiceParts() {
                                   }}
                                 />
                                 <datalist id="voice-labels">
-                                  {voiceLabels.map(label => (
+                                  {voiceLabels.map((label) => (
                                     <option key={label} value={label} />
                                   ))}
                                 </datalist>
@@ -248,10 +239,7 @@ export default function VoiceParts() {
                                   >
                                     {t('common.save')}
                                   </button>
-                                  <button
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={handleCancelEdit}
-                                  >
+                                  <button className="btn btn-secondary btn-sm" onClick={handleCancelEdit}>
                                     {t('common.cancel')}
                                   </button>
                                 </div>

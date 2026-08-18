@@ -76,57 +76,60 @@ Options:
 
 // Common instrument name mappings
 const instrumentMappings: Record<string, string[]> = {
-  'fluit': ['flute', 'fluit', 'dwarsfluit'],
-  'piccolo': ['piccolo', 'pikkolofluit', 'piccolo flute'],
-  'hobo': ['oboe', 'hobo'],
-  'fagot': ['bassoon', 'fagot'],
-  'klarinet': ['clarinet', 'klarinet', 'bb clarinet', 'bes klarinet'],
-  'basklarinet': ['bass clarinet', 'basklarinet', 'bas klarinet'],
+  fluit: ['flute', 'fluit', 'dwarsfluit'],
+  piccolo: ['piccolo', 'pikkolofluit', 'piccolo flute'],
+  hobo: ['oboe', 'hobo'],
+  fagot: ['bassoon', 'fagot'],
+  klarinet: ['clarinet', 'klarinet', 'bb clarinet', 'bes klarinet'],
+  basklarinet: ['bass clarinet', 'basklarinet', 'bas klarinet'],
   'es-klarinet': ['eb clarinet', 'es klarinet', 'es-klarinet', 'kleine klarinet'],
-  'altsaxofoon': ['alto saxophone', 'altsax', 'alt sax', 'altsaxofoon'],
-  'tenorsaxofoon': ['tenor saxophone', 'tenorsax', 'tenor sax', 'tenorsaxofoon'],
-  'baritonsaxofoon': ['baritone saxophone', 'baritonsax', 'bari sax', 'baritonsaxofoon'],
-  'sopraansaxofoon': ['soprano saxophone', 'sopraansax', 'sopraan sax'],
-  'hoorn': ['french horn', 'hoorn', 'f hoorn', 'waldhoorn', 'horn'],
-  'trompet': ['trumpet', 'trompet', 'bb trompet'],
-  'kornet': ['cornet', 'kornet'],
-  'bugel': ['flugelhorn', 'bugel', 'flugel'],
-  'trombone': ['trombone', 'schuiftrombone', 'tenor trombone'],
-  'bastrombone': ['bass trombone', 'bastrombone'],
-  'bariton': ['baritone horn', 'bariton', 'baritone', 'euphonium'],
-  'euphonium': ['euphonium', 'eufonium'],
-  'tuba': ['tuba', 'bas tuba'],
-  'slagwerk': ['percussion', 'slagwerk', 'drums', 'percussie'],
-  'pauken': ['timpani', 'pauken', 'kettle drums'],
-  'xylofoon': ['xylophone', 'xylofoon'],
-  'vibrafoon': ['vibraphone', 'vibrafoon'],
-  'klokkenspel': ['glockenspiel', 'klokkenspel', 'bells'],
-  'marimba': ['marimba'],
-  'contrabas': ['double bass', 'contrabas', 'string bass', 'bas'],
-  'piano': ['piano', 'keyboard'],
-  'harp': ['harp'],
+  altsaxofoon: ['alto saxophone', 'altsax', 'alt sax', 'altsaxofoon'],
+  tenorsaxofoon: ['tenor saxophone', 'tenorsax', 'tenor sax', 'tenorsaxofoon'],
+  baritonsaxofoon: ['baritone saxophone', 'baritonsax', 'bari sax', 'baritonsaxofoon'],
+  sopraansaxofoon: ['soprano saxophone', 'sopraansax', 'sopraan sax'],
+  hoorn: ['french horn', 'hoorn', 'f hoorn', 'waldhoorn', 'horn'],
+  trompet: ['trumpet', 'trompet', 'bb trompet'],
+  kornet: ['cornet', 'kornet'],
+  bugel: ['flugelhorn', 'bugel', 'flugel'],
+  trombone: ['trombone', 'schuiftrombone', 'tenor trombone'],
+  bastrombone: ['bass trombone', 'bastrombone'],
+  bariton: ['baritone horn', 'bariton', 'baritone', 'euphonium'],
+  euphonium: ['euphonium', 'eufonium'],
+  tuba: ['tuba', 'bas tuba'],
+  slagwerk: ['percussion', 'slagwerk', 'drums', 'percussie'],
+  pauken: ['timpani', 'pauken', 'kettle drums'],
+  xylofoon: ['xylophone', 'xylofoon'],
+  vibrafoon: ['vibraphone', 'vibrafoon'],
+  klokkenspel: ['glockenspiel', 'klokkenspel', 'bells'],
+  marimba: ['marimba'],
+  contrabas: ['double bass', 'contrabas', 'string bass', 'bas'],
+  piano: ['piano', 'keyboard'],
+  harp: ['harp'],
 };
 
 // Genre name mappings
 const genreMappings: Record<string, string[]> = {
-  'mars': ['march', 'mars', 'marsen', 'marches'],
-  'ouverture': ['overture', 'ouverture', 'ouvertures'],
-  'suite': ['suite', 'suites'],
-  'wals': ['waltz', 'wals', 'walsen', 'waltzes'],
-  'symfonie': ['symphony', 'symfonie', 'sinfonieën', 'symphonies'],
-  'fanfare': ['fanfare', 'fanfares'],
-  'concert': ['concerto', 'concert', 'concerten', 'concertos'],
-  'polka': ['polka', 'polka\'s', 'polkas'],
-  'potpourri': ['potpourri', 'medley', 'potpourri\'s', 'medleys'],
-  'filmmuziek': ['film music', 'filmmuziek', 'movie music', 'soundtrack'],
-  'musical': ['musical', 'show music', 'broadway'],
-  'pop': ['pop arrangement', 'poparrangement', 'pop music'],
-  'traditioneel': ['traditional', 'traditioneel', 'folk music', 'volksmuziek'],
-  'kerstmuziek': ['christmas music', 'kerstmuziek', 'holiday music', 'kerstliederen'],
+  mars: ['march', 'mars', 'marsen', 'marches'],
+  ouverture: ['overture', 'ouverture', 'ouvertures'],
+  suite: ['suite', 'suites'],
+  wals: ['waltz', 'wals', 'walsen', 'waltzes'],
+  symfonie: ['symphony', 'symfonie', 'sinfonieën', 'symphonies'],
+  fanfare: ['fanfare', 'fanfares'],
+  concert: ['concerto', 'concert', 'concerten', 'concertos'],
+  polka: ['polka', "polka's", 'polkas'],
+  potpourri: ['potpourri', 'medley', "potpourri's", 'medleys'],
+  filmmuziek: ['film music', 'filmmuziek', 'movie music', 'soundtrack'],
+  musical: ['musical', 'show music', 'broadway'],
+  pop: ['pop arrangement', 'poparrangement', 'pop music'],
+  traditioneel: ['traditional', 'traditioneel', 'folk music', 'volksmuziek'],
+  kerstmuziek: ['christmas music', 'kerstmuziek', 'holiday music', 'kerstliederen'],
 };
 
 function normalizeText(text: string): string {
-  return text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '');
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s]/g, '');
 }
 
 function findInstrumentMatch(text: string): JskosConcept | null {
@@ -140,7 +143,7 @@ function findInstrumentMatch(text: string): JskosConcept | null {
 
   // Try mappings
   for (const [key, aliases] of Object.entries(instrumentMappings)) {
-    if (aliases.some(alias => normalized.includes(alias) || alias.includes(normalized))) {
+    if (aliases.some((alias) => normalized.includes(alias) || alias.includes(normalized))) {
       const result = searchConcepts(key, 'instrument', 1, 'nl');
       if (result.concepts.length > 0) {
         return result.concepts[0];
@@ -162,7 +165,7 @@ function findGenreMatch(genreName: string): JskosConcept | null {
 
   // Try mappings
   for (const [key, aliases] of Object.entries(genreMappings)) {
-    if (aliases.some(alias => normalized.includes(alias) || alias.includes(normalized))) {
+    if (aliases.some((alias) => normalized.includes(alias) || alias.includes(normalized))) {
       const result = searchConcepts(key, 'genre', 1, 'nl');
       if (result.concepts.length > 0) {
         return result.concepts[0];
@@ -221,12 +224,16 @@ async function main() {
     }
 
     // Get existing genre associations (from the old genres table)
-    const existingGenres = db.prepare(`
+    const existingGenres = db
+      .prepare(
+        `
       SELECT g.name
       FROM music_title_genres mtg
       JOIN genres g ON g.id = mtg.genre_id
       WHERE mtg.music_title_id = ?
-    `).all(title.id) as Array<{ name: string }>;
+    `,
+      )
+      .all(title.id) as Array<{ name: string }>;
 
     // Try to match genres to JSKOS
     const matchedGenres: string[] = [];
@@ -254,9 +261,13 @@ async function main() {
     }
 
     // Get instrumentation from music_metadata parts if available
-    const metadata = db.prepare(`
+    const metadata = db
+      .prepare(
+        `
       SELECT parts FROM music_metadata WHERE music_title_id = ?
-    `).get(title.id) as { parts: string | null } | undefined;
+    `,
+      )
+      .get(title.id) as { parts: string | null } | undefined;
 
     if (metadata?.parts) {
       try {
@@ -331,7 +342,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

@@ -51,12 +51,7 @@ interface UseLazyLoadReturn {
  * );
  */
 export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn {
-  const {
-    rootMargin = '100px',
-    threshold = 0,
-    triggerOnce = true,
-    initialVisible = false,
-  } = options;
+  const { rootMargin = '100px', threshold = 0, triggerOnce = true, initialVisible = false } = options;
 
   const ref = useRef<HTMLElement | null>(null);
   const [isVisible, setIsVisible] = useState(initialVisible);
@@ -142,16 +137,9 @@ interface UseLazyLoadMultipleReturn {
  * ));
  */
 export function useLazyLoadMultiple(options: UseLazyLoadMultipleOptions): UseLazyLoadMultipleReturn {
-  const {
-    count,
-    rootMargin = '100px',
-    threshold = 0,
-    triggerOnce = true,
-  } = options;
+  const { count, rootMargin = '100px', threshold = 0, triggerOnce = true } = options;
 
-  const [visibilityStates, setVisibilityStates] = useState<boolean[]>(() =>
-    new Array(count).fill(false)
-  );
+  const [visibilityStates, setVisibilityStates] = useState<boolean[]>(() => new Array(count).fill(false));
   const elementsRef = useRef<Map<number, HTMLElement | null>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
 

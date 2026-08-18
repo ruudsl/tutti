@@ -21,9 +21,11 @@ const CURSOR_STYLES: Record<string, string> = {
   eraser: 'not-allowed',
 };
 
-export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
-  selectedShapeType?: ShapeType;
-}> = ({
+export const AnnotationCanvas: React.FC<
+  AnnotationCanvasProps & {
+    selectedShapeType?: ShapeType;
+  }
+> = ({
   pageNumber,
   musicPieceId,
   width,
@@ -52,268 +54,281 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
 
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
-  const getCanvasPoint = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent): Point => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+  const getCanvasPoint = useCallback(
+    (e: React.MouseEvent | React.TouchEvent | React.PointerEvent): Point => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
 
-    const rect = canvas.getBoundingClientRect();
-    let clientX: number, clientY: number;
+      const rect = canvas.getBoundingClientRect();
+      let clientX: number, clientY: number;
 
-    if ('touches' in e && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else if ('clientX' in e) {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    } else {
-      return { x: 0, y: 0 };
-    }
-
-    return {
-      x: (clientX - rect.left) / scale,
-      y: (clientY - rect.top) / scale,
-    };
-  }, [scale]);
-
-  const drawStampOnCanvas = useCallback((
-    ctx: CanvasRenderingContext2D,
-    stampData: StampAnnotation,
-    stampColor: string,
-    s: number
-  ) => {
-    const stamp = stamps.find(st => st.id === stampData.stampId);
-    if (!stamp) return;
-
-    ctx.save();
-    ctx.translate(stampData.position.x * s, stampData.position.y * s);
-    ctx.rotate((stampData.rotation * Math.PI) / 180);
-    const stampScale = stampData.scale * s / dpr;
-
-    ctx.fillStyle = stampColor;
-    ctx.strokeStyle = stampColor;
-    ctx.font = `bold ${20 * stampScale}px "Times New Roman", serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const svgData = stamp.svgData;
-
-    // Parse and draw common stamp types
-    if (svgData.includes('<text')) {
-      const textMatch = svgData.match(/>([^<]+)</);
-      if (textMatch) {
-        const text = textMatch[1];
-        const fontSizeMatch = svgData.match(/font-size="(\d+)"/);
-        const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) * stampScale : 20 * stampScale;
-        const isItalic = svgData.includes('font-style="italic"');
-        const isBold = svgData.includes('font-weight="bold"');
-        ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px "Times New Roman", serif`;
-        ctx.fillText(text, 0, 0);
+      if ('touches' in e && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if ('clientX' in e) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      } else {
+        return { x: 0, y: 0 };
       }
-    } else if (svgData.includes('<path') || svgData.includes('<line') || svgData.includes('<circle')) {
-      // Draw shape-based stamps
-      ctx.lineWidth = 2 * stampScale;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
 
-      // Parse path commands
-      const pathMatch = svgData.match(/d="([^"]+)"/);
-      if (pathMatch) {
-        const pathData = pathMatch[1];
-        const path = new Path2D();
+      return {
+        x: (clientX - rect.left) / scale,
+        y: (clientY - rect.top) / scale,
+      };
+    },
+    [scale],
+  );
 
-        // Simple path parser
-        const commands = pathData.match(/[MLQCZHVA][^MLQCZHVA]*/gi) || [];
-        let currentX = 0, currentY = 0;
+  const drawStampOnCanvas = useCallback(
+    (ctx: CanvasRenderingContext2D, stampData: StampAnnotation, stampColor: string, s: number) => {
+      const stamp = stamps.find((st) => st.id === stampData.stampId);
+      if (!stamp) return;
 
-        commands.forEach(cmd => {
-          const type = cmd[0].toUpperCase();
-          const nums = cmd.slice(1).trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      ctx.save();
+      ctx.translate(stampData.position.x * s, stampData.position.y * s);
+      ctx.rotate((stampData.rotation * Math.PI) / 180);
+      const stampScale = (stampData.scale * s) / dpr;
 
-          switch (type) {
-            case 'M':
-              currentX = (nums[0] - 15) * stampScale;
-              currentY = (nums[1] - 15) * stampScale;
-              path.moveTo(currentX, currentY);
-              break;
-            case 'L':
-              currentX = (nums[0] - 15) * stampScale;
-              currentY = (nums[1] - 15) * stampScale;
-              path.lineTo(currentX, currentY);
-              break;
-            case 'C':
-              path.bezierCurveTo(
-                (nums[0] - 15) * stampScale, (nums[1] - 15) * stampScale,
-                (nums[2] - 15) * stampScale, (nums[3] - 15) * stampScale,
-                (nums[4] - 15) * stampScale, (nums[5] - 15) * stampScale
-              );
-              currentX = (nums[4] - 15) * stampScale;
-              currentY = (nums[5] - 15) * stampScale;
-              break;
-            case 'Z':
-              path.closePath();
-              break;
+      ctx.fillStyle = stampColor;
+      ctx.strokeStyle = stampColor;
+      ctx.font = `bold ${20 * stampScale}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const svgData = stamp.svgData;
+
+      // Parse and draw common stamp types
+      if (svgData.includes('<text')) {
+        const textMatch = svgData.match(/>([^<]+)</);
+        if (textMatch) {
+          const text = textMatch[1];
+          const fontSizeMatch = svgData.match(/font-size="(\d+)"/);
+          const fontSize = fontSizeMatch ? parseInt(fontSizeMatch[1]) * stampScale : 20 * stampScale;
+          const isItalic = svgData.includes('font-style="italic"');
+          const isBold = svgData.includes('font-weight="bold"');
+          ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSize}px "Times New Roman", serif`;
+          ctx.fillText(text, 0, 0);
+        }
+      } else if (svgData.includes('<path') || svgData.includes('<line') || svgData.includes('<circle')) {
+        // Draw shape-based stamps
+        ctx.lineWidth = 2 * stampScale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Parse path commands
+        const pathMatch = svgData.match(/d="([^"]+)"/);
+        if (pathMatch) {
+          const pathData = pathMatch[1];
+          const path = new Path2D();
+
+          // Simple path parser
+          const commands = pathData.match(/[MLQCZHVA][^MLQCZHVA]*/gi) || [];
+          let currentX = 0,
+            currentY = 0;
+
+          commands.forEach((cmd) => {
+            const type = cmd[0].toUpperCase();
+            const nums = cmd
+              .slice(1)
+              .trim()
+              .split(/[\s,]+/)
+              .map(Number)
+              .filter((n) => !isNaN(n));
+
+            switch (type) {
+              case 'M':
+                currentX = (nums[0] - 15) * stampScale;
+                currentY = (nums[1] - 15) * stampScale;
+                path.moveTo(currentX, currentY);
+                break;
+              case 'L':
+                currentX = (nums[0] - 15) * stampScale;
+                currentY = (nums[1] - 15) * stampScale;
+                path.lineTo(currentX, currentY);
+                break;
+              case 'C':
+                path.bezierCurveTo(
+                  (nums[0] - 15) * stampScale,
+                  (nums[1] - 15) * stampScale,
+                  (nums[2] - 15) * stampScale,
+                  (nums[3] - 15) * stampScale,
+                  (nums[4] - 15) * stampScale,
+                  (nums[5] - 15) * stampScale,
+                );
+                currentX = (nums[4] - 15) * stampScale;
+                currentY = (nums[5] - 15) * stampScale;
+                break;
+              case 'Z':
+                path.closePath();
+                break;
+            }
+          });
+
+          if (svgData.includes('fill="currentColor"') || svgData.includes('fill="none"') === false) {
+            ctx.fill(path);
           }
-        });
-
-        if (svgData.includes('fill="currentColor"') || svgData.includes('fill="none"') === false) {
-          ctx.fill(path);
+          if (svgData.includes('stroke="currentColor"') || svgData.includes('stroke=')) {
+            ctx.stroke(path);
+          }
         }
-        if (svgData.includes('stroke="currentColor"') || svgData.includes('stroke=')) {
-          ctx.stroke(path);
-        }
-      }
 
-      // Draw circles
-      const circleMatches = svgData.matchAll(/cx="([\d.]+)"\s*cy="([\d.]+)"\s*r="([\d.]+)"/g);
-      for (const match of circleMatches) {
-        const cx = (parseFloat(match[1]) - 15) * stampScale;
-        const cy = (parseFloat(match[2]) - 15) * stampScale;
-        const r = parseFloat(match[3]) * stampScale;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        if (svgData.includes('fill="none"')) {
+        // Draw circles
+        const circleMatches = svgData.matchAll(/cx="([\d.]+)"\s*cy="([\d.]+)"\s*r="([\d.]+)"/g);
+        for (const match of circleMatches) {
+          const cx = (parseFloat(match[1]) - 15) * stampScale;
+          const cy = (parseFloat(match[2]) - 15) * stampScale;
+          const r = parseFloat(match[3]) * stampScale;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          if (svgData.includes('fill="none"')) {
+            ctx.stroke();
+          } else {
+            ctx.fill();
+          }
+        }
+
+        // Draw lines
+        const lineMatches = svgData.matchAll(/x1="([\d.]+)"\s*y1="([\d.]+)"\s*x2="([\d.]+)"\s*y2="([\d.]+)"/g);
+        for (const match of lineMatches) {
+          ctx.beginPath();
+          ctx.moveTo((parseFloat(match[1]) - 15) * stampScale, (parseFloat(match[2]) - 15) * stampScale);
+          ctx.lineTo((parseFloat(match[3]) - 15) * stampScale, (parseFloat(match[4]) - 15) * stampScale);
           ctx.stroke();
-        } else {
-          ctx.fill();
         }
       }
 
-      // Draw lines
-      const lineMatches = svgData.matchAll(/x1="([\d.]+)"\s*y1="([\d.]+)"\s*x2="([\d.]+)"\s*y2="([\d.]+)"/g);
-      for (const match of lineMatches) {
-        ctx.beginPath();
-        ctx.moveTo((parseFloat(match[1]) - 15) * stampScale, (parseFloat(match[2]) - 15) * stampScale);
-        ctx.lineTo((parseFloat(match[3]) - 15) * stampScale, (parseFloat(match[4]) - 15) * stampScale);
-        ctx.stroke();
-      }
-    }
+      ctx.restore();
+    },
+    [stamps, dpr],
+  );
 
-    ctx.restore();
-  }, [stamps, dpr]);
+  const drawAnnotation = useCallback(
+    (ctx: CanvasRenderingContext2D, annotation: Annotation, dpr: number) => {
+      ctx.save();
+      ctx.globalAlpha = annotation.opacity;
+      const s = scale * dpr;
 
-  const drawAnnotation = useCallback((ctx: CanvasRenderingContext2D, annotation: Annotation, dpr: number) => {
-    ctx.save();
-    ctx.globalAlpha = annotation.opacity;
-    const s = scale * dpr;
+      switch (annotation.annotationType) {
+        case 'freehand': {
+          const stroke = annotation.data as Stroke;
+          if (stroke.points.length < 2) break;
 
-    switch (annotation.annotationType) {
-      case 'freehand': {
-        const stroke = annotation.data as Stroke;
-        if (stroke.points.length < 2) break;
+          ctx.strokeStyle = annotation.color;
+          ctx.lineWidth = annotation.strokeWidth * s;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(stroke.points[0].x * s, stroke.points[0].y * s);
 
-        ctx.strokeStyle = annotation.color;
-        ctx.lineWidth = annotation.strokeWidth * s;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0].x * s, stroke.points[0].y * s);
-
-        for (let i = 1; i < stroke.points.length; i++) {
-          const p0 = stroke.points[i - 1];
-          const p1 = stroke.points[i];
-          const midX = (p0.x + p1.x) / 2;
-          const midY = (p0.y + p1.y) / 2;
-          ctx.quadraticCurveTo(p0.x * s, p0.y * s, midX * s, midY * s);
-        }
-
-        const lastPoint = stroke.points[stroke.points.length - 1];
-        ctx.lineTo(lastPoint.x * s, lastPoint.y * s);
-        ctx.stroke();
-        break;
-      }
-
-      case 'highlight': {
-        const highlight = annotation.data as HighlightAnnotation;
-        if (highlight.points.length < 2) break;
-
-        ctx.fillStyle = annotation.color;
-        ctx.globalAlpha = 0.3;
-        ctx.beginPath();
-        ctx.moveTo(highlight.points[0].x * s, highlight.points[0].y * s);
-
-        for (const point of highlight.points) {
-          ctx.lineTo(point.x * s, point.y * s);
-        }
-
-        ctx.closePath();
-        ctx.fill();
-        break;
-      }
-
-      case 'text': {
-        const text = annotation.data as TextAnnotation;
-        ctx.fillStyle = annotation.color;
-        ctx.font = `${text.fontSize * s}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-        ctx.textBaseline = 'top';
-        ctx.fillText(text.content, text.position.x * s, text.position.y * s);
-        break;
-      }
-
-      case 'stamp': {
-        const stampData = annotation.data as StampAnnotation;
-        drawStampOnCanvas(ctx, stampData, annotation.color, s);
-        break;
-      }
-
-      case 'shape': {
-        const shape = annotation.data as ShapeAnnotation;
-        ctx.strokeStyle = annotation.color;
-        ctx.lineWidth = annotation.strokeWidth * s;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        const x1 = shape.start.x * s;
-        const y1 = shape.start.y * s;
-        const x2 = shape.end.x * s;
-        const y2 = shape.end.y * s;
-
-        ctx.beginPath();
-
-        switch (shape.shapeType) {
-          case 'rectangle':
-            ctx.rect(x1, y1, x2 - x1, y2 - y1);
-            break;
-          case 'circle': {
-            const radiusX = Math.abs(x2 - x1) / 2;
-            const radiusY = Math.abs(y2 - y1) / 2;
-            const centerX = (x1 + x2) / 2;
-            const centerY = (y1 + y2) / 2;
-            ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
-            break;
+          for (let i = 1; i < stroke.points.length; i++) {
+            const p0 = stroke.points[i - 1];
+            const p1 = stroke.points[i];
+            const midX = (p0.x + p1.x) / 2;
+            const midY = (p0.y + p1.y) / 2;
+            ctx.quadraticCurveTo(p0.x * s, p0.y * s, midX * s, midY * s);
           }
-          case 'line':
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            break;
-          case 'arrow': {
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            const angle = Math.atan2(y2 - y1, x2 - x1);
-            const headLength = 15 * s / dpr;
-            ctx.lineTo(
-              x2 - headLength * Math.cos(angle - Math.PI / 6),
-              y2 - headLength * Math.sin(angle - Math.PI / 6)
-            );
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(
-              x2 - headLength * Math.cos(angle + Math.PI / 6),
-              y2 - headLength * Math.sin(angle + Math.PI / 6)
-            );
-            break;
-          }
+
+          const lastPoint = stroke.points[stroke.points.length - 1];
+          ctx.lineTo(lastPoint.x * s, lastPoint.y * s);
+          ctx.stroke();
+          break;
         }
 
-        if (shape.filled) {
+        case 'highlight': {
+          const highlight = annotation.data as HighlightAnnotation;
+          if (highlight.points.length < 2) break;
+
           ctx.fillStyle = annotation.color;
-          ctx.fill();
-        }
-        ctx.stroke();
-        break;
-      }
-    }
+          ctx.globalAlpha = 0.3;
+          ctx.beginPath();
+          ctx.moveTo(highlight.points[0].x * s, highlight.points[0].y * s);
 
-    ctx.restore();
-  }, [scale, drawStampOnCanvas]);
+          for (const point of highlight.points) {
+            ctx.lineTo(point.x * s, point.y * s);
+          }
+
+          ctx.closePath();
+          ctx.fill();
+          break;
+        }
+
+        case 'text': {
+          const text = annotation.data as TextAnnotation;
+          ctx.fillStyle = annotation.color;
+          ctx.font = `${text.fontSize * s}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+          ctx.textBaseline = 'top';
+          ctx.fillText(text.content, text.position.x * s, text.position.y * s);
+          break;
+        }
+
+        case 'stamp': {
+          const stampData = annotation.data as StampAnnotation;
+          drawStampOnCanvas(ctx, stampData, annotation.color, s);
+          break;
+        }
+
+        case 'shape': {
+          const shape = annotation.data as ShapeAnnotation;
+          ctx.strokeStyle = annotation.color;
+          ctx.lineWidth = annotation.strokeWidth * s;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          const x1 = shape.start.x * s;
+          const y1 = shape.start.y * s;
+          const x2 = shape.end.x * s;
+          const y2 = shape.end.y * s;
+
+          ctx.beginPath();
+
+          switch (shape.shapeType) {
+            case 'rectangle':
+              ctx.rect(x1, y1, x2 - x1, y2 - y1);
+              break;
+            case 'circle': {
+              const radiusX = Math.abs(x2 - x1) / 2;
+              const radiusY = Math.abs(y2 - y1) / 2;
+              const centerX = (x1 + x2) / 2;
+              const centerY = (y1 + y2) / 2;
+              ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+              break;
+            }
+            case 'line':
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              break;
+            case 'arrow': {
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              const angle = Math.atan2(y2 - y1, x2 - x1);
+              const headLength = (15 * s) / dpr;
+              ctx.lineTo(
+                x2 - headLength * Math.cos(angle - Math.PI / 6),
+                y2 - headLength * Math.sin(angle - Math.PI / 6),
+              );
+              ctx.moveTo(x2, y2);
+              ctx.lineTo(
+                x2 - headLength * Math.cos(angle + Math.PI / 6),
+                y2 - headLength * Math.sin(angle + Math.PI / 6),
+              );
+              break;
+            }
+          }
+
+          if (shape.filled) {
+            ctx.fillStyle = annotation.color;
+            ctx.fill();
+          }
+          ctx.stroke();
+          break;
+        }
+      }
+
+      ctx.restore();
+    },
+    [scale, drawStampOnCanvas],
+  );
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -387,15 +402,15 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
             ctx.lineTo(x2, y2);
             if (selectedShapeType === 'arrow') {
               const angle = Math.atan2(y2 - y1, x2 - x1);
-              const headLength = 15 * s / dpr;
+              const headLength = (15 * s) / dpr;
               ctx.lineTo(
                 x2 - headLength * Math.cos(angle - Math.PI / 6),
-                y2 - headLength * Math.sin(angle - Math.PI / 6)
+                y2 - headLength * Math.sin(angle - Math.PI / 6),
               );
               ctx.moveTo(x2, y2);
               ctx.lineTo(
                 x2 - headLength * Math.cos(angle + Math.PI / 6),
-                y2 - headLength * Math.sin(angle + Math.PI / 6)
+                y2 - headLength * Math.sin(angle + Math.PI / 6),
               );
             }
             break;
@@ -405,7 +420,20 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
 
       ctx.restore();
     }
-  }, [annotations, isDrawing, currentStroke, shapeStart, activeTool, selectedShapeType, color, strokeWidth, opacity, scale, dpr, drawAnnotation]);
+  }, [
+    annotations,
+    isDrawing,
+    currentStroke,
+    shapeStart,
+    activeTool,
+    selectedShapeType,
+    color,
+    strokeWidth,
+    opacity,
+    scale,
+    dpr,
+    drawAnnotation,
+  ]);
 
   useEffect(() => {
     redraw();
@@ -490,7 +518,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDrawing) return;
     const point = getCanvasPoint(e);
-    setCurrentStroke(prev => [...prev, point]);
+    setCurrentStroke((prev) => [...prev, point]);
   };
 
   const handlePointerUp = () => {
@@ -507,8 +535,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
           for (const strokePoint of stroke.points) {
             for (const erasePoint of currentStroke) {
               const distance = Math.sqrt(
-                Math.pow(strokePoint.x - erasePoint.x, 2) +
-                Math.pow(strokePoint.y - erasePoint.y, 2)
+                Math.pow(strokePoint.x - erasePoint.x, 2) + Math.pow(strokePoint.y - erasePoint.y, 2),
               );
               if (distance < eraserRadius) {
                 toDelete.push(annotation.id);
@@ -520,7 +547,7 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps & {
         }
       }
 
-      toDelete.forEach(id => onAnnotationDelete(id));
+      toDelete.forEach((id) => onAnnotationDelete(id));
     } else if (activeTool === 'freehand' && currentStroke.length > 1) {
       const freehandAnnotation: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt'> = {
         musicPieceId,

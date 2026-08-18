@@ -32,41 +32,51 @@ export function useUploadProgress(_options: UseUploadProgressOptions = {}) {
   }, []);
 
   const updateUpload = useCallback((id: string, updates: Partial<UploadItem>) => {
-    setUploads(prev => prev.map(upload =>
-      upload.id === id ? { ...upload, ...updates } : upload
-    ));
+    setUploads((prev) => prev.map((upload) => (upload.id === id ? { ...upload, ...updates } : upload)));
   }, []);
 
   const setAllUploading = useCallback((progress: number) => {
-    setUploads(prev => prev.map(upload => ({
-      ...upload,
-      progress: upload.status === 'complete' || upload.status === 'error' ? upload.progress : progress,
-      status: upload.status === 'complete' || upload.status === 'error' ? upload.status : 'uploading',
-    })));
+    setUploads((prev) =>
+      prev.map((upload) => ({
+        ...upload,
+        progress: upload.status === 'complete' || upload.status === 'error' ? upload.progress : progress,
+        status: upload.status === 'complete' || upload.status === 'error' ? upload.status : 'uploading',
+      })),
+    );
   }, []);
 
-  const markComplete = useCallback((id: string) => {
-    updateUpload(id, { progress: 100, status: 'complete' });
-  }, [updateUpload]);
+  const markComplete = useCallback(
+    (id: string) => {
+      updateUpload(id, { progress: 100, status: 'complete' });
+    },
+    [updateUpload],
+  );
 
-  const markError = useCallback((id: string, error: string) => {
-    updateUpload(id, { status: 'error', error });
-  }, [updateUpload]);
+  const markError = useCallback(
+    (id: string, error: string) => {
+      updateUpload(id, { status: 'error', error });
+    },
+    [updateUpload],
+  );
 
   const markAllComplete = useCallback(() => {
-    setUploads(prev => prev.map(upload => ({
-      ...upload,
-      progress: upload.status !== 'error' ? 100 : upload.progress,
-      status: upload.status !== 'error' ? 'complete' : upload.status,
-    })));
+    setUploads((prev) =>
+      prev.map((upload) => ({
+        ...upload,
+        progress: upload.status !== 'error' ? 100 : upload.progress,
+        status: upload.status !== 'error' ? 'complete' : upload.status,
+      })),
+    );
     setIsUploading(false);
   }, []);
 
   const markAllProcessing = useCallback(() => {
-    setUploads(prev => prev.map(upload => ({
-      ...upload,
-      status: upload.status !== 'error' && upload.status !== 'complete' ? 'processing' : upload.status,
-    })));
+    setUploads((prev) =>
+      prev.map((upload) => ({
+        ...upload,
+        status: upload.status !== 'error' && upload.status !== 'complete' ? 'processing' : upload.status,
+      })),
+    );
   }, []);
 
   const cancelAll = useCallback(() => {
@@ -79,7 +89,7 @@ export function useUploadProgress(_options: UseUploadProgressOptions = {}) {
   }, []);
 
   const clearCompleted = useCallback(() => {
-    setUploads(prev => prev.filter(upload => upload.status !== 'complete'));
+    setUploads((prev) => prev.filter((upload) => upload.status !== 'complete'));
   }, []);
 
   const clearAll = useCallback(() => {
@@ -87,13 +97,11 @@ export function useUploadProgress(_options: UseUploadProgressOptions = {}) {
     setIsUploading(false);
   }, []);
 
-  const totalProgress = uploads.length > 0
-    ? uploads.reduce((sum, u) => sum + u.progress, 0) / uploads.length
-    : 0;
+  const totalProgress = uploads.length > 0 ? uploads.reduce((sum, u) => sum + u.progress, 0) / uploads.length : 0;
 
-  const pendingCount = uploads.filter(u => u.status === 'pending' || u.status === 'uploading').length;
-  const completedCount = uploads.filter(u => u.status === 'complete').length;
-  const errorCount = uploads.filter(u => u.status === 'error').length;
+  const pendingCount = uploads.filter((u) => u.status === 'pending' || u.status === 'uploading').length;
+  const completedCount = uploads.filter((u) => u.status === 'complete').length;
+  const errorCount = uploads.filter((u) => u.status === 'error').length;
 
   return {
     uploads,

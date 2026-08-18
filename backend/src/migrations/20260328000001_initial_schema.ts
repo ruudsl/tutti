@@ -13,12 +13,12 @@ import db from '../database/connection';
  * Run the migration - Create all initial tables
  */
 export function up(): void {
-    // ===========================================
-    // CORE TABLES
-    // ===========================================
+  // ===========================================
+  // CORE TABLES
+  // ===========================================
 
-    // Associations (parent organizations)
-    db.exec(`
+  // Associations (parent organizations)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS associations (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL UNIQUE,
@@ -40,8 +40,8 @@ export function up(): void {
         )
     `);
 
-    // Orchestras within an association
-    db.exec(`
+  // Orchestras within an association
+  db.exec(`
         CREATE TABLE IF NOT EXISTS orchestras (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -51,8 +51,8 @@ export function up(): void {
         )
     `);
 
-    // Instruments with main name
-    db.exec(`
+  // Instruments with main name
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instruments (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -63,8 +63,8 @@ export function up(): void {
         )
     `);
 
-    // Instrument aliases/subnames
-    db.exec(`
+  // Instrument aliases/subnames
+  db.exec(`
         CREATE TABLE IF NOT EXISTS instrument_aliases (
             id TEXT PRIMARY KEY,
             instrument_id TEXT NOT NULL,
@@ -75,8 +75,8 @@ export function up(): void {
         )
     `);
 
-    // Users/Members
-    db.exec(`
+  // Users/Members
+  db.exec(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             email TEXT NOT NULL UNIQUE,
@@ -99,8 +99,8 @@ export function up(): void {
         )
     `);
 
-    // User-Instrument junction table
-    db.exec(`
+  // User-Instrument junction table
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_instruments (
             user_id TEXT NOT NULL,
             instrument_id TEXT NOT NULL,
@@ -110,8 +110,8 @@ export function up(): void {
         )
     `);
 
-    // User-Orchestra junction table
-    db.exec(`
+  // User-Orchestra junction table
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_orchestras (
             user_id TEXT NOT NULL,
             orchestra_id TEXT NOT NULL,
@@ -121,8 +121,8 @@ export function up(): void {
         )
     `);
 
-    // Genres for music pieces
-    db.exec(`
+  // Genres for music pieces
+  db.exec(`
         CREATE TABLE IF NOT EXISTS genres (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL UNIQUE,
@@ -130,12 +130,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // MUSIC MANAGEMENT
-    // ===========================================
+  // ===========================================
+  // MUSIC MANAGEMENT
+  // ===========================================
 
-    // Music lists per orchestra
-    db.exec(`
+  // Music lists per orchestra
+  db.exec(`
         CREATE TABLE IF NOT EXISTS music_lists (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -150,8 +150,8 @@ export function up(): void {
         )
     `);
 
-    // Music titles (metadata)
-    db.exec(`
+  // Music titles (metadata)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS music_titles (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -171,8 +171,8 @@ export function up(): void {
         )
     `);
 
-    // Music pieces (sheet music files)
-    db.exec(`
+  // Music pieces (sheet music files)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS music_pieces (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -194,8 +194,8 @@ export function up(): void {
         )
     `);
 
-    // Music list pieces junction table
-    db.exec(`
+  // Music list pieces junction table
+  db.exec(`
         CREATE TABLE IF NOT EXISTS music_list_pieces (
             music_list_id TEXT NOT NULL,
             music_piece_id TEXT NOT NULL,
@@ -207,8 +207,8 @@ export function up(): void {
         )
     `);
 
-    // Music title genres junction table
-    db.exec(`
+  // Music title genres junction table
+  db.exec(`
         CREATE TABLE IF NOT EXISTS music_title_genres (
             music_title_id TEXT NOT NULL,
             genre_id TEXT NOT NULL,
@@ -218,8 +218,8 @@ export function up(): void {
         )
     `);
 
-    // Shared music access (legacy)
-    db.exec(`
+  // Shared music access (legacy)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS shared_music_access (
             music_piece_id TEXT NOT NULL,
             association_id TEXT NOT NULL,
@@ -230,8 +230,8 @@ export function up(): void {
         )
     `);
 
-    // Shared title access
-    db.exec(`
+  // Shared title access
+  db.exec(`
         CREATE TABLE IF NOT EXISTS shared_title_access (
             music_title_id TEXT NOT NULL,
             association_id TEXT NOT NULL,
@@ -242,12 +242,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // USER FEATURES
-    // ===========================================
+  // ===========================================
+  // USER FEATURES
+  // ===========================================
 
-    // User favorites
-    db.exec(`
+  // User favorites
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_favorites (
             user_id TEXT NOT NULL,
             music_title_id TEXT NOT NULL,
@@ -258,8 +258,8 @@ export function up(): void {
         )
     `);
 
-    // Recent views
-    db.exec(`
+  // Recent views
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_recent_views (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -271,8 +271,8 @@ export function up(): void {
         )
     `);
 
-    // Practice logs
-    db.exec(`
+  // Practice logs
+  db.exec(`
         CREATE TABLE IF NOT EXISTS practice_logs (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -285,8 +285,8 @@ export function up(): void {
         )
     `);
 
-    // PDF annotations
-    db.exec(`
+  // PDF annotations
+  db.exec(`
         CREATE TABLE IF NOT EXISTS pdf_annotations (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -306,8 +306,8 @@ export function up(): void {
         )
     `);
 
-    // User sessions
-    db.exec(`
+  // User sessions
+  db.exec(`
         CREATE TABLE IF NOT EXISTS user_sessions (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -321,8 +321,8 @@ export function up(): void {
         )
     `);
 
-    // Push subscriptions
-    db.exec(`
+  // Push subscriptions
+  db.exec(`
         CREATE TABLE IF NOT EXISTS push_subscriptions (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -334,8 +334,8 @@ export function up(): void {
         )
     `);
 
-    // Password reset tokens
-    db.exec(`
+  // Password reset tokens
+  db.exec(`
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -347,12 +347,12 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // ISSUE TRACKING & LOANS
-    // ===========================================
+  // ===========================================
+  // ISSUE TRACKING & LOANS
+  // ===========================================
 
-    // Piece issues (Meldkamer)
-    db.exec(`
+  // Piece issues (Meldkamer)
+  db.exec(`
         CREATE TABLE IF NOT EXISTS piece_issues (
             id TEXT PRIMARY KEY,
             music_piece_id TEXT NOT NULL,
@@ -371,8 +371,8 @@ export function up(): void {
         )
     `);
 
-    // Music loans
-    db.exec(`
+  // Music loans
+  db.exec(`
         CREATE TABLE IF NOT EXISTS loans (
             id TEXT PRIMARY KEY,
             music_title_id TEXT NOT NULL,
@@ -391,8 +391,8 @@ export function up(): void {
         )
     `);
 
-    // Activity log
-    db.exec(`
+  // Activity log
+  db.exec(`
         CREATE TABLE IF NOT EXISTS activity_log (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -405,65 +405,65 @@ export function up(): void {
         )
     `);
 
-    // ===========================================
-    // INDEXES FOR CORE TABLES
-    // ===========================================
+  // ===========================================
+  // INDEXES FOR CORE TABLES
+  // ===========================================
 
-    db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_users_association ON users(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_orchestras_association ON orchestras(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_instrument ON music_pieces(instrument_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_association ON music_pieces(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_title ON music_pieces(title)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(alias)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_genres_name ON genres(name)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_piece_issues_piece ON piece_issues(music_piece_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_piece_issues_status ON piece_issues(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_loans_title ON loans(music_title_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token)');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_users_association ON users(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_orchestras_association ON orchestras(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_instrument ON music_pieces(instrument_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_association ON music_pieces(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_music_pieces_title ON music_pieces(title)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_instrument_aliases_alias ON instrument_aliases(alias)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_music_titles_title ON music_titles(title)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_music_titles_association ON music_titles(association_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_genres_name ON genres(name)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_piece_issues_piece ON piece_issues(music_piece_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_piece_issues_status ON piece_issues(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_loans_title ON loans(music_title_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON activity_log(entity_type, entity_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_activity_log_date ON activity_log(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id)');
 }
 
 /**
  * Rollback the migration - Drop all tables
  */
 export function down(): void {
-    // Drop tables in reverse order of dependencies
-    const tables = [
-        'password_reset_tokens',
-        'activity_log',
-        'loans',
-        'piece_issues',
-        'push_subscriptions',
-        'user_sessions',
-        'pdf_annotations',
-        'practice_logs',
-        'user_recent_views',
-        'user_favorites',
-        'shared_title_access',
-        'shared_music_access',
-        'music_title_genres',
-        'music_list_pieces',
-        'music_pieces',
-        'music_titles',
-        'music_lists',
-        'genres',
-        'user_orchestras',
-        'user_instruments',
-        'users',
-        'instrument_aliases',
-        'instruments',
-        'orchestras',
-        'associations',
-    ];
+  // Drop tables in reverse order of dependencies
+  const tables = [
+    'password_reset_tokens',
+    'activity_log',
+    'loans',
+    'piece_issues',
+    'push_subscriptions',
+    'user_sessions',
+    'pdf_annotations',
+    'practice_logs',
+    'user_recent_views',
+    'user_favorites',
+    'shared_title_access',
+    'shared_music_access',
+    'music_title_genres',
+    'music_list_pieces',
+    'music_pieces',
+    'music_titles',
+    'music_lists',
+    'genres',
+    'user_orchestras',
+    'user_instruments',
+    'users',
+    'instrument_aliases',
+    'instruments',
+    'orchestras',
+    'associations',
+  ];
 
-    for (const table of tables) {
-        db.exec(`DROP TABLE IF EXISTS ${table}`);
-    }
+  for (const table of tables) {
+    db.exec(`DROP TABLE IF EXISTS ${table}`);
+  }
 }

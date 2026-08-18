@@ -28,15 +28,18 @@ export const createRehearsal = async (rehearsal: {
   return data;
 };
 
-export const updateRehearsal = async (id: string, rehearsal: {
-  date: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  type?: string;
-  notes?: string;
-  orchestraId?: string;
-}): Promise<void> => {
+export const updateRehearsal = async (
+  id: string,
+  rehearsal: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    location?: string;
+    type?: string;
+    notes?: string;
+    orchestraId?: string;
+  },
+): Promise<void> => {
   await api.put(`/rehearsals/${id}`, rehearsal);
 };
 
@@ -65,12 +68,15 @@ export const addDefaultDay = async (day: {
   return data;
 };
 
-export const updateDefaultDay = async (id: string, day: {
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
-  location?: string;
-}): Promise<void> => {
+export const updateDefaultDay = async (
+  id: string,
+  day: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    location?: string;
+  },
+): Promise<void> => {
   await api.put(`/rehearsals/default-days/${id}`, day);
 };
 
@@ -99,7 +105,11 @@ export interface AttendanceMember {
   total: number;
 }
 
-export const getAttendanceSummary = async (from: string, to: string, orchestraId?: string): Promise<{
+export const getAttendanceSummary = async (
+  from: string,
+  to: string,
+  orchestraId?: string,
+): Promise<{
   members: AttendanceMember[];
   rehearsalCount: number;
   from: string;

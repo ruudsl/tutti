@@ -4,16 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import type { RehearsalAttendanceTrend } from '../../api/attendance-analytics';
 
@@ -23,11 +14,7 @@ interface AttendanceLineChartProps {
   showAttendees?: boolean;
 }
 
-export function AttendanceLineChart({
-  data,
-  height = 300,
-  showAttendees = true,
-}: AttendanceLineChartProps) {
+export function AttendanceLineChart({ data, height = 300, showAttendees = true }: AttendanceLineChartProps) {
   const { t } = useTranslation();
 
   const chartData = useMemo(() => {

@@ -28,11 +28,10 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-        className="mb-3"
-      >
-        <h1>{t('dashboard.welcome')}, {user?.firstName}!</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mb-3">
+        <h1>
+          {t('dashboard.welcome')}, {user?.firstName}!
+        </h1>
         <DashboardEditToggle
           isEditMode={isEditMode}
           onToggle={() => setIsEditMode(!isEditMode)}

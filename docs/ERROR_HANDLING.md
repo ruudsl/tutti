@@ -27,22 +27,22 @@ throw errors.internal('Database connection failed');
 
 ```typescript
 class ApiError extends Error {
-  statusCode: number;       // HTTP status code
-  message: string;          // Error message
-  isOperational: boolean;   // true = expected error, false = programming error
+  statusCode: number; // HTTP status code
+  message: string; // Error message
+  isOperational: boolean; // true = expected error, false = programming error
 }
 ```
 
 ### Predefined Error Factories
 
-| Factory | Status Code | Default Message |
-|---------|-------------|-----------------|
-| `errors.badRequest()` | 400 | "Ongeldige aanvraag." |
-| `errors.unauthorized()` | 401 | "Niet geautoriseerd." |
-| `errors.forbidden()` | 403 | "Geen toegang." |
-| `errors.notFound()` | 404 | "Niet gevonden." |
-| `errors.conflict()` | 409 | "Conflict." |
-| `errors.internal()` | 500 | "Interne serverfout." |
+| Factory                 | Status Code | Default Message       |
+| ----------------------- | ----------- | --------------------- |
+| `errors.badRequest()`   | 400         | "Ongeldige aanvraag." |
+| `errors.unauthorized()` | 401         | "Niet geautoriseerd." |
+| `errors.forbidden()`    | 403         | "Geen toegang."       |
+| `errors.notFound()`     | 404         | "Niet gevonden."      |
+| `errors.conflict()`     | 409         | "Conflict."           |
+| `errors.internal()`     | 500         | "Interne serverfout." |
 
 ### Async Handler Wrapper
 
@@ -51,13 +51,16 @@ Use `asyncHandler` to automatically catch Promise rejections:
 ```typescript
 import { asyncHandler } from '../middleware/errorHandler';
 
-router.get('/users/:id', asyncHandler(async (req, res) => {
-  const user = await findUser(req.params.id);
-  if (!user) {
-    throw errors.notFound('User not found');
-  }
-  res.json(user);
-}));
+router.get(
+  '/users/:id',
+  asyncHandler(async (req, res) => {
+    const user = await findUser(req.params.id);
+    if (!user) {
+      throw errors.notFound('User not found');
+    }
+    res.json(user);
+  }),
+);
 ```
 
 ### Error Middleware
@@ -74,13 +77,13 @@ The central error handler (`errorHandler`) processes all errors:
 
 ### Automatic Error Transformations
 
-| Error Type | HTTP Status | Response |
-|------------|-------------|----------|
-| `ApiError` | As specified | `{ error: message }` |
-| `ZodError` | 400 | `{ error: "Validatiefout.", details: [...] }` |
-| UNIQUE constraint | 409 | `{ error: "Dit item bestaat al." }` |
-| FOREIGN KEY constraint | 400 | `{ error: "Ongeldige referentie." }` |
-| Other errors | 500 | `{ error: "Interne serverfout." }` |
+| Error Type             | HTTP Status  | Response                                      |
+| ---------------------- | ------------ | --------------------------------------------- |
+| `ApiError`             | As specified | `{ error: message }`                          |
+| `ZodError`             | 400          | `{ error: "Validatiefout.", details: [...] }` |
+| UNIQUE constraint      | 409          | `{ error: "Dit item bestaat al." }`           |
+| FOREIGN KEY constraint | 400          | `{ error: "Ongeldige referentie." }`          |
+| Other errors           | 500          | `{ error: "Interne serverfout." }`            |
 
 ## Frontend Error Handling
 
@@ -101,19 +104,19 @@ import { ErrorBoundary } from './components/ErrorBoundary';
   showReportButton
 >
   <App />
-</ErrorBoundary>
+</ErrorBoundary>;
 ```
 
 #### ErrorBoundary Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `children` | ReactNode | Components to wrap |
-| `fallback` | ReactNode | Custom fallback UI |
-| `onError` | `(error, errorInfo) => void` | Error callback |
-| `onReport` | `(error, errorInfo) => void` | Report button callback |
-| `showReportButton` | boolean | Show report button (default: true) |
-| `onRetry` | `() => void` | Custom retry handler |
+| Prop               | Type                         | Description                        |
+| ------------------ | ---------------------------- | ---------------------------------- |
+| `children`         | ReactNode                    | Components to wrap                 |
+| `fallback`         | ReactNode                    | Custom fallback UI                 |
+| `onError`          | `(error, errorInfo) => void` | Error callback                     |
+| `onReport`         | `(error, errorInfo) => void` | Report button callback             |
+| `showReportButton` | boolean                      | Show report button (default: true) |
+| `onRetry`          | `() => void`                 | Custom retry handler               |
 
 ### Section Error Boundary
 
@@ -124,7 +127,7 @@ import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 
 <SectionErrorBoundary sectionName="Music Player" compact>
   <MusicPlayer />
-</SectionErrorBoundary>
+</SectionErrorBoundary>;
 
 // Or use the HOC
 import { withSectionErrorBoundary } from './components/SectionErrorBoundary';
@@ -134,12 +137,12 @@ const SafeMusicPlayer = withSectionErrorBoundary(MusicPlayer, 'Music Player');
 
 #### SectionErrorBoundary Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `sectionName` | string | Section name for display |
-| `compact` | boolean | Minimal error display |
-| `showRetry` | boolean | Show retry button (default: true) |
-| `onError` | `(error, errorInfo, sectionName) => void` | Error callback |
+| Prop          | Type                                      | Description                       |
+| ------------- | ----------------------------------------- | --------------------------------- |
+| `sectionName` | string                                    | Section name for display          |
+| `compact`     | boolean                                   | Minimal error display             |
+| `showRetry`   | boolean                                   | Show retry button (default: true) |
+| `onError`     | `(error, errorInfo, sectionName) => void` | Error callback                    |
 
 ### Toast Notifications
 
@@ -155,14 +158,11 @@ showSuccess('Changes saved');
 showError('Failed to save changes');
 
 // Promise-based (loading -> success/error)
-await showPromise(
-  saveData(),
-  {
-    loading: 'Saving...',
-    success: 'Saved successfully',
-    error: 'Failed to save'
-  }
-);
+await showPromise(saveData(), {
+  loading: 'Saving...',
+  success: 'Saved successfully',
+  error: 'Failed to save',
+});
 ```
 
 Toast functions include screen reader announcements for accessibility.
@@ -179,13 +179,13 @@ try {
 } catch (error) {
   // Get user-friendly message
   const message = getErrorMessage(error);
-  
+
   // Get error code for handling specific cases
   const code = getErrorCode(error);
   if (code === 'UNAUTHORIZED') {
     // Redirect to login
   }
-  
+
   // Get localized message with i18n
   const localizedMessage = getLocalizedErrorMessage(error, t, 'en');
 }
@@ -193,16 +193,16 @@ try {
 
 #### Error Codes
 
-| Code | Description |
-|------|-------------|
-| `UNAUTHORIZED` | 401 - Session expired |
-| `FORBIDDEN` | 403 - Access denied |
-| `NOT_FOUND` | 404 - Resource not found |
-| `CONFLICT` | 409 - Duplicate entry |
-| `VALIDATION_ERROR` | 422 - Invalid input |
-| `SERVER_ERROR` | 5xx - Server error |
-| `NETWORK_ERROR` | No response |
-| `TIMEOUT` | Request timeout |
+| Code               | Description              |
+| ------------------ | ------------------------ |
+| `UNAUTHORIZED`     | 401 - Session expired    |
+| `FORBIDDEN`        | 403 - Access denied      |
+| `NOT_FOUND`        | 404 - Resource not found |
+| `CONFLICT`         | 409 - Duplicate entry    |
+| `VALIDATION_ERROR` | 422 - Invalid input      |
+| `SERVER_ERROR`     | 5xx - Server error       |
+| `NETWORK_ERROR`    | No response              |
+| `TIMEOUT`          | Request timeout          |
 
 ### Error Handler Factory
 
@@ -244,20 +244,20 @@ logSecurity('rate-limit-exceeded', { ip: req.ip, endpoint: '/api/auth' });
 
 ### Log Levels
 
-| Level | Use Case |
-|-------|----------|
-| `error` | Errors requiring attention |
-| `warn` | Potential issues, deprecated usage |
-| `info` | Important events (startup, auth) |
-| `debug` | Development debugging (dev only) |
+| Level   | Use Case                           |
+| ------- | ---------------------------------- |
+| `error` | Errors requiring attention         |
+| `warn`  | Potential issues, deprecated usage |
+| `info`  | Important events (startup, auth)   |
+| `debug` | Development debugging (dev only)   |
 
 ### Log Files (Production)
 
-| File | Contents |
-|------|----------|
-| `logs/error.log` | Error-level logs only |
-| `logs/combined.log` | All log levels |
-| `logs/access.log` | HTTP request logs |
+| File                | Contents              |
+| ------------------- | --------------------- |
+| `logs/error.log`    | Error-level logs only |
+| `logs/combined.log` | All log levels        |
+| `logs/access.log`   | HTTP request logs     |
 
 Log files are rotated at 10MB with 5-10 file retention.
 
@@ -315,23 +315,27 @@ setupSentryExpressErrorHandler(app);
 Sentry automatically filters sensitive data:
 
 **Redacted Headers:**
+
 - `authorization`
 - `cookie`
 - `x-csrf-token`
 
 **Redacted Body Fields:**
+
 - `password`
 - `token`
 - `secret`
 - `apiKey`
 
 **Excluded Breadcrumbs:**
+
 - `/auth/login`
 - `/auth/reset-password`
 
 ### Performance Monitoring
 
 Sentry tracks performance in production:
+
 - Traces sample rate: 10% (production), 100% (development)
 - HTTP request tracing
 - Express middleware timing
@@ -352,18 +356,21 @@ throw new Error('Not found');
 
 ```typescript
 // API route handler
-router.post('/orders', asyncHandler(async (req, res) => {
-  try {
-    const order = await createOrder(req.body);
-    res.json(order);
-  } catch (error) {
-    // Transform domain errors to API errors
-    if (error instanceof InsufficientStockError) {
-      throw errors.badRequest(error.message);
+router.post(
+  '/orders',
+  asyncHandler(async (req, res) => {
+    try {
+      const order = await createOrder(req.body);
+      res.json(order);
+    } catch (error) {
+      // Transform domain errors to API errors
+      if (error instanceof InsufficientStockError) {
+        throw errors.badRequest(error.message);
+      }
+      throw error; // Let error middleware handle unknown errors
     }
-    throw error; // Let error middleware handle unknown errors
-  }
-}));
+  }),
+);
 ```
 
 ### 3. Include Context in Logs
@@ -389,7 +396,7 @@ logger.error('Error creating order');
   <SectionErrorBoundary sectionName="Sidebar">
     <Sidebar />
   </SectionErrorBoundary>
-  
+
   <SectionErrorBoundary sectionName="Main Content">
     <MainContent />
   </SectionErrorBoundary>

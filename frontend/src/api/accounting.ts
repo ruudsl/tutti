@@ -5,10 +5,28 @@ import api from './client';
 // =====================================================
 
 export type AccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense';
-export type AccountSubtype = 'bank' | 'cash' | 'receivable' | 'payable' | 'inventory' |
-  'fixed_asset' | 'current_liability' | 'long_term_liability' | 'retained_earnings' |
-  'membership_fees' | 'donations' | 'grants' | 'ticket_sales' | 'sponsoring' |
-  'personnel' | 'materials' | 'rent' | 'utilities' | 'insurance' | 'depreciation' | 'other';
+export type AccountSubtype =
+  | 'bank'
+  | 'cash'
+  | 'receivable'
+  | 'payable'
+  | 'inventory'
+  | 'fixed_asset'
+  | 'current_liability'
+  | 'long_term_liability'
+  | 'retained_earnings'
+  | 'membership_fees'
+  | 'donations'
+  | 'grants'
+  | 'ticket_sales'
+  | 'sponsoring'
+  | 'personnel'
+  | 'materials'
+  | 'rent'
+  | 'utilities'
+  | 'insurance'
+  | 'depreciation'
+  | 'other';
 export type FiscalYearStatus = 'open' | 'closed' | 'locked';
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'partial' | 'overdue' | 'cancelled' | 'written_off';
 export type InvoiceType = 'sales' | 'purchase' | 'credit_note';
@@ -252,12 +270,17 @@ export async function getMembershipFeeTypes(): Promise<MembershipFeeType[]> {
   return response.data;
 }
 
-export async function createMembershipFeeType(data: CreateMembershipFeeTypeData): Promise<{ id: string; message: string }> {
+export async function createMembershipFeeType(
+  data: CreateMembershipFeeTypeData,
+): Promise<{ id: string; message: string }> {
   const response = await api.post('/accounting/membership-fee-types', data);
   return response.data;
 }
 
-export async function updateMembershipFeeType(id: string, data: Partial<CreateMembershipFeeTypeData>): Promise<{ message: string }> {
+export async function updateMembershipFeeType(
+  id: string,
+  data: Partial<CreateMembershipFeeTypeData>,
+): Promise<{ message: string }> {
   const response = await api.put(`/accounting/membership-fee-types/${id}`, data);
   return response.data;
 }
@@ -292,7 +315,9 @@ export async function getInvoice(id: string): Promise<Invoice> {
   return response.data;
 }
 
-export async function createInvoice(data: CreateInvoiceData): Promise<{ id: string; invoiceNumber: string; message: string }> {
+export async function createInvoice(
+  data: CreateInvoiceData,
+): Promise<{ id: string; invoiceNumber: string; message: string }> {
   const response = await api.post('/accounting/invoices', data);
   return response.data;
 }
@@ -325,7 +350,11 @@ export async function getBalanceReport(fiscalYearId?: string, date?: string): Pr
   return response.data;
 }
 
-export async function getProfitLossReport(fiscalYearId?: string, startDate?: string, endDate?: string): Promise<ProfitLossReport> {
+export async function getProfitLossReport(
+  fiscalYearId?: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<ProfitLossReport> {
   const params = new URLSearchParams();
   if (fiscalYearId) params.append('fiscalYearId', fiscalYearId);
   if (startDate) params.append('startDate', startDate);
@@ -381,7 +410,10 @@ export interface CreateTransactionData {
   reference?: string;
   description: string;
   invoiceId?: string;
-  lines: Omit<TransactionLine, 'id' | 'lineNumber' | 'accountCode' | 'accountName' | 'accountType' | 'costCenterCode' | 'costCenterName'>[];
+  lines: Omit<
+    TransactionLine,
+    'id' | 'lineNumber' | 'accountCode' | 'accountName' | 'accountType' | 'costCenterCode' | 'costCenterName'
+  >[];
 }
 
 export interface TransactionFilters {
@@ -411,7 +443,9 @@ export async function getTransaction(id: string): Promise<Transaction> {
   return response.data;
 }
 
-export async function createTransaction(data: CreateTransactionData): Promise<{ id: string; transactionNumber: string; message: string }> {
+export async function createTransaction(
+  data: CreateTransactionData,
+): Promise<{ id: string; transactionNumber: string; message: string }> {
   const response = await api.post('/accounting/transactions', data);
   return response.data;
 }
@@ -482,7 +516,7 @@ export interface BankStatementDetail {
 export async function importBankStatement(
   accountId: string,
   format: BankImportFormat,
-  content: string
+  content: string,
 ): Promise<{ id: string; entryCount: number; totalDebit: number; totalCredit: number; message: string }> {
   const response = await api.post('/accounting/bank-import', { accountId, format, content });
   return response.data;
@@ -502,7 +536,7 @@ export async function bookBankLine(
   statementId: string,
   lineId: string,
   counterAccountId: string,
-  costCenterId?: string
+  costCenterId?: string,
 ): Promise<{ transactionId: string; transactionNumber: string; message: string }> {
   const response = await api.post(`/accounting/bank-statements/${statementId}/lines/${lineId}/book`, {
     counterAccountId,
@@ -566,7 +600,11 @@ export interface AgingReport {
   grandTotal: number;
 }
 
-export async function getAccountLedger(accountId: string, startDate?: string, endDate?: string): Promise<AccountLedgerReport> {
+export async function getAccountLedger(
+  accountId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<AccountLedgerReport> {
   const params = new URLSearchParams();
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
@@ -609,7 +647,7 @@ export async function generateSepaBatch(
   paymentType: 'credit_transfer' | 'direct_debit',
   executionDate: string,
   bankAccountId: string,
-  invoiceIds: string[]
+  invoiceIds: string[],
 ): Promise<{ id: string; transactionCount: number; totalAmount: number; message: string }> {
   const response = await api.post('/accounting/sepa/generate', {
     paymentType,
@@ -798,27 +836,45 @@ async function downloadExport(endpoint: string, filename: string): Promise<void>
 
 export async function exportTransactions(fiscalYearId?: string): Promise<void> {
   const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
-  await downloadExport(`/accounting/export/transactions${params}`, `grootboek_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    `/accounting/export/transactions${params}`,
+    `grootboek_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }
 
 export async function exportAccounts(fiscalYearId?: string): Promise<void> {
   const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
-  await downloadExport(`/accounting/export/accounts${params}`, `rekeningschema_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    `/accounting/export/accounts${params}`,
+    `rekeningschema_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }
 
 export async function exportInvoices(fiscalYearId?: string): Promise<void> {
   const params = fiscalYearId ? `?fiscalYearId=${fiscalYearId}&format=csv` : '?format=csv';
-  await downloadExport(`/accounting/export/invoices${params}`, `facturen_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    `/accounting/export/invoices${params}`,
+    `facturen_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }
 
 export async function exportBalanceSheet(fiscalYearId: string): Promise<void> {
-  await downloadExport(`/accounting/export/balance-sheet?fiscalYearId=${fiscalYearId}&format=csv`, `balans_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    `/accounting/export/balance-sheet?fiscalYearId=${fiscalYearId}&format=csv`,
+    `balans_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }
 
 export async function exportProfitLoss(fiscalYearId: string): Promise<void> {
-  await downloadExport(`/accounting/export/profit-loss?fiscalYearId=${fiscalYearId}&format=csv`, `winst_verlies_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    `/accounting/export/profit-loss?fiscalYearId=${fiscalYearId}&format=csv`,
+    `winst_verlies_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }
 
 export async function exportRelations(): Promise<void> {
-  await downloadExport('/accounting/export/relations?format=csv', `relaties_${new Date().toISOString().split('T')[0]}.csv`);
+  await downloadExport(
+    '/accounting/export/relations?format=csv',
+    `relaties_${new Date().toISOString().split('T')[0]}.csv`,
+  );
 }

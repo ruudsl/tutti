@@ -25,7 +25,7 @@ export function useSpondIntegration() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const updateCredentials = useCallback((updates: Partial<SpondCredentials>) => {
-    setCredentials(prev => ({ ...prev, ...updates }));
+    setCredentials((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const resetCredentials = useCallback(() => {

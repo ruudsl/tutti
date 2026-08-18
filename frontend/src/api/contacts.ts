@@ -83,12 +83,20 @@ export const getContactCategories = async (): Promise<ContactCategory[]> => {
   return data;
 };
 
-export const createContactCategory = async (category: { name: string; color?: string; icon?: string; sortOrder?: number }): Promise<ContactCategory> => {
+export const createContactCategory = async (category: {
+  name: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+}): Promise<ContactCategory> => {
   const { data } = await api.post('/contacts/categories', category);
   return data;
 };
 
-export const updateContactCategory = async (id: string, category: { name?: string; color?: string; icon?: string; sortOrder?: number }): Promise<void> => {
+export const updateContactCategory = async (
+  id: string,
+  category: { name?: string; color?: string; icon?: string; sortOrder?: number },
+): Promise<void> => {
   await api.put(`/contacts/categories/${id}`, category);
 };
 
@@ -107,7 +115,9 @@ export const getContact = async (id: string): Promise<Contact> => {
   return data;
 };
 
-export const createContact = async (contact: CreateContactData): Promise<{ id: string; name: string; message: string }> => {
+export const createContact = async (
+  contact: CreateContactData,
+): Promise<{ id: string; name: string; message: string }> => {
   const { data } = await api.post('/contacts', contact);
   return data;
 };
@@ -128,7 +138,9 @@ export const deactivateContact = async (id: string): Promise<void> => {
   await api.post(`/contacts/${id}/deactivate`);
 };
 
-export const promoteContactToUser = async (id: string): Promise<{ userId: string; email: string; tempPassword: string; message: string }> => {
+export const promoteContactToUser = async (
+  id: string,
+): Promise<{ userId: string; email: string; tempPassword: string; message: string }> => {
   const { data } = await api.post(`/contacts/${id}/promote`);
   return data;
 };
@@ -139,12 +151,19 @@ export const getContactPersons = async (contactId: string): Promise<ContactPerso
   return data;
 };
 
-export const addContactPerson = async (contactId: string, person: { name: string; role?: string; email?: string; phone?: string; isPrimary?: boolean; notes?: string }): Promise<{ id: string; name: string; message: string }> => {
+export const addContactPerson = async (
+  contactId: string,
+  person: { name: string; role?: string; email?: string; phone?: string; isPrimary?: boolean; notes?: string },
+): Promise<{ id: string; name: string; message: string }> => {
   const { data } = await api.post(`/contacts/${contactId}/persons`, person);
   return data;
 };
 
-export const updateContactPerson = async (contactId: string, personId: string, person: { name?: string; role?: string; email?: string; phone?: string; isPrimary?: boolean; notes?: string }): Promise<void> => {
+export const updateContactPerson = async (
+  contactId: string,
+  personId: string,
+  person: { name?: string; role?: string; email?: string; phone?: string; isPrimary?: boolean; notes?: string },
+): Promise<void> => {
   await api.put(`/contacts/${contactId}/persons/${personId}`, person);
 };
 

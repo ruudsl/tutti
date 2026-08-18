@@ -78,7 +78,7 @@ export const createTicketOrder = async (
     buyerPhone?: string;
     notes?: string;
     captchaToken?: string;
-  }
+  },
 ): Promise<{
   orderId: string;
   total: number;
@@ -116,7 +116,7 @@ export const getTicketOrder = async (orderId: string): Promise<TicketOrder> => {
  */
 export const payTicketOrder = async (
   orderId: string,
-  payment: { method?: string; returnUrl?: string }
+  payment: { method?: string; returnUrl?: string },
 ): Promise<{ paymentId: string; checkoutUrl: string }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/pay`, payment);
   return data;
@@ -191,7 +191,7 @@ export const createTicketType = async (
     saleStart?: string;
     saleEnd?: string;
     maxPerOrder?: number;
-  }
+  },
 ): Promise<TicketType> => {
   const { data } = await api.post(`/concerts/${concertId}/ticket-types`, ticketType);
   return data;
@@ -223,7 +223,7 @@ export const updateTicketType = async (
     saleStart?: string;
     saleEnd?: string;
     maxPerOrder?: number;
-  }
+  },
 ): Promise<{ success: boolean }> => {
   const { data } = await api.put(`/ticket-types/${ticketTypeId}`, updates);
   return data;
@@ -327,7 +327,10 @@ export const cancelTicket = async (ticketId: string): Promise<{ success: boolean
  * @returns {Promise<{success: boolean, refundId?: string, message: string}>} Refund result
  * @throws {AxiosError} When order not found, already refunded, or refund fails
  */
-export const refundOrder = async (orderId: string, reason?: string): Promise<{ success: boolean; refundId?: string; message: string }> => {
+export const refundOrder = async (
+  orderId: string,
+  reason?: string,
+): Promise<{ success: boolean; refundId?: string; message: string }> => {
   const { data } = await api.post(`/tickets/orders/${orderId}/refund`, { reason });
   return data;
 };
@@ -490,7 +493,7 @@ export const getTransferableTickets = async (): Promise<TransferableTicket[]> =>
  */
 export const initiateTicketTransfer = async (
   ticketId: string,
-  transfer: { recipientEmail: string; recipientName: string }
+  transfer: { recipientEmail: string; recipientName: string },
 ): Promise<{ transfer: TicketTransfer; message: string }> => {
   const { data } = await api.post(`/tickets/${ticketId}/transfer`, transfer);
   return data;
@@ -531,7 +534,9 @@ export const cancelTicketTransfer = async (transferId: string): Promise<{ succes
  * @returns {Promise<{success: boolean, ticket: Ticket, message: string}>} Accepted ticket details
  * @throws {AxiosError} When transfer not found, expired, or already accepted
  */
-export const acceptTicketTransfer = async (transferCode: string): Promise<{ success: boolean; ticket: Ticket; message: string }> => {
+export const acceptTicketTransfer = async (
+  transferCode: string,
+): Promise<{ success: boolean; ticket: Ticket; message: string }> => {
   const { data } = await api.post(`/tickets/transfers/${transferCode}/accept`);
   return data;
 };

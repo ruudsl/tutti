@@ -12,10 +12,10 @@ The query client (`frontend/src/lib/queryClient.ts`) is configured with intellig
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,    // 5 minutes - data considered fresh
+      staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - cache retention for offline
-      retry: 1,                     // Single retry on failure
-      refetchOnWindowFocus: false,  // Disable automatic refetch
+      retry: 1, // Single retry on failure
+      refetchOnWindowFocus: false, // Disable automatic refetch
     },
     mutations: {
       retry: 0, // No automatic retry for mutations
@@ -28,14 +28,14 @@ const queryClient = new QueryClient({
 
 Different data types have different freshness requirements:
 
-| Data Type | Stale Time | Rationale |
-|-----------|------------|-----------|
-| Reference data (instruments, genres) | 30 min | Rarely changes |
-| User profile | 10 min | Infrequently updated |
-| User list | 15 min | Moderate change frequency |
-| Content (music, concerts) | 5 min | Default, balanced |
-| Real-time (tickets, seating) | 30-60 sec | Frequently updated |
-| Notifications | 1 min | Time-sensitive |
+| Data Type                            | Stale Time | Rationale                 |
+| ------------------------------------ | ---------- | ------------------------- |
+| Reference data (instruments, genres) | 30 min     | Rarely changes            |
+| User profile                         | 10 min     | Infrequently updated      |
+| User list                            | 15 min     | Moderate change frequency |
+| Content (music, concerts)            | 5 min      | Default, balanced         |
+| Real-time (tickets, seating)         | 30-60 sec  | Frequently updated        |
+| Notifications                        | 1 min      | Time-sensitive            |
 
 ```typescript
 import { staleTimes } from '../lib/queryClient';
@@ -51,11 +51,11 @@ useQuery({
 
 Controls how long unused data stays in cache:
 
-| Data Type | Cache Time | Purpose |
-|-----------|------------|---------|
-| Reference data | 1 hour | Reduce API calls |
-| Content data | 30 min | Balance freshness/performance |
-| Frequently changing | 10 min | Prevent stale data |
+| Data Type           | Cache Time | Purpose                       |
+| ------------------- | ---------- | ----------------------------- |
+| Reference data      | 1 hour     | Reduce API calls              |
+| Content data        | 30 min     | Balance freshness/performance |
+| Frequently changing | 10 min     | Prevent stale data            |
 
 ### Query Keys
 
@@ -65,10 +65,10 @@ Use consistent query keys for proper cache invalidation:
 import { queryKeys } from '../lib/queryClient';
 
 // Standard patterns
-queryKeys.users                    // ['users']
-queryKeys.user(id)                 // ['users', id]
-queryKeys.musicPieces({ genre })   // ['musicPieces', { genre }]
-queryKeys.concert(id)              // ['concerts', id]
+queryKeys.users; // ['users']
+queryKeys.user(id); // ['users', id]
+queryKeys.musicPieces({ genre }); // ['musicPieces', { genre }]
+queryKeys.concert(id); // ['concerts', id]
 ```
 
 ### Cache Persistence
@@ -176,26 +176,26 @@ rollupOptions: {
     manualChunks: {
       // Core React - loaded first
       'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-      
+
       // State management
       'vendor-query': [
         '@tanstack/react-query',
         '@tanstack/react-query-persist-client',
         '@tanstack/query-sync-storage-persister',
       ],
-      
+
       // Heavy libraries - loaded on demand
       'vendor-pdf': ['pdfjs-dist'],
-      
+
       // Forms
       'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-      
+
       // Drag and drop
       'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-      
+
       // i18n
       'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-      
+
       // Utilities
       'vendor-utils': ['axios', 'date-fns', 'idb', 'ua-parser-js'],
     },
@@ -205,13 +205,13 @@ rollupOptions: {
 
 ### Benefits
 
-| Chunk | Size | Loading |
-|-------|------|---------|
-| vendor-react | ~140KB | Initial load |
-| vendor-query | ~45KB | Initial load |
-| vendor-pdf | ~800KB | On PDF view |
-| vendor-forms | ~35KB | On form pages |
-| vendor-dnd | ~25KB | On sortable lists |
+| Chunk        | Size   | Loading           |
+| ------------ | ------ | ----------------- |
+| vendor-react | ~140KB | Initial load      |
+| vendor-query | ~45KB  | Initial load      |
+| vendor-pdf   | ~800KB | On PDF view       |
+| vendor-forms | ~35KB  | On form pages     |
+| vendor-dnd   | ~25KB  | On sortable lists |
 
 ### Chunk Size Warning
 
@@ -234,9 +234,7 @@ For data that should be fresh but fallback to cache:
 ```typescript
 registerRoute(
   ({ request, url }) => {
-    return request.method === 'GET' &&
-           url.pathname.startsWith('/api/') &&
-           !url.pathname.startsWith('/api/auth');
+    return request.method === 'GET' && url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth');
   },
   new NetworkFirst({
     cacheName: 'api-cache',
@@ -247,7 +245,7 @@ registerRoute(
       }),
     ],
     networkTimeoutSeconds: 5, // Fast fallback to cache
-  })
+  }),
 );
 ```
 
@@ -267,7 +265,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
       }),
     ],
-  })
+  }),
 );
 
 // Reference data
@@ -281,7 +279,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
       }),
     ],
-  })
+  }),
 );
 ```
 
@@ -325,15 +323,15 @@ registerRoute(/\.mp3$/, new CacheFirst({ cacheName: 'music-cache', ... }));
 
 ### Cache Expiration Summary
 
-| Cache | Max Entries | Max Age |
-|-------|-------------|---------|
-| api-cache | 200 | 24 hours |
-| user-profile-cache | 1 | 7 days |
-| reference-data-cache | 100 | 7 days |
-| image-cache | 200 | 30 days |
-| font-cache | 20 | 1 year |
-| pdf-cache | 200 | 14 days |
-| music-cache | 50 | 30 days |
+| Cache                | Max Entries | Max Age  |
+| -------------------- | ----------- | -------- |
+| api-cache            | 200         | 24 hours |
+| user-profile-cache   | 1           | 7 days   |
+| reference-data-cache | 100         | 7 days   |
+| image-cache          | 200         | 30 days  |
+| font-cache           | 20          | 1 year   |
+| pdf-cache            | 200         | 14 days  |
+| music-cache          | 50          | 30 days  |
 
 ### Background Sync
 
@@ -342,8 +340,7 @@ Offline mutations are queued and synced when online:
 ```typescript
 registerRoute(
   ({ request, url }) => {
-    return ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) &&
-           url.pathname.startsWith('/api/');
+    return ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) && url.pathname.startsWith('/api/');
   },
   new NetworkFirst({
     plugins: [
@@ -351,7 +348,7 @@ registerRoute(
         maxRetentionTime: 24 * 60, // 24 hours
       }),
     ],
-  })
+  }),
 );
 ```
 
@@ -385,11 +382,11 @@ The `/api/health` endpoint reports system status:
 
 ```typescript
 // Basic health check
-GET /api/health
+GET / api / health;
 // Returns: { status, timestamp, uptime, version, environment }
 
 // Detailed health check (admin only)
-GET /api/health/detailed
+GET / api / health / detailed;
 // Returns: { status, services: { database, disk, memory }, system }
 ```
 
@@ -408,6 +405,7 @@ logDb('SELECT', 'users', undefined, Date.now() - start);
 ### React Query DevTools
 
 In development, use React Query DevTools to monitor:
+
 - Cache state
 - Query timing
 - Stale/fresh status
@@ -448,7 +446,7 @@ const insertMany = db.transaction((items) => {
 insertMany(items);
 
 // Avoid: Individual inserts
-items.forEach(item => insert.run(item.id, item.name));
+items.forEach((item) => insert.run(item.id, item.name));
 ```
 
 ### 4. Cache Expensive Computations

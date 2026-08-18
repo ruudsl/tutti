@@ -2,10 +2,10 @@
 
 ## Ondersteunde Versies
 
-| Versie | Ondersteund         |
-| ------ | ------------------- |
-| 1.x    | :white_check_mark:  |
-| < 1.0  | :x:                 |
+| Versie | Ondersteund        |
+| ------ | ------------------ |
+| 1.x    | :white_check_mark: |
+| < 1.0  | :x:                |
 
 Wij ondersteunen uitsluitend de nieuwste hoofdversie met beveiligingsupdates. Oudere versies ontvangen geen patches.
 
@@ -27,12 +27,12 @@ Wij nemen de beveiliging van Tutti serieus. Als je een beveiligingsprobleem ontd
 
 ### Reactietijd
 
-| Fase                    | Termijn           |
-| ----------------------- | ----------------- |
-| Eerste ontvangstbevestiging | Binnen 48 uur    |
-| Beoordeling en triage   | Binnen 7 dagen    |
-| Oplossing en patch      | Afhankelijk van ernst |
-| Publieke disclosure     | Na release van fix |
+| Fase                        | Termijn               |
+| --------------------------- | --------------------- |
+| Eerste ontvangstbevestiging | Binnen 48 uur         |
+| Beoordeling en triage       | Binnen 7 dagen        |
+| Oplossing en patch          | Afhankelijk van ernst |
+| Publieke disclosure         | Na release van fix    |
 
 ### Wat te Verwachten
 

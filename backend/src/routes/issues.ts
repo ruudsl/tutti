@@ -28,10 +28,14 @@ const router = Router();
  *       200:
  *         description: List of issues
  */
-router.get('/', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { status, pieceId } = req.query;
+router.get(
+  '/',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { status, pieceId } = req.query;
 
-  let query = `
+    let query = `
     SELECT
       pi.id,
       pi.music_piece_id,
@@ -56,27 +60,31 @@ router.get('/', authenticateToken, requireRole('music_committee', 'admin'), asyn
     WHERE mp.association_id = ?
   `;
 
-  const params: any[] = [req.user!.associationId];
+    const params: any[] = [req.user!.associationId];
 
-  if (status && status !== 'all') {
-    query += ' AND pi.status = ?';
-    params.push(status);
-  }
+    if (status && status !== 'all') {
+      query += ' AND pi.status = ?';
+      params.push(status);
+    }
 
-  if (pieceId) {
-    query += ' AND pi.music_piece_id = ?';
-    params.push(pieceId);
-  }
+    if (pieceId) {
+      query += ' AND pi.music_piece_id = ?';
+      params.push(pieceId);
+    }
 
-  query += ' ORDER BY pi.created_at DESC';
+    query += ' ORDER BY pi.created_at DESC';
 
-  const issues = db.prepare(query).all(...params);
-  res.json(issues);
-}));
+    const issues = db.prepare(query).all(...params);
+    res.json(issues);
+  }),
+);
 
 // Get my reported issues (for regular members)
-router.get('/my-issues', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const query = `
+router.get(
+  '/my-issues',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = `
     SELECT
       pi.id,
       pi.music_piece_id,
@@ -97,13 +105,20 @@ router.get('/my-issues', authenticateToken, asyncHandler(async (req: AuthRequest
     ORDER BY pi.created_at DESC
   `;
 
-  const issues = db.prepare(query).all(req.user!.id);
-  res.json(issues);
-}));
+    const issues = db.prepare(query).all(req.user!.id);
+    res.json(issues);
+  }),
+);
 
 // Get issue statistics
-router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const stats = db.prepare(`
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = db
+      .prepare(
+        `
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open,
@@ -113,10 +128,13 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
     FROM piece_issues pi
     JOIN music_pieces mp ON pi.music_piece_id = mp.id
     WHERE mp.association_id = ?
-  `).get(req.user!.associationId);
+  `,
+      )
+      .get(req.user!.associationId);
 
-  res.json(stats);
-}));
+    res.json(stats);
+  }),
+);
 
 /**
  * @swagger
@@ -148,32 +166,43 @@ router.get('/stats', authenticateToken, requireRole('music_committee', 'admin'),
  *       404:
  *         description: Music piece not found
  */
-router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { musicPieceId, pageNumber, measureNumber, description } = req.body;
+router.post(
+  '/',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { musicPieceId, pageNumber, measureNumber, description } = req.body;
 
-  if (!musicPieceId || !description) {
-    return res.status(400).json({ error: 'Muziekstuk en beschrijving zijn verplicht' });
-  }
+    if (!musicPieceId || !description) {
+      return res.status(400).json({ error: 'Muziekstuk en beschrijving zijn verplicht' });
+    }
 
-  // Verify the music piece exists and user has access
-  const piece = db.prepare(`
+    // Verify the music piece exists and user has access
+    const piece = db
+      .prepare(
+        `
     SELECT mp.id
     FROM music_pieces mp
     WHERE mp.id = ? AND mp.association_id = ?
-  `).get(musicPieceId, req.user!.associationId);
+  `,
+      )
+      .get(musicPieceId, req.user!.associationId);
 
-  if (!piece) {
-    return res.status(404).json({ error: 'Muziekstuk niet gevonden' });
-  }
+    if (!piece) {
+      return res.status(404).json({ error: 'Muziekstuk niet gevonden' });
+    }
 
-  const issueId = uuidv4();
+    const issueId = uuidv4();
 
-  db.prepare(`
+    db.prepare(
+      `
     INSERT INTO piece_issues (id, music_piece_id, reported_by, page_number, measure_number, description)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(issueId, musicPieceId, req.user!.id, pageNumber || null, measureNumber || null, description);
+  `,
+    ).run(issueId, musicPieceId, req.user!.id, pageNumber || null, measureNumber || null, description);
 
-  const issue = db.prepare(`
+    const issue = db
+      .prepare(
+        `
     SELECT
       pi.*,
       mp.title as piece_title,
@@ -182,47 +211,64 @@ router.post('/', authenticateToken, asyncHandler(async (req: AuthRequest, res: R
     JOIN music_pieces mp ON pi.music_piece_id = mp.id
     JOIN users u ON pi.reported_by = u.id
     WHERE pi.id = ?
-  `).get(issueId);
+  `,
+      )
+      .get(issueId);
 
-  res.status(201).json(issue);
-}));
+    res.status(201).json(issue);
+  }),
+);
 
 // Update issue status (music committee/admin only)
-router.patch('/:id/status', authenticateToken, requireRole('music_committee', 'admin'), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const { status, resolutionNotes } = req.body;
+router.patch(
+  '/:id/status',
+  authenticateToken,
+  requireRole('music_committee', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { status, resolutionNotes } = req.body;
 
-  if (!status || !['open', 'in_review', 'resolved', 'rejected'].includes(status)) {
-    return res.status(400).json({ error: 'Ongeldige status' });
-  }
+    if (!status || !['open', 'in_review', 'resolved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Ongeldige status' });
+    }
 
-  // Verify the issue exists and belongs to user's association
-  const issue = db.prepare(`
+    // Verify the issue exists and belongs to user's association
+    const issue = db
+      .prepare(
+        `
     SELECT pi.id
     FROM piece_issues pi
     JOIN music_pieces mp ON pi.music_piece_id = mp.id
     WHERE pi.id = ? AND mp.association_id = ?
-  `).get(id, req.user!.associationId);
+  `,
+      )
+      .get(id, req.user!.associationId);
 
-  if (!issue) {
-    return res.status(404).json({ error: 'Melding niet gevonden' });
-  }
+    if (!issue) {
+      return res.status(404).json({ error: 'Melding niet gevonden' });
+    }
 
-  if (status === 'resolved' || status === 'rejected') {
-    db.prepare(`
+    if (status === 'resolved' || status === 'rejected') {
+      db.prepare(
+        `
       UPDATE piece_issues
       SET status = ?, resolution_notes = ?, resolved_by = ?, resolved_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, resolutionNotes || null, req.user!.id, id);
-  } else {
-    db.prepare(`
+    `,
+      ).run(status, resolutionNotes || null, req.user!.id, id);
+    } else {
+      db.prepare(
+        `
       UPDATE piece_issues
       SET status = ?, resolution_notes = NULL, resolved_by = NULL, resolved_at = NULL
       WHERE id = ?
-    `).run(status, id);
-  }
+    `,
+      ).run(status, id);
+    }
 
-  const updated = db.prepare(`
+    const updated = db
+      .prepare(
+        `
     SELECT
       pi.*,
       mp.title as piece_title,
@@ -233,37 +279,48 @@ router.patch('/:id/status', authenticateToken, requireRole('music_committee', 'a
     JOIN users u ON pi.reported_by = u.id
     LEFT JOIN users ru ON pi.resolved_by = ru.id
     WHERE pi.id = ?
-  `).get(id);
+  `,
+      )
+      .get(id);
 
-  res.json(updated);
-}));
+    res.json(updated);
+  }),
+);
 
 // Delete issue (admin only or reporter can delete their own open issues)
-router.delete('/:id', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+router.delete(
+  '/:id',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
 
-  const issue = db.prepare(`
+    const issue = db
+      .prepare(
+        `
     SELECT pi.*, mp.association_id
     FROM piece_issues pi
     JOIN music_pieces mp ON pi.music_piece_id = mp.id
     WHERE pi.id = ?
-  `).get(id) as any;
+  `,
+      )
+      .get(id) as any;
 
-  if (!issue) {
-    return res.status(404).json({ error: 'Melding niet gevonden' });
-  }
+    if (!issue) {
+      return res.status(404).json({ error: 'Melding niet gevonden' });
+    }
 
-  // Check permissions
-  const isAdmin = req.user!.role === 'admin';
-  const isOwnOpenIssue = issue.reported_by === req.user!.id && issue.status === 'open';
-  const isSameAssociation = issue.association_id === req.user!.associationId;
+    // Check permissions
+    const isAdmin = req.user!.role === 'admin';
+    const isOwnOpenIssue = issue.reported_by === req.user!.id && issue.status === 'open';
+    const isSameAssociation = issue.association_id === req.user!.associationId;
 
-  if (!isSameAssociation || (!isAdmin && !isOwnOpenIssue)) {
-    return res.status(403).json({ error: 'Geen toegang om deze melding te verwijderen' });
-  }
+    if (!isSameAssociation || (!isAdmin && !isOwnOpenIssue)) {
+      return res.status(403).json({ error: 'Geen toegang om deze melding te verwijderen' });
+    }
 
-  db.prepare('DELETE FROM piece_issues WHERE id = ?').run(id);
-  res.json({ success: true });
-}));
+    db.prepare('DELETE FROM piece_issues WHERE id = ?').run(id);
+    res.json({ success: true });
+  }),
+);
 
 export default router;

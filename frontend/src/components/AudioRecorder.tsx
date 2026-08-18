@@ -13,12 +13,7 @@ interface AudioRecorderProps {
   defaultOrchestraId?: string;
 }
 
-export function AudioRecorder({
-  onClose,
-  rehearsalId,
-  defaultMusicTitleId,
-  defaultOrchestraId,
-}: AudioRecorderProps) {
+export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defaultOrchestraId }: AudioRecorderProps) {
   const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -159,9 +154,7 @@ export function AudioRecorder({
         {/* Recording Controls */}
         <div className="card bg-base-200 p-4">
           <div className="text-center mb-4">
-            <div className="text-4xl font-mono font-bold">
-              {formatTime(recordingTime)}
-            </div>
+            <div className="text-4xl font-mono font-bold">{formatTime(recordingTime)}</div>
             {isRecording && (
               <div className="flex items-center justify-center gap-2 mt-2">
                 <span
@@ -173,9 +166,7 @@ export function AudioRecorder({
                     animation: isPaused ? 'none' : 'pulse 1.5s infinite',
                   }}
                 />
-                <span className="text-sm">
-                  {isPaused ? t('audio.paused') : t('audio.recording')}
-                </span>
+                <span className="text-sm">{isPaused ? t('audio.paused') : t('audio.recording')}</span>
               </div>
             )}
           </div>
@@ -248,28 +239,24 @@ export function AudioRecorder({
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
                 <label className="form-label">{t('common.orchestra')}</label>
-                <select
-                  className="form-control"
-                  value={orchestraId}
-                  onChange={(e) => setOrchestraId(e.target.value)}
-                >
+                <select className="form-control" value={orchestraId} onChange={(e) => setOrchestraId(e.target.value)}>
                   <option value="">{t('common.selectOptional')}</option>
                   {orchestras?.map((o) => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">{t('music.title')}</label>
-                <select
-                  className="form-control"
-                  value={musicTitleId}
-                  onChange={(e) => setMusicTitleId(e.target.value)}
-                >
+                <select className="form-control" value={musicTitleId} onChange={(e) => setMusicTitleId(e.target.value)}>
                   <option value="">{t('common.selectOptional')}</option>
                   {musicTitles?.map((mt) => (
-                    <option key={mt.id} value={mt.id}>{mt.title}</option>
+                    <option key={mt.id} value={mt.id}>
+                      {mt.title}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -285,9 +272,7 @@ export function AudioRecorder({
                 />
                 <span>{t('audio.makePublic')}</span>
               </label>
-              <p className="text-sm text-base-content/60 mt-1">
-                {t('audio.publicDescription')}
-              </p>
+              <p className="text-sm text-base-content/60 mt-1">{t('audio.publicDescription')}</p>
             </div>
           </>
         )}

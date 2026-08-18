@@ -84,10 +84,7 @@ export function SessionsManager() {
             >
               {revokeAllMutation.isPending ? '...' : t('common.confirm')}
             </button>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => setConfirmRevokeAll(false)}
-            >
+            <button className="btn btn-outline btn-sm" onClick={() => setConfirmRevokeAll(false)}>
               {t('common.cancel')}
             </button>
           </div>
@@ -111,19 +108,12 @@ export function SessionsManager() {
                   <div>
                     <strong>{parseUserAgent(session.userAgent)}</strong>
                     {session.isCurrent && (
-                      <span
-                        className="badge badge-success"
-                        style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}
-                      >
+                      <span className="badge badge-success" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
                         {t('sessions.current')}
                       </span>
                     )}
                   </div>
-                  {session.ipAddress && (
-                    <small style={{ color: 'var(--text-light)' }}>
-                      IP: {session.ipAddress}
-                    </small>
-                  )}
+                  {session.ipAddress && <small style={{ color: 'var(--text-light)' }}>IP: {session.ipAddress}</small>}
                 </td>
                 <td>{formatDate(session.lastActive)}</td>
                 <td>{formatDate(session.expiresAt)}</td>
@@ -145,9 +135,7 @@ export function SessionsManager() {
       </div>
 
       {sessions.length === 0 && (
-        <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '2rem' }}>
-          No active sessions found.
-        </p>
+        <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: '2rem' }}>No active sessions found.</p>
       )}
     </div>
   );

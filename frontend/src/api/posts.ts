@@ -147,7 +147,10 @@ export async function deletePost(id: string): Promise<{ message: string }> {
 }
 
 // Comments
-export async function addPostComment(postId: string, data: { content: string; parentId?: string }): Promise<PostComment & { message: string }> {
+export async function addPostComment(
+  postId: string,
+  data: { content: string; parentId?: string },
+): Promise<PostComment & { message: string }> {
   const response = await api.post(`/posts/${postId}/comments`, data);
   return response.data;
 }
