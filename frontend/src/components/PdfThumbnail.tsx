@@ -136,6 +136,7 @@ export const PdfThumbnail = memo(function PdfThumbnail({
       canvas.height = scaledViewport.height;
 
       await page.render({
+        canvas,
         canvasContext: context,
         viewport: scaledViewport,
       }).promise;
@@ -149,7 +150,7 @@ export const PdfThumbnail = memo(function PdfThumbnail({
       setLoadState('loaded');
 
       // Cleanup
-      pdf.destroy();
+      pdf.loadingTask.destroy();
       pdfRef.current = null;
     } catch (error) {
       console.error('Failed to render PDF thumbnail:', error);
@@ -166,7 +167,7 @@ export const PdfThumbnail = memo(function PdfThumbnail({
     return () => {
       // Cleanup PDF document on unmount
       if (pdfRef.current) {
-        pdfRef.current.destroy();
+        pdfRef.current.loadingTask.destroy();
         pdfRef.current = null;
       }
     };

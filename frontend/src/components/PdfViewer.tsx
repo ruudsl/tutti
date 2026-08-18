@@ -245,7 +245,8 @@ export function PdfViewer({
           const data = await file.arrayBuffer();
           loadingTask = pdfjsLib.getDocument({ data });
         } else if (url) {
-          loadingTask = pdfjsLib.getDocument(url);
+          // v6 accepteert geen kale string meer als bron
+          loadingTask = pdfjsLib.getDocument({ url });
         } else {
           throw new Error('No PDF source provided');
         }
@@ -333,6 +334,7 @@ export function PdfViewer({
 
         // Render page
         await page.render({
+          canvas,
           canvasContext: ctx,
           viewport: scaledViewport,
         }).promise;

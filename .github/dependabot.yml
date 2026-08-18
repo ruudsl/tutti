@@ -16,9 +16,14 @@ updates:
         dependency-type: 'production'
         update-types:
           - 'patch'
-    ignore:
-      - dependency-name: '*'
-        update-types: ['version-update:semver-major']
+      # Majors werden hiervoor categorisch genegeerd. Daardoor kwam er nooit
+      # een PR voor kwetsbaarheden die alleen in een major zijn opgelost, en
+      # bleven acht advisories maandenlang onzichtbaar staan. Ze komen nu wel
+      # binnen, gebundeld in een eigen PR zodat ze de lijst niet overspoelen
+      # en bewust beoordeeld worden.
+      major-updates:
+        update-types:
+          - 'major'
     commit-message:
       prefix: 'chore(deps)'
     labels:
