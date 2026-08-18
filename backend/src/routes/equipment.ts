@@ -221,6 +221,116 @@ router.get(
   }),
 );
 
+// LET OP: deze letterlijke routes staan bewust boven /:id.
+// Express matcht in registratievolgorde, dus met /:id ervoor kwam een
+// verzoek hier terecht bij de :id-handler en antwoordde die 404.
+
+// GET /equipment/loans
+router.get(
+  '/loans',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { status, userId, equipmentId } = req.query;
+
+    let query = `
+      SELECT el.*, e.name as equipment_name, e.inventory_number,
+        u.first_name || ' ' || u.last_name as user_name
+      FROM equipment_loans el
+      JOIN equipment_items e ON el.equipment_id = e.id
+      JOIN users u ON el.user_id = u.id
+      WHERE e.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (status) {
+      query += ' AND el.status = ?';
+      params.push(status);
+    }
+    if (userId) {
+      query += ' AND el.user_id = ?';
+      params.push(userId);
+    }
+    if (equipmentId) {
+      query += ' AND el.equipment_id = ?';
+      params.push(equipmentId);
+    }
+
+    query += ' ORDER BY el.checkout_date DESC';
+
+    const loans = db.prepare(query).all(...params);
+
+    res.json(
+      loans.map((l: any) => ({
+        id: l.id,
+        equipmentId: l.equipment_id,
+        equipmentName: l.equipment_name,
+        inventoryNumber: l.inventory_number,
+        userId: l.user_id,
+        userName: l.user_name,
+        checkoutDate: l.checkout_date,
+        expectedReturnDate: l.expected_return_date,
+        actualReturnDate: l.actual_return_date,
+        status: l.status,
+      })),
+    );
+  }),
+);
+
+// GET /equipment/stats
+router.get(
+  '/stats',
+  authenticateToken,
+  requireRole('admin', 'equipment_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const totalItems = db
+      .prepare(
+        `
+      SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ? AND deleted_at IS NULL
+    `,
+      )
+      .get(associationId) as any;
+
+    const byStatus = db
+      .prepare(
+        `
+      SELECT status, COUNT(*) as count FROM equipment_items
+      WHERE association_id = ? AND deleted_at IS NULL
+      GROUP BY status
+    `,
+      )
+      .all(associationId);
+
+    const activeLoans = db
+      .prepare(
+        `
+      SELECT COUNT(*) as count FROM equipment_loans el
+      JOIN equipment_items e ON el.equipment_id = e.id
+      WHERE e.association_id = ? AND el.status = 'active'
+    `,
+      )
+      .get(associationId) as any;
+
+    const totalValue = db
+      .prepare(
+        `
+      SELECT SUM(current_value) as total FROM equipment_items
+      WHERE association_id = ? AND deleted_at IS NULL AND status NOT IN ('retired', 'lost', 'sold')
+    `,
+      )
+      .get(associationId) as any;
+
+    res.json({
+      totalItems: totalItems.count,
+      byStatus: Object.fromEntries(byStatus.map((s: any) => [s.status, s.count])),
+      activeLoans: activeLoans.count,
+      totalValue: totalValue.total || 0,
+    });
+  }),
+);
+
 // GET /equipment/:id
 router.get(
   '/:id',
@@ -453,58 +563,6 @@ router.delete(
   }),
 );
 
-// GET /equipment/loans
-router.get(
-  '/loans',
-  authenticateToken,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-    const { status, userId, equipmentId } = req.query;
-
-    let query = `
-      SELECT el.*, e.name as equipment_name, e.inventory_number,
-        u.first_name || ' ' || u.last_name as user_name
-      FROM equipment_loans el
-      JOIN equipment_items e ON el.equipment_id = e.id
-      JOIN users u ON el.user_id = u.id
-      WHERE e.association_id = ?
-    `;
-    const params: any[] = [associationId];
-
-    if (status) {
-      query += ' AND el.status = ?';
-      params.push(status);
-    }
-    if (userId) {
-      query += ' AND el.user_id = ?';
-      params.push(userId);
-    }
-    if (equipmentId) {
-      query += ' AND el.equipment_id = ?';
-      params.push(equipmentId);
-    }
-
-    query += ' ORDER BY el.checkout_date DESC';
-
-    const loans = db.prepare(query).all(...params);
-
-    res.json(
-      loans.map((l: any) => ({
-        id: l.id,
-        equipmentId: l.equipment_id,
-        equipmentName: l.equipment_name,
-        inventoryNumber: l.inventory_number,
-        userId: l.user_id,
-        userName: l.user_name,
-        checkoutDate: l.checkout_date,
-        expectedReturnDate: l.expected_return_date,
-        actualReturnDate: l.actual_return_date,
-        status: l.status,
-      })),
-    );
-  }),
-);
-
 // POST /equipment/loans
 router.post(
   '/loans',
@@ -662,60 +720,6 @@ router.post(
     );
 
     res.status(201).json({ id: maintenanceId, message: 'Onderhoud geregistreerd' });
-  }),
-);
-
-// GET /equipment/stats
-router.get(
-  '/stats',
-  authenticateToken,
-  requireRole('admin', 'equipment_committee'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
-    const totalItems = db
-      .prepare(
-        `
-      SELECT COUNT(*) as count FROM equipment_items WHERE association_id = ? AND deleted_at IS NULL
-    `,
-      )
-      .get(associationId) as any;
-
-    const byStatus = db
-      .prepare(
-        `
-      SELECT status, COUNT(*) as count FROM equipment_items
-      WHERE association_id = ? AND deleted_at IS NULL
-      GROUP BY status
-    `,
-      )
-      .all(associationId);
-
-    const activeLoans = db
-      .prepare(
-        `
-      SELECT COUNT(*) as count FROM equipment_loans el
-      JOIN equipment_items e ON el.equipment_id = e.id
-      WHERE e.association_id = ? AND el.status = 'active'
-    `,
-      )
-      .get(associationId) as any;
-
-    const totalValue = db
-      .prepare(
-        `
-      SELECT SUM(current_value) as total FROM equipment_items
-      WHERE association_id = ? AND deleted_at IS NULL AND status NOT IN ('retired', 'lost', 'sold')
-    `,
-      )
-      .get(associationId) as any;
-
-    res.json({
-      totalItems: totalItems.count,
-      byStatus: Object.fromEntries(byStatus.map((s: any) => [s.status, s.count])),
-      activeLoans: activeLoans.count,
-      totalValue: totalValue.total || 0,
-    });
   }),
 );
 
