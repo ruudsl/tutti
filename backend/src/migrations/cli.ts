@@ -49,10 +49,32 @@ async function main() {
     }
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : error);
+    flushOrWarn();
     process.exit(1);
   }
 
+  flushOrWarn();
   process.exit(0);
+}
+
+/**
+ * Schrijf hangende wijzigingen weg voordat het proces stopt.
+ *
+ * De databasewrapper bewaart schrijfacties in het geheugen en plant een
+ * debounced save met een unref'd timer, zodat die het proces niet openhoudt.
+ * Deze CLI eindigde direct na afloop met process.exit(), waardoor die timer
+ * nooit afging: elke migratie meldde "Applied successfully" maar belandde
+ * nooit op schijf. Daardoor waren migraties in de praktijk nooit toegepast -
+ * vandaar ontbrekende tabellen als super_admins en de kolommen voor
+ * datumpeilingen.
+ */
+function flushOrWarn(): void {
+  try {
+    db.flush();
+  } catch (error) {
+    console.error('Kon de database niet wegschrijven:', error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }
 
 async function handleUp() {

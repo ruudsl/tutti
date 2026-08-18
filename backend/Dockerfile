@@ -75,4 +75,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
 # Start the application
-CMD ["node", "backend/dist/index.js"]
+#
+# De migraties draaien eerst, net als het start-script in backend/package.json
+# ("node dist/migrations/cli.js up && node dist/index.js") en net als
+# render.yaml, dat npm start gebruikt. Deze CMD sloeg die stap over, waardoor
+# een Docker-deployment nooit een migratie uitvoerde: een verse database viel
+# meteen om op "no such table: super_admins" en bestaande installaties liepen
+# stilzwijgend elke schemawijziging mis.
+CMD ["sh", "-c", "node backend/dist/migrations/cli.js up && node backend/dist/index.js"]
