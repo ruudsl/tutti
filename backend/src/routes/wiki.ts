@@ -639,9 +639,16 @@ router.delete(
       throw new ApiError(404, 'Attachment not found');
     }
 
-    // Delete file from disk
-    const filePath = path.join(uploadsDir, attachment.file_path);
-    if (fs.existsSync(filePath)) {
+    // Verwijder het bestand van schijf.
+    //
+    // file_path komt uit de database en wordt gevuld met de naam die multer
+    // heeft verzonnen, dus in de praktijk is die veilig. Maar een pad uit
+    // opslag rechtstreeks in path.join stoppen is een gat zodra die aanname
+    // ooit niet meer klopt: een naam met ../ erin wijst dan buiten uploadsDir.
+    // basename haalt elke mapcomponent weg, en de controle daarna is de
+    // vangnetregel voor het geval basename niet genoeg blijkt.
+    const filePath = path.join(uploadsDir, path.basename(attachment.file_path));
+    if (filePath.startsWith(uploadsDir + path.sep) && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
