@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import db from '../database/connection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { isModuleEnabled } from '../modules/service';
 import logger from '../utils/logger';
 import config from '../config';
 import {
@@ -868,17 +869,24 @@ router.get(
       .all(association.id, today, endDateStr) as any[];
 
     // Get latest announcement/post
-    const latestPost = db
-      .prepare(
-        `
+    //
+    // Het infoscherm is publiek, dus er is geen ingelogde gebruiker om de
+    // vereniging uit af te leiden; die komt hier uit de route zelf. Staat de
+    // module Nieuwsberichten uit, dan hoort er ook op het scherm in de hal
+    // geen bericht te verschijnen.
+    const latestPost = isModuleEnabled(association.id, 'posts')
+      ? (db
+          .prepare(
+            `
         SELECT id, title, content, published_at
         FROM posts
         WHERE association_id = ? AND status = 'published' AND is_pinned = 1
         ORDER BY published_at DESC
         LIMIT 1
     `,
-      )
-      .get(association.id) as any;
+          )
+          .get(association.id) as any)
+      : null;
 
     // Allow CORS for info screens
     res.setHeader('Access-Control-Allow-Origin', '*');

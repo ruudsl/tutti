@@ -75,28 +75,52 @@ De stand wordt op vrijwel elk verzoek gelezen en daarom in het geheugen
 gehouden, per vereniging. De cache wordt leeggegooid bij elke wijziging; er is
 geen tijdslimiet, want wijzigen kan alleen via `setModuleEnabled`.
 
-## De eerste drie modules
+## De modules
 
-| Sleutel      | Naam                 | Verbergt                                                                             | Standaard |
-| ------------ | -------------------- | ------------------------------------------------------------------------------------ | --------- |
-| `accounting` | Boekhouding          | `/accounting`                                                                        | uit       |
-| `ticketing`  | Kaartverkoop         | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               | uit       |
-| `stage`      | Podium en opstelling | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer` | uit       |
+Alle modules staan standaard uit. Een vereniging die niets instelt houdt het
+kleine menu; wie een onderdeel gebruikt, zet het in twee klikken aan onder
+**Beheer → Modules**.
 
-Samen halen die tien navigatie-items weg voor een vereniging die ze niet
+| Sleutel        | Naam                    | Verbergt                                                                             |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------------ |
+| `accounting`   | Boekhouding             | `/accounting`                                                                        |
+| `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               |
+| `stage`        | Podium en opstelling    | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer` |
+| `polls`        | Peilingen               | `/polls`                                                                             |
+| `tasks`        | Taken                   | `/tasks`                                                                             |
+| `posts`        | Nieuwsberichten         | `/posts`                                                                             |
+| `mailings`     | Mailings                | `/email-campaigns`                                                                   |
+| `contacts`     | Externe contacten       | `/contacts`                                                                          |
+| `issues`       | Meldingen               | `/issues`                                                                            |
+| `practice`     | Thuis oefenen           | `/practice`, `/practice-schedules`                                                   |
+| `externals`    | Invallers en vervangers | `/external-musicians`, `/replacement-requests`                                       |
+| `inventory`    | Inventaris              | `/instrument-assets`, `/uniforms`, `/equipment`, `/outfits`                          |
+| `projects`     | Projecten en reizen     | `/projects`, `/tours`                                                                |
+| `resources`    | Ruimtes reserveren      | `/resources`                                                                         |
+| `wiki`         | Wiki                    | `/wiki`                                                                              |
+| `performances` | Uitvoeringshistorie     | `/performances`                                                                      |
+| `workflows`    | Workflow-automatisering | `/workflows`                                                                         |
+| `seasons`      | Seizoensplanning        | `/season-planner`                                                                    |
+| `attendance`   | Aanwezigheidsanalyse    | `/attendance-analytics`                                                              |
+
+Samen halen die 32 navigatie-items weg voor een vereniging die er niets van
 gebruikt.
 
-Deze drie zijn gekozen omdat ze alle drie zelfstandig zijn: geen andere module
-leest hun tabellen, en het dashboard, de agenda en de globale zoekfunctie tonen
-er niets van. Daardoor is er geen vijfde laag nodig om ze echt onzichtbaar te
-maken.
+### Wat kern blijft
+
+Kern is wat een vereniging altijd nodig heeft: dashboard, eigen bladmuziek,
+repetities, beschikbaarheid, concerten, leden, de bladmuziekbibliotheek en het
+beheer zelf. Die staan bewust niet in de tabel, want zonder die onderdelen is er
+geen applicatie meer.
+
+De globale zoekfunctie doorzoekt alleen kern — bladmuziek, leden, orkesten,
+lijsten, repetities — en hoeft dus niet mee te kijken met de modulestand.
 
 ### Waarom standaard uit
 
-Voor bestaande verenigingen is standaard uit een gedragsverandering, maar wel de
-juiste: dit zijn de onderdelen waarvan we weten dat de meeste verenigingen ze
-niet gebruiken, en die het inlogscherm het meest opblazen. Een vereniging die ze
-wel gebruikt, zet ze in twee klikken aan onder **Beheer → Modules** — de
+Voor bestaande verenigingen is dit een gedragsverandering, maar wel de juiste:
+het inlogscherm toonde iedere vereniging alles wat de applicatie kan, en dat was
+de aanleiding voor dit hele ontwerp. Wie een onderdeel gebruikt, zet het aan; de
 gegevens staan er dan nog gewoon.
 
 ## Een module toevoegen
@@ -124,22 +148,42 @@ Verzoeken zonder token gaan er ongehinderd doorheen: de betaal-webhook en een
 bezoeker op de publieke bestelpagina moeten blijven werken. Een lopende betaling
 mag niet stukgaan doordat een beheerder op dat moment de module uitzet.
 
-## Wat nog aandacht vraagt bij volgende modules
+## Doorsnijdende weergaven
 
-De eerste drie zijn met opzet de makkelijke. Bij modules die wél verweven zijn
-met de rest komt er werk bij:
+Een module verbergen op alleen zijn eigen pagina's is niet genoeg zodra andere
+onderdelen zijn gegevens tonen. Dan is "verborgen" cosmetisch: het menu-item is
+weg, maar de takenlijst staat nog op het dashboard.
 
-- **Doorsnijdende weergaven.** Het dashboard, de globale zoekfunctie, de agenda
-  en het notificatiecentrum halen gegevens uit meerdere modules. Als een module
-  uit staat mag zijn data daar niet meer opduiken, anders is "verborgen" alleen
-  cosmetisch.
-- **Geplande taken.** Een scheduler die herinneringen verstuurt voor een
-  uitgezette module blijft mailen over iets wat niemand meer kan zien. Elke
-  scheduler moet de stand van zijn module controleren voordat hij iets
-  verstuurt. Voor `stage` is dat al gedaan:
-  `scheduler/seating-notifications` slaat verenigingen over die de module uit
-  hebben staan. De instellingen blijven bewaard, ze worden alleen niet meer
-  uitgevoerd.
+Wat er is nagelopen en wat eruit kwam:
+
+| Plek                                     | Leest van                    | Aangepast                                                                         |
+| ---------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| Dashboard-widgets                        | `tasks`, `practice`, `posts` | ja — widgets van een uitgezette module vallen weg, ook uit het instellingenscherm |
+| Infoscherm (`/api/calendar/info-screen`) | `posts`                      | ja — geen vastgezet bericht op het scherm in de hal                               |
+| Wekelijkse e-mail-digest                 | `practice`                   | ja — geen oefenoverzicht in de mail                                               |
+| Workflow-uitvoering                      | `workflows`                  | ja — in `executeWorkflow`, het knooppunt waar alle triggers langskomen            |
+| Opstellingsmeldingen                     | `stage`                      | ja — `scheduler/seating-notifications`                                            |
+| Globale zoekfunctie                      | alleen kern                  | niet nodig                                                                        |
+| Snelle acties                            | alleen kern                  | niet nodig                                                                        |
+
+De widgetvoorkeuren van een gebruiker blijven gewoon opgeslagen; de indeling
+komt terug zoals hij was zodra de module weer aan gaat. Ook hier: verbergen,
+niet verwijderen.
+
+De guard op workflows staat bewust in `executeWorkflow` en niet in de scheduler.
+Handmatig, gepland en op gebeurtenis komen daar allemaal langs, dus één controle
+dekt ze alle drie. De regels zelf blijven staan en doen het weer zodra de module
+aan gaat.
+
+## Wat nog aandacht vraagt
+
 - **Verwijzingen tussen modules.** Zodra een tabel van module A naar module B
-  wijst, is uitzetten van B niet meer vrijblijvend. Dat is bij deze drie niet
-  het geval, maar het is de eerste vraag bij elke volgende.
+  wijst, is uitzetten van B niet meer vrijblijvend. Dat speelt bij de huidige
+  set niet, maar het is de eerste vraag bij elke volgende module.
+- **Notificatiecentrum.** Meldingen die uit een uitgezette module voortkomen
+  blijven in de lijst staan tot ze zijn gelezen. Nieuwe komen er niet bij, want
+  de bron is afgesloten, maar oude worden niet opgeruimd — bewust, want dat zou
+  verwijderen zijn.
+- **De aan/uit-stand is geen rechtenmodel.** Een module uitzetten haalt hem uit
+  het zicht van iedereen, ook van beheerders. Wie wát mag blijft een kwestie van
+  rollen.

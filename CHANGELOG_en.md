@@ -6,6 +6,15 @@ All notable changes to this application are documented here.
 
 ### Added
 
+- **Sixteen more modules** — Polls, Tasks, Posts, Mailings, External contacts, Issues, Home practice, Substitutes, Inventory, Projects and trips, Room booking, Wiki, Performance history, Workflow automation, Season planning and Attendance analytics. Together with the first three that is nineteen switches, hiding 32 menu items.
+- **Cross-cutting views follow suit** — Dashboard widgets, the info screen, the weekly e-mail and workflow execution no longer show anything from a disabled module. Widget preferences are kept and return exactly as they were.
+
+### Fixed
+
+- The practice summary never appeared in the weekly e-mail: the query returned `total_minutes` while the text read `totalMinutes`.
+
+### Added
+
 #### Modules
 
 - **Switch parts on and off** — An administrator switches off what the association does not use under Admin → Modules. It disappears from the menu and can no longer be opened.

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useModules } from '../context/ModulesContext';
 
 export interface DashboardWidget {
   id: string;
@@ -49,7 +50,22 @@ const DEFAULT_WIDGETS: DashboardWidget[] = [
 
 const STORAGE_KEY = 'dashboard-widgets';
 
+/**
+ * Widgets die bij een module horen.
+ *
+ * Zonder deze koppeling blijft het dashboard gegevens tonen van een module die
+ * de beheerder heeft uitgezet - een takenlijst zonder takenpagina, of
+ * oefenvoortgang terwijl "thuis oefenen" uit staat. Dan is verbergen alleen
+ * cosmetisch, en dat is precies wat het niet moet zijn.
+ */
+const WIDGET_MODULE: Partial<Record<WidgetType, string>> = {
+  tasks: 'tasks',
+  'practice-progress': 'practice',
+  announcements: 'posts',
+};
+
 export function useDashboardWidgets() {
+  const { enabled: enabledModules } = useModules();
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -74,6 +90,16 @@ export function useDashboardWidgets() {
     }
     setIsLoaded(true);
   }, []);
+
+  // Widgets van uitgezette modules vallen weg. Ze blijven wel in de opgeslagen
+  // voorkeuren staan, zodat de indeling van de gebruiker terugkomt zodra de
+  // module weer aan gaat.
+  const visibleWidgets = useMemo(() => {
+    return widgets.filter((w) => {
+      const moduleKey = WIDGET_MODULE[w.type];
+      return !moduleKey || enabledModules.includes(moduleKey);
+    });
+  }, [widgets, enabledModules]);
 
   // Save widgets to localStorage
   const saveWidgets = useCallback((newWidgets: DashboardWidget[]) => {
@@ -128,10 +154,11 @@ export function useDashboardWidgets() {
   }, [saveWidgets]);
 
   // Get enabled widgets sorted by order
-  const enabledWidgets = widgets.filter((w) => w.enabled).sort((a, b) => a.order - b.order);
+  const enabledWidgets = visibleWidgets.filter((w) => w.enabled).sort((a, b) => a.order - b.order);
 
-  // Get all widgets sorted by order
-  const allWidgets = [...widgets].sort((a, b) => a.order - b.order);
+  // Ook de instellingenlijst toont alleen wat er te kiezen valt: een widget
+  // aanzetten voor een uitgezette module levert een leeg vak op.
+  const allWidgets = [...visibleWidgets].sort((a, b) => a.order - b.order);
 
   return {
     widgets: enabledWidgets,

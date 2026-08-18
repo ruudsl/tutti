@@ -12,7 +12,27 @@
 import { describe, it, expect } from 'vitest';
 import { moduleForPath, isPathVisible, isLocationHidden } from '../modules';
 
-const ALL = ['accounting', 'ticketing', 'stage'];
+const ALL = [
+  'accounting',
+  'ticketing',
+  'stage',
+  'polls',
+  'tasks',
+  'posts',
+  'mailings',
+  'contacts',
+  'issues',
+  'practice',
+  'externals',
+  'inventory',
+  'projects',
+  'resources',
+  'wiki',
+  'performances',
+  'workflows',
+  'seasons',
+  'attendance',
+];
 const NONE: string[] = [];
 
 describe('moduleForPath', () => {
@@ -21,11 +41,37 @@ describe('moduleForPath', () => {
     ['/ticket-sales', 'ticketing'],
     ['/payment-settings', 'ticketing'],
     ['/stage-designer', 'stage'],
+    ['/polls', 'polls'],
+    ['/email-campaigns', 'mailings'],
+    ['/practice-schedules', 'practice'],
+    ['/replacement-requests', 'externals'],
+    ['/uniforms', 'inventory'],
+    ['/tours', 'projects'],
+    ['/season-planner', 'seasons'],
+    ['/attendance-analytics', 'attendance'],
   ])('koppelt %s aan %s', (path, expected) => {
     expect(moduleForPath(path)).toBe(expected);
   });
 
-  it.each(['/rehearsals', '/members', '/music-pieces', '/', '/settings'])('laat %s vrij', (path) => {
+  // De kern moet vrij blijven: zonder deze paden is er geen applicatie meer,
+  // dus ze horen bij geen enkele module.
+  it.each([
+    '/rehearsals',
+    '/availability',
+    '/members',
+    '/concerts',
+    '/music-pieces',
+    '/lists',
+    '/titles',
+    '/upload',
+    '/my-music',
+    '/users',
+    '/orchestras',
+    '/',
+    '/settings',
+    '/modules',
+    '/health',
+  ])('laat %s vrij', (path) => {
     expect(moduleForPath(path)).toBeNull();
   });
 });
