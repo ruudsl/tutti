@@ -9,7 +9,7 @@
 # =============================================================================
 # Stage 1: Build
 # =============================================================================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ RUN npm run build --workspace=backend
 # =============================================================================
 # Stage 2: Production
 # =============================================================================
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
 LABEL org.opencontainers.image.title="Tutti Backend"
 LABEL org.opencontainers.image.description="Backend API for Tutti - Orchestra Music Management"

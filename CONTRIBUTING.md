@@ -22,7 +22,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - npm 9+
 - Git
 

@@ -4,10 +4,10 @@
 
 ### Welke Node.js versie heb ik nodig?
 
-Tutti vereist **Node.js 18 of hoger**. We raden Node.js 20+ aan voor de beste prestaties. Controleer je versie met:
+Tutti vereist **Node.js 24 of hoger** (de huidige Active LTS). Node.js 20 is sinds april 2026 end-of-life en wordt niet meer ondersteund. Controleer je versie met:
 
 ```bash
-node --version  # Moet v18.0.0 of hoger zijn
+node --version  # Moet v24.0.0 of hoger zijn
 ```
 
 ### De installatie mislukt met npm errors
