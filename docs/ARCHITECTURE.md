@@ -68,7 +68,7 @@ Tutti is a multi-tenant web application for music associations (concert bands, b
 
 | Technology     | Purpose            |
 | -------------- | ------------------ |
-| Node.js 20     | Runtime            |
+| Node.js 24     | Runtime            |
 | Express        | HTTP framework     |
 | TypeScript     | Type safety        |
 | better-sqlite3 | Database           |

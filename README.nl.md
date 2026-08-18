@@ -3,7 +3,7 @@
 [![CI](https://github.com/ruudsl/tutti/actions/workflows/ci.yml/badge.svg)](https://github.com/ruudsl/tutti/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/ruudsl/tutti/actions/workflows/codeql.yml/badge.svg)](https://github.com/ruudsl/tutti/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/ruudsl/tutti/branch/main/graph/badge.svg)](https://codecov.io/gh/ruudsl/tutti)
-![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-24+-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
@@ -42,7 +42,7 @@ Zie [docs/FEATURES.md](docs/FEATURES.md) voor de complete functielijst.
 
 ### Vereisten
 
-- **Node.js** 18+ (20+ aanbevolen)
+- **Node.js** 24+ (LTS)
 - **npm** 9+
 
 ### Installatie
@@ -190,7 +190,7 @@ Zie [SECURITY.md](SECURITY.md) voor ons beveiligingsbeleid en het melden van kwe
 
 | Backend         | Frontend           |
 | --------------- | ------------------ |
-| Node.js 20+     | React 18           |
+| Node.js 24+     | React 18           |
 | Express 4.x     | Vite 5.x           |
 | TypeScript 5.x  | TanStack Query 5.x |
 | SQLite (sql.js) | React Router 6.x   |

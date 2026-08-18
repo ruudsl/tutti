@@ -4,7 +4,7 @@
   "description": "Webapplicatie voor harmonieorkest muziekbeheer",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "workspaces": [
     "backend",
