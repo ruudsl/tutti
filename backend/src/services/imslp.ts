@@ -428,7 +428,7 @@ function parseScoresFromHtml(html: string, workId: string): ImslpScore[] {
         const filename = decodeURIComponent(fileUrl.split('/').pop() || `score_${index}.pdf`);
 
         // Try to extract description from surrounding context
-        let description = filename
+        const description = filename
             .replace(/\.pdf$/i, '')
             .replace(/_/g, ' ')
             .replace(/PMLP\d+[-_]/i, ''); // Remove PMLP prefix

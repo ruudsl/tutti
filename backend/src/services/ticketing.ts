@@ -75,7 +75,7 @@ export async function generateQRCode(data: string): Promise<string> {
         return qrDataUrl;
     } catch (error) {
         logger.error('Failed to generate QR code:', error);
-        throw new Error('Failed to generate QR code');
+        throw new Error('Failed to generate QR code', { cause: error });
     }
 }
 
@@ -93,7 +93,7 @@ export async function generateQRCodeSVG(data: string): Promise<string> {
         return svg;
     } catch (error) {
         logger.error('Failed to generate QR code SVG:', error);
-        throw new Error('Failed to generate QR code');
+        throw new Error('Failed to generate QR code', { cause: error });
     }
 }
 

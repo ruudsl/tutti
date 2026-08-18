@@ -94,7 +94,7 @@ export default function MusicPieces() {
     const isAsc = direction === 'asc';
 
     sorted.sort((a, b) => {
-      let comparison = 0;
+      let comparison: number;
       switch (sortBy) {
         case 'name-asc':
         case 'name-desc':

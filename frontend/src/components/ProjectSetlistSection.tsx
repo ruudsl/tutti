@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -133,8 +133,9 @@ export function ProjectSetlistSection({ project, onUpdate }: ProjectSetlistSecti
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Update local state when project changes
-  useMemo(() => {
+  // Update local state when project changes.
+  // This must be an effect, not useMemo: calling setState during render can loop.
+  useEffect(() => {
     setItems([...project.setlist].sort((a, b) => a.sortOrder - b.sortOrder));
     setHasChanges(false);
   }, [project.setlist]);

@@ -360,7 +360,7 @@ router.post('/sync', authenticateToken, requireRole('admin', 'music_committee', 
 
     for (const [orchestraKey, orchestraRehearsals] of rehearsalsByOrchestra) {
         // Determine which Spond group to use for this orchestra
-        let groupId: string | null = null;
+        let groupId: string | null;
         if (orchestraKey !== '__all__') {
             groupId = orchestraGroupMap.get(orchestraKey) || spondConfig.group_id;
         } else {

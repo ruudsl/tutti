@@ -307,7 +307,7 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
         const altMatch = shortcut.alt ? e.altKey : !e.altKey;
 
         // Handle special keys
-        let keyMatch = false;
+        let keyMatch: boolean;
         if (shortcut.key === '?') {
           keyMatch = e.key === '?' || (e.shiftKey && e.key === '/');
         } else {

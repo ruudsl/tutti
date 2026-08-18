@@ -280,11 +280,10 @@ router.post('/cleanup', authenticateToken, asyncHandler(async (req: AuthRequest,
   }
 
   let removed = 0;
-  let total = 0;
 
   try {
     const thumbnailFiles = fs.readdirSync(THUMBNAIL_DIR);
-    total = thumbnailFiles.length;
+    const total = thumbnailFiles.length;
 
     // For each thumbnail, check if it's older than 7 days
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days

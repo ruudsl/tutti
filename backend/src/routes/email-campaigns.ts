@@ -16,6 +16,7 @@ import sanitizeHtml from 'sanitize-html';
 const sanitizeForLog = (value: unknown): string =>
   String(value ?? '')
     .replace(/[\r\n]+/g, ' ')
+    // eslint-disable-next-line no-control-regex -- strip control chars from log output
     .replace(/[\u0000-\u001F\u007F]+/g, ' ')
     .trim();
 

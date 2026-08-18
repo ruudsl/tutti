@@ -8,7 +8,10 @@ import logger from '../utils/logger';
 import { z } from 'zod';
 
 const sanitizeForLog = (value: unknown): string =>
-    String(value).replace(/[\r\n]+/g, '').replace(/[\x00-\x1F\x7F]+/g, '');
+    String(value)
+        .replace(/[\r\n]+/g, '')
+        // eslint-disable-next-line no-control-regex -- strip control chars from log output
+        .replace(/[\x00-\x1F\x7F]+/g, '');
 
 const router = Router();
 

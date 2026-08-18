@@ -492,16 +492,13 @@ export function calculateOptimalPricing(concertId: string): PricingSuggestion {
     // Get historical data for pricing analysis
     const historicalData = getHistoricalData(concert.association_id, concert.concert_type, concert.venue_type);
 
-    // Calculate historical price-fill rate relationship
-    let historicalAvgPrice = avgCurrentPrice;
-    let historicalFillRate = 0.7;
-
+    // Calculate historical price-fill rate relationship (only used for reasoning output)
     if (historicalData.length > 0) {
-        historicalAvgPrice = historicalData.reduce((sum, c) => {
+        const historicalAvgPrice = historicalData.reduce((sum, c) => {
             return sum + (c.total_capacity > 0 ? c.total_revenue / c.total_sold : 0);
         }, 0) / historicalData.length;
 
-        historicalFillRate = historicalData.reduce((sum, c) => {
+        const historicalFillRate = historicalData.reduce((sum, c) => {
             return sum + (c.total_capacity > 0 ? c.total_sold / c.total_capacity : 0);
         }, 0) / historicalData.length;
 

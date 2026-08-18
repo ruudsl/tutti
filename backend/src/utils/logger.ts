@@ -1,3 +1,4 @@
+import fs from 'fs';
 import winston from 'winston';
 import path from 'path';
 import config from '../config';
@@ -36,7 +37,6 @@ const logger = winston.createLogger({
 // Add file transports in production
 if (config.isProduction) {
     // Ensure log directory exists
-    const fs = require('fs');
     if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
     }

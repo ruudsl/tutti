@@ -325,7 +325,7 @@ router.get('/values/:entityType/:entityId', authenticateToken, asyncHandler(asyn
 
         if (!canView) continue;
 
-        let value = null;
+        let value: any;
         switch (def.field_type) {
             case 'number':
                 value = def.value_number;

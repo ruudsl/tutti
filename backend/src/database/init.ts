@@ -1,3 +1,6 @@
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import db from './connection';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -140,7 +143,6 @@ async function initializeDatabase() {
         // Create admin user with password from env var or generated random password
         const adminId = uuidv4();
         const adminPassword = process.env.ADMIN_INIT_PASSWORD || (() => {
-            const crypto = require('crypto');
             return crypto.randomBytes(16).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) + 'A1!';
         })();
         const passwordHash = bcrypt.hashSync(adminPassword, 10);
@@ -160,8 +162,6 @@ async function initializeDatabase() {
             console.log('Password: (set via ADMIN_INIT_PASSWORD env var)');
         } else {
             // Write password to a secure file instead of logging to console
-            const fs = require('fs');
-            const path = require('path');
             const passwordFile = path.join(process.cwd(), 'data', 'admin-password.txt');
             fs.mkdirSync(path.dirname(passwordFile), { recursive: true });
             fs.writeFileSync(passwordFile, `Admin password: ${adminPassword}\nGenerated at: ${new Date().toISOString()}\n\nIMPORTANT: Delete this file after saving the password securely!\n`, { mode: 0o600 });

@@ -142,7 +142,7 @@ function getDateRange(period: 'week' | 'month' | 'quarter' | 'year', offset: num
             endDate = new Date(now.getFullYear(), now.getMonth() - offset + 1, 0);
             startDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
             break;
-        case 'quarter':
+        case 'quarter': {
             const currentQuarter = Math.floor(now.getMonth() / 3);
             const targetQuarter = currentQuarter - offset;
             const year = now.getFullYear() + Math.floor(targetQuarter / 4);
@@ -150,11 +150,13 @@ function getDateRange(period: 'week' | 'month' | 'quarter' | 'year', offset: num
             startDate = new Date(year, quarter * 3, 1);
             endDate = new Date(year, quarter * 3 + 3, 0);
             break;
-        case 'year':
+        }
+        case 'year': {
             const targetYear = now.getFullYear() - offset;
             startDate = new Date(targetYear, 0, 1);
             endDate = new Date(targetYear, 11, 31);
             break;
+        }
     }
 
     return {
@@ -243,7 +245,7 @@ export function getAttendanceOverview(
     };
 
     // Calculate previous period stats for comparison
-    let prevRehearsalQuery = rehearsalQuery.replace('AND r.date >= ? AND r.date <= ?', 'AND r.date >= ? AND r.date <= ?');
+    const prevRehearsalQuery = rehearsalQuery.replace('AND r.date >= ? AND r.date <= ?', 'AND r.date >= ? AND r.date <= ?');
     const prevRehearsalParams = [...rehearsalParams];
     prevRehearsalParams[1] = prevStartDate;
     prevRehearsalParams[2] = prevEndDate;
