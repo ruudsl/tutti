@@ -52,7 +52,7 @@ export default function PracticeSchedules() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('practiceSchedules.title')}</h1>
         <div className="flex gap-2">
           <select
@@ -312,7 +312,7 @@ function ScheduleDetailModal({ scheduleId, onClose }: { scheduleId: string; onCl
 
         {/* Milestones */}
         <div>
-          <div className="flex justify-between items-center mb-3">
+          <div className="page-header">
             <h3 className="font-semibold">{t('practiceSchedules.milestones')}</h3>
             <div className="flex gap-2">
               {canManage && (

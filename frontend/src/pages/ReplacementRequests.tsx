@@ -217,7 +217,7 @@ export default function ReplacementRequests() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>
           {t('replacementRequests.title')}
           <span className="badge badge-primary ml-2">{requests.length}</span>
@@ -411,7 +411,7 @@ export default function ReplacementRequests() {
             )}
 
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="page-header">
                 <label className="form-label text-muted mb-0">{t('replacementRequests.invitations')}</label>
                 {canEdit && requestDetail.status !== 'filled' && requestDetail.status !== 'cancelled' && (
                   <button className="btn btn-primary btn-sm" onClick={() => openInviteModal(requestDetail)}>

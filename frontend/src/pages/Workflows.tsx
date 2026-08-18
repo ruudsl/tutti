@@ -913,7 +913,7 @@ function WorkflowDetailModal({
 
         {/* Triggers Section */}
         <div>
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 className="font-semibold flex items-center gap-2">
               <Icon name="warning" className="w-4 h-4" />
               {t('workflows.triggersTitle')}
@@ -979,7 +979,7 @@ function WorkflowDetailModal({
 
         {/* Actions Section */}
         <div>
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 className="font-semibold flex items-center gap-2">
               <Icon name="play" className="w-4 h-4" />
               {t('workflows.actionsTitle')}

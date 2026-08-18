@@ -104,8 +104,8 @@ export default function EmailCampaigns() {
   );
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('emailCampaigns.title')}</h1>
         <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
           <Icon name="plus" size={16} />
@@ -352,7 +352,7 @@ function CampaignDetailModal({
           {/* Recipients Preview (for drafts) */}
           {campaign.status === 'draft' && recipientsPreview && (
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="page-header">
                 <h4 className="text-sm font-semibold text-base-content/70">
                   {t('emailCampaigns.recipientsPreview', { count: recipientsPreview.count })}
                 </h4>
@@ -377,7 +377,7 @@ function CampaignDetailModal({
           {/* Stats for sent campaigns */}
           {campaign.status === 'sent' && (
             <div>
-              <div className="flex justify-between items-center mb-3">
+              <div className="page-header">
                 <h4 className="text-sm font-semibold text-base-content/70">{t('emailCampaigns.stats.total')}</h4>
                 <button className="btn btn-sm btn-outline gap-1" onClick={() => setShowRecipientsDialog(true)}>
                   <Icon name="users" size={14} />
@@ -722,7 +722,7 @@ function EmailAttachmentsSection({ campaignId, canEdit }: { campaignId: string; 
 
   return (
     <div className="border-t border-base-300 pt-4 mt-4">
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h4 className="text-sm font-semibold text-base-content/70">
           {t('emailCampaigns.attachments')} ({attachments.length})
         </h4>

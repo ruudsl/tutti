@@ -468,7 +468,7 @@ export default function Concerts() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>{t('concerts.title')}</h1>
         </div>
         <div className="card">
@@ -482,7 +482,7 @@ export default function Concerts() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>
           {t('concerts.title')}
           <span className="badge badge-primary ml-2">{concerts.length}</span>
@@ -631,7 +631,7 @@ export default function Concerts() {
       {activeTab === 'statistics' && statistics && (
         <div className="card">
           <div className="card-body">
-            <div className="flex justify-between items-center mb-3">
+            <div className="page-header">
               <h3 style={{ margin: 0 }}>{t('concerts.statistics')}</h3>
               <button className="btn btn-outline" onClick={() => setShowBumaStemraModal(true)}>
                 {t('concerts.bumaStemraExport')}
@@ -927,7 +927,7 @@ export default function Concerts() {
           />
 
           {/* Program Section */}
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 style={{ margin: 0 }}>{t('concerts.program')}</h4>
             <div className="flex gap-2">
               <button className="btn btn-outline btn-sm" onClick={() => exportProgramMutation.mutate(viewingConcert)}>
@@ -973,7 +973,7 @@ export default function Concerts() {
           )}
 
           {/* Media Section */}
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 style={{ margin: 0 }}>{t('concerts.media')}</h4>
             <button className="btn btn-primary btn-sm" onClick={() => setShowAddMediaModal(true)}>
               + {t('concerts.addMedia')}
@@ -1005,7 +1005,7 @@ export default function Concerts() {
           )}
 
           {/* Tickets Section */}
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 style={{ margin: 0 }}>{t('tickets.title')}</h4>
             <div className="flex gap-2">
               <Link to={`/concerts/${viewingConcert}/guest-list`} className="btn btn-outline btn-sm">
@@ -1085,7 +1085,7 @@ export default function Concerts() {
           )}
 
           {/* Attendance Section */}
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <h4 style={{ margin: 0 }}>{t('concerts.attendance')}</h4>
             <div className="flex gap-2">
               <button className="btn btn-outline btn-sm" onClick={() => handleViewPrediction(viewingConcert)}>

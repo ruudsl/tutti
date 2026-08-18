@@ -119,8 +119,8 @@ export default function Polls() {
   const filteredPolls = polls;
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('polls.title')}</h1>
         {canCreate && (
           <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
@@ -402,7 +402,7 @@ function PollDetailModal({
 
             return (
               <div key={option.id} className="space-y-1">
-                <div className="flex justify-between items-center">
+                <div className="page-header">
                   <span className={`flex-1 ${isUserVote ? 'font-semibold' : ''}`}>
                     {option.text}
                     {isUserVote && <Icon name="checkCircle" size={14} className="inline ml-2 text-success" />}

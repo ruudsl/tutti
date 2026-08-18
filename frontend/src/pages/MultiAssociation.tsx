@@ -44,7 +44,7 @@ export default function MultiAssociation() {
 
   if (checkingAccess) {
     return (
-      <div className="p-6">
+      <div className="page">
         <div role="status" className="text-center py-12 text-gray-500">
           {t('multiAssociation.checkingAccess')}
         </div>
@@ -162,7 +162,7 @@ function AssociationsTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h2 className="text-lg font-semibold">{t('multiAssociation.associations.title')}</h2>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -625,7 +625,7 @@ function InvitationsTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h2 className="text-lg font-semibold">{t('multiAssociation.invitations.title')}</h2>
         <button
           onClick={() => setShowAddForm(true)}
@@ -951,7 +951,7 @@ function SuperAdminsTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h2 className="text-lg font-semibold">{t('multiAssociation.superAdmins.title')}</h2>
       </div>
 

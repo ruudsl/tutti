@@ -502,7 +502,7 @@ function CreateEditWikiModal({
         )}
 
         <div className="form-control">
-          <div className="flex justify-between items-center mb-2">
+          <div className="page-header">
             <label className="label py-0">
               <span className="label-text">{t('wiki.content')} *</span>
             </label>
@@ -638,7 +638,7 @@ function WikiAttachmentsSection({ slug, canEdit }: { slug: string; canEdit: bool
 
   return (
     <div className="border-t pt-4 mt-4">
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h3 className="font-semibold">{t('wiki.attachments')}</h3>
         {canEdit && (
           <>
