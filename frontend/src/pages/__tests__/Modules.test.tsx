@@ -85,6 +85,28 @@ describe('modulepagina', () => {
     expect(screen.getByRole('button', { name: /modules.retry/ })).toBeInTheDocument();
   });
 
+  it('wijst bij een 404 naar de backend, niet naar een storing', async () => {
+    // Dit is het geval dat in de praktijk voorkomt: de frontend is bijgewerkt
+    // en de backend nog niet. "Het lukte niet" stuurt een beheerder dan de
+    // verkeerde kant op.
+    vi.mocked(getModuleSettings).mockRejectedValue({ response: { status: 404 } });
+
+    render(<Modules />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText('modules.errorNotDeployed')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /modules.retry/ })).toBeInTheDocument();
+  });
+
+  it('legt bij een 403 uit dat het beheerderswerk is, zonder knop', async () => {
+    vi.mocked(getModuleSettings).mockRejectedValue({ response: { status: 403 } });
+
+    render(<Modules />, { wrapper });
+
+    await waitFor(() => expect(screen.getByText('modules.errorNotAdmin')).toBeInTheDocument());
+    // Opnieuw proberen helpt hier niet; die knop hoort er dus niet te staan.
+    expect(screen.queryByRole('button', { name: /modules.retry/ })).not.toBeInTheDocument();
+  });
+
   it('meldt het als er geen modules zijn', async () => {
     vi.mocked(getModuleSettings).mockResolvedValue([]);
 

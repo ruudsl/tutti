@@ -144,6 +144,8 @@
     "off": "Aus",
     "enabled": "Modul eingeschaltet.",
     "disabled": "Modul ausgeschaltet. Die Daten bleiben erhalten.",
+    "errorNotDeployed": "Dieser Server kennt die Modulseite noch nicht. Das Backend läuft vermutlich noch in einer älteren Version: starte es neu oder deploye es erneut.",
+    "errorNotAdmin": "Nur Administratoren können Module ein- und ausschalten.",
     "errorLoad": "Die Module konnten nicht geladen werden.",
     "retry": "Erneut versuchen",
     "empty": "Es gibt noch keine Module zum Ein- oder Ausschalten.",
