@@ -1,4 +1,5 @@
 import { useEffect, useRef, useId, ReactNode, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { Icon } from './Icon';
@@ -168,7 +169,24 @@ export function Modal({
     large: 'modal-large',
   }[size];
 
-  return (
+  /**
+   * De modal gaat naar document.body en niet naar de plek in de boom waar hij
+   * geschreven staat.
+   *
+   * .modal-overlay is position: fixed en rekent daarmee vanaf het venster -
+   * behalve als een voorouder een transform heeft, want dan wordt die het
+   * referentiekader. Dat gebeurde hier: theme-2026.css geeft elk direct kind
+   * van .main-content een page-in-animatie met fill-mode both, en de
+   * eindtoestand daarvan is een transform. Die blijft dus permanent staan.
+   *
+   * Gevolg: de overlay vulde de pagina-div in plaats van het scherm, en een
+   * formulier van gemiddelde hoogte kwam met zijn bovenkant boven het venster
+   * uit. Op de kledingpagina was het eerste veld daardoor niet te zien.
+   *
+   * Buiten die boom kan geen enkele voorouder er nog invloed op hebben, ook
+   * geen animatie die later wordt toegevoegd.
+   */
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div
         ref={(el) => {
@@ -198,7 +216,8 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
