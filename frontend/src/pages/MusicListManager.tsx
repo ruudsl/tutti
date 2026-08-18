@@ -331,8 +331,8 @@ export default function MusicListManager() {
 
   if (isLoading) {
     return (
-      <div>
-        <h1 className="mb-3">{t('lists.manageTitle')}</h1>
+      <div className="page">
+        <h1>{t('lists.manageTitle')}</h1>
         <div className="grid grid-3" style={{ gridTemplateColumns: '250px 250px 1fr' }}>
           <div className="card">
             <div className="card-body">

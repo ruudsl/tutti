@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mb-3">
+      <div className="page-header">
         <h1>
           {t('dashboard.welcome')}, {user?.firstName}!
         </h1>

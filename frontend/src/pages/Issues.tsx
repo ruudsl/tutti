@@ -109,7 +109,7 @@ export default function Issues() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>
           {t('issues.title')}
           <span className="badge badge-primary badge-title-count">{issues.length}</span>

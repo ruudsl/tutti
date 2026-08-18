@@ -158,7 +158,7 @@ export default function Events() {
 
   if (viewingEventId && eventDetail) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="page">
         <button onClick={handleCloseDetail} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4">
           <Icon name="arrowLeft" className="w-5 h-5" />
           Terug naar overzicht
@@ -242,7 +242,7 @@ export default function Events() {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="page">
             {activeTab === 'details' && (
               <EventDetailsTab
                 event={eventDetail}
@@ -288,7 +288,7 @@ export default function Events() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">Evenementen & Optredens</h1>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -809,7 +809,7 @@ function EventScheduleTab({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h3 className="font-semibold">Tijdschema</h3>
         <button
           onClick={() => setShowAddForm(true)}
@@ -907,7 +907,7 @@ function EventTransportTab({
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="page-header">
           <h3 className="font-semibold">Vervoer</h3>
           <button
             className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -977,7 +977,7 @@ function EventTransportTab({
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="page-header">
           <h3 className="font-semibold">Verzamelpunten</h3>
           <button
             className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -1050,7 +1050,7 @@ function EventPackingTab({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h3 className="font-semibold">Paklijsten</h3>
         <button
           onClick={() => setShowAddForm(true)}

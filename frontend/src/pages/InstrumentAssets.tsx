@@ -838,7 +838,7 @@ export default function InstrumentAssets() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="page-header">
         <h1 style={{ margin: 0 }}>Instrumentenbeheer</h1>
         <button
           onClick={() => setShowAddModal(true)}

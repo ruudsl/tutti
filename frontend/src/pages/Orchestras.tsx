@@ -147,7 +147,7 @@ export default function Orchestras() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>{t('orchestras.title')}</h1>
         </div>
         <div className="grid grid-cols-2">

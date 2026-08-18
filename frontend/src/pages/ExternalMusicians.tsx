@@ -238,7 +238,7 @@ export default function ExternalMusicians() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>
           {t('externalMusicians.title')}
           <span className="badge badge-primary ml-2">{musicians.length}</span>

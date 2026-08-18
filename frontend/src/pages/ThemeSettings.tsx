@@ -115,7 +115,7 @@ export default function ThemeSettingsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div className="page-header">
         <h1>{t('theme.title')}</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button type="button" className="btn btn-outline" onClick={handleReset} disabled={isSaving}>

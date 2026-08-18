@@ -467,7 +467,7 @@ export default function TicketDashboard() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>
             <Skeleton width="300px" height="2rem" />
           </h1>

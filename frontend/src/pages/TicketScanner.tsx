@@ -224,7 +224,7 @@ export default function TicketScanner() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('tickets.scanner')}</h1>
         <button
           className={`btn ${showOfflineMode ? 'btn-primary' : 'btn-outline'}`}

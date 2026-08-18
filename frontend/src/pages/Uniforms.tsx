@@ -266,7 +266,7 @@ export default function Uniforms() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>{t('uniforms.title')}</h1>
         </div>
         <div className="card">

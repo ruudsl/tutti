@@ -67,8 +67,8 @@ export default function Projects() {
   const planningProjects = projects.filter((p) => p.status === 'planning');
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('projects.title')}</h1>
         <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
           <Icon name="plus" size={18} />

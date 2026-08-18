@@ -133,8 +133,8 @@ export default function DataExport() {
   }
 
   return (
-    <div>
-      <h1 className="mb-3">{t('dataExport.title')}</h1>
+    <div className="page">
+      <h1>{t('dataExport.title')}</h1>
 
       <div className="grid grid-2 gap-3">
         {/* Data Overview */}

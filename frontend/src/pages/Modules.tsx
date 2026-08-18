@@ -71,8 +71,8 @@ export default function Modules() {
           : t('modules.errorLoad');
 
     return (
-      <div>
-        <h1 className="mb-3">{t('modules.title')}</h1>
+      <div className="page">
+        <h1>{t('modules.title')}</h1>
         <div className="alert alert-danger">
           <Icon name="warning" /> {message}
         </div>
@@ -87,8 +87,8 @@ export default function Modules() {
 
   if (!modules || modules.length === 0) {
     return (
-      <div>
-        <h1 className="mb-3">{t('modules.title')}</h1>
+      <div className="page">
+        <h1>{t('modules.title')}</h1>
         <div className="alert alert-info">
           <Icon name="info" /> {t('modules.empty')}
         </div>
@@ -97,8 +97,8 @@ export default function Modules() {
   }
 
   return (
-    <div>
-      <h1 className="mb-3">{t('modules.title')}</h1>
+    <div className="page">
+      <h1>{t('modules.title')}</h1>
 
       <div className="alert alert-info mb-3">
         <Icon name="info" /> {t('modules.description')}

@@ -252,8 +252,8 @@ export default function Accounting() {
   const payableAccounts = accounts.filter((a) => a.accountSubtype === 'payable');
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('accounting.title')}</h1>
         <div className="flex items-center gap-2">
           {fiscalYears.length > 0 ? (
@@ -431,7 +431,7 @@ export default function Accounting() {
           {/* Recent Transactions */}
           <div className="card bg-base-100 shadow-md">
             <div className="card-body">
-              <div className="flex justify-between items-center">
+              <div className="page-header">
                 <h3 className="card-title text-lg">{t('accounting.recentTransactions')}</h3>
                 <button className="btn btn-ghost btn-sm" onClick={() => setActiveTab('transactions')}>
                   {t('common.viewAll')} <Icon name="chevronRight" size={16} />
@@ -496,7 +496,7 @@ export default function Accounting() {
       {/* Chart of Accounts Tab */}
       {activeTab === 'chart' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.chartOfAccounts')}</h2>
             <div className="flex gap-2">
               {accounts.length === 0 && (
@@ -552,7 +552,7 @@ export default function Accounting() {
                 return (
                   <div key={type} className="card bg-base-100 shadow-md">
                     <div className="card-body">
-                      <div className="flex justify-between items-center">
+                      <div className="page-header">
                         <h3 className={`card-title text-lg flex items-center gap-2 ${ACCOUNT_TYPE_COLORS[type]}`}>
                           <Icon name={ACCOUNT_TYPE_ICONS[type]} size={20} />
                           {t(`accounting.accountTypes.${type}`)}
@@ -635,7 +635,7 @@ export default function Accounting() {
       {/* Transactions/Journal Entries Tab */}
       {activeTab === 'transactions' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.journalEntries')}</h2>
             <button className="btn btn-primary gap-2" onClick={() => setShowTransactionModal(true)}>
               <Icon name="plus" size={16} />
@@ -696,7 +696,7 @@ export default function Accounting() {
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.invoices')}</h2>
             <button className="btn btn-primary gap-2" onClick={() => setShowInvoiceModal(true)}>
               <Icon name="plus" size={16} />
@@ -775,7 +775,7 @@ export default function Accounting() {
       {/* Relations Tab */}
       {activeTab === 'relations' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.relations')}</h2>
             <button className="btn btn-primary gap-2" onClick={() => setShowRelationModal(true)}>
               <Icon name="plus" size={16} />
@@ -840,7 +840,7 @@ export default function Accounting() {
       {/* Cost Centers Tab */}
       {activeTab === 'costcenters' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.costCenters')}</h2>
             <button className="btn btn-primary gap-2" onClick={() => setShowCostCenterModal(true)}>
               <Icon name="plus" size={16} />
@@ -891,7 +891,7 @@ export default function Accounting() {
       {/* Budgets Tab */}
       {activeTab === 'budgets' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="page-header">
             <h2 className="text-xl font-semibold">{t('accounting.budgets')}</h2>
             <button className="btn btn-primary gap-2" onClick={() => setShowBudgetModal(true)}>
               <Icon name="plus" size={16} />

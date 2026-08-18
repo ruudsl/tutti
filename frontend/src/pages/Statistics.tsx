@@ -328,7 +328,7 @@ export default function Statistics() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('statistics.title')}</h1>
         <label>
           <span className="sr-only">{t('statistics.period')}</span>

@@ -137,7 +137,7 @@ export default function Upload() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('upload.title')}</h1>
         <button className="btn btn-outline" onClick={() => setShowImslpSearch(true)}>
           {t('imslp.searchOnImslp')}

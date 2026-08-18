@@ -84,8 +84,8 @@ export default function Resources() {
   const availableResources = resources.filter((r) => r.isActive);
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('resources.title')}</h1>
         <div className="flex gap-2">
           <button className="btn btn-outline gap-2" onClick={() => setShowCategoriesManager(true)}>

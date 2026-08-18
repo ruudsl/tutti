@@ -133,7 +133,7 @@ export default function PaymentSettings() {
 
   if (isLoading) {
     return (
-      <div>
+      <div className="page">
         <h1>{t('paymentSettings.title')}</h1>
         <div className="card">
           <div className="card-body">

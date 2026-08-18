@@ -181,7 +181,7 @@ export default function Practice() {
 
   if (statsLoading || goalsLoading) {
     return (
-      <div>
+      <div className="page">
         <h1>{t('practice.title')}</h1>
         <SkeletonTable rows={4} columns={3} />
       </div>

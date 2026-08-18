@@ -94,7 +94,7 @@ export default function CustomFieldsAdmin() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>
           {t('customFields.title')}
           <span className="badge badge-primary badge-title-count">{definitions.length}</span>

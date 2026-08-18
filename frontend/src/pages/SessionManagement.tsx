@@ -157,7 +157,7 @@ export default function SessionManagement() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('sessions.title')}</h1>
         {otherSessions.length > 0 && (
           <button

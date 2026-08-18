@@ -54,8 +54,8 @@ export default function Tours() {
   const upcomingTours = tours.filter((t) => new Date(t.startDate) >= new Date());
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page">
+      <div className="page-header">
         <h1 className="text-2xl font-bold">{t('tours.title')}</h1>
         <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
           <Icon name="plus" size={18} />

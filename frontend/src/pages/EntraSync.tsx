@@ -283,8 +283,8 @@ export default function EntraSync() {
 
   if (!msConfig?.configured) {
     return (
-      <div>
-        <h1 className="mb-3">{t('entraSync.title')}</h1>
+      <div className="page">
+        <h1>{t('entraSync.title')}</h1>
         <div className="card">
           <div className="card-body">
             <p style={{ color: 'var(--text-secondary)' }}>{t('entraSync.notConfigured')}</p>

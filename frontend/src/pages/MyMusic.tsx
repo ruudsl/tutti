@@ -653,7 +653,7 @@ export default function MyMusic() {
   // Show lists overview - grouped by orchestra
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('myMusic.title')}</h1>
         {lists.length > 1 && (
           <button

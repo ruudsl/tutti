@@ -272,8 +272,8 @@ export default function Onboarding() {
   };
 
   return (
-    <div>
-      <h1 className="mb-3">{t('memberOnboarding.title')}</h1>
+    <div className="page">
+      <h1>{t('memberOnboarding.title')}</h1>
 
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-3">
