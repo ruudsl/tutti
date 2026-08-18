@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, optionalAuth, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { requireModule } from '../middleware/requireModule';
 import { z } from 'zod';
 import {
   generateSecureTicketCode,
@@ -39,6 +40,17 @@ import {
 import logger from '../utils/logger';
 
 const router = Router();
+
+// De kaartverkoop-module kan per vereniging uit staan. De guard staat hier en
+// niet bij de mount in index.ts, omdat deze router aan /api hangt en paden
+// bedient onder zowel /tickets als /concerts/:id/tickets; een prefix-guard zou
+// de helft missen.
+//
+// optionalAuth ervoor, zodat requireModule de vereniging kent. Verzoeken zonder
+// token (de betaal-webhook, een bezoeker op de publieke bestelpagina) gaan er
+// ongehinderd doorheen: een lopende betaling mag niet stukgaan doordat een
+// beheerder de module uitzet.
+router.use(optionalAuth, requireModule('ticketing'));
 
 // Rate limiters for the public checkout endpoints. These are stricter than the
 // general /api limiter in index.ts because order creation reserves ticket

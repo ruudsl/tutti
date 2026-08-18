@@ -3655,4 +3655,24 @@ CREATE TABLE IF NOT EXISTS user_recent_searches (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_recent_searches_user ON user_recent_searches(user_id);
+
+-- ===========================================
+-- MODULES (aan/uit per vereniging)
+-- ===========================================
+-- Alleen afwijkingen van de standaard uit backend/src/modules/registry.ts.
+-- Geen rij betekent: de standaard geldt. Uitzetten verbergt de module, het
+-- verwijdert geen gegevens; zie docs/MODULES.md.
+CREATE TABLE IF NOT EXISTS association_modules (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    module_key TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    updated_by TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(association_id, module_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_association_modules_association ON association_modules(association_id);
 `;

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useModules } from '../context/ModulesContext';
+import { isPathVisible } from '../utils/modules';
 import { ROLES } from '../utils/constants';
 import { OnboardingTour, resetOnboarding } from './OnboardingTour';
 import { DarkModeToggle } from './DarkModeToggle';
@@ -218,6 +220,7 @@ const navGroups: SidebarNavGroup[] = [
       '/users',
       '/orchestras',
       '/settings',
+      '/modules',
       '/payment-settings',
       '/entra-sync',
       '/onboarding',
@@ -235,6 +238,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/custom-fields', labelKey: 'nav.customFields', roles: [ROLES.ADMIN] },
       { path: '/accounting', labelKey: 'nav.accounting', roles: [ROLES.ADMIN] },
       { path: '/settings', labelKey: 'nav.settings', roles: [ROLES.ADMIN] },
+      { path: '/modules', labelKey: 'nav.modules', roles: [ROLES.ADMIN] },
       { path: '/payment-settings', labelKey: 'nav.paymentSettings', roles: [ROLES.ADMIN] },
       { path: '/entra-sync', labelKey: 'nav.entraSync', roles: [ROLES.ADMIN] },
       { path: '/theme', labelKey: 'nav.theme', roles: [ROLES.ADMIN] },
@@ -327,15 +331,16 @@ export default function Layout() {
   };
 
   const userRole = user?.role || '';
+  const { enabled: enabledModules } = useModules();
 
-  // Filter nav groups based on user role
-  const visibleGroups = navGroups.filter((group) => {
-    const visibleItems = group.items.filter((item) => {
-      if (!item.roles) return true;
-      return item.roles.includes(userRole);
-    });
-    return visibleItems.length > 0;
-  });
+  // Filter nav groups op rol en op de modules die deze vereniging aan heeft.
+  // Een groep waarvan alles wegvalt, verdwijnt zelf ook.
+  const isItemVisible = (item: SidebarNavItem) => {
+    if (item.roles && !item.roles.includes(userRole)) return false;
+    return isPathVisible(item.path, enabledModules);
+  };
+
+  const visibleGroups = navGroups.filter((group) => group.items.some(isItemVisible));
 
   // Check if a group is active based on current path
   const isGroupActive = (group: SidebarNavGroup) => {
@@ -429,10 +434,7 @@ export default function Layout() {
             {visibleGroups.map((group) => {
               const active = isGroupActive(group);
               const isSingleItem = group.items.length === 1;
-              const visibleItems = group.items.filter((item) => {
-                if (!item.roles) return true;
-                return item.roles.includes(userRole);
-              });
+              const visibleItems = group.items.filter(isItemVisible);
 
               if (isSingleItem) {
                 // Single-item groups render as direct links
@@ -605,10 +607,7 @@ export default function Layout() {
             </div>
             <nav className="mobile-menu-nav">
               {visibleGroups.map((group) => {
-                const visibleItems = group.items.filter((item) => {
-                  if (!item.roles) return true;
-                  return item.roles.includes(userRole);
-                });
+                const visibleItems = group.items.filter(isItemVisible);
 
                 if (visibleItems.length === 1) {
                   return (

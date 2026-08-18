@@ -137,7 +137,19 @@
     "content": "Inhoud",
     "admin": "Beheer"
   },
+  "modules": {
+    "title": "Modules",
+    "description": "Zet onderdelen uit die de vereniging niet gebruikt. Ze verdwijnen dan uit het menu en zijn niet meer op te vragen. Er wordt niets verwijderd: zet je een module later weer aan, dan staat alles er nog precies zo bij.",
+    "on": "Aan",
+    "off": "Uit",
+    "enabled": "Module aangezet.",
+    "disabled": "Module uitgezet. De gegevens blijven bewaard.",
+    "errorSave": "Module bijwerken is niet gelukt.",
+    "hiddenPages_one": "{{count}} pagina verborgen",
+    "hiddenPages_other": "{{count}} pagina's verborgen"
+  },
   "nav": {
+    "modules": "Modules",
     "dashboard": "Dashboard",
     "myMusic": "Mijn Muziek",
     "tools": "Tools",
@@ -5643,6 +5655,7 @@
     }
   },
   "pageTitle": {
+    "modules": "Modules",
     "stageDesigner": "Podiumindeling Designer",
     "concertStageSetup": "Concert Podiumindeling"
   }

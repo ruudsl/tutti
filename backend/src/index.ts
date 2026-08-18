@@ -120,6 +120,9 @@ import wikiRoutes from './routes/wiki';
 import workflowsRoutes from './routes/workflows';
 import performancesRoutes from './routes/performances';
 import stageLayoutsRoutes from './routes/stage-layouts';
+import modulesRoutes from './routes/modules';
+import { requireModule } from './middleware/requireModule';
+import { optionalAuth } from './middleware/auth';
 
 // Import recovery
 import failedImportsRoutes from './routes/failed-imports';
@@ -296,6 +299,7 @@ app.use('/api/pdf-tools', pdfToolsRoutes);
 app.use('/api/loans', loansRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/modules', modulesRoutes);
 app.use('/api/rehearsals', rehearsalRoutes);
 app.use('/api/spond', spondRoutes);
 app.use('/api/musicainfo', musicaInfoRoutes);
@@ -313,7 +317,7 @@ app.use('/api/polls', pollsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/email-campaigns', emailCampaignsRoutes);
-app.use('/api/accounting', accountingRoutes);
+app.use('/api/accounting', optionalAuth, requireModule('accounting'), accountingRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/resources', resourcesRoutes);
@@ -328,8 +332,8 @@ app.use('/api/uniforms', uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
-app.use('/api/seating', seatingRoutes);
-app.use('/api/seating-notifications', seatingNotificationsRoutes);
+app.use('/api/seating', optionalAuth, requireModule('stage'), seatingRoutes);
+app.use('/api/seating-notifications', optionalAuth, requireModule('stage'), seatingNotificationsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/practice', practiceRoutes);
@@ -348,7 +352,7 @@ app.use('/api/thumbnails', thumbnailsRoutes);
 app.use('/api/streaming', streamingLinksRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/holidays', holidaysRoutes);
-app.use('/api/stage-layouts', stageLayoutsRoutes);
+app.use('/api/stage-layouts', optionalAuth, requireModule('stage'), stageLayoutsRoutes);
 
 // External Musicians Network
 app.use('/api/external-musicians', externalMusiciansRoutes);
@@ -420,7 +424,7 @@ app.get('/api/changelog', async (req, res) => {
 // Routes with catch-all patterns (mount these AFTER specific routes)
 app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concerts/:id/tickets, /tickets/...
 app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
-app.use('/api/payment-settings', paymentSettingsRoutes);
+app.use('/api/payment-settings', optionalAuth, requireModule('ticketing'), paymentSettingsRoutes);
 app.use('/api/discount-codes', discountCodesRoutes);
 app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
 

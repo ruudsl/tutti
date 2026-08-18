@@ -137,7 +137,19 @@
     "content": "Inhalt",
     "admin": "Verwaltung"
   },
+  "modules": {
+    "title": "Module",
+    "description": "Schalte Bereiche ab, die der Verein nicht nutzt. Sie verschwinden aus dem Menü und lassen sich nicht mehr öffnen. Es wird nichts gelöscht: schaltest du ein Modul später wieder ein, ist alles unverändert da.",
+    "on": "Ein",
+    "off": "Aus",
+    "enabled": "Modul eingeschaltet.",
+    "disabled": "Modul ausgeschaltet. Die Daten bleiben erhalten.",
+    "errorSave": "Das Modul konnte nicht aktualisiert werden.",
+    "hiddenPages_one": "{{count}} Seite ausgeblendet",
+    "hiddenPages_other": "{{count}} Seiten ausgeblendet"
+  },
   "nav": {
+    "modules": "Module",
     "dashboard": "Dashboard",
     "myMusic": "Meine Musik",
     "tools": "Werkzeuge",
@@ -2008,6 +2020,7 @@
     "linkText": "Feedback geben"
   },
   "pageTitle": {
+    "modules": "Module",
     "stageDesigner": "Bühnenaufstellung Designer",
     "concertStageSetup": "Konzert-Bühnenaufstellung"
   },

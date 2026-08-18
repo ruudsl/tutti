@@ -137,7 +137,19 @@
     "content": "Content",
     "admin": "Admin"
   },
+  "modules": {
+    "title": "Modules",
+    "description": "Switch off the parts your association does not use. They disappear from the menu and can no longer be opened. Nothing is deleted: switch a module back on and everything is exactly as you left it.",
+    "on": "On",
+    "off": "Off",
+    "enabled": "Module switched on.",
+    "disabled": "Module switched off. The data is kept.",
+    "errorSave": "Could not update the module.",
+    "hiddenPages_one": "{{count}} page hidden",
+    "hiddenPages_other": "{{count}} pages hidden"
+  },
   "nav": {
+    "modules": "Modules",
     "dashboard": "Dashboard",
     "myMusic": "My Music",
     "tools": "Tools",
@@ -5643,6 +5655,7 @@
     }
   },
   "pageTitle": {
+    "modules": "Modules",
     "stageDesigner": "Stage Layout Designer",
     "concertStageSetup": "Concert Stage Setup"
   }
