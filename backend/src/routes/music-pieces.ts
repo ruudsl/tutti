@@ -2365,6 +2365,204 @@ router.post(
   }),
 );
 
+// LET OP: de /bulk-routes staan bewust boven /:id.
+// Express matcht in registratievolgorde, dus met /:id ervoor kwam een
+// verzoek op /api/music-pieces/bulk terecht bij de :id-handler met
+// id = "bulk" en antwoordde die 404. Bulk bewerken en bulk verwijderen
+// waren daardoor onbereikbaar vanuit de frontend.
+
+/**
+ * @swagger
+ * /music-pieces/bulk:
+ *   put:
+ *     summary: Bulk update music pieces
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pieceIds
+ *               - updates
+ *             properties:
+ *               pieceIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               updates:
+ *                 type: object
+ *                 properties:
+ *                   instrumentId:
+ *                     type: string
+ *                     nullable: true
+ *                   addToListId:
+ *                     type: string
+ *                   removeFromListId:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Pieces updated
+ */
+router.put(
+  '/bulk',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = bulkUpdatePiecesSchema.parse(req.body);
+
+    if (data.pieceIds.length === 0) {
+      throw new ApiError(400, 'Geen muziekstukken geselecteerd.');
+    }
+
+    if (data.pieceIds.length > 100) {
+      throw new ApiError(400, 'Maximaal 100 stukken tegelijk bijwerken.');
+    }
+
+    let updated = 0;
+
+    withTransaction(() => {
+      for (const pieceId of data.pieceIds) {
+        // Verify piece exists and belongs to user's association
+        const piece = db
+          .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?')
+          .get(pieceId, req.user!.associationId);
+
+        if (!piece) continue;
+
+        // Update instrument if specified
+        if (data.updates.instrumentId !== undefined) {
+          db.prepare('UPDATE music_pieces SET instrument_id = ? WHERE id = ?').run(data.updates.instrumentId, pieceId);
+        }
+
+        // Add to list if specified
+        if (data.updates.addToListId) {
+          // Verify list belongs to same association
+          const list = db
+            .prepare(
+              `
+                    SELECT ml.id FROM music_lists ml
+                    JOIN orchestras o ON ml.orchestra_id = o.id
+                    WHERE ml.id = ? AND o.association_id = ?
+                `,
+            )
+            .get(data.updates.addToListId, req.user!.associationId);
+
+          if (list) {
+            db.prepare(
+              `
+                        INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id)
+                        VALUES (?, ?)
+                    `,
+            ).run(data.updates.addToListId, pieceId);
+          }
+        }
+
+        // Remove from list if specified
+        if (data.updates.removeFromListId) {
+          db.prepare(
+            `
+                    DELETE FROM music_list_pieces
+                    WHERE music_list_id = ? AND music_piece_id = ?
+                `,
+          ).run(data.updates.removeFromListId, pieceId);
+        }
+
+        updated++;
+      }
+    });
+
+    logger.info(`Bulk updated ${updated} music pieces`, { updatedBy: req.user!.id });
+
+    res.json({
+      message: `${updated} muziekstukken bijgewerkt.`,
+      updated,
+    });
+  }),
+);
+
+/**
+ * @swagger
+ * /music-pieces/bulk:
+ *   delete:
+ *     summary: Bulk delete music pieces
+ *     tags: [Music Pieces]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pieceIds
+ *             properties:
+ *               pieceIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Pieces deleted
+ */
+router.delete(
+  '/bulk',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = bulkDeletePiecesSchema.parse(req.body);
+
+    if (data.pieceIds.length === 0) {
+      throw new ApiError(400, 'Geen muziekstukken geselecteerd.');
+    }
+
+    if (data.pieceIds.length > 100) {
+      throw new ApiError(400, 'Maximaal 100 stukken tegelijk verwijderen.');
+    }
+
+    let deleted = 0;
+    const deletedAt = new Date().toISOString();
+
+    withTransaction(() => {
+      for (const pieceId of data.pieceIds) {
+        const piece = db
+          .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+          .get(pieceId, req.user!.associationId) as { id: string } | undefined;
+
+        if (!piece) continue;
+
+        // Soft delete: keep the row and PDF file; both are purged later by
+        // the GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
+        db.prepare('UPDATE music_pieces SET deleted_at = ? WHERE id = ?').run(deletedAt, pieceId);
+        deleted++;
+      }
+    });
+
+    logger.info(`Bulk soft-deleted ${deleted} music pieces`, { deletedBy: req.user!.id });
+
+    // Log audit event
+    logAuditEvent(
+      req.user!.id,
+      'bulk_delete',
+      'music_pieces',
+      data.pieceIds.join(','),
+      `${deleted} muziekstukken verwijderd`,
+      undefined,
+      req.ip,
+      req.get('user-agent'),
+    );
+
+    res.json({
+      message: `${deleted} muziekstukken verwijderd.`,
+      deleted,
+    });
+  }),
+);
+
 /**
  * @swagger
  * /music-pieces/{id}:
@@ -2689,198 +2887,6 @@ router.post(
     );
 
     res.json({ message: 'Muziekstuk succesvol gedeeld.' });
-  }),
-);
-
-/**
- * @swagger
- * /music-pieces/bulk:
- *   put:
- *     summary: Bulk update music pieces
- *     tags: [Music Pieces]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - pieceIds
- *               - updates
- *             properties:
- *               pieceIds:
- *                 type: array
- *                 items:
- *                   type: string
- *               updates:
- *                 type: object
- *                 properties:
- *                   instrumentId:
- *                     type: string
- *                     nullable: true
- *                   addToListId:
- *                     type: string
- *                   removeFromListId:
- *                     type: string
- *     responses:
- *       200:
- *         description: Pieces updated
- */
-router.put(
-  '/bulk',
-  authenticateToken,
-  requireRole('admin', 'music_committee'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = bulkUpdatePiecesSchema.parse(req.body);
-
-    if (data.pieceIds.length === 0) {
-      throw new ApiError(400, 'Geen muziekstukken geselecteerd.');
-    }
-
-    if (data.pieceIds.length > 100) {
-      throw new ApiError(400, 'Maximaal 100 stukken tegelijk bijwerken.');
-    }
-
-    let updated = 0;
-
-    withTransaction(() => {
-      for (const pieceId of data.pieceIds) {
-        // Verify piece exists and belongs to user's association
-        const piece = db
-          .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?')
-          .get(pieceId, req.user!.associationId);
-
-        if (!piece) continue;
-
-        // Update instrument if specified
-        if (data.updates.instrumentId !== undefined) {
-          db.prepare('UPDATE music_pieces SET instrument_id = ? WHERE id = ?').run(data.updates.instrumentId, pieceId);
-        }
-
-        // Add to list if specified
-        if (data.updates.addToListId) {
-          // Verify list belongs to same association
-          const list = db
-            .prepare(
-              `
-                    SELECT ml.id FROM music_lists ml
-                    JOIN orchestras o ON ml.orchestra_id = o.id
-                    WHERE ml.id = ? AND o.association_id = ?
-                `,
-            )
-            .get(data.updates.addToListId, req.user!.associationId);
-
-          if (list) {
-            db.prepare(
-              `
-                        INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id)
-                        VALUES (?, ?)
-                    `,
-            ).run(data.updates.addToListId, pieceId);
-          }
-        }
-
-        // Remove from list if specified
-        if (data.updates.removeFromListId) {
-          db.prepare(
-            `
-                    DELETE FROM music_list_pieces
-                    WHERE music_list_id = ? AND music_piece_id = ?
-                `,
-          ).run(data.updates.removeFromListId, pieceId);
-        }
-
-        updated++;
-      }
-    });
-
-    logger.info(`Bulk updated ${updated} music pieces`, { updatedBy: req.user!.id });
-
-    res.json({
-      message: `${updated} muziekstukken bijgewerkt.`,
-      updated,
-    });
-  }),
-);
-
-/**
- * @swagger
- * /music-pieces/bulk:
- *   delete:
- *     summary: Bulk delete music pieces
- *     tags: [Music Pieces]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - pieceIds
- *             properties:
- *               pieceIds:
- *                 type: array
- *                 items:
- *                   type: string
- *     responses:
- *       200:
- *         description: Pieces deleted
- */
-router.delete(
-  '/bulk',
-  authenticateToken,
-  requireRole('admin', 'music_committee'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = bulkDeletePiecesSchema.parse(req.body);
-
-    if (data.pieceIds.length === 0) {
-      throw new ApiError(400, 'Geen muziekstukken geselecteerd.');
-    }
-
-    if (data.pieceIds.length > 100) {
-      throw new ApiError(400, 'Maximaal 100 stukken tegelijk verwijderen.');
-    }
-
-    let deleted = 0;
-    const deletedAt = new Date().toISOString();
-
-    withTransaction(() => {
-      for (const pieceId of data.pieceIds) {
-        const piece = db
-          .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
-          .get(pieceId, req.user!.associationId) as { id: string } | undefined;
-
-        if (!piece) continue;
-
-        // Soft delete: keep the row and PDF file; both are purged later by
-        // the GDPR cleanup scheduler (SOFT_DELETE_RETENTION_DAYS).
-        db.prepare('UPDATE music_pieces SET deleted_at = ? WHERE id = ?').run(deletedAt, pieceId);
-        deleted++;
-      }
-    });
-
-    logger.info(`Bulk soft-deleted ${deleted} music pieces`, { deletedBy: req.user!.id });
-
-    // Log audit event
-    logAuditEvent(
-      req.user!.id,
-      'bulk_delete',
-      'music_pieces',
-      data.pieceIds.join(','),
-      `${deleted} muziekstukken verwijderd`,
-      undefined,
-      req.ip,
-      req.get('user-agent'),
-    );
-
-    res.json({
-      message: `${deleted} muziekstukken verwijderd.`,
-      deleted,
-    });
   }),
 );
 

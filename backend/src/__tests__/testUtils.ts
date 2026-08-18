@@ -42,6 +42,22 @@ export interface TestInstrument {
   clef?: string;
 }
 
+export interface TestMusicPiece {
+  id: string;
+  title: string;
+  associationId: string;
+  arranger?: string | null;
+  instrumentId?: string | null;
+  tuning?: string | null;
+  groupNumber?: string | null;
+  clef?: string | null;
+  filePath: string;
+  originalFilename: string;
+  youtubeUrl?: string | null;
+  uploadedBy?: string | null;
+  deletedAt?: string | null;
+}
+
 export interface TestRehearsal {
   id: string;
   associationId: string;
@@ -166,6 +182,56 @@ export function createTestOrchestra(associationId: string, overrides: Partial<Te
     .run(orchestra.id, orchestra.name, orchestra.associationId);
 
   return orchestra;
+}
+
+/**
+ * Create a test music piece and insert it into the database.
+ *
+ * file_path en original_filename zijn NOT NULL in het schema; de helper vult
+ * ze met een plausibele waarde zodat tests zich op de rest kunnen richten.
+ */
+export function createTestMusicPiece(associationId: string, overrides: Partial<TestMusicPiece> = {}): TestMusicPiece {
+  const id = overrides.id || uuidv4();
+  const piece: TestMusicPiece = {
+    id,
+    title: overrides.title || `Test Piece ${id.slice(0, 8)}`,
+    associationId,
+    arranger: overrides.arranger ?? null,
+    instrumentId: overrides.instrumentId ?? null,
+    tuning: overrides.tuning ?? null,
+    groupNumber: overrides.groupNumber ?? null,
+    clef: overrides.clef ?? null,
+    filePath: overrides.filePath || `${id}.pdf`,
+    originalFilename: overrides.originalFilename || 'test.pdf',
+    youtubeUrl: overrides.youtubeUrl ?? null,
+    uploadedBy: overrides.uploadedBy ?? null,
+    deletedAt: overrides.deletedAt ?? null,
+  };
+
+  testDb
+    .prepare(
+      `INSERT INTO music_pieces
+                (id, title, arranger, instrument_id, tuning, group_number, clef,
+                 file_path, original_filename, youtube_url, association_id, uploaded_by, deleted_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      piece.id,
+      piece.title,
+      piece.arranger,
+      piece.instrumentId,
+      piece.tuning,
+      piece.groupNumber,
+      piece.clef,
+      piece.filePath,
+      piece.originalFilename,
+      piece.youtubeUrl,
+      piece.associationId,
+      piece.uploadedBy,
+      piece.deletedAt,
+    );
+
+  return piece;
 }
 
 /**
