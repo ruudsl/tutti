@@ -2,6 +2,15 @@
 
 > **Doel:** Per feature een concreet implementatie-blueprint: wat, database-wijzigingen, backend routes, frontend pages/components, integraties met bestaande Tutti-modules, acceptance criteria, en effort-schatting.
 
+> **Status per 2026-08-18:** alle features uit Fase 1 en Fase 2 van dit plan zijn
+> **geïmplementeerd** — elke module heeft een gemounte backend-route (`backend/src/index.ts`)
+> en een frontend-pagina. Dit document blijft bewaard als *blueprint en referentie* voor het
+> ontwerp (schema's, endpoints, acceptance criteria); het is geen openstaande backlog meer.
+> Per feature staat hieronder welke bestanden de implementatie bevatten.
+>
+> Wat wél nog openstaat, staat in de werkpakketten-roadmap: [`../ROADMAP.md`](../ROADMAP.md).
+
+
 ## Effort-schatting (T-shirt sizing)
 
 | Size | Tijd |
@@ -24,26 +33,26 @@
 # Inhoudsopgave
 
 ## Fase 1 — Prioriteit HOOG
-- [1.1 Polls / voting module](#11-polls--voting-module)
-- [1.2 Custom fields per orchestra](#12-custom-fields-per-orchestra)
-- [1.3 Boekhouding-module](#13-boekhouding-module)
-- [1.4 Granular per-user privacy](#14-granular-per-user-privacy)
-- [1.5 External contacts](#15-external-contacts)
-- [1.6 Email bulk-mailing](#16-email-bulk-mailing)
-- [1.7 Tasks module](#17-tasks-module)
+- ✅ [1.1 Polls / voting module](#11-polls--voting-module)
+- ✅ [1.2 Custom fields per orchestra](#12-custom-fields-per-orchestra)
+- ✅ [1.3 Boekhouding-module](#13-boekhouding-module)
+- ✅ [1.4 Granular per-user privacy](#14-granular-per-user-privacy)
+- ✅ [1.5 External contacts](#15-external-contacts)
+- ✅ [1.6 Email bulk-mailing](#16-email-bulk-mailing)
+- ✅ [1.7 Tasks module](#17-tasks-module)
 
 ## Fase 2 — Prioriteit MIDDEN
-- [2.1 Tour module](#21-tour-module)
-- [2.2 Probenphasen / Projects](#22-probenphasen--projects)
-- [2.3 Resource booking](#23-resource-booking)
-- [2.4 Posts / news module](#24-posts--news-module)
-- [2.5 Performance histories](#25-performance-histories)
-- [2.6 Calendar embedding + Info-Screen](#26-calendar-embedding--info-screen)
-- [2.7 Workflow automation / Routines](#27-workflow-automation--routines)
-- [2.8 Equipment / instrument inventory](#28-equipment--instrument-inventory)
-- [2.9 Outfits-module](#29-outfits-module)
-- [2.10 Wiki module](#210-wiki-module)
-- [2.11 OpenAPI/Swagger + client libraries](#211-openapi--client-libraries)
+- ✅ [2.1 Tour module](#21-tour-module)
+- ✅ [2.2 Probenphasen / Projects](#22-probenphasen--projects)
+- ✅ [2.3 Resource booking](#23-resource-booking)
+- ✅ [2.4 Posts / news module](#24-posts--news-module)
+- ✅ [2.5 Performance histories](#25-performance-histories)
+- ✅ [2.6 Calendar embedding + Info-Screen](#26-calendar-embedding--info-screen)
+- ✅ [2.7 Workflow automation / Routines](#27-workflow-automation--routines)
+- ✅ [2.8 Equipment / instrument inventory](#28-equipment--instrument-inventory)
+- ✅ [2.9 Outfits-module](#29-outfits-module)
+- ✅ [2.10 Wiki module](#210-wiki-module)
+- ✅ [2.11 OpenAPI/Swagger + client libraries](#211-openapi--client-libraries)
 
 ## Bijlagen
 - [Bijlage A: Fasering](#bijlage-a-fasering)
@@ -55,6 +64,8 @@
 # 1.1 Polls / voting module
 
 > **Effort: M (2–3 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/polls.ts` · `frontend/src/pages/Polls.tsx`
 
 ## Wat & waarom
 
@@ -176,6 +187,8 @@ POST   /api/polls/:id/comments
 # 1.2 Custom fields per orchestra
 
 > **Effort: M (2–3 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/custom-fields.ts` · `frontend/src/pages/CustomFieldsAdmin.tsx`
 
 ## Wat & waarom
 
@@ -279,6 +292,8 @@ POST   /api/custom-fields/values/bulk
 # 1.3 Boekhouding-module
 
 > **Effort: XL (8+ weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/accounting.ts` · `backend/src/services/invoices.ts` · `frontend/src/pages/Accounting.tsx`
 
 ## Wat & waarom
 
@@ -365,6 +380,8 @@ CREATE TABLE fiscal_years (...)
 # 1.4 Granular per-user privacy
 
 > **Effort: M (3 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/privacy-settings.ts` · `frontend/src/pages/PrivacySettings.tsx`
 
 ## Wat & waarom
 
@@ -440,6 +457,8 @@ GET    /api/privacy/visible-fields/:user_id
 # 1.5 External contacts
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/contacts.ts` · `frontend/src/pages/Contacts.tsx`
 
 ## Wat & waarom
 
@@ -522,6 +541,8 @@ GET    /api/contacts/:id/relations
 # 1.6 Email bulk-mailing
 
 > **Effort: S–M (1.5 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/email-campaigns.ts` · `frontend/src/pages/EmailCampaigns.tsx`
 
 ## Wat & waarom
 
@@ -559,6 +580,8 @@ CREATE TABLE mail_subscriptions (...)
 # 1.7 Tasks module
 
 > **Effort: S (1 week)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/tasks.ts` · `frontend/src/pages/Tasks.tsx`
 
 ## Wat & waarom
 
@@ -612,6 +635,8 @@ CREATE TABLE task_template_items (...)
 # 2.1 Tour module
 
 > **Effort: L (4–5 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/tours.ts` · `frontend/src/pages/Tours.tsx`
 
 Voor verenigingen die concertreizen of festivals doen. Tours zijn aaneenschakelingen van repetities + concerten + reizen + accommodatie + equipment.
 
@@ -620,6 +645,8 @@ Voor verenigingen die concertreizen of festivals doen. Tours zijn aaneenschakeli
 # 2.2 Probenphasen / Projects
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/projects.ts` · `frontend/src/pages/Projects.tsx`
 
 Projecten groeperen: reeks repetities + concerten + specifieke deelnemerspool + setlist. Voorbeelden: "WMC 2026", "Kerstconcert-cyclus".
 
@@ -628,6 +655,8 @@ Projecten groeperen: reeks repetities + concerten + specifieke deelnemerspool + 
 # 2.3 Resource booking
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/resources.ts` · `frontend/src/pages/Resources.tsx`
 
 Boekingen voor gedeelde resources: repetitielokalen, slagwerk-instrumenten, geluidsinstallatie, bus.
 
@@ -636,6 +665,8 @@ Boekingen voor gedeelde resources: repetitielokalen, slagwerk-instrumenten, gelu
 # 2.4 Posts / news module
 
 > **Effort: M (2.5 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/posts.ts` · `frontend/src/pages/Posts.tsx`
 
 Nieuwsberichten binnen Tutti met embed-optie voor externe website. Concert-aankondigingen, ledenupdates, mijlpalen.
 
@@ -644,6 +675,8 @@ Nieuwsberichten binnen Tutti met embed-optie voor externe website. Concert-aanko
 # 2.5 Performance histories
 
 > **Effort: S (1 week)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/performances.ts` · `frontend/src/pages/Performances.tsx`
 
 "Wanneer hebben we *Pirates of the Caribbean* voor het laatst gespeeld?" Tracking van uitgevoerde werken per concert.
 
@@ -652,6 +685,8 @@ Nieuwsberichten binnen Tutti met embed-optie voor externe website. Concert-aanko
 # 2.6 Calendar embedding + Info-Screen
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/calendar.ts` · `frontend/src/pages/PublicCalendar.tsx` · `frontend/src/pages/InfoScreen.tsx`
 
 Publieke kalender embed voor website + lobby-scherm met komende events. ICS-feeds voor Outlook/Google Calendar.
 
@@ -660,6 +695,8 @@ Publieke kalender embed voor website + lobby-scherm met komende events. ICS-feed
 # 2.7 Workflow automation / Routines
 
 > **Effort: L (4–5 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/workflows.ts` · `backend/src/services/workflowEngine.ts` · `frontend/src/pages/Workflows.tsx`
 
 Automatische workflows met triggers, condities en acties:
 - 30 dagen voor concert: reminder-mail
@@ -671,6 +708,8 @@ Automatische workflows met triggers, condities en acties:
 # 2.8 Equipment / instrument inventory
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/equipment.ts` · `frontend/src/pages/Equipment.tsx`
 
 Inventaris van instrumenten en equipment: pauken, marimba, lessenaars, microfoons. Met aankoopwaarde, afschrijving, uitleenregistratie.
 
@@ -679,6 +718,8 @@ Inventaris van instrumenten en equipment: pauken, marimba, lessenaars, microfoon
 # 2.9 Outfits-module
 
 > **Effort: XS (3 dagen)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/outfits.ts` · `frontend/src/pages/Outfits.tsx`
 
 Outfit-definities ("Concert-zwart", "Vrolijk shirt") die aan concerten gekoppeld kunnen worden.
 
@@ -687,6 +728,8 @@ Outfit-definities ("Concert-zwart", "Vrolijk shirt") die aan concerten gekoppeld
 # 2.10 Wiki module
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/routes/wiki.ts` · `frontend/src/pages/Wiki.tsx`
 
 Interne wiki voor notulen, draaiboeken, procedures. Markdown editor met versiegeschiedenis en per-pagina permissions.
 
@@ -695,12 +738,17 @@ Interne wiki voor notulen, draaiboeken, procedures. Markdown editor met versiege
 # 2.11 OpenAPI/Swagger + client libraries
 
 > **Effort: M (2 weken)**
+>
+> **Status: ✅ Geïmplementeerd** — `backend/src/swagger.ts` (Swagger UI op `/api/docs`)
 
 Formele API-documentatie met Swagger UI. Gegenereerde TypeScript en PHP clients voor third-party integraties.
 
 ---
 
 # Bijlage A: Fasering
+
+> **Status:** Fase A t/m E zijn uitgevoerd. De fasering hieronder is de oorspronkelijke
+> planning en dient nu als historisch overzicht.
 
 ## Fase A — Foundation (3 maanden)
 - 1.4 Granular per-user privacy *(M)*
@@ -736,18 +784,21 @@ Formele API-documentatie met Swagger UI. Gegenereerde TypeScript en PHP clients 
 
 Deze refactors helpen meerdere features:
 
-| Refactor | Effort | Beschrijving |
-|----------|--------|--------------|
-| **Migration framework** | XS | Incrementele schema-changes met up/down SQL |
-| **Generic file-upload** | S | Storage abstraction, mime-type validatie |
-| **Notification service** | S | Email + push + in-app met preferences |
-| **Audit log uitbreiden** | XS | Voor-en-na waardes, entity filters |
-| **Rich-text editor** | S | Tiptap standaardisatie voor posts/mail/wiki |
-| **Permission framework** | M | Permission tags, roles als bundles |
+| Refactor | Effort | Beschrijving | Status |
+|----------|--------|--------------|--------|
+| **Migration framework** | XS | Incrementele schema-changes met up/down SQL | ✅ `backend/src/migrations/runner.ts` (29 migraties) |
+| **Generic file-upload** | S | Storage abstraction, mime-type validatie | 🔄 magic-byte validatie in `backend/src/utils/fileValidation.ts`; nog geen storage-abstractie |
+| **Notification service** | S | Email + push + in-app met preferences | ✅ `backend/src/services/notifications.ts` + `routes/notificationChannels.ts` |
+| **Audit log uitbreiden** | XS | Voor-en-na waardes, entity filters | ✅ `backend/src/routes/audit-logs.ts` |
+| **Rich-text editor** | S | Tiptap standaardisatie voor posts/mail/wiki | ⬜ Open — geen Tiptap-dependency aanwezig |
+| **Permission framework** | M | Permission tags, roles als bundles | ⬜ Open — autorisatie loopt nog via rollen in `backend/src/middleware/auth.ts` |
 
 ---
 
 # Bijlage C: Effort summary
+
+> **Status:** alle features in deze tabel zijn opgeleverd; de schattingen zijn bewaard
+> als referentie voor toekomstige planning.
 
 | Feature | Size | Weken |
 |---------|------|-------|
@@ -779,3 +830,7 @@ Deze refactors helpen meerdere features:
 | Rich-text | S | 1 |
 | Permissions | M | 2 |
 | **TOTAAL** | | **~52 weken** |
+
+---
+
+*Laatst bijgewerkt: 2026-08-18 — statusregels toegevoegd na verificatie tegen de codebase.*
