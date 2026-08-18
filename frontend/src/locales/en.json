@@ -4627,6 +4627,7 @@
       "declined": "Declined"
     },
     "events": {
+      "label": "Events",
       "linkConcert": "Link concert",
       "unlinkConcert": "Unlink concert",
       "linkRehearsal": "Link rehearsal",
@@ -4832,6 +4833,7 @@
       "status": "Status"
     },
     "categories": {
+      "label": "Categories",
       "manage": "Manage Resource Categories",
       "description": "Categories help organize your resources. Drag to reorder.",
       "add": "Add Category",

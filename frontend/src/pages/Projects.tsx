@@ -474,7 +474,7 @@ function ProjectDetailModal({ projectId, onClose }: { projectId: string; onClose
             onClick={() => setActiveTab('events')}
           >
             <Icon name="link" size={16} className="mr-1" />
-            {t('projects.events', 'Events')}
+            {t('projects.events.label')}
           </button>
           <button
             className={`tab ${activeTab === 'schedule' ? 'tab-active' : ''}`}

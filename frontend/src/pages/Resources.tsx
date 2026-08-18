@@ -115,7 +115,7 @@ export default function Resources() {
         </div>
         <div className="card bg-base-100 shadow-sm">
           <div className="card-body p-4">
-            <div className="text-sm text-base-content/60">{t('resources.categories')}</div>
+            <div className="text-sm text-base-content/60">{t('resources.categories.label')}</div>
             <div className="text-2xl font-bold">{categories.length}</div>
           </div>
         </div>
