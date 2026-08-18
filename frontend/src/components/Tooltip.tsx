@@ -132,7 +132,9 @@ export function Tooltip({
     };
 
     let finalPosition = position;
-    let { top, left, fits } = calculatePosition(position);
+    const initialCalc = calculatePosition(position);
+    const fits = initialCalc.fits;
+    let { top, left } = initialCalc;
 
     // Auto-flip to opposite side if it doesn't fit
     if (autoFlip && !fits) {

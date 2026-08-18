@@ -85,7 +85,7 @@ const nestedRouteConfig: Record<string, { labelKey: string; parent: string }> = 
 const MAX_VISIBLE_ITEMS = 4;
 
 // Store for dynamic breadcrumb context (set by pages)
-let dynamicContext: BreadcrumbContext = {};
+const dynamicContext: BreadcrumbContext = {};
 
 export function setBreadcrumbContext(key: string, label: string, parentPath?: string) {
   dynamicContext[key] = { label, parentPath };

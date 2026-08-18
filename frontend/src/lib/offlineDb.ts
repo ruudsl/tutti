@@ -362,7 +362,7 @@ export async function saveAnnotationOffline(annotation: Omit<OfflineAnnotation, 
 }
 
 export async function getAnnotationsForPiece(musicPieceId: string, pageNumber?: number) {
-  let query = offlineDb.annotations.where('musicPieceId').equals(musicPieceId);
+  const query = offlineDb.annotations.where('musicPieceId').equals(musicPieceId);
 
   if (pageNumber !== undefined) {
     const annotations = await query.toArray();

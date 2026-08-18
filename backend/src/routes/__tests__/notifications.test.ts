@@ -70,14 +70,14 @@ describe('Notifications API', () => {
       const unreadId = uuidv4();
 
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(readId, memberUser.id, 'info', 'Read notification', 1);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(readId, memberUser.id, 'info', 'Read notification', 'Test notification body', 1);
 
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(unreadId, memberUser.id, 'info', 'Unread notification', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(unreadId, memberUser.id, 'info', 'Unread notification', 'Test notification body', 0);
 
       const res = await request(app)
         .get('/api/notifications?unreadOnly=true')
@@ -106,19 +106,19 @@ describe('Notifications API', () => {
 
     it('should count unread notifications', async () => {
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notification 1', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), memberUser.id, 'info', 'Notification 1', 'Test notification body', 0);
 
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notification 2', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), memberUser.id, 'info', 'Notification 2', 'Test notification body', 0);
 
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Read one', 1);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), memberUser.id, 'info', 'Read one', 'Test notification body', 1);
 
       const res = await request(app)
         .get('/api/notifications/unread-count')
@@ -133,9 +133,9 @@ describe('Notifications API', () => {
     it('should mark notification as read', async () => {
       const notifId = uuidv4();
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(notifId, memberUser.id, 'info', 'Test', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(notifId, memberUser.id, 'info', 'Test', 'Test notification body', 0);
 
       const res = await request(app)
         .post(`/api/notifications/${notifId}/read`)
@@ -151,14 +151,14 @@ describe('Notifications API', () => {
   describe('POST /api/notifications/read-all', () => {
     it('should mark all notifications as read', async () => {
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notif 1', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), memberUser.id, 'info', 'Notif 1', 'Test notification body', 0);
 
       testDb.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(uuidv4(), memberUser.id, 'info', 'Notif 2', 0);
+        INSERT INTO notifications (id, user_id, type, title, body, is_read)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(uuidv4(), memberUser.id, 'info', 'Notif 2', 'Test notification body', 0);
 
       const res = await request(app)
         .post('/api/notifications/read-all')

@@ -168,7 +168,7 @@ function findOrCreateOrchestras(orchestraNames: string[], associationId: string 
     db.transaction(() => {
         for (const name of orchestraNames) {
             // Try to find existing orchestra (case-insensitive)
-            let orchestra = db.prepare(
+            const orchestra = db.prepare(
                 'SELECT id FROM orchestras WHERE LOWER(name) = LOWER(?) AND association_id = ?'
             ).get(name, associationId) as { id: string } | undefined;
 

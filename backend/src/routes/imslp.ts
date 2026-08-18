@@ -186,7 +186,7 @@ router.post('/import', authenticateToken, asyncHandler(async (req: AuthRequest, 
     logger.info(`Saved PDF to: ${filePath}`);
 
     // Create or get the music_title entry
-    let musicTitleId: string | null = null;
+    let musicTitleId: string;
 
     const existingTitle = db.prepare(
         `SELECT id FROM music_titles WHERE title = ? AND association_id = ?`

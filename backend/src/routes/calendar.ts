@@ -225,7 +225,7 @@ router.get('/settings', authenticateToken, asyncHandler(async (req: AuthRequest,
 router.put('/settings', authenticateToken, asyncHandler(async (req: AuthRequest, res: Response) => {
     const { includeRehearsals, includeConcerts, googleCalendarId } = req.body;
 
-    let settings = db.prepare(`
+    const settings = db.prepare(`
         SELECT * FROM user_calendar_settings WHERE user_id = ?
     `).get(req.user!.id) as CalendarSettings | undefined;
 

@@ -342,7 +342,6 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
     // ============ HEADER ============
     // Association name (as logo placeholder)
     drawText(associationName, margin, y, { font: helveticaBold, size: 20 });
-    y -= 30;
 
     // Invoice title
     drawText('FACTUUR', width - margin - 100, height - margin, { font: helveticaBold, size: 16 });

@@ -73,7 +73,7 @@ export interface CreatePostData {
   scheduledAt?: string;
 }
 
-export interface UpdatePostData extends Partial<CreatePostData> {}
+export type UpdatePostData = Partial<CreatePostData>;
 
 export interface PostFilters {
   status?: PostStatus;

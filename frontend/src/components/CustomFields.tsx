@@ -419,7 +419,7 @@ function FieldInput({ fieldKey, meta, value, onChange, disabled }: FieldInputPro
         </div>
       );
 
-    case 'multiselect':
+    case 'multiselect': {
       const selectedValues = Array.isArray(value) ? value : [];
       return (
         <div className="form-control">
@@ -457,6 +457,7 @@ function FieldInput({ fieldKey, meta, value, onChange, disabled }: FieldInputPro
           </div>
         </div>
       );
+    }
 
     default:
       return (

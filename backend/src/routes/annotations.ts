@@ -9,7 +9,10 @@ import logger from '../utils/logger';
 const router = Router();
 
 const sanitizeForLog = (value: unknown): string =>
-    String(value).replace(/[\r\n\t]/g, ' ').replace(/[\x00-\x1F\x7F]/g, '');
+    String(value)
+        .replace(/[\r\n\t]/g, ' ')
+        // eslint-disable-next-line no-control-regex -- strip control chars from log output
+        .replace(/[\x00-\x1F\x7F]/g, '');
 
 /**
  * @swagger
@@ -311,7 +314,7 @@ router.get('/:musicPieceId/:pageNumber', authenticateToken, asyncHandler(async (
     const { musicPieceId, pageNumber } = req.params;
     const { includeShared } = req.query;
 
-    let query = `
+    const query = `
         SELECT id, music_piece_id, page_number, annotation_type, data,
                color, stroke_width, opacity, is_shared, created_at, updated_at
         FROM pdf_annotations

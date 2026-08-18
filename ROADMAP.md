@@ -11,13 +11,13 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 | 1 | Onafhankelijke security audit | extern | ⬜ Gepland |
 | 2 | Security audit remediation | 65h | ⬜ Gepland |
 | 3 | WCAG 2.1 AA accessibility audit + fixes | 45h | ✅ Voltooid |
-| 4 | Docker packaging + self-hosting guide | 50h | ✅ Voltooid |
+| 4 | Docker packaging + self-hosting guide | 50h | 🔄 Deels |
 | 5 | Open music metadata (MusicXML / JSKOS) | 75h | ✅ Voltooid |
-| 6 | Privacy-by-design review + GDPR hardening | 45h | ✅ Voltooid |
+| 6 | Privacy-by-design review + GDPR hardening | 45h | 🔄 Deels |
 | 7 | Community docs, onboarding, multilingual README | 45h | ✅ Voltooid |
 | 8 | CI/CD hardening + test coverage >80% | 50h | 🔄 Deels |
 | 9 | Community outreach (KNMO, federaties) | 25h | ⬜ Gepland |
-| 10 | PWA hardening + mobile UX | 55h | ✅ Voltooid |
+| 10 | PWA hardening + mobile UX | 55h | 🔄 Deels |
 | 11 | Pilot deployments (2-3 verenigingen) | 45h | ⬜ Gepland |
 | **Totaal** | | **500h + audit** |
 
@@ -92,7 +92,7 @@ Formele audit van WCAG 2.1 AA compliance:
 - PostgreSQL migratie pad documenteren
 
 ### Deliverables
-- [ ] `tutti/tutti:latest` Docker image op Docker Hub
+- [ ] `tutti/tutti:latest` Docker image op Docker Hub — *CI bouwt de images (`docker` job in `ci.yml`) maar pusht nog niet naar een registry*
 - [x] `docker-compose.yml` met alle services
 - [x] `docker-compose.prod.yml` voor productie
 - [x] Self-hosting guide voor non-developers
@@ -135,7 +135,7 @@ Gestructureerde GDPR / privacy-by-design review:
 - Privacy documentatie
 
 ### Deliverables
-- [ ] Privacy Impact Assessment (PIA)
+- [ ] Privacy Impact Assessment (PIA) — *nog op te stellen; checklist staat in `docs/GDPR.md`*
 - [x] Data Processing Agreement (DPA) template
 - [x] Leden data export functie (GDPR Art. 20)
 - [x] Account verwijdering met cascade (GDPR Art. 17)
@@ -157,7 +157,7 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 - [x] Architecture documentation
-- [ ] API reference (OpenAPI/Swagger)
+- [x] API reference (OpenAPI/Swagger) — `backend/src/swagger.ts`, gemount op `/api/docs`
 - [x] Deployment guide (SELF_HOSTING.md)
 - [x] Contributing guide (CONTRIBUTING.md)
 - [x] Code of Conduct
@@ -172,9 +172,11 @@ Gestructureerde GDPR / privacy-by-design review:
 **Afhankelijkheden:** Geen
 
 ### Huidige Status
-- Test coverage: ~52% backend, ~92% frontend utilities
-- CI: GitHub Actions (build, lint, tests, coverage)
-- CD: Docker build in CI
+- Coverage backend (18-08-2026): statements 51,4%, branches 39,6%, functions 53,4%, lines 51,6%
+- CI-drempels backend (`backend/vitest.config.ts`): 48 / 37 / 50 / 48
+- Integratietests draaien tegen het echte schema (`src/database/schema.ts` + migraties)
+- CI: GitHub Actions — jobs voor backend, frontend, E2E (Playwright), lint, security audit en Docker build
+- CD: Docker build in CI (geen registry push, geen staging deploy)
 
 ### Scope
 - Test coverage verhogen naar >80%
@@ -183,12 +185,12 @@ Gestructureerde GDPR / privacy-by-design review:
 - Automated deployments
 
 ### Deliverables
-- [ ] Unit tests: >80% coverage
+- [ ] Unit tests: >80% coverage — *nu 51,4% statements / 39,6% branches*
 - [x] Integration tests voor tenant isolatie
-- [ ] E2E tests voor kritieke flows
+- [~] E2E tests voor kritieke flows — *Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`*
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
-- [ ] Automated staging deployments
+- [ ] Automated staging deployments — *nog niet ingericht*
 - [x] Coverage badges in README
 
 ---
@@ -236,11 +238,11 @@ Fase 1-4 zijn geïmplementeerd:
 
 ### Deliverables
 - [x] Offline PDF viewing
-- [ ] Background push notifications
+- [x] Background push notifications — `push` + `pushsubscriptionchange` handlers in `frontend/src/sw-custom.ts`
 - [x] App shortcuts (manifest)
 - [x] Share Target API
 - [x] Improved mobile touch UX
-- [ ] Lighthouse PWA score >90
+- [ ] Lighthouse PWA score >90 — *nog niet gemeten in CI*
 
 ---
 
@@ -299,6 +301,7 @@ Maand 10-12: Afronding, documentatie, contingency
 
 ---
 
-*Document versie: 1.0*  
+*Document versie: 1.1*  
 *Aangemaakt: 2026-04-26*  
+*Laatst bijgewerkt: 2026-08-18*  
 *Status: Subsidieaanvraag ingediend*

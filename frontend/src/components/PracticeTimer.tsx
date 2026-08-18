@@ -74,7 +74,9 @@ export function PracticeTimer({
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleR0JNYvL06RkFQQynNrUhUcN');
             audio.volume = 0.3;
             audio.play().catch(() => {});
-          } catch {}
+          } catch {
+            // Notification sound is best-effort; ignore playback errors
+          }
         }
       }, 1000);
     } else {

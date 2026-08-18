@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- sql.js ships a CJS factory without usable ESM typings
 const initSqlJs = require('sql.js');
 import path from 'path';
 import fs from 'fs';

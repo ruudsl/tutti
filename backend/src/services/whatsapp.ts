@@ -159,7 +159,7 @@ async function sendMetaWhatsAppMessage(
     try {
         const url = `${config.apiUrl}/${config.phoneNumberId}/messages`;
 
-        let payload: Record<string, any> = {
+        const payload: Record<string, any> = {
             messaging_product: 'whatsapp',
             to: message.to.replace(/[^0-9]/g, ''), // Remove non-numeric characters
         };
