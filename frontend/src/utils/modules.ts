@@ -23,6 +23,34 @@ const MODULE_BY_PATH: Record<string, string> = {
   '/occupancy': 'stage',
   '/neighbor-preferences': 'stage',
   '/stage-designer': 'stage',
+
+  '/polls': 'polls',
+  '/tasks': 'tasks',
+  '/posts': 'posts',
+  '/email-campaigns': 'mailings',
+  '/contacts': 'contacts',
+  '/issues': 'issues',
+
+  '/practice': 'practice',
+  '/practice-schedules': 'practice',
+
+  '/external-musicians': 'externals',
+  '/replacement-requests': 'externals',
+
+  '/instrument-assets': 'inventory',
+  '/uniforms': 'inventory',
+  '/equipment': 'inventory',
+  '/outfits': 'inventory',
+
+  '/projects': 'projects',
+  '/tours': 'projects',
+
+  '/resources': 'resources',
+  '/wiki': 'wiki',
+  '/performances': 'performances',
+  '/workflows': 'workflows',
+  '/season-planner': 'seasons',
+  '/attendance-analytics': 'attendance',
 };
 
 /** De module waar dit pad bij hoort, of null als het pad altijd zichtbaar is. */

@@ -294,7 +294,7 @@ app.use('/api/associations', associationsRoutes);
 app.use('/api/genres', genresRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/download-token', downloadTokenRoutes);
-app.use('/api/issues', issuesRoutes);
+app.use('/api/issues', optionalAuth, requireModule('issues'), issuesRoutes);
 app.use('/api/pdf-tools', pdfToolsRoutes);
 app.use('/api/loans', loansRoutes);
 app.use('/api/activity', activityRoutes);
@@ -305,30 +305,30 @@ app.use('/api/spond', spondRoutes);
 app.use('/api/musicainfo', musicaInfoRoutes);
 app.use('/api/imslp', imslpRoutes);
 app.use('/api/cloud-import', cloudImportRoutes);
-app.use('/api/equipment', equipmentRoutes);
-app.use('/api/instrument-assets', instrumentAssetsRoutes);
-app.use('/api/instrument-insurance', instrumentInsuranceRoutes);
+app.use('/api/equipment', optionalAuth, requireModule('inventory'), equipmentRoutes);
+app.use('/api/instrument-assets', optionalAuth, requireModule('inventory'), instrumentAssetsRoutes);
+app.use('/api/instrument-insurance', optionalAuth, requireModule('inventory'), instrumentInsuranceRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/multi-association', multiAssociationRoutes);
-app.use('/api/contacts', contactsRoutes);
+app.use('/api/contacts', optionalAuth, requireModule('contacts'), contactsRoutes);
 app.use('/api/custom-fields', customFieldsRoutes);
 app.use('/api/privacy-settings', privacySettingsRoutes);
-app.use('/api/polls', pollsRoutes);
-app.use('/api/tasks', tasksRoutes);
-app.use('/api/posts', postsRoutes);
-app.use('/api/email-campaigns', emailCampaignsRoutes);
+app.use('/api/polls', optionalAuth, requireModule('polls'), pollsRoutes);
+app.use('/api/tasks', optionalAuth, requireModule('tasks'), tasksRoutes);
+app.use('/api/posts', optionalAuth, requireModule('posts'), postsRoutes);
+app.use('/api/email-campaigns', optionalAuth, requireModule('mailings'), emailCampaignsRoutes);
 app.use('/api/accounting', optionalAuth, requireModule('accounting'), accountingRoutes);
-app.use('/api/projects', projectsRoutes);
-app.use('/api/tours', toursRoutes);
-app.use('/api/resources', resourcesRoutes);
-app.use('/api/seasons', seasonsRoutes);
+app.use('/api/projects', optionalAuth, requireModule('projects'), projectsRoutes);
+app.use('/api/tours', optionalAuth, requireModule('projects'), toursRoutes);
+app.use('/api/resources', optionalAuth, requireModule('resources'), resourcesRoutes);
+app.use('/api/seasons', optionalAuth, requireModule('seasons'), seasonsRoutes);
 
 // Phase E routes
-app.use('/api/outfits', outfitsRoutes);
-app.use('/api/wiki', wikiRoutes);
-app.use('/api/workflows', workflowsRoutes);
-app.use('/api/performances', performancesRoutes);
-app.use('/api/uniforms', uniformsRoutes);
+app.use('/api/outfits', optionalAuth, requireModule('inventory'), outfitsRoutes);
+app.use('/api/wiki', optionalAuth, requireModule('wiki'), wikiRoutes);
+app.use('/api/workflows', optionalAuth, requireModule('workflows'), workflowsRoutes);
+app.use('/api/performances', optionalAuth, requireModule('performances'), performancesRoutes);
+app.use('/api/uniforms', optionalAuth, requireModule('inventory'), uniformsRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/entra', entraSyncRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
@@ -336,7 +336,7 @@ app.use('/api/seating', optionalAuth, requireModule('stage'), seatingRoutes);
 app.use('/api/seating-notifications', optionalAuth, requireModule('stage'), seatingNotificationsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/favorites', favoritesRoutes);
-app.use('/api/practice', practiceRoutes);
+app.use('/api/practice', optionalAuth, requireModule('practice'), practiceRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/recent', recentRoutes);
 app.use('/api/annotations', annotationsRoutes);
@@ -345,7 +345,7 @@ app.use('/api/audio-recordings', audioRecordingsRoutes);
 app.use('/api/section-chat', sectionChatRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/notification-channels', notificationChannelsRoutes);
-app.use('/api/practice-schedules', practiceSchedulesRoutes);
+app.use('/api/practice-schedules', optionalAuth, requireModule('practice'), practiceSchedulesRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/thumbnails', thumbnailsRoutes);
@@ -355,8 +355,8 @@ app.use('/api/holidays', holidaysRoutes);
 app.use('/api/stage-layouts', optionalAuth, requireModule('stage'), stageLayoutsRoutes);
 
 // External Musicians Network
-app.use('/api/external-musicians', externalMusiciansRoutes);
-app.use('/api/replacement-requests', replacementRequestsRoutes);
+app.use('/api/external-musicians', optionalAuth, requireModule('externals'), externalMusiciansRoutes);
+app.use('/api/replacement-requests', optionalAuth, requireModule('externals'), replacementRequestsRoutes);
 
 // Import recovery
 app.use('/api/failed-imports', failedImportsRoutes);
@@ -366,8 +366,12 @@ app.use('/api/health', healthRoutes);
 // Root-level mount for /concerts/:id/stage routes; must come after the
 // specific /api/* mounts above or it shadows them (e.g. /api/health)
 app.use('/api', stageLayoutsRoutes);
+// Alleen de aanwezigheidsanalyse hoort bij de module 'attendance'; de rest van
+// /api/analytics (repertoire, oefenen) staat daar los van. De guard moet dus op
+// het diepere pad en voor de mount hieronder staan.
+app.use('/api/analytics/attendance', optionalAuth, requireModule('attendance'));
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/maintenance', optionalAuth, requireModule('inventory'), maintenanceRoutes);
 app.use('/api/vocabularies', vocabulariesRoutes);
 app.use('/api/interop', interopRoutes);
 

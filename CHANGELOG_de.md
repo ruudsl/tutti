@@ -6,6 +6,15 @@ Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
 ### Hinzugefügt
 
+- **Sechzehn weitere Module** — Umfragen, Aufgaben, Nachrichten, Mailings, Externe Kontakte, Meldungen, Üben zu Hause, Aushilfen, Inventar, Projekte und Reisen, Raumbuchung, Wiki, Aufführungshistorie, Workflow-Automatisierung, Saisonplanung und Anwesenheitsanalyse. Zusammen mit den ersten drei sind das neunzehn Schalter, die 32 Menüpunkte ausblenden.
+- **Übergreifende Ansichten ziehen mit** — Dashboard-Widgets, der Infobildschirm, die Wochenmail und die Workflow-Ausführung zeigen nichts mehr aus einem abgeschalteten Modul. Widget-Einstellungen bleiben erhalten und kehren unverändert zurück.
+
+### Behoben
+
+- Die Übungsübersicht erschien nie in der Wochenmail: die Abfrage lieferte `total_minutes`, während der Text `totalMinutes` las.
+
+### Hinzugefügt
+
 #### Module
 
 - **Bereiche ein- und ausschalten** — Ein Administrator schaltet unter Verwaltung → Module ab, was der Verein nicht nutzt. Es verschwindet aus dem Menü und lässt sich nicht mehr öffnen.

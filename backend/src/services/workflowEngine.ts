@@ -1,4 +1,5 @@
 import db from '../database/connection';
+import { isModuleEnabled } from '../modules/service';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '../utils/email';
 import sanitizeHtml from 'sanitize-html';
@@ -32,6 +33,15 @@ export async function executeWorkflow(
   entityType?: string,
   entityId?: string,
 ): Promise<{ executionId: string; success: boolean; error?: string }> {
+  // Alle triggers - handmatig, gepland, op gebeurtenis - komen hier langs, dus
+  // deze ene controle dekt ze allemaal. Een vereniging die de module
+  // Workflow-automatisering uit heeft staan, moet ook geen mails of taken meer
+  // krijgen uit regels die ooit zijn ingesteld. De regels zelf blijven staan en
+  // doen het weer zodra de module aan gaat.
+  if (!isModuleEnabled(associationId, 'workflows')) {
+    return { executionId: '', success: false, error: 'Module workflows staat uit voor deze vereniging.' };
+  }
+
   const executionId = uuidv4();
   const now = new Date().toISOString();
 

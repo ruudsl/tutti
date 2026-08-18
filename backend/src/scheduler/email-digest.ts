@@ -9,6 +9,7 @@
  */
 
 import db from '../database/connection';
+import { isModuleEnabled } from '../modules/service';
 import logger from '../utils/logger';
 import { sendEmail } from '../utils/email';
 
@@ -113,22 +114,32 @@ export async function sendWeeklyDigest(): Promise<void> {
         )
         .all(association.id) as DigestData['upcomingConcerts'];
 
+      // Oefengegevens horen bij de module Thuis oefenen. Staat die uit, dan hoort
+      // er ook geen oefenoverzicht in de wekelijkse mail te staan.
+      const practiceEnabled = isModuleEnabled(association.id, 'practice');
+
       // Send digest to each user
       for (const user of users) {
         try {
           // Get user's practice stats
-          const practiceStats = db
-            .prepare(
-              `
+          // De kolomnamen worden hier omgezet naar de namen die DigestData
+          // gebruikt. Zonder die aliassen leverde de query total_minutes en
+          // session_count, terwijl de mailtekst sessionCount leest: die was dus
+          // altijd undefined en het oefenblok verscheen nooit in de weekmail.
+          const practiceStats = practiceEnabled
+            ? (db
+                .prepare(
+                  `
                         SELECT
-                            COALESCE(SUM(duration_minutes), 0) as total_minutes,
-                            COUNT(*) as session_count
+                            COALESCE(SUM(duration_minutes), 0) as totalMinutes,
+                            COUNT(*) as sessionCount
                         FROM practice_logs
                         WHERE user_id = ?
                           AND practiced_at >= ?
                     `,
-            )
-            .get(user.id, oneWeekAgo.toISOString()) as DigestData['practiceStats'];
+                )
+                .get(user.id, oneWeekAgo.toISOString()) as DigestData['practiceStats'])
+            : null;
 
           const digestData: DigestData = {
             upcomingRehearsals,

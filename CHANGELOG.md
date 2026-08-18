@@ -6,6 +6,15 @@ Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
 ### Toegevoegd
 
+- **Zestien modules erbij** — Peilingen, Taken, Nieuwsberichten, Mailings, Externe contacten, Meldingen, Thuis oefenen, Invallers, Inventaris, Projecten en reizen, Ruimtes reserveren, Wiki, Uitvoeringshistorie, Workflow-automatisering, Seizoensplanning en Aanwezigheidsanalyse. Samen met de eerste drie zijn dat negentien schakelaars die 32 menu-items uit het zicht halen.
+- **Doorsnijdende weergaven kijken mee** — Dashboard-widgets, het infoscherm, de wekelijkse e-mail en de workflow-uitvoering tonen niets meer van een uitgezette module. Widgetvoorkeuren blijven bewaard en komen terug zoals ze waren.
+
+### Opgelost
+
+- Het oefenoverzicht verscheen nooit in de wekelijkse e-mail: de query leverde `total_minutes` terwijl de tekst `totalMinutes` las.
+
+### Toegevoegd
+
 #### Modules
 
 - **Onderdelen aan- en uitzetten** — Een beheerder zet onder Beheer → Modules uit wat de vereniging niet gebruikt. Het verdwijnt uit het menu en is niet meer op te vragen.
