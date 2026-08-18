@@ -59,6 +59,7 @@ export default function PdfPagePreview({
     canvas.height = scaledViewport.height;
 
     await page.render({
+      canvas,
       canvasContext: context,
       viewport: scaledViewport,
     }).promise;
@@ -84,7 +85,7 @@ export default function PdfPagePreview({
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
         if (cancelled) {
-          pdf.destroy();
+          pdf.loadingTask.destroy();
           return;
         }
 
@@ -111,7 +112,7 @@ export default function PdfPagePreview({
     return () => {
       cancelled = true;
       if (pdfRef.current) {
-        pdfRef.current.destroy();
+        pdfRef.current.loadingTask.destroy();
         pdfRef.current = null;
       }
     };
