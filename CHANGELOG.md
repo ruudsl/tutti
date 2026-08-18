@@ -2,6 +2,26 @@
 
 Alle belangrijke wijzigingen in deze applicatie worden hier gedocumenteerd.
 
+## [1.14.0] - 2026-08-18
+
+### Toegevoegd
+
+#### Modules
+
+- **Onderdelen aan- en uitzetten** — Een beheerder zet onder Beheer → Modules uit wat de vereniging niet gebruikt. Het verdwijnt uit het menu en is niet meer op te vragen.
+- **Uitzetten verbergt, het verwijdert niets** — De gegevens van een uitgezette module blijven ongewijzigd staan en komen bij aanzetten precies zo terug.
+- **Eerste drie modules** — Boekhouding, Kaartverkoop (inclusief betaalinstellingen en de scanner) en Podium en opstelling. Samen tien menu-items.
+- **In de rondleiding** — Nieuwe beheerders krijgen de modules meteen na het welkom te zien.
+
+### Gewijzigd
+
+- **De drie modules staan standaard uit**, ook voor bestaande verenigingen. Gebruik je ze wel, dan zet je ze in twee klikken aan onder Beheer → Modules; je gegevens staan er dan nog gewoon.
+
+### Opgelost
+
+- Tien modules schreven naar tabellen of kolommen die nooit waren aangemaakt, waardoor die functies faalden zodra iemand ze gebruikte: boekhouding, bijlagen bij mailings, schaderapportages op apparatuur, wiki-bijlagen, het tekenpad in annotaties, seizoensplanning, IMSLP-import en de concert-podiumindeling.
+- `equipment_loans` stond twee keer in het schema met verschillende kolommen. Doordat de eerste won, kreeg de apparatuurmodule stil de verkeerde tabel.
+
 ## [1.13.0] - 2026-05-06
 
 ### Toegevoegd

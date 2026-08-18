@@ -144,6 +144,9 @@
     "off": "Uit",
     "enabled": "Module aangezet.",
     "disabled": "Module uitgezet. De gegevens blijven bewaard.",
+    "errorLoad": "De modules konden niet worden opgehaald.",
+    "retry": "Opnieuw proberen",
+    "empty": "Er zijn nog geen modules die aan of uit gezet kunnen worden.",
     "errorSave": "Module bijwerken is niet gelukt.",
     "hiddenPages_one": "{{count}} pagina verborgen",
     "hiddenPages_other": "{{count}} pagina's verborgen"
@@ -2680,6 +2683,10 @@
       "welcome": {
         "title": "Welkom, beheerder!",
         "description": "Als beheerder heb je volledige controle over de applicatie. Laten we de belangrijkste onderdelen doornemen."
+      },
+      "modules": {
+        "title": "Modules",
+        "description": "Tutti kan meer dan de meeste verenigingen nodig hebben. Boekhouding, kaartverkoop en podiumindeling staan daarom uit. Zet aan wat jullie gebruiken; de rest blijft uit het menu. Later van gedachten veranderen kan altijd, en er gaan geen gegevens verloren."
       },
       "orchestras": {
         "title": "Orkesten",

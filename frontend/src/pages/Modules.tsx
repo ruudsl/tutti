@@ -22,7 +22,12 @@ export default function Modules() {
   const queryClient = useQueryClient();
   const { refresh } = useModules();
 
-  const { data: modules, isLoading } = useQuery({
+  const {
+    data: modules,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['module-settings'],
     queryFn: getModuleSettings,
   });
@@ -49,6 +54,34 @@ export default function Modules() {
     );
   }
 
+  // Zonder deze twee takken toont de pagina bij een mislukte of lege respons
+  // alleen de kop en de toelichting, zonder een enkele schakelaar en zonder
+  // uitleg waarom. Dat ziet eruit als een kapotte pagina.
+  if (isError) {
+    return (
+      <div>
+        <h1 className="mb-3">{t('modules.title')}</h1>
+        <div className="alert alert-danger">
+          <Icon name="warning" /> {t('modules.errorLoad')}
+        </div>
+        <button className="btn btn-secondary" onClick={() => refetch()}>
+          <Icon name="refresh" /> {t('modules.retry')}
+        </button>
+      </div>
+    );
+  }
+
+  if (!modules || modules.length === 0) {
+    return (
+      <div>
+        <h1 className="mb-3">{t('modules.title')}</h1>
+        <div className="alert alert-info">
+          <Icon name="info" /> {t('modules.empty')}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="mb-3">{t('modules.title')}</h1>
@@ -57,7 +90,7 @@ export default function Modules() {
         <Icon name="info" /> {t('modules.description')}
       </div>
 
-      {(modules ?? []).map((module: ModuleSetting) => (
+      {modules.map((module: ModuleSetting) => (
         <div key={module.key} className="card mb-2">
           <div className="card-body module-row">
             <div className="module-info">
