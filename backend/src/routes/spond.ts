@@ -3,7 +3,13 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { SpondClient, encryptPassword, decryptPassword, SpondCredentialsUnreadableError } from '../services/spond';
+import {
+  SpondClient,
+  encryptPassword,
+  decryptPassword,
+  SpondCredentialsUnreadableError,
+  SpondLoginError,
+} from '../services/spond';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -15,6 +21,23 @@ const router = Router();
  * dan lijkt het alsof Spond de inloggegevens weigert terwijl er niets mis is
  * met de gegevens zelf - alleen met de sleutel waarmee ze zijn opgeslagen.
  */
+/**
+ * Zet een mislukte Spond-aanmelding om in een melding die de gebruiker verder
+ * helpt. Zonder dit onderscheid komt elke storing binnen als "wachtwoord fout".
+ */
+function asApiError(error: unknown, suffix = ''): unknown {
+  if (!(error instanceof SpondLoginError)) return error;
+
+  const tail = suffix ? ` ${suffix}` : '';
+  if (error.reason === 'rejected') {
+    return new ApiError(400, `Spond wees deze combinatie van e-mailadres en wachtwoord af.${tail}`);
+  }
+  if (error.reason === 'unreachable') {
+    return new ApiError(502, `Spond was niet bereikbaar.${tail} Probeer het straks opnieuw.`);
+  }
+  return new ApiError(502, `Spond gaf een onverwacht antwoord. ${error.message}${tail}`);
+}
+
 function readSpondPassword(encrypted: string): string {
   try {
     return decryptPassword(encrypted);
@@ -85,12 +108,18 @@ router.put(
       throw new ApiError(400, 'Gebruikersnaam en wachtwoord zijn verplicht.');
     }
 
-    // Verify credentials by attempting login
+    // Controleer de gegevens door echt in te loggen.
+    //
+    // Hier stond een catch die alles opving en er altijd "controleer de
+    // inloggegevens" van maakte. Een storing bij Spond, een netwerkfout of een
+    // gewijzigde API kwamen dus binnen als een verkeerd wachtwoord, waardoor
+    // iemand met kloppende gegevens eindeloos zijn wachtwoord bleef opnieuw
+    // typen. De echte reden hoort in de melding te staan.
     try {
       const client = new SpondClient(username, password);
       await client.login();
-    } catch {
-      throw new ApiError(400, 'Kon niet inloggen bij Spond. Controleer de inloggegevens.');
+    } catch (error) {
+      throw asApiError(error, 'Je gegevens zijn niet opgeslagen.');
     }
 
     const encryptedPassword = encryptPassword(password);
@@ -162,9 +191,12 @@ router.get(
 
     const password = readSpondPassword(config.password_encrypted);
     const client = new SpondClient(config.username, password);
-    const groups = await client.getGroups();
-
-    res.json(groups);
+    try {
+      const groups = await client.getGroups();
+      res.json(groups);
+    } catch (error) {
+      throw asApiError(error);
+    }
   }),
 );
 
@@ -471,6 +503,13 @@ router.post(
         allEvents.set(groupId, events);
         logger.info(`Fetched ${events.length} events from Spond group ${groupId}`);
       } catch (err) {
+        // Lukt het aanmelden niet, dan lukt geen enkele groep en heeft
+        // doorgaan geen zin. Deze lus vulde dan stilletjes lege lijsten,
+        // waarna de synchronisatie meldde dat er nul repetities waren - wat
+        // eruitziet als een lege agenda in plaats van een mislukte aanmelding.
+        if (err instanceof SpondLoginError) {
+          throw asApiError(err);
+        }
         logger.warn(`Failed to fetch events from Spond group ${groupId}`, { error: err });
         allEvents.set(groupId, []);
       }
@@ -754,11 +793,16 @@ router.post(
     const dayAfter = new Date(date);
     dayAfter.setDate(dayAfter.getDate() + 1);
 
-    const events = await client.getEvents(
-      groupId,
-      dayBefore.toISOString().split('T')[0],
-      dayAfter.toISOString().split('T')[0],
-    );
+    let events;
+    try {
+      events = await client.getEvents(
+        groupId,
+        dayBefore.toISOString().split('T')[0],
+        dayAfter.toISOString().split('T')[0],
+      );
+    } catch (error) {
+      throw asApiError(error);
+    }
 
     let matchingEvent;
 
