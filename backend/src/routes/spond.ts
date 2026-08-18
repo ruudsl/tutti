@@ -3,10 +3,31 @@ import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
-import { SpondClient, encryptPassword, decryptPassword } from '../services/spond';
+import { SpondClient, encryptPassword, decryptPassword, SpondCredentialsUnreadableError } from '../services/spond';
 import logger from '../utils/logger';
 
 const router = Router();
+
+/**
+ * Het opgeslagen wachtwoord lezen, met een bruikbare melding als dat niet lukt.
+ *
+ * Zonder deze vertaling werd een onleesbaar wachtwoord een generieke 500, en
+ * dan lijkt het alsof Spond de inloggegevens weigert terwijl er niets mis is
+ * met de gegevens zelf - alleen met de sleutel waarmee ze zijn opgeslagen.
+ */
+function readSpondPassword(encrypted: string): string {
+  try {
+    return decryptPassword(encrypted);
+  } catch (err) {
+    if (err instanceof SpondCredentialsUnreadableError) {
+      throw new ApiError(
+        400,
+        'De opgeslagen Spond-gegevens kunnen niet meer worden gelezen. Stel de koppeling opnieuw in met je e-mailadres en wachtwoord.',
+      );
+    }
+    throw err;
+  }
+}
 
 /** Convert "HH:MM" time string to minutes since midnight */
 export function timeToMinutes(time: string): number {
@@ -139,7 +160,7 @@ router.get(
       throw new ApiError(400, 'Spond is niet geconfigureerd.');
     }
 
-    const password = decryptPassword(config.password_encrypted);
+    const password = readSpondPassword(config.password_encrypted);
     const client = new SpondClient(config.username, password);
     const groups = await client.getGroups();
 
@@ -351,7 +372,7 @@ router.post(
       throw new ApiError(400, 'Spond is niet geconfigureerd.');
     }
 
-    const password = decryptPassword(spondConfig.password_encrypted);
+    const password = readSpondPassword(spondConfig.password_encrypted);
     const client = new SpondClient(spondConfig.username, password);
 
     // Get upcoming rehearsals (next 3 months) - now including orchestra_id
@@ -681,7 +702,7 @@ router.post(
       throw new ApiError(400, 'Geen Spond-groep geconfigureerd voor dit orkest.');
     }
 
-    const password = decryptPassword(spondConfig.password_encrypted);
+    const password = readSpondPassword(spondConfig.password_encrypted);
     const client = new SpondClient(spondConfig.username, password);
 
     // Get member links and user lookup for matching
@@ -981,7 +1002,7 @@ router.put(
 
       if (spondConfig) {
         try {
-          const password = decryptPassword(spondConfig.password_encrypted);
+          const password = readSpondPassword(spondConfig.password_encrypted);
           const client = new SpondClient(spondConfig.username, password);
           await client.changeResponse(rehearsal.spond_event_id, spondMemberIdForSync, accepted);
           spondSynced = true;
