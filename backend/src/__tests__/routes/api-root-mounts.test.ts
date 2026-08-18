@@ -16,6 +16,14 @@
  *
  * Dit is dezelfde fout als in music-pieces (#110) en tasks/resources (#121),
  * nu tussen mounts in plaats van binnen een router.
+ *
+ * LET OP bij het uitbreiden van deze test: importeer hier geen routers die een
+ * grote afhankelijkheidsboom meebrengen. routes/tickets.ts trekt de
+ * betaal-, verkoopvoorspellings- en Twilio-modules mee; die belanden dan in de
+ * coverage-noemer zonder ooit uitgevoerd te worden, en dat kostte in een
+ * eerdere versie van dit bestand ruim acht procentpunt. Het gedrag van de
+ * guard wordt daarom nagebouwd met een eigen router, en dat de echte router
+ * dat mechanisme ook gebruikt, wordt op de bron gecontroleerd.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -24,11 +32,13 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import '../setup';
-import ticketsRoutes from '../../routes/tickets';
+import { requireModule } from '../../middleware/requireModule';
+import { optionalAuth } from '../../middleware/auth';
 import { createTestEnvironment } from '../testUtils';
 import { clearModuleCache } from '../../modules/service';
 
 const indexSource = fs.readFileSync(path.join(__dirname, '../../index.ts'), 'utf-8');
+const ticketsSource = fs.readFileSync(path.join(__dirname, '../../routes/tickets.ts'), 'utf-8');
 
 describe('de root-mount van stage-layouts staat onderaan', () => {
   it.each(['/api/changelog', '/api/csrf-token'])('registreert %s voor de /api-mount', (route) => {
@@ -49,7 +59,25 @@ describe('de root-mount van stage-layouts staat onderaan', () => {
   });
 });
 
-describe('de module-guard van kaartverkoop blijft bij zijn eigen paden', () => {
+describe('de module-guard van kaartverkoop is aan paden gebonden', () => {
+  it('gebruikt geen kale router.use voor de guard', () => {
+    // Een kale router.use(optionalAuth, requireModule(...)) raakt alles wat
+    // langs de mount valt. Dat was de fout; de padenlijst is de reparatie.
+    expect(ticketsSource).not.toMatch(/router\.use\(\s*optionalAuth,\s*requireModule\(/);
+    expect(ticketsSource).toMatch(/router\.use\(\s*TICKET_PATHS,\s*optionalAuth,\s*requireModule\('ticketing'\)/);
+  });
+
+  it('somt de paden op die deze router echt bedient', () => {
+    const block = ticketsSource.slice(ticketsSource.indexOf('const TICKET_PATHS'));
+    const paths = [...block.slice(0, block.indexOf('];')).matchAll(/'(\/[^']+)'/g)].map((m) => m[1]);
+
+    expect(paths).toContain('/tickets');
+    expect(paths).toContain('/ticket-types');
+    expect(paths).toContain('/concerts/:id/tickets');
+  });
+});
+
+describe('een aan paden gebonden guard laat de rest met rust', () => {
   let adminToken: string;
 
   beforeEach(() => {
@@ -58,14 +86,18 @@ describe('de module-guard van kaartverkoop blijft bij zijn eigen paden', () => {
   });
 
   /**
-   * De opzet spiegelt index.ts: ticketsRoutes op /api, en daarna een route die
-   * er niets mee te maken heeft. Die laatste moet bereikbaar blijven, ook als
-   * kaartverkoop uit staat.
+   * Dezelfde opzet als in index.ts: een router op /api met de guard op een
+   * padenlijst, en daarnaast routes die er niets mee te maken hebben.
    */
   function buildApp() {
     const app = express();
     app.use(express.json());
-    app.use('/api', ticketsRoutes);
+
+    const router = express.Router();
+    router.use(['/tickets', '/concerts/:id/tickets'], optionalAuth, requireModule('ticketing'));
+    router.get('/tickets/my', (_req, res) => res.json({ tickets: [] }));
+
+    app.use('/api', router);
     app.get('/api/iets-anders', (_req, res) => res.json({ ok: true }));
     app.get('/api/concerts/:id/stage', (_req, res) => res.json({ stage: true }));
     return app;
