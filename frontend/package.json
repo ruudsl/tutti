@@ -21,7 +21,7 @@
     "@tanstack/react-query-persist-client": "^5.101.4",
     "@types/dompurify": "^3.0.5",
     "@types/react-window": "^2.0.0",
-    "axios": "^1.18.1",
+    "axios": "^1.19.0",
     "date-fns": "^4.4.0",
     "dexie": "^4.4.5",
     "dompurify": "^3.4.11",
