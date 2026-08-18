@@ -29,6 +29,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import '../setup';
@@ -92,6 +93,11 @@ describe('een aan paden gebonden guard laat de rest met rust', () => {
   function buildApp() {
     const app = express();
     app.use(express.json());
+    // Net als index.ts: eerst een rate limiter op /api, dan de mounts. Zonder
+    // hem is dit een route met een autorisatiecheck en geen limiet, en dat is
+    // precies het patroon dat productie wel afdekt. De grens staat zo hoog dat
+    // geen enkele test hem raakt.
+    app.use('/api', rateLimit({ windowMs: 60_000, limit: 10_000 }));
 
     const router = express.Router();
     router.use(['/tickets', '/concerts/:id/tickets'], optionalAuth, requireModule('ticketing'));
