@@ -363,9 +363,6 @@ app.use('/api/failed-imports', failedImportsRoutes);
 
 // Health check routes (MUST be before catch-all /api routes to avoid conflicts)
 app.use('/api/health', healthRoutes);
-// Root-level mount for /concerts/:id/stage routes; must come after the
-// specific /api/* mounts above or it shadows them (e.g. /api/health)
-app.use('/api', stageLayoutsRoutes);
 // Alleen de aanwezigheidsanalyse hoort bij de module 'attendance'; de rest van
 // /api/analytics (repertoire, oefenen) staat daar los van. De guard moet dus op
 // het diepere pad en voor de mount hieronder staan.
@@ -484,6 +481,18 @@ app.post('/', (req, res) => {
   });
   res.status(404).json({ error: 'Not found', message: 'POST to root is not a valid endpoint' });
 });
+
+// Root-level mount voor de /concerts/:id/stage-routes.
+//
+// Deze router hangt aan /api en heeft ook een router.get('/:id') voor
+// podiumindelingen. Daardoor vangt hij elk /api/<iets> met een enkel segment af
+// dat hierboven nog niet is afgehandeld, en antwoordt met "Podiumindeling niet
+// gevonden" - of met 401, want die route wil een token. Zo waren
+// /api/changelog en /api/csrf-token onbereikbaar.
+//
+// Daarom staat deze mount helemaal onderaan, vlak voor de 404-handler: alles
+// wat een eigen route heeft, komt eerst.
+app.use('/api', stageLayoutsRoutes);
 
 // 404 handler for unknown API routes
 app.use('/api/*', notFoundHandler);

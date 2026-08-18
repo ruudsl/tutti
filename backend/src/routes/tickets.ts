@@ -43,14 +43,29 @@ const router = Router();
 
 // De kaartverkoop-module kan per vereniging uit staan. De guard staat hier en
 // niet bij de mount in index.ts, omdat deze router aan /api hangt en paden
-// bedient onder zowel /tickets als /concerts/:id/tickets; een prefix-guard zou
-// de helft missen.
+// bedient onder zowel /tickets als /concerts/:id/tickets; een prefix-guard bij
+// de mount zou de helft missen.
+//
+// De paden staan er expliciet bij. Een kale router.use() zou namelijk ook
+// verzoeken raken die deze router helemaal niet afhandelt maar er wel langs
+// vallen - alles onder /api dat pas verderop in index.ts een route heeft. Die
+// kregen dan een 404 zodra kaartverkoop uit stond.
 //
 // optionalAuth ervoor, zodat requireModule de vereniging kent. Verzoeken zonder
 // token (de betaal-webhook, een bezoeker op de publieke bestelpagina) gaan er
 // ongehinderd doorheen: een lopende betaling mag niet stukgaan doordat een
 // beheerder de module uitzet.
-router.use(optionalAuth, requireModule('ticketing'));
+const TICKET_PATHS = [
+  '/tickets',
+  '/ticket-types',
+  '/concerts/:id/tickets',
+  '/concerts/:id/ticket-types',
+  '/concerts/:id/ticket-stats',
+  '/concerts/:id/seats',
+  '/concerts/:id/attendees',
+];
+
+router.use(TICKET_PATHS, optionalAuth, requireModule('ticketing'));
 
 // Rate limiters for the public checkout endpoints. These are stricter than the
 // general /api limiter in index.ts because order creation reserves ticket
