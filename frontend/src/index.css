@@ -6092,7 +6092,7 @@ a:not(.btn):not(.nav-link):not(.sidebar-direct-link):not(.sidebar-sub-link):hove
   padding: var(--space-2) var(--space-3);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   font-size: var(--font-size-sm);
   color: var(--text);
   cursor: pointer;
@@ -6120,7 +6120,7 @@ a:not(.btn):not(.nav-link):not(.sidebar-direct-link):not(.sidebar-sub-link):hove
   min-width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
   overflow: hidden;
@@ -8252,4 +8252,133 @@ div.form-control {
     min-height: 0;
     padding: 0;
   }
+}
+
+/* ===========================================================================
+   DOORZICHTIGHEIDS-VARIANTEN OP TEKSTKLEUR
+   In de opmaak staat op ruim 300 plaatsen text-base-content/60 en varianten.
+   Dat is Tailwind-schrijfwijze voor "grondkleur op 60% dekking" en er stond
+   geen enkele regel voor, waardoor al die bijschriften in volle tekstkleur
+   werden getoond in plaats van gedempt. De schuine streep moet in CSS
+   ontsnapt worden. De waarden zijn op onze eigen tokens afgebeeld in plaats
+   van op echte doorzichtigheid, zodat het contrast op elke achtergrond
+   voorspelbaar blijft.
+   =========================================================================== */
+
+.text-base-content\/80 {
+  color: var(--text-light);
+}
+.text-base-content\/70 {
+  color: var(--text-light);
+}
+.text-base-content\/60 {
+  color: var(--text-muted);
+}
+.text-base-content\/50 {
+  color: var(--text-muted);
+}
+.text-base-content\/40 {
+  color: var(--text-muted);
+}
+.text-base-content\/30 {
+  color: var(--border-strong, var(--text-muted));
+}
+
+/* ===========================================================================
+   RESTERENDE GATEN
+   Klassen die in de opmaak voorkwamen maar nergens een regel hadden.
+   Gevonden met een volledige doorloop van alle pagina's in de browser.
+   =========================================================================== */
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.card-actions.justify-end {
+  justify-content: flex-end;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: var(--surface-hover);
+  color: var(--text-light);
+}
+
+.section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.text-4xl {
+  font-size: 2.25rem;
+  line-height: 1.15;
+}
+.text-5xl {
+  font-size: 3rem;
+  line-height: 1.1;
+}
+.p-1\.5 {
+  padding: 0.375rem;
+}
+.w-64 {
+  width: 16rem;
+}
+.w-2\/5 {
+  width: 40%;
+}
+.hover\:opacity-100:hover {
+  opacity: 1;
+}
+
+/* Overzichtskaartjes met een cijfer en een bijschrift. Komen voor op de
+   gezondheids- en samenvattingspagina's. */
+.health-item,
+.summary-card,
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.health-label,
+.summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.health-value,
+.summary-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text);
+}
+.summary-icon {
+  color: var(--primary);
+}
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Statistiekenrij: past het aantal kolommen aan de beschikbare breedte aan.
+   De vaste zes kolommen liepen op de apparatuurpagina over de rand omdat een
+   bijschrift als "Actieve uitleningen" niet in 151 pixels past. */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-4);
 }

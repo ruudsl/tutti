@@ -331,6 +331,30 @@ router.get(
   }),
 );
 
+// GET /equipment/types
+// De invoerpagina biedt bij "soort" een lijst met suggesties aan. Die haalde ze
+// hier op, maar dit pad bestond niet en viel dus door naar /:id, wat met een
+// 404 antwoordde. Deze route moet daarom boven /:id blijven staan.
+router.get(
+  '/types',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const rows = db
+      .prepare(
+        `
+      SELECT DISTINCT equipment_type FROM equipment_items
+      WHERE association_id = ? AND deleted_at IS NULL AND equipment_type IS NOT NULL
+      ORDER BY equipment_type
+    `,
+      )
+      .all(associationId) as Array<{ equipment_type: string }>;
+
+    res.json(rows.map((r) => r.equipment_type));
+  }),
+);
+
 // GET /equipment/:id
 router.get(
   '/:id',

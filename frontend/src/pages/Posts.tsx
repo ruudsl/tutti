@@ -557,7 +557,7 @@ function CreatePostModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t('posts.categories')}</span>
+            <span className="label-text">{t('posts.categories.title')}</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
@@ -759,7 +759,7 @@ function EditPostModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t('posts.categories')}</span>
+            <span className="label-text">{t('posts.categories.title')}</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
