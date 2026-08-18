@@ -4542,6 +4542,7 @@
     "overview": "Übersicht",
     "setlist": "Setlist",
     "events": {
+      "label": "Veranstaltungen",
       "linkConcert": "Konzert verknüpfen",
       "unlinkConcert": "Konzert trennen",
       "linkRehearsal": "Probe verknüpfen",
@@ -4705,6 +4706,7 @@
     "resource": "Ressource",
     "rooms": "Räume",
     "categories": {
+      "label": "Kategorien",
       "manage": "Ressourcenkategorien verwalten",
       "description": "Kategorien helfen bei der Organisation Ihrer Ressourcen. Ziehen zum Neuordnen.",
       "add": "Kategorie hinzufügen",

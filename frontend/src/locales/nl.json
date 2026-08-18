@@ -4627,6 +4627,7 @@
       "declined": "Afgewezen"
     },
     "events": {
+      "label": "Evenementen",
       "linkConcert": "Concert koppelen",
       "unlinkConcert": "Concert ontkoppelen",
       "linkRehearsal": "Repetitie koppelen",
@@ -4832,6 +4833,7 @@
       "status": "Status"
     },
     "categories": {
+      "label": "Categorieën",
       "manage": "Middelcategorieën beheren",
       "description": "Categorieën helpen je middelen te organiseren. Sleep om te herschikken.",
       "add": "Categorie toevoegen",
