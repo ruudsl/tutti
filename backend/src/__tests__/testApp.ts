@@ -16,6 +16,7 @@ import instrumentsRoutes from '../routes/instruments';
 import notificationsRoutes from '../routes/notifications';
 import musicPiecesRoutes from '../routes/music-pieces';
 import concertsRoutes from '../routes/concerts';
+import pollsRoutes from '../routes/polls';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -36,6 +37,7 @@ app.use('/api/instruments', instrumentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/concerts', concertsRoutes);
+app.use('/api/polls', pollsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

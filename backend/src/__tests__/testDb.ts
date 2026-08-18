@@ -8,6 +8,7 @@
 const initSqlJs = require('sql.js');
 
 import { schema } from '../database/schema';
+import { splitSchemaStatements } from '../database/splitSchemaStatements';
 
 /**
  * The tests run against the real schema (src/database/schema.ts) instead of a
@@ -29,10 +30,7 @@ const testSchema = schema;
  * test run loudly.
  */
 function applySchema(db: any): void {
-  for (const statement of testSchema.split(';')) {
-    const trimmed = statement.trim();
-    if (!trimmed) continue;
-
+  for (const trimmed of splitSchemaStatements(testSchema)) {
     try {
       db.run(trimmed);
     } catch (err: any) {

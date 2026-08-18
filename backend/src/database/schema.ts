@@ -1849,11 +1849,19 @@ CREATE TABLE IF NOT EXISTS polls (
     ends_at DATETIME,
     target_orchestras TEXT,
     target_roles TEXT,
+    -- Datumpeiling: de winnende optie kan automatisch een repetitie opleveren.
+    -- routes/polls.ts schrijft en leest deze drie kolommen. Ze ontbraken
+    -- eerder volledig, waardoor het aanmaken van een peiling faalde met
+    -- "table polls has no column named is_date_poll".
+    is_date_poll INTEGER NOT NULL DEFAULT 0,
+    auto_create_rehearsal INTEGER NOT NULL DEFAULT 0,
+    target_orchestra_id TEXT,
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     closed_at DATETIME,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
+    FOREIGN KEY (target_orchestra_id) REFERENCES orchestras(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -1867,6 +1875,9 @@ CREATE TABLE IF NOT EXISTS poll_options (
     poll_id TEXT NOT NULL,
     option_text TEXT NOT NULL,
     option_description TEXT,
+    -- Machineleesbare waarde achter de optietekst. Voor datumpeilingen is
+    -- dat de datum in YYYY-MM-DD, die de auto-aanmaak van een repetitie leest.
+    option_value TEXT,
     sort_order INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
