@@ -45,11 +45,11 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@types/sanitize-html": "^2.16.1",
-    "concurrently": "^8.2.2",
+    "concurrently": "^10.0.5",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.2",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
     "typescript-eslint": "^8.67.0"
   }
