@@ -490,7 +490,7 @@ router.get(
     let assignments;
     try {
       layoutData = JSON.parse(assignment.layout_data || '{}');
-      assignments = JSON.parse(assignment.assignments || '{}');
+      assignments = JSON.parse(assignment.assignments_data || '{}');
     } catch {
       layoutData = { positions: [], shapes: [], sections: [] };
       assignments = {};
@@ -575,7 +575,7 @@ router.put(
         `
       UPDATE concert_stage_assignments SET
         layout_id = ?,
-        assignments = ?,
+        assignments_data = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `,
@@ -586,7 +586,7 @@ router.put(
       const id = uuidv4();
       db.prepare(
         `
-      INSERT INTO concert_stage_assignments (id, concert_id, layout_id, assignments)
+      INSERT INTO concert_stage_assignments (id, concert_id, layout_id, assignments_data)
       VALUES (?, ?, ?, ?)
     `,
       ).run(id, req.params.id, data.layoutId, assignmentsJson);
@@ -686,7 +686,7 @@ router.get(
     let assignments;
     try {
       layoutData = JSON.parse(assignment.layout_data || '{}');
-      assignments = JSON.parse(assignment.assignments || '{}');
+      assignments = JSON.parse(assignment.assignments_data || '{}');
     } catch {
       layoutData = { positions: [], shapes: [], sections: [] };
       assignments = {};

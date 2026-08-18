@@ -193,6 +193,13 @@ CREATE TABLE IF NOT EXISTS pdf_annotations (
     width REAL,
     height REAL,
     content TEXT,
+    -- Vrije-vorm tekenpad (annotations.ts POST /drawings): de punten staan als
+    -- JSON in data, met de bijbehorende penstijl. De velden hierboven beschrijven
+    -- een rechthoekige annotatie; beide paden delen deze tabel.
+    data TEXT,
+    stroke_width REAL,
+    opacity REAL,
+    is_shared INTEGER DEFAULT 0,
     color TEXT DEFAULT '#FFFF00',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -244,6 +251,7 @@ CREATE TABLE IF NOT EXISTS music_titles (
     association_id TEXT NOT NULL,
     deleted_at DATETIME DEFAULT NULL, -- Soft delete timestamp (NULL = actief)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (association_id) REFERENCES associations(id) ON DELETE CASCADE,
     UNIQUE(title, arranger, association_id)
 );
@@ -2215,6 +2223,7 @@ CREATE TABLE IF NOT EXISTS email_campaign_recipients (
     opened_at DATETIME,
     clicked_at DATETIME,
     bounce_reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -2222,6 +2231,22 @@ CREATE TABLE IF NOT EXISTS email_campaign_recipients (
 CREATE INDEX IF NOT EXISTS idx_email_recipients_campaign ON email_campaign_recipients(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_email_recipients_user ON email_campaign_recipients(user_id);
 CREATE INDEX IF NOT EXISTS idx_email_recipients_status ON email_campaign_recipients(status);
+
+-- Bijlagen bij een mailing
+CREATE TABLE IF NOT EXISTS email_campaign_attachments (
+    id TEXT PRIMARY KEY,
+    campaign_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    mime_type TEXT,
+    file_size INTEGER,
+    uploaded_by TEXT NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_attachments_campaign ON email_campaign_attachments(campaign_id);
 
 -- =====================================================
 -- ACCOUNTING / BOEKHOUDING MODULE
@@ -2480,6 +2505,11 @@ CREATE TABLE IF NOT EXISTS transactions (
     bank_statement_line_id TEXT,
     is_reconciled INTEGER DEFAULT 0,
     reconciled_at DATETIME,
+    -- Geboekt (definitief) versus concept. Een geboekte transactie is niet meer
+    -- te bewerken of te verwijderen; afletteren tegen een bankregel staat daar
+    -- los van en gebruikt is_reconciled.
+    is_posted INTEGER NOT NULL DEFAULT 0,
+    posted_at DATETIME,
     created_by TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -3217,8 +3247,14 @@ CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment_items(category_id
 CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment_items(status);
 CREATE INDEX IF NOT EXISTS idx_equipment_inventory ON equipment_items(inventory_number);
 
--- Equipment loans/checkouts
-CREATE TABLE IF NOT EXISTS equipment_loans (
+-- Bruikleen op de equipment_items-inventaris.
+--
+-- Let op: dit is NIET dezelfde tabel als equipment_loans hierboven. Die hoort
+-- bij de oudere equipment-tabel (instrumenten, gebruikt door maintenance.ts)
+-- en heeft een andere kolomindeling. Omdat beide CREATE TABLE IF NOT EXISTS
+-- heetten, won de eerste en kreeg routes/equipment.ts een tabel met de
+-- verkeerde kolommen. Vandaar de eigen naam.
+CREATE TABLE IF NOT EXISTS equipment_item_loans (
     id TEXT PRIMARY KEY,
     equipment_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -3245,10 +3281,30 @@ CREATE TABLE IF NOT EXISTS equipment_loans (
     FOREIGN KEY (returned_to) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_equipment_loans_equipment ON equipment_loans(equipment_id);
-CREATE INDEX IF NOT EXISTS idx_equipment_loans_user ON equipment_loans(user_id);
-CREATE INDEX IF NOT EXISTS idx_equipment_loans_status ON equipment_loans(status);
-CREATE INDEX IF NOT EXISTS idx_equipment_loans_dates ON equipment_loans(checkout_date, expected_return_date);
+CREATE INDEX IF NOT EXISTS idx_equipment_item_loans_equipment ON equipment_item_loans(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_item_loans_user ON equipment_item_loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_item_loans_status ON equipment_item_loans(status);
+CREATE INDEX IF NOT EXISTS idx_equipment_item_loans_dates ON equipment_item_loans(checkout_date, expected_return_date);
+
+-- Schaderapportages op de equipment_items-inventaris (routes/equipment.ts)
+CREATE TABLE IF NOT EXISTS equipment_damage_reports (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    reported_by TEXT NOT NULL,
+    description TEXT NOT NULL,
+    severity TEXT NOT NULL CHECK (severity IN ('minor', 'moderate', 'severe', 'unusable')),
+    photos TEXT,
+    repair_cost REAL,
+    repaired_at DATETIME,
+    repaired_by TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES equipment_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (repaired_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_damage_reports_item ON equipment_damage_reports(item_id);
 
 -- Equipment maintenance records
 CREATE TABLE IF NOT EXISTS equipment_maintenance (
@@ -3556,4 +3612,47 @@ CREATE INDEX IF NOT EXISTS idx_failed_imports_association ON failed_imports(asso
 CREATE INDEX IF NOT EXISTS idx_failed_imports_status ON failed_imports(status);
 CREATE INDEX IF NOT EXISTS idx_failed_imports_created_by ON failed_imports(created_by);
 CREATE INDEX IF NOT EXISTS idx_failed_imports_created_at ON failed_imports(created_at);
+
+-- ===========================================
+-- AVG / PRIVACY EN ZOEKGESCHIEDENIS
+-- ===========================================
+-- Deze drie tabellen werden voorheen bij elk verzoek door routes/gdpr.ts en
+-- routes/search.ts zelf aangemaakt met CREATE TABLE IF NOT EXISTS. Dat werkte,
+-- maar zette DDL in een request-pad en hield ze buiten schema.ts, de migraties
+-- en elke schemacontrole.
+
+-- Verwijderverzoeken van gebruikers (AVG art. 17)
+CREATE TABLE IF NOT EXISTS deletion_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    reason TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    processed_by TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Bewaartermijnen per gegevenssoort, per vereniging
+CREATE TABLE IF NOT EXISTS data_retention_settings (
+    id TEXT PRIMARY KEY,
+    association_id TEXT NOT NULL,
+    data_type TEXT NOT NULL,
+    retention_days INTEGER NOT NULL,
+    auto_delete INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(association_id, data_type)
+);
+
+-- Recente zoekopdrachten per gebruiker
+CREATE TABLE IF NOT EXISTS user_recent_searches (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    query TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_recent_searches_user ON user_recent_searches(user_id);
 `;

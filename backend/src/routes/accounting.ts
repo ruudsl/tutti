@@ -1756,7 +1756,7 @@ router.get(
         transactionType: t.transaction_type,
         reference: t.reference,
         description: t.description,
-        totalAmount: t.total_amount,
+        totalAmount: t.amount,
         isPosted: !!t.is_posted,
         isReconciled: !!t.is_reconciled,
         invoiceId: t.invoice_id,
@@ -1812,7 +1812,7 @@ router.get(
       transactionType: transaction.transaction_type,
       reference: transaction.reference,
       description: transaction.description,
-      totalAmount: transaction.total_amount,
+      totalAmount: transaction.amount,
       isPosted: !!transaction.is_posted,
       isReconciled: !!transaction.is_reconciled,
       invoiceId: transaction.invoice_id,
@@ -1898,7 +1898,7 @@ router.post(
       `
         INSERT INTO transactions (
             id, association_id, fiscal_year_id, transaction_number, transaction_date,
-            transaction_type, reference, description, total_amount, invoice_id,
+            transaction_type, reference, description, amount, invoice_id,
             created_by, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
@@ -1986,7 +1986,7 @@ router.put(
       `
         UPDATE transactions SET
             transaction_date = ?, transaction_type = ?, reference = ?, description = ?,
-            total_amount = ?, invoice_id = ?, updated_at = CURRENT_TIMESTAMP
+            amount = ?, invoice_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `,
     ).run(
@@ -2408,7 +2408,7 @@ router.post(
       `
         INSERT INTO transactions (
             id, association_id, fiscal_year_id, transaction_number, transaction_date,
-            transaction_type, description, total_amount, bank_statement_line_id, is_posted,
+            transaction_type, description, amount, bank_statement_line_id, is_posted,
             created_by, created_at
         ) VALUES (?, ?, ?, ?, ?, 'bank', ?, ?, ?, 1, ?, ?)
     `,
