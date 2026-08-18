@@ -105,7 +105,7 @@ export default function Profile() {
   };
 
   return (
-    <div>
+    <div className="page">
       <h1>{t('profile.title')}</h1>
 
       <div className="grid grid-2">

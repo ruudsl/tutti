@@ -1075,7 +1075,7 @@ export default function SeasonPlanner() {
   // Main View (Seasons List / Templates)
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="page-header">
         <h1>{t('seasonPlanner.title')}</h1>
         <button className="btn btn-primary" onClick={startWizard}>
           <Icon name="plus" size={16} /> {t('seasonPlanner.newSeason')}

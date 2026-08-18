@@ -580,8 +580,8 @@ export default function Settings() {
   }
 
   return (
-    <div>
-      <h1 className="mb-3">{t('settings.title')}</h1>
+    <div className="page">
+      <h1>{t('settings.title')}</h1>
 
       <div className="card mb-3">
         <div className="card-header">

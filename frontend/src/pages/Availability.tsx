@@ -170,7 +170,7 @@ export default function Availability() {
 
   if (myLoading) {
     return (
-      <div>
+      <div className="page">
         <h1>{t('availability.title')}</h1>
         <SkeletonTable rows={6} columns={7} />
       </div>

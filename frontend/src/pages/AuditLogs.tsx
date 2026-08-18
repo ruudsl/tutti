@@ -79,8 +79,8 @@ export default function AuditLogs() {
   };
 
   return (
-    <div>
-      <h1 className="mb-3">{t('auditLogs.title')}</h1>
+    <div className="page">
+      <h1>{t('auditLogs.title')}</h1>
       <p className="text-light mb-3">{t('auditLogs.description')}</p>
 
       {/* Filters */}

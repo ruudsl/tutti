@@ -89,7 +89,7 @@ export default function AttendanceAnalytics() {
 
   if (isLoading) {
     return (
-      <div>
+      <div className="page">
         <h1>{t('attendanceAnalytics.title', 'Aanwezigheidsanalyse')}</h1>
         <SkeletonTable rows={5} columns={4} />
       </div>
