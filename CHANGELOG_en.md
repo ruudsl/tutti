@@ -2,6 +2,26 @@
 
 All notable changes to this application are documented here.
 
+## [1.14.0] - 2026-08-18
+
+### Added
+
+#### Modules
+
+- **Switch parts on and off** — An administrator switches off what the association does not use under Admin → Modules. It disappears from the menu and can no longer be opened.
+- **Switching off hides, it does not delete** — The data of a disabled module stays untouched and comes back exactly as it was when switched on again.
+- **First three modules** — Accounting, Ticket sales (including payment settings and the scanner) and Stage and seating. Ten menu items in total.
+- **Part of the tour** — New administrators see the modules right after the welcome step.
+
+### Changed
+
+- **The three modules are off by default**, including for existing associations. If you do use them, two clicks under Admin → Modules turn them back on; your data is still there.
+
+### Fixed
+
+- Ten modules wrote to tables or columns that had never been created, so those features failed the moment anyone used them: accounting, campaign attachments, equipment damage reports, wiki attachments, the drawing path in annotations, season planning, IMSLP import and concert stage assignments.
+- `equipment_loans` was defined twice in the schema with different columns. Because the first one won, the equipment module silently got the wrong table.
+
 ## [1.13.0] - 2026-05-06
 
 ### Added

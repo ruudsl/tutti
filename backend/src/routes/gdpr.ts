@@ -369,20 +369,6 @@ router.post(
 
     const requestId = crypto.randomUUID();
 
-    // Check if table exists, create if not
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS deletion_requests (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      reason TEXT,
-      status TEXT DEFAULT 'pending',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      processed_at DATETIME,
-      processed_by TEXT,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
-
     db.prepare(
       `
     INSERT INTO deletion_requests (id, user_id, reason)
@@ -641,20 +627,6 @@ router.get(
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
-
-    // Ensure table exists
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS data_retention_settings (
-      id TEXT PRIMARY KEY,
-      association_id TEXT NOT NULL,
-      data_type TEXT NOT NULL,
-      retention_days INTEGER NOT NULL,
-      auto_delete INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(association_id, data_type)
-    )
-  `);
 
     const settings = db
       .prepare(

@@ -137,7 +137,22 @@
     "content": "Inhalt",
     "admin": "Verwaltung"
   },
+  "modules": {
+    "title": "Module",
+    "description": "Schalte Bereiche ab, die der Verein nicht nutzt. Sie verschwinden aus dem Menü und lassen sich nicht mehr öffnen. Es wird nichts gelöscht: schaltest du ein Modul später wieder ein, ist alles unverändert da.",
+    "on": "Ein",
+    "off": "Aus",
+    "enabled": "Modul eingeschaltet.",
+    "disabled": "Modul ausgeschaltet. Die Daten bleiben erhalten.",
+    "errorLoad": "Die Module konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Es gibt noch keine Module zum Ein- oder Ausschalten.",
+    "errorSave": "Das Modul konnte nicht aktualisiert werden.",
+    "hiddenPages_one": "{{count}} Seite ausgeblendet",
+    "hiddenPages_other": "{{count}} Seiten ausgeblendet"
+  },
   "nav": {
+    "modules": "Module",
     "dashboard": "Dashboard",
     "myMusic": "Meine Musik",
     "tools": "Werkzeuge",
@@ -2008,6 +2023,7 @@
     "linkText": "Feedback geben"
   },
   "pageTitle": {
+    "modules": "Module",
     "stageDesigner": "Bühnenaufstellung Designer",
     "concertStageSetup": "Konzert-Bühnenaufstellung"
   },
@@ -2361,6 +2377,10 @@
       "welcome": {
         "title": "Willkommen, Administrator!",
         "description": "Als Admin haben Sie volle Kontrolle über die Anwendung. Lassen Sie uns die wichtigsten Bereiche durchgehen."
+      },
+      "modules": {
+        "title": "Module",
+        "description": "Tutti kann mehr, als die meisten Vereine brauchen. Buchhaltung, Kartenverkauf und Bühnenaufstellung sind deshalb ausgeschaltet. Schalte ein, was ihr nutzt; der Rest bleibt aus dem Menü. Du kannst es später jederzeit ändern, und es gehen keine Daten verloren."
       },
       "orchestras": {
         "title": "Orchester",

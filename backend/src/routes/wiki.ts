@@ -560,7 +560,7 @@ router.get(
     FROM wiki_attachments a
     LEFT JOIN users u ON a.uploaded_by = u.id
     WHERE a.page_id = ?
-    ORDER BY a.uploaded_at DESC
+    ORDER BY a.created_at DESC
   `,
       )
       .all(page.id);
@@ -568,14 +568,14 @@ router.get(
     res.json(
       attachments.map((a: any) => ({
         id: a.id,
-        filename: a.filename,
-        originalFilename: a.original_filename,
+        filename: a.file_path,
+        originalFilename: a.file_name,
         mimeType: a.mime_type,
         fileSize: a.file_size,
-        url: `/uploads/wiki/${a.filename}`,
+        url: `/uploads/wiki/${a.file_path}`,
         uploadedBy: a.uploaded_by,
         uploadedByName: a.uploaded_by_name,
-        uploadedAt: a.uploaded_at,
+        uploadedAt: a.created_at,
       })),
     );
   }),
@@ -605,7 +605,7 @@ router.post(
 
     db.prepare(
       `
-    INSERT INTO wiki_attachments (id, page_id, filename, original_filename, mime_type, file_size, uploaded_by, uploaded_at)
+    INSERT INTO wiki_attachments (id, page_id, file_path, file_name, mime_type, file_size, uploaded_by, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `,
     ).run(id, page.id, req.file.filename, req.file.originalname, req.file.mimetype, req.file.size, req.user!.id, now);
@@ -633,15 +633,22 @@ router.delete(
     }
 
     const attachment = db
-      .prepare(`SELECT filename FROM wiki_attachments WHERE id = ? AND page_id = ?`)
+      .prepare(`SELECT file_path FROM wiki_attachments WHERE id = ? AND page_id = ?`)
       .get(req.params.attachmentId, page.id) as any;
     if (!attachment) {
       throw new ApiError(404, 'Attachment not found');
     }
 
-    // Delete file from disk
-    const filePath = path.join(uploadsDir, attachment.filename);
-    if (fs.existsSync(filePath)) {
+    // Verwijder het bestand van schijf.
+    //
+    // file_path komt uit de database en wordt gevuld met de naam die multer
+    // heeft verzonnen, dus in de praktijk is die veilig. Maar een pad uit
+    // opslag rechtstreeks in path.join stoppen is een gat zodra die aanname
+    // ooit niet meer klopt: een naam met ../ erin wijst dan buiten uploadsDir.
+    // basename haalt elke mapcomponent weg, en de controle daarna is de
+    // vangnetregel voor het geval basename niet genoeg blijkt.
+    const filePath = path.join(uploadsDir, path.basename(attachment.file_path));
+    if (filePath.startsWith(uploadsDir + path.sep) && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 

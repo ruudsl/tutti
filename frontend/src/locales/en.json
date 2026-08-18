@@ -137,7 +137,22 @@
     "content": "Content",
     "admin": "Admin"
   },
+  "modules": {
+    "title": "Modules",
+    "description": "Switch off the parts your association does not use. They disappear from the menu and can no longer be opened. Nothing is deleted: switch a module back on and everything is exactly as you left it.",
+    "on": "On",
+    "off": "Off",
+    "enabled": "Module switched on.",
+    "disabled": "Module switched off. The data is kept.",
+    "errorLoad": "Could not load the modules.",
+    "retry": "Try again",
+    "empty": "There are no modules to switch on or off yet.",
+    "errorSave": "Could not update the module.",
+    "hiddenPages_one": "{{count}} page hidden",
+    "hiddenPages_other": "{{count}} pages hidden"
+  },
   "nav": {
+    "modules": "Modules",
     "dashboard": "Dashboard",
     "myMusic": "My Music",
     "tools": "Tools",
@@ -2924,6 +2939,10 @@
         "title": "Welcome, Administrator!",
         "description": "As an admin, you have full control over the application. Let's walk through the key areas."
       },
+      "modules": {
+        "title": "Modules",
+        "description": "Tutti can do more than most associations need. Accounting, ticket sales and stage layouts are therefore switched off. Turn on what you use; the rest stays out of the menu. You can change your mind later, and no data is ever lost."
+      },
       "orchestras": {
         "title": "Orchestras",
         "description": "Start by setting up your orchestras. Each orchestra can have its own members, repertoire, and rehearsal schedule."
@@ -5643,6 +5662,7 @@
     }
   },
   "pageTitle": {
+    "modules": "Modules",
     "stageDesigner": "Stage Layout Designer",
     "concertStageSetup": "Concert Stage Setup"
   }

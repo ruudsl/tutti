@@ -19,6 +19,15 @@ const TOUR_STEPS: Record<string, TourStep[]> = {
       icon: 'hand',
     },
     {
+      // Als tweede stap, want deze keuze bepaalt hoe de rest van de applicatie
+      // eruitziet. Modules staan standaard uit; wie hier niets doet, houdt het
+      // kleine menu.
+      titleKey: 'onboarding.admin.modules.title',
+      descriptionKey: 'onboarding.admin.modules.description',
+      icon: 'package',
+      navigateTo: '/modules',
+    },
+    {
       titleKey: 'onboarding.admin.orchestras.title',
       descriptionKey: 'onboarding.admin.orchestras.description',
       icon: 'music2',

@@ -1,8 +1,10 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ModulesProvider, useModules } from './context/ModulesContext';
+import { isLocationHidden } from './utils/modules';
 import { useTheme } from './hooks/useTheme';
 import { queryClient, queryPersister, persistOptions } from './lib/queryClient';
 import { Toaster } from './utils/toast';
@@ -80,6 +82,7 @@ const AuditLogs = lazy(() => import('./pages/AuditLogs'));
 const Users = lazy(() => import('./pages/Users'));
 const Orchestras = lazy(() => import('./pages/Orchestras'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Modules = lazy(() => import('./pages/Modules'));
 const ThemeSettings = lazy(() => import('./pages/ThemeSettings'));
 const Changelog = lazy(() => import('./pages/Changelog'));
 const EntraSync = lazy(() => import('./pages/EntraSync'));
@@ -156,6 +159,8 @@ function RouteLoadingFallback() {
 
 function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { user } = useAuth();
+  const { enabled, loaded } = useModules();
+  const location = useLocation();
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -163,6 +168,14 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
 
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/" />;
+  }
+
+  // Een pagina van een uitgezette module bestaat niet voor deze vereniging,
+  // ook niet via een bewaarde link. Pas oordelen zodra de stand bekend is:
+  // anders zou de eerste keer inloggen iedereen wegsturen van pagina's die
+  // gewoon mogen.
+  if (loaded && isLocationHidden(location.pathname, enabled)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -446,6 +459,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="modules"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN]}>
+                <Modules />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="theme"
             element={
               <PrivateRoute roles={[ROLES.ADMIN]}>
@@ -679,7 +700,9 @@ function AppContent() {
           <ConfirmProvider>
             <AppInit />
             <SectionErrorBoundary sectionName="Routes" compact>
-              <AppRoutes />
+              <ModulesProvider>
+                <AppRoutes />
+              </ModulesProvider>
             </SectionErrorBoundary>
             <SectionErrorBoundary sectionName="Notifications" compact>
               <Toaster

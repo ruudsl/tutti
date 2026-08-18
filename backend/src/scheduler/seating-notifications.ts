@@ -2,6 +2,7 @@ import db from '../database/connection';
 import logger from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import twilio from 'twilio';
+import { isModuleEnabled } from '../modules/service';
 
 interface NotificationSettings {
   id: string;
@@ -17,6 +18,7 @@ interface NotificationSettings {
   include_image: boolean;
   message_template: string | null;
   orchestra_name: string;
+  association_id: string;
 }
 
 interface Rehearsal {
@@ -310,7 +312,7 @@ async function checkAndSendNotifications(): Promise<void> {
     const allSettings = db
       .prepare(
         `
-            SELECT sns.*, o.name as orchestra_name
+            SELECT sns.*, o.name as orchestra_name, o.association_id
             FROM seating_notification_settings sns
             JOIN orchestras o ON sns.orchestra_id = o.id
             WHERE sns.enabled = 1
@@ -319,6 +321,14 @@ async function checkAndSendNotifications(): Promise<void> {
       .all() as NotificationSettings[];
 
     for (const settings of allSettings) {
+      // Een vereniging die de module Podium en opstelling heeft uitgezet, mag
+      // hier geen berichten over krijgen. De instellingen blijven staan, ze
+      // worden alleen niet meer uitgevoerd - net als bij de rest van de
+      // module: verbergen, niet verwijderen.
+      if (!isModuleEnabled(settings.association_id, 'stage')) {
+        continue;
+      }
+
       // Calculate the target time window
       const targetTime = new Date(now.getTime() + settings.minutes_before * 60 * 1000);
       const windowStart = new Date(targetTime.getTime() - 2 * 60 * 1000); // 2 min before

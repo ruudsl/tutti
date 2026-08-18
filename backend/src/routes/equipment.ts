@@ -168,7 +168,7 @@ router.get(
 
     let query = `
       SELECT e.*, ec.name as category_name, ec.color as category_color,
-        (SELECT COUNT(*) FROM equipment_loans WHERE equipment_id = e.id AND status = 'active') as active_loans
+        (SELECT COUNT(*) FROM equipment_item_loans WHERE equipment_id = e.id AND status = 'active') as active_loans
       FROM equipment_items e
       LEFT JOIN equipment_categories ec ON e.category_id = ec.id
       WHERE e.association_id = ? AND e.deleted_at IS NULL
@@ -236,7 +236,7 @@ router.get(
     let query = `
       SELECT el.*, e.name as equipment_name, e.inventory_number,
         u.first_name || ' ' || u.last_name as user_name
-      FROM equipment_loans el
+      FROM equipment_item_loans el
       JOIN equipment_items e ON el.equipment_id = e.id
       JOIN users u ON el.user_id = u.id
       WHERE e.association_id = ?
@@ -306,7 +306,7 @@ router.get(
     const activeLoans = db
       .prepare(
         `
-      SELECT COUNT(*) as count FROM equipment_loans el
+      SELECT COUNT(*) as count FROM equipment_item_loans el
       JOIN equipment_items e ON el.equipment_id = e.id
       WHERE e.association_id = ? AND el.status = 'active'
     `,
@@ -358,7 +358,7 @@ router.get(
       .prepare(
         `
       SELECT el.*, u.first_name || ' ' || u.last_name as user_name
-      FROM equipment_loans el
+      FROM equipment_item_loans el
       JOIN users u ON el.user_id = u.id
       WHERE el.equipment_id = ?
       ORDER BY el.checkout_date DESC
@@ -592,7 +592,7 @@ router.post(
     const activeLoan = db
       .prepare(
         `
-      SELECT id FROM equipment_loans WHERE equipment_id = ? AND status = 'active'
+      SELECT id FROM equipment_item_loans WHERE equipment_id = ? AND status = 'active'
     `,
       )
       .get(data.equipmentId);
@@ -604,7 +604,7 @@ router.post(
     const id = uuidv4();
     db.prepare(
       `
-      INSERT INTO equipment_loans (id, equipment_id, user_id, checkout_date, expected_return_date,
+      INSERT INTO equipment_item_loans (id, equipment_id, user_id, checkout_date, expected_return_date,
         condition_at_checkout, checkout_notes, related_concert_id, related_rehearsal_id,
         related_project_id, created_by)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)
@@ -642,7 +642,7 @@ router.patch(
     const loan = db
       .prepare(
         `
-      SELECT el.*, e.id as equipment_id FROM equipment_loans el
+      SELECT el.*, e.id as equipment_id FROM equipment_item_loans el
       JOIN equipment_items e ON el.equipment_id = e.id
       WHERE el.id = ? AND e.association_id = ?
     `,
@@ -659,7 +659,7 @@ router.patch(
 
     db.prepare(
       `
-      UPDATE equipment_loans SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP,
+      UPDATE equipment_item_loans SET status = 'returned', actual_return_date = CURRENT_TIMESTAMP,
         condition_at_return = ?, return_notes = ?, returned_to = ?
       WHERE id = ?
     `,

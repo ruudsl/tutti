@@ -2,6 +2,26 @@
 
 Alle wichtigen Änderungen an dieser Anwendung werden hier dokumentiert.
 
+## [1.14.0] - 2026-08-18
+
+### Hinzugefügt
+
+#### Module
+
+- **Bereiche ein- und ausschalten** — Ein Administrator schaltet unter Verwaltung → Module ab, was der Verein nicht nutzt. Es verschwindet aus dem Menü und lässt sich nicht mehr öffnen.
+- **Ausschalten blendet aus, es löscht nicht** — Die Daten eines abgeschalteten Moduls bleiben unverändert und sind beim Einschalten genau wie zuvor wieder da.
+- **Erste drei Module** — Buchhaltung, Kartenverkauf (inklusive Zahlungseinstellungen und Scanner) sowie Bühne und Aufstellung. Zusammen zehn Menüpunkte.
+- **In der Einführung** — Neue Administratoren sehen die Module direkt nach der Begrüßung.
+
+### Geändert
+
+- **Die drei Module sind standardmäßig aus**, auch für bestehende Vereine. Wer sie nutzt, schaltet sie mit zwei Klicks unter Verwaltung → Module wieder ein; die Daten sind noch vorhanden.
+
+### Behoben
+
+- Zehn Module schrieben in Tabellen oder Spalten, die nie angelegt worden waren, sodass diese Funktionen scheiterten, sobald jemand sie nutzte: Buchhaltung, Anhänge an Mailings, Schadensmeldungen zu Ausrüstung, Wiki-Anhänge, der Zeichenpfad in Anmerkungen, Saisonplanung, IMSLP-Import und die Konzert-Bühnenaufstellung.
+- `equipment_loans` stand zweimal im Schema mit unterschiedlichen Spalten. Da die erste gewann, bekam das Ausrüstungsmodul still die falsche Tabelle.
+
 ## [1.13.0] - 2026-05-06
 
 ### Hinzugefügt

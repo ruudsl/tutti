@@ -20,6 +20,7 @@ import pollsRoutes from '../routes/polls';
 import tasksRoutes from '../routes/tasks';
 import resourcesRoutes from '../routes/resources';
 import equipmentRoutes from '../routes/equipment';
+import modulesRoutes from '../routes/modules';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -44,6 +45,7 @@ app.use('/api/polls', pollsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/equipment', equipmentRoutes);
+app.use('/api/modules', modulesRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -248,19 +248,19 @@ router.post(
 
     // If no instrument found, try to get or create a "Score" instrument
     if (!instrumentId) {
-      const scoreInstrument = db
-        .prepare(`SELECT id FROM instruments WHERE association_id = ? AND name = 'Score'`)
-        .get(user.associationId) as { id: string } | undefined;
+      // instruments is een globale lijst, niet per vereniging: er is één
+      // "Score" voor iedereen. Eerder werd hier op association_id gefilterd,
+      // een kolom die de tabel niet heeft.
+      const scoreInstrument = db.prepare(`SELECT id FROM instruments WHERE name = 'Score'`).get() as
+        { id: string } | undefined;
 
       if (scoreInstrument) {
         instrumentId = scoreInstrument.id;
       } else {
-        // Create a Score instrument
         instrumentId = uuidv4();
-        db.prepare(
-          `INSERT INTO instruments (id, name, association_id, created_at)
-                 VALUES (?, 'Score', ?, CURRENT_TIMESTAMP)`,
-        ).run(instrumentId, user.associationId);
+        db.prepare(`INSERT INTO instruments (id, name, created_at) VALUES (?, 'Score', CURRENT_TIMESTAMP)`).run(
+          instrumentId,
+        );
       }
     }
 
@@ -280,9 +280,11 @@ router.post(
 
     // Log the activity
     db.prepare(
-      `INSERT INTO activity_log (id, user_id, action_type, entity_type, entity_id, association_id, created_at)
-         VALUES (?, ?, 'import', 'music_piece', ?, ?, CURRENT_TIMESTAMP)`,
-    ).run(uuidv4(), user.id, pieceId, user.associationId);
+      // activity_log heeft geen association_id; de vereniging volgt uit user_id,
+      // zoals ook gdpr.ts de log opschoont.
+      `INSERT INTO activity_log (id, user_id, action_type, entity_type, entity_id, created_at)
+         VALUES (?, ?, 'import', 'music_piece', ?, CURRENT_TIMESTAMP)`,
+    ).run(uuidv4(), user.id, pieceId);
 
     res.json({
       message: 'Successfully imported from IMSLP',
