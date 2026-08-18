@@ -13,6 +13,78 @@ const router = Router();
 
 const CACHE_PATH = '/api/polls';
 
+/** Defaults wanneer een orkest geen eigen repetitietijden heeft ingesteld. */
+const DEFAULT_REHEARSAL_START = '19:30';
+const DEFAULT_REHEARSAL_END = '22:00';
+
+interface CreateRehearsalInstanceInput {
+  associationId: string;
+  orchestraId: string | null;
+  /** Datum in YYYY-MM-DD; de rest van de applicatie gebruikt dat formaat. */
+  date: string;
+  location?: string | null;
+  notes: string;
+  createdBy: string;
+}
+
+/**
+ * Maak een rehearsal_instance aan vanuit een peiling.
+ *
+ * Beide plekken in dit bestand die een repetitie uit een peiling aanmaken
+ * lopen hier doorheen. Ze schreven eerder allebei hun eigen INSERT met een
+ * andere kolomset: de ene liet association_id leeg (waardoor de rij bij geen
+ * enkele vereniging hoorde), de andere sloeg start- en eindtijd niet op en
+ * schreef de datum als volledige ISO-timestamp in plaats van YYYY-MM-DD.
+ * Daardoor vond de duplicaatcontrole hieronder rijen van het andere pad nooit.
+ *
+ * @returns het id van de nieuwe repetitie.
+ */
+function createRehearsalInstanceFromPoll(input: CreateRehearsalInstanceInput): string {
+  // Standaardtijden komen uit rehearsal_default_days: eerst een regel voor dit
+  // orkest, anders de verenigingsbrede regel (orchestra_id IS NULL). De oude
+  // code las orchestras.default_start_time en verwante kolommen, die nergens
+  // bestaan - die query gooide dus altijd "no such column".
+  const defaults = db
+    .prepare(
+      `
+        SELECT start_time, end_time, location
+        FROM rehearsal_default_days
+        WHERE association_id = ?
+          AND (orchestra_id = ? OR orchestra_id IS NULL)
+        ORDER BY orchestra_id IS NULL
+        LIMIT 1
+      `,
+    )
+    .get(input.associationId, input.orchestraId) as
+    { start_time: string; end_time: string; location: string | null } | undefined;
+
+  const rehearsalId = uuidv4();
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `
+      INSERT INTO rehearsal_instances (
+          id, association_id, orchestra_id, date, start_time, end_time, location,
+          status, notes, created_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?)
+    `,
+  ).run(
+    rehearsalId,
+    input.associationId,
+    input.orchestraId,
+    input.date,
+    defaults?.start_time || DEFAULT_REHEARSAL_START,
+    defaults?.end_time || DEFAULT_REHEARSAL_END,
+    input.location ?? defaults?.location ?? null,
+    input.notes,
+    input.createdBy,
+    now,
+    now,
+  );
+
+  return rehearsalId;
+}
+
 // Validation schemas
 const createPollSchema = z.object({
   title: z.string().min(1, 'Titel is verplicht.'),
@@ -607,13 +679,17 @@ router.post(
 
     // Auto-create rehearsal if it's a date poll with auto_create_rehearsal enabled
     if (status === 'closed' && poll.is_date_poll && poll.auto_create_rehearsal) {
-      // Find the winning option (most 'yes' votes)
+      // Find the winning option (most votes).
+      // De join filterde eerder op v.vote_value = 'yes', een kolom die niet
+      // bestaat en die het stem-endpoint ook nergens schrijft. Daardoor gooide
+      // het sluiten van een datumpeiling een 500 en werd er nooit een
+      // repetitie aangemaakt. Een rij in poll_votes is de stem.
       const winningOption = db
         .prepare(
           `
             SELECT o.*, COUNT(v.id) as vote_count
             FROM poll_options o
-            LEFT JOIN poll_votes v ON o.id = v.option_id AND v.vote_value = 'yes'
+            LEFT JOIN poll_votes v ON o.id = v.option_id
             WHERE o.poll_id = ?
             GROUP BY o.id
             ORDER BY vote_count DESC
@@ -639,45 +715,19 @@ router.post(
             .prepare(
               `
                     SELECT id FROM rehearsal_instances
-                    WHERE orchestra_id = ? AND date = ?
+                    WHERE association_id = ? AND orchestra_id = ? AND date = ?
                 `,
             )
-            .get(orchestraId, rehearsalDate.split('T')[0]);
+            .get(associationId, orchestraId, rehearsalDate.split('T')[0]);
 
           if (!existingRehearsal) {
-            // Get orchestra default rehearsal settings
-            const orchestra = db
-              .prepare(
-                `
-                        SELECT default_rehearsal_day, default_start_time, default_end_time, default_location
-                        FROM orchestras WHERE id = ?
-                    `,
-              )
-              .get(orchestraId) as any;
-
-            const rehearsalId = uuidv4();
-            const startTime = orchestra?.default_start_time || '19:30';
-            const endTime = orchestra?.default_end_time || '22:00';
-            const location = orchestra?.default_location || '';
-
-            db.prepare(
-              `
-                        INSERT INTO rehearsal_instances (
-                            id, orchestra_id, date, start_time, end_time, location,
-                            status, notes, created_by, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?)
-                    `,
-            ).run(
-              rehearsalId,
+            const rehearsalId = createRehearsalInstanceFromPoll({
+              associationId: associationId!,
               orchestraId,
-              rehearsalDate.split('T')[0],
-              startTime,
-              endTime,
-              location,
-              `Automatisch aangemaakt vanuit poll: ${poll.title}`,
-              req.user!.id,
-              now,
-            );
+              date: rehearsalDate.split('T')[0],
+              notes: `Automatisch aangemaakt vanuit poll: ${poll.title}`,
+              createdBy: req.user!.id,
+            });
 
             createdRehearsalId = rehearsalId;
 
@@ -1343,39 +1393,29 @@ router.post(
     }
 
     // Create rehearsal
-    const rehearsalId = uuidv4();
-    const now = new Date().toISOString();
+    const rehearsalDate = parsedDate.toISOString().split('T')[0];
 
-    db.prepare(
-      `
-        INSERT INTO rehearsal_instances (
-            id, association_id, orchestra_id, date, location, notes, created_by, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    ).run(
-      rehearsalId,
+    const rehearsalId = createRehearsalInstanceFromPoll({
       associationId,
-      orchestraId || null,
-      parsedDate.toISOString(),
-      location || null,
-      notes || `Aangemaakt vanuit peiling: ${poll.title}`,
-      req.user!.id,
-      now,
-      now,
-    );
+      orchestraId: orchestraId || null,
+      date: rehearsalDate,
+      location: location || null,
+      notes: notes || `Aangemaakt vanuit peiling: ${poll.title}`,
+      createdBy: req.user!.id,
+    });
 
     logAuditEvent(
       req.user!.id,
       'rehearsal_created_from_poll',
       'rehearsal',
       rehearsalId,
-      `${parsedDate.toISOString().split('T')[0]} (van peiling ${poll.title})`,
+      `${rehearsalDate} (van peiling ${poll.title})`,
     );
 
     res.json({
       message: 'Repetitie aangemaakt.',
       rehearsalId,
-      date: parsedDate.toISOString(),
+      date: rehearsalDate,
       winningOption: winningOption.option_text,
       voteCount: winningOption.vote_count,
     });

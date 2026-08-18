@@ -3,6 +3,7 @@ const initSqlJs = require('sql.js');
 import path from 'path';
 import fs from 'fs';
 import { schema } from './schema';
+import { splitSchemaStatements } from './splitSchemaStatements';
 import { runMigrations } from './migrations';
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/harmonie.db');
@@ -63,7 +64,7 @@ class DatabaseWrapper {
 
       // Initialize schema (CREATE TABLE IF NOT EXISTS statements)
       // Run each statement separately to handle partial failures gracefully
-      const schemaStatements = schema.split(';').filter((s) => s.trim());
+      const schemaStatements = splitSchemaStatements(schema);
       for (const statement of schemaStatements) {
         const trimmed = statement.trim();
         if (!trimmed) continue;
