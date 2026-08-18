@@ -17,6 +17,9 @@ import notificationsRoutes from '../routes/notifications';
 import musicPiecesRoutes from '../routes/music-pieces';
 import concertsRoutes from '../routes/concerts';
 import pollsRoutes from '../routes/polls';
+import tasksRoutes from '../routes/tasks';
+import resourcesRoutes from '../routes/resources';
+import equipmentRoutes from '../routes/equipment';
 
 // Import middleware
 import { notFoundHandler } from '../middleware/errorHandler';
@@ -38,6 +41,9 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/music-pieces', musicPiecesRoutes);
 app.use('/api/concerts', concertsRoutes);
 app.use('/api/polls', pollsRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/resources', resourcesRoutes);
+app.use('/api/equipment', equipmentRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

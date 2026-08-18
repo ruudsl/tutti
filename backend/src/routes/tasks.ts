@@ -317,6 +317,157 @@ router.get(
   }),
 );
 
+// LET OP: deze letterlijke routes staan bewust boven /:id.
+// Express matcht in registratievolgorde, dus met /:id ervoor kwam een
+// verzoek hier terecht bij de :id-handler en antwoordde die 404.
+
+router.get(
+  '/templates',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+      throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const templates = db
+      .prepare(
+        `
+        SELECT tt.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS created_by_name
+        FROM task_templates tt
+        LEFT JOIN task_lists tl ON tt.task_list_id = tl.id
+        LEFT JOIN users u ON tt.created_by = u.id
+        WHERE tt.association_id = ? AND tt.is_active = 1
+        ORDER BY tt.name
+    `,
+      )
+      .all(associationId);
+
+    res.json(
+      templates.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        taskListId: t.task_list_id,
+        listName: t.list_name,
+        listColor: t.list_color,
+        priority: t.priority,
+        estimatedHours: t.estimated_hours,
+        checklistItems: t.checklist_items ? JSON.parse(t.checklist_items) : [],
+        createdBy: t.created_by,
+        createdByName: t.created_by_name,
+        createdAt: t.created_at,
+      })),
+    );
+  }),
+);
+
+// Dashboard summary endpoint
+router.get(
+  '/summary',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    if (!associationId) {
+      throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
+    }
+
+    const userId = req.user!.id;
+
+    // Get counts by status
+    const statusCounts = db
+      .prepare(
+        `
+        SELECT status, COUNT(*) as count
+        FROM tasks
+        WHERE association_id = ?
+        GROUP BY status
+    `,
+      )
+      .all(associationId) as any[];
+
+    // Get my tasks (assigned to me, not done)
+    const myTasks = db
+      .prepare(
+        `
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        WHERE t.association_id = ? AND t.assigned_to = ? AND t.status NOT IN ('done', 'cancelled')
+        ORDER BY t.priority DESC, t.due_date ASC NULLS LAST
+        LIMIT 5
+    `,
+      )
+      .all(associationId, userId);
+
+    // Get overdue tasks
+    const now = new Date().toISOString();
+    const overdueTasks = db
+      .prepare(
+        `
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS assigned_to_name
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.association_id = ? AND t.due_date < ? AND t.status NOT IN ('done', 'cancelled')
+        ORDER BY t.due_date ASC
+        LIMIT 5
+    `,
+      )
+      .all(associationId, now);
+
+    // Get recent completed tasks
+    const recentCompleted = db
+      .prepare(
+        `
+        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
+            u.first_name || ' ' || u.last_name AS assigned_to_name
+        FROM tasks t
+        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.association_id = ? AND t.status = 'done'
+        ORDER BY t.completed_at DESC
+        LIMIT 5
+    `,
+      )
+      .all(associationId);
+
+    // Build status summary
+    const statusSummary: Record<string, number> = {
+      todo: 0,
+      in_progress: 0,
+      review: 0,
+      done: 0,
+      cancelled: 0,
+    };
+
+    statusCounts.forEach((s: any) => {
+      statusSummary[s.status] = s.count;
+    });
+
+    const mapTask = (t: any) => ({
+      id: t.id,
+      title: t.title,
+      status: t.status,
+      priority: t.priority,
+      dueDate: t.due_date,
+      listName: t.list_name,
+      listColor: t.list_color,
+      assignedToName: t.assigned_to_name,
+    });
+
+    res.json({
+      statusSummary,
+      totalOpen: statusSummary.todo + statusSummary.in_progress + statusSummary.review,
+      myTasks: myTasks.map(mapTask),
+      overdueTasks: overdueTasks.map(mapTask),
+      recentCompleted: recentCompleted.map(mapTask),
+    });
+  }),
+);
+
 router.get(
   '/:id',
   authenticateToken,
@@ -800,48 +951,6 @@ const createTemplateSchema = z.object({
 
 const updateTemplateSchema = createTemplateSchema.partial();
 
-router.get(
-  '/templates',
-  authenticateToken,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-    if (!associationId) {
-      throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
-    }
-
-    const templates = db
-      .prepare(
-        `
-        SELECT tt.*, tl.name AS list_name, tl.color AS list_color,
-            u.first_name || ' ' || u.last_name AS created_by_name
-        FROM task_templates tt
-        LEFT JOIN task_lists tl ON tt.task_list_id = tl.id
-        LEFT JOIN users u ON tt.created_by = u.id
-        WHERE tt.association_id = ? AND tt.is_active = 1
-        ORDER BY tt.name
-    `,
-      )
-      .all(associationId);
-
-    res.json(
-      templates.map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        taskListId: t.task_list_id,
-        listName: t.list_name,
-        listColor: t.list_color,
-        priority: t.priority,
-        estimatedHours: t.estimated_hours,
-        checklistItems: t.checklist_items ? JSON.parse(t.checklist_items) : [],
-        createdBy: t.created_by,
-        createdByName: t.created_by_name,
-        createdAt: t.created_at,
-      })),
-    );
-  }),
-);
-
 router.post(
   '/templates',
   authenticateToken,
@@ -1034,111 +1143,6 @@ router.post(
       id: taskId,
       title: taskTitle,
       message: 'Taak aangemaakt van template.',
-    });
-  }),
-);
-
-// Dashboard summary endpoint
-router.get(
-  '/summary',
-  authenticateToken,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-    if (!associationId) {
-      throw new ApiError(400, 'Gebruiker heeft geen vereniging.');
-    }
-
-    const userId = req.user!.id;
-
-    // Get counts by status
-    const statusCounts = db
-      .prepare(
-        `
-        SELECT status, COUNT(*) as count
-        FROM tasks
-        WHERE association_id = ?
-        GROUP BY status
-    `,
-      )
-      .all(associationId) as any[];
-
-    // Get my tasks (assigned to me, not done)
-    const myTasks = db
-      .prepare(
-        `
-        SELECT t.*, tl.name AS list_name, tl.color AS list_color
-        FROM tasks t
-        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
-        WHERE t.association_id = ? AND t.assigned_to = ? AND t.status NOT IN ('done', 'cancelled')
-        ORDER BY t.priority DESC, t.due_date ASC NULLS LAST
-        LIMIT 5
-    `,
-      )
-      .all(associationId, userId);
-
-    // Get overdue tasks
-    const now = new Date().toISOString();
-    const overdueTasks = db
-      .prepare(
-        `
-        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
-            u.first_name || ' ' || u.last_name AS assigned_to_name
-        FROM tasks t
-        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
-        LEFT JOIN users u ON t.assigned_to = u.id
-        WHERE t.association_id = ? AND t.due_date < ? AND t.status NOT IN ('done', 'cancelled')
-        ORDER BY t.due_date ASC
-        LIMIT 5
-    `,
-      )
-      .all(associationId, now);
-
-    // Get recent completed tasks
-    const recentCompleted = db
-      .prepare(
-        `
-        SELECT t.*, tl.name AS list_name, tl.color AS list_color,
-            u.first_name || ' ' || u.last_name AS assigned_to_name
-        FROM tasks t
-        LEFT JOIN task_lists tl ON t.task_list_id = tl.id
-        LEFT JOIN users u ON t.assigned_to = u.id
-        WHERE t.association_id = ? AND t.status = 'done'
-        ORDER BY t.completed_at DESC
-        LIMIT 5
-    `,
-      )
-      .all(associationId);
-
-    // Build status summary
-    const statusSummary: Record<string, number> = {
-      todo: 0,
-      in_progress: 0,
-      review: 0,
-      done: 0,
-      cancelled: 0,
-    };
-
-    statusCounts.forEach((s: any) => {
-      statusSummary[s.status] = s.count;
-    });
-
-    const mapTask = (t: any) => ({
-      id: t.id,
-      title: t.title,
-      status: t.status,
-      priority: t.priority,
-      dueDate: t.due_date,
-      listName: t.list_name,
-      listColor: t.list_color,
-      assignedToName: t.assigned_to_name,
-    });
-
-    res.json({
-      statusSummary,
-      totalOpen: statusSummary.todo + statusSummary.in_progress + statusSummary.review,
-      myTasks: myTasks.map(mapTask),
-      overdueTasks: overdueTasks.map(mapTask),
-      recentCompleted: recentCompleted.map(mapTask),
     });
   }),
 );

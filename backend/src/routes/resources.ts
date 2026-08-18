@@ -199,6 +199,74 @@ router.get(
   }),
 );
 
+// LET OP: deze letterlijke routes staan bewust boven /:id.
+// Express matcht in registratievolgorde, dus met /:id ervoor kwam een
+// verzoek hier terecht bij de :id-handler en antwoordde die 404.
+
+// GET /resources/bookings - List all bookings
+router.get(
+  '/bookings',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const { resourceId, status, startDate, endDate, myBookings } = req.query;
+    const userId = req.user!.id;
+
+    let query = `
+      SELECT rb.*, r.name as resource_name, r.resource_type,
+        u.first_name || ' ' || u.last_name as booked_by_name
+      FROM resource_bookings rb
+      JOIN resources r ON rb.resource_id = r.id
+      JOIN users u ON rb.user_id = u.id
+      WHERE r.association_id = ?
+    `;
+    const params: any[] = [associationId];
+
+    if (resourceId) {
+      query += ' AND rb.resource_id = ?';
+      params.push(resourceId);
+    }
+    if (status) {
+      query += ' AND rb.status = ?';
+      params.push(status);
+    }
+    if (startDate) {
+      query += ' AND rb.start_datetime >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND rb.end_datetime <= ?';
+      params.push(endDate);
+    }
+    if (myBookings === 'true') {
+      query += ' AND rb.user_id = ?';
+      params.push(userId);
+    }
+
+    query += ' ORDER BY rb.start_datetime DESC';
+
+    const bookings = db.prepare(query).all(...params);
+
+    res.json(
+      bookings.map((b: any) => ({
+        id: b.id,
+        resourceId: b.resource_id,
+        resourceName: b.resource_name,
+        resourceType: b.resource_type,
+        userId: b.user_id,
+        bookedByName: b.booked_by_name,
+        title: b.title,
+        description: b.description,
+        startDatetime: b.start_datetime,
+        endDatetime: b.end_datetime,
+        status: b.status,
+        notes: b.notes,
+        createdAt: b.created_at,
+      })),
+    );
+  }),
+);
+
 // GET /resources/:id - Get resource details
 router.get(
   '/:id',
@@ -496,70 +564,6 @@ router.delete(
 // =====================================================
 // BOOKINGS
 // =====================================================
-
-// GET /resources/bookings - List all bookings
-router.get(
-  '/bookings',
-  authenticateToken,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-    const { resourceId, status, startDate, endDate, myBookings } = req.query;
-    const userId = req.user!.id;
-
-    let query = `
-      SELECT rb.*, r.name as resource_name, r.resource_type,
-        u.first_name || ' ' || u.last_name as booked_by_name
-      FROM resource_bookings rb
-      JOIN resources r ON rb.resource_id = r.id
-      JOIN users u ON rb.user_id = u.id
-      WHERE r.association_id = ?
-    `;
-    const params: any[] = [associationId];
-
-    if (resourceId) {
-      query += ' AND rb.resource_id = ?';
-      params.push(resourceId);
-    }
-    if (status) {
-      query += ' AND rb.status = ?';
-      params.push(status);
-    }
-    if (startDate) {
-      query += ' AND rb.start_datetime >= ?';
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ' AND rb.end_datetime <= ?';
-      params.push(endDate);
-    }
-    if (myBookings === 'true') {
-      query += ' AND rb.user_id = ?';
-      params.push(userId);
-    }
-
-    query += ' ORDER BY rb.start_datetime DESC';
-
-    const bookings = db.prepare(query).all(...params);
-
-    res.json(
-      bookings.map((b: any) => ({
-        id: b.id,
-        resourceId: b.resource_id,
-        resourceName: b.resource_name,
-        resourceType: b.resource_type,
-        userId: b.user_id,
-        bookedByName: b.booked_by_name,
-        title: b.title,
-        description: b.description,
-        startDatetime: b.start_datetime,
-        endDatetime: b.end_datetime,
-        status: b.status,
-        notes: b.notes,
-        createdAt: b.created_at,
-      })),
-    );
-  }),
-);
 
 // POST /resources/bookings - Create booking
 router.post(
