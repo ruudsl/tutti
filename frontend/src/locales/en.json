@@ -144,6 +144,8 @@
     "off": "Off",
     "enabled": "Module switched on.",
     "disabled": "Module switched off. The data is kept.",
+    "errorNotDeployed": "This server does not know the modules screen yet. The backend is probably still running an older version: restart or redeploy it.",
+    "errorNotAdmin": "Only administrators can switch modules on and off.",
     "errorLoad": "Could not load the modules.",
     "retry": "Try again",
     "empty": "There are no modules to switch on or off yet.",

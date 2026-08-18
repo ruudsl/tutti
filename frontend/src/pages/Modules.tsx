@@ -26,6 +26,7 @@ export default function Modules() {
     data: modules,
     isLoading,
     isError,
+    error,
     refetch,
   } = useQuery({
     queryKey: ['module-settings'],
@@ -58,15 +59,28 @@ export default function Modules() {
   // alleen de kop en de toelichting, zonder een enkele schakelaar en zonder
   // uitleg waarom. Dat ziet eruit als een kapotte pagina.
   if (isError) {
+    // "Het lukte niet" laat een beheerder met lege handen staan. De drie
+    // gevallen die hier echt voorkomen hebben elk een ander vervolg, dus die
+    // krijgen elk hun eigen zin.
+    const status = (error as { response?: { status?: number } } | null)?.response?.status;
+    const message =
+      status === 404
+        ? t('modules.errorNotDeployed')
+        : status === 403
+          ? t('modules.errorNotAdmin')
+          : t('modules.errorLoad');
+
     return (
       <div>
         <h1 className="mb-3">{t('modules.title')}</h1>
         <div className="alert alert-danger">
-          <Icon name="warning" /> {t('modules.errorLoad')}
+          <Icon name="warning" /> {message}
         </div>
-        <button className="btn btn-secondary" onClick={() => refetch()}>
-          <Icon name="refresh" /> {t('modules.retry')}
-        </button>
+        {status !== 403 && (
+          <button className="btn btn-secondary" onClick={() => refetch()}>
+            <Icon name="refresh" /> {t('modules.retry')}
+          </button>
+        )}
       </div>
     );
   }

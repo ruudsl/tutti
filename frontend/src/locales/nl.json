@@ -144,6 +144,8 @@
     "off": "Uit",
     "enabled": "Module aangezet.",
     "disabled": "Module uitgezet. De gegevens blijven bewaard.",
+    "errorNotDeployed": "Deze server kent het modulescherm nog niet. De backend draait waarschijnlijk nog een oudere versie: herstart of implementeer hem opnieuw.",
+    "errorNotAdmin": "Alleen beheerders kunnen modules aan- en uitzetten.",
     "errorLoad": "De modules konden niet worden opgehaald.",
     "retry": "Opnieuw proberen",
     "empty": "Er zijn nog geen modules die aan of uit gezet kunnen worden.",
