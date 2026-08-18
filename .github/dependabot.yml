@@ -16,14 +16,31 @@ updates:
         dependency-type: 'production'
         update-types:
           - 'patch'
-      # Majors werden hiervoor categorisch genegeerd. Daardoor kwam er nooit
-      # een PR voor kwetsbaarheden die alleen in een major zijn opgelost, en
-      # bleven acht advisories maandenlang onzichtbaar staan. Ze komen nu wel
-      # binnen, gebundeld in een eigen PR zodat ze de lijst niet overspoelen
-      # en bewust beoordeeld worden.
-      major-updates:
+    # Majors worden bewust NIET gegroepeerd.
+    #
+    # Ze werden eerst categorisch genegeerd, waardoor er nooit een PR kwam voor
+    # kwetsbaarheden die alleen in een major zijn opgelost. Daarna stonden ze
+    # in een eigen groep, met als gedachte dat een bundel de lijst niet zou
+    # overspoelen. Dat pakte precies verkeerd uit: PR #111 bevatte 27 majors in
+    # een keer, waaronder express 4->5 en react 18->19. Zo'n PR is geen
+    # afweging maar een herschrijving, en niemand gaat hem samenvoegen.
+    #
+    # Zonder groep opent Dependabot er een per pakket. Dat zijn er meer, maar
+    # elk ervan is te beoordelen en los samen te voegen.
+    ignore:
+      # Vite 8 draait op Rolldown en accepteert geen functie meer voor
+      # manualChunks; vite.config.ts gebruikt die wel. Getest op 2026-08-18:
+      # de build faalt met "manualChunks is not a function". Weghalen zodra
+      # de chunkverdeling is omgeschreven.
+      - dependency-name: 'vite'
         update-types:
-          - 'major'
+          - 'version-update:semver-major'
+      # plugin-react 5 en hoger geeft "Missing field moduleType" en een blanco
+      # pagina; getest op 2026-08-18, zes E2E-tests vielen om. Hoort bij de
+      # overstap naar Vite 8 en gaat samen met de regel hierboven weg.
+      - dependency-name: '@vitejs/plugin-react'
+        update-types:
+          - 'version-update:semver-major'
     commit-message:
       prefix: 'chore(deps)'
     labels:
