@@ -499,7 +499,7 @@ export default function MusicTitles() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>{t('titles.title')}</h1>
         </div>
         <SkeletonTable rows={10} columns={5} />

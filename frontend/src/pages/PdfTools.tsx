@@ -545,7 +545,7 @@ export default function PdfTools() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('pdfTools.title')}</h1>
       </div>
 

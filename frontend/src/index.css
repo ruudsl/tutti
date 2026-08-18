@@ -6732,10 +6732,21 @@ a:not(.btn):not(.nav-link):not(.sidebar-direct-link):not(.sidebar-sub-link):hove
    gebruiker niet per pagina hoeft te zoeken waar hij iets kan beginnen. */
 .page-header {
   display: flex;
-  align-items: flex-start;
+  /* Uitlijnen op het midden, zoals de 47 pagina's die dit met de hand deden.
+     Ook met een omschrijving eronder blijft de hoofdactie zo op ooghoogte van
+     de titel staan. */
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
+  /* Pagina's die nog geen .page-wrapper hebben, krijgen de ruimte eronder van
+     deze marge. Binnen .page regelt de gap dat al, dus daar valt hij weg. */
+  margin-bottom: var(--space-4);
+}
+
+.page > .page-header,
+.page-container > .page-header {
+  margin-bottom: 0;
 }
 
 .page-heading {

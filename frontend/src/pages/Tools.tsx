@@ -8,7 +8,7 @@ export default function Tools() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('tools.title')}</h1>
       </div>
 

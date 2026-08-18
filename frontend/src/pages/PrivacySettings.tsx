@@ -102,7 +102,7 @@ export default function PrivacySettings() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('privacy.title')}</h1>
         {hasUnsavedChanges && (
           <button className="btn btn-primary" onClick={handleSave} disabled={updateMutation.isPending}>

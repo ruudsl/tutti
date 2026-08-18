@@ -86,7 +86,7 @@ export default function ImslpBrowser() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="page-header">
         <h1>{t('imslp.browserTitle')}</h1>
         <a href="https://imslp.org" target="_blank" rel="noopener noreferrer" className="btn btn-outline">
           {t('imslp.openImslp')}

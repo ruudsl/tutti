@@ -155,7 +155,7 @@ export default function HolidaySettings() {
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="page-header">
           <h1>{t('holidays.title')}</h1>
         </div>
         <SkeletonTable rows={6} columns={3} />
