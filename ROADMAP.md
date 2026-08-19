@@ -153,7 +153,7 @@ Gestructureerde GDPR / privacy-by-design review:
 
 - [ ] Privacy Impact Assessment (PIA) — _nog op te stellen; checklist staat in `docs/GDPR.md`_
 - [x] Data Processing Agreement (DPA) template
-- [x] Leden data export functie (GDPR Art. 20)
+- [x] Leden data export functie (GDPR Art. 20) — _werkte tot 19-08-2026 niet: de route stond onder `/:id` en was daardoor onbereikbaar, en de query eronder vroeg kolommen op die niet in `activity_log` bestaan. Beide gerepareerd en geverifieerd tegen een draaiende server_
 - [x] Account verwijdering met cascade (GDPR Art. 17)
 - [x] Bewaartermijnen configuratie per data type
 - [x] Privacy policy template
