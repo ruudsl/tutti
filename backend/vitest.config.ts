@@ -14,21 +14,56 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'lcov'],
-      // Werkelijk op dit moment: 47,4 / 35,8 / 50,5 / 47,4.
+
+      // `all` en `include` zijn hier het belangrijkste.
       //
-      // De percentages zijn gedaald ten opzichte van de vorige stand
-      // (54,4 / 43,1 / 56,9 / 54,6) doordat tasks, resources en equipment nu
-      // in de test-app gemount staan voor de routevolgorde-regressietests.
-      // Dat zijn ruim 1200 extra statements in de noemer die nauwelijks
-      // gedekt zijn. In absolute zin ging de dekking juist omhoog:
-      // 2486 -> 2746 gedekte statements.
+      // Zonder deze twee telt de v8-provider alleen bestanden die een test
+      // toevallig inlaadt. Een bestand dat geen enkele test aanraakt verdwijnt
+      // dan uit de noemer in plaats van als nul mee te tellen. Het gemeten
+      // getal ging daardoor over 6140 statements terwijl de backend er 22056
+      // heeft: ruim zeventig procent van de code werd niet eens bekeken.
+      // Bestanden als accounting.ts, tickets.ts, events.ts en analytics.ts -
+      // bij elkaar ruim tienduizend regels - kwamen in het rapport niet voor.
       //
-      // Doel voor WP8 blijft >80%.
+      // Dat gaf ook een averechtse prikkel. Een test toevoegen trekt het
+      // bestand dat hij aanroept de noemer in, waardoor het percentage daalt
+      // terwijl er juist meer getest wordt. Precies dat gebeurde eerder: van
+      // 54,4 naar 47,4 procent nadat er tests bij kwamen. Sturen op zo'n getal
+      // beloont het niet schrijven van tests.
+      //
+      // In oudere Vitest-versies heette dit `all: true`. Die optie bestaat in
+      // versie 4 niet meer en wordt stilzwijgend genegeerd; `include` doet nu
+      // het werk. Hem laten staan zou de typecheck breken en de indruk wekken
+      // dat hij iets doet.
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/__tests__/**',
+        'src/**/*.d.ts',
+        // Losstaande onderhoudscommando's; die draaien niet in de applicatie.
+        // Migraties staan er bewust wel in: die kunnen stukgaan, en dat is in
+        // de praktijk ook gebeurd.
+        'src/scripts/**',
+      ],
+
+      // Gemeten over de hele backend op 19-08-2026:
+      //   statements 12,86 (2838/22056)
+      //   branches    9,11 (1207/13242)
+      //   functions  14,29 (379/2652)
+      //   lines      12,89 (2763/21419)
+      //
+      // Deze drempels zijn niet te vergelijken met de eerdere 46 / 34 / 49 /
+      // 46: die golden over een kwart van de code. De hoeveelheid geteste code
+      // is niet veranderd - 2838 gedekte statements, voor en na - alleen de
+      // noemer klopt nu.
+      //
+      // Het doel van >80 procent uit WP8 staat daarmee veel verder weg dan het
+      // leek: daarvoor moeten er ruim veertienduizend statements bij afgedekt
+      // worden.
       thresholds: {
-        statements: 46,
-        branches: 34,
-        functions: 49,
-        lines: 46,
+        statements: 12,
+        branches: 8,
+        functions: 13,
+        lines: 12,
       },
     },
   },

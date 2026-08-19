@@ -88,13 +88,28 @@ jobs:
 
       - run: npm ci
 
-      # Deze stap haalde de browser eens niet binnen en bleef bijna een uur
-      # hangen, terwijl hij normaal in een minuut klaar is. Zonder eigen limiet
-      # eet zo'n hang de hele tijdslimiet van de job op, en blijft de pull
-      # request wachten op iets wat nooit komt.
+      # --with-deps draait apt-get, en dat liep twee runs achter elkaar vast op
+      # de Ubuntu-spiegel van de runner: de Azure-spiegel antwoordde niet, de
+      # terugval haalde de InRelease-bestanden nog op en daarna gebeurde er
+      # zeven minuten niets. Normaal is deze stap in een minuut klaar.
+      #
+      # De installatie van de browser zelf gaat buiten apt om. Loopt het
+      # apt-deel vast, dan kappen we dat af en halen we alleen de browser op;
+      # de runner-image van ubuntu-latest brengt de systeembibliotheken al mee.
+      # De job draait dan gewoon door in plaats van te stranden op iets wat
+      # niet aan dit project ligt.
+      #
+      # De tijdslimiet op de stap blijft als vangnet voor het geval ook de
+      # terugval blijft hangen.
       - name: Install Playwright browsers
         timeout-minutes: 8
-        run: npx playwright install chromium --with-deps
+        run: |
+          if timeout 240 npx playwright install chromium --with-deps; then
+            echo "browser en systeembibliotheken geinstalleerd"
+          else
+            echo "apt liep vast of faalde; alleen de browser ophalen"
+            timeout 180 npx playwright install chromium
+          fi
 
       - name: Seed E2E database
         run: npm run seed:e2e --workspace=backend
