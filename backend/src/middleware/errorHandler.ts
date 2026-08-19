@@ -35,12 +35,60 @@ export function asyncHandler<T extends Request = Request>(
   };
 }
 
+/**
+ * Veldnamen waarvan de inhoud nooit in een logregel mag belanden.
+ *
+ * De foutlogger schreef hieronder de volledige aanvraag weg. Bij een mislukte
+ * Spond-koppeling stond het wachtwoord van de gebruiker daardoor leesbaar in
+ * de productielogs. Logs worden bewaard, doorgestuurd en door meer mensen
+ * gelezen dan de aanvraag zelf, dus dit is een lek en geen ongemak.
+ */
+const GEHEIME_VELDEN = [
+  'password',
+  'passwordConfirm',
+  'currentPassword',
+  'newPassword',
+  'token',
+  'accessToken',
+  'refreshToken',
+  'apiKey',
+  'secret',
+  'clientSecret',
+  'authorization',
+  'mfaCode',
+  'recoveryCode',
+];
+
+/**
+ * Vervang de inhoud van gevoelige velden door een markering. Blijft werken bij
+ * geneste objecten, want een aanvraag kan gegevens meesturen als { config: {
+ * password } }. Arrays worden meegenomen zodat een lijst met koppelingen niet
+ * alsnog alles doorlaat.
+ */
+export function maskeerGeheimen(waarde: unknown, diepte = 0): unknown {
+  if (diepte > 6 || waarde === null || typeof waarde !== 'object') return waarde;
+
+  if (Array.isArray(waarde)) {
+    return waarde.map((item) => maskeerGeheimen(item, diepte + 1));
+  }
+
+  const uit: Record<string, unknown> = {};
+  for (const [sleutel, item] of Object.entries(waarde as Record<string, unknown>)) {
+    if (GEHEIME_VELDEN.some((veld) => veld.toLowerCase() === sleutel.toLowerCase())) {
+      uit[sleutel] = '[weggelaten]';
+    } else {
+      uit[sleutel] = maskeerGeheimen(item, diepte + 1);
+    }
+  }
+  return uit;
+}
+
 // Central error handling middleware
 export function errorHandler(err: Error | ApiError, req: Request, res: Response, next: NextFunction): void {
   // Log the error with full details for debugging
   logger.error(`[${req.method} ${req.path}] ${err.name}: ${err.message}`, {
     stack: err.stack,
-    body: req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
+    body: req.body && Object.keys(req.body).length > 0 ? maskeerGeheimen(req.body) : undefined,
   });
 
   // Handle known API errors

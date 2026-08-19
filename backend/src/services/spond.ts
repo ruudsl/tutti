@@ -35,6 +35,27 @@ export function encryptPassword(plaintext: string): string {
  * verschil te zien: hier moet je de koppeling opnieuw instellen, daar je
  * wachtwoord controleren.
  */
+/**
+ * Fout die zegt: het inloggen bij Spond zelf is misgegaan.
+ *
+ * De aanroepende code moet kunnen zien wat er gebeurde. Weigerde Spond de
+ * gegevens (401 of 403), dan klopt het wachtwoord niet. Kwam er een 5xx, dan
+ * ligt het aan Spond. Kwam er helemaal geen antwoord, dan konden we er niet
+ * bij. Dat zijn drie verschillende problemen met drie verschillende
+ * oplossingen, en de gebruiker hoort niet bij alle drie te lezen dat hij zijn
+ * wachtwoord moet controleren.
+ */
+export class SpondLoginError extends Error {
+  constructor(
+    message: string,
+    readonly reason: 'rejected' | 'unreachable' | 'unexpected',
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = 'SpondLoginError';
+  }
+}
+
 export class SpondCredentialsUnreadableError extends Error {
   constructor() {
     super('Het opgeslagen Spond-wachtwoord kan niet worden ontsleuteld.');
@@ -96,24 +117,91 @@ export class SpondClient {
     private password: string,
   ) {}
 
+  /**
+   * Aanmeldpaden, in volgorde van proberen.
+   *
+   * Uit de productielogs: Spond antwoordde op /login met een 404 en
+   * errorCode 404. Het pad bestaat dus niet meer; de gegevens van de gebruiker
+   * werden nooit gecontroleerd. Spond zet zijn aanmelding tegenwoordig onder
+   * auth2. Het oude pad blijft als tweede staan, zodat een omgeving die nog op
+   * de vorige versie draait blijft werken - en zodat de logs laten zien welk
+   * pad het wél deed.
+   */
+  private static readonly LOGIN_PATHS = ['/auth2/login', '/login'];
+
+  private async postLogin(path: string): Promise<Response> {
+    try {
+      return await fetch(`${SPOND_API_BASE}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Spond weigert aanvragen zonder herkenbare afzender. Node stuurt
+          // van zichzelf niets bruikbaars mee, wat een 403 oplevert die niets
+          // met het wachtwoord te maken heeft.
+          'User-Agent': 'Tutti/1.0 (+https://github.com/ruudsl/tutti)',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ email: this.username, password: this.password }),
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      logger.error('Spond niet bereikbaar', { path, detail });
+      throw new SpondLoginError(`Spond was niet bereikbaar: ${detail}`, 'unreachable');
+    }
+  }
+
   async login(): Promise<void> {
-    const res = await fetch(`${SPOND_API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: this.username, password: this.password }),
-    });
+    let res: Response | null = null;
+    let gebruiktPad = '';
+
+    for (const path of SpondClient.LOGIN_PATHS) {
+      const poging = await this.postLogin(path);
+      // Alleen bij een 404 heeft het zin het volgende pad te proberen. Een 401
+      // betekent dat we het juiste adres te pakken hebben en dat de gegevens
+      // worden afgewezen; dan moeten we niet doorzoeken.
+      if (poging.status === 404) {
+        logger.warn('Spond kent dit aanmeldpad niet', { path });
+        continue;
+      }
+      res = poging;
+      gebruiktPad = path;
+      break;
+    }
+
+    if (!res) {
+      throw new SpondLoginError(
+        `Spond kent geen van de bekende aanmeldadressen (${SpondClient.LOGIN_PATHS.join(', ')}). ` +
+          'Waarschijnlijk is hun API gewijzigd.',
+        'unexpected',
+        404,
+      );
+    }
 
     if (!res.ok) {
       const text = await res.text();
-      logger.error('Spond login failed', { status: res.status, body: text });
-      throw new Error(`Spond login failed: ${res.status}`);
+      logger.error('Spond weigerde het inloggen', {
+        path: gebruiktPad,
+        status: res.status,
+        body: text.slice(0, 500),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        throw new SpondLoginError('Spond wees de inloggegevens af.', 'rejected', res.status);
+      }
+      throw new SpondLoginError(`Spond antwoordde met status ${res.status}.`, 'unexpected', res.status);
     }
 
     const data = (await res.json()) as { loginToken?: string; token?: string };
     this.token = data.loginToken || data.token || null;
     if (!this.token) {
-      throw new Error('No token received from Spond');
+      logger.error('Spond gaf geen token terug', { path: gebruiktPad, keys: Object.keys(data) });
+      throw new SpondLoginError(
+        'Spond gaf geen aanmeldtoken terug. Mogelijk is de koppeling met tweestapsverificatie beveiligd.',
+        'unexpected',
+      );
     }
+
+    logger.info('Aangemeld bij Spond', { path: gebruiktPad });
   }
 
   private async request(path: string, params?: Record<string, string>): Promise<any> {
