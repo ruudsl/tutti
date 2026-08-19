@@ -64,6 +64,47 @@
 
 Go back to Render.com and set `FRONTEND_URL` to the Vercel URL for CORS.
 
+## Staging
+
+Staging is een tweede, losstaande omgeving die automatisch wordt bijgewerkt zodra CI op `main` slaagt. Zo is een wijziging te bekijken op een draaiende installatie voordat productie hem krijgt.
+
+De workflow (`.github/workflows/deploy-staging.yml`) doet drie dingen: hij start de uitrol, wacht tot de omgeving weer antwoordt, en draait daarna een rookproef (`scripts/smoke-test.mjs`). Die laatste stap is er omdat een geslaagde uitrol alleen zegt dat het proces startte — niet dat de migraties doorliepen of dat de database staat.
+
+### Inrichten
+
+**1. Maak een staging-service in Render**
+
+Dezelfde instellingen als de productie-service, met drie verschillen:
+
+| Instelling     | Waarde                                                              |
+| -------------- | ------------------------------------------------------------------- |
+| Name           | `tutti-staging`                                                     |
+| Branch         | `main`                                                              |
+| Auto-Deploy    | **Off** — de workflow start de uitrol, anders gebeurt het twee keer |
+| `DB_PATH`      | een eigen pad op een eigen disk, nooit die van productie            |
+| `FRONTEND_URL` | de staging-URL van de frontend                                      |
+
+Geef staging een **eigen `JWT_SECRET`**. Wordt die gedeeld met productie, dan is een token van staging ook geldig op productie.
+
+**2. Zet de gegevens in GitHub**
+
+| Soort    | Naam                         | Waar vandaan                                                                     |
+| -------- | ---------------------------- | -------------------------------------------------------------------------------- |
+| Secret   | `RENDER_STAGING_DEPLOY_HOOK` | Render → staging-service → Settings → Deploy Hook                                |
+| Variable | `STAGING_URL`                | de URL van de staging-service, bijvoorbeeld `https://tutti-staging.onrender.com` |
+
+Onder Settings → Secrets and variables → Actions; de eerste bij _Secrets_, de tweede bij _Variables_.
+
+Ontbreekt een van beide, dan stopt de workflow met een uitleg in de samenvatting in plaats van met een rode kruis. Een fout die je niet kunt oplossen zonder toegang tot de instellingen leert je niets, en went eraan dat rood normaal is.
+
+### De rookproef losstaand draaien
+
+```bash
+node scripts/smoke-test.mjs https://tutti-staging.onrender.com
+```
+
+Hij logt nergens in — daar zouden inloggegevens voor nodig zijn, en die horen niet in een uitrolstap. Wat hij wel controleert: of de gezondheidsroute antwoordt, of de database bereikbaar is, of een beschermde route netjes 401 geeft (niet 200, want dan ligt de beveiliging eraf, en niet 500, want dan is de middleware stuk), en of een onbekend pad 404 geeft.
+
 ## Docker (Self-hosting)
 
 The easiest way to self-host Tutti is using Docker Compose:

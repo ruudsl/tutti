@@ -211,7 +211,8 @@ Gestructureerde GDPR / privacy-by-design review:
 - [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
-- [ ] Automated staging deployments — _nog niet ingericht_
+- [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_
+  - Vereist nog twee instellingen in GitHub: secret `RENDER_STAGING_DEPLOY_HOOK` en variable `STAGING_URL`. Zonder die twee stopt de workflow met een uitleg in plaats van met een fout. Inrichten staat in `docs/DEPLOYMENT.md`
 - [x] Coverage badges in README
 
 ---

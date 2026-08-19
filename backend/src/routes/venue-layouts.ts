@@ -623,13 +623,31 @@ router.post(
 // ==========================================
 
 /**
+ * De stoelen van een concert hangen onder /api/concerts/:id/seats en niet
+ * onder /api/venue-layouts. Ze zaten daarom in dezelfde router, die kaal op
+ * /api werd gemount.
+ *
+ * Daarmee stonden ook '/' en '/:id' op de wortel van de API: /api/ gaf de
+ * zaalindelingen terug en /api/<wat dan ook> antwoordde met "Venue layout not
+ * found". Elk onbekend pad met een enkel segment kwam daar dus uit in plaats
+ * van bij de 404-handler.
+ *
+ * Dat was ook niet de bedoeling: de Swagger-beschrijvingen in dit bestand
+ * noemen /venue-layouts, /venue-layouts/{id} en /venue-layouts/{id}/seats. De
+ * mount week af van de eigen documentatie. De zaalindelingen staan nu onder
+ * /api/venue-layouts, zoals beschreven, en alleen de concertstoelen blijven op
+ * de wortel.
+ */
+export const concertSeatsRouter = Router();
+
+/**
  * @swagger
  * /concerts/{id}/seats:
  *   get:
  *     summary: Get seat availability for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.get(
+concertSeatsRouter.get(
   '/concerts/:id/seats',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -785,7 +803,7 @@ router.get(
  *     summary: Reserve seats temporarily for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.post(
+concertSeatsRouter.post(
   '/concerts/:id/seats/reserve',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -909,7 +927,7 @@ router.post(
  *     summary: Release seat reservations for a concert
  *     tags: [Venue Layouts, Tickets]
  */
-router.delete(
+concertSeatsRouter.delete(
   '/concerts/:id/seats/reserve',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
