@@ -1260,7 +1260,10 @@ router.post(
         SELECT DISTINCT u.id, u.email, u.first_name, u.last_name
         FROM users u
         WHERE u.association_id = ?
-        AND u.is_active = 1
+        -- Zie email-campaigns.ts: users heeft status, geen is_active. Deze
+        -- query zocht de leden op die nog niet gestemd hadden, en liep daar
+        -- altijd op stuk.
+        AND u.status = 'active'
         AND u.email IS NOT NULL
         AND u.id NOT IN (
             SELECT DISTINCT pv.user_id FROM poll_votes pv WHERE pv.poll_id = ?
