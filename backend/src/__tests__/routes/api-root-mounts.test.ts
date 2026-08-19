@@ -5,10 +5,13 @@
  * voorvoegsels bedienen. Allebei bleken ze verzoeken op te eten die ergens
  * anders thuishoren:
  *
- *   - stage-layouts heeft een router.get('/:id'). Op /api gemonteerd ving die
- *     elk /api/<een-segment> af dat daarvoor nog geen route had. /api/changelog
- *     en /api/csrf-token kwamen zo nooit aan: de eerste gaf "Podiumindeling
- *     niet gevonden", de tweede 401 omdat die route een token wil.
+ *   - stage-layouts en venue-layouts hebben allebei een route op '/:id'. Op
+ *     /api gemonteerd vingen die elk /api/<een-segment> af dat daarvoor nog
+ *     geen route had. /api/changelog en /api/csrf-token kwamen zo nooit aan.
+ *     Onderaan monteren verschoof dat naar de volgende router in plaats van
+ *     het op te lossen; die mounts dragen bovendien geen moduleguard, zodat de
+ *     detailroute bereikbaar bleef met de module uit. Nu staan alleen de
+ *     concertroutes van die bestanden nog op de wortel.
  *   - tickets had een kale router.use() met de module-guard erin. Die raakte
  *     elk verzoek dat langs de mount viel, ook verzoeken die deze router
  *     helemaal niet afhandelt. Stond kaartverkoop uit, dan gaf bijvoorbeeld
@@ -41,22 +44,67 @@ import { clearModuleCache } from '../../modules/service';
 const indexSource = fs.readFileSync(path.join(__dirname, '../../index.ts'), 'utf-8');
 const ticketsSource = fs.readFileSync(path.join(__dirname, '../../routes/tickets.ts'), 'utf-8');
 
-describe('de root-mount van stage-layouts staat onderaan', () => {
-  it.each(['/api/changelog', '/api/csrf-token'])('registreert %s voor de /api-mount', (route) => {
-    const mountIndex = indexSource.indexOf("app.use('/api', stageLayoutsRoutes)");
-    const routeIndex = indexSource.indexOf(`app.get('${route}'`);
+/**
+ * Zoek elke router die kaal op /api hangt, en bepaal uit welk bestand en onder
+ * welke naam die komt. Een standaard-export heet in het bronbestand `router`;
+ * een benoemde export draagt zijn eigen naam.
+ */
+function kaleApiMounts(): Array<{ naam: string; bestand: string; variabele: string }> {
+  const uit: Array<{ naam: string; bestand: string; variabele: string }> = [];
 
-    expect(routeIndex, `${route} niet gevonden in index.ts`).toBeGreaterThan(-1);
-    expect(routeIndex).toBeLessThan(mountIndex);
+  for (const match of indexSource.matchAll(/app\.use\('\/api',\s*([A-Za-z_$][\w$]*)\)/g)) {
+    const naam = match[1];
+    if (naam === 'generalLimiter') continue; // geen router maar een limiter
+
+    const standaard = new RegExp(`import\\s+${naam}(?:\\s*,\\s*\\{[^}]*\\})?\\s+from\\s+'([^']+)'`);
+    const benoemd = new RegExp(
+      `import\\s+(?:[A-Za-z_$][\\w$]*\\s*,\\s*)?\\{[^}]*\\b${naam}\\b[^}]*\\}\\s+from\\s+'([^']+)'`,
+    );
+
+    const viaStandaard = indexSource.match(standaard);
+    const viaBenoemd = indexSource.match(benoemd);
+    const pad = viaStandaard?.[1] ?? viaBenoemd?.[1];
+    if (!pad) continue;
+
+    uit.push({
+      naam,
+      bestand: path.join(__dirname, '../..', pad.replace(/^\.\//, '') + '.ts'),
+      // Bij een standaard-export heet de variabele in het bronbestand `router`.
+      variabele: viaStandaard ? 'router' : naam,
+    });
+  }
+
+  return uit;
+}
+
+describe('routers op de wortel van /api claimen geen wortelpaden', () => {
+  /**
+   * Dit is de eigenschap waar het om gaat, en die is sterker dan de volgorde
+   * van de mounts.
+   *
+   * Een router met een route op '/' of '/:iets' die kaal op /api hangt, biedt
+   * die route aan op de wortel van de API. Elk onbekend pad met een enkel
+   * segment komt daar dan uit: /api/onzin antwoordde met "Podiumindeling niet
+   * gevonden" en later met "Venue layout not found", allebei in plaats van een
+   * nette 404. Onderaan monteren verschoof dat probleem alleen naar de
+   * volgende router; het loste het niet op.
+   *
+   * Erger nog was dat zo'n mount geen moduleguard droeg, terwijl de nette
+   * mount van dezelfde router die wel had. De detailroute bleef daardoor
+   * bereikbaar met de module uit.
+   */
+  it('vindt minstens een kale /api-mount om te controleren', () => {
+    // Anders zou deze test stilletjes niets meer nakijken.
+    expect(kaleApiMounts().length).toBeGreaterThan(0);
   });
 
-  it('staat na alle andere /api-mounts', () => {
-    const mountIndex = indexSource.indexOf("app.use('/api', stageLayoutsRoutes)");
+  it.each(kaleApiMounts())('$naam biedt geen wortelroute aan', ({ bestand, variabele }) => {
+    const bron = fs.readFileSync(bestand, 'utf-8');
+    const wortelroutes = [
+      ...bron.matchAll(new RegExp(`${variabele}\\.(get|post|put|patch|delete)\\(\\s*\n?\\s*'(/|/:[^']*)'`, 'g')),
+    ].map((m) => `${m[1]} ${m[2]}`);
 
-    // De 404-handler op /api/* hoort er juist na te staan; die telt niet mee.
-    const specifiekeMounts = [...indexSource.matchAll(/app\.use\('\/api\/(?!\*)[^']*'/g)].map((m) => m.index ?? 0);
-
-    expect(Math.max(...specifiekeMounts)).toBeLessThan(mountIndex);
+    expect(wortelroutes, `${variabele} in ${path.basename(bestand)} claimt de wortel van /api`).toEqual([]);
   });
 });
 

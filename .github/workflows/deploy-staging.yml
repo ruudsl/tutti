@@ -1,0 +1,104 @@
+name: Deploy naar staging
+
+# Rolt uit naar staging zodra CI op main geslaagd is. Niet bij elke push:
+# een uitrol van een tak waarvan de tests omvielen heeft geen zin.
+on:
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types: [completed]
+  # Handmatig starten kan ook, bijvoorbeeld om een mislukte uitrol te herhalen.
+  workflow_dispatch:
+
+concurrency:
+  # Bij meerdere merges vlak achter elkaar telt alleen de laatste. Twee
+  # gelijktijdige uitrollen naar dezelfde omgeving lopen elkaar in de weg.
+  group: staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Uitrollen en controleren
+    runs-on: ubuntu-latest
+    # De wachtlus hieronder geeft na tien minuten zelf op. Deze grens vangt de
+    # gevallen die daar niet onder vallen, zoals een stap die vastloopt op een
+    # download.
+    timeout-minutes: 20
+    # Bij workflow_run draait dit ook als CI faalde; die uitrol slaan we over.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # Zonder de geheimen is er geen staging-omgeving om naartoe te rollen.
+      # Dan stopt deze workflow met een uitleg in plaats van met een rode kruis:
+      # een fout die je niet kunt oplossen zonder toegang tot de instellingen
+      # leert je niets, en went eraan dat rood normaal is.
+      - name: Controleer of staging is ingesteld
+        id: instellingen
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+          STAGING_URL: ${{ vars.STAGING_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ] || [ -z "$STAGING_URL" ]; then
+            echo 'ingesteld=nee' >> "$GITHUB_OUTPUT"
+            {
+              echo '### Staging is nog niet ingesteld'
+              echo
+              echo 'Deze workflow rolt pas uit als twee dingen bestaan:'
+              echo
+              echo '- **Secret** `RENDER_STAGING_DEPLOY_HOOK` — de Deploy Hook URL van de'
+              echo '  staging-service in Render (Settings → Deploy Hook).'
+              echo '- **Variable** `STAGING_URL` — de URL waarop staging bereikbaar is,'
+              echo '  bijvoorbeeld `https://tutti-staging.onrender.com`.'
+              echo
+              echo 'Zie `docs/DEPLOYMENT.md` voor het aanmaken van de staging-service.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'ingesteld=ja' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start de uitrol
+        if: steps.instellingen.outputs.ingesteld == 'ja'
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$DEPLOY_HOOK")
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "De deploy hook antwoordde met status $status"
+            exit 1
+          fi
+          echo "Uitrol gestart"
+
+      # Render bouwt en start opnieuw; hoe lang dat duurt hangt van het plan af.
+      # We wachten tot de nieuwe versie antwoordt in plaats van een vaste tijd
+      # aan te houden, want een vaste tijd is altijd of te kort of verspilling.
+      - name: Wacht tot staging weer antwoordt
+        if: steps.instellingen.outputs.ingesteld == 'ja'
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+        run: |
+          echo "Wachten op $STAGING_URL"
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null "$STAGING_URL/api/health"; then
+              echo "staging antwoordt na $((i * 10)) seconden"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "staging antwoordde niet binnen tien minuten"
+          exit 1
+
+      # Een geslaagde uitrol zegt alleen dat het proces startte. Deze controle
+      # raakt de paden die stukgaan als er onderweg iets misging.
+      - name: Rookproef
+        if: steps.instellingen.outputs.ingesteld == 'ja'
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+        run: node scripts/smoke-test.mjs "$STAGING_URL"

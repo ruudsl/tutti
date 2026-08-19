@@ -191,8 +191,10 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Huidige Status
 
-- Coverage backend (18-08-2026): statements 51,4%, branches 39,6%, functions 53,4%, lines 51,6%
-- CI-drempels backend (`backend/vitest.config.ts`): 48 / 37 / 50 / 48
+- Coverage backend (19-08-2026, over de **hele** backend): statements 13,1% (2838/21664), branches 9,3%, functions 14,5%, lines 13,1%
+- CI-drempels backend (`backend/vitest.config.ts`): 12 / 8 / 13 / 12 (statements / branches / functions / lines)
+- **De eerdere cijfers klopten niet.** Er stond geen `include` in de coverage-instellingen, en de v8-provider telt dan alleen bestanden die een test toevallig inlaadt. Bestanden die geen enkele test aanraakt verdwenen uit de noemer in plaats van als nul mee te tellen. De meting ging over 6140 van de 21664 statements — ruim zeventig procent van de code werd niet bekeken, waaronder `accounting.ts`, `tickets.ts`, `events.ts` en `analytics.ts` (samen ruim tienduizend regels)
+- Er zat ook een averechtse prikkel in: een test toevoegen trok het aangeroepen bestand de noemer in, waardoor het percentage dáálde terwijl er meer getest werd (54,4% → 47,4%). De hoeveelheid geteste code veranderde niet door deze correctie; alleen de noemer klopt nu
 - Integratietests draaien tegen het echte schema (`src/database/schema.ts` + migraties)
 - CI: GitHub Actions — jobs voor backend, frontend, E2E (Playwright), lint, security audit en Docker build
 - CD: Docker build in CI (geen registry push, geen staging deploy)
@@ -206,12 +208,16 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 
-- [ ] Unit tests: >80% coverage — _nu 51,4% statements / 39,6% branches_
+- [ ] Unit tests: >80% coverage — _nu 13,1% statements / 9,3% branches over de hele backend_
+  - **De 50 uur die hiervoor begroot staat is niet realistisch.** Van 2838 naar 80% betekent ruim veertienduizend statements erbij afdekken. Dat is werk van maanden, niet van een week
+  - Grootste gaten in wat wél gemeten werd: `music-pieces.ts` (472 ongedekte statements), `spond.ts` (339), `polls.ts` (303), `tasks.ts` (293), `concerts.ts` (266)
+  - Overweging voor de planning: een tussendoel dat wel haalbaar is (bijvoorbeeld 30%) zegt meer dan een doel dat niemand gaat halen
 - [x] Integration tests voor tenant isolatie
 - [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
-- [ ] Automated staging deployments — _nog niet ingericht_
+- [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_
+  - Vereist nog twee instellingen in GitHub: secret `RENDER_STAGING_DEPLOY_HOOK` en variable `STAGING_URL`. Zonder die twee stopt de workflow met een uitleg in plaats van met een fout. Inrichten staat in `docs/DEPLOYMENT.md`
 - [x] Coverage badges in README
 
 ---
@@ -269,7 +275,10 @@ Fase 1-4 zijn geïmplementeerd:
 - [x] App shortcuts (manifest)
 - [x] Share Target API
 - [x] Improved mobile touch UX
-- [ ] Lighthouse PWA score >90 — _nog niet gemeten in CI_
+- [x] Lighthouse gemeten in CI — _job `lighthouse` in `ci.yml`, mediaan van drie metingen tegen de gebouwde applicatie_
+  - Gemeten 19-08-2026: performance 75, accessibility 98, best-practices 96, seo 100
+  - De **PWA-categorie bestaat niet meer**: Lighthouse 12 heeft die geschrapt, inclusief de losse audits (`installable-manifest`, `service-worker`, `maskable-icon`). Een PWA-score van >90 is dus niet te halen omdat het getal niet meer bestaat. Wat die score controleerde staat nu als eigen controle in `scripts/lighthouse-check.mjs`
+- [ ] Prestatiescore naar >90 — _staat op 75; de hoofdbundel is 788 KB van in totaal 4,2 MB JavaScript, en dat kost onder de gesimuleerde 4G-verbinding 3,4 s tot de eerste weergave_
 
 ---
 

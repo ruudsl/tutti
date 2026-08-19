@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, optionalAuth, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
+import { requireModule } from '../middleware/requireModule';
 import logger from '../utils/logger';
 import { z } from 'zod';
 
@@ -439,13 +440,35 @@ router.post(
 // ==================== CONCERT STAGE ASSIGNMENTS ====================
 
 /**
+ * De podiumindeling van een concert hangt onder /api/concerts/:id/stage en
+ * niet onder /api/stage-layouts. Die routes zaten daarom in dezelfde router,
+ * die vervolgens twee keer werd gemount: een keer op /api/stage-layouts en
+ * een keer kaal op /api.
+ *
+ * Die tweede mount bood daarmee ook '/' en '/:id' aan op de wortel van de API.
+ * Dat had twee gevolgen. Elk onbekend pad met een enkel segment kwam bij
+ * '/:id' uit, dus /api/onzin antwoordde met "podiumindeling niet gevonden" of
+ * met 401 in plaats van een nette 404. En ernstiger: die mount had geen
+ * moduleguard, zodat de detailroute bereikbaar bleef terwijl de module stage
+ * uitstond - precies wat de guard moest voorkomen.
+ *
+ * Een eigen router lost allebei op. Wat hier niet in staat, is via /api ook
+ * niet te bereiken. De guard staat op de router zelf en niet op de mount,
+ * want bij een mount met een pad haalt Express dat pad van de url af, waarna
+ * de routes hieronder niet meer matchen.
+ */
+export const concertStageRouter = Router();
+
+concertStageRouter.use(optionalAuth, requireModule('stage'));
+
+/**
  * @swagger
  * /concerts/{id}/stage:
  *   get:
  *     summary: Get stage assignment for a concert
  *     tags: [Stage Layouts]
  */
-router.get(
+concertStageRouter.get(
   '/concerts/:id/stage',
   authenticateToken,
   concertStageCache,
@@ -524,7 +547,7 @@ router.get(
  *     summary: Save stage assignment for a concert
  *     tags: [Stage Layouts]
  */
-router.put(
+concertStageRouter.put(
   '/concerts/:id/stage',
   authenticateToken,
   requireRole('admin', 'music_committee', 'conductor'),
@@ -605,7 +628,7 @@ router.put(
  *     summary: Remove stage assignment from a concert
  *     tags: [Stage Layouts]
  */
-router.delete(
+concertStageRouter.delete(
   '/concerts/:id/stage',
   authenticateToken,
   requireRole('admin', 'music_committee', 'conductor'),
@@ -649,7 +672,7 @@ router.delete(
  *     summary: Get printable seat cards data for a concert
  *     tags: [Stage Layouts]
  */
-router.get(
+concertStageRouter.get(
   '/concerts/:id/stage/print',
   authenticateToken,
   concertStageCache,

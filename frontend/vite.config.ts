@@ -32,6 +32,19 @@ export default defineConfig({
       },
     },
   },
+  // `preview` serveert de productiebuild en erft de instellingen van `server`
+  // niet. Zonder deze eigen proxy komen API-aanroepen daar nergens aan, en
+  // blijft de applicatie in een laadtoestand hangen. Dat maakt elke meting aan
+  // de gebouwde app onbruikbaar - Lighthouse zag een pagina die nooit afkwam.
+  preview: {
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     target: 'esnext',
     rollupOptions: {

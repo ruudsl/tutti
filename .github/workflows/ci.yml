@@ -9,6 +9,7 @@ on:
 jobs:
   backend:
     name: Backend
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -38,6 +39,7 @@ jobs:
 
   frontend:
     name: Frontend
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -69,6 +71,7 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       # Dedicated E2E database, separate from any dev/prod database.
@@ -85,8 +88,28 @@ jobs:
 
       - run: npm ci
 
+      # --with-deps draait apt-get, en dat liep twee runs achter elkaar vast op
+      # de Ubuntu-spiegel van de runner: de Azure-spiegel antwoordde niet, de
+      # terugval haalde de InRelease-bestanden nog op en daarna gebeurde er
+      # zeven minuten niets. Normaal is deze stap in een minuut klaar.
+      #
+      # De installatie van de browser zelf gaat buiten apt om. Loopt het
+      # apt-deel vast, dan kappen we dat af en halen we alleen de browser op;
+      # de runner-image van ubuntu-latest brengt de systeembibliotheken al mee.
+      # De job draait dan gewoon door in plaats van te stranden op iets wat
+      # niet aan dit project ligt.
+      #
+      # De tijdslimiet op de stap blijft als vangnet voor het geval ook de
+      # terugval blijft hangen.
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        timeout-minutes: 8
+        run: |
+          if timeout 240 npx playwright install chromium --with-deps; then
+            echo "browser en systeembibliotheken geinstalleerd"
+          else
+            echo "apt liep vast of faalde; alleen de browser ophalen"
+            timeout 180 npx playwright install chromium
+          fi
 
       - name: Seed E2E database
         run: npm run seed:e2e --workspace=backend
@@ -105,6 +128,7 @@ jobs:
 
   lint:
     name: Lint
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -125,6 +149,7 @@ jobs:
 
   security:
     name: Security Audit
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -139,6 +164,7 @@ jobs:
 
   docker:
     name: Docker Build
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -174,3 +200,64 @@ jobs:
           DOMAIN: example.com
           TRAEFIK_DASHBOARD_AUTH: 'admin:dummy'
         run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
+
+  lighthouse:
+    name: Lighthouse
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    env:
+      DB_PATH: ${{ github.workspace }}/lighthouse-data/tutti.db
+      JWT_SECRET: lighthouse-only-secret-not-used-anywhere-else
+      FRONTEND_URL: http://localhost:3001
+      PORT: '3001'
+      # LET OP: NODE_ENV staat hier bewust niet. Op jobniveau geldt hij ook
+      # voor `npm ci`, en die slaat bij NODE_ENV=production alle
+      # devDependencies over - inclusief elke @types-package. De build viel dan
+      # om op tientallen "Could not find a declaration file"-fouten, terwijl de
+      # pakketten zelf wel stonden. Hij hoort alleen bij het starten van de
+      # applicatie, hieronder.
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # De backend serveert in productiemodus zelf de gebouwde frontend, en
+      # `npm start` draait eerst de migraties. Dat is dezelfde opzet als de
+      # Docker-image, dus meten we wat er ook echt draait - niet een
+      # ontwikkelserver met onverkleinde bestanden.
+      - name: Start de applicatie
+        # Alleen hier: in productiemodus serveert de backend zelf de gebouwde
+        # frontend, wat we willen meten.
+        env:
+          NODE_ENV: production
+        run: |
+          mkdir -p "$(dirname "$DB_PATH")"
+          npm start &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3001/api/health; then
+              echo "applicatie draait"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "applicatie kwam niet omhoog"
+          exit 1
+
+      - name: Lighthouse
+        run: node scripts/lighthouse-check.mjs http://localhost:3001/
+
+      - name: Bewaar het verslag
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-report
+          path: lighthouse-report.json
+          retention-days: 7

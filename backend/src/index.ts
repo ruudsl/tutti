@@ -78,7 +78,7 @@ import ticketsRoutes from './routes/tickets';
 import guestListRoutes from './routes/guest-list';
 import paymentSettingsRoutes from './routes/payment-settings';
 import discountCodesRoutes from './routes/discount-codes';
-import venueLayoutsRoutes from './routes/venue-layouts';
+import venueLayoutsRoutes, { concertSeatsRouter } from './routes/venue-layouts';
 import { createServer, Server as HttpServer } from 'http';
 import { initWebSocket, getIO } from './websocket';
 import { startScheduler as startSeatingScheduler } from './scheduler/seating-notifications';
@@ -119,7 +119,7 @@ import outfitsRoutes from './routes/outfits';
 import wikiRoutes from './routes/wiki';
 import workflowsRoutes from './routes/workflows';
 import performancesRoutes from './routes/performances';
-import stageLayoutsRoutes from './routes/stage-layouts';
+import stageLayoutsRoutes, { concertStageRouter } from './routes/stage-layouts';
 import modulesRoutes from './routes/modules';
 import { requireModule } from './middleware/requireModule';
 import { optionalAuth } from './middleware/auth';
@@ -427,7 +427,13 @@ app.use('/api', ticketsRoutes); // Tickets routes use multiple prefixes: /concer
 app.use('/api', guestListRoutes); // Guest list routes: /concerts/:id/guest-list, /guest-list/...
 app.use('/api/payment-settings', optionalAuth, requireModule('ticketing'), paymentSettingsRoutes);
 app.use('/api/discount-codes', discountCodesRoutes);
-app.use('/api', venueLayoutsRoutes); // Venue layouts routes: /venue-layouts, /concerts/:id/seats
+// De zaalindelingen stonden op de wortel van de API: deze router heeft routes
+// op '/' en '/:id', dus /api/ gaf de indelingen terug en /api/<wat dan ook>
+// antwoordde met "Venue layout not found" in plaats van een nette 404. De
+// Swagger-beschrijvingen in dat bestand noemen al /venue-layouts; alleen de
+// mount week daarvan af.
+app.use('/api/venue-layouts', venueLayoutsRoutes);
+app.use('/api', concertSeatsRouter); // /concerts/:id/seats en /concerts/:id/seats/reserve
 
 // Swagger API documentation
 if (config.isDevelopment) {
@@ -484,15 +490,17 @@ app.post('/', (req, res) => {
 
 // Root-level mount voor de /concerts/:id/stage-routes.
 //
-// Deze router hangt aan /api en heeft ook een router.get('/:id') voor
-// podiumindelingen. Daardoor vangt hij elk /api/<iets> met een enkel segment af
-// dat hierboven nog niet is afgehandeld, en antwoordt met "Podiumindeling niet
-// gevonden" - of met 401, want die route wil een token. Zo waren
-// /api/changelog en /api/csrf-token onbereikbaar.
+// Hier hing eerder de volledige podiumindeling-router. Die heeft ook een
+// route op '/:id', en op de wortel van de API ving die elk onbekend pad met
+// een enkel segment af: /api/onzin antwoordde met "Podiumindeling niet
+// gevonden", of met 401 omdat die route een token wil. Zo waren /api/changelog
+// en /api/csrf-token onbereikbaar. Onderaan zetten hielp daar tegen, maar
+// loste het niet op: de mount had geen moduleguard, dus de detailroute bleef
+// bereikbaar terwijl de module stage uitstond.
 //
-// Daarom staat deze mount helemaal onderaan, vlak voor de 404-handler: alles
-// wat een eigen route heeft, komt eerst.
-app.use('/api', stageLayoutsRoutes);
+// concertStageRouter bevat alleen de /concerts/:id/stage-routes en draagt de
+// guard zelf. Wat daar niet in staat, valt nu door naar de 404-handler.
+app.use('/api', concertStageRouter);
 
 // 404 handler for unknown API routes
 app.use('/api/*', notFoundHandler);
