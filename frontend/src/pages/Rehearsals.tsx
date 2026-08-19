@@ -495,6 +495,13 @@ export default function Rehearsals() {
   };
 
   // Spond handlers
+  // Bij een bestaande koppeling ligt het wachtwoord al versleuteld in de
+  // database. Het bewerkscherm maakt dat veld leeg, dus wie alleen een andere
+  // groep koos kon niet opslaan: de knop bleef uit. Leeg laten betekent nu
+  // "houd het huidige wachtwoord".
+  const spondWachtwoordBekend = Boolean(spondConfig?.configured);
+  const spondFormBruikbaar = Boolean(spondForm.username) && (Boolean(spondForm.password) || spondWachtwoordBekend);
+
   const handleSaveSpondConfig = async () => {
     try {
       await saveSpondConfig({
@@ -1674,6 +1681,9 @@ export default function Rehearsals() {
                           onChange={(e) => setSpondForm({ ...spondForm, password: e.target.value })}
                           placeholder={spondConfig?.configured ? '••••••••' : ''}
                         />
+                        {spondWachtwoordBekend && (
+                          <span className="form-help">{t('rehearsals.spond.passwordKeepHint')}</span>
+                        )}
                       </div>
                     </div>
                     <div className="form-group" style={{ marginTop: '0.75rem' }}>
@@ -1695,7 +1705,7 @@ export default function Rehearsals() {
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={handleLoadGroups}
-                          disabled={loadingGroups || !spondForm.username || !spondForm.password}
+                          disabled={loadingGroups || !spondFormBruikbaar}
                         >
                           {loadingGroups ? t('rehearsals.spond.loadingGroups') : t('rehearsals.spond.selectGroup')}
                         </button>
@@ -1705,7 +1715,7 @@ export default function Rehearsals() {
                       <button
                         className="btn btn-primary"
                         onClick={handleSaveSpondConfig}
-                        disabled={!spondForm.username || !spondForm.password}
+                        disabled={!spondFormBruikbaar}
                       >
                         {t('rehearsals.spond.saveConfig')}
                       </button>

@@ -1899,7 +1899,8 @@
       "lastSync": "Zuletzt synchronisiert",
       "never": "Nie",
       "enabled": "Verknüpfung aktiv",
-      "disabled": "Verknüpfung inaktiv"
+      "disabled": "Verknüpfung inaktiv",
+      "passwordKeepHint": "Leer lassen, um das aktuelle Passwort zu behalten."
     },
     "recurring": {
       "title": "Wiederkehrende Probe erstellen",

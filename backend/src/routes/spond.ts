@@ -104,9 +104,25 @@ router.put(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { username, password, groupId, syncEnabled } = req.body;
 
-    if (!username || !password) {
-      throw new ApiError(400, 'Gebruikersnaam en wachtwoord zijn verplicht.');
+    const bestaand = db
+      .prepare('SELECT id, username, password_encrypted FROM spond_config WHERE association_id = ?')
+      .get(req.user!.associationId) as { id: string; username: string; password_encrypted: string } | undefined;
+
+    if (!username) {
+      throw new ApiError(400, 'Een e-mailadres is verplicht.');
     }
+
+    // Het wachtwoord mag wegblijven zolang er al een koppeling staat voor
+    // hetzelfde account. Wie alleen een andere groep kiest, hoefde daarvoor
+    // zijn wachtwoord opnieuw te typen - en omdat het bewerkscherm dat veld
+    // leegmaakte, kon dat scherm zichzelf niet opslaan.
+    const hergebruiktWachtwoord = !password && bestaand && bestaand.username === username;
+
+    if (!password && !hergebruiktWachtwoord) {
+      throw new ApiError(400, 'Een wachtwoord is verplicht bij het instellen van de koppeling.');
+    }
+
+    const teControleren = hergebruiktWachtwoord ? readSpondPassword(bestaand!.password_encrypted) : password;
 
     // Controleer de gegevens door echt in te loggen.
     //
@@ -116,19 +132,15 @@ router.put(
     // iemand met kloppende gegevens eindeloos zijn wachtwoord bleef opnieuw
     // typen. De echte reden hoort in de melding te staan.
     try {
-      const client = new SpondClient(username, password);
+      const client = new SpondClient(username, teControleren);
       await client.login();
     } catch (error) {
       throw asApiError(error, 'Je gegevens zijn niet opgeslagen.');
     }
 
-    const encryptedPassword = encryptPassword(password);
+    const encryptedPassword = hergebruiktWachtwoord ? bestaand!.password_encrypted : encryptPassword(password);
 
-    const existing = db
-      .prepare('SELECT id FROM spond_config WHERE association_id = ?')
-      .get(req.user!.associationId) as any;
-
-    if (existing) {
+    if (bestaand) {
       db.prepare(
         `
             UPDATE spond_config
