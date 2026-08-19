@@ -110,3 +110,55 @@ describe('Aanmelden bij Spond', () => {
     await expect(new SpondClient('iemand@example.com', 'goed').login()).resolves.toBeUndefined();
   });
 });
+
+describe('Aanmeldpad bij Spond', () => {
+  it('valt terug op het oude pad als het nieuwe een 404 geeft', async () => {
+    const nep = vi.fn(async (url: string) =>
+      url.includes('/auth2/login') ? antwoord(404, { errorCode: 404 }) : antwoord(200, { loginToken: 'abc' }),
+    );
+    vi.stubGlobal('fetch', nep);
+
+    await new SpondClient('iemand@example.com', 'goed').login();
+
+    expect(nep).toHaveBeenCalledTimes(2);
+    expect(nep.mock.calls[0][0]).toContain('/auth2/login');
+    expect(nep.mock.calls[1][0]).toContain('/login');
+  });
+
+  it('zoekt niet verder als het eerste pad antwoordt', async () => {
+    const nep = vi.fn(async () => antwoord(200, { loginToken: 'abc' }));
+    vi.stubGlobal('fetch', nep);
+
+    await new SpondClient('iemand@example.com', 'goed').login();
+
+    expect(nep).toHaveBeenCalledTimes(1);
+    expect(nep.mock.calls[0][0]).toContain('/auth2/login');
+  });
+
+  it('blijft bij een 401 staan in plaats van door te zoeken', async () => {
+    const nep = vi.fn(async () => antwoord(401, 'Unauthorized'));
+    vi.stubGlobal('fetch', nep);
+
+    const fout = await new SpondClient('iemand@example.com', 'fout').login().catch((e) => e);
+
+    // Een 401 zegt dat we het juiste adres hebben en de gegevens niet kloppen.
+    // Doorzoeken zou dat verhullen achter "geen adres gevonden".
+    expect(nep).toHaveBeenCalledTimes(1);
+    expect(fout.reason).toBe('rejected');
+  });
+
+  it('meldt het duidelijk als geen enkel pad bestaat', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => antwoord(404, { message: 'HTTP 404 Not Found', errorCode: 404 })),
+    );
+
+    const fout = await new SpondClient('iemand@example.com', 'goed').login().catch((e) => e);
+
+    expect(fout).toBeInstanceOf(SpondLoginError);
+    expect(fout.status).toBe(404);
+    expect(fout.message).toContain('API gewijzigd');
+    // Dit is nadrukkelijk geen 'rejected': het wachtwoord is nooit beoordeeld.
+    expect(fout.reason).toBe('unexpected');
+  });
+});

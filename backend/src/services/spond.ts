@@ -117,10 +117,21 @@ export class SpondClient {
     private password: string,
   ) {}
 
-  async login(): Promise<void> {
-    let res: Response;
+  /**
+   * Aanmeldpaden, in volgorde van proberen.
+   *
+   * Uit de productielogs: Spond antwoordde op /login met een 404 en
+   * errorCode 404. Het pad bestaat dus niet meer; de gegevens van de gebruiker
+   * werden nooit gecontroleerd. Spond zet zijn aanmelding tegenwoordig onder
+   * auth2. Het oude pad blijft als tweede staan, zodat een omgeving die nog op
+   * de vorige versie draait blijft werken - en zodat de logs laten zien welk
+   * pad het wél deed.
+   */
+  private static readonly LOGIN_PATHS = ['/auth2/login', '/login'];
+
+  private async postLogin(path: string): Promise<Response> {
     try {
-      res = await fetch(`${SPOND_API_BASE}/login`, {
+      return await fetch(`${SPOND_API_BASE}${path}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,13 +145,45 @@ export class SpondClient {
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      logger.error('Spond niet bereikbaar', { detail });
+      logger.error('Spond niet bereikbaar', { path, detail });
       throw new SpondLoginError(`Spond was niet bereikbaar: ${detail}`, 'unreachable');
+    }
+  }
+
+  async login(): Promise<void> {
+    let res: Response | null = null;
+    let gebruiktPad = '';
+
+    for (const path of SpondClient.LOGIN_PATHS) {
+      const poging = await this.postLogin(path);
+      // Alleen bij een 404 heeft het zin het volgende pad te proberen. Een 401
+      // betekent dat we het juiste adres te pakken hebben en dat de gegevens
+      // worden afgewezen; dan moeten we niet doorzoeken.
+      if (poging.status === 404) {
+        logger.warn('Spond kent dit aanmeldpad niet', { path });
+        continue;
+      }
+      res = poging;
+      gebruiktPad = path;
+      break;
+    }
+
+    if (!res) {
+      throw new SpondLoginError(
+        `Spond kent geen van de bekende aanmeldadressen (${SpondClient.LOGIN_PATHS.join(', ')}). ` +
+          'Waarschijnlijk is hun API gewijzigd.',
+        'unexpected',
+        404,
+      );
     }
 
     if (!res.ok) {
       const text = await res.text();
-      logger.error('Spond weigerde het inloggen', { status: res.status, body: text.slice(0, 500) });
+      logger.error('Spond weigerde het inloggen', {
+        path: gebruiktPad,
+        status: res.status,
+        body: text.slice(0, 500),
+      });
 
       if (res.status === 401 || res.status === 403) {
         throw new SpondLoginError('Spond wees de inloggegevens af.', 'rejected', res.status);
@@ -151,12 +194,14 @@ export class SpondClient {
     const data = (await res.json()) as { loginToken?: string; token?: string };
     this.token = data.loginToken || data.token || null;
     if (!this.token) {
-      logger.error('Spond gaf geen token terug', { keys: Object.keys(data) });
+      logger.error('Spond gaf geen token terug', { path: gebruiktPad, keys: Object.keys(data) });
       throw new SpondLoginError(
         'Spond gaf geen aanmeldtoken terug. Mogelijk is de koppeling met tweestapsverificatie beveiligd.',
         'unexpected',
       );
     }
+
+    logger.info('Aangemeld bij Spond', { path: gebruiktPad });
   }
 
   private async request(path: string, params?: Record<string, string>): Promise<any> {
