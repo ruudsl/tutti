@@ -174,3 +174,54 @@ jobs:
           DOMAIN: example.com
           TRAEFIK_DASHBOARD_AUTH: 'admin:dummy'
         run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
+
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    env:
+      DB_PATH: ${{ github.workspace }}/lighthouse-data/tutti.db
+      JWT_SECRET: lighthouse-only-secret-not-used-anywhere-else
+      FRONTEND_URL: http://localhost:3001
+      NODE_ENV: production
+      PORT: '3001'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # De backend serveert in productiemodus zelf de gebouwde frontend, en
+      # `npm start` draait eerst de migraties. Dat is dezelfde opzet als de
+      # Docker-image, dus meten we wat er ook echt draait - niet een
+      # ontwikkelserver met onverkleinde bestanden.
+      - name: Start de applicatie
+        run: |
+          mkdir -p "$(dirname "$DB_PATH")"
+          npm start &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3001/api/health; then
+              echo "applicatie draait"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "applicatie kwam niet omhoog"
+          exit 1
+
+      - name: Lighthouse
+        run: node scripts/lighthouse-check.mjs http://localhost:3001/
+
+      - name: Bewaar het verslag
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-report
+          path: lighthouse-report.json
+          retention-days: 7

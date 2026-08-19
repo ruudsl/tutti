@@ -19,6 +19,21 @@ export default tseslint.config(
   // Base JS rules for all files
   js.configs.recommended,
 
+  // Losse scripts in scripts/ draaien onder Node. Zonder deze globals meldt
+  // eslint console en process als onbekend, terwijl dat daar juist de normale
+  // manier van werken is.
+  {
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+
   // TypeScript rules for all TS/TSX files
   ...tseslint.configs.recommended.map((config) => ({
     ...config,

@@ -192,7 +192,7 @@ Gestructureerde GDPR / privacy-by-design review:
 ### Huidige Status
 
 - Coverage backend (18-08-2026): statements 51,4%, branches 39,6%, functions 53,4%, lines 51,6%
-- CI-drempels backend (`backend/vitest.config.ts`): 48 / 37 / 50 / 48
+- CI-drempels backend (`backend/vitest.config.ts`): 46 / 34 / 49 / 46 (statements / branches / functions / lines)
 - Integratietests draaien tegen het echte schema (`src/database/schema.ts` + migraties)
 - CI: GitHub Actions — jobs voor backend, frontend, E2E (Playwright), lint, security audit en Docker build
 - CD: Docker build in CI (geen registry push, geen staging deploy)
@@ -269,7 +269,10 @@ Fase 1-4 zijn geïmplementeerd:
 - [x] App shortcuts (manifest)
 - [x] Share Target API
 - [x] Improved mobile touch UX
-- [ ] Lighthouse PWA score >90 — _nog niet gemeten in CI_
+- [x] Lighthouse gemeten in CI — _job `lighthouse` in `ci.yml`, mediaan van drie metingen tegen de gebouwde applicatie_
+  - Gemeten 19-08-2026: performance 75, accessibility 98, best-practices 96, seo 100
+  - De **PWA-categorie bestaat niet meer**: Lighthouse 12 heeft die geschrapt, inclusief de losse audits (`installable-manifest`, `service-worker`, `maskable-icon`). Een PWA-score van >90 is dus niet te halen omdat het getal niet meer bestaat. Wat die score controleerde staat nu als eigen controle in `scripts/lighthouse-check.mjs`
+- [ ] Prestatiescore naar >90 — _staat op 75; de hoofdbundel is 788 KB van in totaal 4,2 MB JavaScript, en dat kost onder de gesimuleerde 4G-verbinding 3,4 s tot de eerste weergave_
 
 ---
 
