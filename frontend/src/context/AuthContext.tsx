@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User, LoginResponse } from '../types';
-import { login as apiLogin, getProfile } from '../api';
+import { login as apiLogin, getProfile } from '../api/auth';
 import { clearPersistedCache } from '../lib/queryClient';
 
 interface AuthContextType {
