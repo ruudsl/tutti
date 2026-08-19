@@ -24,7 +24,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
 
   if (isLoading) {
     return (
-      <div className={`grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 ${className}`}>
+      <div className={`stats-grid ${className}`}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <SkeletonCard key={i} />
         ))}
@@ -42,7 +42,7 @@ export function EquipmentStats({ className = '' }: EquipmentStatsProps) {
   const repairCount = stats.byStatus['repair'] || 0;
 
   return (
-    <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 ${className}`}>
+    <div className={`stats-grid ${className}`}>
       {/* Total Items */}
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">

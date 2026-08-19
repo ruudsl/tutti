@@ -77,7 +77,25 @@
     "selected": "{{count}} ausgewählt",
     "clearSelection": "Auswahl löschen",
     "move": "Verschieben",
-    "archive": "Archivieren"
+    "archive": "Archivieren",
+    "backToHome": "Zurück zur Startseite",
+    "clear": "Leeren",
+    "deleting": "Wird gelöscht…",
+    "done": "Fertig",
+    "endDate": "Enddatum",
+    "error": "Etwas ist schiefgelaufen",
+    "exportCsv": "Als CSV exportieren",
+    "location": "Ort",
+    "login": "Anmelden",
+    "noPermission": "Sie haben keine Berechtigung für diese Seite",
+    "processing": "Wird verarbeitet…",
+    "remove": "Entfernen",
+    "retry": "Erneut versuchen",
+    "saved": "Gespeichert",
+    "selectOptional": "Auswählen (optional)",
+    "startDate": "Startdatum",
+    "viewAll": "Alle anzeigen",
+    "warnings": "Warnungen"
   },
   "lazyImage": {
     "notLoaded": "Nicht geladen"
@@ -633,7 +651,10 @@
     "errorDeletePerson": "Fehler beim Löschen des Ansprechpartners",
     "errorCreateCategory": "Fehler beim Erstellen der Kategorie",
     "errorUpdateCategory": "Fehler beim Aktualisieren der Kategorie",
-    "errorDeleteCategory": "Fehler beim Löschen der Kategorie"
+    "errorDeleteCategory": "Fehler beim Löschen der Kategorie",
+    "deleteTitle": "Kontakt löschen",
+    "errorUpdatePerson": "Der Kontakt konnte nicht aktualisiert werden",
+    "personUpdated": "Kontakt aktualisiert"
   },
   "polls": {
     "title": "Umfragen",
@@ -709,7 +730,11 @@
     "createRehearsal": "Probe erstellen",
     "confirmCreateRehearsal": "Möchten Sie eine Probe basierend auf der Gewinneroption erstellen?",
     "rehearsalCreated": "Probe für {date} erstellt",
-    "errorCreateRehearsal": "Fehler beim Erstellen der Probe"
+    "errorCreateRehearsal": "Fehler beim Erstellen der Probe",
+    "cannotChangeTypeWithVotes": "Der Umfragetyp kann nach abgegebenen Stimmen nicht mehr geändert werden.",
+    "editPoll": "Umfrage bearbeiten",
+    "editWarningHasVotes": "Es wurde bereits abgestimmt. Änderungen können das Ergebnis beeinflussen.",
+    "startsAt": "Beginnt am"
   },
   "tasks": {
     "title": "Aufgaben",
@@ -795,7 +820,34 @@
     "postTitle": "Titel",
     "excerpt": "Zusammenfassung",
     "content": "Inhalt",
-    "categories": "Kategorien",
+    "categories": {
+      "title": "Kategorien",
+      "add": "Kategorie hinzufügen",
+      "color": "Farbe",
+      "created": "Kategorie hinzugefügt",
+      "customColor": "Eigene Farbe",
+      "delete": "Kategorie löschen",
+      "deleteConfirm": "Möchten Sie diese Kategorie wirklich löschen?",
+      "deleteNote": "Beiträge in dieser Kategorie bleiben erhalten, sie verlieren nur ihre Kategorie.",
+      "deleted": "Kategorie gelöscht",
+      "description": "Gruppieren Sie Beiträge, damit Mitglieder schneller finden, was sie suchen.",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Worum geht es in den Beiträgen dieser Kategorie?",
+      "edit": "Kategorie bearbeiten",
+      "errorCreate": "Die Kategorie konnte nicht hinzugefügt werden",
+      "errorDelete": "Die Kategorie konnte nicht gelöscht werden",
+      "errorUpdate": "Die Kategorie konnte nicht aktualisiert werden",
+      "manage": "Kategorien verwalten",
+      "name": "Name",
+      "namePlaceholder": "Zum Beispiel: Ankündigungen",
+      "noCategories": "Noch keine Kategorien",
+      "postCount": "Beiträge",
+      "selectColor": "Farbe wählen",
+      "slug": "Webadresse",
+      "slugHint": "Dieser Teil erscheint in der Webadresse. Leer lassen, um ihn aus dem Namen abzuleiten.",
+      "slugPlaceholder": "ankuendigungen",
+      "updated": "Kategorie aktualisiert"
+    },
     "noPosts": "Noch keine Beiträge.",
     "filterStatus": "Status",
     "filterCategory": "Kategorie",
@@ -920,7 +972,22 @@
     "sendTest": "Senden",
     "sendTestEmail": "Test-E-Mail senden",
     "testSent": "Test-E-Mail gesendet",
-    "errorTest": "Fehler beim Senden der Test-E-Mail"
+    "errorTest": "Fehler beim Senden der Test-E-Mail",
+    "addAttachment": "Anhang hinzufügen",
+    "attachmentDeleted": "Anhang gelöscht",
+    "attachmentUploaded": "Anhang hochgeladen",
+    "attachments": "Anhänge",
+    "confirmDeleteAttachment": "Möchten Sie diesen Anhang wirklich löschen?",
+    "errorDeleteAttachment": "Der Anhang konnte nicht gelöscht werden",
+    "errorUploadAttachment": "Der Anhang konnte nicht hochgeladen werden",
+    "noAttachments": "Noch keine Anhänge",
+    "noRecipientsFound": "Keine Empfänger gefunden",
+    "recipientDetails": "Empfängerdetails",
+    "recipientEmail": "E-Mail-Adresse",
+    "recipientName": "Name",
+    "recipientStatusLabel": "Status",
+    "searchRecipients": "Empfänger durchsuchen",
+    "viewRecipients": "Empfänger anzeigen"
   },
   "customFields": {
     "title": "Benutzerdefinierte Felder",
@@ -982,7 +1049,8 @@
     "errorCreate": "Fehler beim Erstellen des Feldes",
     "errorUpdate": "Fehler beim Aktualisieren des Feldes",
     "errorDelete": "Fehler beim Löschen des Feldes",
-    "errorSave": "Fehler beim Speichern der Felder"
+    "errorSave": "Fehler beim Speichern der Felder",
+    "deleteTitle": "Feld löschen"
   },
   "privacy": {
     "title": "Datenschutzeinstellungen",
@@ -1132,7 +1200,8 @@
     "errorDeleteMp3": "Fehler beim Löschen der MP3",
     "internalNotes": "Interne Notizen (Musikkommission)",
     "internalNotesPlaceholder": "Z. B. 'Fehlende Stimmen' oder 'Original in Archivschrank 3'",
-    "internalNotesHelp": "Nur für Mitglieder der Musikkommission und Administratoren sichtbar."
+    "internalNotesHelp": "Nur für Mitglieder der Musikkommission und Administratoren sichtbar.",
+    "noTitlesDescription": "Fügen Sie Titel hinzu, um sie hier zu sehen."
   },
   "streaming": {
     "title": "Streaming-Links",
@@ -1552,7 +1621,12 @@
     "concertLocation": "Location",
     "concertLocationPlaceholder": "Z. B. Gemeindesaal, Stadthalle",
     "exportPdf": "Programmheft exportieren (PDF)",
-    "errorExportPdf": "Fehler beim Exportieren des Programms"
+    "errorExportPdf": "Fehler beim Exportieren des Programms",
+    "deleteListTitle": "Liste löschen",
+    "deleted": "Liste gelöscht",
+    "errorDelete": "Die Liste konnte nicht gelöscht werden",
+    "removeTitleTitle": "Titel aus Liste entfernen",
+    "titleRemoved": "Titel aus der Liste entfernt"
   },
   "mfa": {
     "title": "Zwei-Faktor-Authentifizierung (MFA)",
@@ -1900,7 +1974,8 @@
       "never": "Nie",
       "enabled": "Verknüpfung aktiv",
       "disabled": "Verknüpfung inaktiv",
-      "passwordKeepHint": "Leer lassen, um das aktuelle Passwort zu behalten."
+      "passwordKeepHint": "Leer lassen, um das aktuelle Passwort zu behalten.",
+      "removeTitle": "Spond-Verknüpfung entfernen"
     },
     "recurring": {
       "title": "Wiederkehrende Probe erstellen",
@@ -1916,7 +1991,8 @@
       "create": "Proben erstellen",
       "created": "{{count}} Proben erstellt",
       "more": "+{{count}} weitere"
-    }
+    },
+    "deleteTitle": "Probe löschen"
   },
   "availability": {
     "title": "Verfügbarkeit",
@@ -2170,6 +2246,16 @@
       "in_repair": "In Reparatur",
       "repaired": "Repariert",
       "written_off": "Ausgemustert"
+    },
+    "deleteTitle": "Ausrüstung löschen",
+    "noEquipmentDescription": "Fügen Sie Instrumente und Material hinzu, um sie hier zu sehen.",
+    "stats": {
+      "activeLoans": "Verliehen",
+      "available": "Verfügbar",
+      "inMaintenance": "Wartung",
+      "inUse": "In Gebrauch",
+      "total": "Gesamt",
+      "totalValue": "Wert"
     }
   },
   "uniforms": {
@@ -2364,7 +2450,8 @@
       "history": "Basierend auf Historie",
       "disclaimer": "Diese Prognose basiert auf historischen Anwesenheitsdaten.",
       "error": "Prognose konnte nicht geladen werden"
-    }
+    },
+    "instrument": "Instrument"
   },
   "onboarding": {
     "menuItem": "Rundgang starten",
@@ -2675,7 +2762,9 @@
     "noMembers": "Keine Mitglieder gefunden.",
     "syncPhotos": "Fotos synchronisieren",
     "syncPhotosDescription": "Profilfotos von Microsoft 365 synchronisieren.",
-    "syncPhotosSuccess": "Fotos synchronisiert"
+    "syncPhotosSuccess": "Fotos synchronisiert",
+    "gridView": "Kachelansicht",
+    "listView": "Listenansicht"
   },
   "voiceParts": {
     "title": "Stimmenzuordnung",
@@ -3421,7 +3510,10 @@
       "instrument": "Instrument",
       "rehearsal": "Repetitie",
       "concert": "Concert",
-      "settings": "Instellingen"
+      "settings": "Instellingen",
+      "musicList": "Musikliste",
+      "musicPiece": "Musikstück",
+      "musicTitle": "Musiktitel"
     }
   },
   "darkMode": {
@@ -3561,7 +3653,9 @@
     "searchPiece": "Titel suchen...",
     "noResults": "Keine Titel gefunden",
     "typeToSearch": "Zum Suchen tippen",
-    "log": "Protokollieren"
+    "log": "Protokollieren",
+    "deleteGoalTitle": "Ziel löschen",
+    "deleteLogTitle": "Sitzung löschen"
   },
   "recent": {
     "title": "Zuletzt angesehen",

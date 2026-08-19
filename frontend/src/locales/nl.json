@@ -77,7 +77,25 @@
     "selected": "{{count}} geselecteerd",
     "clearSelection": "Selectie wissen",
     "move": "Verplaatsen",
-    "archive": "Archiveren"
+    "archive": "Archiveren",
+    "backToHome": "Terug naar start",
+    "clear": "Wissen",
+    "deleting": "Bezig met verwijderen…",
+    "done": "Klaar",
+    "endDate": "Einddatum",
+    "error": "Er is iets misgegaan",
+    "exportCsv": "Exporteren naar CSV",
+    "location": "Locatie",
+    "login": "Inloggen",
+    "noPermission": "Je hebt geen rechten voor deze pagina",
+    "processing": "Bezig…",
+    "remove": "Verwijderen",
+    "retry": "Opnieuw proberen",
+    "saved": "Opgeslagen",
+    "selectOptional": "Kies (optioneel)",
+    "startDate": "Startdatum",
+    "viewAll": "Alles bekijken",
+    "warnings": "Waarschuwingen"
   },
   "lazyImage": {
     "notLoaded": "Niet geladen"
@@ -587,7 +605,10 @@
     "errorDeletePerson": "Fout bij verwijderen contactpersoon",
     "errorCreateCategory": "Fout bij aanmaken categorie",
     "errorUpdateCategory": "Fout bij bijwerken categorie",
-    "errorDeleteCategory": "Fout bij verwijderen categorie"
+    "errorDeleteCategory": "Fout bij verwijderen categorie",
+    "deleteTitle": "Contact verwijderen",
+    "errorUpdatePerson": "Het contact kon niet worden bijgewerkt",
+    "personUpdated": "Contact bijgewerkt"
   },
   "polls": {
     "title": "Peilingen",
@@ -663,7 +684,11 @@
     "createRehearsal": "Repetitie aanmaken",
     "confirmCreateRehearsal": "Wil je een repetitie aanmaken op basis van de winnende optie?",
     "rehearsalCreated": "Repetitie aangemaakt voor {date}",
-    "errorCreateRehearsal": "Fout bij aanmaken repetitie"
+    "errorCreateRehearsal": "Fout bij aanmaken repetitie",
+    "cannotChangeTypeWithVotes": "Het soort peiling kan niet meer worden gewijzigd zodra er stemmen zijn.",
+    "editPoll": "Peiling bewerken",
+    "editWarningHasVotes": "Er is al gestemd. Wijzigingen kunnen de uitslag beïnvloeden.",
+    "startsAt": "Start op"
   },
   "tasks": {
     "title": "Taken",
@@ -749,7 +774,34 @@
     "postTitle": "Titel",
     "excerpt": "Samenvatting",
     "content": "Inhoud",
-    "categories": "Categorieën",
+    "categories": {
+      "title": "Categorieën",
+      "add": "Categorie toevoegen",
+      "color": "Kleur",
+      "created": "Categorie toegevoegd",
+      "customColor": "Eigen kleur",
+      "delete": "Categorie verwijderen",
+      "deleteConfirm": "Weet je zeker dat je deze categorie wilt verwijderen?",
+      "deleteNote": "De berichten in deze categorie blijven bestaan, ze raken alleen hun categorie kwijt.",
+      "deleted": "Categorie verwijderd",
+      "description": "Groepeer berichten zodat leden sneller vinden wat ze zoeken.",
+      "descriptionLabel": "Omschrijving",
+      "descriptionPlaceholder": "Waar gaan de berichten in deze categorie over?",
+      "edit": "Categorie bewerken",
+      "errorCreate": "De categorie kon niet worden toegevoegd",
+      "errorDelete": "De categorie kon niet worden verwijderd",
+      "errorUpdate": "De categorie kon niet worden bijgewerkt",
+      "manage": "Categorieën beheren",
+      "name": "Naam",
+      "namePlaceholder": "Bijvoorbeeld: Mededelingen",
+      "noCategories": "Nog geen categorieën",
+      "postCount": "Berichten",
+      "selectColor": "Kies een kleur",
+      "slug": "Webadres",
+      "slugHint": "Dit stukje komt in het webadres te staan. Laat leeg om het uit de naam af te leiden.",
+      "slugPlaceholder": "mededelingen",
+      "updated": "Categorie bijgewerkt"
+    },
     "noPosts": "Nog geen berichten.",
     "filterStatus": "Status",
     "filterCategory": "Categorie",
@@ -874,7 +926,22 @@
     "sendTest": "Versturen",
     "sendTestEmail": "Test-e-mail versturen",
     "testSent": "Test-e-mail verzonden",
-    "errorTest": "Fout bij versturen test-e-mail"
+    "errorTest": "Fout bij versturen test-e-mail",
+    "addAttachment": "Bijlage toevoegen",
+    "attachmentDeleted": "Bijlage verwijderd",
+    "attachmentUploaded": "Bijlage toegevoegd",
+    "attachments": "Bijlagen",
+    "confirmDeleteAttachment": "Weet je zeker dat je deze bijlage wilt verwijderen?",
+    "errorDeleteAttachment": "De bijlage kon niet worden verwijderd",
+    "errorUploadAttachment": "De bijlage kon niet worden toegevoegd",
+    "noAttachments": "Nog geen bijlagen",
+    "noRecipientsFound": "Geen ontvangers gevonden",
+    "recipientDetails": "Gegevens ontvanger",
+    "recipientEmail": "E-mailadres",
+    "recipientName": "Naam",
+    "recipientStatusLabel": "Status",
+    "searchRecipients": "Zoek in ontvangers",
+    "viewRecipients": "Ontvangers bekijken"
   },
   "customFields": {
     "title": "Aangepaste velden",
@@ -936,7 +1003,8 @@
     "errorCreate": "Fout bij aanmaken veld",
     "errorUpdate": "Fout bij bijwerken veld",
     "errorDelete": "Fout bij verwijderen veld",
-    "errorSave": "Fout bij opslaan velden"
+    "errorSave": "Fout bij opslaan velden",
+    "deleteTitle": "Veld verwijderen"
   },
   "privacy": {
     "title": "Privacy-instellingen",
@@ -1086,7 +1154,8 @@
     "errorFetchYouTube": "Kon YouTube-metadata niet ophalen",
     "errorSaveMetadata": "Fout bij opslaan metadata",
     "errorUploadMp3": "Fout bij uploaden MP3",
-    "errorDeleteMp3": "Fout bij verwijderen MP3"
+    "errorDeleteMp3": "Fout bij verwijderen MP3",
+    "noTitlesDescription": "Voeg titels toe om ze hier terug te vinden."
   },
   "streaming": {
     "title": "Streaming Links",
@@ -1506,7 +1575,12 @@
     "concertLocation": "Locatie",
     "concertLocationPlaceholder": "Bijv. Dorpshuis, De Schuur",
     "exportPdf": "Exporteer programmaboekje (PDF)",
-    "errorExportPdf": "Fout bij exporteren programma"
+    "errorExportPdf": "Fout bij exporteren programma",
+    "deleteListTitle": "Lijst verwijderen",
+    "deleted": "Lijst verwijderd",
+    "errorDelete": "De lijst kon niet worden verwijderd",
+    "removeTitleTitle": "Titel uit lijst halen",
+    "titleRemoved": "Titel uit de lijst gehaald"
   },
   "mfa": {
     "title": "Tweestapsverificatie (MFA)",
@@ -1854,7 +1928,8 @@
       "never": "Nooit",
       "enabled": "Koppeling actief",
       "disabled": "Koppeling inactief",
-      "passwordKeepHint": "Laat leeg om het huidige wachtwoord te houden."
+      "passwordKeepHint": "Laat leeg om het huidige wachtwoord te houden.",
+      "removeTitle": "Spond-koppeling verwijderen"
     },
     "recurring": {
       "title": "Terugkerende repetities",
@@ -1870,7 +1945,8 @@
       "more": "meer",
       "create": "{{count}} repetities aanmaken",
       "created": "{{count}} terugkerende repetities aangemaakt"
-    }
+    },
+    "deleteTitle": "Repetitie verwijderen"
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -1931,7 +2007,9 @@
     "searchPiece": "Zoek titel...",
     "noResults": "Geen titels gevonden",
     "typeToSearch": "Typ om te zoeken",
-    "log": "Loggen"
+    "log": "Loggen",
+    "deleteGoalTitle": "Doel verwijderen",
+    "deleteLogTitle": "Sessie verwijderen"
   },
   "accessibilityInfo": {
     "title": "Toegankelijkheidsinformatie",
@@ -2101,6 +2179,16 @@
       "in_repair": "In reparatie",
       "repaired": "Gerepareerd",
       "written_off": "Afgeschreven"
+    },
+    "deleteTitle": "Apparatuur verwijderen",
+    "noEquipmentDescription": "Voeg instrumenten en materialen toe om ze hier terug te vinden.",
+    "stats": {
+      "activeLoans": "Uitgeleend",
+      "available": "Beschikbaar",
+      "inMaintenance": "Onderhoud",
+      "inUse": "In gebruik",
+      "total": "Totaal",
+      "totalValue": "Waarde"
     }
   },
   "uniforms": {
@@ -2295,7 +2383,8 @@
       "probability": "Kans",
       "history": "Historie",
       "disclaimer": "Voorspellingen zijn gebaseerd op historische opkomstdata en kunnen afwijken van de werkelijke opkomst."
-    }
+    },
+    "instrument": "Instrument"
   },
   "tickets": {
     "title": "Tickets",
@@ -2964,7 +3053,10 @@
       "instrument": "Instrument",
       "rehearsal": "Repetitie",
       "concert": "Concert",
-      "settings": "Instellingen"
+      "settings": "Instellingen",
+      "musicList": "Muzieklijst",
+      "musicPiece": "Muziekstuk",
+      "musicTitle": "Muziektitel"
     }
   },
   "darkMode": {
@@ -3119,7 +3211,9 @@
     "noMembers": "Geen leden gevonden.",
     "syncPhotos": "Foto's synchroniseren",
     "syncPhotosDescription": "Synchroniseer profielfoto's van Microsoft 365.",
-    "syncPhotosSuccess": "Foto's gesynchroniseerd"
+    "syncPhotosSuccess": "Foto's gesynchroniseerd",
+    "gridView": "Tegelweergave",
+    "listView": "Lijstweergave"
   },
   "voiceParts": {
     "title": "Partijenverdeling",
