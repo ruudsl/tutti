@@ -1,3 +1,19 @@
+/* Het lettertype komt uit het project zelf en niet meer van Google.
+ *
+ * In index.html stond een stylesheet van fonts.googleapis.com in de head. Zo'n
+ * verwijzing blokkeert het tekenen van de pagina: de browser laat niets zien
+ * tot die binnen is. Dat kost altijd een volledige rondgang naar een andere
+ * partij voordat er iets op het scherm staat, en gaat helemaal mis als die
+ * host onbereikbaar is - in de omgeving waar de Lighthouse-meting draait bleef
+ * de pagina daardoor dertien seconden wit.
+ *
+ * Dit is de variabele versie: een bestand voor het hele gewichtsbereik in
+ * plaats van vijf losse. De browser haalt dankzij unicode-range alleen de
+ * tekentabel die hij nodig heeft, en font-display: swap zorgt dat de tekst
+ * meteen in het terugvallettertype verschijnt.
+ */
+@import '@fontsource-variable/inter/wght.css';
+
 /* ============================================
    DESIGN SYSTEM TOKENS
    ============================================ */
@@ -41,7 +57,7 @@
 
   /* --- Typography --- */
   --font-family:
-    'Inter', 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   --font-size-base: 16px;
   --font-size-xs: 0.75rem; /* 12px */

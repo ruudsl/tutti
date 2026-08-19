@@ -168,9 +168,12 @@ const getContentSecurityPolicy = (): false | { directives: Record<string, string
     styleSrc: [
       "'self'",
       "'unsafe-inline'", // Required for styled-components / CSS-in-JS
-      'https://fonts.googleapis.com',
     ],
-    fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+    // Het lettertype komt uit het project zelf; fonts.googleapis.com en
+    // fonts.gstatic.com stonden hier voor een verwijzing die er niet meer is.
+    // Een toestemming die niets meer bedient hoort weg: dan valt het meteen op
+    // als er ooit weer een externe bron bij komt.
+    fontSrc: ["'self'", 'data:'],
     imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
     mediaSrc: ["'self'", 'blob:', 'https://www.youtube.com'],
     frameSrc: [
