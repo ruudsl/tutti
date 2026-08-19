@@ -7,7 +7,8 @@ import { Icon } from '../components/Icon';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import SocialLoginButtons from '../components/SocialLoginButtons';
 import { LazyImage } from '../components/LazyImage';
-import api, { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api';
+import api from '../api/client';
+import { getMicrosoftEnabled, getMicrosoftLoginUrl } from '../api/integrations';
 
 export default function Login() {
   const [email, setEmail] = useState('');

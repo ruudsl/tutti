@@ -25,15 +25,60 @@ const url = process.argv[2] || 'http://localhost:3001/';
  * streefwaarde. Een drempel die vandaag al rood staat bewaakt niets - hij
  * wordt genegeerd of uitgezet. Zo vangt hij wel elke verslechtering.
  *
- * Gemeten op 19-08-2026: performance 75, accessibility 98,
- * best-practices 96, seo 100.
+ * Gemeten op 19-08-2026 met het lettertype uit het project zelf: performance
+ * 80, accessibility 98, best-practices 96, seo 100.
+ *
+ * Daarvoor stond performance op 75. Dat cijfer ging grotendeels over de
+ * meetopstelling: er stond een stylesheet van fonts.googleapis.com in de head,
+ * die host is hier geblokkeerd, en het verzoek blokkeerde het tekenen tot het
+ * na 12,9 seconden opgaf. Sinds het lettertype meekomt met het project is dat
+ * weg, en controleert controleerVerzoeken() bovendien dat zoiets niet nog eens
+ * onopgemerkt in een cijfer verdwijnt.
  */
 const DREMPELS = {
-  performance: 70,
+  performance: 75,
   accessibility: 95,
   'best-practices': 90,
   seo: 95,
 };
+
+/**
+ * Controleer of alle verzoeken zijn aangekomen.
+ *
+ * Dit is er omdat de meting een keer volstrekt misleidend was. De pagina bleef
+ * dertien seconden wit, Speed Index kwam op nul en de prestatiescore op 75. De
+ * oorzaak bleek niet in de applicatie te zitten maar in de meetopstelling: een
+ * stylesheet van fonts.googleapis.com deed er 12,9 seconden over en faalde
+ * toen, omdat die host in de meetomgeving geblokkeerd is. Een verwijzing in de
+ * head blokkeert het tekenen, dus de hele meting ging over dat ene verzoek.
+ *
+ * Lighthouse meldt dat nergens als probleem; het cijfer komt er gewoon lager
+ * uit. Zonder deze controle stuurt zo'n uitkomst je urenlang de verkeerde kant
+ * op - dat is precies wat er gebeurde.
+ *
+ * Een verzoek dat niet aankomt maakt de uitkomst onbruikbaar, dus dat is hier
+ * een fout en geen voetnoot.
+ */
+function controleerVerzoeken(lhr) {
+  const verzoeken = lhr?.audits?.['network-requests']?.details?.items ?? [];
+  const problemen = [];
+
+  for (const verzoek of verzoeken) {
+    const status = verzoek.statusCode;
+    const duur = (verzoek.networkEndTime ?? 0) - (verzoek.networkRequestTime ?? 0);
+    const kort = String(verzoek.url).slice(0, 90);
+
+    // Lighthouse noteert -1 voor een verzoek dat is afgebroken of nooit
+    // beantwoord.
+    if (status === -1 || status === undefined) {
+      problemen.push(`verzoek kwam niet aan na ${Math.round(duur)} ms: ${kort}`);
+    } else if (status >= 400) {
+      problemen.push(`verzoek gaf status ${status}: ${kort}`);
+    }
+  }
+
+  return problemen;
+}
 
 /** Losse eisen aan het manifest, als vervanging van de geschrapte PWA-score. */
 async function controleerInstalleerbaarheid(basis) {
@@ -88,6 +133,8 @@ const chrome = await chromeLauncher.launch({
 
 try {
   const rondes = [];
+  // De laatste meting blijft bewaard: daar kijkt de netwerkcontrole naar.
+  let laatste = null;
   for (let i = 0; i < METINGEN; i++) {
     const run = await lighthouse(url, {
       port: chrome.port,
@@ -95,6 +142,7 @@ try {
       logLevel: 'error',
       onlyCategories: Object.keys(DREMPELS),
     });
+    laatste = run.lhr;
     // Bewaar het laatste verslag als bijlage voor de CI-uitvoer.
     if (i === METINGEN - 1) writeFileSync('lighthouse-report.json', run.report);
     rondes.push(
@@ -114,6 +162,13 @@ try {
     if (!ok) tekort.push(`${categorie}: ${score} < ${ondergrens}`);
   }
 
+  const mislukteVerzoeken = controleerVerzoeken(laatste);
+  if (mislukteVerzoeken.length === 0) {
+    console.log('ok   verzoeken         alles aangekomen');
+  } else {
+    mislukteVerzoeken.forEach((p) => console.log(`FOUT verzoeken         ${p}`));
+  }
+
   const installeerbaarheid = await controleerInstalleerbaarheid(url);
   if (installeerbaarheid.length === 0) {
     console.log('ok   installeerbaarheid  manifest en iconen in orde');
@@ -121,7 +176,7 @@ try {
     installeerbaarheid.forEach((p) => console.log(`LAAG installeerbaarheid  ${p}`));
   }
 
-  const alleProblemen = [...tekort, ...installeerbaarheid];
+  const alleProblemen = [...mislukteVerzoeken, ...tekort, ...installeerbaarheid];
   if (tekort.length > 0) {
     console.log('\nLosse metingen:');
     rondes.forEach((r, i) =>

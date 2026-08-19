@@ -49,31 +49,35 @@ export default defineConfig({
     target: 'esnext',
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks - core React ecosystem
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        manualChunks(id: string) {
+          // src/api.ts is een bestand van bijna vierduizend regels met alle
+          // endpoints erin. Tientallen lui geladen pagina's importeren eruit,
+          // en Rollup tilt een module die door meerdere chunks wordt gedeeld
+          // naar de gemeenschappelijke bundel. Daardoor stond die 109 KB in de
+          // hoofdbundel en haalde iemand op de inlogpagina alle endpoints van
+          // de applicatie binnen voordat hij zijn e-mailadres kon typen.
+          //
+          // Een eigen chunk laadt hem pas als een pagina hem echt nodig heeft.
+          // De inlogpagina wijst inmiddels naar de kleine modules onder
+          // src/api/ en raakt dit bestand niet meer aan.
+          if (id.includes('/src/api.ts')) return 'api-legacy';
 
-          // React Query - state management
-          'vendor-query': [
-            '@tanstack/react-query',
-            '@tanstack/react-query-persist-client',
-            '@tanstack/query-sync-storage-persister',
-          ],
+          if (!id.includes('node_modules')) return undefined;
 
-          // PDF.js - large library for PDF handling
-          'vendor-pdf': ['pdfjs-dist'],
+          // Kern van React
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) {
+            return 'vendor-react';
+          }
+          if (id.includes('@tanstack/')) return 'vendor-query';
+          if (id.includes('pdfjs-dist')) return 'vendor-pdf';
+          if (/[\\/](react-hook-form|@hookform|zod)[\\/]/.test(id)) return 'vendor-forms';
+          if (id.includes('@dnd-kit/')) return 'vendor-dnd';
+          if (/[\\/](i18next|react-i18next|i18next-browser-languagedetector)[\\/]/.test(id)) {
+            return 'vendor-i18n';
+          }
+          if (/[\\/](axios|date-fns|idb|ua-parser-js)[\\/]/.test(id)) return 'vendor-utils';
 
-          // Forms - react-hook-form and validation
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-
-          // DnD Kit - drag and drop
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-
-          // i18n - internationalization
-          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-
-          // Utilities
-          'vendor-utils': ['axios', 'date-fns', 'idb', 'ua-parser-js'],
+          return undefined;
         },
       },
     },

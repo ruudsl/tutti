@@ -45,3 +45,6 @@ coverage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Meetuitvoer van de Lighthouse-controle; een artefact, geen bronbestand.
+lighthouse-report.json

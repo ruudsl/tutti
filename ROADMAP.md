@@ -276,9 +276,12 @@ Fase 1-4 zijn geïmplementeerd:
 - [x] Share Target API
 - [x] Improved mobile touch UX
 - [x] Lighthouse gemeten in CI — _job `lighthouse` in `ci.yml`, mediaan van drie metingen tegen de gebouwde applicatie_
-  - Gemeten 19-08-2026: performance 75, accessibility 98, best-practices 96, seo 100
+  - Gemeten 19-08-2026: performance 80, accessibility 98, best-practices 96, seo 100
   - De **PWA-categorie bestaat niet meer**: Lighthouse 12 heeft die geschrapt, inclusief de losse audits (`installable-manifest`, `service-worker`, `maskable-icon`). Een PWA-score van >90 is dus niet te halen omdat het getal niet meer bestaat. Wat die score controleerde staat nu als eigen controle in `scripts/lighthouse-check.mjs`
-- [ ] Prestatiescore naar >90 — _staat op 75; de hoofdbundel is 788 KB van in totaal 4,2 MB JavaScript, en dat kost onder de gesimuleerde 4G-verbinding 3,4 s tot de eerste weergave_
+- [ ] Prestatiescore naar >90 — _staat op 80, was 75_
+  - De sprong van 75 naar 80 kwam doordat het lettertype nu uit het project zelf komt. Er stond een render-blokkerende stylesheet van `fonts.googleapis.com` in de `<head>`; die host is in de meetomgeving geblokkeerd, waardoor het verzoek het tekenen 12,9 seconden tegenhield en de pagina tot 13 seconden wit bleef. Ook in productie kostte die verwijzing een volledige rondgang naar Google voordat er iets op het scherm stond
+  - `scripts/lighthouse-check.mjs` laat een mislukt netwerkverzoek nu de controle falen. Lighthouse meldt zoiets nergens; het cijfer komt alleen lager uit, en dat stuurt je de verkeerde kant op
+  - De resterende twintig punten zitten in LCP en Speed Index. De hoofdbundel is 760 KB (was 816) en er zit geen enkele grote klapper meer in — dat is een lange staart van shell-onderdelen stuk voor stuk nalopen
 
 ---
 

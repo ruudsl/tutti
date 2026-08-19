@@ -14,7 +14,7 @@ import { NotificationBell } from './NotificationCenter';
 import { RecentItems } from './RecentItems';
 import { KeyboardShortcutsHelp, SequenceIndicator } from './KeyboardShortcutsHelp';
 import { useKeyboardShortcuts, useShortcutEvent } from '../hooks/useKeyboardShortcuts';
-import { getSettings } from '../api';
+import { getSettings } from '../api/settings';
 import { Icon, type IconName } from './Icon';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { AssociationSwitcher } from './AssociationSwitcher';

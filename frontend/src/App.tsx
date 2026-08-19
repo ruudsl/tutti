@@ -19,10 +19,17 @@ import { ConfirmProvider } from './hooks/useConfirm';
 import { PrivacyConsentGate } from './components/PrivacyConsentGate';
 import { ROLES } from './utils/constants';
 
-// Critical pages - loaded eagerly so the first render (login/dashboard) stays fast
+// Alleen wat de eerste weergave echt nodig heeft, staat hier eager.
+//
+// Dashboard stond hier ook, "zodat de eerste render snel blijft". Voor wie al
+// ingelogd is klopt dat, maar wie op de inlogpagina komt haalde zo eerst het
+// hele dashboard met zijn widgets binnen voordat hij zijn e-mailadres kon
+// typen. Dat is de duurste pagina van de twee, en de enige die je op dat
+// moment zeker niet nodig hebt.
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 // All other pages are lazy loaded (route-based code-splitting).
 // Chunk-load failures after a deploy are handled by SectionErrorBoundary,
