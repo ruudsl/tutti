@@ -72,6 +72,25 @@ docker compose up -d
 open http://localhost:5173
 ```
 
+`docker compose up` haalt de gepubliceerde images op; je hebt dus geen bouwomgeving nodig. Wil je toch zelf bouwen, bijvoorbeeld na een eigen aanpassing, dan doet `docker compose build` dat en zet dezelfde naam erop.
+
+### Kant-en-klare images
+
+De images staan op GitHub Container Registry en worden bij elke merge naar `main` opnieuw gepubliceerd:
+
+```bash
+docker pull ghcr.io/ruudsl/tutti-backend:latest
+docker pull ghcr.io/ruudsl/tutti-frontend:latest
+```
+
+Naast `latest` krijgt elke build een label met zijn commit (`sha-a1b2c3d`), en een versietag `v1.2.3` levert ook `1.2.3`, `1.2` en `1` op. Voor een productieomgeving is het verstandig om een versie vast te zetten in plaats van `latest` te volgen: dan weet je wat er draait, en een terugdraaiactie is een kwestie van het label wijzigen.
+
+Aanmelden hoeft niet voor een openbare repository. Is de repository privé, dan eerst:
+
+```bash
+echo <je-token> | docker login ghcr.io -u <je-github-naam> --password-stdin
+```
+
 Default credentials will be shown in the logs on first startup:
 
 ```bash

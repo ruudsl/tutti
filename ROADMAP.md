@@ -102,7 +102,9 @@ Formele audit van WCAG 2.1 AA compliance:
 
 ### Deliverables
 
-- [ ] `tutti/tutti:latest` Docker image op Docker Hub — _CI bouwt de images (`docker` job in `ci.yml`) maar pusht nog niet naar een registry_
+- [x] Kant-en-klare images in een registry — _`.github/workflows/publish-images.yml` publiceert backend en frontend naar `ghcr.io/ruudsl/tutti-backend` en `-frontend` bij elke merge naar `main` en bij elke versietag_
+  - Gekozen voor GitHub Container Registry en niet voor Docker Hub: dat werkt met `GITHUB_TOKEN` en vraagt geen account, geen organisatienaam en geen secrets die iemand moet verversen. Docker Hub is later toe te voegen als de naamruimte `tutti` beschikbaar is
+  - `docker-compose.yml` heeft nu `image:` naast `build:`, zodat `docker compose up` de image ophaalt en zelf-hosten geen bouwomgeving vraagt
 - [x] `docker-compose.yml` met alle services
 - [x] `docker-compose.prod.yml` voor productie
 - [x] Self-hosting guide voor non-developers
