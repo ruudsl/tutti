@@ -182,8 +182,13 @@ jobs:
       DB_PATH: ${{ github.workspace }}/lighthouse-data/tutti.db
       JWT_SECRET: lighthouse-only-secret-not-used-anywhere-else
       FRONTEND_URL: http://localhost:3001
-      NODE_ENV: production
       PORT: '3001'
+      # LET OP: NODE_ENV staat hier bewust niet. Op jobniveau geldt hij ook
+      # voor `npm ci`, en die slaat bij NODE_ENV=production alle
+      # devDependencies over - inclusief elke @types-package. De build viel dan
+      # om op tientallen "Could not find a declaration file"-fouten, terwijl de
+      # pakketten zelf wel stonden. Hij hoort alleen bij het starten van de
+      # applicatie, hieronder.
     steps:
       - uses: actions/checkout@v7
 
@@ -202,6 +207,10 @@ jobs:
       # Docker-image, dus meten we wat er ook echt draait - niet een
       # ontwikkelserver met onverkleinde bestanden.
       - name: Start de applicatie
+        # Alleen hier: in productiemodus serveert de backend zelf de gebouwde
+        # frontend, wat we willen meten.
+        env:
+          NODE_ENV: production
         run: |
           mkdir -p "$(dirname "$DB_PATH")"
           npm start &
