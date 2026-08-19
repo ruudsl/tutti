@@ -412,6 +412,44 @@ router.get(
   }),
 );
 
+// LET OP: deze route moet boven '/:id' blijven staan.
+//
+// Hij stond eronder, ruim duizend regels lager. Express matcht op volgorde, dus
+// /events/packing-templates kwam uit bij '/:id' en antwoordde met "Evenement
+// niet gevonden".
+
+router.get(
+  '/packing-templates',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const templates = db
+      .prepare(
+        `
+        SELECT t.*, u.first_name, u.last_name,
+               (SELECT COUNT(*) FROM packing_list_template_items WHERE template_id = t.id) as item_count
+        FROM packing_list_templates t
+        LEFT JOIN users u ON t.created_by = u.id
+        WHERE t.association_id = ?
+        ORDER BY t.is_default DESC, t.name
+    `,
+      )
+      .all(req.user!.associationId);
+
+    res.json(
+      (templates as any[]).map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        eventType: t.event_type,
+        isDefault: !!t.is_default,
+        itemCount: t.item_count,
+        createdBy: t.first_name ? `${t.first_name} ${t.last_name}` : null,
+        createdAt: t.created_at,
+      })),
+    );
+  }),
+);
+
 router.get(
   '/:id',
   authenticateToken,
@@ -1557,38 +1595,6 @@ router.get(
 // ===========================================
 // PACKING LIST TEMPLATES
 // ===========================================
-
-router.get(
-  '/packing-templates',
-  authenticateToken,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const templates = db
-      .prepare(
-        `
-        SELECT t.*, u.first_name, u.last_name,
-               (SELECT COUNT(*) FROM packing_list_template_items WHERE template_id = t.id) as item_count
-        FROM packing_list_templates t
-        LEFT JOIN users u ON t.created_by = u.id
-        WHERE t.association_id = ?
-        ORDER BY t.is_default DESC, t.name
-    `,
-      )
-      .all(req.user!.associationId);
-
-    res.json(
-      (templates as any[]).map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        eventType: t.event_type,
-        isDefault: !!t.is_default,
-        itemCount: t.item_count,
-        createdBy: t.first_name ? `${t.first_name} ${t.last_name}` : null,
-        createdAt: t.created_at,
-      })),
-    );
-  }),
-);
 
 router.get(
   '/packing-templates/:id',

@@ -1,55 +1,99 @@
 /**
- * Regressietests voor routes die door een /:id-route werden afgevangen.
+ * Een letterlijk pad mag niet onder een parameterpad staan.
  *
- * Express matcht in registratievolgorde. Stond een letterlijke route als
- * /tasks/templates na /tasks/:id, dan kwam het verzoek terecht bij de
- * :id-handler met id = "templates" en antwoordde die 404 - met de
- * bijbehorende foutmelding ("Taak niet gevonden"), wat het gemeen maakte om
- * te herkennen. Deze test controleert per endpoint dat er geen 404 komt en
- * dat het antwoord van de bedoelde handler komt.
+ * Express matcht routes op volgorde van registratie. Staat er eerst een route
+ * op '/:id' en daarna een op '/export-data', dan komt een verzoek aan
+ * /users/export-data bij de eerste terecht: Express ziet "export-data" als een
+ * id, zoekt een gebruiker met die naam en antwoordt met "Gebruiker niet
+ * gevonden". De tweede route wordt nooit bereikt.
  *
- * Dezelfde fout is eerder gevonden in music-pieces.ts (PUT/DELETE /bulk).
+ * Dit patroon kwam in dit project herhaaldelijk voor - in music-pieces (#110),
+ * in tasks en resources (#121), tussen mounts in index.ts (#136), en bij
+ * podiumindelingen en zaalindelingen (#144). Elke keer werd het gevonden
+ * doordat iemand er toevallig tegenaan liep, en elke keer werd alleen dat ene
+ * geval opgelost.
+ *
+ * Twee gevallen die op dat moment nog stil kapot waren:
+ *   - GET /users/export-data, de gegevensexport uit artikel 20 van de AVG
+ *   - GET /events/packing-templates
+ *
+ * Deze test controleert de eigenschap zelf over alle routebestanden, zodat een
+ * volgend geval meteen opvalt in plaats van pas als een gebruiker het meldt.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
-import '../setup';
-import app from '../testApp';
-import { createTestEnvironment } from '../testUtils';
+import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 
-describe('Routes that must not be shadowed by /:id', () => {
-  let adminToken: string;
+const ROUTES_MAP = path.join(__dirname, '../../routes');
 
-  beforeEach(() => {
-    adminToken = createTestEnvironment().adminToken;
+interface Route {
+  methode: string;
+  pad: string;
+  regel: number;
+}
+
+/**
+ * Lees de routes uit een bronbestand.
+ *
+ * Bewust op de tekst en niet door de router te importeren: dat zou de hele
+ * afhankelijkheidsboom van elk routebestand meetrekken, met alle bijwerkingen
+ * en de dekkingsmeting van dien.
+ */
+function leesRoutes(bron: string): Route[] {
+  const regels = bron.split('\n');
+  const routes: Route[] = [];
+
+  regels.forEach((regel, i) => {
+    const m = regel.match(/^\s*[A-Za-z_$][\w$]*\.(get|post|put|patch|delete)\($/);
+    if (!m || i + 1 >= regels.length) return;
+    const p = regels[i + 1].match(/^\s*'([^']+)'/);
+    if (p) routes.push({ methode: m[1].toUpperCase(), pad: p[1], regel: i + 1 });
   });
 
-  const endpoints: { path: string; description: string }[] = [
-    { path: '/api/tasks/templates', description: 'takensjablonen' },
-    { path: '/api/tasks/summary', description: 'takenoverzicht' },
-    { path: '/api/resources/bookings', description: 'reserveringen' },
-    { path: '/api/equipment/loans', description: 'uitleningen' },
-    { path: '/api/equipment/stats', description: 'apparatuurstatistieken' },
-  ];
+  return routes;
+}
 
-  it.each(endpoints)('reaches its own handler: $path ($description)', async ({ path }) => {
-    const response = await request(app).get(path).set('Authorization', `Bearer ${adminToken}`);
+/** Vangt `eerder` het pad van `later` af? */
+function vangtAf(eerder: Route, later: Route): boolean {
+  if (eerder.methode !== later.methode) return false;
 
-    expect(response.status).not.toBe(404);
+  const a = eerder.pad.split('/').filter(Boolean);
+  const b = later.pad.split('/').filter(Boolean);
+  if (a.length !== b.length) return false;
+  if (!a.some((deel) => deel.startsWith(':'))) return false;
+
+  return a.every((deel, i) => deel.startsWith(':') || deel === b[i]);
+}
+
+const bestanden = fs
+  .readdirSync(ROUTES_MAP)
+  .filter((naam) => naam.endsWith('.ts'))
+  .sort();
+
+describe('routes vangen elkaar niet af', () => {
+  it('vindt routebestanden om te controleren', () => {
+    // Zonder deze controle zou de test stilletjes niets meer nakijken als de
+    // map ooit verplaatst wordt.
+    expect(bestanden.length).toBeGreaterThan(50);
   });
 
-  it.each(endpoints)('does not answer with a not-found message: $path', async ({ path }) => {
-    const response = await request(app).get(path).set('Authorization', `Bearer ${adminToken}`);
+  it.each(bestanden)('%s', (naam) => {
+    const routes = leesRoutes(fs.readFileSync(path.join(ROUTES_MAP, naam), 'utf-8'));
+    const problemen: string[] = [];
 
-    // De :id-handlers antwoorden met "... niet gevonden"; dat mag hier niet.
-    expect(String(response.body?.error ?? '')).not.toMatch(/niet gevonden/i);
-  });
+    routes.forEach((later, j) => {
+      if (later.pad.includes(':')) return; // alleen letterlijke paden lopen dit risico
+      routes.slice(0, j).forEach((eerder) => {
+        if (vangtAf(eerder, later)) {
+          problemen.push(
+            `${later.methode} ${later.pad} (regel ${later.regel}) wordt afgevangen door ` +
+              `${eerder.methode} ${eerder.pad} (regel ${eerder.regel}) - zet de letterlijke route erboven`,
+          );
+        }
+      });
+    });
 
-  it('still resolves a real id through the :id handler', async () => {
-    const response = await request(app)
-      .get('/api/tasks/00000000-0000-4000-8000-000000000000')
-      .set('Authorization', `Bearer ${adminToken}`);
-
-    expect(response.status).toBe(404);
+    expect(problemen).toEqual([]);
   });
 });
