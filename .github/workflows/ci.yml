@@ -9,6 +9,7 @@ on:
 jobs:
   backend:
     name: Backend
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -38,6 +39,7 @@ jobs:
 
   frontend:
     name: Frontend
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -69,6 +71,7 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       # Dedicated E2E database, separate from any dev/prod database.
@@ -85,7 +88,12 @@ jobs:
 
       - run: npm ci
 
+      # Deze stap haalde de browser eens niet binnen en bleef bijna een uur
+      # hangen, terwijl hij normaal in een minuut klaar is. Zonder eigen limiet
+      # eet zo'n hang de hele tijdslimiet van de job op, en blijft de pull
+      # request wachten op iets wat nooit komt.
       - name: Install Playwright browsers
+        timeout-minutes: 8
         run: npx playwright install chromium --with-deps
 
       - name: Seed E2E database
@@ -105,6 +113,7 @@ jobs:
 
   lint:
     name: Lint
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -125,6 +134,7 @@ jobs:
 
   security:
     name: Security Audit
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -139,6 +149,7 @@ jobs:
 
   docker:
     name: Docker Build
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -177,6 +188,7 @@ jobs:
 
   lighthouse:
     name: Lighthouse
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
       DB_PATH: ${{ github.workspace }}/lighthouse-data/tutti.db

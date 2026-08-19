@@ -20,6 +20,10 @@ jobs:
   deploy:
     name: Uitrollen en controleren
     runs-on: ubuntu-latest
+    # De wachtlus hieronder geeft na tien minuten zelf op. Deze grens vangt de
+    # gevallen die daar niet onder vallen, zoals een stap die vastloopt op een
+    # download.
+    timeout-minutes: 20
     # Bij workflow_run draait dit ook als CI faalde; die uitrol slaan we over.
     if: >
       github.event_name == 'workflow_dispatch' ||
