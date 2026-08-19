@@ -1,0 +1,113 @@
+name: Publiceer images
+
+# Publiceren gebeurt na een merge naar main en bij een versietag, niet bij elke
+# pull request. Een image van een tak die nog beoordeeld wordt hoort niet in de
+# registry: dan weet niemand meer wat `latest` betekent.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+concurrency:
+  # Bij meerdere merges vlak achter elkaar telt alleen de laatste; anders kan
+  # een oudere build als laatste binnenkomen en `latest` terugzetten.
+  group: publiceer-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publiceer:
+    name: ${{ matrix.naam }}
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Nodig om naar ghcr.io te mogen schrijven. GITHUB_TOKEN volstaat; er zijn
+      # geen secrets die iemand moet aanmaken of verversen.
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - naam: backend
+            dockerfile: backend/Dockerfile
+          - naam: frontend
+            dockerfile: frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Aanmelden en labels bepalen gebeurt met gewone commando's in plaats van
+      # met docker/login-action en docker/metadata-action. Die twee worden in
+      # dit project nergens anders gebruikt, dus er is geen versie van bekend
+      # die hier aantoonbaar werkt - en een verkeerd gegokte versie faalt pas in
+      # CI. setup-buildx-action en build-push-action draaien hieronder wel al
+      # groen in ci.yml.
+      - name: Aanmelden bij de registry
+        run: echo '${{ secrets.GITHUB_TOKEN }}' | docker login "$REGISTRY" -u '${{ github.actor }}' --password-stdin
+
+      - name: Bepaal de labels
+        id: meta
+        run: |
+          # ghcr.io accepteert alleen kleine letters in de naam.
+          pad=$(echo "${{ github.repository }}-${{ matrix.naam }}" | tr '[:upper:]' '[:lower:]')
+          image="$REGISTRY/$pad"
+
+          # Elke build krijgt zijn eigen korte sha, zodat een uitrol precies
+          # terug te vinden en terug te draaien is.
+          labels="$image:sha-$(git rev-parse --short HEAD)"
+
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            labels="$labels,$image:latest"
+          fi
+
+          # Bij een versietag v1.2.3 ook 1.2.3, 1.2 en 1, zodat iemand die
+          # zelf host kan kiezen hoe strak hij vastzet.
+          case "$GITHUB_REF" in
+            refs/tags/v*)
+              versie="${GITHUB_REF#refs/tags/v}"
+              labels="$labels,$image:$versie"
+              case "$versie" in
+                *.*.*)
+                  labels="$labels,$image:${versie%.*},$image:${versie%%.*}"
+                  ;;
+              esac
+              ;;
+          esac
+
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "labels=$labels" >> "$GITHUB_OUTPUT"
+          echo "Publiceert naar: $labels"
+
+      - name: Bouwen en publiceren
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.labels }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          # Dezelfde cache als de bouwstap in ci.yml, zodat een merge niet alles
+          # opnieuw hoeft te bouwen.
+          cache-from: type=gha,scope=${{ matrix.naam }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.naam }}
+
+      - name: Zet in de samenvatting waar de image staat
+        run: |
+          {
+            echo "### ${{ matrix.naam }}"
+            echo
+            echo '```'
+            echo "docker pull ${{ steps.meta.outputs.image }}:latest"
+            echo '```'
+            echo
+            echo "Gepubliceerd onder:"
+            echo '${{ steps.meta.outputs.labels }}' | tr ',' '\n' | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"

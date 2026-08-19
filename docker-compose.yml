@@ -6,6 +6,12 @@ services:
   # Backend API
   # ==========================================================================
   backend:
+    # Met image én build erbij kun je kiezen. `docker compose up` haalt de
+    # gepubliceerde image op, zodat zelf-hosten geen bouwomgeving vraagt;
+    # `docker compose build` bouwt hem alsnog lokaal en zet dezelfde naam
+    # erop. Zet de naam vast op een versie in plaats van latest als je wilt
+    # weten wat er draait.
+    image: ghcr.io/ruudsl/tutti-backend:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -37,6 +43,7 @@ services:
   # Frontend (nginx)
   # ==========================================================================
   frontend:
+    image: ghcr.io/ruudsl/tutti-frontend:latest
     build:
       context: .
       dockerfile: frontend/Dockerfile
