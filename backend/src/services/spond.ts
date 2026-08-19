@@ -45,6 +45,33 @@ export function encryptPassword(plaintext: string): string {
  * oplossingen, en de gebruiker hoort niet bij alle drie te lezen dat hij zijn
  * wachtwoord moet controleren.
  */
+/**
+ * Haal het aanmeldtoken uit het antwoord van Spond.
+ *
+ * Spond heeft de naam van dit veld al eens gewijzigd, en het antwoord is niet
+ * altijd plat: sommige versies zetten het onder een omhulsel. Daarom zoeken we
+ * op een handvol bekende namen, ook een niveau dieper, in plaats van op één
+ * vaste sleutel te vertrouwen.
+ */
+const TOKEN_VELDEN = ['loginToken', 'token', 'accessToken', 'authToken', 'access_token'];
+
+export function pakToken(data: Record<string, unknown>, diepte = 0): string | null {
+  for (const veld of TOKEN_VELDEN) {
+    const waarde = data[veld];
+    if (typeof waarde === 'string' && waarde.length > 0) return waarde;
+  }
+
+  if (diepte >= 1) return null;
+
+  for (const waarde of Object.values(data)) {
+    if (waarde && typeof waarde === 'object' && !Array.isArray(waarde)) {
+      const gevonden = pakToken(waarde as Record<string, unknown>, diepte + 1);
+      if (gevonden) return gevonden;
+    }
+  }
+  return null;
+}
+
 export class SpondLoginError extends Error {
   constructor(
     message: string,
@@ -191,12 +218,19 @@ export class SpondClient {
       throw new SpondLoginError(`Spond antwoordde met status ${res.status}.`, 'unexpected', res.status);
     }
 
-    const data = (await res.json()) as { loginToken?: string; token?: string };
-    this.token = data.loginToken || data.token || null;
+    const data = (await res.json()) as Record<string, unknown>;
+    this.token = pakToken(data);
     if (!this.token) {
-      logger.error('Spond gaf geen token terug', { path: gebruiktPad, keys: Object.keys(data) });
+      // De veldnamen staan ook in de melding zelf. Ze zijn niet geheim - de
+      // waarden wel, en die blijven hier weg - en zonder deze aanwijzing moet
+      // een beheerder in de serverlogs gaan graven om te zien waar Spond op
+      // vastloopt.
+      const velden = Object.keys(data);
+      logger.error('Spond gaf geen token terug', { path: gebruiktPad, keys: velden });
       throw new SpondLoginError(
-        'Spond gaf geen aanmeldtoken terug. Mogelijk is de koppeling met tweestapsverificatie beveiligd.',
+        `Spond gaf geen aanmeldtoken terug via ${gebruiktPad}. ` +
+          `Ontvangen velden: ${velden.length ? velden.join(', ') : '(geen)'}. ` +
+          'Mogelijk is het account met tweestapsverificatie beveiligd.',
         'unexpected',
       );
     }

@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '../setup';
-import { SpondClient, SpondLoginError } from '../../services/spond';
+import { SpondClient, SpondLoginError, pakToken } from '../../services/spond';
 
 function antwoord(status: number, body: unknown): Response {
   return {
@@ -160,5 +160,53 @@ describe('Aanmeldpad bij Spond', () => {
     expect(fout.message).toContain('API gewijzigd');
     // Dit is nadrukkelijk geen 'rejected': het wachtwoord is nooit beoordeeld.
     expect(fout.reason).toBe('unexpected');
+  });
+});
+
+describe('Het aanmeldtoken uit het antwoord halen', () => {
+  it('kent de namen die Spond gebruikt heeft', () => {
+    expect(pakToken({ loginToken: 'a' })).toBe('a');
+    expect(pakToken({ token: 'b' })).toBe('b');
+    expect(pakToken({ accessToken: 'c' })).toBe('c');
+    expect(pakToken({ access_token: 'd' })).toBe('d');
+  });
+
+  it('kijkt een niveau dieper als het antwoord een omhulsel heeft', () => {
+    expect(pakToken({ data: { loginToken: 'diep' } })).toBe('diep');
+  });
+
+  it('graaft niet eindeloos door', () => {
+    expect(pakToken({ a: { b: { loginToken: 'te diep' } } })).toBeNull();
+  });
+
+  it('trapt niet in een leeg veld', () => {
+    expect(pakToken({ loginToken: '' })).toBeNull();
+    expect(pakToken({ loginToken: null })).toBeNull();
+  });
+
+  it('noemt de ontvangen velden in de melding', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => antwoord(200, { challenge: 'x', twoFactorRequired: true })),
+    );
+
+    const fout = await new SpondClient('iemand@example.com', 'goed').login().catch((e) => e);
+
+    // Zonder deze aanwijzing moet een beheerder in de serverlogs gaan graven.
+    expect(fout.message).toContain('challenge');
+    expect(fout.message).toContain('twoFactorRequired');
+    expect(fout.message).toContain('/auth2/login');
+    // De waarden horen er niet in te staan, alleen de namen.
+    expect(fout.message).not.toContain('"x"');
+  });
+
+  it('zegt het duidelijk als er helemaal niets terugkwam', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => antwoord(200, {})),
+    );
+
+    const fout = await new SpondClient('iemand@example.com', 'goed').login().catch((e) => e);
+    expect(fout.message).toContain('(geen)');
   });
 });
