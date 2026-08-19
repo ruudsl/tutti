@@ -256,3 +256,198 @@ describe('Scheiding tussen verenigingen', () => {
     expect(associationId).toBeTruthy();
   });
 });
+
+/** Een relatie is nodig voor elke factuur; deze helper houdt dat kort. */
+async function maakRelatie(naam = 'Leverancier BV') {
+  const res = await alsAdmin('post', '/relations').send({ relationType: 'supplier', name: naam });
+  expect(res.status).toBe(201);
+  return res.body.id as string;
+}
+
+/** Geef de id van een rekening met deze code, uit het standaardschema. */
+async function rekeningId(code: string) {
+  const lijst = await alsAdmin('get', '/accounts');
+  const rekening = lijst.body.find((r: { code: string }) => r.code === code);
+  expect(rekening, `rekening ${code} ontbreekt`).toBeTruthy();
+  return rekening.id as string;
+}
+
+describe('Relaties', () => {
+  it('maakt een relatie aan en toont hem', async () => {
+    const id = await maakRelatie('Muziekhandel De Klank');
+
+    const lijst = await alsAdmin('get', '/relations');
+    expect(lijst.status).toBe(200);
+    expect(lijst.body.map((r: { id: string }) => r.id)).toContain(id);
+  });
+
+  it('eist een soort en een naam', async () => {
+    const res = await alsAdmin('post', '/relations').send({ name: 'Zonder soort' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('naam');
+  });
+
+  it('toont de relaties van een andere vereniging niet', async () => {
+    await maakRelatie();
+
+    const andere = createTestAssociation();
+    const andereToken = generateTestToken(createTestUser(andere.id, { email: 'admin-rel@test.com', role: 'admin' }));
+
+    const res = await request(app).get('/api/accounting/relations').set('Authorization', `Bearer ${andereToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});
+
+describe('Facturen', () => {
+  // Een factuur krijgt een nummer binnen het lopende boekjaar, dus zonder
+  // open boekjaar weigert de route terecht.
+  beforeEach(async () => {
+    await maakBoekjaar({ isCurrent: true });
+  });
+
+  it('maakt een factuur met regels aan', async () => {
+    const relationId = await maakRelatie();
+
+    const res = await alsAdmin('post', '/invoices').send({
+      invoiceType: 'purchase',
+      relationId,
+      invoiceDate: '2026-03-01',
+      dueDate: '2026-03-31',
+      description: 'Bladmuziek',
+      lines: [{ description: 'Partituren', quantity: 2, unitPrice: 45.5, vatRate: 21 }],
+    });
+
+    expect(res.status).toBe(201);
+    const lijst = await alsAdmin('get', '/invoices');
+    expect(lijst.body.length).toBeGreaterThan(0);
+  });
+
+  it('weigert een factuur zonder regels', async () => {
+    const relationId = await maakRelatie();
+
+    // Een factuur zonder regels heeft geen bedrag; die hoort niet te bestaan.
+    const res = await alsAdmin('post', '/invoices').send({
+      invoiceType: 'purchase',
+      relationId,
+      invoiceDate: '2026-03-01',
+      dueDate: '2026-03-31',
+      lines: [],
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('weigert een factuur voor een onbekende relatie', async () => {
+    const res = await alsAdmin('post', '/invoices').send({
+      invoiceType: 'purchase',
+      relationId: '11111111-1111-1111-1111-111111111111',
+      invoiceDate: '2026-03-01',
+      dueDate: '2026-03-31',
+      lines: [{ description: 'Iets', quantity: 1, unitPrice: 10 }],
+    });
+
+    expect([400, 404]).toContain(res.status);
+  });
+});
+
+describe('Boekingen', () => {
+  /** Een boeking vraagt een lopend boekjaar en rekeningen om op te boeken. */
+  async function opzet() {
+    await maakBoekjaar({ isCurrent: true });
+    await alsAdmin('post', '/accounts/initialize');
+    return { kas: await rekeningId('1000'), bank: await rekeningId('1100') };
+  }
+
+  it('boekt een sluitende post', async () => {
+    const { kas, bank } = await opzet();
+
+    const res = await alsAdmin('post', '/transactions').send({
+      transactionDate: '2026-03-01',
+      transactionType: 'transfer',
+      description: 'Kas naar bank',
+      lines: [
+        { accountId: bank, debitAmount: 100 },
+        { accountId: kas, creditAmount: 100 },
+      ],
+    });
+
+    expect(res.status).toBe(201);
+  });
+
+  it('weigert een post die niet in balans is', async () => {
+    const { kas, bank } = await opzet();
+
+    // Dit is de kern van dubbel boekhouden: wat er aan de ene kant af gaat,
+    // moet er aan de andere kant bij komen. Zonder deze controle loopt de
+    // balans stilletjes scheef.
+    const res = await alsAdmin('post', '/transactions').send({
+      transactionDate: '2026-03-01',
+      transactionType: 'transfer',
+      description: 'Scheve boeking',
+      lines: [
+        { accountId: bank, debitAmount: 100 },
+        { accountId: kas, creditAmount: 75 },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('balans');
+    expect(res.body.error).toContain('25');
+  });
+
+  it('weigert een post met maar een regel', async () => {
+    const { bank } = await opzet();
+
+    const res = await alsAdmin('post', '/transactions').send({
+      transactionDate: '2026-03-01',
+      transactionType: 'journal',
+      description: 'Eenzijdig',
+      lines: [{ accountId: bank, debitAmount: 100 }],
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('weigert een post zonder lopend boekjaar', async () => {
+    await alsAdmin('post', '/accounts/initialize');
+    const bank = await rekeningId('1100');
+    const kas = await rekeningId('1000');
+
+    const res = await alsAdmin('post', '/transactions').send({
+      transactionDate: '2026-03-01',
+      transactionType: 'transfer',
+      description: 'Zonder boekjaar',
+      lines: [
+        { accountId: bank, debitAmount: 50 },
+        { accountId: kas, creditAmount: 50 },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('boekjaar');
+  });
+});
+
+describe('Rapportages', () => {
+  it('geeft een balans terug', async () => {
+    await maakBoekjaar({ isCurrent: true });
+    await alsAdmin('post', '/accounts/initialize');
+
+    const res = await alsAdmin('get', '/reports/balance');
+    expect(res.status).toBe(200);
+  });
+
+  it('geeft een winst-en-verliesrekening terug', async () => {
+    await maakBoekjaar({ isCurrent: true });
+    await alsAdmin('post', '/accounts/initialize');
+
+    const res = await alsAdmin('get', '/reports/profit-loss');
+    expect(res.status).toBe(200);
+  });
+
+  it('geeft een ouderdomsoverzicht terug', async () => {
+    const res = await alsAdmin('get', '/reports/aging');
+    expect(res.status).toBe(200);
+  });
+});
