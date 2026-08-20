@@ -335,14 +335,20 @@ router.put(
       throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    // Check if entry exists
+    // Check if entry exists and belongs to the caller's association. De
+    // gastenlijst hangt aan een concert, en dat concert aan een vereniging;
+    // zonder die stap kan een beheerder de gasten van een andere vereniging
+    // aanpassen.
     const existing = db
       .prepare(
         `
-        SELECT id, concert_id, tickets_sent FROM guest_list WHERE id = ?
+        SELECT gl.id, gl.concert_id, gl.tickets_sent
+        FROM guest_list gl
+        JOIN concerts c ON c.id = gl.concert_id
+        WHERE gl.id = ? AND c.association_id = ?
     `,
       )
-      .get(id) as { id: string; concert_id: string; tickets_sent: number } | undefined;
+      .get(id, req.user!.associationId) as { id: string; concert_id: string; tickets_sent: number } | undefined;
 
     if (!existing) {
       throw new ApiError(404, 'Guest list entry not found');
@@ -479,14 +485,18 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
-    // Check if entry exists
+    // Check if entry exists and belongs to the caller's association.
     const existing = db
       .prepare(
         `
-        SELECT id, name, email, concert_id, tickets_sent FROM guest_list WHERE id = ?
+        SELECT gl.id, gl.name, gl.email, gl.concert_id, gl.tickets_sent
+        FROM guest_list gl
+        JOIN concerts c ON c.id = gl.concert_id
+        WHERE gl.id = ? AND c.association_id = ?
     `,
       )
-      .get(id) as { id: string; name: string; email: string; concert_id: string; tickets_sent: number } | undefined;
+      .get(id, req.user!.associationId) as
+      { id: string; name: string; email: string; concert_id: string; tickets_sent: number } | undefined;
 
     if (!existing) {
       throw new ApiError(404, 'Guest list entry not found');
@@ -560,7 +570,10 @@ router.post(
         }
       | undefined;
 
-    if (!entry) {
+    // De query haalde association_id al op maar deed er niets mee, waardoor
+    // een beheerder kaarten kon versturen voor het concert van een andere
+    // vereniging.
+    if (!entry || entry.association_id !== req.user!.associationId) {
       throw new ApiError(404, 'Guest list entry not found');
     }
 
@@ -693,10 +706,13 @@ router.post(
     const entries = db
       .prepare(
         `
-        SELECT id FROM guest_list WHERE concert_id = ? AND tickets_sent = 0
+        SELECT gl.id
+        FROM guest_list gl
+        JOIN concerts c ON c.id = gl.concert_id
+        WHERE gl.concert_id = ? AND gl.tickets_sent = 0 AND c.association_id = ?
     `,
       )
-      .all(concertId) as { id: string }[];
+      .all(concertId, req.user!.associationId) as { id: string }[];
 
     if (entries.length === 0) {
       return res.json({
