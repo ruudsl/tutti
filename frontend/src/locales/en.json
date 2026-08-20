@@ -272,7 +272,8 @@
     "seasonPlanner": "Season Planning",
     "attendanceAnalytics": "Attendance Analytics",
     "externalMusicians": "External Musicians",
-    "replacementRequests": "Replacement Requests"
+    "replacementRequests": "Replacement Requests",
+    "musicSharing": "Share music"
   },
   "roles": {
     "admin": "Administrator",
@@ -2153,7 +2154,8 @@
   "pageTitle": {
     "modules": "Modules",
     "stageDesigner": "Stage Layout Designer",
-    "concertStageSetup": "Concert Stage Setup"
+    "concertStageSetup": "Concert Stage Setup",
+    "musicSharing": "Share music"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -4376,7 +4378,8 @@
         "pending": "Pending",
         "active": "Active",
         "rejected": "Rejected"
-      }
+      },
+      "linkViaCode": "Linking with another association is done with a code, under"
     },
     "members": {
       "title": "Members",
@@ -5663,6 +5666,104 @@
       "paymentInstructionsText": "Please pay the outstanding amount of {{amount}} before {{dueDate}}, quoting invoice number {{invoiceNumber}}.",
       "paymentReference": "Payment reference",
       "notes": "Notes"
+    }
+  },
+  "musicSharing": {
+    "title": "Sharing music between associations",
+    "intro": "Link with another association using a code, choose per piece who you share it with, and decide yourself which parts you release.",
+    "tabs": {
+      "koppelingen": "Links",
+      "catalogus": "Catalogue",
+      "verzoeken": "Requests",
+      "oproepen": "Wanted",
+      "overzicht": "Overview"
+    },
+    "link": {
+      "explanation": "There is deliberately no list of associations on Tutti. You link using a code passed on outside Tutti, so you always know who you are linked with.",
+      "giveTitle": "Share a code",
+      "giveHelp": "Generate a code and pass it to the other association. The code works once.",
+      "generate": "Generate code",
+      "validUntil": "Valid until {{datum}}",
+      "replacesPrevious": "Any earlier unused codes from your association have now expired.",
+      "enterTitle": "Enter a code",
+      "codeLabel": "Link code",
+      "redeem": "Link",
+      "linked": "Linked with {{naam}}.",
+      "failed": "Linking failed.",
+      "partnersTitle": "Linked associations",
+      "noPartners": "No links yet.",
+      "end": "End link",
+      "endTitle": "End link",
+      "endConfirm": "End the link with {{naam}}? What you share with them will no longer be visible. The shares themselves remain, so relinking restores everything.",
+      "ended": "Link ended."
+    },
+    "catalog": {
+      "search": "Search what partners share",
+      "empty": "Nothing has been shared with you yet. Link with an association first, or ask them to open up a piece.",
+      "requestExplanation": "This shows which parts exist. For the file itself you submit a request; the owner decides each time.",
+      "request": "Request",
+      "unknownInstrument": "Unknown instrument"
+    },
+    "request": {
+      "incoming": "Incoming requests",
+      "noIncoming": "No requests.",
+      "outgoing": "Our requests",
+      "noOutgoing": "No requests made yet.",
+      "approve": "Release",
+      "reject": "Decline",
+      "withdraw": "Withdraw",
+      "sent": "Request sent.",
+      "approved": "Part released.",
+      "rejected": "Request declined.",
+      "until": "until {{datum}}",
+      "status": {
+        "pending": "Pending",
+        "approved": "Released",
+        "rejected": "Declined",
+        "withdrawn": "Withdrawn"
+      },
+      "downloadFailed": "Downloading failed. Access may have expired."
+    },
+    "wanted": {
+      "new": "Post a request",
+      "post": "Post",
+      "posted": "Request posted.",
+      "failed": "Posting failed.",
+      "empty": "No posts. Only linked associations see each other’s posts.",
+      "replies": "Replies ({{aantal}})",
+      "noReplies": "No replies yet.",
+      "reply": "Reply",
+      "replied": "Reply posted.",
+      "replyFailed": "Replying failed.",
+      "yourReply": "Your reply",
+      "markResolved": "Found",
+      "filter": {
+        "open": "Open",
+        "resolved": "Found",
+        "all": "All"
+      },
+      "status": {
+        "open": "Open",
+        "resolved": "Found",
+        "closed": "Closed"
+      },
+      "field": {
+        "title": "Title",
+        "composer": "Composer",
+        "arranger": "Arranger",
+        "description": "Details",
+        "referenceUrl": "Link or YouTube video",
+        "referenceHelp": "A YouTube address is shown here as a video; any other address as a link."
+      }
+    },
+    "overview": {
+      "noPartners": "No links yet, so there is nothing to share.",
+      "count": "{{aantal}} piece(s)",
+      "nothingShared": "You share nothing with this association.",
+      "since": "shared since {{datum}}",
+      "excluded": "Parts you never share",
+      "excludedHelp": "These parts stay out of every share, even for pieces you do open up.",
+      "noExclusions": "No exclusions."
     }
   }
 }

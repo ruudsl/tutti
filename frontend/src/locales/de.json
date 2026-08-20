@@ -272,7 +272,8 @@
     "attendanceAnalytics": "Anwesenheitsanalyse",
     "externalMusicians": "Externe Musiker",
     "replacementRequests": "Vertretungsanfragen",
-    "stageDesigner": "Bühnenaufstellung"
+    "stageDesigner": "Bühnenaufstellung",
+    "musicSharing": "Musik teilen"
   },
   "roles": {
     "admin": "Administrator",
@@ -2130,7 +2131,8 @@
   "pageTitle": {
     "modules": "Module",
     "stageDesigner": "Bühnenaufstellung Designer",
-    "concertStageSetup": "Konzert-Bühnenaufstellung"
+    "concertStageSetup": "Konzert-Bühnenaufstellung",
+    "musicSharing": "Musik teilen"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -4376,7 +4378,8 @@
         "pending": "Ausstehend",
         "active": "Aktiv",
         "rejected": "Abgelehnt"
-      }
+      },
+      "linkViaCode": "Die Verbindung mit einem anderen Verein entsteht über einen Code, unter"
     },
     "members": {
       "title": "Mitglieder",
@@ -5663,6 +5666,104 @@
       "paymentInstructionsText": "Bitte überweisen Sie den offenen Betrag von {{amount}} bis {{dueDate}} unter Angabe der Rechnungsnummer {{invoiceNumber}}.",
       "paymentReference": "Zahlungsreferenz",
       "notes": "Anmerkungen"
+    }
+  },
+  "musicSharing": {
+    "title": "Musik zwischen Vereinen teilen",
+    "intro": "Verbinde dich über einen Code mit einem anderen Verein, wähle pro Stück, mit wem du es teilst, und entscheide selbst, welche Stimmen du freigibst.",
+    "tabs": {
+      "koppelingen": "Verbindungen",
+      "catalogus": "Katalog",
+      "verzoeken": "Anfragen",
+      "oproepen": "Gesuche",
+      "overzicht": "Übersicht"
+    },
+    "link": {
+      "explanation": "Es gibt bewusst keine Liste der Vereine auf Tutti. Die Verbindung entsteht über einen Code, den du außerhalb von Tutti weitergibst – so weißt du immer, mit wem du verbunden bist.",
+      "giveTitle": "Einen Code weitergeben",
+      "giveHelp": "Erzeuge einen Code und gib ihn an den anderen Verein weiter. Der Code gilt einmalig.",
+      "generate": "Code erzeugen",
+      "validUntil": "Gültig bis {{datum}}",
+      "replacesPrevious": "Frühere unbenutzte Codes eures Vereins sind damit verfallen.",
+      "enterTitle": "Einen Code eingeben",
+      "codeLabel": "Verbindungscode",
+      "redeem": "Verbinden",
+      "linked": "Mit {{naam}} verbunden.",
+      "failed": "Verbinden fehlgeschlagen.",
+      "partnersTitle": "Verbundene Vereine",
+      "noPartners": "Noch keine Verbindungen.",
+      "end": "Verbindung beenden",
+      "endTitle": "Verbindung beenden",
+      "endConfirm": "Verbindung mit {{naam}} wirklich beenden? Was ihr mit ihnen teilt, ist danach nicht mehr sichtbar. Die Freigaben bleiben bestehen, bei einer neuen Verbindung ist alles wieder da.",
+      "ended": "Verbindung beendet."
+    },
+    "catalog": {
+      "search": "Im Angebot der Partner suchen",
+      "empty": "Es wurde noch nichts mit euch geteilt. Verbindet euch zuerst mit einem Verein oder bittet ihn, ein Stück freizugeben.",
+      "requestExplanation": "Hier siehst du, welche Stimmen es gibt. Für die Datei selbst stellst du eine Anfrage; der Eigentümer entscheidet jedes Mal.",
+      "request": "Anfragen",
+      "unknownInstrument": "Unbekanntes Instrument"
+    },
+    "request": {
+      "incoming": "Eingegangene Anfragen",
+      "noIncoming": "Keine Anfragen.",
+      "outgoing": "Unsere Anfragen",
+      "noOutgoing": "Noch keine Anfragen gestellt.",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "withdraw": "Zurückziehen",
+      "sent": "Anfrage gesendet.",
+      "approved": "Stimme freigegeben.",
+      "rejected": "Anfrage abgelehnt.",
+      "until": "bis {{datum}}",
+      "status": {
+        "pending": "In Bearbeitung",
+        "approved": "Freigegeben",
+        "rejected": "Abgelehnt",
+        "withdrawn": "Zurückgezogen"
+      },
+      "downloadFailed": "Der Download ist fehlgeschlagen. Möglicherweise ist der Zugang abgelaufen."
+    },
+    "wanted": {
+      "new": "Gesuch aufgeben",
+      "post": "Aufgeben",
+      "posted": "Gesuch aufgegeben.",
+      "failed": "Gesuch aufgeben fehlgeschlagen.",
+      "empty": "Keine Gesuche. Nur verbundene Vereine sehen die Gesuche der anderen.",
+      "replies": "Antworten ({{aantal}})",
+      "noReplies": "Noch keine Antworten.",
+      "reply": "Antworten",
+      "replied": "Antwort verfasst.",
+      "replyFailed": "Antworten fehlgeschlagen.",
+      "yourReply": "Eure Antwort",
+      "markResolved": "Gefunden",
+      "filter": {
+        "open": "Offen",
+        "resolved": "Gefunden",
+        "all": "Alle"
+      },
+      "status": {
+        "open": "Offen",
+        "resolved": "Gefunden",
+        "closed": "Geschlossen"
+      },
+      "field": {
+        "title": "Titel",
+        "composer": "Komponist",
+        "arranger": "Arrangeur",
+        "description": "Erläuterung",
+        "referenceUrl": "Link oder YouTube-Video",
+        "referenceHelp": "Eine YouTube-Adresse wird hier als Video gezeigt, jede andere Adresse als Link."
+      }
+    },
+    "overview": {
+      "noPartners": "Noch keine Verbindungen, also gibt es nichts zu teilen.",
+      "count": "{{aantal}} Stück(e)",
+      "nothingShared": "Mit diesem Verein teilt ihr nichts.",
+      "since": "geteilt seit {{datum}}",
+      "excluded": "Stimmen, die ihr nirgends teilt",
+      "excludedHelp": "Diese Stimmen bleiben von jeder Freigabe ausgenommen, auch bei Stücken, die ihr freigebt.",
+      "noExclusions": "Keine Ausnahmen."
     }
   }
 }

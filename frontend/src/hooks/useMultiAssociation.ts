@@ -18,7 +18,6 @@ import {
   acceptInvitation,
   getPartnerships,
   requestPartnership,
-  getAssociationDirectory,
   getPartnerMusic,
   getPartnerEvents,
   approvePartnership,
@@ -221,15 +220,6 @@ export function usePartnerships() {
   return useQuery({
     queryKey: ['partnerships'],
     queryFn: getPartnerships,
-  });
-}
-
-/** De verenigingen waarmee een partnerschap aangevraagd kan worden. */
-export function useAssociationDirectory(enabled = true) {
-  return useQuery({
-    queryKey: ['association-directory'],
-    queryFn: getAssociationDirectory,
-    enabled,
   });
 }
 

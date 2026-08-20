@@ -272,7 +272,8 @@
     "seasonPlanner": "Seizoensplanning",
     "attendanceAnalytics": "Aanwezigheidsanalyse",
     "externalMusicians": "Externe Muzikanten",
-    "replacementRequests": "Invalverzoeken"
+    "replacementRequests": "Invalverzoeken",
+    "musicSharing": "Muziek delen"
   },
   "roles": {
     "admin": "Beheerder",
@@ -3122,7 +3123,8 @@
   "pageTitle": {
     "modules": "Modules",
     "stageDesigner": "Podiumindeling Designer",
-    "concertStageSetup": "Concert Podiumindeling"
+    "concertStageSetup": "Concert Podiumindeling",
+    "musicSharing": "Muziek delen"
   },
   "seating": {
     "title": "Orkestopstelling",
@@ -4376,7 +4378,8 @@
         "pending": "In afwachting",
         "active": "Actief",
         "rejected": "Afgewezen"
-      }
+      },
+      "linkViaCode": "Koppelen met een andere vereniging gaat via een code, onder"
     },
     "members": {
       "title": "Leden",
@@ -5663,6 +5666,104 @@
       "paymentInstructionsText": "Gelieve het openstaande bedrag van {{amount}} te voldoen vóór {{dueDate}}, onder vermelding van factuurnummer {{invoiceNumber}}.",
       "paymentReference": "Betalingskenmerk",
       "notes": "Opmerkingen"
+    }
+  },
+  "musicSharing": {
+    "title": "Muziek delen tussen verenigingen",
+    "intro": "Koppel met een andere vereniging via een code, kies per stuk met wie je het deelt, en beslis zelf welke partijen je vrijgeeft.",
+    "tabs": {
+      "koppelingen": "Koppelingen",
+      "catalogus": "Catalogus",
+      "verzoeken": "Verzoeken",
+      "oproepen": "Oproepen",
+      "overzicht": "Overzicht"
+    },
+    "link": {
+      "explanation": "Er is bewust geen lijst van verenigingen op Tutti. Je koppelt met een code die je buiten Tutti om doorgeeft, zodat je altijd weet met wie je gekoppeld bent.",
+      "giveTitle": "Een code delen",
+      "giveHelp": "Maak een code aan en geef die door aan de andere vereniging. De code is eenmalig.",
+      "generate": "Code aanmaken",
+      "validUntil": "Geldig tot {{datum}}",
+      "replacesPrevious": "Eerdere ongebruikte codes van jullie vereniging zijn hiermee vervallen.",
+      "enterTitle": "Een code invoeren",
+      "codeLabel": "Koppelcode",
+      "redeem": "Koppelen",
+      "linked": "Gekoppeld met {{naam}}.",
+      "failed": "Koppelen is niet gelukt.",
+      "partnersTitle": "Gekoppelde verenigingen",
+      "noPartners": "Nog geen koppelingen.",
+      "end": "Koppeling beëindigen",
+      "endTitle": "Koppeling beëindigen",
+      "endConfirm": "Weet je zeker dat je de koppeling met {{naam}} wilt beëindigen? Wat je met hen deelt is daarna niet meer zichtbaar. De delingen zelf blijven staan, dus bij een nieuwe koppeling is alles er weer.",
+      "ended": "Koppeling beëindigd."
+    },
+    "catalog": {
+      "search": "Zoek in wat partners delen",
+      "empty": "Er is nog niets met jullie gedeeld. Koppel eerst met een vereniging, of vraag hen om een stuk open te zetten.",
+      "requestExplanation": "Hier zie je welke partijen er zijn. Voor het bestand zelf dien je een verzoek in; de eigenaar beslist per keer.",
+      "request": "Aanvragen",
+      "unknownInstrument": "Onbekend instrument"
+    },
+    "request": {
+      "incoming": "Binnengekomen verzoeken",
+      "noIncoming": "Geen verzoeken.",
+      "outgoing": "Onze verzoeken",
+      "noOutgoing": "Nog geen verzoeken gedaan.",
+      "approve": "Vrijgeven",
+      "reject": "Afwijzen",
+      "withdraw": "Intrekken",
+      "sent": "Verzoek verstuurd.",
+      "approved": "Partij vrijgegeven.",
+      "rejected": "Verzoek afgewezen.",
+      "until": "tot {{datum}}",
+      "status": {
+        "pending": "In behandeling",
+        "approved": "Vrijgegeven",
+        "rejected": "Afgewezen",
+        "withdrawn": "Ingetrokken"
+      },
+      "downloadFailed": "Het bestand ophalen is niet gelukt. Mogelijk is de toegang verlopen."
+    },
+    "wanted": {
+      "new": "Oproep plaatsen",
+      "post": "Plaatsen",
+      "posted": "Oproep geplaatst.",
+      "failed": "Oproep plaatsen is niet gelukt.",
+      "empty": "Geen oproepen. Alleen gekoppelde verenigingen zien elkaars oproepen.",
+      "replies": "Antwoorden ({{aantal}})",
+      "noReplies": "Nog geen antwoorden.",
+      "reply": "Antwoorden",
+      "replied": "Antwoord geplaatst.",
+      "replyFailed": "Antwoorden is niet gelukt.",
+      "yourReply": "Jullie antwoord",
+      "markResolved": "Gevonden",
+      "filter": {
+        "open": "Open",
+        "resolved": "Gevonden",
+        "all": "Alle"
+      },
+      "status": {
+        "open": "Open",
+        "resolved": "Gevonden",
+        "closed": "Gesloten"
+      },
+      "field": {
+        "title": "Titel",
+        "composer": "Componist",
+        "arranger": "Arrangeur",
+        "description": "Toelichting",
+        "referenceUrl": "Link of YouTube-filmpje",
+        "referenceHelp": "Een YouTube-adres wordt hier als filmpje getoond; elk ander adres als link."
+      }
+    },
+    "overview": {
+      "noPartners": "Nog geen koppelingen, dus er valt nog niets te delen.",
+      "count": "{{aantal}} stuk(ken)",
+      "nothingShared": "Met deze vereniging deel je niets.",
+      "since": "gedeeld sinds {{datum}}",
+      "excluded": "Partijen die je nergens deelt",
+      "excludedHelp": "Deze partijen blijven buiten elke deling, ook bij stukken die je wel openzet.",
+      "noExclusions": "Geen uitzonderingen."
     }
   }
 }

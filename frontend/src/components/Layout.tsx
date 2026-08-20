@@ -169,6 +169,7 @@ const navGroups: SidebarNavGroup[] = [
       '/statistics',
       '/pdf-tools',
       '/imslp',
+      '/music-sharing',
     ],
     items: [
       { path: '/music-pieces', labelKey: 'nav.pieces', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
@@ -176,6 +177,7 @@ const navGroups: SidebarNavGroup[] = [
       { path: '/titles', labelKey: 'nav.titles', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/upload', labelKey: 'nav.upload', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/imslp', labelKey: 'nav.imslp', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
+      { path: '/music-sharing', labelKey: 'nav.musicSharing', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/loans', labelKey: 'nav.loans', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/pdf-tools', labelKey: 'nav.pdfTools', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },
       { path: '/genres', labelKey: 'nav.genres', roles: [ROLES.ADMIN, ROLES.MUSIC_COMMITTEE] },

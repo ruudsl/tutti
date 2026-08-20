@@ -16,8 +16,6 @@ import {
   useCreateInvitation,
   useDeleteInvitation,
   usePartnerships,
-  useRequestPartnership,
-  useAssociationDirectory,
   usePartnerMusic,
   usePartnerEvents,
   useApprovePartnership,
@@ -743,109 +741,6 @@ function InvitationsTab() {
   );
 }
 
-/**
- * Een partnerschap aanvragen.
- *
- * De backend wil het id van de andere vereniging; de keuzelijst komt uit
- * /multi-association/directory, dat alleen naam en plaats teruggeeft.
- */
-function PartnershipRequestModal({
-  onClose,
-  onSubmit,
-  isLoading,
-}: {
-  onClose: () => void;
-  onSubmit: (data: { targetAssociationId: string; shareMusic: boolean; shareEvents: boolean; notes?: string }) => void;
-  isLoading: boolean;
-}) {
-  const { t } = useTranslation();
-  const { data: verenigingen, isLoading: lijstLaadt } = useAssociationDirectory();
-  const [formData, setFormData] = useState({
-    targetAssociationId: '',
-    shareMusic: false,
-    shareEvents: false,
-    notes: '',
-  });
-
-  return (
-    <FormModal
-      title={t('multiAssociation.partnerships.request')}
-      onClose={onClose}
-      onSubmit={() =>
-        onSubmit({
-          targetAssociationId: formData.targetAssociationId,
-          shareMusic: formData.shareMusic,
-          shareEvents: formData.shareEvents,
-          notes: formData.notes || undefined,
-        })
-      }
-      isLoading={isLoading || !formData.targetAssociationId}
-      submitLabel={t('multiAssociation.partnerships.send')}
-    >
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="partner-vereniging">
-            {t('multiAssociation.partnerships.targetAssociation')}
-          </label>
-          <select
-            id="partner-vereniging"
-            value={formData.targetAssociationId}
-            onChange={(e) => setFormData((prev) => ({ ...prev, targetAssociationId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
-            disabled={lijstLaadt}
-          >
-            <option value="">{t('multiAssociation.partnerships.choose')}</option>
-            {(verenigingen ?? []).map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.city ? `${v.name} (${v.city})` : v.name}
-              </option>
-            ))}
-          </select>
-          {!lijstLaadt && (verenigingen ?? []).length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">{t('multiAssociation.partnerships.noneAvailable')}</p>
-          )}
-        </div>
-
-        <fieldset>
-          <legend className="block text-sm font-medium mb-1">{t('multiAssociation.partnerships.whatToShare')}</legend>
-          <p className="text-sm text-gray-500 mb-2">{t('multiAssociation.partnerships.shareExplanation')}</p>
-
-          <label className="flex items-center gap-2 mb-1">
-            <input
-              type="checkbox"
-              checked={formData.shareMusic}
-              onChange={(e) => setFormData((prev) => ({ ...prev, shareMusic: e.target.checked }))}
-            />
-            {t('multiAssociation.partnerships.shareMusic')}
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.shareEvents}
-              onChange={(e) => setFormData((prev) => ({ ...prev, shareEvents: e.target.checked }))}
-            />
-            {t('multiAssociation.partnerships.shareEvents')}
-          </label>
-        </fieldset>
-
-        <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="partner-notitie">
-            {t('multiAssociation.partnerships.notes')}
-          </label>
-          <textarea
-            id="partner-notitie"
-            value={formData.notes}
-            onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
-            rows={2}
-          />
-        </div>
-      </div>
-    </FormModal>
-  );
-}
-
-/** Wat de partners op dit moment daadwerkelijk delen. */
 function GedeeldDoorPartners() {
   const { t } = useTranslation();
   const { data: muziek } = usePartnerMusic();
@@ -895,21 +790,9 @@ function GedeeldDoorPartners() {
 function PartnershipsTab() {
   const { t } = useTranslation();
   const { data: partnerships, isLoading } = usePartnerships();
-  const requestPartnership = useRequestPartnership();
   const approvePartnership = useApprovePartnership();
   const rejectPartnership = useRejectPartnership();
   const endPartnership = useEndPartnership();
-  const [showRequestModal, setShowRequestModal] = useState(false);
-
-  const handleRequest = async (data: {
-    targetAssociationId: string;
-    shareMusic: boolean;
-    shareEvents: boolean;
-    notes?: string;
-  }) => {
-    await requestPartnership.mutateAsync(data);
-    setShowRequestModal(false);
-  };
 
   if (isLoading) {
     return (
@@ -923,13 +806,22 @@ function PartnershipsTab() {
     <div>
       <div className="page-header">
         <h2 className="text-lg font-semibold">{t('multiAssociation.partnerships.title')}</h2>
-        <button
-          onClick={() => setShowRequestModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Icon name="plus" className="w-5 h-5" />
-          {t('multiAssociation.partnerships.request')}
-        </button>
+      </div>
+
+      {/*
+        Aanvragen gebeurde hier met een keuzelijst van alle verenigingen. Die
+        lijst is weg: koppelen gaat via een code die je buiten Tutti om
+        doorgeeft. Dit tabblad toont nog wat er loopt; het koppelen zelf staat
+        onder Muziek delen.
+      */}
+      <div className="alert alert-info mb-4">
+        <Icon name="info" className="w-5 h-5" />{' '}
+        <span>
+          {t('multiAssociation.partnerships.linkViaCode')}{' '}
+          <Link to="/music-sharing" className="underline">
+            {t('nav.musicSharing')}
+          </Link>
+        </span>
       </div>
 
       {!partnerships || partnerships.length === 0 ? (
@@ -1011,14 +903,6 @@ function PartnershipsTab() {
       )}
 
       <GedeeldDoorPartners />
-
-      {showRequestModal && (
-        <PartnershipRequestModal
-          onClose={() => setShowRequestModal(false)}
-          onSubmit={handleRequest}
-          isLoading={requestPartnership.isPending}
-        />
-      )}
     </div>
   );
 }
