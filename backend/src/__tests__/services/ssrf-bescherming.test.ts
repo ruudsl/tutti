@@ -80,4 +80,82 @@ describe('SSRF-bescherming', () => {
       await expect(downloadPdf('geen adres')).rejects.toThrow(/Invalid IMSLP download URL/);
     });
   });
+
+  describe('doorverwijzingen', () => {
+    function antwoordMetDoorverwijzing(naar: string) {
+      return {
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: naar }),
+      };
+    }
+
+    function gelukt() {
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/pdf' }),
+        arrayBuffer: async () => new ArrayBuffer(8),
+      };
+    }
+
+    it('volgt een doorverwijzing binnen imslp', async () => {
+      const opgevraagd: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          opgevraagd.push(url);
+          return opgevraagd.length === 1 ? antwoordMetDoorverwijzing('https://ks4.imslp.net/files/echt.pdf') : gelukt();
+        }),
+      );
+
+      await expect(downloadPdf('https://imslp.org/mars.pdf')).resolves.toBeInstanceOf(Buffer);
+      expect(opgevraagd).toHaveLength(2);
+      expect(opgevraagd[1]).toContain('ks4.imslp.net');
+    });
+
+    it('volgt een doorverwijzing naar buiten imslp niet', async () => {
+      // Dit is het gat dat een witte lijst alleen niet dicht: een toegestane
+      // host mag de server niet alsnog ergens anders heen sturen.
+      const opgevraagd: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          opgevraagd.push(url);
+          return antwoordMetDoorverwijzing('http://169.254.169.254/latest/meta-data/');
+        }),
+      );
+
+      await expect(downloadPdf('https://imslp.org/mars.pdf')).rejects.toThrow(/Only HTTPS|host is not allowed/);
+      expect(opgevraagd).toHaveLength(1);
+    });
+
+    it('lost een relatieve doorverwijzing op tegen de huidige host', async () => {
+      const opgevraagd: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          opgevraagd.push(url);
+          return opgevraagd.length === 1 ? antwoordMetDoorverwijzing('/files/elders.pdf') : gelukt();
+        }),
+      );
+
+      await expect(downloadPdf('https://imslp.org/mars.pdf')).resolves.toBeInstanceOf(Buffer);
+      expect(opgevraagd[1]).toBe('https://imslp.org/files/elders.pdf');
+    });
+
+    it('blijft niet eindeloos doorverwijzingen volgen', async () => {
+      let teller = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => {
+          teller++;
+          return antwoordMetDoorverwijzing('https://imslp.org/nog-een-keer.pdf');
+        }),
+      );
+
+      await expect(downloadPdf('https://imslp.org/mars.pdf')).rejects.toThrow(/Too many redirects/);
+      expect(teller).toBeLessThanOrEqual(6);
+    });
+  });
 });

@@ -554,7 +554,48 @@ function controleerImslpUrl(ruweUrl: string): string {
     throw new Error('IMSLP download URL host is not allowed');
   }
 
-  return ontleed.toString();
+  // Opnieuw opgebouwd uit onderdelen die stuk voor stuk zijn nagekeken, in
+  // plaats van de aangeleverde tekst door te geven.
+  const opnieuw = new URL(`https://${host}`);
+  opnieuw.pathname = ontleed.pathname;
+  opnieuw.search = ontleed.search;
+  return opnieuw.toString();
+}
+
+/** Hoeveel doorverwijzingen we hooguit volgen. */
+const MAX_DOORVERWIJZINGEN = 5;
+
+/**
+ * Haal iets op bij IMSLP en volg doorverwijzingen zelf, zodat elke stap
+ * opnieuw langs de witte lijst gaat. Zou fetch ze automatisch volgen, dan kan
+ * een toegestane host de server alsnog naar een intern adres sturen.
+ */
+async function haalOpVanImslp(ruweUrl: string): Promise<Response> {
+  let huidige = controleerImslpUrl(ruweUrl);
+
+  for (let stap = 0; stap <= MAX_DOORVERWIJZINGEN; stap++) {
+    const antwoord = await fetch(huidige, {
+      headers: {
+        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+      },
+      redirect: 'manual',
+    });
+
+    if (antwoord.status < 300 || antwoord.status >= 400) {
+      return antwoord;
+    }
+
+    const volgende = antwoord.headers.get('location');
+    if (!volgende) {
+      return antwoord;
+    }
+
+    // Een doorverwijzing mag relatief zijn: eerst tegen de huidige plek
+    // oplossen, dan opnieuw nakijken.
+    huidige = controleerImslpUrl(new URL(volgende, huidige).toString());
+  }
+
+  throw new Error('Too many redirects while downloading from IMSLP');
 }
 
 /**
@@ -564,17 +605,10 @@ function controleerImslpUrl(ruweUrl: string): string {
 export async function downloadPdf(fileUrl: string): Promise<Buffer> {
   await rateLimit();
 
-  const veiligeUrl = controleerImslpUrl(fileUrl);
-
-  logger.info(`IMSLP download: ${veiligeUrl}`);
+  logger.info(`IMSLP download: ${fileUrl}`);
 
   // IMSLP may redirect through a download page
-  const response = await fetch(veiligeUrl, {
-    headers: {
-      'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
-    },
-    redirect: 'follow',
-  });
+  const response = await haalOpVanImslp(fileUrl);
 
   if (!response.ok) {
     throw new Error(`Failed to download PDF: ${response.status}`);
@@ -599,12 +633,9 @@ export async function downloadPdf(fileUrl: string): Promise<Buffer> {
       }
 
       // Follow the actual download URL
-      const pdfResponse = await fetch(actualUrl, {
-        headers: {
-          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
-        },
-        redirect: 'follow',
-      });
+      // Dit adres komt uit de opgehaalde pagina en is dus net zo goed van
+      // buiten; het gaat langs dezelfde controle als het eerste.
+      const pdfResponse = await haalOpVanImslp(actualUrl);
 
       if (!pdfResponse.ok) {
         throw new Error(`Failed to download PDF: ${pdfResponse.status}`);

@@ -7,8 +7,12 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { searchImslp, getWorkDetails, downloadPdf } from '../services/imslp';
 import db from '../database/connection';
 import logger from '../utils/logger';
+import { isPdf } from '../utils/fileValidation';
 
 const router = Router();
+
+/** Bovengrens voor een gedownloade pdf, zodat het geheugen niet volloopt. */
+const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 
@@ -189,6 +193,16 @@ router.post(
       .substring(0, 50);
     const filename = `${safeTitle}_${safeArranger}_${Date.now()}.pdf`;
     const filePath = path.join(UPLOAD_DIR, filename);
+
+    // Wat IMSLP terugstuurt is netwerkverkeer en dus niet te vertrouwen.
+    // Voordat het als .pdf op schijf belandt, moet het ook echt een pdf zijn.
+    if (!isPdf(pdfBuffer)) {
+      throw new ApiError(502, 'Het gedownloade bestand is geen geldige PDF.');
+    }
+
+    if (pdfBuffer.length > MAX_PDF_BYTES) {
+      throw new ApiError(502, 'Het gedownloade bestand is te groot.');
+    }
 
     // Save the PDF
     fs.writeFileSync(filePath, pdfBuffer);
