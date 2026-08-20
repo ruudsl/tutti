@@ -391,8 +391,10 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
     channelsToUse = overrideChannels;
   } else {
     channelsToUse = getChannelsForType(userId, type, prefs || {});
-    if (channelsToUse.length === 0) {
-      // Fall back to default channels
+    if (channelsToUse.length === 0 && !prefs) {
+      // Alleen terugvallen op de standaardkanalen wanneer het lid nog nooit
+      // iets heeft ingesteld. Bestaan er wel voorkeuren en komt daar niets
+      // uit, dan is dat een keuze: alles uit hoort ook alles uit te blijven.
       channelsToUse = ['email', 'push'];
     }
   }
