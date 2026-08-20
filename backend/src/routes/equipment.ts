@@ -823,7 +823,7 @@ router.post(
     const item = db
       .prepare(
         `
-      SELECT id, condition FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+      SELECT id, condition, status FROM equipment_items WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(req.params.id, associationId) as any;
@@ -860,6 +860,10 @@ router.post(
       unusable: 'broken',
     };
 
+    // status stond niet in de SELECT hierboven, dus item.status was undefined
+    // en bij elke melding die niet 'unusable' was werd de stand van het item
+    // overschreven met niets. Alleen bij 'unusable' hoort hij te veranderen;
+    // anders blijft hij zoals hij was.
     const newCondition = conditionMap[data.severity];
     if (newCondition) {
       db.prepare('UPDATE equipment_items SET condition = ?, status = ? WHERE id = ?').run(

@@ -219,7 +219,10 @@ router.delete(
 router.get(
   '/',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 60 }),
+  // varyByUser omdat ?assignedTo=me in de sleutel wel als tekst meetelt maar
+  // niet wie "me" is. Twee leden die allebei hun eigen taken opvroegen deelden
+  // dus dezelfde cache-ingang, en de tweede kreeg de taken van de eerste.
+  cacheMiddleware({ ttlSeconds: 60, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {

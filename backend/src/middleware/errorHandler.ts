@@ -92,6 +92,23 @@ export function maskeerGeheimen(waarde: unknown, diepte = 0): unknown {
 }
 
 // Central error handling middleware
+/**
+ * Herkent een schending van een uniciteitsregel.
+ *
+ * Vijf routes controleerden hierop met `err.code === 'SQLITE_CONSTRAINT_UNIQUE'`.
+ * Dat is de vorm van better-sqlite3; sql.js, dat hier draait, zet helemaal geen
+ * `code` op zijn fouten. Die tak werd dus nooit genomen en hun eigen, veel
+ * duidelijkere melding ("Lid is al toegevoegd aan dit project") kwam nooit bij
+ * de gebruiker aan - die kreeg de algemene "Dit item bestaat al." verderop.
+ * Beide vormen worden nu herkend.
+ */
+export function isUniekheidsfout(err: unknown): boolean {
+  const code = (err as { code?: string } | null | undefined)?.code;
+  if (code === 'SQLITE_CONSTRAINT_UNIQUE') return true;
+  const bericht = err instanceof Error ? err.message : String(err);
+  return /UNIQUE constraint failed/i.test(bericht);
+}
+
 export function errorHandler(err: Error | ApiError, req: Request, res: Response, next: NextFunction): void {
   // Log the error with full details for debugging
   logger.error(`[${req.method} ${req.path}] ${err.name}: ${err.message}`, {

@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
-import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -110,8 +110,8 @@ router.post(
       `,
       ).run(id, associationId, data.name, data.description || null, data.color || null, data.icon || null);
     } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new ApiError(400, 'Categorie met deze naam bestaat al');
+      if (isUniekheidsfout(err)) {
+        throw new ApiError(409, 'Categorie met deze naam bestaat al');
       }
       throw err;
     }
@@ -554,8 +554,25 @@ router.delete(
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id, availId } = req.params;
+    const associationId = req.user!.associationId;
 
-    db.prepare('DELETE FROM resource_availability WHERE id = ? AND resource_id = ?').run(availId, id);
+    // Deze route keek alleen naar het id van de resource, niet naar de
+    // vereniging. Een beheerder van vereniging A kon zo de beschikbaarheid van
+    // een zaal van vereniging B weghalen. De route die deze regels toevoegt
+    // doet die controle wel; deze bleef achter.
+    const resource = db
+      .prepare('SELECT id FROM resources WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!resource) {
+      throw new ApiError(404, 'Resource niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM resource_availability WHERE id = ? AND resource_id = ?').run(availId, id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Beschikbaarheid niet gevonden');
+    }
 
     res.json({ message: 'Beschikbaarheid verwijderd' });
   }),

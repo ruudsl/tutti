@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
-import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 
 const router = Router();
 
@@ -261,7 +261,7 @@ router.post(
       );
       res.status(201).json({ message: 'Outfit linked to concert' });
     } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      if (isUniekheidsfout(err)) {
         throw new ApiError(409, 'Outfit already linked to this concert');
       }
       throw err;

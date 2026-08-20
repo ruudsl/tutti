@@ -103,7 +103,10 @@ router.post(
       defaultRehearsalDuration || 120,
       defaultRehearsalLocation || null,
       typicalConcertsCount || 4,
-      templateData ? JSON.stringify(templateData) : null,
+      // template_data is NOT NULL met standaard '{}'. Een expliciete null
+      // overrulet die standaard, en dan wierp de invoeging - een sjabloon
+      // zonder templateData kon dus nooit worden aangemaakt.
+      templateData ? JSON.stringify(templateData) : '{}',
       req.user!.id,
     );
 
@@ -394,9 +397,11 @@ router.put(
     }
 
     // Validate status
-    const validStatuses = ['draft', 'active', 'completed'];
+    // Deze lijst hoort gelijk te lopen met de CHECK op seasons.status; wijkt
+    // hij af, dan komt een verkeerde waarde niet als 400 terug maar als 500.
+    const validStatuses = ['draft', 'active', 'completed', 'archived'];
     if (status && !validStatuses.includes(status)) {
-      throw new ApiError(400, 'Ongeldige status. Gebruik draft, active of completed.');
+      throw new ApiError(400, 'Ongeldige status. Gebruik draft, active, completed of archived.');
     }
 
     db.prepare(

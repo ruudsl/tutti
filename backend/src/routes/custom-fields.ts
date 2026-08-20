@@ -70,6 +70,22 @@ const setFieldValueSchema = z.object({
   values: z.record(z.string(), z.any()),
 });
 
+/**
+ * Mag deze rol dit veld zien?
+ *
+ * Dezelfde afweging stond eerst alleen in /definitions/:entityType. De kale
+ * lijst op /definitions gaf elk veld terug, ook de velden die op admin_only
+ * staan - een gewoon lid zag dus de labels van interne velden zoals "Interne
+ * notitie". De twee routes spraken elkaar tegen; nu delen ze deze regel.
+ */
+const COMMISSIEROLLEN = ['admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'];
+
+function magVeldZien(visibility: string | null, rol: string): boolean {
+  if (visibility === 'admin_only') return rol === 'admin';
+  if (visibility === 'committee_plus') return COMMISSIEROLLEN.includes(rol);
+  return true;
+}
+
 // =====================================================
 // FIELD DEFINITION ROUTES
 // =====================================================
@@ -77,7 +93,11 @@ const setFieldValueSchema = z.object({
 router.get(
   '/definitions',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 300 }),
+  // varyByUser omdat het antwoord van de rol van de aanvrager afhangt. Zonder
+  // dat vulde de eerste beheerder die de pagina opende de cache voor de hele
+  // vereniging, en kregen alle leden vijf minuten lang zijn antwoord - inclusief
+  // de velden die op admin_only staan.
+  cacheMiddleware({ ttlSeconds: 300, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
@@ -103,7 +123,9 @@ router.get(
 
     query += ' ORDER BY entity_type, sort_order, field_label';
 
-    const definitions = db.prepare(query).all(...params) as any[];
+    const definitions = (db.prepare(query).all(...params) as any[]).filter((d) =>
+      magVeldZien(d.visibility, req.user!.role),
+    );
 
     res.json(
       definitions.map((d) => ({
@@ -132,7 +154,9 @@ router.get(
 router.get(
   '/definitions/:entityType',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 300 }),
+  // Zie hierboven: dit antwoord is per rol verschillend, dus de cache moet dat
+  // ook zijn.
+  cacheMiddleware({ ttlSeconds: 300, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
@@ -158,16 +182,7 @@ router.get(
       .all(associationId, entityType) as any[];
 
     const userRole = req.user!.role;
-    const filtered = definitions.filter((d) => {
-      if (d.visibility === 'all') return true;
-      if (d.visibility === 'admin_only') return userRole === 'admin';
-      if (d.visibility === 'committee_plus') {
-        return ['admin', 'music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'].includes(
-          userRole,
-        );
-      }
-      return true;
-    });
+    const filtered = definitions.filter((d) => magVeldZien(d.visibility, userRole));
 
     res.json(
       filtered.map((d) => ({

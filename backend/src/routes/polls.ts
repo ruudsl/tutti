@@ -214,7 +214,11 @@ function canUserSeePoll(poll: any, user: any): boolean {
 router.get(
   '/',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 60 }),
+  // varyByUser omdat dit antwoord per persoon verschilt: welke peilingen op
+  // jou gericht zijn (canUserSeePoll), of jij al gestemd hebt, en of je de
+  // concepten mag zien. Zonder dit kreeg elk lid een minuut lang het antwoord
+  // van degene die als eerste vroeg.
+  cacheMiddleware({ ttlSeconds: 60, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {
