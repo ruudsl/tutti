@@ -463,7 +463,19 @@ if (config.isProduction) {
     logger.info('Serving frontend from ' + frontendPath);
     app.use(express.static(frontendPath));
 
-    app.get('*', (req, res, next) => {
+    // De algemene begrenzing hierboven geldt alleen voor /api, dus deze route
+    // stond nergens toe aan een maximum terwijl hij wel elke keer een bestand
+    // van schijf leest. Ruim bemeten: een pagina die ververst wordt telt hier
+    // maar één keer, de rest van de bestanden gaat via express.static.
+    const frontendLimiter = rateLimit({
+      windowMs: config.rateLimitWindowMs,
+      max: Math.max(config.rateLimitMaxRequests * 2, 600),
+      message: 'Te veel verzoeken. Probeer het later opnieuw.',
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+
+    app.get('*', frontendLimiter, (req, res, next) => {
       if (!req.path.startsWith('/api')) {
         res.sendFile(path.join(frontendPath, 'index.html'));
       } else {

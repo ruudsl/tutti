@@ -84,7 +84,7 @@ Stripe is a global payment platform with excellent international support. Recomm
 STRIPE_SECRET_KEY=sk_live_YOUR_KEY_HERE
 
 # Stripe webhook signing secret
-STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SIGNING_SECRET
 ```
 
 **Notes:**

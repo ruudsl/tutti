@@ -479,11 +479,20 @@ router.get('/whatsapp/webhook', (req: Request, res: Response) => {
   const challenge = req.query['hub.challenge'] as string;
 
   const result = verifyWhatsAppWebhook(mode, token, challenge);
-  if (result) {
-    res.status(200).send(result);
-  } else {
+  if (!result) {
     res.sendStatus(403);
+    return;
   }
+
+  // De challenge komt uit de queryparameters en gaat er onveranderd weer uit.
+  // Meta stuurt daar een getal; alles anders weigeren we, en het antwoord gaat
+  // als platte tekst de deur uit in plaats van als html.
+  if (!/^\d{1,32}$/.test(result)) {
+    res.sendStatus(400);
+    return;
+  }
+
+  res.status(200).type('text/plain').send(result);
 });
 
 /**

@@ -244,15 +244,15 @@ export function getAttendanceOverview(
   };
 
   // Calculate previous period stats for comparison
-  const prevRehearsalQuery = rehearsalQuery.replace(
-    'AND r.date >= ? AND r.date <= ?',
-    'AND r.date >= ? AND r.date <= ?',
-  );
+  //
+  // Dezelfde query, alleen met de datums van de vorige periode. Hier stond een
+  // replace() die een stuk tekst door zichzelf verving en dus niets deed; het
+  // omzetten gebeurt in de parameters hieronder.
   const prevRehearsalParams = [...rehearsalParams];
   prevRehearsalParams[1] = prevStartDate;
   prevRehearsalParams[2] = prevEndDate;
 
-  const prevRehearsalStats = db.prepare(prevRehearsalQuery).get(...prevRehearsalParams) as {
+  const prevRehearsalStats = db.prepare(rehearsalQuery).get(...prevRehearsalParams) as {
     total_rehearsals: number;
     avg_attendance_rate: number | null;
   };

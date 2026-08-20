@@ -111,13 +111,27 @@ async function createMolliePayment(request: PaymentRequest): Promise<PaymentResp
   }
 }
 
+/**
+ * Een betaalkenmerk van Mollie of Stripe bestaat uit letters, cijfers en
+ * liggende streepjes. Alles daarbuiten hoort niet in een pad thuis.
+ */
+function controleerBetaalId(paymentId: string): string {
+  if (!/^[A-Za-z0-9_]{1,64}$/.test(paymentId)) {
+    throw new Error('Invalid payment id');
+  }
+  return paymentId;
+}
+
 async function getMolliePaymentStatus(paymentId: string): Promise<PaymentStatus | null> {
   if (!MOLLIE_API_KEY) {
     return null;
   }
 
   try {
-    const response = await fetch(`${MOLLIE_API_URL}/payments/${paymentId}`, {
+    // paymentId komt uit de aanvraag en staat in het pad. Zonder controle kan
+    // een aanroeper met '../' een ander eindpunt van Mollie raken, mét de
+    // sleutel van de vereniging eraan vast.
+    const response = await fetch(`${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(paymentId))}`, {
       headers: {
         Authorization: `Bearer ${MOLLIE_API_KEY}`,
       },
@@ -233,11 +247,14 @@ async function getStripePaymentStatus(sessionId: string): Promise<PaymentStatus 
   }
 
   try {
-    const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
-      headers: {
-        Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
+    const response = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(controleerBetaalId(sessionId))}`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       return null;
@@ -554,14 +571,17 @@ async function createMollieRefund(request: RefundRequest): Promise<RefundRespons
       payload.description = request.reason;
     }
 
-    const response = await fetch(`${MOLLIE_API_URL}/payments/${request.paymentId}/refunds`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${MOLLIE_API_KEY}`,
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${MOLLIE_API_URL}/payments/${encodeURIComponent(controleerBetaalId(request.paymentId))}/refunds`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${MOLLIE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -580,11 +600,14 @@ async function createMollieRefund(request: RefundRequest): Promise<RefundRespons
 async function createStripeRefund(request: RefundRequest): Promise<RefundResponse> {
   try {
     // First, get the payment intent from the session
-    const sessionResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${request.paymentId}`, {
-      headers: {
-        Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
+    const sessionResponse = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(controleerBetaalId(request.paymentId))}`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64')}`,
+        },
       },
-    });
+    );
 
     if (!sessionResponse.ok) {
       return { success: false, error: 'Session not found' };

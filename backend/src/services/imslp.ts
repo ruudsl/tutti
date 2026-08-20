@@ -523,16 +523,53 @@ function extractKeyFromTitle(title: string): string {
 }
 
 /**
+ * Hosts waar een bladmuziekbestand vandaan mag komen. De URL komt uit de
+ * aanvraag, dus zonder deze controle kan de server elk adres bevragen dat hij
+ * kan bereiken — ook binnen het eigen netwerk.
+ */
+const TOEGESTANE_IMSLP_HOSTS = new Set(['imslp.org', 'www.imslp.org', 'ks.imslp.net', 'ks4.imslp.net']);
+const TOEGESTANE_IMSLP_SUFFIXEN = ['.imslp.org', '.imslp.net'];
+
+function controleerImslpUrl(ruweUrl: string): string {
+  let ontleed: URL;
+  try {
+    ontleed = new URL(ruweUrl);
+  } catch {
+    throw new Error('Invalid IMSLP download URL');
+  }
+
+  if (ontleed.protocol !== 'https:') {
+    throw new Error('Only HTTPS IMSLP download URLs are allowed');
+  }
+
+  if (ontleed.username || ontleed.password) {
+    throw new Error('IMSLP download URL must not contain credentials');
+  }
+
+  const host = ontleed.hostname.toLowerCase();
+  const toegestaan =
+    TOEGESTANE_IMSLP_HOSTS.has(host) || TOEGESTANE_IMSLP_SUFFIXEN.some((achtervoegsel) => host.endsWith(achtervoegsel));
+
+  if (!toegestaan) {
+    throw new Error('IMSLP download URL host is not allowed');
+  }
+
+  return ontleed.toString();
+}
+
+/**
  * Download a PDF from IMSLP
  * Returns the PDF as a Buffer
  */
 export async function downloadPdf(fileUrl: string): Promise<Buffer> {
   await rateLimit();
 
-  logger.info(`IMSLP download: ${fileUrl}`);
+  const veiligeUrl = controleerImslpUrl(fileUrl);
+
+  logger.info(`IMSLP download: ${veiligeUrl}`);
 
   // IMSLP may redirect through a download page
-  const response = await fetch(fileUrl, {
+  const response = await fetch(veiligeUrl, {
     headers: {
       'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
     },
