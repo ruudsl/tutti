@@ -156,6 +156,32 @@
     "admin": "Verwaltung"
   },
   "modules": {
+    "categories": {
+      "music": {
+        "title": "Musizieren",
+        "description": "Alles rund ums Spielen selbst: zu Hause üben, die Bühnenaufstellung, Anwesenheit und Aushilfen."
+      },
+      "planning": {
+        "title": "Planen und organisieren",
+        "description": "Die Saison voraus, Projekte und Reisen, Räume und die Arbeit, die dazugehört."
+      },
+      "communication": {
+        "title": "Kommunikation",
+        "description": "Wie der Verein seine Mitglieder erreicht und was untereinander festgehalten wird."
+      },
+      "assets": {
+        "title": "Besitz und Verwaltung",
+        "description": "Was der Verein besitzt und verleiht, und was kaputt ist."
+      },
+      "finance": {
+        "title": "Geld",
+        "description": "Buchhaltung und Kartenverkauf."
+      },
+      "other": {
+        "title": "Sonstiges",
+        "description": "Module, die dieser Bildschirm noch nicht einordnen konnte."
+      }
+    },
     "title": "Module",
     "description": "Schalte Bereiche ab, die der Verein nicht nutzt. Sie verschwinden aus dem Menü und lassen sich nicht mehr öffnen. Es wird nichts gelöscht: schaltest du ein Modul später wieder ein, ist alles unverändert da.",
     "on": "Ein",
@@ -4326,6 +4352,16 @@
       }
     },
     "partnerships": {
+      "request": "Partnerschaft anfragen",
+      "send": "Anfrage senden",
+      "targetAssociation": "Verein",
+      "choose": "Verein auswählen",
+      "noneAvailable": "Es gibt keine anderen Vereine auf dieser Installation.",
+      "whatToShare": "Was teilt ihr?",
+      "shareExplanation": "Geteilt wird immer nur lesend, und nur was du selbst freigegeben hast: bei Musik die Titel mit 'geteilt', beim Kalender die kommenden Konzerte. Interne Notizen sind nie dabei.",
+      "notes": "Hinweis zur Anfrage",
+      "sharedMusic": "Musik von Partnern",
+      "sharedEvents": "Konzerte von Partnern",
       "title": "Partnerschaften",
       "noPartnerships": "Keine Partnerschaften",
       "outgoing": "Ausgehende Anfrage",

@@ -221,6 +221,60 @@ export async function getPartnerships(): Promise<Partnership[]> {
   return response.data;
 }
 
+/** Een vereniging zoals die in de keuzelijst voor een partnerschap staat. */
+export interface DirectoryAssociation {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
+/**
+ * De verenigingen waarmee een partnerschap aangevraagd kan worden.
+ *
+ * Bewust karig - naam en plaats - en alleen voor bestuur en beheer. Zonder
+ * deze lijst was aanvragen onmogelijk: de route erachter wil een id.
+ */
+export async function getAssociationDirectory(): Promise<DirectoryAssociation[]> {
+  const response = await api.get('/multi-association/directory');
+  return response.data;
+}
+
+/** Een muziektitel die een partnervereniging heeft opengesteld. */
+export interface SharedTitle {
+  id: string;
+  title: string;
+  composer: string | null;
+  arranger: string | null;
+  durationSeconds: number | null;
+  grade: string | null;
+  youtubeUrl: string | null;
+  associationId: string;
+  associationName: string;
+}
+
+/** Een aankomend concert van een partnervereniging. */
+export interface SharedConcert {
+  id: string;
+  name: string;
+  date: string;
+  endDate: string | null;
+  location: string | null;
+  concertType: string | null;
+  description: string | null;
+  associationId: string;
+  associationName: string;
+}
+
+export async function getPartnerMusic(): Promise<SharedTitle[]> {
+  const response = await api.get('/multi-association/partners/music');
+  return response.data;
+}
+
+export async function getPartnerEvents(): Promise<SharedConcert[]> {
+  const response = await api.get('/multi-association/partners/events');
+  return response.data;
+}
+
 export async function requestPartnership(data: {
   targetAssociationId: string;
   shareMusic?: boolean;

@@ -95,3 +95,29 @@ describe('elke module is ook aan de API-kant afgeschermd', () => {
     expect(unguarded).toEqual([]);
   });
 });
+
+describe('elke module hoort bij een groep', () => {
+  /**
+   * Het beheerscherm zet de modules onder kopjes. Een module zonder groep, of
+   * met een groep die de frontend niet kent, belandt onder "Overig" - dat valt
+   * niet op tot een beheerder zich afvraagt waarom er een kopje bij staat.
+   * Deze test vangt dat bij het toevoegen van een module in plaats van erna.
+   */
+  const GROEPEN = ['music', 'planning', 'communication', 'assets', 'finance'];
+
+  it('kent aan elke module een van de bekende groepen toe', () => {
+    const zonderGroep = MODULES.filter((m) => !GROEPEN.includes(m.category)).map((m) => `${m.key}: ${m.category}`);
+    expect(zonderGroep).toEqual([]);
+  });
+
+  it('laat geen groep leeg', () => {
+    const gebruikt = new Set(MODULES.map((m) => m.category));
+    const leeg = GROEPEN.filter((g) => !gebruikt.has(g as (typeof MODULES)[number]['category']));
+    expect(leeg).toEqual([]);
+  });
+
+  it('geeft de groep mee in de instellingenroute', () => {
+    const routeSource = fs.readFileSync(path.join(__dirname, '../../routes/modules.ts'), 'utf-8');
+    expect(routeSource).toMatch(/category: m\.category/);
+  });
+});

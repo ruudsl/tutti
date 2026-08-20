@@ -1,5 +1,6 @@
 import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   useIsSuperAdmin,
@@ -15,6 +16,10 @@ import {
   useCreateInvitation,
   useDeleteInvitation,
   usePartnerships,
+  useRequestPartnership,
+  useAssociationDirectory,
+  usePartnerMusic,
+  usePartnerEvents,
   useApprovePartnership,
   useRejectPartnership,
   useEndPartnership,
@@ -105,6 +110,17 @@ export default function MultiAssociation() {
       {activeTab === 'activity' && <ActivityTab />}
     </div>
   );
+}
+
+/**
+ * "3 / 100" als er een grens is, anders alleen het aantal.
+ *
+ * Een lege grens betekent geen grens; "3 / null" op het scherm zetten zou
+ * suggereren dat er iets misging.
+ */
+function metGrens(aantal: number | undefined, grens: number | null | undefined): string {
+  const gebruikt = aantal ?? 0;
+  return typeof grens === 'number' && grens > 0 ? `${gebruikt} / ${grens}` : `${gebruikt}`;
 }
 
 function AssociationsTab() {
@@ -207,14 +223,20 @@ function AssociationsTab() {
                     <div className="font-medium">{assoc.name}</div>
                     {assoc.city && <div className="text-sm text-gray-500">{assoc.city}</div>}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{assoc.slug}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {/* De slug is de inloglink van deze vereniging: dat scherm
+                        toont dan haar naam en logo in plaats van de neutrale. */}
+                    {assoc.slug ? (
+                      <Link to={`/login/${assoc.slug}`} className="text-blue-600 hover:underline">
+                        /login/{assoc.slug}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{getTierBadge(assoc.subscriptionTier)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    {assoc.memberCount} / {assoc.maxMembers}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {assoc.orchestraCount} / {assoc.maxOrchestras}
-                  </td>
+                  <td className="px-4 py-3 text-sm">{metGrens(assoc.memberCount, assoc.maxMembers)}</td>
+                  <td className="px-4 py-3 text-sm">{metGrens(assoc.orchestraCount, assoc.maxOrchestras)}</td>
                   <td className="px-4 py-3">
                     {assoc.isActive ? (
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
@@ -721,12 +743,173 @@ function InvitationsTab() {
   );
 }
 
+/**
+ * Een partnerschap aanvragen.
+ *
+ * De backend wil het id van de andere vereniging; de keuzelijst komt uit
+ * /multi-association/directory, dat alleen naam en plaats teruggeeft.
+ */
+function PartnershipRequestModal({
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  onClose: () => void;
+  onSubmit: (data: { targetAssociationId: string; shareMusic: boolean; shareEvents: boolean; notes?: string }) => void;
+  isLoading: boolean;
+}) {
+  const { t } = useTranslation();
+  const { data: verenigingen, isLoading: lijstLaadt } = useAssociationDirectory();
+  const [formData, setFormData] = useState({
+    targetAssociationId: '',
+    shareMusic: false,
+    shareEvents: false,
+    notes: '',
+  });
+
+  return (
+    <FormModal
+      title={t('multiAssociation.partnerships.request')}
+      onClose={onClose}
+      onSubmit={() =>
+        onSubmit({
+          targetAssociationId: formData.targetAssociationId,
+          shareMusic: formData.shareMusic,
+          shareEvents: formData.shareEvents,
+          notes: formData.notes || undefined,
+        })
+      }
+      isLoading={isLoading || !formData.targetAssociationId}
+      submitLabel={t('multiAssociation.partnerships.send')}
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="partner-vereniging">
+            {t('multiAssociation.partnerships.targetAssociation')}
+          </label>
+          <select
+            id="partner-vereniging"
+            value={formData.targetAssociationId}
+            onChange={(e) => setFormData((prev) => ({ ...prev, targetAssociationId: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+            disabled={lijstLaadt}
+          >
+            <option value="">{t('multiAssociation.partnerships.choose')}</option>
+            {(verenigingen ?? []).map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.city ? `${v.name} (${v.city})` : v.name}
+              </option>
+            ))}
+          </select>
+          {!lijstLaadt && (verenigingen ?? []).length === 0 && (
+            <p className="text-sm text-gray-500 mt-1">{t('multiAssociation.partnerships.noneAvailable')}</p>
+          )}
+        </div>
+
+        <fieldset>
+          <legend className="block text-sm font-medium mb-1">{t('multiAssociation.partnerships.whatToShare')}</legend>
+          <p className="text-sm text-gray-500 mb-2">{t('multiAssociation.partnerships.shareExplanation')}</p>
+
+          <label className="flex items-center gap-2 mb-1">
+            <input
+              type="checkbox"
+              checked={formData.shareMusic}
+              onChange={(e) => setFormData((prev) => ({ ...prev, shareMusic: e.target.checked }))}
+            />
+            {t('multiAssociation.partnerships.shareMusic')}
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.shareEvents}
+              onChange={(e) => setFormData((prev) => ({ ...prev, shareEvents: e.target.checked }))}
+            />
+            {t('multiAssociation.partnerships.shareEvents')}
+          </label>
+        </fieldset>
+
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="partner-notitie">
+            {t('multiAssociation.partnerships.notes')}
+          </label>
+          <textarea
+            id="partner-notitie"
+            value={formData.notes}
+            onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+            rows={2}
+          />
+        </div>
+      </div>
+    </FormModal>
+  );
+}
+
+/** Wat de partners op dit moment daadwerkelijk delen. */
+function GedeeldDoorPartners() {
+  const { t } = useTranslation();
+  const { data: muziek } = usePartnerMusic();
+  const { data: concerten } = usePartnerEvents();
+
+  if ((muziek ?? []).length === 0 && (concerten ?? []).length === 0) return null;
+
+  return (
+    <div className="mt-8 space-y-6">
+      {(muziek ?? []).length > 0 && (
+        <section>
+          <h3 className="font-semibold mb-2">{t('multiAssociation.partnerships.sharedMusic')}</h3>
+          <ul className="space-y-1 text-sm">
+            {(muziek ?? []).map((titel) => (
+              <li key={titel.id} className="flex justify-between border-b py-1">
+                <span>
+                  {titel.title}
+                  {titel.arranger && <span className="text-gray-500"> - {titel.arranger}</span>}
+                </span>
+                <span className="text-gray-500">{titel.associationName}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(concerten ?? []).length > 0 && (
+        <section>
+          <h3 className="font-semibold mb-2">{t('multiAssociation.partnerships.sharedEvents')}</h3>
+          <ul className="space-y-1 text-sm">
+            {(concerten ?? []).map((concert) => (
+              <li key={concert.id} className="flex justify-between border-b py-1">
+                <span>
+                  {concert.date} - {concert.name}
+                  {concert.location && <span className="text-gray-500"> ({concert.location})</span>}
+                </span>
+                <span className="text-gray-500">{concert.associationName}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function PartnershipsTab() {
   const { t } = useTranslation();
   const { data: partnerships, isLoading } = usePartnerships();
+  const requestPartnership = useRequestPartnership();
   const approvePartnership = useApprovePartnership();
   const rejectPartnership = useRejectPartnership();
   const endPartnership = useEndPartnership();
+  const [showRequestModal, setShowRequestModal] = useState(false);
+
+  const handleRequest = async (data: {
+    targetAssociationId: string;
+    shareMusic: boolean;
+    shareEvents: boolean;
+    notes?: string;
+  }) => {
+    await requestPartnership.mutateAsync(data);
+    setShowRequestModal(false);
+  };
 
   if (isLoading) {
     return (
@@ -738,7 +921,16 @@ function PartnershipsTab() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">{t('multiAssociation.partnerships.title')}</h2>
+      <div className="page-header">
+        <h2 className="text-lg font-semibold">{t('multiAssociation.partnerships.title')}</h2>
+        <button
+          onClick={() => setShowRequestModal(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Icon name="plus" className="w-5 h-5" />
+          {t('multiAssociation.partnerships.request')}
+        </button>
+      </div>
 
       {!partnerships || partnerships.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
@@ -816,6 +1008,16 @@ function PartnershipsTab() {
             </div>
           ))}
         </div>
+      )}
+
+      <GedeeldDoorPartners />
+
+      {showRequestModal && (
+        <PartnershipRequestModal
+          onClose={() => setShowRequestModal(false)}
+          onSubmit={handleRequest}
+          isLoading={requestPartnership.isPending}
+        />
       )}
     </div>
   );

@@ -156,6 +156,32 @@
     "admin": "Admin"
   },
   "modules": {
+    "categories": {
+      "music": {
+        "title": "Making music",
+        "description": "Everything around playing itself: practising at home, the stage layout, attendance and stand-ins."
+      },
+      "planning": {
+        "title": "Planning and organising",
+        "description": "The season ahead, projects and tours, rooms and the work that comes with them."
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "How the association reaches its members and what gets written down between them."
+      },
+      "assets": {
+        "title": "Property and upkeep",
+        "description": "What the association owns and lends out, and what is broken."
+      },
+      "finance": {
+        "title": "Money",
+        "description": "Accounting and ticket sales."
+      },
+      "other": {
+        "title": "Other",
+        "description": "Modules this screen could not place yet."
+      }
+    },
     "title": "Modules",
     "description": "Switch off the parts your association does not use. They disappear from the menu and can no longer be opened. Nothing is deleted: switch a module back on and everything is exactly as you left it.",
     "on": "On",
@@ -4326,6 +4352,16 @@
       }
     },
     "partnerships": {
+      "request": "Request partnership",
+      "send": "Send request",
+      "targetAssociation": "Association",
+      "choose": "Choose an association",
+      "noneAvailable": "There are no other associations on this installation.",
+      "whatToShare": "What will you share?",
+      "shareExplanation": "Sharing is always read-only, and only covers what you marked as shared yourself: for music the titles set to 'shared', for the calendar the upcoming concerts. Internal notes are never included.",
+      "notes": "Note with the request",
+      "sharedMusic": "Music from partners",
+      "sharedEvents": "Concerts from partners",
       "title": "Partnerships",
       "noPartnerships": "No partnerships",
       "outgoing": "Outgoing request",

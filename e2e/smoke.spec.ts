@@ -70,8 +70,18 @@ test.describe('Authentication', () => {
     const submitButton = page.getByRole('button', { name: LOGIN_BUTTON });
     await submitButton.click();
 
-    // Should show error message (backend returns "Ongeldige inloggegevens.")
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 10000 });
+    // De foutmelding zelf, niet zomaar iets met role="alert".
+    //
+    // Hier stond getByRole('alert'). De applicatie heeft een leeg
+    // aria-live-gebied voor de schermlezer dat op elke pagina staat en die rol
+    // ook draagt, dus die verwachting ging al op zodra het scherm geladen was -
+    // nog voor er geklikt was. De test keek in de praktijk nergens naar.
+    //
+    // Erger nog: zodra de echte melding erbij kwam waren het er twee, en dan
+    // valt Playwright over de meerduidigheid. Of de test slaagde of faalde hing
+    // dus af van wat er net iets eerder was: de melding of de controle.
+    const foutmelding = page.locator('[role="alert"]').filter({ hasText: /\S/ });
+    await expect(foutmelding).toBeVisible({ timeout: 10000 });
     await expect(page).toHaveURL(/login/i);
   });
 

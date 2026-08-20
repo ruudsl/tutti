@@ -47,10 +47,20 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const MODULE = {
   key: 'accounting',
+  category: 'finance',
   title: 'Boekhouding',
   description: 'Grootboek, facturen en contributie.',
   enabled: false,
   navPaths: ['/accounting'],
+};
+
+const PEILINGEN = {
+  key: 'polls',
+  category: 'communication',
+  title: 'Peilingen',
+  description: 'Peilingen onder de leden.',
+  enabled: true,
+  navPaths: ['/polls'],
 };
 
 describe('modulepagina', () => {
@@ -113,5 +123,48 @@ describe('modulepagina', () => {
     render(<Modules />, { wrapper });
 
     await waitFor(() => expect(screen.getByText('modules.empty')).toBeInTheDocument());
+  });
+
+  describe('groepering', () => {
+    it('zet elke module onder het kopje van zijn groep', async () => {
+      vi.mocked(getModuleSettings).mockResolvedValue([MODULE, PEILINGEN]);
+
+      render(<Modules />, { wrapper });
+
+      await waitFor(() => expect(screen.getByText('Boekhouding')).toBeInTheDocument());
+      expect(screen.getByRole('heading', { name: 'modules.categories.finance.title' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'modules.categories.communication.title' })).toBeInTheDocument();
+    });
+
+    it('toont geen kopje voor een groep zonder modules', async () => {
+      vi.mocked(getModuleSettings).mockResolvedValue([MODULE]);
+
+      render(<Modules />, { wrapper });
+
+      await waitFor(() => expect(screen.getByText('Boekhouding')).toBeInTheDocument());
+      expect(screen.queryByRole('heading', { name: 'modules.categories.music.title' })).not.toBeInTheDocument();
+    });
+
+    it('houdt de kopjes in een vaste volgorde, los van de volgorde uit de backend', async () => {
+      // De backend geeft geld eerst; op het scherm hoort communicatie ervoor.
+      vi.mocked(getModuleSettings).mockResolvedValue([MODULE, PEILINGEN]);
+
+      render(<Modules />, { wrapper });
+
+      await waitFor(() => expect(screen.getByText('Boekhouding')).toBeInTheDocument());
+      const kopjes = screen.getAllByRole('heading', { level: 2 }).map((k) => k.textContent);
+      expect(kopjes).toEqual(['modules.categories.communication.title', 'modules.categories.finance.title']);
+    });
+
+    it('laat een module met een onbekende groep niet van het scherm vallen', async () => {
+      // Een backend die een nieuwe groep kent mag hier geen schakelaar kosten.
+      vi.mocked(getModuleSettings).mockResolvedValue([{ ...MODULE, category: 'iets-nieuws' }]);
+
+      render(<Modules />, { wrapper });
+
+      await waitFor(() => expect(screen.getByText('Boekhouding')).toBeInTheDocument());
+      expect(screen.getByRole('heading', { name: 'modules.categories.other.title' })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'Boekhouding' })).toBeInTheDocument();
+    });
   });
 });

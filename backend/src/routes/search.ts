@@ -84,8 +84,10 @@ router.get(
              GROUP_CONCAT(DISTINCT i.name) as instruments
       FROM music_titles mt
       LEFT JOIN music_pieces mp ON mp.title = mt.title AND mp.arranger IS mt.arranger
+        AND mp.association_id = mt.association_id AND mp.deleted_at IS NULL
       LEFT JOIN instruments i ON mp.instrument_id = i.id
       WHERE mt.association_id = ?
+        AND mt.deleted_at IS NULL
         AND (LOWER(mt.title) LIKE ? OR LOWER(mt.arranger) LIKE ?)
       GROUP BY mt.id
       LIMIT ?
@@ -129,6 +131,7 @@ router.get(
       LEFT JOIN user_orchestras uo ON u.id = uo.user_id
       LEFT JOIN orchestras o ON uo.orchestra_id = o.id
       WHERE u.association_id = ?
+        AND u.deleted_at IS NULL
         AND (LOWER(u.first_name) LIKE ? OR LOWER(u.last_name) LIKE ? OR LOWER(u.email) LIKE ?)
       GROUP BY u.id
       LIMIT ?
@@ -206,6 +209,7 @@ router.get(
       FROM music_lists ml
       JOIN orchestras o ON ml.orchestra_id = o.id
       WHERE o.association_id = ?
+        AND ml.deleted_at IS NULL
         AND LOWER(ml.name) LIKE ?
     `;
       const listParams: (string | number)[] = [associationId!, searchTerm];
@@ -252,7 +256,7 @@ router.get(
              o.name as orchestra_name
       FROM rehearsals r
       LEFT JOIN orchestras o ON r.orchestra_id = o.id
-      WHERE (o.association_id = ? OR r.orchestra_id IS NULL)
+      WHERE r.association_id = ?
         AND (LOWER(r.location) LIKE ? OR LOWER(r.notes) LIKE ? OR r.date LIKE ?)
         AND r.date >= date('now')
       ORDER BY r.date ASC
@@ -374,7 +378,7 @@ router.get(
       .prepare(
         `
     SELECT DISTINCT title FROM music_titles
-    WHERE association_id = ? AND LOWER(title) LIKE ?
+    WHERE association_id = ? AND deleted_at IS NULL AND LOWER(title) LIKE ?
     LIMIT 5
   `,
       )
@@ -387,7 +391,8 @@ router.get(
       .prepare(
         `
     SELECT first_name || ' ' || last_name as name FROM users
-    WHERE association_id = ? AND (LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ?)
+    WHERE association_id = ? AND deleted_at IS NULL
+      AND (LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ?)
     LIMIT 5
   `,
       )

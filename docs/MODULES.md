@@ -81,27 +81,33 @@ Alle modules staan standaard uit. Een vereniging die niets instelt houdt het
 kleine menu; wie een onderdeel gebruikt, zet het in twee klikken aan onder
 **Beheer → Modules**.
 
-| Sleutel        | Naam                    | Verbergt                                                                             |
-| -------------- | ----------------------- | ------------------------------------------------------------------------------------ |
-| `accounting`   | Boekhouding             | `/accounting`                                                                        |
-| `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               |
-| `stage`        | Podium en opstelling    | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer` |
-| `polls`        | Peilingen               | `/polls`                                                                             |
-| `tasks`        | Taken                   | `/tasks`                                                                             |
-| `posts`        | Nieuwsberichten         | `/posts`                                                                             |
-| `mailings`     | Mailings                | `/email-campaigns`                                                                   |
-| `contacts`     | Externe contacten       | `/contacts`                                                                          |
-| `issues`       | Meldingen               | `/issues`                                                                            |
-| `practice`     | Thuis oefenen           | `/practice`, `/practice-schedules`                                                   |
-| `externals`    | Invallers en vervangers | `/external-musicians`, `/replacement-requests`                                       |
-| `inventory`    | Inventaris              | `/instrument-assets`, `/uniforms`, `/equipment`, `/outfits`                          |
-| `projects`     | Projecten en reizen     | `/projects`, `/tours`                                                                |
-| `resources`    | Ruimtes reserveren      | `/resources`                                                                         |
-| `wiki`         | Wiki                    | `/wiki`                                                                              |
-| `performances` | Uitvoeringshistorie     | `/performances`                                                                      |
-| `workflows`    | Workflow-automatisering | `/workflows`                                                                         |
-| `seasons`      | Seizoensplanning        | `/season-planner`                                                                    |
-| `attendance`   | Aanwezigheidsanalyse    | `/attendance-analytics`                                                              |
+| Groep           | Sleutel        | Naam                    | Verbergt                                                                             |
+| --------------- | -------------- | ----------------------- | ------------------------------------------------------------------------------------ |
+| `music`         | `stage`        | Podium en opstelling    | `/seating`, `/voice-parts`, `/occupancy`, `/neighbor-preferences`, `/stage-designer` |
+|                 | `practice`     | Thuis oefenen           | `/practice`, `/practice-schedules`                                                   |
+|                 | `externals`    | Invallers en vervangers | `/external-musicians`, `/replacement-requests`                                       |
+|                 | `performances` | Uitvoeringshistorie     | `/performances`                                                                      |
+|                 | `attendance`   | Aanwezigheidsanalyse    | `/attendance-analytics`                                                              |
+| `planning`      | `seasons`      | Seizoensplanning        | `/season-planner`                                                                    |
+|                 | `projects`     | Projecten en reizen     | `/projects`, `/tours`                                                                |
+|                 | `resources`    | Ruimtes reserveren      | `/resources`                                                                         |
+|                 | `tasks`        | Taken                   | `/tasks`                                                                             |
+|                 | `workflows`    | Workflow-automatisering | `/workflows`                                                                         |
+| `communication` | `posts`        | Nieuwsberichten         | `/posts`                                                                             |
+|                 | `mailings`     | Mailings                | `/email-campaigns`                                                                   |
+|                 | `polls`        | Peilingen               | `/polls`                                                                             |
+|                 | `wiki`         | Wiki                    | `/wiki`                                                                              |
+|                 | `contacts`     | Externe contacten       | `/contacts`                                                                          |
+| `assets`        | `inventory`    | Inventaris              | `/instrument-assets`, `/uniforms`, `/equipment`, `/outfits`                          |
+|                 | `issues`       | Meldingen               | `/issues`                                                                            |
+| `finance`       | `accounting`   | Boekhouding             | `/accounting`                                                                        |
+|                 | `ticketing`    | Kaartverkoop            | `/my-tickets`, `/ticket-sales`, `/ticket-scanner`, `/payment-settings`               |
+
+Het beheerscherm zet de modules onder deze groepen, in de volgorde hierboven:
+van wat een vereniging wekelijks aanraakt naar wat er een paar keer per jaar bij
+komt. De groep bepaalt alleen de plek op het scherm en verder niets. De namen
+van de kopjes staan in de vertalingen van de frontend onder
+`modules.categories`; welke module bij welke groep hoort staat in de registry.
 
 Samen halen die 32 navigatie-items weg voor een vereniging die er niets van
 gebruikt.
@@ -130,6 +136,10 @@ gegevens staan er dan nog gewoon.
    `app.use('/api/x', optionalAuth, requireModule('x'), xRoutes)`.
    `optionalAuth` moet ervoor, anders kent de guard de vereniging niet.
 3. Voeg de paden toe aan `MODULE_BY_PATH` in `frontend/src/utils/modules.ts`.
+
+De definitie in stap 1 heeft een `category` nodig; zonder geldige groep valt de
+module in het beheerscherm onder "Overig". Een test in
+`backend/src/__tests__/modules/registry.test.ts` slaat daarop aan.
 
 Meer is het niet: de navigatie, de routeguard en het beheerscherm lezen alle
 drie uit die twee lijsten.

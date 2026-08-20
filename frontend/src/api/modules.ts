@@ -13,6 +13,11 @@ import api from './client';
 /** Een module met omschrijving en huidige stand, voor het beheerscherm. */
 export interface ModuleSetting {
   key: string;
+  /**
+   * Onder welk kopje de module in het beheerscherm staat. De backend bepaalt
+   * de indeling, de frontend de naam van het kopje en de volgorde.
+   */
+  category: string;
   title: string;
   description: string;
   enabled: boolean;

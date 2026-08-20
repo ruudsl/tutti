@@ -7,6 +7,8 @@ import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { bewaakLedenLimiet } from '../services/abonnementLimieten';
+import { haalGedeeldeMuziek, haalGedeeldeConcerten, haalPartners } from '../services/partnerschappen';
 import { z } from 'zod';
 
 const router = Router();
@@ -67,7 +69,19 @@ router.get(
       .prepare(
         `
         SELECT a.*,
-               (SELECT COUNT(*) FROM users WHERE association_id = a.id) as member_count,
+               (
+                 -- Dezelfde telling als de limietbewaking gebruikt: verwijderde
+                 -- leden tellen niet mee, en wie via user_associations bij deze
+                 -- vereniging hoort telt wel. Anders staat er 40 van de 100 op
+                 -- het scherm terwijl de grens al bereikt is.
+                 SELECT COUNT(*) FROM (
+                   SELECT id FROM users WHERE association_id = a.id AND deleted_at IS NULL
+                   UNION
+                   SELECT u.id FROM users u
+                   JOIN user_associations ua ON u.id = ua.user_id
+                   WHERE ua.association_id = a.id AND ua.status = 'active' AND u.deleted_at IS NULL
+                 )
+               ) as member_count,
                (SELECT COUNT(*) FROM orchestras WHERE association_id = a.id) as orchestra_count,
                pa.name as parent_name
         FROM associations a
@@ -589,6 +603,10 @@ router.post(
       throw new ApiError(409, 'Er staat al een uitnodiging open voor dit e-mailadres.');
     }
 
+    // Liever hier weigeren dan de uitgenodigde over een week op een dichte
+    // deur laten stuiten.
+    bewaakLedenLimiet(req.user!.associationId!);
+
     const id = uuidv4();
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -695,6 +713,10 @@ router.post(
       throw new ApiError(403, 'Deze uitnodiging is voor een ander e-mailadres.');
     }
 
+    // Tussen versturen en aannemen zit tot een week; de vereniging kan
+    // ondertussen vol zijn gelopen.
+    bewaakLedenLimiet(invitation.association_id);
+
     withTransaction(() => {
       db.prepare(
         `
@@ -724,6 +746,83 @@ router.post(
 // ===========================================
 // PARTNERSHIP ROUTES
 // ===========================================
+
+/**
+ * De verenigingen waarmee een partnerschap aangevraagd kan worden.
+ *
+ * Zonder deze lijst was het aanvragen van een partnerschap in de praktijk
+ * onmogelijk: de route erachter wil een id, en een beheerder kon nergens zien
+ * welke verenigingen er zijn - dat overzicht is alleen voor een super-admin.
+ *
+ * Bewust karig: naam en plaats, van verenigingen die actief zijn, zonder de
+ * eigen vereniging. Geen adressen, geen aantallen, geen abonnement.
+ */
+router.get(
+  '/directory',
+  authenticateToken,
+  requireRole('board', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const verenigingen = db
+      .prepare(
+        `
+        SELECT id, name, display_name, city
+        FROM associations
+        WHERE id != ? AND COALESCE(is_active, 1) = 1
+        ORDER BY name
+    `,
+      )
+      .all(req.user!.associationId) as {
+      id: string;
+      name: string;
+      display_name: string | null;
+      city: string | null;
+    }[];
+
+    res.json(
+      verenigingen.map((v) => ({
+        id: v.id,
+        name: v.display_name || v.name,
+        city: v.city,
+      })),
+    );
+  }),
+);
+
+/**
+ * De muziektitels die partners hebben opengesteld.
+ *
+ * Elk lid mag dit inzien: het is een catalogus om te bladeren, geen archief.
+ * De bladmuziek zelf blijft van de eigenaar.
+ */
+router.get(
+  '/partners/music',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(haalGedeeldeMuziek(req.user!.associationId!));
+  }),
+);
+
+/** De aankomende concerten van partners. */
+router.get(
+  '/partners/events',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(haalGedeeldeConcerten(req.user!.associationId!));
+  }),
+);
+
+/** Met welke verenigingen wordt op dit moment daadwerkelijk iets gedeeld. */
+router.get(
+  '/partners/summary',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId!;
+    res.json({
+      music: haalPartners(associationId, 'share_music'),
+      events: haalPartners(associationId, 'share_events'),
+    });
+  }),
+);
 
 router.get(
   '/partnerships',

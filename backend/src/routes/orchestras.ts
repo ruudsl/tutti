@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { createOrchestraSchema, updateOrchestraSchema } from '../validation/schemas';
 import logger from '../utils/logger';
+import { bewaakOrkestLimiet } from '../services/abonnementLimieten';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
@@ -180,6 +181,8 @@ router.post(
     if (existing) {
       throw new ApiError(409, 'Orkest met deze naam bestaat al.');
     }
+
+    bewaakOrkestLimiet(req.user!.associationId!);
 
     const orchestraId = uuidv4();
     db.prepare('INSERT INTO orchestras (id, name, association_id) VALUES (?, ?, ?)').run(
