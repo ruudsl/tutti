@@ -4,7 +4,7 @@ import fs from 'fs';
 import archiver from 'archiver';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { FileValidationError } from '../utils/errors';
@@ -16,6 +16,25 @@ import { logAuditEvent } from './audit-logs';
 import { getBackupDir } from '../scheduler/backup';
 
 const router = Router();
+
+/**
+ * Reservekopie en terugzetten.
+ *
+ * Deze drie routes gaan over de hele installatie, niet over een vereniging.
+ * De reservekopie is het databasebestand plus alle uploads - dus van alle
+ * verenigingen tegelijk - en terugzetten overschrijft datzelfde bestand.
+ *
+ * Ze stonden op requireRole('admin'). Dat is de beheerder van een vereniging,
+ * en die rol heeft elke vereniging zelf in handen. Op een installatie met meer
+ * dan een vereniging kon een beheerder daarmee de bladmuziek, de ledengegevens
+ * en de boekhouding van alle andere verenigingen binnenhalen, en met een eigen
+ * bestand alles overschrijven.
+ *
+ * ipWhitelistMiddleware stond er wel bij, maar die laat alles door zolang
+ * IP_WHITELIST_ENABLED niet aan staat, en dat is de standaard.
+ *
+ * Nu is het super-admin: iemand die over de installatie gaat.
+ */
 
 // Get paths from config/environment
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
@@ -42,7 +61,7 @@ const DB_PATH = config.dbPath;
 router.get(
   '/',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -198,7 +217,7 @@ router.get(
 router.get(
   '/info',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     let dbSize = 0;
@@ -298,7 +317,7 @@ const backupUpload = multer({
 router.post(
   '/restore',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   backupUpload.single('backup'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
