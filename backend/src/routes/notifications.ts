@@ -289,12 +289,18 @@ router.post(
       .get(endpoint);
 
     if (existing) {
-      // Update existing
+      // Ook user_id bijwerken. Een endpoint hoort bij een browser, niet bij een
+      // account, en de kolom is UNIQUE - dus als een tweede lid op hetzelfde
+      // toestel inlogt en zich aanmeldt, is dat dezelfde rij. Zonder user_id
+      // erbij bleef de rij van de eerste staan met de sleutels van de tweede:
+      // de meldingen van de eerste kwamen leesbaar aan bij de tweede, en de
+      // tweede kreeg zelf niets. Wie zich als laatste aanmeldt, gebruikt het
+      // toestel.
       db.prepare(
         `
-            UPDATE push_subscriptions SET p256dh_key = ?, auth_key = ? WHERE endpoint = ?
+            UPDATE push_subscriptions SET user_id = ?, p256dh_key = ?, auth_key = ? WHERE endpoint = ?
         `,
-      ).run(keys.p256dh, keys.auth, endpoint);
+      ).run(req.user!.id, keys.p256dh, keys.auth, endpoint);
     } else {
       // Create new
       db.prepare(

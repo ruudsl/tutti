@@ -8,6 +8,15 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import {
+  geldendeZichtbaarheid,
+  haalKijker,
+  instellingenPerLid,
+  magVeldZien,
+  orkestenPerLid,
+  sectiesPerLid,
+  verenigingsstandaarden,
+} from '../services/zichtbaarheid';
 import { createUserSchema, updateUserSchema } from '../validation/schemas';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import { isImage, validateUploadedFile } from '../utils/fileValidation';
@@ -135,22 +144,45 @@ router.get(
       orchestrasByUser.get(orch.user_id)!.push({ id: orch.id, name: orch.name });
     }
 
+    // Wat een lid per veld op zichtbaarheid heeft gezet, gold tot nu toe alleen
+    // binnen routes/privacy-settings.ts. Deze gids gaf foto, instrumenten en
+    // orkesten aan iedereen, ongeacht die keuze. Alles wat hier nodig is komt
+    // uit drie extra queries voor de hele lijst tegelijk, zodat de gids geen
+    // query per lid gaat doen.
+    const instellingen = instellingenPerLid(userIds);
+    const standaarden = verenigingsstandaarden(req.user!.associationId);
+    const orkestenVanLid = orkestenPerLid(userIds);
+    const sectiesVanLid = sectiesPerLid(userIds);
+    const kijker = haalKijker(req.user!.id, req.user!.role);
+
+    const magZien = (eigenaarId: string, veld: string) =>
+      magVeldZien(
+        kijker,
+        eigenaarId,
+        geldendeZichtbaarheid(instellingen.get(eigenaarId)?.get(veld), standaarden.get(veld)),
+        {
+          orkesten: orkestenVanLid.get(eigenaarId) ?? new Set<string>(),
+          secties: sectiesVanLid.get(eigenaarId) ?? new Set<string>(),
+        },
+      );
+
     // Build result with pre-fetched data
     const result = users
       .map((user) => ({
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
-        photoUrl: user.profile_photo_path ? `/api/users/${user.id}/photo` : null,
-        instruments: instrumentsByUser.get(user.id) || [],
-        orchestras: orchestrasByUser.get(user.id) || [],
+        photoUrl: user.profile_photo_path && magZien(user.id, 'profile_photo') ? `/api/users/${user.id}/photo` : null,
+        instruments: magZien(user.id, 'instruments') ? instrumentsByUser.get(user.id) || [] : [],
+        orchestras: magZien(user.id, 'orchestras') ? orchestrasByUser.get(user.id) || [] : [],
       }))
       .filter((user) => {
-        // Apply orchestra filter
+        // Beide filters kijken naar wat de aanvrager mag zien, niet naar de
+        // onderliggende gegevens. Anders zou je met ?orchestraId= alsnog
+        // kunnen afleiden in welk orkest iemand speelt die dat verborgen houdt.
         if (orchestraId && !user.orchestras.some((o) => o.id === orchestraId)) {
           return false;
         }
-        // Apply instrument filter
         if (instrumentId && !user.instruments.some((i) => i.id === instrumentId)) {
           return false;
         }

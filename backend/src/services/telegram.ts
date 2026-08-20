@@ -7,6 +7,42 @@ import logger from '../utils/logger';
 // Telegram Bot API configuration (env var fallback)
 const TELEGRAM_BOT_TOKEN_ENV = process.env.TELEGRAM_BOT_TOKEN;
 
+/**
+ * Gedeeld geheim tussen Telegram en deze server.
+ *
+ * De webhook staat open op het internet en kan zonder inloggen een koppeling
+ * verbreken: /stop werkt op het chat-id dat in het verzoek staat, en dat komt
+ * uit de body. Wie de url kent kan daarmee leden ongemerkt van hun meldingen
+ * afsnijden.
+ *
+ * Telegram stuurt dit geheim bij elk verzoek mee in de header
+ * X-Telegram-Bot-Api-Secret-Token, mits je het bij setWebhook hebt opgegeven.
+ * Dat is de enige manier om te weten dat een verzoek echt van Telegram komt.
+ */
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+/** Het ingestelde webhook-geheim, of undefined als het er niet is. */
+export function getWebhookSecret(): string | undefined {
+  return TELEGRAM_WEBHOOK_SECRET || undefined;
+}
+
+/**
+ * Klopt de header die Telegram meestuurt?
+ *
+ * Beide kanten worden eerst gehasht, want timingSafeEqual werpt een RangeError
+ * op buffers van ongelijke lengte - en die lengte zou dan zelf al iets over het
+ * geheim verraden.
+ */
+export function webhookGeheimKlopt(aangeleverd: string | undefined): boolean {
+  const verwacht = getWebhookSecret();
+  if (!verwacht) return false;
+  if (!aangeleverd) return false;
+
+  const a = crypto.createHash('sha256').update(aangeleverd).digest();
+  const b = crypto.createHash('sha256').update(verwacht).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
 export interface TelegramMessage {
   chatId: string | number;
   text: string;
@@ -522,9 +558,16 @@ export async function setWebhook(webhookUrl: string, associationId?: string): Pr
   }
 
   try {
+    const geheim = getWebhookSecret();
+    if (!geheim) {
+      logger.warn('TELEGRAM_WEBHOOK_SECRET is niet gezet; de webhook zou dan voor iedereen openstaan.');
+      return false;
+    }
+
     const response = await axios.post(`${config.apiUrl}/setWebhook`, {
       url: webhookUrl,
       allowed_updates: ['message', 'callback_query'],
+      secret_token: geheim,
     });
 
     if (response.data.ok) {
