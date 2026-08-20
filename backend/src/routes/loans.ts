@@ -258,17 +258,35 @@ router.put(
       return res.status(404).json({ error: 'Uitlening niet gevonden' });
     }
 
-    db.prepare(
-      `
-    UPDATE loans
-    SET borrower_name = COALESCE(?, borrower_name),
-        borrower_email = ?,
-        borrower_organization = ?,
-        notes = ?,
-        expected_return = ?
-    WHERE id = ?
-  `,
-    ).run(borrowerName, borrowerEmail || null, borrowerOrganization || null, notes || null, expectedReturn || null, id);
+    // Alleen bijwerken wat het verzoek noemt.
+    //
+    // Hiervoor stond de naam op COALESCE en de vier andere velden niet, dus
+    // wie alleen de notitie aanpaste wiste het e-mailadres, de organisatie en
+    // de verwachte retourdatum van de lener. De frontend stuurt die velden
+    // allemaal als optioneel mee, dus dat gebeurde bij gewoon gebruik.
+    //
+    // Een veld dat wel wordt meegestuurd maar leeg is, wordt nog steeds
+    // leeggemaakt: dat is de manier om een e-mailadres weg te halen.
+    const velden: Record<string, unknown> = {
+      borrower_name: borrowerName,
+      borrower_email: borrowerEmail,
+      borrower_organization: borrowerOrganization,
+      notes: notes,
+      expected_return: expectedReturn,
+    };
+
+    const toewijzingen: string[] = [];
+    const waarden: unknown[] = [];
+
+    for (const [kolom, waarde] of Object.entries(velden)) {
+      if (waarde === undefined) continue;
+      toewijzingen.push(`${kolom} = ?`);
+      waarden.push(waarde === '' ? null : waarde);
+    }
+
+    if (toewijzingen.length > 0) {
+      db.prepare(`UPDATE loans SET ${toewijzingen.join(', ')} WHERE id = ?`).run(...waarden, id);
+    }
 
     const updated = db
       .prepare(
