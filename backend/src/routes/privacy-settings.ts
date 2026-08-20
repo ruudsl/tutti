@@ -5,6 +5,15 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth'
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { withTransaction } from '../utils/database';
+import {
+  geldendeZichtbaarheid,
+  haalKijker,
+  instellingenPerLid,
+  magVeldZien,
+  orkestenPerLid,
+  sectiesPerLid,
+  verenigingsstandaarden,
+} from '../services/zichtbaarheid';
 import logger from '../utils/logger';
 import { z } from 'zod';
 
@@ -227,23 +236,28 @@ router.get(
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
-    const settings = db
-      .prepare(
-        `
-        SELECT field_name, visibility
-        FROM user_privacy_settings
-        WHERE user_id = ?
-    `,
+    const eigenInstellingen = instellingenPerLid([targetUserId]).get(targetUserId) ?? new Map<string, string>();
+    const standaarden = verenigingsstandaarden(associationId);
+    const kijker = haalKijker(requesterId, requesterRole);
+    const eigenaar = {
+      orkesten: orkestenPerLid([targetUserId]).get(targetUserId) ?? new Set<string>(),
+      secties: sectiesPerLid([targetUserId]).get(targetUserId) ?? new Set<string>(),
+    };
+
+    // Elk veld waarover iets bekend is: de standaardvelden, plus alles wat het
+    // lid zelf of de vereniging heeft aangeraakt.
+    const velden = new Set<string>([...STANDARD_FIELDS, ...eigenInstellingen.keys(), ...standaarden.keys()]);
+
+    const visibleFields = [...velden]
+      .filter((veld) =>
+        magVeldZien(
+          kijker,
+          targetUserId,
+          geldendeZichtbaarheid(eigenInstellingen.get(veld), standaarden.get(veld)),
+          eigenaar,
+        ),
       )
-      .all(targetUserId) as any[];
-
-    const visibleFields: string[] = [];
-
-    for (const setting of settings) {
-      if (canViewField(requesterRole, setting.visibility, requesterId, targetUserId)) {
-        visibleFields.push(setting.field_name);
-      }
-    }
+      .sort();
 
     res.json({ visibleFields });
   }),
@@ -456,27 +470,6 @@ function getMoreRestrictiveLevels(minLevel: string): string[] {
   const minIndex = levelOrder.indexOf(minLevel);
   if (minIndex === -1) return levelOrder;
   return levelOrder.slice(minIndex);
-}
-
-function canViewField(viewerRole: string, fieldVisibility: string, viewerId: string, ownerId: string): boolean {
-  if (viewerId === ownerId) return true;
-  if (viewerRole === 'admin') return true;
-
-  switch (fieldVisibility) {
-    case 'public':
-      return true;
-    case 'all_members':
-      return true;
-    case 'section':
-    case 'orchestra':
-      return true;
-    case 'committee':
-      return ['music_committee', 'equipment_committee', 'uniforms_committee', 'conductor'].includes(viewerRole);
-    case 'admin_only':
-      return viewerRole === 'admin';
-    default:
-      return false;
-  }
 }
 
 export default router;

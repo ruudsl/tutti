@@ -15,6 +15,8 @@ import {
 import {
   generateLinkUrl as generateTelegramLinkUrl,
   processUpdate as processTelegramUpdate,
+  getWebhookSecret,
+  webhookGeheimKlopt,
   isTelegramConfigured,
   TelegramUpdate,
 } from '../services/telegram';
@@ -243,6 +245,23 @@ router.delete(
 router.post(
   '/telegram/webhook',
   asyncHandler(async (req: Request, res: Response) => {
+    // Deze route staat open op het internet en verandert wel degelijk iets:
+    // /start koppelt een chat aan een account en /stop verbreekt die
+    // koppeling, allebei op het chat-id dat in de body staat. Zonder controle
+    // kon iedereen die de url kende leden ongemerkt van hun meldingen
+    // afsnijden. Telegram stuurt daarvoor een gedeeld geheim mee.
+    if (!getWebhookSecret()) {
+      logger.error('Telegram-webhook geweigerd: TELEGRAM_WEBHOOK_SECRET is niet gezet.');
+      res.sendStatus(503);
+      return;
+    }
+
+    if (!webhookGeheimKlopt(req.get('x-telegram-bot-api-secret-token'))) {
+      logger.warn('Telegram-webhook geweigerd: het meegestuurde geheim klopt niet.');
+      res.sendStatus(401);
+      return;
+    }
+
     const update = req.body as TelegramUpdate;
 
     // Process the update asynchronously

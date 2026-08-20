@@ -271,6 +271,13 @@ const generalLimiter = rateLimit({
   message: { error: 'Te veel verzoeken. Probeer het later opnieuw.' },
   standardHeaders: true,
   legacyHeaders: false,
+  // Niet tijdens ontwikkelen. De begrenzer telt elk /api-verzoek, en een scherm
+  // van deze applicatie doet er al gauw enkele tientallen: modules, meldingen,
+  // huisstijl, maatwerkvelden. Bij het rondklikken op een eigen machine is het
+  // budget daardoor binnen een kwartier op, en dan geeft alles een 429 -
+  // inclusief het aanmaken van een orkest. Op een laptop beschermt hij niets;
+  // hij hoort bij een server die op het internet staat.
+  skip: () => config.isDevelopment,
 });
 app.use('/api', generalLimiter);
 
@@ -472,6 +479,7 @@ if (config.isProduction) {
     const frontendLimiter = rateLimit({
       windowMs: config.rateLimitWindowMs,
       max: Math.max(config.rateLimitMaxRequests * 2, 600),
+      skip: () => config.isDevelopment,
       message: 'Te veel verzoeken. Probeer het later opnieuw.',
       standardHeaders: true,
       legacyHeaders: false,
