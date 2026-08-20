@@ -70,9 +70,6 @@ function tabellenDieDeBronZelfAanmaakt(bestanden: string[]): Set<string> {
  */
 const OPENSTAAND = new Set([
   'routes/accounting.ts — no such column: ba.account_holder_name',
-  'routes/calendar.ts — no such column: google_calendar_client_id',
-  'routes/calendar.ts — no such column: start_time',
-  'routes/calendar.ts — no such column: show_rehearsals_public',
   'routes/concerts.ts — no such column: instrument',
   'routes/external-musicians.ts — no such column: title',
   'routes/imslp.ts — no such column: association_id',
