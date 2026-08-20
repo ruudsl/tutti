@@ -33,12 +33,13 @@ export function generateSecureTicketCode(): string {
   const randomBytes = crypto.randomBytes(8);
   const hex = randomBytes.toString('hex').toUpperCase();
 
-  // Create a simple checksum (last 2 chars based on hash of first 14)
+  // Checksum over the full 16-char payload, so validateTicketCodeChecksum()
+  // can recompute it from the emitted code.
   const hash = crypto.createHash('sha256').update(hex).digest('hex');
   const checksum = hash.substring(0, 2).toUpperCase();
 
-  // Format: XXXX-XXXX-XXXX-XX
-  return `${hex.substring(0, 4)}-${hex.substring(4, 8)}-${hex.substring(8, 12)}-${checksum}`;
+  // Format: XXXX-XXXX-XXXX-XXXX-XX
+  return `${hex.substring(0, 4)}-${hex.substring(4, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${checksum}`;
 }
 
 /**
