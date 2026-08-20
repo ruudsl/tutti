@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
-import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -392,6 +392,17 @@ router.post(
       throw new ApiError(404, 'Project niet gevonden');
     }
 
+    // Zonder deze controle kon elk gebruikers-id worden meegegeven, ook dat
+    // van een lid van een andere vereniging. Dat lid stond dan met naam en
+    // e-mailadres in het projectoverzicht.
+    const gebruiker = db
+      .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
+      .get(data.userId, associationId);
+
+    if (!gebruiker) {
+      throw new ApiError(404, 'Lid niet gevonden');
+    }
+
     const memberId = uuidv4();
     try {
       db.prepare(
@@ -401,8 +412,8 @@ router.post(
       `,
       ).run(memberId, id, data.userId, data.role, data.notes || null);
     } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new ApiError(400, 'Lid is al toegevoegd aan dit project');
+      if (isUniekheidsfout(err)) {
+        throw new ApiError(409, 'Lid is al toegevoegd aan dit project');
       }
       throw err;
     }
@@ -452,6 +463,17 @@ router.post(
       throw new ApiError(404, 'Project niet gevonden');
     }
 
+    // Idem voor het concert: zonder deze controle kon een concert van een
+    // andere vereniging aan het project worden gehangen, en verscheen het met
+    // naam en datum in het projectoverzicht.
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+      .get(concertId, associationId);
+
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden');
+    }
+
     try {
       db.prepare(
         `
@@ -460,8 +482,8 @@ router.post(
       `,
       ).run(id, concertId, sortOrder || 0);
     } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new ApiError(400, 'Concert is al gekoppeld aan dit project');
+      if (isUniekheidsfout(err)) {
+        throw new ApiError(409, 'Concert is al gekoppeld aan dit project');
       }
       throw err;
     }
@@ -477,6 +499,18 @@ router.delete(
   requireRole('admin', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id, concertId } = req.params;
+    const associationId = req.user!.associationId;
+
+    // Deze route keek alleen naar het project-id uit het pad. De routes die
+    // koppelen controleren wel van welke vereniging het project is; deze en de
+    // setlist-route hieronder bleven achter.
+    const project = db
+      .prepare('SELECT id FROM projects WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!project) {
+      throw new ApiError(404, 'Project niet gevonden');
+    }
 
     db.prepare('DELETE FROM project_concerts WHERE project_id = ? AND concert_id = ?').run(id, concertId);
 
@@ -533,8 +567,21 @@ router.delete(
   requireRole('admin', 'music_committee', 'conductor'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id, itemId } = req.params;
+    const associationId = req.user!.associationId;
 
-    db.prepare('DELETE FROM project_setlist WHERE id = ? AND project_id = ?').run(itemId, id);
+    const project = db
+      .prepare('SELECT id FROM projects WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!project) {
+      throw new ApiError(404, 'Project niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM project_setlist WHERE id = ? AND project_id = ?').run(itemId, id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Setlist-item niet gevonden');
+    }
 
     res.json({ message: 'Item verwijderd uit setlist' });
   }),

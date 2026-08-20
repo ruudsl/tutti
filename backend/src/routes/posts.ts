@@ -261,7 +261,11 @@ router.delete(
 router.get(
   '/',
   authenticateToken,
-  cacheMiddleware({ ttlSeconds: 60 }),
+  // varyByUser omdat dit antwoord van de rol afhangt: een beheerder ziet ook
+  // concepten en geplande berichten, een lid alleen wat gepubliceerd is.
+  // Zonder dit deelde de hele vereniging één cache-ingang, en zag elk lid een
+  // minuut lang de concepten die de beheerder net had opgehaald.
+  cacheMiddleware({ ttlSeconds: 60, varyByUser: true }),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     if (!associationId) {

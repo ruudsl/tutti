@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
-import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -566,8 +566,8 @@ router.post(
         data.notes || null,
       );
     } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new ApiError(400, 'Je bent al geregistreerd voor deze tour');
+      if (isUniekheidsfout(err)) {
+        throw new ApiError(409, 'Je bent al geregistreerd voor deze tour');
       }
       throw err;
     }
@@ -747,8 +747,25 @@ router.delete(
   requireRole('admin', 'board'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id, accId } = req.params;
+    const associationId = req.user!.associationId;
 
-    db.prepare('DELETE FROM tour_accommodations WHERE id = ? AND tour_id = ?').run(accId, id);
+    // Deze route keek alleen naar het id van de tour, niet naar de vereniging.
+    // Een beheerder van vereniging A kon zo de accommodatie van een reis van
+    // vereniging B verwijderen. Alle andere routes hieronder doen deze
+    // controle wel; deze bleef achter.
+    const tour = db
+      .prepare('SELECT id FROM tours WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(id, associationId);
+
+    if (!tour) {
+      throw new ApiError(404, 'Tour niet gevonden');
+    }
+
+    const result = db.prepare('DELETE FROM tour_accommodations WHERE id = ? AND tour_id = ?').run(accId, id);
+
+    if (result.changes === 0) {
+      throw new ApiError(404, 'Accommodatie niet gevonden');
+    }
 
     res.json({ message: 'Accommodatie verwijderd' });
   }),
