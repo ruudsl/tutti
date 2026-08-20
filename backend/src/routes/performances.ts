@@ -112,9 +112,8 @@ router.get(
         `
     SELECT mt.id, mt.title, mt.composer
     FROM music_titles mt
-    JOIN music_lists ml ON mt.list_id = ml.id
-    JOIN orchestras o ON ml.orchestra_id = o.id
-    WHERE o.association_id = ?
+    WHERE mt.association_id = ?
+      AND mt.deleted_at IS NULL
       AND mt.id NOT IN (
         SELECT DISTINCT cp.music_title_id
         FROM concert_program cp

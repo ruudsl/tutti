@@ -443,9 +443,15 @@ router.get(
     const members = db
       .prepare(
         `
-        SELECT id, first_name, last_name, instrument
-        FROM users
-        WHERE association_id = ? AND role != 'inactive'
+        -- Het instrument van een lid staat niet op users maar in de
+        -- koppeltabel user_instruments; een lid kan er meer dan één hebben.
+        SELECT u.id, u.first_name, u.last_name,
+               (SELECT GROUP_CONCAT(i.name, ', ')
+                  FROM user_instruments ui
+                  JOIN instruments i ON i.id = ui.instrument_id
+                 WHERE ui.user_id = u.id) AS instrument
+        FROM users u
+        WHERE u.association_id = ? AND u.role != 'inactive'
     `,
       )
       .all(req.user!.associationId) as { id: string; first_name: string; last_name: string; instrument: string }[];

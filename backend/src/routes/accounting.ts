@@ -1401,7 +1401,9 @@ router.post(
     const bankAccount = db
       .prepare(
         `
-        SELECT a.*, ba.iban, ba.bic, ba.account_holder_name
+        -- bank_accounts noemt de tenaamstelling gewoon 'name'; met een alias
+        -- botst hij niet met accounts.name uit a.*.
+        SELECT a.*, ba.iban, ba.bic, ba.name AS account_holder_name
         FROM accounts a
         LEFT JOIN bank_accounts ba ON ba.account_id = a.id
         WHERE a.id = ? AND a.association_id = ? AND a.account_subtype = 'bank'

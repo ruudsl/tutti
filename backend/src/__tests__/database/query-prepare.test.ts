@@ -69,14 +69,6 @@ function tabellenDieDeBronZelfAanmaakt(bestanden: string[]): Set<string> {
  * strenger. Voeg hier niets aan toe zonder de fout echt na te lopen.
  */
 const OPENSTAAND = new Set([
-  'routes/accounting.ts — no such column: ba.account_holder_name',
-  'routes/concerts.ts — no such column: instrument',
-  'routes/external-musicians.ts — no such column: title',
-  'routes/imslp.ts — no such column: association_id',
-  'routes/performances.ts — no such column: mt.list_id',
-  'routes/replacement-requests.ts — no such column: title',
-  'routes/stage-layouts.ts — no such column: association_id',
-  'services/maintenanceAlerts.ts — no such column: status',
   'services/ticketing.ts — no such table: scanner_tokens',
   'services/ticketing.ts — no such table: offline_scan_log',
   'services/workflowEngine.ts — no such table: group_members',

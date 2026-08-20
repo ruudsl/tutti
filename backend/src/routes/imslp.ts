@@ -238,9 +238,11 @@ router.post(
       // Try to find a matching instrument
       const instrument = db
         .prepare(
-          `SELECT id FROM instruments WHERE association_id = ? AND (name LIKE ? OR name = 'Score' OR name = 'Full Score')`,
+          // De instrumententabel is gedeeld en kent geen association_id; zie
+          // routes/instruments.ts, dat er ook niet op filtert.
+          `SELECT id FROM instruments WHERE name LIKE ? OR name = 'Score' OR name = 'Full Score'`,
         )
-        .get(user.associationId, `%${instrumentation.split(',')[0].trim()}%`) as { id: string } | undefined;
+        .get(`%${instrumentation.split(',')[0].trim()}%`) as { id: string } | undefined;
       if (instrument) {
         instrumentId = instrument.id;
       }

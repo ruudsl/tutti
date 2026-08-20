@@ -739,10 +739,10 @@ concertStageRouter.get(
     const instrumentRows = db
       .prepare(
         `
-    SELECT id, name FROM instruments WHERE association_id = ?
+    SELECT id, name FROM instruments
   `,
       )
-      .all(req.user!.associationId) as { id: string; name: string }[];
+      .all() as { id: string; name: string }[];
 
     const instrumentMap: Record<string, string> = {};
     for (const inst of instrumentRows) {
