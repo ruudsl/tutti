@@ -267,10 +267,10 @@ export function getNotPlayedPieces(
             mt.title,
             mt.composer,
             mt.arranger,
-            MAX(COALESCE(lp.last_concert, lp.last_rehearsal)) as lastPerformed,
+            COALESCE(lp.last_concert, lp.last_rehearsal) as lastPerformed,
             CASE
-                WHEN MAX(COALESCE(lp.last_concert, lp.last_rehearsal)) IS NULL THEN NULL
-                ELSE CAST(julianday(?) - julianday(MAX(COALESCE(lp.last_concert, lp.last_rehearsal))) AS INTEGER)
+                WHEN COALESCE(lp.last_concert, lp.last_rehearsal) IS NULL THEN NULL
+                ELSE CAST(julianday(?) - julianday(COALESCE(lp.last_concert, lp.last_rehearsal)) AS INTEGER)
             END as daysSinceLastPerformed,
             GROUP_CONCAT(DISTINCT g.name) as genres
         FROM music_titles mt
@@ -279,10 +279,10 @@ export function getNotPlayedPieces(
         LEFT JOIN genres g ON mtg.genre_id = g.id
         WHERE mt.association_id = ?
         AND (
-            MAX(COALESCE(lp.last_concert, lp.last_rehearsal)) IS NULL
-            OR MAX(COALESCE(lp.last_concert, lp.last_rehearsal)) < ?
+            COALESCE(lp.last_concert, lp.last_rehearsal) IS NULL
+            OR COALESCE(lp.last_concert, lp.last_rehearsal) < ?
         )
-        GROUP BY mt.id, mt.title, mt.composer, mt.arranger
+        GROUP BY mt.id, mt.title, mt.composer, mt.arranger, lastPerformed
         ORDER BY lastPerformed ASC NULLS FIRST, mt.title ASC
         LIMIT ?
     `;

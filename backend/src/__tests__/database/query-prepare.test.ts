@@ -106,8 +106,11 @@ describe('Elke query is voor te bereiden', () => {
           gecontroleerd++;
         } catch (error) {
           const melding = error instanceof Error ? error.message : String(error);
-          // SQLite formuleert het bij een INSERT anders dan bij de rest.
-          if (!/no such (column|table)|has no column named/i.test(melding)) continue;
+          // Elke volledige query hoort te vertalen. Een fout hier betekent dat
+          // de query nooit kan draaien, wat de reden ook is: een kolom die niet
+          // bestaat ("no such column", of bij een INSERT "has no column named"),
+          // maar net zo goed een aggregaat in een WHERE ("misuse of aggregate").
+          // Daarom niet op een lijstje meldingen filteren.
 
           const ontbrekendeTabel = melding.match(/no such table: (\w+)/)?.[1];
           if (ontbrekendeTabel && zelfAangemaakt.has(ontbrekendeTabel)) continue;
