@@ -170,7 +170,14 @@ async function meetEenRonde() {
       onlyCategories: Object.keys(DREMPELS),
     });
   } finally {
-    await chrome.kill().catch(() => {});
+    // kill() geeft in deze versie van chrome-launcher niets terug, geen
+    // promise. `await chrome.kill().catch(...)` wierp daarom zelf, in het
+    // finally-blok, en nam elke ronde mee voordat het resultaat eruit kwam.
+    try {
+      await chrome.kill();
+    } catch {
+      // Een browser die al weg is hoeft niet nog eens te sluiten.
+    }
   }
 }
 
