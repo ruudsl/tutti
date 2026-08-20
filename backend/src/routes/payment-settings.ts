@@ -50,6 +50,34 @@ function detectModeFromKey(key: string): 'live' | 'test' {
   return key.startsWith('test_') ? 'test' : 'live';
 }
 
+/**
+ * Zorg dat er een rij met betaalinstellingen is voor deze vereniging.
+ *
+ * De rij werd alleen aangemaakt door GET /. Alle andere routes doen een
+ * UPDATE ... WHERE association_id = ?, en die raakte nul rijen zolang niemand
+ * de instellingenpagina had geopend. POST /mollie/connect meldde dan gewoon
+ * succes met het profiel-id erbij, terwijl de sleutel nergens werd opgeslagen
+ * en de vereniging niet gekoppeld was.
+ */
+function zorgVoorInstellingen(associationId: string): void {
+  const bestaat = db.prepare('SELECT id FROM payment_settings WHERE association_id = ?').get(associationId);
+  if (bestaat) {
+    return;
+  }
+
+  db.prepare("INSERT INTO payment_settings (id, association_id, provider) VALUES (?, ?, 'mollie')").run(
+    uuidv4(),
+    associationId,
+  );
+
+  for (const [method, fee] of Object.entries(DEFAULT_MOLLIE_FEES)) {
+    db.prepare(
+      `INSERT OR IGNORE INTO payment_method_fees (id, association_id, method, provider_fee, customer_fee, is_enabled)
+       VALUES (?, ?, ?, ?, ?, 1)`,
+    ).run(uuidv4(), associationId, method, fee, fee);
+  }
+}
+
 // =============================================
 // PAYMENT SETTINGS ROUTES
 // =============================================
@@ -192,6 +220,8 @@ router.put(
 
     const { passFeesToCustomer } = validation.data;
 
+    zorgVoorInstellingen(associationId!);
+
     if (passFeesToCustomer !== undefined) {
       db.prepare(
         `
@@ -275,6 +305,8 @@ router.post(
 
     const { apiKey, mode: explicitMode } = validation.data;
     const mode = explicitMode || detectModeFromKey(apiKey);
+
+    zorgVoorInstellingen(associationId!);
 
     // Verify API key by fetching organization info
     try {
@@ -380,6 +412,8 @@ router.put(
 
     const { mode } = validation.data;
 
+    zorgVoorInstellingen(associationId!);
+
     // Verify that the key for the requested mode is configured
     const row = db
       .prepare(
@@ -432,6 +466,8 @@ router.delete(
     if (mode !== 'live' && mode !== 'test') {
       throw new ApiError(400, 'Invalid mode. Use live or test.');
     }
+
+    zorgVoorInstellingen(associationId!);
 
     if (mode === 'test') {
       db.prepare(
@@ -502,6 +538,8 @@ router.post(
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
+
+    zorgVoorInstellingen(associationId!);
 
     db.prepare(
       `
