@@ -61,18 +61,15 @@ function tabellenDieDeBronZelfAanmaakt(bestanden: string[]): Set<string> {
 }
 
 /**
- * Bekende openstaande gevallen. Elke regel is een query die vandaag stukloopt
- * zodra hij wordt aangeroepen; ze staan hier zodat deze test meteen bewaakt
- * dat er geen nieuwe bij komen, en tegelijk laat zien wat er nog te doen is.
+ * Bekende openstaande gevallen: queries die vandaag stuklopen zodra ze worden
+ * aangeroepen. De lijst is leeg, en dat hoort zo te blijven.
  *
- * Werk je er een weg, haal de regel dan hier weg — de test wordt vanzelf
- * strenger. Voeg hier niets aan toe zonder de fout echt na te lopen.
+ * Hij begon op dertig regels. Zet er alleen iets bij als je een fout echt hebt
+ * nagelopen en hem bewust laat liggen; haal de regel weg zodra hij verholpen
+ * is. De test hieronder dwingt dat laatste af, zodat de lijst niet stilletjes
+ * gevallen blijft afdekken die allang zijn opgelost.
  */
-const OPENSTAAND = new Set([
-  'services/ticketing.ts — no such table: scanner_tokens',
-  'services/ticketing.ts — no such table: offline_scan_log',
-  'services/workflowEngine.ts — no such table: group_members',
-]);
+const OPENSTAAND = new Set([]);
 
 describe('Elke query is voor te bereiden', () => {
   let problemen: string[];

@@ -28,16 +28,7 @@ const triggerSchema = z.object({
 });
 
 const actionSchema = z.object({
-  actionType: z.enum([
-    'send_email',
-    'send_notification',
-    'create_task',
-    'update_field',
-    'add_to_group',
-    'remove_from_group',
-    'webhook',
-    'delay',
-  ]),
+  actionType: z.enum(['send_email', 'send_notification', 'create_task', 'update_field', 'webhook', 'delay']),
   actionOrder: z.number().optional(),
   config: z.any(),
   conditions: z.any().optional(),

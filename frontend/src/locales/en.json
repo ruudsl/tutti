@@ -5003,8 +5003,6 @@
       "send_notification": "Send notification",
       "create_task": "Create task",
       "update_field": "Update field",
-      "add_to_group": "Add to group",
-      "remove_from_group": "Remove from group",
       "webhook": "Webhook",
       "delay": "Delay"
     },

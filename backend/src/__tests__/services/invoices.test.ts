@@ -230,6 +230,75 @@ describe('facturen', () => {
     });
   });
 
+  describe('bewaren', () => {
+    it('zet de factuur in de database in plaats van in het geheugen', async () => {
+      // De service hield facturen eerst in een Map bij; die was bij elke
+      // herstart leeg. Een factuur is een bewaarplichtig document.
+      const factuur = await createInvoice(maakBestelling());
+
+      const rij = testDb
+        .prepare('SELECT invoice_number, total, status, association_id FROM ticket_invoices WHERE id = ?')
+        .get(factuur.id) as { invoice_number: string; total: number; status: string; association_id: string };
+
+      expect(rij).toMatchObject({
+        invoice_number: factuur.invoiceNumber,
+        status: factuur.status,
+        association_id: vereniging.id,
+      });
+      expect(rij.total).toBeCloseTo(factuur.total, 2);
+    });
+
+    it('bewaart de regels bij de factuur', async () => {
+      const factuur = await createInvoice(maakBestelling({ aantal: 3, stukprijs: 12 }));
+
+      const regels = testDb
+        .prepare('SELECT description, quantity, total, vat_amount FROM invoice_line_items WHERE invoice_id = ?')
+        .all(factuur.id) as Array<{ description: string; quantity: number; total: number; vat_amount: number }>;
+
+      expect(regels).toHaveLength(1);
+      expect(regels[0]).toMatchObject({ description: 'Regulier', quantity: 3 });
+      expect(regels[0].total + regels[0].vat_amount).toBeCloseTo(36, 2);
+    });
+
+    it('geeft na opnieuw inlezen dezelfde bedragen terug', async () => {
+      const factuur = await createInvoice(maakBestelling({ aantal: 2, stukprijs: 21.8, servicekosten: 1.5 }));
+      const opnieuw = getInvoice(factuur.id)!;
+
+      expect(opnieuw.total).toBeCloseTo(factuur.total, 2);
+      expect(opnieuw.subtotal).toBeCloseTo(factuur.subtotal, 2);
+      expect(opnieuw.vatAmount).toBeCloseTo(factuur.vatAmount, 2);
+      expect(opnieuw.vatRate).toBeCloseTo(BTW, 4);
+      expect(opnieuw.lineItems).toHaveLength(factuur.lineItems.length);
+    });
+
+    it('bewaart de bedrijfsgegevens en leest ze terug', async () => {
+      const factuur = await createInvoice(maakBestelling(), {
+        companyName: 'Muziekhandel Bakker',
+        vatNumber: 'NL123456789B01',
+        address: 'Kerkstraat 1',
+        postalCode: '1234 AB',
+        city: 'Utrecht',
+      });
+
+      expect(getInvoice(factuur.id)?.businessDetails).toMatchObject({
+        companyName: 'Muziekhandel Bakker',
+        vatNumber: 'NL123456789B01',
+        city: 'Utrecht',
+      });
+    });
+
+    it('laat geen tweede factuur voor dezelfde bestelling toe', async () => {
+      const orderId = maakBestelling();
+      await createInvoice(orderId);
+      await createInvoice(orderId);
+
+      const rij = testDb.prepare('SELECT COUNT(*) AS n FROM ticket_invoices WHERE order_id = ?').get(orderId) as {
+        n: number;
+      };
+      expect(rij.n).toBe(1);
+    });
+  });
+
   describe('status wijzigen', () => {
     it('werkt de status bij', async () => {
       const factuur = await createInvoice(maakBestelling({ status: 'pending' }));

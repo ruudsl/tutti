@@ -5003,8 +5003,6 @@
       "send_notification": "Notificatie versturen",
       "create_task": "Taak aanmaken",
       "update_field": "Veld bijwerken",
-      "add_to_group": "Aan groep toevoegen",
-      "remove_from_group": "Uit groep verwijderen",
       "webhook": "Webhook",
       "delay": "Vertraging"
     },

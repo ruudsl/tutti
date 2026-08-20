@@ -197,6 +197,14 @@ export function getUserPreferences(userId: string): UserNotificationPreferences 
         enabled: !!prefs.concert_reminders,
         channels: getChannelsForType(userId, 'concert_reminder', prefs),
       },
+      announcement: {
+        enabled: !!prefs.announcements,
+        channels: getChannelsForType(userId, 'announcement', prefs),
+      },
+      general: {
+        enabled: !!prefs.general,
+        channels: getChannelsForType(userId, 'general', prefs),
+      },
     },
   };
 }
@@ -261,6 +269,8 @@ export function updateUserPreferences(
     chatMessages: boolean;
     practiceReminders: boolean;
     concertReminders: boolean;
+    announcements: boolean;
+    general: boolean;
   }>,
 ): void {
   // Ensure preferences exist
@@ -282,6 +292,8 @@ export function updateUserPreferences(
     chatMessages: 'chat_messages',
     practiceReminders: 'practice_reminders',
     concertReminders: 'concert_reminders',
+    announcements: 'announcements',
+    general: 'general',
   };
 
   for (const [key, column] of Object.entries(fieldMap)) {

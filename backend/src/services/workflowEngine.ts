@@ -141,11 +141,7 @@ async function executeAction(action: WorkflowAction, context: ExecutionContext):
     case 'update_field':
       await executeUpdateField(config, context);
       break;
-    case 'add_to_group':
-      await executeAddToGroup(config, context);
       break;
-    case 'remove_from_group':
-      await executeRemoveFromGroup(config, context);
       break;
     case 'webhook':
       await executeWebhook(config, context);
@@ -317,59 +313,9 @@ async function executeUpdateField(config: Record<string, any>, context: Executio
   }
 }
 
-async function executeAddToGroup(config: Record<string, any>, context: ExecutionContext): Promise<void> {
-  const { groupId, userId } = config;
-
-  const targetUserId = userId || context.entityData?.userId || context.entityId;
-  if (!groupId || !targetUserId) {
-    context.log.push('Missing group or user ID');
-    return;
-  }
-
-  const exists = db
-    .prepare(
-      `
-    SELECT id FROM group_members WHERE group_id = ? AND user_id = ?
-  `,
-    )
-    .get(groupId, targetUserId);
-
-  if (!exists) {
-    db.prepare(
-      `
-      INSERT INTO group_members (id, group_id, user_id, created_at)
-      VALUES (?, ?, ?, ?)
-    `,
-    ).run(uuidv4(), groupId, targetUserId, new Date().toISOString());
-    context.log.push(`Added user ${targetUserId} to group ${groupId}`);
-  } else {
-    context.log.push('User already in group');
-  }
-}
-
-async function executeRemoveFromGroup(config: Record<string, any>, context: ExecutionContext): Promise<void> {
-  const { groupId, userId } = config;
-
-  const targetUserId = userId || context.entityData?.userId || context.entityId;
-  if (!groupId || !targetUserId) {
-    context.log.push('Missing group or user ID');
-    return;
-  }
-
-  const result = db
-    .prepare(
-      `
-    DELETE FROM group_members WHERE group_id = ? AND user_id = ?
-  `,
-    )
-    .run(groupId, targetUserId);
-
-  if (result.changes > 0) {
-    context.log.push(`Removed user ${targetUserId} from group ${groupId}`);
-  } else {
-    context.log.push('User was not in group');
-  }
-}
+// De acties 'aan groep toevoegen' en 'uit groep verwijderen' zijn
+// verwijderd: de tabel group_members is nooit aangemaakt, dus beide
+// liepen bij uitvoering stuk.
 
 async function executeWebhook(config: Record<string, any>, context: ExecutionContext): Promise<void> {
   const { url, method, headers, body } = config;

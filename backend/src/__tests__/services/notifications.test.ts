@@ -114,6 +114,25 @@ describe('meldingen', () => {
       expect(soorten.new_music).toHaveProperty('enabled');
       expect(soorten.rehearsal_change).toHaveProperty('channels');
     });
+
+    it('noemt alle acht de soorten, en zet ze standaard aan', () => {
+      const soorten = getUserPreferences(lid.id).notificationTypes;
+      const verwacht = [
+        'new_music',
+        'rehearsal_change',
+        'seating_update',
+        'chat_message',
+        'practice_reminder',
+        'concert_reminder',
+        'announcement',
+        'general',
+      ] as const;
+
+      for (const soort of verwacht) {
+        expect(soorten[soort], soort).toBeDefined();
+        expect(soorten[soort]!.enabled, soort).toBe(true);
+      }
+    });
   });
 
   describe('updateUserPreferences', () => {
@@ -138,6 +157,15 @@ describe('meldingen', () => {
       getUserPreferences(lid.id);
       updateUserPreferences(lid.id, { newMusic: false });
       expect(getUserPreferences(lid.id).notificationTypes.rehearsal_change?.enabled).toBe(true);
+    });
+
+    it('zet mededelingen en algemene meldingen uit', () => {
+      getUserPreferences(lid.id);
+      updateUserPreferences(lid.id, { announcements: false, general: false });
+
+      const soorten = getUserPreferences(lid.id).notificationTypes;
+      expect(soorten.announcement?.enabled).toBe(false);
+      expect(soorten.general?.enabled).toBe(false);
     });
 
     it('doet niets bij een lege wijziging', () => {
@@ -228,6 +256,22 @@ describe('meldingen', () => {
 
       expect(bewaardeMeldingen(lid.id)).toHaveLength(1);
       expect(resultaat.channels).toEqual([]);
+    });
+
+    it('verstuurt niets meer zodra het lid die soort heeft uitgezet', async () => {
+      getUserPreferences(lid.id);
+      updateUserPreferences(lid.id, { announcements: false });
+
+      const resultaat = await sendNotification({
+        userId: lid.id,
+        type: 'announcement',
+        title: 'Mededeling',
+        body: 'Ter kennisgeving',
+        associationId: vereniging.id,
+      });
+
+      expect(resultaat.channels).toEqual([]);
+      expect(bewaardeMeldingen(lid.id)).toHaveLength(0);
     });
 
     it('houdt de meldingen van twee leden uit elkaar', async () => {
