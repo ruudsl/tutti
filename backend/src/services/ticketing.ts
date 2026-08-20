@@ -617,30 +617,40 @@ export function calculateGroupDiscount(
   const ticketType = db
     .prepare(
       `
-        SELECT price, group_discount_config FROM ticket_types WHERE id = ?
+        SELECT price FROM ticket_types WHERE id = ?
     `,
     )
-    .get(ticketTypeId) as { price: number; group_discount_config?: string } | undefined;
+    .get(ticketTypeId) as { price: number } | undefined;
 
   if (!ticketType) {
     logger.warn(`Ticket type not found for group discount calculation: ${ticketTypeId}`);
     return { discountAmount: 0, finalPrice: 0 };
   }
 
-  // Default discount tiers
+  // Default discount tiers, used when the ticket type defines none of its own
   let discountTiers: GroupDiscountConfig[] = [
     { minQuantity: 5, discountPercentage: 5 },
     { minQuantity: 10, discountPercentage: 10 },
     { minQuantity: 20, discountPercentage: 15 },
   ];
 
-  // Use custom config if available
-  if (ticketType.group_discount_config) {
-    try {
-      discountTiers = JSON.parse(ticketType.group_discount_config);
-    } catch (error) {
-      logger.error('Failed to parse group discount config:', error);
-    }
+  // Per-ticket-type tiers live in ticket_group_discounts; only percentage rows
+  // apply here, the other discount types are handled at order level.
+  const configured = db
+    .prepare(
+      `
+        SELECT min_quantity, discount_value FROM ticket_group_discounts
+        WHERE ticket_type_id = ? AND discount_type = 'percentage'
+        ORDER BY min_quantity
+    `,
+    )
+    .all(ticketTypeId) as Array<{ min_quantity: number; discount_value: number }>;
+
+  if (configured.length > 0) {
+    discountTiers = configured.map((row) => ({
+      minQuantity: row.min_quantity,
+      discountPercentage: row.discount_value,
+    }));
   }
 
   // Find applicable discount tier (highest matching)
@@ -675,15 +685,13 @@ export interface DiscountCodeValidation {
   code?: {
     id: string;
     code: string;
-    discountType: 'percentage' | 'fixed';
+    discountType: 'percentage' | 'fixed_amount';
     discountValue: number;
     maxUses?: number;
     currentUses: number;
     minOrderTotal?: number;
-    maxDiscountAmount?: number;
     validFrom?: string;
     validUntil?: string;
-    restrictedToEmails?: string[];
   };
   discountAmount: number;
   message: string;
@@ -704,26 +712,24 @@ export function validateDiscountCode(
       `
         SELECT
             id, code, discount_type, discount_value,
-            max_uses, current_uses, min_order_total, max_discount_amount,
-            valid_from, valid_until, restricted_emails, concert_id
+            max_uses, uses_count, min_order_amount,
+            valid_from, valid_until, concert_ids
         FROM discount_codes
-        WHERE code = ? AND association_id = ? AND active = 1
+        WHERE code = ? AND association_id = ? AND is_active = 1
     `,
     )
     .get(code.toUpperCase(), associationId) as
     | {
         id: string;
         code: string;
-        discount_type: 'percentage' | 'fixed';
+        discount_type: 'percentage' | 'fixed_amount';
         discount_value: number;
         max_uses: number | null;
-        current_uses: number;
-        min_order_total: number | null;
-        max_discount_amount: number | null;
+        uses_count: number;
+        min_order_amount: number | null;
         valid_from: string | null;
         valid_until: string | null;
-        restricted_emails: string | null;
-        concert_id: string | null;
+        concert_ids: string | null;
       }
     | undefined;
 
@@ -735,17 +741,25 @@ export function validateDiscountCode(
     };
   }
 
-  // Check if code is concert-specific
-  if (discountCode.concert_id && discountCode.concert_id !== concertId) {
-    return {
-      valid: false,
-      discountAmount: 0,
-      message: 'This discount code is not valid for this concert',
-    };
+  // Check if code is restricted to specific concerts (null = all concerts)
+  if (discountCode.concert_ids) {
+    let toegestaneConcerten: string[] = [];
+    try {
+      toegestaneConcerten = JSON.parse(discountCode.concert_ids) as string[];
+    } catch (error) {
+      logger.error('Failed to parse concert_ids on discount code:', error);
+    }
+    if (toegestaneConcerten.length > 0 && !toegestaneConcerten.includes(concertId)) {
+      return {
+        valid: false,
+        discountAmount: 0,
+        message: 'This discount code is not valid for this concert',
+      };
+    }
   }
 
   // Check usage limit
-  if (discountCode.max_uses !== null && discountCode.current_uses >= discountCode.max_uses) {
+  if (discountCode.max_uses !== null && discountCode.uses_count >= discountCode.max_uses) {
     return {
       valid: false,
       discountAmount: 0,
@@ -771,24 +785,12 @@ export function validateDiscountCode(
   }
 
   // Check minimum order total
-  if (discountCode.min_order_total !== null && orderTotal < discountCode.min_order_total) {
+  if (discountCode.min_order_amount !== null && orderTotal < discountCode.min_order_amount) {
     return {
       valid: false,
       discountAmount: 0,
-      message: `Minimum order total of EUR ${discountCode.min_order_total.toFixed(2)} required`,
+      message: `Minimum order total of EUR ${discountCode.min_order_amount.toFixed(2)} required`,
     };
-  }
-
-  // Check email restrictions
-  if (discountCode.restricted_emails) {
-    const restrictedEmails = JSON.parse(discountCode.restricted_emails) as string[];
-    if (restrictedEmails.length > 0 && !restrictedEmails.includes(userEmail.toLowerCase())) {
-      return {
-        valid: false,
-        discountAmount: 0,
-        message: 'This discount code is not valid for your account',
-      };
-    }
   }
 
   // Calculate discount
@@ -797,11 +799,6 @@ export function validateDiscountCode(
     discountAmount = orderTotal * (discountCode.discount_value / 100);
   } else {
     discountAmount = discountCode.discount_value;
-  }
-
-  // Apply max discount cap
-  if (discountCode.max_discount_amount !== null && discountAmount > discountCode.max_discount_amount) {
-    discountAmount = discountCode.max_discount_amount;
   }
 
   // Ensure discount doesn't exceed order total
@@ -821,12 +818,10 @@ export function validateDiscountCode(
       discountType: discountCode.discount_type,
       discountValue: discountCode.discount_value,
       maxUses: discountCode.max_uses ?? undefined,
-      currentUses: discountCode.current_uses,
-      minOrderTotal: discountCode.min_order_total ?? undefined,
-      maxDiscountAmount: discountCode.max_discount_amount ?? undefined,
+      currentUses: discountCode.uses_count,
+      minOrderTotal: discountCode.min_order_amount ?? undefined,
       validFrom: discountCode.valid_from ?? undefined,
       validUntil: discountCode.valid_until ?? undefined,
-      restrictedToEmails: discountCode.restricted_emails ? JSON.parse(discountCode.restricted_emails) : undefined,
     },
     discountAmount,
     message: 'Discount code applied successfully',
@@ -841,7 +836,7 @@ export function applyDiscountCode(codeId: string, orderId: string, userEmail: st
   db.prepare(
     `
         UPDATE discount_codes
-        SET current_uses = current_uses + 1, updated_at = CURRENT_TIMESTAMP
+        SET uses_count = uses_count + 1
         WHERE id = ?
     `,
   ).run(codeId);
