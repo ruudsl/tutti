@@ -465,7 +465,16 @@ function getTableName(entityType: string): string | null {
   return mapping[entityType] || null;
 }
 
-export function processScheduledWorkflows(): void {
+/**
+ * Draai de workflows waarvan het geplande tijdstip nu is.
+ *
+ * Zonder associationId gaat dit over alle verenigingen; zo roept de planner in
+ * scheduler/workflow-runner.ts het aan, en daar hoort dat ook. De route die
+ * hetzelfde handmatig aftrapt geeft de vereniging van de aanvrager mee: die
+ * hoort alleen zijn eigen automatisering te kunnen laten afgaan, niet de mails
+ * en meldingen van elke andere vereniging op de installatie.
+ */
+export function processScheduledWorkflows(associationId?: string): void {
   const now = new Date();
   const currentTime = now.toTimeString().slice(0, 5);
 
@@ -481,9 +490,10 @@ export function processScheduledWorkflows(): void {
       AND w.is_active = 1
       AND w.deleted_at IS NULL
       AND t.time_of_day = ?
+      AND (? IS NULL OR w.association_id = ?)
   `,
     )
-    .all(currentTime) as any[];
+    .all(currentTime, associationId ?? null, associationId ?? null) as any[];
 
   for (const trigger of triggers) {
     // Check if cron matches (simplified - just check time)
@@ -493,7 +503,8 @@ export function processScheduledWorkflows(): void {
   }
 }
 
-export function processDateFieldWorkflows(): void {
+/** Zie processScheduledWorkflows voor de rol van associationId. */
+export function processDateFieldWorkflows(associationId?: string): void {
   // Find workflows with date_field triggers
   const triggers = db
     .prepare(
@@ -507,9 +518,10 @@ export function processDateFieldWorkflows(): void {
       AND w.deleted_at IS NULL
       AND t.date_field_entity IS NOT NULL
       AND t.date_field_name IS NOT NULL
+      AND (? IS NULL OR w.association_id = ?)
   `,
     )
-    .all() as any[];
+    .all(associationId ?? null, associationId ?? null) as any[];
 
   for (const trigger of triggers) {
     const tableName = getTableName(trigger.date_field_entity);

@@ -342,12 +342,22 @@ router.post(
 );
 
 // DELETE /api/workflows/:id/triggers/:triggerId - Remove trigger
+//
+// Het workflow-id komt uit het pad en zei op zichzelf niets over de vereniging.
+// De buurroute die een trigger toevoegt controleert dat wel; deze bleef achter,
+// waardoor elke beheerder de automatisering van een andere vereniging uit
+// elkaar kon halen.
 router.delete(
   '/:id/triggers/:triggerId',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db
-      .prepare(`DELETE FROM workflow_triggers WHERE id = ? AND workflow_id = ?`)
-      .run(req.params.triggerId, req.params.id);
+      .prepare(
+        `DELETE FROM workflow_triggers
+         WHERE id = ? AND workflow_id IN (
+           SELECT id FROM workflows WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+         )`,
+      )
+      .run(req.params.triggerId, req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Trigger not found');
@@ -396,13 +406,18 @@ router.post(
   }),
 );
 
-// DELETE /api/workflows/:id/actions/:actionId - Remove action
+// DELETE /api/workflows/:id/actions/:actionId - Remove action (zie de trigger hierboven)
 router.delete(
   '/:id/actions/:actionId',
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = db
-      .prepare(`DELETE FROM workflow_actions WHERE id = ? AND workflow_id = ?`)
-      .run(req.params.actionId, req.params.id);
+      .prepare(
+        `DELETE FROM workflow_actions
+         WHERE id = ? AND workflow_id IN (
+           SELECT id FROM workflows WHERE id = ? AND association_id = ? AND deleted_at IS NULL
+         )`,
+      )
+      .run(req.params.actionId, req.params.id, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Action not found');
@@ -444,20 +459,26 @@ router.post(
   }),
 );
 
-// POST /api/workflows/process-scheduled - Process scheduled workflows (called by cron)
+// POST /api/workflows/process-scheduled - de planning handmatig aftrappen
+//
+// Deze twee routes riepen de verwerking aan zonder vereniging, en dan gaat die
+// over de hele installatie. Een beheerder van de ene vereniging kon daarmee de
+// mails, meldingen en taken van elke andere vereniging laten afgaan, zo vaak
+// als hij het verzoek herhaalde. De planner in scheduler/workflow-runner.ts
+// roept dezelfde functies wel zonder vereniging aan; daar hoort dat ook.
 router.post(
   '/process/scheduled',
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
-    processScheduledWorkflows();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    processScheduledWorkflows(req.user!.associationId!);
     res.json({ message: 'Scheduled workflows processing initiated' });
   }),
 );
 
-// POST /api/workflows/process-date-fields - Process date field workflows (called by cron)
+// POST /api/workflows/process-date-fields - idem voor de datumvelden
 router.post(
   '/process/date-fields',
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
-    processDateFieldWorkflows();
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    processDateFieldWorkflows(req.user!.associationId!);
     res.json({ message: 'Date field workflows processing initiated' });
   }),
 );
