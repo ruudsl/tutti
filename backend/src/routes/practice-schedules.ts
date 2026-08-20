@@ -8,6 +8,65 @@ import logger from '../utils/logger';
 const router = Router();
 
 /**
+ * Rollen die een oefenschema mogen inrichten.
+ */
+const SCHEMABEHEERDERS = ['admin', 'conductor', 'music_committee'];
+
+/**
+ * Haal een oefenschema op dat aan de eigen vereniging hangt.
+ *
+ * Een oefenschema hangt via zijn orkest aan een vereniging. Het overzicht,
+ * het bijwerken en het verwijderen legden dat verband wel, maar het toevoegen
+ * van een mijlpaal niet - die schreef gewoon op het schema-id uit het pad.
+ */
+function haalEigenSchema(req: AuthRequest, schemaId: string): any {
+  const schema = db
+    .prepare(
+      `
+        SELECT ps.*, o.association_id
+        FROM practice_schedules ps
+        JOIN orchestras o ON ps.orchestra_id = o.id
+        WHERE ps.id = ? AND o.association_id = ?
+    `,
+    )
+    .get(schemaId, req.user!.associationId) as any;
+
+  if (!schema) {
+    throw new ApiError(404, 'Oefenschema niet gevonden');
+  }
+
+  return schema;
+}
+
+/**
+ * Haal een mijlpaal op die bij een schema van de eigen vereniging hoort.
+ *
+ * Bewerken en verwijderen van een mijlpaal keken alleen naar de rol. Elke
+ * beheerder, dirigent of commissielid kon daarmee een mijlpaal van een andere
+ * vereniging aanpassen of weggooien - het id uit het pad ging rechtstreeks de
+ * UPDATE of DELETE in.
+ */
+function haalEigenMijlpaal(req: AuthRequest, mijlpaalId: string): any {
+  const mijlpaal = db
+    .prepare(
+      `
+        SELECT psm.*, ps.orchestra_id
+        FROM practice_schedule_milestones psm
+        JOIN practice_schedules ps ON psm.schedule_id = ps.id
+        JOIN orchestras o ON ps.orchestra_id = o.id
+        WHERE psm.id = ? AND o.association_id = ?
+    `,
+    )
+    .get(mijlpaalId, req.user!.associationId) as any;
+
+  if (!mijlpaal) {
+    throw new ApiError(404, 'Mijlpaal niet gevonden');
+  }
+
+  return mijlpaal;
+}
+
+/**
  * @swagger
  * /practice-schedules:
  *   get:
@@ -215,7 +274,7 @@ router.post(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     // Only conductors and music committee can create schedules
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, "Geen rechten om oefenschema's aan te maken");
     }
 
@@ -223,6 +282,26 @@ router.post(
 
     if (!musicTitleId || !orchestraId || !targetDate) {
       throw new ApiError(400, 'Muziekstuk, orkest en doeldatum zijn verplicht');
+    }
+
+    // Zonder deze twee controles kon een schema worden aangemaakt op het orkest
+    // en het muziekstuk van een andere vereniging. Het overzicht filtert op de
+    // vereniging van het orkest, dus zo'n schema verscheen daarna in de
+    // planning van die andere vereniging.
+    const stuk = db
+      .prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
+      .get(musicTitleId, req.user!.associationId);
+
+    if (!stuk) {
+      throw new ApiError(404, 'Muziekstuk niet gevonden');
+    }
+
+    const orkest = db
+      .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+      .get(orchestraId, req.user!.associationId);
+
+    if (!orkest) {
+      throw new ApiError(404, 'Orkest niet gevonden');
     }
 
     // Check if schedule already exists
@@ -281,7 +360,7 @@ router.patch(
   '/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, "Geen rechten om oefenschema's te bewerken");
     }
 
@@ -340,7 +419,7 @@ router.delete(
   '/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, "Geen rechten om oefenschema's te verwijderen");
     }
 
@@ -377,7 +456,7 @@ router.post(
   '/:id/milestones',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, 'Geen rechten om mijlpalen toe te voegen');
     }
 
@@ -386,6 +465,8 @@ router.post(
     if (!title || !targetDate) {
       throw new ApiError(400, 'Titel en doeldatum zijn verplicht');
     }
+
+    haalEigenSchema(req, req.params.id);
 
     // Get max sort order
     const maxOrder = db
@@ -421,11 +502,13 @@ router.patch(
   '/milestones/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, 'Geen rechten om mijlpalen te bewerken');
     }
 
     const { title, description, targetDate, isCompleted } = req.body;
+
+    haalEigenMijlpaal(req, req.params.id);
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -474,9 +557,11 @@ router.delete(
   '/milestones/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, 'Geen rechten om mijlpalen te verwijderen');
     }
+
+    haalEigenMijlpaal(req, req.params.id);
 
     db.prepare('DELETE FROM practice_schedule_milestones WHERE id = ?').run(req.params.id);
 
@@ -507,9 +592,11 @@ router.post(
       throw new ApiError(400, 'Ongeldige status');
     }
 
+    haalEigenMijlpaal(req, req.params.id);
+
     // Check if user plays this instrument (or is admin/conductor)
     const canUpdate =
-      ['admin', 'conductor', 'music_committee'].includes(req.user!.role) ||
+      SCHEMABEHEERDERS.includes(req.user!.role) ||
       db
         .prepare(`SELECT 1 FROM user_instruments WHERE user_id = ? AND instrument_id = ?`)
         .get(req.user!.id, instrumentId);
@@ -561,7 +648,7 @@ router.post(
   '/:id/initialize-sections',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
+    if (!SCHEMABEHEERDERS.includes(req.user!.role)) {
       throw new ApiError(403, 'Geen rechten');
     }
 
