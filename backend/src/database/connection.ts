@@ -321,6 +321,22 @@ class DatabaseWrapper {
   }
 }
 
+/**
+ * sql.js weigert een `undefined` binding met "tried to bind a value of an
+ * unknown type". Routes die een gedeeltelijke wijziging doen geven voor elk
+ * veld dat de aanvraag niet noemt `undefined` mee aan een `COALESCE(?, kolom)`,
+ * en zo'n verzoek liep daardoor altijd stuk op een 500. In SQL is een niet
+ * ingevulde parameter NULL, dus dat is wat we ervan maken.
+ */
+function normaliseerParams(params: any[]): any[] {
+  for (const waarde of params) {
+    if (waarde === undefined) {
+      return params.map((p) => (p === undefined ? null : p));
+    }
+  }
+  return params;
+}
+
 class PreparedStatement {
   private wrapper: DatabaseWrapper;
   private sql: string;
@@ -331,15 +347,15 @@ class PreparedStatement {
   }
 
   run(...params: any[]): { changes: number; lastInsertRowid: number } {
-    return this.wrapper.runStatement(this.sql, params);
+    return this.wrapper.runStatement(this.sql, normaliseerParams(params));
   }
 
   get(...params: any[]): any {
-    return this.wrapper.getStatement(this.sql, params);
+    return this.wrapper.getStatement(this.sql, normaliseerParams(params));
   }
 
   all(...params: any[]): any[] {
-    return this.wrapper.allStatement(this.sql, params);
+    return this.wrapper.allStatement(this.sql, normaliseerParams(params));
   }
 }
 
