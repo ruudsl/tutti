@@ -175,30 +175,41 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
     throw new Error(`No items found for order: ${orderId}`);
   }
 
-  // Create line items with VAT calculation
+  // Bij het afrekenen geldt total = som(prijs x aantal) + servicekosten; er
+  // komt geen btw bovenop. De kaartprijs is dus de prijs inclusief btw, zoals
+  // gebruikelijk bij consumentenverkoop. De btw wordt daarom uit het bedrag
+  // gerekend en niet erbovenop geteld: anders noemt de factuur negen procent
+  // meer dan de koper heeft betaald.
+  const naarCenten = (bedrag: number): number => Math.round(bedrag * 100) / 100;
+
   const lineItems: InvoiceLineItem[] = orderItems.map((item) => {
-    const totalPrice = item.quantity * item.unitPrice;
-    const vatAmount = totalPrice * VAT_RATE;
+    const brutoRegel = naarCenten(item.quantity * item.unitPrice);
+    const nettoRegel = naarCenten(brutoRegel / (1 + VAT_RATE));
 
     return {
       description: item.ticketTypeName,
       quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice,
+      // Op een factuur staat de stukprijs exclusief btw, zodat aantal maal
+      // stukprijs het regelbedrag oplevert.
+      unitPrice: item.quantity > 0 ? naarCenten(nettoRegel / item.quantity) : 0,
+      totalPrice: nettoRegel,
       vatRate: VAT_RATE,
-      vatAmount,
+      // Het verschil, niet opnieuw uitgerekend: zo tellen netto en btw altijd
+      // precies op tot het brutobedrag.
+      vatAmount: naarCenten(brutoRegel - nettoRegel),
     };
   });
 
   // Calculate totals
-  const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const vatAmount = lineItems.reduce((sum, item) => sum + item.vatAmount, 0);
+  const subtotal = naarCenten(lineItems.reduce((sum, item) => sum + item.totalPrice, 0));
+  const vatAmount = naarCenten(lineItems.reduce((sum, item) => sum + item.vatAmount, 0));
 
   // Service fee (if any - calculated as difference between order total and ticket subtotal)
-  const serviceFee = Math.max(0, order.total - subtotal);
-  const serviceFeeVat = serviceFee * VAT_RATE;
+  const brutoServicekosten = Math.max(0, naarCenten(order.total - (subtotal + vatAmount)));
+  const serviceFee = naarCenten(brutoServicekosten / (1 + VAT_RATE));
+  const serviceFeeVat = naarCenten(brutoServicekosten - serviceFee);
 
-  const total = subtotal + vatAmount + serviceFee + serviceFeeVat;
+  const total = naarCenten(subtotal + vatAmount + serviceFee + serviceFeeVat);
 
   // Generate invoice
   const now = new Date();
