@@ -4604,7 +4604,20 @@
     "export": "Exporteren",
     "exportData": "Gegevens exporteren",
     "exportSuccess": "Export succesvol gedownload",
-    "exportError": "Fout bij exporteren"
+    "exportError": "Fout bij exporteren",
+    "editEntry": "Boeking bewerken",
+    "postTransaction": "Boeken",
+    "transactionPosted": "Boeking geboekt.",
+    "transactionUpdated": "Boeking bijgewerkt.",
+    "transactionDeleted": "Boeking verwijderd.",
+    "confirmDeleteTransaction": "Weet je zeker dat je deze boeking wilt verwijderen?",
+    "sendInvoice": "Factuur verzenden",
+    "invoiceSent": "Factuur verzonden.",
+    "markPaid": "Betaald melden",
+    "invoiceMarkedPaid": "Factuur op betaald gezet.",
+    "invoiceDeleted": "Factuur verwijderd.",
+    "confirmDeleteInvoice": "Weet je zeker dat je deze factuur wilt verwijderen?",
+    "errorLoad": "Laden mislukt."
   },
   "projects": {
     "title": "Projecten",
