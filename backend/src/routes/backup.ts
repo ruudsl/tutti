@@ -56,6 +56,12 @@ const DB_PATH = config.dbPath;
  * leeg. De aanroeper kijkt daarna nog een keer of het samengestelde pad
  * werkelijk binnen de doelmap valt - dat staat daar bewust en niet hier, zodat
  * die grens naast de schrijfopdracht zelf te lezen is.
+ *
+ * Die tweede controle gebruikt aan beide kanten path.resolve. Met path.join
+ * zou het samengestelde pad relatief blijven als UPLOAD_DIR dat is - te zetten
+ * via de omgeving - terwijl de grens ernaast absoluut is. De vergelijking gaat
+ * dan altijd mis en er wordt niets meer teruggezet, zonder dat iemand het
+ * merkt.
  */
 export function isVeiligeBestandsnaam(naam: string): boolean {
   if (!naam || naam === '.' || naam === '..') return false;
@@ -449,7 +455,7 @@ router.post(
             logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
             continue;
           }
-          const doel = path.join(MP3_UPLOAD_DIR, storedName);
+          const doel = path.resolve(MP3_UPLOAD_DIR, storedName);
           if (!doel.startsWith(path.resolve(MP3_UPLOAD_DIR) + path.sep)) {
             logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
             continue;
@@ -465,7 +471,7 @@ router.post(
             logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
             continue;
           }
-          const doel = path.join(UPLOAD_DIR, storedName);
+          const doel = path.resolve(UPLOAD_DIR, storedName);
           if (!doel.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) {
             logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
             continue;

@@ -19,6 +19,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import db from '../../database/connection';
@@ -163,6 +164,44 @@ describe('reservekopie', () => {
 
     it('weigert een naam die na normaliseren nog steeds uit de map wijst', () => {
       expect(isVeiligeBestandsnaam('iets/../../buiten.pdf')).toBe(false);
+    });
+  });
+
+  describe('de grens rond de doelmap', () => {
+    /**
+     * De controle bij de schrijfopdracht gebruikt aan beide kanten
+     * path.resolve. Dat is geen detail: met path.join blijft het samengestelde
+     * pad relatief als UPLOAD_DIR dat is - en die is via de omgeving te zetten
+     * - terwijl de grens ernaast absoluut is. De vergelijking gaat dan altijd
+     * mis, en het terugzetten slaat stilzwijgend elk bestand over.
+     *
+     * Deze test doet de vergelijking na met een relatieve map, precies zoals
+     * de route hem doet.
+     */
+    const binnenDeGrens = (map: string, naam: string) =>
+      path.resolve(map, naam).startsWith(path.resolve(map) + path.sep);
+
+    it('laat een gewoon bestand door bij een absolute map', () => {
+      expect(binnenDeGrens('/var/data/uploads', 'partij.pdf')).toBe(true);
+    });
+
+    it('laat een gewoon bestand ook door bij een relatieve map', () => {
+      expect(binnenDeGrens('./uploads', 'partij.pdf')).toBe(true);
+    });
+
+    it('weigert een ontsnapping bij een absolute map', () => {
+      expect(binnenDeGrens('/var/data/uploads', '../../buiten.pdf')).toBe(false);
+    });
+
+    it('weigert een ontsnapping bij een relatieve map', () => {
+      expect(binnenDeGrens('./uploads', '../../buiten.pdf')).toBe(false);
+    });
+
+    it('weigert een map die alleen als tekst op de doelmap lijkt', () => {
+      // /var/data/uploads-extern begint als tekst met /var/data/uploads, maar
+      // is een andere map. Het scheidingsteken in de grens vangt dat.
+      const doel = path.resolve('/var/data/uploads-extern/partij.pdf');
+      expect(doel.startsWith(path.resolve('/var/data/uploads') + path.sep)).toBe(false);
     });
   });
 
