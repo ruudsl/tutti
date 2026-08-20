@@ -141,8 +141,6 @@ async function executeAction(action: WorkflowAction, context: ExecutionContext):
     case 'update_field':
       await executeUpdateField(config, context);
       break;
-      break;
-      break;
     case 'webhook':
       await executeWebhook(config, context);
       break;
