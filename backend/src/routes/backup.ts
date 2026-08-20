@@ -42,6 +42,32 @@ const MP3_UPLOAD_DIR = process.env.MP3_UPLOAD_DIR || path.join(__dirname, '../..
 const DB_PATH = config.dbPath;
 
 /**
+ * Waar mag een bestand uit een reservekopie terechtkomen?
+ *
+ * De namen in manifest.json komen uit het aangeleverde zipbestand en zijn dus
+ * door de aanleveraar bepaald. Ze gingen rechtstreeks in path.join(). De
+ * controle die daarboven staat kijkt alleen naar entryName - de naam van de
+ * zip-ingang - en niet naar storedName uit het manifest, dus een manifest dat
+ * `../../../etc/cron.d/iets` als storedName opgaf schreef daar ook.
+ *
+ * Een naam uit een reservekopie hoort een bestandsnaam te zijn, geen pad.
+ * Twee controles: de naam moet gelijk zijn aan zijn eigen basename, en het
+ * uiteindelijke pad moet binnen de doelmap blijven. De eerste vangt elk
+ * scheidingsteken, de tweede is er voor het geval een platform iets anders
+ * met de naam doet dan verwacht.
+ *
+ * Geeft null terug als de naam niet deugt; de aanroeper slaat hem dan over.
+ */
+export function veiligDoelpad(map: string, naam: string): string | null {
+  if (!naam || naam === '.' || naam === '..') return null;
+  if (naam !== path.basename(naam)) return null;
+
+  const doel = path.resolve(map, naam);
+  const grens = path.resolve(map) + path.sep;
+  return doel.startsWith(grens) ? doel : null;
+}
+
+/**
  * @swagger
  * /backup:
  *   get:
@@ -424,14 +450,24 @@ router.post(
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = mp3ArchiveToStored.get(archiveName) || archiveName;
-          fs.writeFileSync(path.join(MP3_UPLOAD_DIR, storedName), entry.getData());
+          const doel = veiligDoelpad(MP3_UPLOAD_DIR, storedName);
+          if (!doel) {
+            logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          fs.writeFileSync(doel, entry.getData());
           restoredMp3s++;
         } else if (entryName.startsWith('uploads/') && entryName.endsWith('.pdf')) {
           // Restore PDF file
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = pdfArchiveToStored.get(archiveName) || archiveName;
-          fs.writeFileSync(path.join(UPLOAD_DIR, storedName), entry.getData());
+          const doel = veiligDoelpad(UPLOAD_DIR, storedName);
+          if (!doel) {
+            logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          fs.writeFileSync(doel, entry.getData());
           restoredPdfs++;
         }
       }
