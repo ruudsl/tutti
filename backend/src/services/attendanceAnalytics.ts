@@ -214,26 +214,24 @@ export function getAttendanceOverview(
   };
 
   // Build query for concerts
-  let concertQuery = `
+  const concertQuery = `
         SELECT
             COUNT(DISTINCT c.id) as total_concerts
         FROM concerts c
         WHERE c.association_id = ?
         AND c.date >= ? AND c.date <= ?
     `;
+  // Een concert hangt in dit schema niet aan een orkest: concerts heeft geen
+  // orchestra_id. Filteren op orkest kan hier dus niet, en gebeurt alleen bij
+  // de repetities hierboven.
   const concertParams: (string | null)[] = [associationId, startDate, endDate];
-
-  if (orchestraId) {
-    concertQuery += ' AND (c.orchestra_id = ? OR c.orchestra_id IS NULL)';
-    concertParams.push(orchestraId);
-  }
 
   const concertStats = db.prepare(concertQuery).get(...concertParams) as {
     total_concerts: number;
   };
 
   // Get concert attendance count
-  let concertAttendanceQuery = `
+  const concertAttendanceQuery = `
         SELECT
             COUNT(DISTINCT ca.user_id) as avg_attendance
         FROM concert_attendance ca
@@ -241,10 +239,6 @@ export function getAttendanceOverview(
         WHERE c.association_id = ?
         AND c.date >= ? AND c.date <= ?
     `;
-  if (orchestraId) {
-    concertAttendanceQuery += ' AND (c.orchestra_id = ? OR c.orchestra_id IS NULL)';
-  }
-
   const concertAttendance = db.prepare(concertAttendanceQuery).get(...concertParams) as {
     avg_attendance: number;
   };
