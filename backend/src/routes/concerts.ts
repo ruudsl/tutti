@@ -452,7 +452,7 @@ router.get(
                   JOIN instruments i ON i.id = ui.instrument_id
                  WHERE ui.user_id = u.id) AS instrument
         FROM users u
-        WHERE u.association_id = ? AND u.role != 'inactive'
+        WHERE u.association_id = ? AND u.status != 'inactive' AND u.deleted_at IS NULL
     `,
       )
       .all(req.user!.associationId) as { id: string; first_name: string; last_name: string; instrument: string }[];
@@ -475,7 +475,7 @@ router.get(
         SELECT
             COUNT(DISTINCT c.id) as total_concerts,
             COUNT(DISTINCT ca.id) as total_attendances,
-            (SELECT COUNT(*) FROM users WHERE association_id = ? AND role != 'inactive') as member_count
+            (SELECT COUNT(*) FROM users WHERE association_id = ? AND status != 'inactive' AND deleted_at IS NULL) as member_count
         FROM concerts c
         LEFT JOIN concert_attendance ca ON c.id = ca.concert_id
         WHERE c.association_id = ? AND c.concert_type = ? AND c.date < date('now')

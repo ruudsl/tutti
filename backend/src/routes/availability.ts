@@ -120,7 +120,8 @@ router.get(
         FROM users u
         LEFT JOIN member_availability ma ON u.id = ma.user_id AND ma.date = ?
         WHERE u.association_id = ?
-          AND u.role != 'inactive'
+          AND u.status != 'inactive'
+          AND u.deleted_at IS NULL
     `;
     const params: any[] = [date, req.user!.associationId];
 
