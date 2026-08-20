@@ -108,6 +108,7 @@ const Uniforms = lazy(() => import('./pages/Uniforms'));
 const InstrumentAssets = lazy(() => import('./pages/InstrumentAssets'));
 const Events = lazy(() => import('./pages/Events'));
 const MultiAssociation = lazy(() => import('./pages/MultiAssociation'));
+const MusicSharing = lazy(() => import('./pages/MusicSharing'));
 
 // External Musicians Network
 const ExternalMusicians = lazy(() => import('./pages/ExternalMusicians'));
@@ -597,6 +598,14 @@ function AppRoutes() {
             element={
               <PrivateRoute roles={[ROLES.ADMIN, ROLES.BOARD]}>
                 <Events />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="music-sharing"
+            element={
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+                <MusicSharing />
               </PrivateRoute>
             }
           />

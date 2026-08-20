@@ -52,35 +52,19 @@ describe('partnerschappen (routes)', () => {
     return id;
   }
 
-  describe('GET /directory', () => {
-    it('geeft de andere verenigingen aan een beheerder', async () => {
-      const antwoord = await als(beheerderToken, 'get', '/directory');
-      expect(antwoord.status).toBe(200);
-      expect(antwoord.body.map((v: { id: string }) => v.id)).toContain(partner.id);
-    });
-
-    it('laat de eigen vereniging weg', async () => {
-      const antwoord = await als(beheerderToken, 'get', '/directory');
-      expect(antwoord.body.map((v: { id: string }) => v.id)).not.toContain(eigen.id);
-    });
-
-    it('laat een vereniging op non-actief weg', async () => {
-      db.prepare('UPDATE associations SET is_active = 0 WHERE id = ?').run(partner.id);
-      const antwoord = await als(beheerderToken, 'get', '/directory');
-      expect(antwoord.body.map((v: { id: string }) => v.id)).not.toContain(partner.id);
-    });
-
-    it('geeft niet meer dan naam en plaats prijs', async () => {
-      const antwoord = await als(beheerderToken, 'get', '/directory');
-      expect(Object.keys(antwoord.body[0]).sort()).toEqual(['city', 'id', 'name']);
-    });
-
-    it('is niet voor een gewoon lid', async () => {
-      expect((await als(lidToken, 'get', '/directory')).status).toBe(403);
-    });
-
-    it('is niet zonder token', async () => {
-      expect((await request(app).get('/api/multi-association/directory')).status).toBe(401);
+  describe('er is geen lijst van verenigingen', () => {
+    /**
+     * GET /directory gaf naam en plaats van elke actieve vereniging terug. Die
+     * lijst bestond omdat het aanvragen van een partnerschap anders onmogelijk
+     * was: de route erachter wil een id, en een beheerder kon nergens zien welke
+     * verenigingen er zijn.
+     *
+     * Koppelen gaat nu via een code die je buiten Tutti om doorgeeft, en daarmee
+     * verviel de reden voor die lijst. Deze test houdt hem weg: rondkijken wie er
+     * verder op het platform zit hoort niet te kunnen.
+     */
+    it('geeft geen overzicht van verenigingen op het platform', async () => {
+      expect((await als(beheerderToken, 'get', '/directory')).status).toBe(404);
     });
   });
 
