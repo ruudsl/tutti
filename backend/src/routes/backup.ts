@@ -42,29 +42,24 @@ const MP3_UPLOAD_DIR = process.env.MP3_UPLOAD_DIR || path.join(__dirname, '../..
 const DB_PATH = config.dbPath;
 
 /**
- * Waar mag een bestand uit een reservekopie terechtkomen?
+ * Mag deze naam uit een reservekopie als bestandsnaam gebruikt worden?
  *
  * De namen in manifest.json komen uit het aangeleverde zipbestand en zijn dus
  * door de aanleveraar bepaald. Ze gingen rechtstreeks in path.join(). De
- * controle die daarboven staat kijkt alleen naar entryName - de naam van de
- * zip-ingang - en niet naar storedName uit het manifest, dus een manifest dat
- * `../../../etc/cron.d/iets` als storedName opgaf schreef daar ook.
+ * controle op padverkeer die verderop staat kijkt alleen naar entryName - de
+ * naam van de zip-ingang - en niet naar storedName uit het manifest, dus die
+ * werd volledig omzeild: een manifest dat `../../../etc/cron.d/iets` als
+ * storedName opgaf schreef daar ook, met de rechten van het serverproces.
  *
- * Een naam uit een reservekopie hoort een bestandsnaam te zijn, geen pad.
- * Twee controles: de naam moet gelijk zijn aan zijn eigen basename, en het
- * uiteindelijke pad moet binnen de doelmap blijven. De eerste vangt elk
- * scheidingsteken, de tweede is er voor het geval een platform iets anders
- * met de naam doet dan verwacht.
- *
- * Geeft null terug als de naam niet deugt; de aanroeper slaat hem dan over.
+ * Een naam uit een reservekopie hoort een bestandsnaam te zijn, geen pad. Deze
+ * controle houdt hem daarop: geen scheidingstekens, geen puntnamen, en niet
+ * leeg. De aanroeper kijkt daarna nog een keer of het samengestelde pad
+ * werkelijk binnen de doelmap valt - dat staat daar bewust en niet hier, zodat
+ * die grens naast de schrijfopdracht zelf te lezen is.
  */
-export function veiligDoelpad(map: string, naam: string): string | null {
-  if (!naam || naam === '.' || naam === '..') return null;
-  if (naam !== path.basename(naam)) return null;
-
-  const doel = path.resolve(map, naam);
-  const grens = path.resolve(map) + path.sep;
-  return doel.startsWith(grens) ? doel : null;
+export function isVeiligeBestandsnaam(naam: string): boolean {
+  if (!naam || naam === '.' || naam === '..') return false;
+  return naam === path.basename(naam);
 }
 
 /**
@@ -450,9 +445,13 @@ router.post(
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = mp3ArchiveToStored.get(archiveName) || archiveName;
-          const doel = veiligDoelpad(MP3_UPLOAD_DIR, storedName);
-          if (!doel) {
+          if (!isVeiligeBestandsnaam(storedName)) {
             logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          const doel = path.join(MP3_UPLOAD_DIR, storedName);
+          if (!doel.startsWith(path.resolve(MP3_UPLOAD_DIR) + path.sep)) {
+            logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
             continue;
           }
           fs.writeFileSync(doel, entry.getData());
@@ -462,9 +461,13 @@ router.post(
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = pdfArchiveToStored.get(archiveName) || archiveName;
-          const doel = veiligDoelpad(UPLOAD_DIR, storedName);
-          if (!doel) {
+          if (!isVeiligeBestandsnaam(storedName)) {
             logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          const doel = path.join(UPLOAD_DIR, storedName);
+          if (!doel.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) {
+            logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
             continue;
           }
           fs.writeFileSync(doel, entry.getData());

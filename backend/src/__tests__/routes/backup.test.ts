@@ -19,11 +19,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import db from '../../database/connection';
-import backupRoutes, { veiligDoelpad } from '../../routes/backup';
+import backupRoutes, { isVeiligeBestandsnaam } from '../../routes/backup';
 import { errorHandler } from '../../middleware/errorHandler';
 import {
   createTestEnvironment,
@@ -131,41 +130,39 @@ describe('reservekopie', () => {
     /**
      * De namen in manifest.json komen uit het aangeleverde zipbestand en zijn
      * dus door de aanleveraar bepaald. Ze gingen rechtstreeks in path.join().
-     * De controle die daarboven staat kijkt alleen naar entryName - de naam
-     * van de zip-ingang - en niet naar storedName uit het manifest, dus die
-     * werd volledig omzeild: een manifest dat `../../../etc/cron.d/iets`
-     * opgaf schreef daar ook.
+     * De controle op padverkeer die verderop staat kijkt alleen naar entryName
+     * - de naam van de zip-ingang - en niet naar storedName uit het manifest,
+     * dus die werd volledig omzeild: een manifest dat
+     * `../../../etc/cron.d/iets` opgaf schreef daar ook.
      */
-    const MAP = '/var/data/uploads';
-
     it('laat een gewone bestandsnaam door', () => {
-      expect(veiligDoelpad(MAP, 'partij-trompet.pdf')).toBe(path.resolve(MAP, 'partij-trompet.pdf'));
+      expect(isVeiligeBestandsnaam('partij-trompet.pdf')).toBe(true);
+    });
+
+    it('laat een naam met punten erin door, die is geen pad', () => {
+      expect(isVeiligeBestandsnaam('mars.der.medici.pdf')).toBe(true);
     });
 
     it('weigert een naam die uit de map wijst', () => {
-      expect(veiligDoelpad(MAP, '../../../etc/cron.d/iets')).toBeNull();
+      expect(isVeiligeBestandsnaam('../../../etc/cron.d/iets')).toBe(false);
     });
 
     it('weigert een naam met een submap erin', () => {
-      expect(veiligDoelpad(MAP, 'submap/partij.pdf')).toBeNull();
+      expect(isVeiligeBestandsnaam('submap/partij.pdf')).toBe(false);
     });
 
     it('weigert een absoluut pad', () => {
-      expect(veiligDoelpad(MAP, '/etc/passwd')).toBeNull();
+      expect(isVeiligeBestandsnaam('/etc/passwd')).toBe(false);
     });
 
     it('weigert een lege naam en de puntnamen', () => {
-      expect(veiligDoelpad(MAP, '')).toBeNull();
-      expect(veiligDoelpad(MAP, '.')).toBeNull();
-      expect(veiligDoelpad(MAP, '..')).toBeNull();
+      expect(isVeiligeBestandsnaam('')).toBe(false);
+      expect(isVeiligeBestandsnaam('.')).toBe(false);
+      expect(isVeiligeBestandsnaam('..')).toBe(false);
     });
 
     it('weigert een naam die na normaliseren nog steeds uit de map wijst', () => {
-      expect(veiligDoelpad(MAP, 'iets/../../buiten.pdf')).toBeNull();
-    });
-
-    it('laat een naam met punten erin die geen pad is gewoon door', () => {
-      expect(veiligDoelpad(MAP, 'mars.der.medici.pdf')).toBe(path.resolve(MAP, 'mars.der.medici.pdf'));
+      expect(isVeiligeBestandsnaam('iets/../../buiten.pdf')).toBe(false);
     });
   });
 
