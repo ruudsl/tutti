@@ -290,8 +290,8 @@ function enigeVereniging(): BrandingRij | undefined {
 /**
  * GET /settings/branding - naam en logo voor het inlogscherm, zonder inloggen.
  *
- * Hier stond `SELECT ... FROM associations LIMIT 1`, zonder ORDER BY en zonder
- * filter. Op een installatie met een vereniging klopte dat toevallig; met meer
+ * Hier stond `SELECT name, display_name, logo_path FROM associations LIMIT 1`,
+ * zonder ORDER BY en zonder filter. Op een installatie met een vereniging klopte dat toevallig; met meer
  * verenigingen kreeg iedereen de eerst aangemaakte te zien, wie hij ook was.
  *
  * Nu bepaalt de slug in de URL het: /login/harmonie-sint-cecilia vraagt

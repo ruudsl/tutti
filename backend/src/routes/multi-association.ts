@@ -7,7 +7,7 @@ import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
-import { bewaakLedenLimiet, bewaakOrkestLimiet } from '../services/abonnementLimieten';
+import { bewaakLedenLimiet } from '../services/abonnementLimieten';
 import { haalGedeeldeMuziek, haalGedeeldeConcerten, haalPartners } from '../services/partnerschappen';
 import { z } from 'zod';
 
