@@ -523,12 +523,27 @@ function extractKeyFromTitle(title: string): string {
 }
 
 /**
- * Hosts waar een bladmuziekbestand vandaan mag komen. De URL komt uit de
- * aanvraag, dus zonder deze controle kan de server elk adres bevragen dat hij
- * kan bereiken — ook binnen het eigen netwerk.
+ * De adressen waar een bladmuziekbestand vandaan mag komen, voluit en met
+ * protocol. Een opgegeven adres wordt hier niet aan getoetst maar mee
+ * vervangen: het uiteindelijke verzoek gaat altijd naar een van deze vaste
+ * waarden, en alleen het pad komt van buiten.
+ *
+ * Eerder stond hier een reeks achtervoegsels (.imslp.org, .imslp.net). Dat
+ * leest prettiger, maar dan blijft de host die je uiteindelijk benadert
+ * afkomstig uit de aanvraag. Voluit opschrijven is strenger: komt er ooit een
+ * bestandsserver bij, dan mislukt de download zichtbaar in plaats van dat er
+ * stilzwijgend een gat openstaat.
  */
-const TOEGESTANE_IMSLP_HOSTS = new Set(['imslp.org', 'www.imslp.org', 'ks.imslp.net', 'ks4.imslp.net']);
-const TOEGESTANE_IMSLP_SUFFIXEN = ['.imslp.org', '.imslp.net'];
+const TOEGESTANE_IMSLP_ADRESSEN = [
+  'https://imslp.org',
+  'https://www.imslp.org',
+  'https://imslp.eu',
+  'https://ks.imslp.net',
+  'https://ks2.imslp.net',
+  'https://ks3.imslp.net',
+  'https://ks4.imslp.net',
+  'https://ks5.imslp.net',
+] as const;
 
 function controleerImslpUrl(ruweUrl: string): string {
   let ontleed: URL;
@@ -546,17 +561,15 @@ function controleerImslpUrl(ruweUrl: string): string {
     throw new Error('IMSLP download URL must not contain credentials');
   }
 
-  const host = ontleed.hostname.toLowerCase();
-  const toegestaan =
-    TOEGESTANE_IMSLP_HOSTS.has(host) || TOEGESTANE_IMSLP_SUFFIXEN.some((achtervoegsel) => host.endsWith(achtervoegsel));
-
-  if (!toegestaan) {
+  const adres = TOEGESTANE_IMSLP_ADRESSEN.find((toegestaan) => toegestaan === ontleed.origin.toLowerCase());
+  if (!adres) {
     throw new Error('IMSLP download URL host is not allowed');
   }
 
-  // Opnieuw opgebouwd uit onderdelen die stuk voor stuk zijn nagekeken, in
-  // plaats van de aangeleverde tekst door te geven.
-  const opnieuw = new URL(`https://${host}`);
+  // Opgebouwd vanaf het vaste adres hierboven. Pad en query worden toegekend
+  // en niet opgelost: bij oplossen zou een pad dat met // begint alsnog een
+  // andere host opleveren.
+  const opnieuw = new URL(adres);
   opnieuw.pathname = ontleed.pathname;
   opnieuw.search = ontleed.search;
   return opnieuw.toString();

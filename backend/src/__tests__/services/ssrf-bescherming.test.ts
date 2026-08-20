@@ -35,7 +35,7 @@ describe('SSRF-bescherming', () => {
       expect(fetch).toHaveBeenCalledOnce();
     });
 
-    it('accepteert een subdomein van imslp', async () => {
+    it('accepteert een bestandsserver die met naam genoemd is', async () => {
       await expect(downloadPdf('https://ks4.imslp.net/files/abc/mars.pdf')).resolves.toBeInstanceOf(Buffer);
     });
 
@@ -74,6 +74,27 @@ describe('SSRF-bescherming', () => {
 
     it('weigert een adres met inloggegevens erin', async () => {
       await expect(downloadPdf('https://gebruiker:geheim@imslp.org/mars.pdf')).rejects.toThrow(/credentials/);
+    });
+
+    it('laat een pad dat met twee schuine strepen begint niet ontsnappen', async () => {
+      // https://imslp.org//kwaadaardig.example/x heeft pad //kwaadaardig.example/x.
+      // Zou dat pad tegen het basisadres worden opgelost, dan komt er een heel
+      // andere host uit; daarom wordt het toegekend en niet opgelost.
+      const opgevraagd: string[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          opgevraagd.push(url);
+          return { ok: true, status: 200, headers: new Headers(), arrayBuffer: async () => new ArrayBuffer(8) };
+        }),
+      );
+
+      await downloadPdf('https://imslp.org//kwaadaardig.example/mars.pdf');
+      expect(new URL(opgevraagd[0]).hostname).toBe('imslp.org');
+    });
+
+    it('weigert een subdomein dat niet met naam genoemd is', async () => {
+      await expect(downloadPdf('https://verzonnen.imslp.net/mars.pdf')).rejects.toThrow(/host is not allowed/);
     });
 
     it('weigert iets dat helemaal geen adres is', async () => {
