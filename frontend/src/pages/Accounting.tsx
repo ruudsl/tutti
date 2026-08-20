@@ -19,7 +19,14 @@ import {
   getCostCenters,
   getBudgets,
   createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  postTransaction,
+  getTransaction,
   createInvoice,
+  sendInvoice,
+  markInvoicePaid,
+  deleteInvoice,
   createRelation,
   createCostCenter,
   createBudget,
@@ -35,6 +42,7 @@ import {
   CreateAccountData,
   TransactionType,
   CreateTransactionData,
+  Transaction,
   CreateInvoiceData,
   AccountingRelation,
   RelationType,
@@ -88,6 +96,64 @@ export default function Accounting() {
   const [showFiscalYearModal, setShowFiscalYearModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
+  const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
+
+  // Boekingen en facturen konden alleen aangemaakt worden: de knoppen om ze
+  // te boeken, te verzenden, betaald te melden of te bewerken ontbraken in de
+  // interface, terwijl de api ze wel kende. Daardoor bleef alles op concept.
+  const boekingMutatie = useMutation({
+    mutationFn: (id: string) => postTransaction(id),
+    onSuccess: () => {
+      showSuccess(t('accounting.transactionPosted'));
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+    onError: (error: any) => showError(error.response?.data?.error || t('accounting.errorSave')),
+  });
+
+  const boekingVerwijderMutatie = useMutation({
+    mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: () => {
+      showSuccess(t('accounting.transactionDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+    onError: (error: any) => showError(error.response?.data?.error || t('accounting.errorDelete')),
+  });
+
+  const factuurVerzendMutatie = useMutation({
+    mutationFn: (id: string) => sendInvoice(id),
+    onSuccess: () => {
+      showSuccess(t('accounting.invoiceSent'));
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+    onError: (error: any) => showError(error.response?.data?.error || t('accounting.errorSave')),
+  });
+
+  const factuurBetaaldMutatie = useMutation({
+    mutationFn: (id: string) => markInvoicePaid(id),
+    onSuccess: () => {
+      showSuccess(t('accounting.invoiceMarkedPaid'));
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+    onError: (error: any) => showError(error.response?.data?.error || t('accounting.errorSave')),
+  });
+
+  const factuurVerwijderMutatie = useMutation({
+    mutationFn: (id: string) => deleteInvoice(id),
+    onSuccess: () => {
+      showSuccess(t('accounting.invoiceDeleted'));
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+    onError: (error: any) => showError(error.response?.data?.error || t('accounting.errorDelete')),
+  });
+
+  /** De regels van een boeking zitten niet in het overzicht; die halen we erbij. */
+  const openBewerken = async (id: string) => {
+    try {
+      setEditTransaction(await getTransaction(id));
+    } catch (error: any) {
+      showError(error.response?.data?.error || t('accounting.errorLoad'));
+    }
+  };
 
   // Fiscal years intentionally have no `enabled` condition: the fiscal year
   // selector in the page header (and the reports/budgets/export logic) needs
@@ -663,6 +729,9 @@ export default function Accounting() {
                         <th>{t('accounting.description')}</th>
                         <th className="text-right">{t('accounting.amount')}</th>
                         <th>{t('common.status')}</th>
+                        <th>
+                          <span className="sr-only">{t('common.actions')}</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -681,6 +750,42 @@ export default function Accounting() {
                             <span className={`badge badge-sm ${tx.isPosted ? 'badge-success' : 'badge-warning'}`}>
                               {tx.isPosted ? t('accounting.posted') : t('accounting.draft')}
                             </span>
+                          </td>
+                          <td>
+                            {/* Een geboekte transactie staat vast: bewerken,
+                                opnieuw boeken en verwijderen kan alleen zolang
+                                hij op concept staat. */}
+                            {!tx.isPosted && (
+                              <div className="flex gap-1 justify-end">
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={() => openBewerken(tx.id)}
+                                  title={t('common.edit')}
+                                >
+                                  <Icon name="pencil" size={16} />
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-xs text-success"
+                                  onClick={() => boekingMutatie.mutate(tx.id)}
+                                  disabled={boekingMutatie.isPending}
+                                  title={t('accounting.postTransaction')}
+                                >
+                                  <Icon name="check" size={16} />
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-xs text-error"
+                                  onClick={() => {
+                                    if (window.confirm(t('accounting.confirmDeleteTransaction'))) {
+                                      boekingVerwijderMutatie.mutate(tx.id);
+                                    }
+                                  }}
+                                  disabled={boekingVerwijderMutatie.isPending}
+                                  title={t('common.delete')}
+                                >
+                                  <Icon name="trash" size={16} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -753,13 +858,51 @@ export default function Accounting() {
                             </span>
                           </td>
                           <td>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              onClick={() => setPrintInvoice(invoice)}
-                              title={t('printTemplates.invoice.printButton')}
-                            >
-                              {t('printTemplates.print')}
-                            </button>
+                            <div className="flex gap-1 justify-end">
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => setPrintInvoice(invoice)}
+                                title={t('printTemplates.invoice.printButton')}
+                              >
+                                {t('printTemplates.print')}
+                              </button>
+                              {/* Een concept moet eerst verstuurd worden; pas
+                                  daarna kan hij betaald gemeld worden. */}
+                              {invoice.status === 'draft' && (
+                                <>
+                                  <button
+                                    className="btn btn-ghost btn-xs text-info"
+                                    onClick={() => factuurVerzendMutatie.mutate(invoice.id)}
+                                    disabled={factuurVerzendMutatie.isPending}
+                                    title={t('accounting.sendInvoice')}
+                                  >
+                                    <Icon name="envelope" size={16} />
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost btn-xs text-error"
+                                    onClick={() => {
+                                      if (window.confirm(t('accounting.confirmDeleteInvoice'))) {
+                                        factuurVerwijderMutatie.mutate(invoice.id);
+                                      }
+                                    }}
+                                    disabled={factuurVerwijderMutatie.isPending}
+                                    title={t('common.delete')}
+                                  >
+                                    <Icon name="trash" size={16} />
+                                  </button>
+                                </>
+                              )}
+                              {invoice.status !== 'draft' && invoice.status !== 'paid' && (
+                                <button
+                                  className="btn btn-ghost btn-xs text-success"
+                                  onClick={() => factuurBetaaldMutatie.mutate(invoice.id)}
+                                  disabled={factuurBetaaldMutatie.isPending}
+                                  title={t('accounting.markPaid')}
+                                >
+                                  <Icon name="check" size={16} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1114,14 +1257,19 @@ export default function Accounting() {
       )}
 
       {/* Transaction Modal */}
-      {showTransactionModal && (
+      {(showTransactionModal || editTransaction) && (
         <TransactionModal
+          transaction={editTransaction}
           accounts={accounts}
           costCenters={costCenters}
-          onClose={() => setShowTransactionModal(false)}
+          onClose={() => {
+            setShowTransactionModal(false);
+            setEditTransaction(null);
+          }}
           onSave={() => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             setShowTransactionModal(false);
+            setEditTransaction(null);
           }}
         />
       )}
@@ -1412,31 +1560,51 @@ function AccountModal({
 // TRANSACTION MODAL
 // =====================================================
 function TransactionModal({
+  transaction,
   accounts,
   costCenters,
   onClose,
   onSave,
 }: {
+  transaction?: Transaction | null;
   accounts: Account[];
   costCenters: CostCenter[];
   onClose: () => void;
   onSave: () => void;
 }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<CreateTransactionData>({
-    transactionDate: new Date().toISOString().split('T')[0],
-    transactionType: 'journal',
-    description: '',
-    lines: [
-      { accountId: '', debitAmount: 0, creditAmount: 0 },
-      { accountId: '', debitAmount: 0, creditAmount: 0 },
-    ],
-  });
+  const bewerken = Boolean(transaction);
+  const [formData, setFormData] = useState<CreateTransactionData>(() =>
+    transaction
+      ? {
+          transactionDate: transaction.transactionDate.split('T')[0],
+          transactionType: transaction.transactionType,
+          reference: transaction.reference,
+          description: transaction.description,
+          lines: (transaction.lines ?? []).map((regel) => ({
+            accountId: regel.accountId,
+            costCenterId: regel.costCenterId,
+            description: regel.description,
+            debitAmount: regel.debitAmount,
+            creditAmount: regel.creditAmount,
+          })),
+        }
+      : {
+          transactionDate: new Date().toISOString().split('T')[0],
+          transactionType: 'journal',
+          description: '',
+          lines: [
+            { accountId: '', debitAmount: 0, creditAmount: 0 },
+            { accountId: '', debitAmount: 0, creditAmount: 0 },
+          ],
+        },
+  );
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateTransactionData) => createTransaction(data),
+    mutationFn: (data: CreateTransactionData) =>
+      transaction ? updateTransaction(transaction.id, data) : createTransaction(data),
     onSuccess: () => {
-      showSuccess(t('accounting.transactionCreated'));
+      showSuccess(t(bewerken ? 'accounting.transactionUpdated' : 'accounting.transactionCreated'));
       onSave();
     },
     onError: (error: any) => {
@@ -1489,7 +1657,7 @@ function TransactionModal({
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
   return (
-    <Modal title={t('accounting.newEntry')} onClose={onClose} size="large">
+    <Modal title={t(bewerken ? 'accounting.editEntry' : 'accounting.newEntry')} onClose={onClose} size="large">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="form-control">

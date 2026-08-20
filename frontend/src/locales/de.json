@@ -4604,7 +4604,20 @@
     "export": "Exportieren",
     "exportData": "Daten exportieren",
     "exportSuccess": "Export erfolgreich heruntergeladen",
-    "exportError": "Fehler beim Exportieren"
+    "exportError": "Fehler beim Exportieren",
+    "editEntry": "Buchung bearbeiten",
+    "postTransaction": "Buchen",
+    "transactionPosted": "Buchung gebucht.",
+    "transactionUpdated": "Buchung aktualisiert.",
+    "transactionDeleted": "Buchung gelöscht.",
+    "confirmDeleteTransaction": "Soll diese Buchung wirklich gelöscht werden?",
+    "sendInvoice": "Rechnung senden",
+    "invoiceSent": "Rechnung gesendet.",
+    "markPaid": "Als bezahlt markieren",
+    "invoiceMarkedPaid": "Rechnung als bezahlt markiert.",
+    "invoiceDeleted": "Rechnung gelöscht.",
+    "confirmDeleteInvoice": "Soll diese Rechnung wirklich gelöscht werden?",
+    "errorLoad": "Laden fehlgeschlagen."
   },
   "projects": {
     "title": "Projekte",
