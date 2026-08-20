@@ -4,7 +4,7 @@
   "description": "Backend API voor harmonieorkest muziekbeheer",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx src/migrations/cli.ts up && tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/migrations/cli.js up && node dist/index.js",
     "db:init": "tsx src/database/init.ts",

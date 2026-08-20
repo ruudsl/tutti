@@ -1,3 +1,14 @@
+// Laad .env voordat DB_PATH hieronder wordt uitgelezen.
+//
+// Dit bestand leest process.env.DB_PATH op moduleniveau. Alleen index.ts laadt
+// .env op tijd, omdat het './config' importeert voor './database/connection'.
+// Elk ander instappunt - de migratie-CLI, db:init, de seed-scripts - importeert
+// deze module als eerste, en kreeg daardoor stil de standaardnaam
+// data/harmonie.db in plaats van de DB_PATH uit .env. Migraties landden dan in
+// een andere database dan waar de server naar kijkt, met ontbrekende tabellen
+// als gevolg. dotenv/config overschrijft bestaande variabelen niet, dus een
+// waarde die al in de omgeving staat (CI, Docker, Render) blijft leidend.
+import 'dotenv/config';
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- sql.js ships a CJS factory without usable ESM typings
 const initSqlJs = require('sql.js');
 import path from 'path';
