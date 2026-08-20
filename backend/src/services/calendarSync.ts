@@ -366,8 +366,23 @@ export function generateCalendarFeedToken(userId: string, secret: string): strin
  * Verify a calendar feed token
  */
 export function verifyCalendarFeedToken(userId: string, token: string, secret: string): boolean {
-  const expectedToken = generateCalendarFeedToken(userId, secret);
-  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expectedToken));
+  return tokensGelijk(token, generateCalendarFeedToken(userId, secret));
+}
+
+/**
+ * Vergelijk twee tokens zonder de uitkomst uit de looptijd te laten afleiden.
+ *
+ * crypto.timingSafeEqual eist twee buffers van gelijke lengte en werpt anders
+ * een RangeError. Een aangeleverd token heeft die lengte niet noodzakelijk:
+ * een token van de verkeerde lengte leverde dus geen "nee" op maar een
+ * uitzondering, en daarmee een 500 in plaats van een 401.
+ *
+ * Door beide eerst te hashen zijn ze altijd even lang. Dat lost het werpen op
+ * en verbergt meteen het lengteverschil.
+ */
+export function tokensGelijk(aangeleverd: string, verwacht: string): boolean {
+  const hash = (waarde: string): Buffer => crypto.createHash('sha256').update(waarde).digest();
+  return crypto.timingSafeEqual(hash(aangeleverd), hash(verwacht));
 }
 
 /**

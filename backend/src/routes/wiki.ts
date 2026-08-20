@@ -64,6 +64,33 @@ function canViewPage(userRole: string, visibility: string): boolean {
   return false;
 }
 
+/**
+ * Haal een pagina op en controleer meteen of deze rol hem mag zien.
+ *
+ * De detailroute deed die controle wel, maar de versiegeschiedenis, een losse
+ * versie en de bijlagen niet. Die haalden de pagina alleen op zijn slug en
+ * vereniging op, zodat een gewoon lid de volledige inhoud van een pagina met
+ * zichtbaarheid "admin" kon lezen via /wiki/<slug>/versions/<id>. Eén extra
+ * padsegment omzeilde daarmee de hele instelling.
+ */
+function haalZichtbarePagina(req: AuthRequest, kolommen = 'id'): any {
+  const pagina = db
+    .prepare(
+      `SELECT ${kolommen}, visibility FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`,
+    )
+    .get(req.user!.associationId, req.params.slug) as any;
+
+  if (!pagina) {
+    throw new ApiError(404, 'Page not found');
+  }
+
+  if (!canViewPage(req.user!.role, pagina.visibility)) {
+    throw new ApiError(403, 'No access to this page');
+  }
+
+  return pagina;
+}
+
 // GET /api/wiki - List wiki pages (tree structure)
 router.get(
   '/',
@@ -195,15 +222,24 @@ router.get(
     db.prepare(`UPDATE wiki_pages SET view_count = view_count + 1 WHERE id = ?`).run(page.id);
 
     // Get children
-    const children = db
-      .prepare(
-        `
-    SELECT id, slug, title, sort_order FROM wiki_pages
+    //
+    // Ook hier telt de zichtbaarheid. Zonder deze filtering stond de titel van
+    // een onderliggende pagina met zichtbaarheid "admin" gewoon in het
+    // antwoord voor elk lid - de inhoud bleef afgeschermd, maar een titel als
+    // "Gesprek met de dirigent" zegt op zichzelf al genoeg.
+    const children = (
+      db
+        .prepare(
+          `
+    SELECT id, slug, title, sort_order, visibility FROM wiki_pages
     WHERE parent_id = ? AND deleted_at IS NULL
     ORDER BY sort_order, title
   `,
-      )
-      .all(page.id);
+        )
+        .all(page.id) as any[]
+    )
+      .filter((kind) => canViewPage(userRole, kind.visibility))
+      .map(({ id, slug, title, sort_order }) => ({ id, slug, title, sort_order }));
 
     // Get breadcrumb path
     const breadcrumbs: any[] = [];
@@ -389,13 +425,28 @@ router.delete(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
 
+    // De slug gaat mee de verwijdering in.
+    //
+    // Op de tabel staat UNIQUE(association_id, slug), terwijl de controle bij
+    // het aanmaken hierboven alleen kijkt naar pagina's die niet verwijderd
+    // zijn. Die twee spraken elkaar tegen: de controle zei dat de slug vrij
+    // was, waarna de invoeging alsnog stukliep op de constraint en de
+    // gebruiker een algemene "Dit item bestaat al." kreeg. Een slug van een
+    // verwijderde pagina was daarmee voorgoed bezet.
+    //
+    // Niets zoekt een verwijderde pagina op zijn slug op - elke query filtert
+    // op deleted_at IS NULL, en versies en bijlagen hangen aan het id - dus
+    // hernoemen is veilig en maakt de slug weer bruikbaar.
+    const verwijderdOp = new Date().toISOString();
     const result = db
       .prepare(
         `
-    UPDATE wiki_pages SET deleted_at = ? WHERE association_id = ? AND slug = ? AND deleted_at IS NULL
+    UPDATE wiki_pages
+    SET deleted_at = ?, slug = slug || '-verwijderd-' || ?
+    WHERE association_id = ? AND slug = ? AND deleted_at IS NULL
   `,
       )
-      .run(new Date().toISOString(), associationId, req.params.slug);
+      .run(verwijderdOp, uuidv4().slice(0, 8), associationId, req.params.slug);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Page not found');
@@ -409,14 +460,7 @@ router.delete(
 router.get(
   '/:slug/versions',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
-    const page = db
-      .prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`)
-      .get(associationId, req.params.slug) as any;
-    if (!page) {
-      throw new ApiError(404, 'Page not found');
-    }
+    const page = haalZichtbarePagina(req);
 
     const versions = db
       .prepare(
@@ -448,14 +492,7 @@ router.get(
 router.get(
   '/:slug/versions/:versionId',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
-    const page = db
-      .prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`)
-      .get(associationId, req.params.slug) as any;
-    if (!page) {
-      throw new ApiError(404, 'Page not found');
-    }
+    const page = haalZichtbarePagina(req);
 
     const version = db
       .prepare(
@@ -544,14 +581,7 @@ router.post(
 router.get(
   '/:slug/attachments',
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
-    const page = db
-      .prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`)
-      .get(associationId, req.params.slug) as any;
-    if (!page) {
-      throw new ApiError(404, 'Page not found');
-    }
+    const page = haalZichtbarePagina(req);
 
     const attachments = db
       .prepare(
@@ -587,11 +617,9 @@ router.post(
   requireRole('admin', 'music_committee', 'board'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
     const page = db
       .prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`)
-      .get(associationId, req.params.slug) as any;
+      .get(req.user!.associationId, req.params.slug) as any;
     if (!page) {
       throw new ApiError(404, 'Page not found');
     }
@@ -623,11 +651,9 @@ router.delete(
   '/:slug/attachments/:attachmentId',
   requireRole('admin', 'music_committee', 'board'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const associationId = req.user!.associationId;
-
     const page = db
       .prepare(`SELECT id FROM wiki_pages WHERE association_id = ? AND slug = ? AND deleted_at IS NULL`)
-      .get(associationId, req.params.slug) as any;
+      .get(req.user!.associationId, req.params.slug) as any;
     if (!page) {
       throw new ApiError(404, 'Page not found');
     }

@@ -7,6 +7,7 @@ import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import { requireModule } from '../middleware/requireModule';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -74,7 +75,7 @@ const createLayoutSchema = z.object({
   thumbnailUrl: z.string().optional(),
 });
 
-const updateLayoutSchema = createLayoutSchema.partial();
+const updateLayoutSchema = wijzigingsschema(createLayoutSchema);
 
 const assignmentSchema = z.record(
   z.string(),
@@ -352,7 +353,18 @@ router.delete(
   requireRole('admin', 'music_committee', 'conductor'),
   cacheInvalidator(CACHE_PATTERN),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Check if layout is in use
+    // Eerst kijken van welke vereniging de indeling is, dan pas of hij in
+    // gebruik is. Andersom verklapte de melding "wordt gebruikt door 2
+    // concert(en)" iets over een indeling van een andere vereniging, terwijl
+    // die niet zou moeten bestaan voor deze aanvrager.
+    const bestaat = db
+      .prepare('SELECT id FROM stage_layouts WHERE id = ? AND association_id = ?')
+      .get(req.params.id, req.user!.associationId);
+
+    if (!bestaat) {
+      throw new ApiError(404, 'Podiumindeling niet gevonden.');
+    }
+
     const usageCount = db
       .prepare(
         `
@@ -368,13 +380,10 @@ router.delete(
       );
     }
 
-    const result = db
-      .prepare('DELETE FROM stage_layouts WHERE id = ? AND association_id = ?')
-      .run(req.params.id, req.user!.associationId);
-
-    if (result.changes === 0) {
-      throw new ApiError(404, 'Podiumindeling niet gevonden.');
-    }
+    db.prepare('DELETE FROM stage_layouts WHERE id = ? AND association_id = ?').run(
+      req.params.id,
+      req.user!.associationId,
+    );
 
     logger.info(`Stage layout deleted: ${req.params.id}`, { deletedBy: req.user!.id });
 

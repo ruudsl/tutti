@@ -611,8 +611,20 @@ router.put(
       `,
       ).run(...params);
 
-      // Update request status based on confirmed assignments
-      if (data.status === 'confirmed') {
+      // Tel de bezetting opnieuw, ongeacht welke kant de wijziging op gaat.
+      //
+      // Dit gebeurde eerst alleen bij 'confirmed'. Zegde een muzikant die al
+      // had toegezegd daarna af, dan bleef het verzoek op 'filled' staan met
+      // de oude telling erbij - het orkest dacht dus dat de plek bezet was
+      // terwijl er niemand meer kwam.
+      //
+      // Een geannuleerd verzoek blijft geannuleerd; dat is een besluit en geen
+      // gevolg van de telling.
+      const requestInfo = db
+        .prepare('SELECT positions_needed, status FROM replacement_requests WHERE id = ?')
+        .get(id) as { positions_needed: number; status: string };
+
+      if (requestInfo.status !== 'cancelled') {
         const confirmedCount = db
           .prepare(
             `
@@ -620,18 +632,15 @@ router.put(
           WHERE request_id = ? AND status = 'confirmed'
         `,
           )
-          .get(id) as any;
-
-        const requestInfo = db
-          .prepare(
-            `
-          SELECT positions_needed FROM replacement_requests WHERE id = ?
-        `,
-          )
-          .get(id) as any;
+          .get(id) as { count: number };
 
         const newPositionsFilled = confirmedCount.count;
-        const newStatus = newPositionsFilled >= requestInfo.positions_needed ? 'filled' : 'partially_filled';
+        const newStatus =
+          newPositionsFilled === 0
+            ? 'open'
+            : newPositionsFilled >= requestInfo.positions_needed
+              ? 'filled'
+              : 'partially_filled';
 
         db.prepare(
           `

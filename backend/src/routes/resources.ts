@@ -4,6 +4,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ const createResourceSchema = z.object({
   notes: z.string().optional(),
 });
 
-const updateResourceSchema = createResourceSchema.partial();
+const updateResourceSchema = wijzigingsschema(createResourceSchema);
 
 const createBookingSchema = z.object({
   resourceId: z.string().uuid(),

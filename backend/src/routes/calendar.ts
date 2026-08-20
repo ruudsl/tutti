@@ -13,7 +13,7 @@ import {
   rehearsalToCalendarEvent,
   concertToCalendarEvent,
   generateCalendarFeedToken,
-  verifyCalendarFeedToken,
+  tokensGelijk,
   getGoogleOAuthUrl,
   exchangeGoogleCode,
   refreshGoogleToken,
@@ -124,7 +124,10 @@ router.get(
       )
       .get(userId) as CalendarSettings | undefined;
 
-    if (!settings || settings.feed_token !== token) {
+    // Vergelijken met !== laat de uitkomst uit de looptijd afleiden. Het is
+    // hier een bearer-token voor een publiek pad, dus die vergelijking hoort
+    // tijdsonafhankelijk te zijn.
+    if (!settings || !tokensGelijk(token, settings.feed_token)) {
       throw new ApiError(401, 'Ongeldige token.');
     }
 
@@ -772,16 +775,20 @@ router.get(
     ].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
 
     if (format === 'ics') {
-      const calEvents = events.map((e) => ({
+      // De velden heetten hier start en end, terwijl CalendarEvent startDate en
+      // endDate gebruikt. Door de cast naar any[] viel dat niet op bij het
+      // vertalen, en pas bij het opbouwen van het bestand: formatIcsDateTime
+      // kreeg undefined en wierp. Deze route gaf daarmee altijd een 500.
+      const calEvents: CalendarEvent[] = events.map((e) => ({
         id: e.id,
         title: e.title,
-        start: new Date(`${e.date}T${e.startTime || '00:00'}`),
-        end: new Date(`${e.date}T${e.endTime || '23:59'}`),
+        startDate: new Date(`${e.date}T${e.startTime || '00:00'}`),
+        endDate: new Date(`${e.date}T${e.endTime || '23:59'}`),
         location: e.location || '',
         description: e.description || '',
       }));
 
-      const icsContent = generateCalendarFeed(calEvents as any[], association.name);
+      const icsContent = generateCalendarFeed(calEvents, association.name);
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=3600');
       return res.send(icsContent);

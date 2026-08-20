@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { getPaginationParams, createPaginatedResult } from '../utils/database';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ const createPolicySchema = z.object({
   documentUrl: z.string().optional(),
 });
 
-const updatePolicySchema = createPolicySchema.partial();
+const updatePolicySchema = wijzigingsschema(createPolicySchema);
 
 const addCoverageSchema = z.object({
   assetId: z.string().uuid(),

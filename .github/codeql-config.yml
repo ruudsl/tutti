@@ -1,0 +1,17 @@
+# Configuratie voor de CodeQL-analyse.
+#
+# Testbestanden worden niet meegescand. Ze draaien nergens anders dan in CI,
+# ze zijn niet bereikbaar vanaf het internet, en ze bouwen bewust kale
+# express-apps met alleen de router die ze onderzoeken. CodeQL leest zo'n
+# testopstelling als een echte route-handler en meldt dan bijvoorbeeld
+# "Missing rate limiting" - een waarschuwing over een server die niet bestaat.
+#
+# Dat is geen theoretisch bezwaar: elk nieuw testbestand dat een router mount
+# levert opnieuw zo'n melding op, en die ruis verbergt de meldingen die er wel
+# toe doen.
+paths-ignore:
+  - '**/__tests__/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - 'e2e/**'

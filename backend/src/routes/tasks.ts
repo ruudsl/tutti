@@ -7,6 +7,7 @@ import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -966,7 +967,7 @@ const createTemplateSchema = z.object({
   checklistItems: z.array(z.string()).optional(),
 });
 
-const updateTemplateSchema = createTemplateSchema.partial();
+const updateTemplateSchema = wijzigingsschema(createTemplateSchema);
 
 router.post(
   '/templates',

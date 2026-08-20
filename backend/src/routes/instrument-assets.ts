@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const sanitizeForLog = (value: unknown): string =>
   String(value)
@@ -56,7 +57,7 @@ const createAssetSchema = z.object({
   customFields: z.record(z.string(), z.any()).optional(),
 });
 
-const updateAssetSchema = createAssetSchema.partial();
+const updateAssetSchema = wijzigingsschema(createAssetSchema);
 
 const createValuationSchema = z.object({
   valuationDate: z.string().min(1, 'Datum is verplicht'),

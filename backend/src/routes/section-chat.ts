@@ -8,6 +8,62 @@ import logger from '../utils/logger';
 const router = Router();
 
 /**
+ * Haal een kanaal op waar deze gebruiker echt bij hoort.
+ *
+ * De controle keek alleen of de gebruiker het instrument van het kanaal
+ * speelt. De tabel instruments is gedeeld door alle verenigingen, dus dat zei
+ * niets over de vereniging: een trompettist bij vereniging A kwam daarmee in
+ * de trompetgroep van vereniging B, kon daar meelezen en meepraten. Een
+ * kanaal hangt via zijn orkest aan een vereniging; die moet kloppen.
+ */
+function haalToegankelijkKanaal(req: AuthRequest, kanaalId: string): any {
+  const kanaal = db
+    .prepare(
+      `
+        SELECT scc.*, o.association_id
+        FROM section_chat_channels scc
+        JOIN orchestras o ON scc.orchestra_id = o.id
+        JOIN user_instruments ui ON ui.instrument_id = scc.instrument_id AND ui.user_id = ?
+        WHERE scc.id = ? AND o.association_id = ?
+    `,
+    )
+    .get(req.user!.id, kanaalId, req.user!.associationId) as any;
+
+  if (!kanaal) {
+    throw new ApiError(403, 'Geen toegang tot dit kanaal');
+  }
+
+  return kanaal;
+}
+
+/**
+ * Haal een bericht op dat in een kanaal van de eigen vereniging staat.
+ *
+ * Bewerken, verwijderen en vastpinnen zochten het bericht alleen op zijn id.
+ * Verwijderen stond open voor elke beheerder en vastpinnen voor elke
+ * beheerder, dirigent of commissielid - van welke vereniging dan ook.
+ */
+function haalBerichtVanEigenVereniging(req: AuthRequest, berichtId: string): any {
+  const bericht = db
+    .prepare(
+      `
+        SELECT scm.*, scc.orchestra_id, o.association_id
+        FROM section_chat_messages scm
+        JOIN section_chat_channels scc ON scm.channel_id = scc.id
+        JOIN orchestras o ON scc.orchestra_id = o.id
+        WHERE scm.id = ? AND o.association_id = ?
+    `,
+    )
+    .get(berichtId, req.user!.associationId) as any;
+
+  if (!bericht) {
+    throw new ApiError(404, 'Bericht niet gevonden');
+  }
+
+  return bericht;
+}
+
+/**
  * @swagger
  * /section-chat/channels:
  *   get:
@@ -56,9 +112,9 @@ router.get(
         FROM section_chat_channels scc
         JOIN instruments i ON scc.instrument_id = i.id
         JOIN orchestras o ON scc.orchestra_id = o.id
-        WHERE scc.instrument_id IN (${placeholders})
+        WHERE scc.instrument_id IN (${placeholders}) AND o.association_id = ?
     `;
-    const params: any[] = [req.user!.id, ...instrumentIds];
+    const params: any[] = [req.user!.id, ...instrumentIds, req.user!.associationId];
 
     if (orchestraId) {
       query += ' AND scc.orchestra_id = ?';
@@ -107,20 +163,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { before, limit = '50' } = req.query;
 
-    // Check if user has access to this channel
-    const channel = db
-      .prepare(
-        `
-        SELECT scc.* FROM section_chat_channels scc
-        JOIN user_instruments ui ON ui.instrument_id = scc.instrument_id AND ui.user_id = ?
-        WHERE scc.id = ?
-    `,
-      )
-      .get(req.user!.id, req.params.id) as any;
-
-    if (!channel) {
-      throw new ApiError(403, 'Geen toegang tot dit kanaal');
-    }
+    haalToegankelijkKanaal(req, req.params.id);
 
     let query = `
         SELECT scm.*,
@@ -141,7 +184,11 @@ router.get(
       params.push(before);
     }
 
-    query += ` ORDER BY scm.created_at DESC LIMIT ?`;
+    // created_at heeft een resolutie van een seconde, dus twee berichten die
+    // vlak na elkaar komen krijgen dezelfde tijdstempel en stonden daarna in
+    // willekeurige volgorde. rowid loopt op in de volgorde van invoegen en is
+    // hier de enige betrouwbare tiebreaker.
+    query += ` ORDER BY scm.created_at DESC, scm.rowid DESC LIMIT ?`;
     params.push(parseInt(limit as string) || 50);
 
     const messages = db.prepare(query).all(...params);
@@ -204,20 +251,7 @@ router.post(
       throw new ApiError(400, 'Bericht mag niet leeg zijn');
     }
 
-    // Check if user has access to this channel
-    const channel = db
-      .prepare(
-        `
-        SELECT scc.* FROM section_chat_channels scc
-        JOIN user_instruments ui ON ui.instrument_id = scc.instrument_id AND ui.user_id = ?
-        WHERE scc.id = ?
-    `,
-      )
-      .get(req.user!.id, req.params.id) as any;
-
-    if (!channel) {
-      throw new ApiError(403, 'Geen toegang tot dit kanaal');
-    }
+    haalToegankelijkKanaal(req, req.params.id);
 
     // If replying, check if reply message exists
     if (replyToId) {
@@ -302,17 +336,7 @@ router.patch(
       throw new ApiError(400, 'Bericht mag niet leeg zijn');
     }
 
-    const message = db
-      .prepare(
-        `
-        SELECT * FROM section_chat_messages WHERE id = ?
-    `,
-      )
-      .get(req.params.id) as any;
-
-    if (!message) {
-      throw new ApiError(404, 'Bericht niet gevonden');
-    }
+    const message = haalBerichtVanEigenVereniging(req, req.params.id);
 
     if (message.user_id !== req.user!.id) {
       throw new ApiError(403, 'Je kunt alleen je eigen berichten bewerken');
@@ -343,20 +367,7 @@ router.delete(
   '/messages/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const message = db
-      .prepare(
-        `
-        SELECT scm.*, scc.orchestra_id
-        FROM section_chat_messages scm
-        JOIN section_chat_channels scc ON scm.channel_id = scc.id
-        WHERE scm.id = ?
-    `,
-      )
-      .get(req.params.id) as any;
-
-    if (!message) {
-      throw new ApiError(404, 'Bericht niet gevonden');
-    }
+    const message = haalBerichtVanEigenVereniging(req, req.params.id);
 
     // Only owner or admin can delete
     if (message.user_id !== req.user!.id && req.user!.role !== 'admin') {
@@ -382,17 +393,7 @@ router.post(
   '/messages/:id/pin',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const message = db
-      .prepare(
-        `
-        SELECT * FROM section_chat_messages WHERE id = ?
-    `,
-      )
-      .get(req.params.id) as any;
-
-    if (!message) {
-      throw new ApiError(404, 'Bericht niet gevonden');
-    }
+    const message = haalBerichtVanEigenVereniging(req, req.params.id);
 
     // Only admin/conductor can pin
     if (!['admin', 'conductor', 'music_committee'].includes(req.user!.role)) {
@@ -419,6 +420,11 @@ router.get(
   '/channels/:id/pinned',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Op deze route stond helemaal geen controle: elke ingelogde gebruiker kon
+    // de vastgepinde berichten van elk kanaal opvragen, van welke vereniging
+    // dan ook, zonder het instrument te spelen.
+    haalToegankelijkKanaal(req, req.params.id);
+
     const messages = db
       .prepare(
         `
@@ -427,7 +433,7 @@ router.get(
         FROM section_chat_messages scm
         JOIN users u ON scm.user_id = u.id
         WHERE scm.channel_id = ? AND scm.is_pinned = 1
-        ORDER BY scm.created_at DESC
+        ORDER BY scm.created_at DESC, scm.rowid DESC
     `,
       )
       .all(req.params.id);
