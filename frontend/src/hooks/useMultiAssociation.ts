@@ -18,6 +18,9 @@ import {
   acceptInvitation,
   getPartnerships,
   requestPartnership,
+  getAssociationDirectory,
+  getPartnerMusic,
+  getPartnerEvents,
   approvePartnership,
   rejectPartnership,
   endPartnership,
@@ -221,6 +224,31 @@ export function usePartnerships() {
   });
 }
 
+/** De verenigingen waarmee een partnerschap aangevraagd kan worden. */
+export function useAssociationDirectory(enabled = true) {
+  return useQuery({
+    queryKey: ['association-directory'],
+    queryFn: getAssociationDirectory,
+    enabled,
+  });
+}
+
+/** De muziektitels die partners hebben opengesteld. */
+export function usePartnerMusic() {
+  return useQuery({
+    queryKey: ['partner-music'],
+    queryFn: getPartnerMusic,
+  });
+}
+
+/** De aankomende concerten van partners. */
+export function usePartnerEvents() {
+  return useQuery({
+    queryKey: ['partner-events'],
+    queryFn: getPartnerEvents,
+  });
+}
+
 export function useRequestPartnership() {
   const queryClient = useQueryClient();
 
@@ -234,6 +262,9 @@ export function useRequestPartnership() {
     }) => requestPartnership(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partnerships'] });
+      // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
+      queryClient.invalidateQueries({ queryKey: ['partner-music'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-events'] });
     },
   });
 }
@@ -245,6 +276,9 @@ export function useApprovePartnership() {
     mutationFn: (id: string) => approvePartnership(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partnerships'] });
+      // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
+      queryClient.invalidateQueries({ queryKey: ['partner-music'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-events'] });
     },
   });
 }
@@ -256,6 +290,9 @@ export function useRejectPartnership() {
     mutationFn: (id: string) => rejectPartnership(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partnerships'] });
+      // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
+      queryClient.invalidateQueries({ queryKey: ['partner-music'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-events'] });
     },
   });
 }
@@ -267,6 +304,9 @@ export function useEndPartnership() {
     mutationFn: (id: string) => endPartnership(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partnerships'] });
+      // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
+      queryClient.invalidateQueries({ queryKey: ['partner-music'] });
+      queryClient.invalidateQueries({ queryKey: ['partner-events'] });
     },
   });
 }

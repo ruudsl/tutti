@@ -8,6 +8,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { bewaakLedenLimiet, bewaakOrkestLimiet } from '../services/abonnementLimieten';
+import { haalGedeeldeMuziek, haalGedeeldeConcerten, haalPartners } from '../services/partnerschappen';
 import { z } from 'zod';
 
 const router = Router();
@@ -745,6 +746,83 @@ router.post(
 // ===========================================
 // PARTNERSHIP ROUTES
 // ===========================================
+
+/**
+ * De verenigingen waarmee een partnerschap aangevraagd kan worden.
+ *
+ * Zonder deze lijst was het aanvragen van een partnerschap in de praktijk
+ * onmogelijk: de route erachter wil een id, en een beheerder kon nergens zien
+ * welke verenigingen er zijn - dat overzicht is alleen voor een super-admin.
+ *
+ * Bewust karig: naam en plaats, van verenigingen die actief zijn, zonder de
+ * eigen vereniging. Geen adressen, geen aantallen, geen abonnement.
+ */
+router.get(
+  '/directory',
+  authenticateToken,
+  requireRole('board', 'admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const verenigingen = db
+      .prepare(
+        `
+        SELECT id, name, display_name, city
+        FROM associations
+        WHERE id != ? AND COALESCE(is_active, 1) = 1
+        ORDER BY name
+    `,
+      )
+      .all(req.user!.associationId) as {
+      id: string;
+      name: string;
+      display_name: string | null;
+      city: string | null;
+    }[];
+
+    res.json(
+      verenigingen.map((v) => ({
+        id: v.id,
+        name: v.display_name || v.name,
+        city: v.city,
+      })),
+    );
+  }),
+);
+
+/**
+ * De muziektitels die partners hebben opengesteld.
+ *
+ * Elk lid mag dit inzien: het is een catalogus om te bladeren, geen archief.
+ * De bladmuziek zelf blijft van de eigenaar.
+ */
+router.get(
+  '/partners/music',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(haalGedeeldeMuziek(req.user!.associationId!));
+  }),
+);
+
+/** De aankomende concerten van partners. */
+router.get(
+  '/partners/events',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    res.json(haalGedeeldeConcerten(req.user!.associationId!));
+  }),
+);
+
+/** Met welke verenigingen wordt op dit moment daadwerkelijk iets gedeeld. */
+router.get(
+  '/partners/summary',
+  authenticateToken,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId!;
+    res.json({
+      music: haalPartners(associationId, 'share_music'),
+      events: haalPartners(associationId, 'share_events'),
+    });
+  }),
+);
 
 router.get(
   '/partnerships',

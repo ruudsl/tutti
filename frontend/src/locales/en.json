@@ -4352,6 +4352,16 @@
       }
     },
     "partnerships": {
+      "request": "Request partnership",
+      "send": "Send request",
+      "targetAssociation": "Association",
+      "choose": "Choose an association",
+      "noneAvailable": "There are no other associations on this installation.",
+      "whatToShare": "What will you share?",
+      "shareExplanation": "Sharing is always read-only, and only covers what you marked as shared yourself: for music the titles set to 'shared', for the calendar the upcoming concerts. Internal notes are never included.",
+      "notes": "Note with the request",
+      "sharedMusic": "Music from partners",
+      "sharedEvents": "Concerts from partners",
       "title": "Partnerships",
       "noPartnerships": "No partnerships",
       "outgoing": "Outgoing request",

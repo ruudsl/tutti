@@ -4352,6 +4352,16 @@
       }
     },
     "partnerships": {
+      "request": "Partnerschaft anfragen",
+      "send": "Anfrage senden",
+      "targetAssociation": "Verein",
+      "choose": "Verein auswählen",
+      "noneAvailable": "Es gibt keine anderen Vereine auf dieser Installation.",
+      "whatToShare": "Was teilt ihr?",
+      "shareExplanation": "Geteilt wird immer nur lesend, und nur was du selbst freigegeben hast: bei Musik die Titel mit 'geteilt', beim Kalender die kommenden Konzerte. Interne Notizen sind nie dabei.",
+      "notes": "Hinweis zur Anfrage",
+      "sharedMusic": "Musik von Partnern",
+      "sharedEvents": "Konzerte von Partnern",
       "title": "Partnerschaften",
       "noPartnerships": "Keine Partnerschaften",
       "outgoing": "Ausgehende Anfrage",

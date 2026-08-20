@@ -4352,6 +4352,16 @@
       }
     },
     "partnerships": {
+      "request": "Partnerschap aanvragen",
+      "send": "Verzoek versturen",
+      "targetAssociation": "Vereniging",
+      "choose": "Kies een vereniging",
+      "noneAvailable": "Er zijn geen andere verenigingen op deze installatie.",
+      "whatToShare": "Wat delen jullie?",
+      "shareExplanation": "Delen is altijd alleen lezen, en alleen wat je zelf hebt opengesteld: bij muziek de titels die op 'delen' staan, bij de agenda de aankomende concerten. Interne notities gaan nooit mee.",
+      "notes": "Toelichting bij het verzoek",
+      "sharedMusic": "Muziek van partners",
+      "sharedEvents": "Concerten van partners",
       "title": "Partnerschappen",
       "noPartnerships": "Geen partnerschappen",
       "outgoing": "Uitgaand verzoek",
