@@ -7,6 +7,8 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const initSqlJs = require('sql.js');
 
+import fs from 'fs';
+import path from 'path';
 import { schema } from '../database/schema';
 import { splitSchemaStatements } from '../database/splitSchemaStatements';
 
@@ -38,6 +40,35 @@ function applySchema(db: any): void {
       if (message.includes('no such column') && trimmed.includes('CREATE INDEX')) continue;
       if (message.includes('already exists')) continue;
       throw err;
+    }
+  }
+}
+
+/**
+ * Een deel van het schema staat niet in schema.ts en ook niet in
+ * src/migrations, maar in losse ALTER TABLE-opdrachten in
+ * database/init.ts. Die functie doet daarnaast van alles wat in een test niet
+ * hoort te gebeuren, dus we halen alleen de kolomtoevoegingen eruit.
+ *
+ * Zonder deze stap draaien de tests tegen een schema dat vijftig kolommen
+ * mist die een echte database wel heeft, en slaagt code die in productie
+ * stukloopt (of andersom).
+ */
+function applyInitColumns(db: any): void {
+  const bron = fs.readFileSync(path.join(__dirname, '../database/init.ts'), 'utf-8');
+  const opdrachten = bron.match(/ALTER TABLE \w+ ADD COLUMN [^'`"]+/g) ?? [];
+
+  for (const opdracht of opdrachten) {
+    try {
+      db.run(opdracht.trim());
+    } catch (err: any) {
+      const message: string = err?.message ?? '';
+      // Een kolom die schema.ts al heeft, of een tabel die hier nog niet
+      // bestaat, is geen fout: init.ts vangt datzelfde geval ook op.
+      if (message.includes('duplicate column name') || message.includes('no such table')) {
+        continue;
+      }
+      throw new Error(`Kolom uit init.ts kon niet worden toegevoegd (${opdracht.trim()}): ${message}`, { cause: err });
     }
   }
 }
@@ -111,6 +142,7 @@ class TestDatabaseWrapper {
       this.db = new SQL.Database();
       this.db.run('PRAGMA foreign_keys = ON');
       applySchema(this.db);
+      applyInitColumns(this.db);
       this.initialized = true;
       // Migrations run through the mocked connection module, which resolves
       // to this wrapper, so they must run after `initialized` is set.

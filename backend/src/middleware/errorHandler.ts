@@ -59,6 +59,9 @@ const GEHEIME_VELDEN = [
   'recoveryCode',
 ];
 
+/** Sleutels die nooit worden overgenomen: ze raken het prototype van objecten. */
+const GEVAARLIJKE_SLEUTELS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Vervang de inhoud van gevoelige velden door een markering. Blijft werken bij
  * geneste objecten, want een aanvraag kan gegevens meesturen als { config: {
@@ -72,8 +75,13 @@ export function maskeerGeheimen(waarde: unknown, diepte = 0): unknown {
     return waarde.map((item) => maskeerGeheimen(item, diepte + 1));
   }
 
-  const uit: Record<string, unknown> = {};
+  // Zonder prototype, zodat een sleutel als __proto__ uit de aanvraag hier een
+  // gewone eigenschap wordt in plaats van het prototype van dit object te
+  // verzetten. De sleutels komen immers rechtstreeks van buiten.
+  const uit: Record<string, unknown> = Object.create(null);
   for (const [sleutel, item] of Object.entries(waarde as Record<string, unknown>)) {
+    if (GEVAARLIJKE_SLEUTELS.has(sleutel)) continue;
+
     if (GEHEIME_VELDEN.some((veld) => veld.toLowerCase() === sleutel.toLowerCase())) {
       uit[sleutel] = '[weggelaten]';
     } else {

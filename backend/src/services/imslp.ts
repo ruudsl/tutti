@@ -523,6 +523,95 @@ function extractKeyFromTitle(title: string): string {
 }
 
 /**
+ * De adressen waar een bladmuziekbestand vandaan mag komen, voluit en met
+ * protocol. Een opgegeven adres wordt hier niet aan getoetst maar mee
+ * vervangen: het uiteindelijke verzoek gaat altijd naar een van deze vaste
+ * waarden, en alleen het pad komt van buiten.
+ *
+ * Eerder stond hier een reeks achtervoegsels (.imslp.org, .imslp.net). Dat
+ * leest prettiger, maar dan blijft de host die je uiteindelijk benadert
+ * afkomstig uit de aanvraag. Voluit opschrijven is strenger: komt er ooit een
+ * bestandsserver bij, dan mislukt de download zichtbaar in plaats van dat er
+ * stilzwijgend een gat openstaat.
+ */
+const TOEGESTANE_IMSLP_ADRESSEN = [
+  'https://imslp.org',
+  'https://www.imslp.org',
+  'https://imslp.eu',
+  'https://ks.imslp.net',
+  'https://ks2.imslp.net',
+  'https://ks3.imslp.net',
+  'https://ks4.imslp.net',
+  'https://ks5.imslp.net',
+] as const;
+
+function controleerImslpUrl(ruweUrl: string): string {
+  let ontleed: URL;
+  try {
+    ontleed = new URL(ruweUrl);
+  } catch {
+    throw new Error('Invalid IMSLP download URL');
+  }
+
+  if (ontleed.protocol !== 'https:') {
+    throw new Error('Only HTTPS IMSLP download URLs are allowed');
+  }
+
+  if (ontleed.username || ontleed.password) {
+    throw new Error('IMSLP download URL must not contain credentials');
+  }
+
+  const adres = TOEGESTANE_IMSLP_ADRESSEN.find((toegestaan) => toegestaan === ontleed.origin.toLowerCase());
+  if (!adres) {
+    throw new Error('IMSLP download URL host is not allowed');
+  }
+
+  // Opgebouwd vanaf het vaste adres hierboven. Pad en query worden toegekend
+  // en niet opgelost: bij oplossen zou een pad dat met // begint alsnog een
+  // andere host opleveren.
+  const opnieuw = new URL(adres);
+  opnieuw.pathname = ontleed.pathname;
+  opnieuw.search = ontleed.search;
+  return opnieuw.toString();
+}
+
+/** Hoeveel doorverwijzingen we hooguit volgen. */
+const MAX_DOORVERWIJZINGEN = 5;
+
+/**
+ * Haal iets op bij IMSLP en volg doorverwijzingen zelf, zodat elke stap
+ * opnieuw langs de witte lijst gaat. Zou fetch ze automatisch volgen, dan kan
+ * een toegestane host de server alsnog naar een intern adres sturen.
+ */
+async function haalOpVanImslp(ruweUrl: string): Promise<Response> {
+  let huidige = controleerImslpUrl(ruweUrl);
+
+  for (let stap = 0; stap <= MAX_DOORVERWIJZINGEN; stap++) {
+    const antwoord = await fetch(huidige, {
+      headers: {
+        'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
+      },
+      redirect: 'manual',
+    });
+
+    if (antwoord.status < 300 || antwoord.status >= 400) {
+      return antwoord;
+    }
+
+    const volgende = antwoord.headers.get('location');
+    if (!volgende) {
+      return antwoord;
+    }
+
+    // Een doorverwijzing mag relatief zijn: eerst tegen de huidige plek
+    // oplossen, dan opnieuw nakijken.
+    huidige = controleerImslpUrl(new URL(volgende, huidige).toString());
+  }
+
+  throw new Error('Too many redirects while downloading from IMSLP');
+}
+
+/**
  * Download a PDF from IMSLP
  * Returns the PDF as a Buffer
  */
@@ -532,12 +621,7 @@ export async function downloadPdf(fileUrl: string): Promise<Buffer> {
   logger.info(`IMSLP download: ${fileUrl}`);
 
   // IMSLP may redirect through a download page
-  const response = await fetch(fileUrl, {
-    headers: {
-      'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
-    },
-    redirect: 'follow',
-  });
+  const response = await haalOpVanImslp(fileUrl);
 
   if (!response.ok) {
     throw new Error(`Failed to download PDF: ${response.status}`);
@@ -562,12 +646,9 @@ export async function downloadPdf(fileUrl: string): Promise<Buffer> {
       }
 
       // Follow the actual download URL
-      const pdfResponse = await fetch(actualUrl, {
-        headers: {
-          'User-Agent': 'HarmonieApp/1.0 (https://harmonie.app; info@harmonie.app)',
-        },
-        redirect: 'follow',
-      });
+      // Dit adres komt uit de opgehaalde pagina en is dus net zo goed van
+      // buiten; het gaat langs dezelfde controle als het eerste.
+      const pdfResponse = await haalOpVanImslp(actualUrl);
 
       if (!pdfResponse.ok) {
         throw new Error(`Failed to download PDF: ${pdfResponse.status}`);

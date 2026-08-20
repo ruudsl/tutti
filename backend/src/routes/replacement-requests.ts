@@ -54,7 +54,7 @@ router.get(
         (SELECT COUNT(*) FROM replacement_assignments WHERE request_id = rr.id) as assignment_count,
         (SELECT COUNT(*) FROM replacement_assignments WHERE request_id = rr.id AND status = 'confirmed') as confirmed_count,
         CASE
-          WHEN rr.event_type = 'concert' THEN (SELECT title FROM concerts WHERE id = rr.event_id)
+          WHEN rr.event_type = 'concert' THEN (SELECT name FROM concerts WHERE id = rr.event_id)
           WHEN rr.event_type = 'rehearsal' THEN (SELECT location FROM rehearsal_instances WHERE id = rr.event_id)
         END as event_name,
         CASE
@@ -206,7 +206,7 @@ router.get(
       SELECT rr.*, i.name as instrument_name, i.tuning as instrument_tuning,
         u.first_name || ' ' || u.last_name as created_by_name,
         CASE
-          WHEN rr.event_type = 'concert' THEN (SELECT title FROM concerts WHERE id = rr.event_id)
+          WHEN rr.event_type = 'concert' THEN (SELECT name FROM concerts WHERE id = rr.event_id)
           WHEN rr.event_type = 'rehearsal' THEN (SELECT location FROM rehearsal_instances WHERE id = rr.event_id)
         END as event_name,
         CASE

@@ -5003,8 +5003,6 @@
       "send_notification": "Benachrichtigung senden",
       "create_task": "Aufgabe erstellen",
       "update_field": "Feld aktualisieren",
-      "add_to_group": "Zur Gruppe hinzufügen",
-      "remove_from_group": "Aus Gruppe entfernen",
       "webhook": "Webhook",
       "delay": "Verzögerung"
     },

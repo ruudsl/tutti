@@ -1507,9 +1507,12 @@ router.get(
         `
     SELECT
       CAST(strftime('%w', r.date) AS INTEGER) as day_of_week,
-      AVG(CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+      -- Per sectie is dit al één groep, dus de opkomst is hier meteen het
+      -- gemiddelde. Een AVG() eromheen zou een aggregaat in een aggregaat
+      -- zijn, en dat weigert SQLite.
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
         THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
-        ELSE 0 END) as avg_rate
+        ELSE 0 END as avg_rate
     FROM rehearsals r
     LEFT JOIN rehearsal_attendance a ON r.id = a.rehearsal_id
     WHERE r.association_id = ? AND r.date >= date('now', '-6 months') AND r.date < date('now')${orchestraFilter}
@@ -1536,9 +1539,10 @@ router.get(
     SELECT
       i.name as instrument,
       COUNT(DISTINCT u.id) as member_count,
-      AVG(CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
+      -- Zelfde reden als hierboven: een aggregaat in een aggregaat mag niet.
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
         THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
-        ELSE 0 END) as avg_rate
+        ELSE 0 END as avg_rate
     FROM users u
     JOIN user_instruments ui ON u.id = ui.user_id
     JOIN instruments i ON ui.instrument_id = i.id

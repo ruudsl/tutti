@@ -5,9 +5,11 @@ const IV_LENGTH = 16;
 const SALT_LENGTH = 32;
 const KEY_LENGTH = 32;
 
-// Cache the derived key to avoid repeated key derivation
+// Cache the derived key to avoid repeated key derivation. The cache is keyed
+// on a fingerprint of secret+salt so a rotated secret derives a fresh key
+// instead of silently reusing the previous one.
 let cachedKey: Buffer | null = null;
-let cachedSalt: string | null = null;
+let cachedFingerprint: string | null = null;
 
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_SECRET || process.env.JWT_SECRET;
@@ -25,12 +27,13 @@ function getEncryptionKey(): Buffer {
       .slice(0, 32);
 
   // Return cached key if secret and salt haven't changed
-  if (cachedKey && cachedSalt === salt) {
+  const fingerprint = crypto.createHash('sha256').update(`${secret}:${salt}`).digest('hex');
+  if (cachedKey && cachedFingerprint === fingerprint) {
     return cachedKey;
   }
 
   cachedKey = crypto.scryptSync(secret, salt, KEY_LENGTH);
-  cachedSalt = salt;
+  cachedFingerprint = fingerprint;
   return cachedKey;
 }
 

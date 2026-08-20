@@ -598,6 +598,20 @@ router.post(
       }
     }
 
+    // De takenlijst werd wel op vereniging gecontroleerd en de toegewezen
+    // persoon niet. Daardoor kon een taak worden toegewezen aan iemand van een
+    // andere vereniging. Die ziet de taak nooit - het overzicht filtert op
+    // vereniging - maar zijn naam verschijnt wel in het overzicht hier, en de
+    // toewijzing kan door niemand worden opgepakt.
+    if (data.assignedTo) {
+      const toegewezene = db
+        .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
+        .get(data.assignedTo, associationId);
+      if (!toegewezene) {
+        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      }
+    }
+
     const taskId = uuidv4();
     const now = new Date().toISOString();
 

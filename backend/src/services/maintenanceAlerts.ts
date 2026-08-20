@@ -575,7 +575,8 @@ export async function runMaintenanceCheck(): Promise<void> {
   const associations = db
     .prepare(
       `
-        SELECT id, name FROM associations WHERE status = 'active'
+        -- associations heeft is_active; het is users dat een status-kolom heeft.
+        SELECT id, name FROM associations WHERE is_active = 1
     `,
     )
     .all() as { id: string; name: string }[];

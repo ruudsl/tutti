@@ -48,3 +48,7 @@ coverage/
 
 # Meetuitvoer van de Lighthouse-controle; een artefact, geen bronbestand.
 lighthouse-report.json
+
+# Meetuitvoer van scripts/lighthouse-check.mjs. Dit is een verslag van een
+# meting, geen bronbestand; het hoort bij de CI-uitvoer en niet in de historie.
+lighthouse-report.json

@@ -141,12 +141,6 @@ async function executeAction(action: WorkflowAction, context: ExecutionContext):
     case 'update_field':
       await executeUpdateField(config, context);
       break;
-    case 'add_to_group':
-      await executeAddToGroup(config, context);
-      break;
-    case 'remove_from_group':
-      await executeRemoveFromGroup(config, context);
-      break;
     case 'webhook':
       await executeWebhook(config, context);
       break;
@@ -231,12 +225,13 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
   const processedMessage = replaceVariables(message || '', context);
 
   for (const userId of userIds) {
+    // De tabel heeft geen priority-kolom; die hoort bij de extra gegevens.
     db.prepare(
       `
-      INSERT INTO notifications (id, user_id, title, message, type, priority, created_at)
+      INSERT INTO notifications (id, user_id, title, body, type, data, created_at)
       VALUES (?, ?, ?, ?, 'workflow', ?, ?)
     `,
-    ).run(uuidv4(), userId, processedTitle, processedMessage, priority || 'medium', now);
+    ).run(uuidv4(), userId, processedTitle, processedMessage, JSON.stringify({ priority: priority || 'medium' }), now);
   }
 
   context.log.push(`Created ${userIds.length} notifications`);
@@ -302,73 +297,62 @@ async function executeUpdateField(config: Record<string, any>, context: Executio
     return;
   }
 
+  // fieldName komt uit de vrij invulbare config van de workflow en wordt in de
+  // query geplakt. Zonder controle kan een beheerder daar een hele SET-clausule
+  // in kwijt ("role = 'admin' WHERE 1=1 --") en zo rijen van andere
+  // verenigingen aanpassen. Alleen een kolom die de tabel echt heeft mag erin.
+  const kolommen = kolommenVan(tableName);
+  if (!kolommen.has(fieldName)) {
+    context.log.push(`Unknown field for ${entityType}: ${fieldName}`);
+    return;
+  }
+
+  if (BESCHERMDE_KOLOMMEN.has(fieldName)) {
+    context.log.push(`Field ${fieldName} cannot be changed by a workflow`);
+    return;
+  }
+
   const processedValue = replaceVariables(String(fieldValue), context);
 
+  // Niet elke tabel houdt updated_at bij; die alleen meenemen waar hij bestaat.
+  const zetUpdatedAt = kolommen.has('updated_at');
+  const sql = zetUpdatedAt
+    ? `UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`
+    : `UPDATE ${tableName} SET ${fieldName} = ? WHERE id = ?`;
+  const params = zetUpdatedAt
+    ? [processedValue, new Date().toISOString(), context.entityId]
+    : [processedValue, context.entityId];
+
   try {
-    db.prepare(`UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`).run(
-      processedValue,
-      new Date().toISOString(),
-      context.entityId,
-    );
+    db.prepare(sql).run(...params);
     context.log.push(`Updated ${entityType}.${fieldName} to ${processedValue}`);
   } catch (error) {
     context.log.push(`Failed to update field: ${error}`);
   }
 }
 
-async function executeAddToGroup(config: Record<string, any>, context: ExecutionContext): Promise<void> {
-  const { groupId, userId } = config;
+/**
+ * Kolommen die een workflow nooit mag overschrijven: ze bepalen bij wie een rij
+ * hoort of waarmee er wordt ingelogd.
+ */
+const BESCHERMDE_KOLOMMEN = new Set([
+  'id',
+  'association_id',
+  'password_hash',
+  'mfa_secret',
+  'microsoft_id',
+  'created_at',
+]);
 
-  const targetUserId = userId || context.entityData?.userId || context.entityId;
-  if (!groupId || !targetUserId) {
-    context.log.push('Missing group or user ID');
-    return;
-  }
-
-  const exists = db
-    .prepare(
-      `
-    SELECT id FROM group_members WHERE group_id = ? AND user_id = ?
-  `,
-    )
-    .get(groupId, targetUserId);
-
-  if (!exists) {
-    db.prepare(
-      `
-      INSERT INTO group_members (id, group_id, user_id, created_at)
-      VALUES (?, ?, ?, ?)
-    `,
-    ).run(uuidv4(), groupId, targetUserId, new Date().toISOString());
-    context.log.push(`Added user ${targetUserId} to group ${groupId}`);
-  } else {
-    context.log.push('User already in group');
-  }
+/** Kolomnamen van een tabel, uit de database zelf. */
+function kolommenVan(tabel: string): Set<string> {
+  const rijen = db.prepare(`PRAGMA table_info(${tabel})`).all() as Array<{ name: string }>;
+  return new Set(rijen.map((r) => r.name));
 }
 
-async function executeRemoveFromGroup(config: Record<string, any>, context: ExecutionContext): Promise<void> {
-  const { groupId, userId } = config;
-
-  const targetUserId = userId || context.entityData?.userId || context.entityId;
-  if (!groupId || !targetUserId) {
-    context.log.push('Missing group or user ID');
-    return;
-  }
-
-  const result = db
-    .prepare(
-      `
-    DELETE FROM group_members WHERE group_id = ? AND user_id = ?
-  `,
-    )
-    .run(groupId, targetUserId);
-
-  if (result.changes > 0) {
-    context.log.push(`Removed user ${targetUserId} from group ${groupId}`);
-  } else {
-    context.log.push('User was not in group');
-  }
-}
+// De acties 'aan groep toevoegen' en 'uit groep verwijderen' zijn
+// verwijderd: de tabel group_members is nooit aangemaakt, dus beide
+// liepen bij uitvoering stuk.
 
 async function executeWebhook(config: Record<string, any>, context: ExecutionContext): Promise<void> {
   const { url, method, headers, body } = config;

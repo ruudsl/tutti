@@ -213,7 +213,7 @@ router.get(
         `
       SELECT ra.*, rr.event_type, rr.event_date, i.name as instrument_name,
         CASE
-          WHEN rr.event_type = 'concert' THEN (SELECT title FROM concerts WHERE id = rr.event_id)
+          WHEN rr.event_type = 'concert' THEN (SELECT name FROM concerts WHERE id = rr.event_id)
           WHEN rr.event_type = 'rehearsal' THEN (SELECT location FROM rehearsal_instances WHERE id = rr.event_id)
         END as event_name
       FROM replacement_assignments ra

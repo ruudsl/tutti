@@ -77,9 +77,170 @@ interface OrderItem {
   unitPrice: number;
 }
 
-// In-memory invoice store (in production, use database)
-const invoices = new Map<string, Invoice>();
-const invoicesByOrder = new Map<string, string>(); // orderId -> invoiceId
+// ========================================
+// Opslag
+// ========================================
+
+/** Vorm van een rij in ticket_invoices. */
+interface FactuurRij {
+  id: string;
+  invoice_number: string;
+  order_id: string;
+  association_id: string;
+  concert_id: string;
+  concert_name: string;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_company_name: string | null;
+  buyer_vat_number: string | null;
+  buyer_address: string | null;
+  buyer_postal_code: string | null;
+  buyer_city: string | null;
+  buyer_country: string | null;
+  subtotal: number;
+  vat_amount: number;
+  vat_rate: number;
+  total: number;
+  service_fee: number;
+  service_fee_vat: number;
+  pdf_path: string | null;
+  issued_at: string;
+  due_date: string;
+  status: Invoice['status'];
+  created_at: string;
+  updated_at: string;
+}
+
+interface RegelRij {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  vat_rate: number;
+  total: number;
+  vat_amount: number;
+}
+
+function haalRegels(invoiceId: string): InvoiceLineItem[] {
+  const rijen = db
+    .prepare(
+      `
+        SELECT description, quantity, unit_price, vat_rate, total, vat_amount
+        FROM invoice_line_items WHERE invoice_id = ? ORDER BY rowid
+    `,
+    )
+    .all(invoiceId) as RegelRij[];
+
+  return rijen.map((rij) => ({
+    description: rij.description,
+    quantity: rij.quantity,
+    unitPrice: rij.unit_price,
+    totalPrice: rij.total,
+    // vat_rate staat in de tabel als percentage, de service rekent met een breuk.
+    vatRate: rij.vat_rate / 100,
+    vatAmount: rij.vat_amount,
+  }));
+}
+
+function naarFactuur(rij: FactuurRij): Invoice {
+  const bedrijf: BusinessDetails | undefined = rij.buyer_company_name
+    ? {
+        companyName: rij.buyer_company_name,
+        vatNumber: rij.buyer_vat_number ?? undefined,
+        address: rij.buyer_address ?? '',
+        postalCode: rij.buyer_postal_code ?? '',
+        city: rij.buyer_city ?? '',
+        country: rij.buyer_country ?? undefined,
+      }
+    : undefined;
+
+  return {
+    id: rij.id,
+    invoiceNumber: rij.invoice_number,
+    orderId: rij.order_id,
+    associationId: rij.association_id,
+    concertId: rij.concert_id,
+    concertName: rij.concert_name,
+    buyerName: rij.buyer_name,
+    buyerEmail: rij.buyer_email,
+    businessDetails: bedrijf,
+    lineItems: haalRegels(rij.id),
+    subtotal: rij.subtotal,
+    vatAmount: rij.vat_amount,
+    serviceFee: rij.service_fee,
+    serviceFeeVat: rij.service_fee_vat,
+    total: rij.total,
+    vatRate: rij.vat_rate / 100,
+    issuedAt: rij.issued_at,
+    dueDate: rij.due_date,
+    status: rij.status,
+    pdfPath: rij.pdf_path ?? undefined,
+    createdAt: rij.created_at,
+    updatedAt: rij.updated_at,
+  };
+}
+
+function bewaarFactuur(factuur: Invoice): void {
+  const bedrijf = factuur.businessDetails;
+
+  db.prepare(
+    `
+        INSERT INTO ticket_invoices (
+            id, invoice_number, order_id, association_id, concert_id, concert_name,
+            buyer_name, buyer_email,
+            buyer_company_name, buyer_vat_number, buyer_address, buyer_postal_code, buyer_city, buyer_country,
+            subtotal, vat_amount, vat_rate, total, service_fee, service_fee_vat,
+            issued_at, due_date, status, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  ).run(
+    factuur.id,
+    factuur.invoiceNumber,
+    factuur.orderId,
+    factuur.associationId,
+    factuur.concertId,
+    factuur.concertName,
+    factuur.buyerName,
+    factuur.buyerEmail,
+    bedrijf?.companyName ?? null,
+    bedrijf?.vatNumber ?? null,
+    bedrijf?.address ?? null,
+    bedrijf?.postalCode ?? null,
+    bedrijf?.city ?? null,
+    bedrijf?.country ?? null,
+    factuur.subtotal,
+    factuur.vatAmount,
+    factuur.vatRate * 100,
+    factuur.total,
+    factuur.serviceFee,
+    factuur.serviceFeeVat,
+    factuur.issuedAt,
+    factuur.dueDate,
+    factuur.status,
+    factuur.createdAt,
+    factuur.updatedAt,
+  );
+
+  const regel = db.prepare(
+    `
+        INSERT INTO invoice_line_items (id, invoice_id, description, quantity, unit_price, vat_rate, total, vat_amount)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  );
+
+  for (const item of factuur.lineItems) {
+    regel.run(
+      crypto.randomUUID(),
+      factuur.id,
+      item.description,
+      item.quantity,
+      item.unitPrice,
+      item.vatRate * 100,
+      item.totalPrice,
+      item.vatAmount,
+    );
+  }
+}
 
 // ========================================
 // Invoice Number Generation
@@ -101,14 +262,16 @@ export function generateInvoiceNumber(associationId: string): string {
   const todayEnd = `${year}-${month}-${day}T23:59:59.999Z`;
 
   // Count existing invoices for today
-  let count = 0;
-  for (const invoice of invoices.values()) {
-    if (invoice.associationId === associationId && invoice.createdAt >= todayStart && invoice.createdAt <= todayEnd) {
-      count++;
-    }
-  }
+  const rij = db
+    .prepare(
+      `
+        SELECT COUNT(*) AS aantal FROM ticket_invoices
+        WHERE association_id = ? AND created_at >= ? AND created_at <= ?
+    `,
+    )
+    .get(associationId, todayStart, todayEnd) as { aantal: number };
 
-  const sequenceNumber = String(count + 1).padStart(4, '0');
+  const sequenceNumber = String(rij.aantal + 1).padStart(4, '0');
 
   return `INV-${datePart}-${sequenceNumber}`;
 }
@@ -122,13 +285,10 @@ export function generateInvoiceNumber(associationId: string): string {
  */
 export async function createInvoice(orderId: string, businessDetails?: BusinessDetails): Promise<Invoice> {
   // Check if invoice already exists for this order
-  const existingInvoiceId = invoicesByOrder.get(orderId);
-  if (existingInvoiceId) {
-    const existingInvoice = invoices.get(existingInvoiceId);
-    if (existingInvoice) {
-      logger.info(`Invoice already exists for order ${orderId}`, { invoiceId: existingInvoiceId });
-      return existingInvoice;
-    }
+  const existingInvoice = getInvoiceByOrder(orderId);
+  if (existingInvoice) {
+    logger.info(`Invoice already exists for order ${orderId}`, { invoiceId: existingInvoice.id });
+    return existingInvoice;
   }
 
   // Fetch order details
@@ -175,30 +335,41 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
     throw new Error(`No items found for order: ${orderId}`);
   }
 
-  // Create line items with VAT calculation
+  // Bij het afrekenen geldt total = som(prijs x aantal) + servicekosten; er
+  // komt geen btw bovenop. De kaartprijs is dus de prijs inclusief btw, zoals
+  // gebruikelijk bij consumentenverkoop. De btw wordt daarom uit het bedrag
+  // gerekend en niet erbovenop geteld: anders noemt de factuur negen procent
+  // meer dan de koper heeft betaald.
+  const naarCenten = (bedrag: number): number => Math.round(bedrag * 100) / 100;
+
   const lineItems: InvoiceLineItem[] = orderItems.map((item) => {
-    const totalPrice = item.quantity * item.unitPrice;
-    const vatAmount = totalPrice * VAT_RATE;
+    const brutoRegel = naarCenten(item.quantity * item.unitPrice);
+    const nettoRegel = naarCenten(brutoRegel / (1 + VAT_RATE));
 
     return {
       description: item.ticketTypeName,
       quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice,
+      // Op een factuur staat de stukprijs exclusief btw, zodat aantal maal
+      // stukprijs het regelbedrag oplevert.
+      unitPrice: item.quantity > 0 ? naarCenten(nettoRegel / item.quantity) : 0,
+      totalPrice: nettoRegel,
       vatRate: VAT_RATE,
-      vatAmount,
+      // Het verschil, niet opnieuw uitgerekend: zo tellen netto en btw altijd
+      // precies op tot het brutobedrag.
+      vatAmount: naarCenten(brutoRegel - nettoRegel),
     };
   });
 
   // Calculate totals
-  const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const vatAmount = lineItems.reduce((sum, item) => sum + item.vatAmount, 0);
+  const subtotal = naarCenten(lineItems.reduce((sum, item) => sum + item.totalPrice, 0));
+  const vatAmount = naarCenten(lineItems.reduce((sum, item) => sum + item.vatAmount, 0));
 
   // Service fee (if any - calculated as difference between order total and ticket subtotal)
-  const serviceFee = Math.max(0, order.total - subtotal);
-  const serviceFeeVat = serviceFee * VAT_RATE;
+  const brutoServicekosten = Math.max(0, naarCenten(order.total - (subtotal + vatAmount)));
+  const serviceFee = naarCenten(brutoServicekosten / (1 + VAT_RATE));
+  const serviceFeeVat = naarCenten(brutoServicekosten - serviceFee);
 
-  const total = subtotal + vatAmount + serviceFee + serviceFeeVat;
+  const total = naarCenten(subtotal + vatAmount + serviceFee + serviceFeeVat);
 
   // Generate invoice
   const now = new Date();
@@ -234,8 +405,7 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
   };
 
   // Store invoice
-  invoices.set(invoiceId, invoice);
-  invoicesByOrder.set(orderId, invoiceId);
+  bewaarFactuur(invoice);
 
   logger.info(`Invoice created`, {
     invoiceId,
@@ -255,16 +425,16 @@ export async function createInvoice(orderId: string, businessDetails?: BusinessD
  * Get an invoice by its ID
  */
 export function getInvoice(invoiceId: string): Invoice | null {
-  return invoices.get(invoiceId) || null;
+  const rij = db.prepare('SELECT * FROM ticket_invoices WHERE id = ?').get(invoiceId) as FactuurRij | undefined;
+  return rij ? naarFactuur(rij) : null;
 }
 
 /**
  * Get an invoice by order ID
  */
 export function getInvoiceByOrder(orderId: string): Invoice | null {
-  const invoiceId = invoicesByOrder.get(orderId);
-  if (!invoiceId) return null;
-  return invoices.get(invoiceId) || null;
+  const rij = db.prepare('SELECT * FROM ticket_invoices WHERE order_id = ?').get(orderId) as FactuurRij | undefined;
+  return rij ? naarFactuur(rij) : null;
 }
 
 // ========================================
@@ -528,62 +698,49 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
  * Update invoice status
  */
 export function updateInvoiceStatus(invoiceId: string, status: Invoice['status']): Invoice | null {
-  const invoice = invoices.get(invoiceId);
-  if (!invoice) return null;
+  const resultaat = db
+    .prepare('UPDATE ticket_invoices SET status = ?, updated_at = ? WHERE id = ?')
+    .run(status, new Date().toISOString(), invoiceId);
 
-  invoice.status = status;
-  invoice.updatedAt = new Date().toISOString();
-
-  invoices.set(invoiceId, invoice);
+  if (resultaat.changes === 0) return null;
 
   logger.info(`Invoice status updated`, { invoiceId, status });
 
-  return invoice;
+  return getInvoice(invoiceId);
 }
 
 /**
  * Get all invoices for an association
  */
 export function getInvoicesByAssociation(associationId: string): Invoice[] {
-  const result: Invoice[] = [];
-  for (const invoice of invoices.values()) {
-    if (invoice.associationId === associationId) {
-      result.push(invoice);
-    }
-  }
-  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const rijen = db
+    .prepare('SELECT * FROM ticket_invoices WHERE association_id = ? ORDER BY created_at DESC')
+    .all(associationId) as FactuurRij[];
+  return rijen.map(naarFactuur);
 }
 
 /**
  * Get invoices by buyer email
  */
 export function getInvoicesByBuyerEmail(email: string): Invoice[] {
-  const result: Invoice[] = [];
-  for (const invoice of invoices.values()) {
-    if (invoice.buyerEmail.toLowerCase() === email.toLowerCase()) {
-      result.push(invoice);
-    }
-  }
-  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const rijen = db
+    .prepare('SELECT * FROM ticket_invoices WHERE LOWER(buyer_email) = LOWER(?) ORDER BY created_at DESC')
+    .all(email) as FactuurRij[];
+  return rijen.map(naarFactuur);
 }
 
 /**
  * Cancel an invoice
  */
 export function cancelInvoice(invoiceId: string): Invoice | null {
-  const invoice = invoices.get(invoiceId);
-  if (!invoice) return null;
+  const factuur = getInvoice(invoiceId);
+  if (!factuur) return null;
 
-  if (invoice.status === 'paid') {
+  if (factuur.status === 'paid') {
     throw new Error('Cannot cancel a paid invoice');
   }
 
-  invoice.status = 'cancelled';
-  invoice.updatedAt = new Date().toISOString();
-
-  invoices.set(invoiceId, invoice);
-
   logger.info(`Invoice cancelled`, { invoiceId });
 
-  return invoice;
+  return updateInvoiceStatus(invoiceId, 'cancelled');
 }

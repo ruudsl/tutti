@@ -31,15 +31,7 @@ export interface WorkflowTrigger {
 
 export interface WorkflowAction {
   id: string;
-  actionType:
-    | 'send_email'
-    | 'send_notification'
-    | 'create_task'
-    | 'update_field'
-    | 'add_to_group'
-    | 'remove_from_group'
-    | 'webhook'
-    | 'delay';
+  actionType: 'send_email' | 'send_notification' | 'create_task' | 'update_field' | 'webhook' | 'delay';
   actionOrder: number;
   config: Record<string, unknown>;
   conditions?: Record<string, unknown>;

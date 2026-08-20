@@ -137,7 +137,7 @@ router.get(
       instruments: db
         .prepare(
           `
-      SELECT i.id, i.name, i.tuning, i.family
+      SELECT i.id, i.name, i.tuning, i.clef
       FROM instruments i
       JOIN user_instruments ui ON ui.instrument_id = i.id
       WHERE ui.user_id = ?
@@ -169,7 +169,7 @@ router.get(
       favorites: db
         .prepare(
           `
-      SELECT uf.id, uf.created_at, mt.title, mt.composer, mt.arranger
+      SELECT uf.created_at, mt.title, mt.composer, mt.arranger
       FROM user_favorites uf
       JOIN music_titles mt ON mt.id = uf.music_title_id
       WHERE uf.user_id = ?
@@ -181,9 +181,8 @@ router.get(
       recentViews: db
         .prepare(
           `
-      SELECT urv.id, urv.viewed_at, mt.title
+      SELECT urv.id, urv.viewed_at, urv.item_type, urv.item_title
       FROM user_recent_views urv
-      JOIN music_titles mt ON mt.id = urv.music_title_id
       WHERE urv.user_id = ?
       ORDER BY urv.viewed_at DESC
     `,
@@ -193,12 +192,12 @@ router.get(
       practiceHistory: db
         .prepare(
           `
-      SELECT pl.id, pl.duration_minutes, pl.notes, pl.started_at, pl.ended_at,
+      SELECT pl.id, pl.duration_minutes, pl.notes, pl.practiced_at,
              mt.title as music_title
       FROM practice_logs pl
       LEFT JOIN music_titles mt ON mt.id = pl.music_title_id
       WHERE pl.user_id = ?
-      ORDER BY pl.started_at DESC
+      ORDER BY pl.practiced_at DESC
     `,
         )
         .all(userId),
@@ -218,7 +217,7 @@ router.get(
         .prepare(
           `
       SELECT pa.id, pa.page_number, pa.annotation_type, pa.content,
-             pa.position_x, pa.position_y, pa.created_at, pa.updated_at,
+             pa.x_position, pa.y_position, pa.created_at, pa.updated_at,
              mp.title as music_piece_title
       FROM pdf_annotations pa
       LEFT JOIN music_pieces mp ON mp.id = pa.music_piece_id
@@ -235,25 +234,15 @@ router.get(
              mt.title as music_title
       FROM audio_recordings ar
       LEFT JOIN music_titles mt ON mt.id = ar.music_title_id
-      WHERE ar.user_id = ?
+      WHERE ar.recorded_by = ?
       ORDER BY ar.created_at DESC
     `,
         )
         .all(userId),
 
-      reportedIssues: db
-        .prepare(
-          `
-      SELECT i.id, i.page_number, i.measure_number, i.description,
-             i.status, i.created_at,
-             mp.title as music_piece_title
-      FROM issues i
-      LEFT JOIN music_pieces mp ON mp.id = i.music_piece_id
-      WHERE i.reporter_id = ?
-      ORDER BY i.created_at DESC
-    `,
-        )
-        .all(userId),
+      // Gemelde fouten in bladmuziek en zitplaatsvoorkeuren horen hier ook
+      // thuis, maar er is geen tabel waarin ze worden bewaard; zodra die er
+      // is, komen ze hier terug.
 
       notificationPreferences: db
         .prepare(
@@ -262,18 +251,6 @@ router.get(
     `,
         )
         .get(userId),
-
-      seatingPreferences: db
-        .prepare(
-          `
-      SELECT sp.id, sp.preference_type, sp.created_at,
-             u.first_name || ' ' || u.last_name as neighbor_name
-      FROM seating_preferences sp
-      LEFT JOIN users u ON u.id = sp.neighbor_user_id
-      WHERE sp.user_id = ?
-    `,
-        )
-        .all(userId),
     };
 
     // Remove sensitive data
@@ -546,7 +523,7 @@ router.post(
         mfa_secret = NULL,
         microsoft_id = NULL,
         private_email = NULL,
-        updated_at = datetime('now')
+        deleted_at = datetime('now')
       WHERE id = ?
     `,
       ).run(userId);
@@ -753,7 +730,7 @@ router.post(
           sql = `DELETE FROM activity_log WHERE created_at < ? AND user_id IN (SELECT id FROM users WHERE association_id = ?)`;
           break;
         case 'deleted_users':
-          sql = `DELETE FROM users WHERE status = 'deleted' AND updated_at < ? AND association_id = ?`;
+          sql = `DELETE FROM users WHERE status = 'deleted' AND deleted_at < ? AND association_id = ?`;
           break;
       }
 

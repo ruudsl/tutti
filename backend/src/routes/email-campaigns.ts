@@ -794,7 +794,10 @@ function getCampaignRecipients(
         SELECT DISTINCT u.id, u.email, u.first_name AS firstName, u.last_name AS lastName
         FROM users u
         WHERE u.association_id = ?
-        AND u.is_active = 1
+        -- De users-tabel heeft geen kolom is_active; actief of niet staat in
+        -- status. Met is_active liep het versturen van elke campagne stuk op
+        -- "no such column", zonder uitzondering.
+        AND u.status = 'active'
         AND u.email IS NOT NULL
         AND u.email != ''
     `;

@@ -69,4 +69,39 @@ describe('Maskeren van geheimen in logregels', () => {
     kring.zelf = kring;
     expect(() => maskeerGeheimen(kring)).not.toThrow();
   });
+
+  describe('sleutels die het prototype raken', () => {
+    // De sleutels komen rechtstreeks uit de aanvraag. Een sleutel als
+    // __proto__ mag niet in het opgebouwde object terechtkomen.
+    it('neemt __proto__ niet over uit de aanvraag', () => {
+      const geknoeid = JSON.parse('{"naam":"Jan","__proto__":{"besmet":true}}');
+      const uit = maskeerGeheimen(geknoeid) as Record<string, unknown>;
+
+      expect(Object.getPrototypeOf(uit)).toBeNull();
+      expect(({} as Record<string, unknown>).besmet).toBeUndefined();
+      expect(uit.naam).toBe('Jan');
+    });
+
+    it('laat constructor en prototype ook liggen', () => {
+      const geknoeid = JSON.parse('{"constructor":{"x":1},"prototype":{"y":2},"naam":"Jan"}');
+      const uit = maskeerGeheimen(geknoeid) as Record<string, unknown>;
+
+      expect(Object.keys(uit)).toEqual(['naam']);
+    });
+
+    it('kijkt ook in geneste objecten', () => {
+      const geknoeid = JSON.parse('{"config":{"__proto__":{"besmet":true},"host":"smtp"}}');
+      const uit = maskeerGeheimen(geknoeid) as { config: Record<string, unknown> };
+
+      expect(({} as Record<string, unknown>).besmet).toBeUndefined();
+      expect(uit.config.host).toBe('smtp');
+    });
+
+    it('blijft geheimen weglaten', () => {
+      const geknoeid = JSON.parse('{"__proto__":{"x":1},"password":"geheim"}');
+      const uit = maskeerGeheimen(geknoeid) as Record<string, unknown>;
+
+      expect(uit.password).toBe('[weggelaten]');
+    });
+  });
 });

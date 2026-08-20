@@ -701,11 +701,10 @@ router.get(
     const concerts = db
       .prepare(
         `
-        SELECT id, name, date, start_time, end_time, venue, address, city, ticket_price,
-               description, status
+        SELECT id, name, date, end_date, location, description
         FROM concerts
-        WHERE association_id = ? AND date >= ? AND date <= ? AND status != 'cancelled'
-        ORDER BY date, start_time
+        WHERE association_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
+        ORDER BY date
     `,
       )
       .all(association.id, today, endDateStr) as any[];
@@ -736,18 +735,23 @@ router.get(
     }
 
     const events = [
+      // De concerttabel kent geen begintijd, adres of kaartprijs; alleen een
+      // datum, een einddatum en een locatie.
       ...concerts.map((c: any) => ({
         id: c.id,
         type: 'concert' as const,
         title: c.name,
         date: c.date,
-        startTime: c.start_time,
-        endTime: c.end_time,
-        venue: c.venue as string | undefined,
-        location: c.venue as string | undefined,
-        address: c.address,
-        city: c.city,
-        ticketPrice: c.ticket_price,
+        // De concerttabel legt geen begin- of eindtijd vast, en ook geen
+        // adres of kaartprijs; alleen een datum, een einddatum en een locatie.
+        startTime: undefined as string | undefined,
+        endTime: undefined as string | undefined,
+        endDate: c.end_date as string | undefined,
+        venue: c.location as string | undefined,
+        location: c.location as string | undefined,
+        address: undefined as string | undefined,
+        city: undefined as string | undefined,
+        ticketPrice: undefined as number | undefined,
         description: c.description as string | undefined,
       })),
       ...rehearsals.map((r: any) => ({
@@ -759,6 +763,7 @@ router.get(
         endTime: r.end_time,
         venue: r.location as string | undefined,
         location: r.location as string | undefined,
+        endDate: undefined as string | undefined,
         address: undefined as string | undefined,
         city: undefined as string | undefined,
         ticketPrice: undefined as number | undefined,
@@ -831,10 +836,10 @@ router.get(
     const nextConcert = db
       .prepare(
         `
-        SELECT id, name, date, start_time, venue, city, description
+        SELECT id, name, date, location, description
         FROM concerts
-        WHERE association_id = ? AND date >= ? AND status != 'cancelled'
-        ORDER BY date, start_time
+        WHERE association_id = ? AND date >= ? AND deleted_at IS NULL
+        ORDER BY date
         LIMIT 1
     `,
       )
@@ -859,10 +864,10 @@ router.get(
     const upcomingConcerts = db
       .prepare(
         `
-        SELECT id, name, date, start_time, venue, city
+        SELECT id, name, date, location
         FROM concerts
-        WHERE association_id = ? AND date >= ? AND date <= ? AND status != 'cancelled'
-        ORDER BY date, start_time
+        WHERE association_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
+        ORDER BY date
         LIMIT 5
     `,
       )
@@ -900,9 +905,7 @@ router.get(
             id: nextConcert.id,
             name: nextConcert.name,
             date: nextConcert.date,
-            startTime: nextConcert.start_time,
-            venue: nextConcert.venue,
-            city: nextConcert.city,
+            venue: nextConcert.location,
             daysUntil: Math.ceil((new Date(nextConcert.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
           }
         : null,
@@ -920,9 +923,7 @@ router.get(
         id: c.id,
         name: c.name,
         date: c.date,
-        startTime: c.start_time,
-        venue: c.venue,
-        city: c.city,
+        venue: c.location,
       })),
       announcement: latestPost
         ? {

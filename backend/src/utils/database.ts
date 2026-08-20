@@ -120,24 +120,17 @@ export function createPaginatedResult<T>(data: T[], total: number, page: number,
 /**
  * Allowed table names for soft delete operations.
  * This whitelist prevents SQL injection through table name interpolation.
+ *
+ * Only tables that actually have a deleted_at column belong here; on any other
+ * table the generated UPDATE fails at runtime with "no such column". Add a
+ * table here together with its deleted_at column, not before.
  */
 const ALLOWED_SOFT_DELETE_TABLES = new Set([
   'users',
-  'instruments',
-  'orchestras',
   'music_lists',
   'music_pieces',
   'music_titles',
-  'associations',
-  'genres',
-  'rehearsals',
   'concerts',
-  'equipment',
-  'uniform_items',
-  'events',
-  'posts',
-  'polls',
-  'tasks',
   'projects',
   'tours',
   'resources',

@@ -40,8 +40,6 @@ const ACTION_TYPE_ICONS: Record<string, IconName> = {
   send_notification: 'bell',
   create_task: 'clipboard',
   update_field: 'pencil',
-  add_to_group: 'users',
-  remove_from_group: 'users',
   webhook: 'globe',
   delay: 'clock',
 };

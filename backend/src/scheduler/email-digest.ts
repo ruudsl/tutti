@@ -59,8 +59,8 @@ export async function sendWeeklyDigest(): Promise<void> {
                   AND u.email IS NOT NULL
                   AND u.role != 'inactive'
                   AND NOT EXISTS (
-                      SELECT 1 FROM user_notification_preferences unp
-                      WHERE unp.user_id = u.id AND unp.email_enabled = 0
+                      SELECT 1 FROM notification_preferences np
+                      WHERE np.user_id = u.id AND np.email_enabled = 0
                   )
             `,
         )

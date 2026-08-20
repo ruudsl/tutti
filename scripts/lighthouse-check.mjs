@@ -122,6 +122,18 @@ async function controleerInstalleerbaarheid(basis) {
  */
 const METINGEN = 3;
 
+/**
+ * Hoeveel pogingen we hooguit doen om aan METINGEN geldige metingen te komen.
+ *
+ * Een meting kan mislukken: dan geeft Lighthouse score null terug voor een
+ * categorie, of zet hij een runtimeError. Dat is geen score van nul maar een
+ * meting die niet is gelukt, en zo hoort hij ook geteld te worden. Eerder ging
+ * dat mis: drie rondes gaven 67, 0 en 82, waarbij die 0 een mislukte meting
+ * was. De mediaan kwam daardoor op 67 uit in plaats van op 82, en de controle
+ * sloeg alarm over iets wat niet was gemeten.
+ */
+const MAX_POGINGEN = METINGEN * 3;
+
 function mediaan(getallen) {
   const gesorteerd = [...getallen].sort((a, b) => a - b);
   return gesorteerd[Math.floor(gesorteerd.length / 2)];
@@ -133,21 +145,43 @@ const chrome = await chromeLauncher.launch({
 
 try {
   const rondes = [];
-  // De laatste meting blijft bewaard: daar kijkt de netwerkcontrole naar.
+  // De laatste geslaagde meting blijft bewaard: daar kijkt de netwerkcontrole naar.
   let laatste = null;
-  for (let i = 0; i < METINGEN; i++) {
+  let mislukt = 0;
+
+  for (let poging = 0; rondes.length < METINGEN && poging < MAX_POGINGEN; poging++) {
     const run = await lighthouse(url, {
       port: chrome.port,
       output: 'json',
       logLevel: 'error',
       onlyCategories: Object.keys(DREMPELS),
     });
+
+    // Een categorie zonder score is niet gemeten. Zo'n ronde meetellen als nul
+    // zou een storing in de meting verwarren met een trage pagina.
+    const ontbreekt = Object.keys(DREMPELS).filter((k) => typeof run.lhr.categories[k]?.score !== 'number');
+    if (run.lhr.runtimeError || ontbreekt.length > 0) {
+      mislukt++;
+      const reden = run.lhr.runtimeError?.message || `geen score voor ${ontbreekt.join(', ')}`;
+      console.log(`meting overgeslagen: ${reden}`);
+      continue;
+    }
+
     laatste = run.lhr;
-    // Bewaar het laatste verslag als bijlage voor de CI-uitvoer.
-    if (i === METINGEN - 1) writeFileSync('lighthouse-report.json', run.report);
-    rondes.push(
-      Object.fromEntries(Object.entries(run.lhr.categories).map(([k, v]) => [k, Math.round((v.score ?? 0) * 100)])),
+    writeFileSync('lighthouse-report.json', run.report);
+    rondes.push(Object.fromEntries(Object.entries(run.lhr.categories).map(([k, v]) => [k, Math.round(v.score * 100)])));
+  }
+
+  if (rondes.length < METINGEN) {
+    console.error(
+      `\nLighthouse kwam niet aan ${METINGEN} geldige metingen (${rondes.length} gelukt, ${mislukt} mislukt).`,
     );
+    console.error('Dat zegt niets over de scores; de meting zelf ging mis.');
+    process.exit(1);
+  }
+
+  if (mislukt > 0) {
+    console.log(`(${mislukt} meting${mislukt === 1 ? '' : 'en'} overgeslagen en opnieuw gedaan)\n`);
   }
 
   const scores = Object.fromEntries(Object.keys(DREMPELS).map((k) => [k, mediaan(rondes.map((r) => r[k] ?? 0))]));

@@ -98,7 +98,7 @@ function cleanupDataType(associationId: string, dataType: string, retentionDays:
           .prepare(
             `
           DELETE FROM practice_logs
-          WHERE ended_at < ?
+          WHERE practiced_at < ?
           AND user_id IN (SELECT id FROM users WHERE association_id = ?)
         `,
           )
@@ -113,7 +113,7 @@ function cleanupDataType(associationId: string, dataType: string, retentionDays:
             `
           DELETE FROM audio_recordings
           WHERE created_at < ?
-          AND user_id IN (SELECT id FROM users WHERE association_id = ?)
+          AND recorded_by IN (SELECT id FROM users WHERE association_id = ?)
         `,
           )
           .run(cutoff, associationId);
@@ -127,7 +127,7 @@ function cleanupDataType(associationId: string, dataType: string, retentionDays:
             `
           DELETE FROM users
           WHERE status = 'deleted'
-          AND updated_at < ?
+          AND deleted_at < ?
           AND association_id = ?
         `,
           )
