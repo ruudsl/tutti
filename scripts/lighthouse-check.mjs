@@ -139,23 +139,56 @@ function mediaan(getallen) {
   return gesorteerd[Math.floor(gesorteerd.length / 2)];
 }
 
-const chrome = await chromeLauncher.launch({
-  chromeFlags: ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
-});
+/**
+ * Elke ronde krijgt een eigen browser.
+ *
+ * Op de CI-runner viel Chrome er een keer middenin uit, en omdat alle drie de
+ * metingen dezelfde browser deelden nam hij de hele stap mee: "connect
+ * ECONNREFUSED 127.0.0.1:37127" als onafgevangen fout, zonder cijfer. Een
+ * browser die crasht is hetzelfde geval als een meting zonder score - de
+ * meting ging mis, de pagina zegt er niets mee. Daarom start hij per ronde
+ * opnieuw en telt zo'n ronde gewoon als mislukt, waarna de volgende poging
+ * volgt.
+ */
+async function meetEenRonde() {
+  const chrome = await chromeLauncher.launch({
+    chromeFlags: [
+      '--headless=new',
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-extensions',
+      '--disable-software-rasterizer',
+    ],
+  });
 
-try {
+  try {
+    return await lighthouse(url, {
+      port: chrome.port,
+      output: 'json',
+      logLevel: 'error',
+      onlyCategories: Object.keys(DREMPELS),
+    });
+  } finally {
+    await chrome.kill().catch(() => {});
+  }
+}
+
+{
   const rondes = [];
   // De laatste geslaagde meting blijft bewaard: daar kijkt de netwerkcontrole naar.
   let laatste = null;
   let mislukt = 0;
 
   for (let poging = 0; rondes.length < METINGEN && poging < MAX_POGINGEN; poging++) {
-    const run = await lighthouse(url, {
-      port: chrome.port,
-      output: 'json',
-      logLevel: 'error',
-      onlyCategories: Object.keys(DREMPELS),
-    });
+    let run;
+    try {
+      run = await meetEenRonde();
+    } catch (fout) {
+      mislukt++;
+      console.log(`meting overgeslagen: browser liep vast (${fout.message})`);
+      continue;
+    }
 
     // Een categorie zonder score is niet gemeten. Zo'n ronde meetellen als nul
     // zou een storing in de meting verwarren met een trage pagina.
@@ -226,6 +259,4 @@ try {
     console.error('\nLighthouse-controle mislukt:\n  ' + alleProblemen.join('\n  '));
     process.exitCode = 1;
   }
-} finally {
-  await chrome.kill();
 }
