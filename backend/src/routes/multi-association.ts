@@ -7,6 +7,7 @@ import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
+import { bewaakLedenLimiet, bewaakOrkestLimiet } from '../services/abonnementLimieten';
 import { z } from 'zod';
 
 const router = Router();
@@ -67,7 +68,19 @@ router.get(
       .prepare(
         `
         SELECT a.*,
-               (SELECT COUNT(*) FROM users WHERE association_id = a.id) as member_count,
+               (
+                 -- Dezelfde telling als de limietbewaking gebruikt: verwijderde
+                 -- leden tellen niet mee, en wie via user_associations bij deze
+                 -- vereniging hoort telt wel. Anders staat er 40 van de 100 op
+                 -- het scherm terwijl de grens al bereikt is.
+                 SELECT COUNT(*) FROM (
+                   SELECT id FROM users WHERE association_id = a.id AND deleted_at IS NULL
+                   UNION
+                   SELECT u.id FROM users u
+                   JOIN user_associations ua ON u.id = ua.user_id
+                   WHERE ua.association_id = a.id AND ua.status = 'active' AND u.deleted_at IS NULL
+                 )
+               ) as member_count,
                (SELECT COUNT(*) FROM orchestras WHERE association_id = a.id) as orchestra_count,
                pa.name as parent_name
         FROM associations a
@@ -589,6 +602,10 @@ router.post(
       throw new ApiError(409, 'Er staat al een uitnodiging open voor dit e-mailadres.');
     }
 
+    // Liever hier weigeren dan de uitgenodigde over een week op een dichte
+    // deur laten stuiten.
+    bewaakLedenLimiet(req.user!.associationId!);
+
     const id = uuidv4();
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -694,6 +711,10 @@ router.post(
     if (invitation.email.toLowerCase() !== req.user!.email?.toLowerCase()) {
       throw new ApiError(403, 'Deze uitnodiging is voor een ander e-mailadres.');
     }
+
+    // Tussen versturen en aannemen zit tot een week; de vereniging kan
+    // ondertussen vol zijn gelopen.
+    bewaakLedenLimiet(invitation.association_id);
 
     withTransaction(() => {
       db.prepare(

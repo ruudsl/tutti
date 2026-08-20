@@ -15,6 +15,7 @@ import { revokeUserSessions } from '../utils/sessionStore';
 import { sendEmail } from '../utils/email';
 import { getWelcomeEmail } from '../templates/emails';
 import logger from '../utils/logger';
+import { bewaakLedenLimiet } from '../services/abonnementLimieten';
 import { logAuditEvent } from './audit-logs';
 
 const router = Router();
@@ -663,6 +664,8 @@ router.post(
     if (existing) {
       throw new ApiError(409, 'Email is al in gebruik.');
     }
+
+    bewaakLedenLimiet(req.user!.associationId!);
 
     const userId = uuidv4();
     const passwordHash = bcrypt.hashSync(data.password, 10);
