@@ -299,18 +299,57 @@ async function executeUpdateField(config: Record<string, any>, context: Executio
     return;
   }
 
+  // fieldName komt uit de vrij invulbare config van de workflow en wordt in de
+  // query geplakt. Zonder controle kan een beheerder daar een hele SET-clausule
+  // in kwijt ("role = 'admin' WHERE 1=1 --") en zo rijen van andere
+  // verenigingen aanpassen. Alleen een kolom die de tabel echt heeft mag erin.
+  const kolommen = kolommenVan(tableName);
+  if (!kolommen.has(fieldName)) {
+    context.log.push(`Unknown field for ${entityType}: ${fieldName}`);
+    return;
+  }
+
+  if (BESCHERMDE_KOLOMMEN.has(fieldName)) {
+    context.log.push(`Field ${fieldName} cannot be changed by a workflow`);
+    return;
+  }
+
   const processedValue = replaceVariables(String(fieldValue), context);
 
+  // Niet elke tabel houdt updated_at bij; die alleen meenemen waar hij bestaat.
+  const zetUpdatedAt = kolommen.has('updated_at');
+  const sql = zetUpdatedAt
+    ? `UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`
+    : `UPDATE ${tableName} SET ${fieldName} = ? WHERE id = ?`;
+  const params = zetUpdatedAt
+    ? [processedValue, new Date().toISOString(), context.entityId]
+    : [processedValue, context.entityId];
+
   try {
-    db.prepare(`UPDATE ${tableName} SET ${fieldName} = ?, updated_at = ? WHERE id = ?`).run(
-      processedValue,
-      new Date().toISOString(),
-      context.entityId,
-    );
+    db.prepare(sql).run(...params);
     context.log.push(`Updated ${entityType}.${fieldName} to ${processedValue}`);
   } catch (error) {
     context.log.push(`Failed to update field: ${error}`);
   }
+}
+
+/**
+ * Kolommen die een workflow nooit mag overschrijven: ze bepalen bij wie een rij
+ * hoort of waarmee er wordt ingelogd.
+ */
+const BESCHERMDE_KOLOMMEN = new Set([
+  'id',
+  'association_id',
+  'password_hash',
+  'mfa_secret',
+  'microsoft_id',
+  'created_at',
+]);
+
+/** Kolomnamen van een tabel, uit de database zelf. */
+function kolommenVan(tabel: string): Set<string> {
+  const rijen = db.prepare(`PRAGMA table_info(${tabel})`).all() as Array<{ name: string }>;
+  return new Set(rijen.map((r) => r.name));
 }
 
 // De acties 'aan groep toevoegen' en 'uit groep verwijderen' zijn
