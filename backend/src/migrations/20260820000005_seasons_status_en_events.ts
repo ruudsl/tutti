@@ -16,6 +16,18 @@
  *    'planning' wordt 'draft'. 'archived' blijft toegestaan: er kunnen rijen
  *    zijn die zo staan, en die weggooien is geen migratie maar dataverlies.
  *
+ *    LET OP bij het herbouwen. connection.ts zet PRAGMA foreign_keys = ON, en
+ *    dan voert DROP TABLE eerst een impliciete DELETE uit. Drie tabellen
+ *    verwijzen naar seasons: season_events met ON DELETE CASCADE, en
+ *    attendance_stats en section_attendance_stats met ON DELETE SET NULL. Zonder
+ *    voorzorg wist dit dus alle evenementen van elk seizoen en verbreekt het de
+ *    koppeling in de twee statistiektabellen - stilzwijgend, want de migratie
+ *    meldt gewoon dat hij gelukt is.
+ *
+ *    De pragma uitzetten kan hier niet: de runner voert up() uit binnen een
+ *    transactie, en PRAGMA foreign_keys doet daar niets. De rijen worden daarom
+ *    eerst apart gezet en na de herbouw teruggeplaatst.
+ *
  * 2. season_events.event_id stond op NOT NULL, terwijl POST /seasons/:id/events
  *    het veld als optioneel behandelt (`eventId || null`). Voor een evenement
  *    van het type 'other' is er ook niets om naar te wijzen. Een evenement
@@ -36,6 +48,15 @@ export const up = (): void => {
   logger.info('Running migration: seasons_status_en_events (up)');
 
   if (/'planning'/.test(tabelSql('seasons'))) {
+    // Zet de rijen apart die de impliciete DELETE van DROP TABLE zou meenemen.
+    db.exec(`
+      CREATE TEMP TABLE seizoen_evenementen_bewaard AS SELECT * FROM season_events;
+      CREATE TEMP TABLE aanwezigheid_seizoen_bewaard AS
+        SELECT id, season_id FROM attendance_stats WHERE season_id IS NOT NULL;
+      CREATE TEMP TABLE sectie_aanwezigheid_seizoen_bewaard AS
+        SELECT id, season_id FROM section_attendance_stats WHERE season_id IS NOT NULL;
+    `);
+
     db.exec(`
       CREATE TABLE seasons_nieuw (
         id TEXT PRIMARY KEY,
@@ -70,6 +91,27 @@ export const up = (): void => {
       CREATE INDEX IF NOT EXISTS idx_seasons_association ON seasons(association_id);
       CREATE INDEX IF NOT EXISTS idx_seasons_status ON seasons(status);
       CREATE INDEX IF NOT EXISTS idx_seasons_dates ON seasons(start_date, end_date);
+    `);
+
+    // En zet ze terug. season_events is door de cascade leeggelopen; de twee
+    // statistiektabellen hebben hun season_id op NULL gekregen.
+    db.exec(`
+      DELETE FROM season_events;
+      INSERT INTO season_events SELECT * FROM seizoen_evenementen_bewaard;
+
+      UPDATE attendance_stats
+      SET season_id = (SELECT b.season_id FROM aanwezigheid_seizoen_bewaard b WHERE b.id = attendance_stats.id)
+      WHERE id IN (SELECT id FROM aanwezigheid_seizoen_bewaard);
+
+      UPDATE section_attendance_stats
+      SET season_id = (
+        SELECT b.season_id FROM sectie_aanwezigheid_seizoen_bewaard b WHERE b.id = section_attendance_stats.id
+      )
+      WHERE id IN (SELECT id FROM sectie_aanwezigheid_seizoen_bewaard);
+
+      DROP TABLE seizoen_evenementen_bewaard;
+      DROP TABLE aanwezigheid_seizoen_bewaard;
+      DROP TABLE sectie_aanwezigheid_seizoen_bewaard;
     `);
   }
 

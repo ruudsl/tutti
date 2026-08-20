@@ -72,9 +72,13 @@ The application is now available at:
 On first start, an admin account is automatically created:
 
 - **Email:** `admin@harmonie.nl`
-- **Password:** Generated and shown in console output
+- **Password:** Generated and written to `backend/data/admin-password.txt`
 
-You can preset a password via `ADMIN_INIT_PASSWORD` environment variable.
+The console prints the path, not the password itself. Delete that file once you
+have stored the password somewhere safe.
+
+You can preset a password via `ADMIN_INIT_PASSWORD` environment variable; in that
+case no file is written.
 
 ## Development
 
