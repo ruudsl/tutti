@@ -4,6 +4,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError, isUniekheidsfout } from '../middleware/errorHandler';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ const createProjectSchema = z.object({
   notes: z.string().optional(),
 });
 
-const updateProjectSchema = createProjectSchema.partial();
+const updateProjectSchema = wijzigingsschema(createProjectSchema);
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),

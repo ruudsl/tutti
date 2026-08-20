@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction, getPaginationParams, createPaginatedResult } from '../utils/database';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -39,7 +40,7 @@ const createUniformItemSchema = z.object({
   purchasePrice: z.number().min(0).optional(),
 });
 
-const updateUniformItemSchema = createUniformItemSchema.partial();
+const updateUniformItemSchema = wijzigingsschema(createUniformItemSchema);
 
 const createUniformSetSchema = z.object({
   name: z.string().min(1, 'Naam is verplicht'),

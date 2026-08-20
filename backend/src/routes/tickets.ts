@@ -38,6 +38,7 @@ import {
   getCaptchaSiteKey,
 } from '../services/captcha';
 import logger from '../utils/logger';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -102,7 +103,7 @@ const createTicketTypeSchema = z.object({
   showServiceFeeSeparate: z.boolean().default(false),
 });
 
-const updateTicketTypeSchema = createTicketTypeSchema.partial();
+const updateTicketTypeSchema = wijzigingsschema(createTicketTypeSchema);
 
 const createOrderSchema = z.object({
   items: z

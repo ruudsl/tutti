@@ -8,6 +8,7 @@ import { withTransaction, getPaginationParams, createPaginatedResult } from '../
 import { createConcertSchema, updateConcertSchema } from '../validation/schemas';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ const createProgramItemSchema = z.object({
   partOfSet: z.string().optional(),
 });
 
-const updateProgramItemSchema = createProgramItemSchema.partial();
+const updateProgramItemSchema = wijzigingsschema(createProgramItemSchema);
 
 const createMediaSchema = z.object({
   mediaType: z.string().min(1, 'Type is verplicht'),

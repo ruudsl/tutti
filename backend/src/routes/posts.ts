@@ -7,6 +7,7 @@ import { cacheMiddleware, cacheInvalidator } from '../middleware/cache';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { z } from 'zod';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ const createPostSchema = z.object({
   publishedAt: z.string().datetime().optional(),
 });
 
-const updatePostSchema = createPostSchema.partial();
+const updatePostSchema = wijzigingsschema(createPostSchema);
 
 const commentSchema = z.object({
   content: z.string().min(1, 'Reactie mag niet leeg zijn.'),
