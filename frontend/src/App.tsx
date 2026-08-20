@@ -210,6 +210,18 @@ function AppRoutes() {
             </PublicRoute>
           }
         />
+        {/* Dezelfde pagina met de slug van een vereniging erin, zodat elke
+            vereniging een eigen inloglink heeft die haar naam en logo toont.
+            Bij welke vereniging je hoort staat op je account; de slug bepaalt
+            alleen wat je op het scherm ziet. */}
+        <Route
+          path="/login/:slug"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
         <Route
           path="/forgot-password"
           element={

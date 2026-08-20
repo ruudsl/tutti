@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -25,6 +25,10 @@ export default function Login() {
   });
   const { login } = useAuth();
   const navigate = useNavigate();
+  // /login/:slug toont de naam en het logo van die vereniging. Zonder slug
+  // beslist de backend: bij een vereniging haar huisstijl, bij meer de
+  // neutrale - dan is geen enkele vereniging de juiste om te tonen.
+  const { slug } = useParams<{ slug?: string }>();
   const { t } = useTranslation();
   const errorRef = useRef<HTMLDivElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +36,7 @@ export default function Login() {
 
   useEffect(() => {
     api
-      .get('/settings/branding')
+      .get('/settings/branding', slug ? { params: { slug } } : undefined)
       .then(({ data }) => {
         setBranding(data);
       })
@@ -45,7 +49,7 @@ export default function Login() {
       .catch(() => {
         /* Microsoft not available */
       });
-  }, []);
+  }, [slug]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

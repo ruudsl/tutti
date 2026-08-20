@@ -273,6 +273,74 @@ describe('instellingen', () => {
     });
   });
 
+  /**
+   * Het inlogscherm haalt hier zijn naam en logo op, zonder token. De query
+   * luidde `SELECT ... FROM associations LIMIT 1`: op een installatie met een
+   * vereniging klopte dat toevallig, met meer kreeg iedereen de eerst
+   * aangemaakte te zien - ook de leden van een andere vereniging.
+   */
+  describe('huisstijl op het inlogscherm', () => {
+    const zetSlug = (associationId: string, slug: string) =>
+      db
+        .prepare('UPDATE associations SET slug = ?, display_name = ? WHERE id = ?')
+        .run(slug, `Naam ${slug}`, associationId);
+
+    it('is op te vragen zonder in te loggen', async () => {
+      const antwoord = await request(app).get('/api/settings/branding');
+      expect(antwoord.status).toBe(200);
+      expect(typeof antwoord.body.displayName).toBe('string');
+    });
+
+    it('toont de vereniging als er precies een is', async () => {
+      db.prepare('DELETE FROM associations WHERE id != ?').run(vereniging.id);
+      db.prepare('UPDATE associations SET display_name = ? WHERE id = ?').run('Harmonie Sint Cecilia', vereniging.id);
+
+      const antwoord = await request(app).get('/api/settings/branding');
+      expect(antwoord.body.displayName).toBe('Harmonie Sint Cecilia');
+    });
+
+    it('toont de neutrale huisstijl als er meer verenigingen zijn', async () => {
+      db.prepare('UPDATE associations SET display_name = ? WHERE id = ?').run('Harmonie Sint Cecilia', vereniging.id);
+      createTestAssociation({ name: `Tweede-${uuidv4()}` });
+
+      const antwoord = await request(app).get('/api/settings/branding');
+      expect(antwoord.body.displayName).toBe('Tutti');
+      expect(antwoord.body.logoUrl).toBeNull();
+    });
+
+    it('toont de vereniging waarvan de slug wordt gevraagd', async () => {
+      const tweede = createTestAssociation({ name: `Tweede-${uuidv4()}` });
+      zetSlug(vereniging.id, 'harmonie-a');
+      zetSlug(tweede.id, 'fanfare-b');
+
+      const antwoord = await request(app).get('/api/settings/branding?slug=fanfare-b');
+      expect(antwoord.body.displayName).toBe('Naam fanfare-b');
+    });
+
+    it('geeft niet de eerste vereniging bij een slug die niet bestaat', async () => {
+      db.prepare('UPDATE associations SET display_name = ? WHERE id = ?').run('Harmonie Sint Cecilia', vereniging.id);
+      createTestAssociation({ name: `Tweede-${uuidv4()}` });
+
+      const antwoord = await request(app).get('/api/settings/branding?slug=bestaat-niet');
+      expect(antwoord.body.displayName).toBe('Tutti');
+    });
+
+    it('toont een vereniging die op non-actief staat niet', async () => {
+      const tweede = createTestAssociation({ name: `Tweede-${uuidv4()}` });
+      zetSlug(tweede.id, 'gestopt');
+      db.prepare('UPDATE associations SET is_active = 0 WHERE id = ?').run(tweede.id);
+
+      const antwoord = await request(app).get('/api/settings/branding?slug=gestopt');
+      expect(antwoord.body.displayName).toBe('Tutti');
+    });
+
+    it('geeft geen lijst van verenigingen prijs', async () => {
+      createTestAssociation({ name: `Tweede-${uuidv4()}` });
+      const antwoord = await request(app).get('/api/settings/branding');
+      expect(Object.keys(antwoord.body).sort()).toEqual(['displayName', 'logoUrl']);
+    });
+  });
+
   describe('logo', () => {
     it('geeft 404 voor een bestandsnaam die niet bestaat', async () => {
       const antwoord = await alsBeheerder('get', '/logo/bestaatniet.png');

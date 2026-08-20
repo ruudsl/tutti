@@ -1,5 +1,6 @@
 import { currentLocale } from '../utils/locale';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   useIsSuperAdmin,
@@ -107,6 +108,17 @@ export default function MultiAssociation() {
   );
 }
 
+/**
+ * "3 / 100" als er een grens is, anders alleen het aantal.
+ *
+ * Een lege grens betekent geen grens; "3 / null" op het scherm zetten zou
+ * suggereren dat er iets misging.
+ */
+function metGrens(aantal: number | undefined, grens: number | null | undefined): string {
+  const gebruikt = aantal ?? 0;
+  return typeof grens === 'number' && grens > 0 ? `${gebruikt} / ${grens}` : `${gebruikt}`;
+}
+
 function AssociationsTab() {
   const { t } = useTranslation();
   const { data: associations, isLoading } = useSuperAdminAssociations();
@@ -207,14 +219,20 @@ function AssociationsTab() {
                     <div className="font-medium">{assoc.name}</div>
                     {assoc.city && <div className="text-sm text-gray-500">{assoc.city}</div>}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{assoc.slug}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {/* De slug is de inloglink van deze vereniging: dat scherm
+                        toont dan haar naam en logo in plaats van de neutrale. */}
+                    {assoc.slug ? (
+                      <Link to={`/login/${assoc.slug}`} className="text-blue-600 hover:underline">
+                        /login/{assoc.slug}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{getTierBadge(assoc.subscriptionTier)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    {assoc.memberCount} / {assoc.maxMembers}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {assoc.orchestraCount} / {assoc.maxOrchestras}
-                  </td>
+                  <td className="px-4 py-3 text-sm">{metGrens(assoc.memberCount, assoc.maxMembers)}</td>
+                  <td className="px-4 py-3 text-sm">{metGrens(assoc.orchestraCount, assoc.maxOrchestras)}</td>
                   <td className="px-4 py-3">
                     {assoc.isActive ? (
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">

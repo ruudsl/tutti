@@ -268,22 +268,56 @@ router.get(
   }),
 );
 
+interface BrandingRij {
+  name: string;
+  display_name: string | null;
+  logo_path: string | null;
+}
+
 /**
- * GET /settings/branding - Get public branding (logo + name, no auth needed for login page)
+ * De vereniging als er precies een is, anders niets.
+ *
+ * Het aantal wordt geteld en niet met LIMIT 1 opgehaald: bij twee verenigingen
+ * hoort het antwoord "geen" te zijn, niet "de eerste".
+ */
+function enigeVereniging(): BrandingRij | undefined {
+  const { aantal } = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
+  if (aantal !== 1) return undefined;
+
+  return db.prepare('SELECT name, display_name, logo_path FROM associations').get() as BrandingRij | undefined;
+}
+
+/**
+ * GET /settings/branding - naam en logo voor het inlogscherm, zonder inloggen.
+ *
+ * Hier stond `SELECT ... FROM associations LIMIT 1`, zonder ORDER BY en zonder
+ * filter. Op een installatie met een vereniging klopte dat toevallig; met meer
+ * verenigingen kreeg iedereen de eerst aangemaakte te zien, wie hij ook was.
+ *
+ * Nu bepaalt de slug in de URL het: /login/harmonie-sint-cecilia vraagt
+ * ?slug=harmonie-sint-cecilia op. Zonder slug hangt het van de installatie af.
+ * Staat er precies een vereniging, dan is er niets te kiezen en is haar naam de
+ * juiste; staan er meer, dan is geen enkele vereniging de juiste en tonen we de
+ * neutrale huisstijl. Liever geen naam dan de verkeerde.
+ *
+ * Een slug die niet bestaat valt terug op datzelfde neutrale scherm: een typefout
+ * in een gedeelde link hoort geen kapotte pagina op te leveren.
  */
 router.get(
   '/branding',
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
-    const association = db
-      .prepare(
-        `
-        SELECT name, display_name, logo_path FROM associations LIMIT 1
-    `,
-      )
-      .get() as any;
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const slug = typeof req.query.slug === 'string' ? req.query.slug.trim() : '';
+
+    const association = slug
+      ? (db
+          .prepare(
+            `SELECT name, display_name, logo_path FROM associations WHERE slug = ? AND COALESCE(is_active, 1) = 1`,
+          )
+          .get(slug) as BrandingRij | undefined)
+      : enigeVereniging();
 
     res.json({
-      displayName: association?.display_name || association?.name || 'Harmonie',
+      displayName: association?.display_name || association?.name || 'Tutti',
       logoUrl: association?.logo_path ? `/api/settings/logo/${path.basename(association.logo_path)}` : null,
     });
   }),
