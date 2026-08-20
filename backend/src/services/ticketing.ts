@@ -883,7 +883,7 @@ export function initiateTicketTransfer(
   const ticket = db
     .prepare(
       `
-        SELECT t.id, t.qr_code, t.buyer_email, t.status, t.order_id
+        SELECT t.id, t.qr_code, t.buyer_email, t.buyer_name, t.status, t.order_id
         FROM tickets t
         WHERE t.id = ? AND LOWER(t.buyer_email) = LOWER(?)
     `,
@@ -893,6 +893,7 @@ export function initiateTicketTransfer(
         id: string;
         qr_code: string;
         buyer_email: string;
+        buyer_name: string;
         status: string;
         order_id: string;
       }
@@ -936,10 +937,10 @@ export function initiateTicketTransfer(
 
   db.prepare(
     `
-        INSERT INTO ticket_transfers (id, ticket_id, from_email, to_email, to_name, transfer_code, status, expires_at, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)
+        INSERT INTO ticket_transfers (id, ticket_id, from_email, from_name, recipient_email, recipient_name, transfer_code, status, expires_at, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP)
     `,
-  ).run(transferId, ticketId, fromEmail, toEmail, toName, transferCode, expiresAt);
+  ).run(transferId, ticketId, fromEmail, ticket.buyer_name, toEmail, toName, transferCode, expiresAt);
 
   logger.info('Ticket transfer initiated', { transferId, ticketId, fromEmail, toEmail });
 
@@ -962,7 +963,7 @@ export function completeTicketTransfer(transferCode: string): TransferResult {
   const transfer = db
     .prepare(
       `
-        SELECT tt.id, tt.ticket_id, tt.from_email, tt.to_email, tt.to_name, tt.status, tt.expires_at,
+        SELECT tt.id, tt.ticket_id, tt.from_email, tt.recipient_email, tt.recipient_name, tt.status, tt.expires_at,
                t.qr_code, t.status as ticket_status
         FROM ticket_transfers tt
         JOIN tickets t ON tt.ticket_id = t.id
@@ -974,8 +975,8 @@ export function completeTicketTransfer(transferCode: string): TransferResult {
         id: string;
         ticket_id: string;
         from_email: string;
-        to_email: string;
-        to_name: string;
+        recipient_email: string;
+        recipient_name: string;
         status: string;
         expires_at: string;
         qr_code: string;
@@ -1022,16 +1023,16 @@ export function completeTicketTransfer(transferCode: string): TransferResult {
     db.prepare(
       `
             UPDATE tickets
-            SET buyer_email = ?, buyer_name = ?, qr_code = ?, updated_at = CURRENT_TIMESTAMP
+            SET buyer_email = ?, buyer_name = ?, qr_code = ?
             WHERE id = ?
         `,
-    ).run(transfer.to_email, transfer.to_name, newQRCode, transfer.ticket_id);
+    ).run(transfer.recipient_email, transfer.recipient_name, newQRCode, transfer.ticket_id);
 
     // Mark transfer as completed
     db.prepare(
       `
             UPDATE ticket_transfers
-            SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+            SET status = 'completed', accepted_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `,
     ).run(transfer.id);
@@ -1043,7 +1044,7 @@ export function completeTicketTransfer(transferCode: string): TransferResult {
     transferId: transfer.id,
     ticketId: transfer.ticket_id,
     fromEmail: transfer.from_email,
-    toEmail: transfer.to_email,
+    toEmail: transfer.recipient_email,
   });
 
   return {
@@ -1053,8 +1054,8 @@ export function completeTicketTransfer(transferCode: string): TransferResult {
     ticket: {
       id: transfer.ticket_id,
       code: newQRCode,
-      newOwnerEmail: transfer.to_email,
-      newOwnerName: transfer.to_name,
+      newOwnerEmail: transfer.recipient_email,
+      newOwnerName: transfer.recipient_name,
     },
   };
 }

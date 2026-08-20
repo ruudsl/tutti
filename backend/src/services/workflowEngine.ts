@@ -231,12 +231,13 @@ async function executeSendNotification(config: Record<string, any>, context: Exe
   const processedMessage = replaceVariables(message || '', context);
 
   for (const userId of userIds) {
+    // De tabel heeft geen priority-kolom; die hoort bij de extra gegevens.
     db.prepare(
       `
-      INSERT INTO notifications (id, user_id, title, message, type, priority, created_at)
+      INSERT INTO notifications (id, user_id, title, body, type, data, created_at)
       VALUES (?, ?, ?, ?, 'workflow', ?, ?)
     `,
-    ).run(uuidv4(), userId, processedTitle, processedMessage, priority || 'medium', now);
+    ).run(uuidv4(), userId, processedTitle, processedMessage, JSON.stringify({ priority: priority || 'medium' }), now);
   }
 
   context.log.push(`Created ${userIds.length} notifications`);

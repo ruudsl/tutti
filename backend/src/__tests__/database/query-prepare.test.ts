@@ -80,9 +80,6 @@ const OPENSTAAND = new Set([
   'routes/replacement-requests.ts — no such column: title',
   'routes/stage-layouts.ts — no such column: association_id',
   'services/maintenanceAlerts.ts — no such column: status',
-  'services/ticketing.ts — no such column: tt.to_email',
-  'services/ticketing.ts — no such column: updated_at',
-  'services/ticketing.ts — no such column: completed_at',
   'services/ticketing.ts — no such table: scanner_tokens',
   'services/ticketing.ts — no such table: offline_scan_log',
   'services/workflowEngine.ts — no such table: group_members',
@@ -120,7 +117,8 @@ describe('Elke query is voor te bereiden', () => {
           gecontroleerd++;
         } catch (error) {
           const melding = error instanceof Error ? error.message : String(error);
-          if (!/no such (column|table)/i.test(melding)) continue;
+          // SQLite formuleert het bij een INSERT anders dan bij de rest.
+          if (!/no such (column|table)|has no column named/i.test(melding)) continue;
 
           const ontbrekendeTabel = melding.match(/no such table: (\w+)/)?.[1];
           if (ontbrekendeTabel && zelfAangemaakt.has(ontbrekendeTabel)) continue;
