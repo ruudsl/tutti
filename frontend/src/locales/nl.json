@@ -156,6 +156,32 @@
     "admin": "Beheer"
   },
   "modules": {
+    "categories": {
+      "music": {
+        "title": "Muziek maken",
+        "description": "Alles rond het spelen zelf: thuis oefenen, de opstelling op het podium, aanwezigheid en invallers."
+      },
+      "planning": {
+        "title": "Plannen en organiseren",
+        "description": "Het seizoen vooruit, projecten en reizen, ruimtes en het werk dat erbij hoort."
+      },
+      "communication": {
+        "title": "Communicatie",
+        "description": "Hoe de vereniging haar leden bereikt en wat er onderling wordt vastgelegd."
+      },
+      "assets": {
+        "title": "Bezit en beheer",
+        "description": "Wat de vereniging bezit en uitleent, en wat er kapot is."
+      },
+      "finance": {
+        "title": "Geld",
+        "description": "De boekhouding en de kaartverkoop."
+      },
+      "other": {
+        "title": "Overig",
+        "description": "Modules die dit scherm nog niet kon indelen."
+      }
+    },
     "title": "Modules",
     "description": "Zet onderdelen uit die de vereniging niet gebruikt. Ze verdwijnen dan uit het menu en zijn niet meer op te vragen. Er wordt niets verwijderd: zet je een module later weer aan, dan staat alles er nog precies zo bij.",
     "on": "Aan",

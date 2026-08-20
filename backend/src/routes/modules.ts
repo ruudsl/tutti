@@ -49,6 +49,7 @@ router.get(
     res.json(
       getModuleStates(req.user!.associationId).map((m) => ({
         key: m.key,
+        category: m.category,
         title: m.title,
         description: m.description,
         enabled: m.enabled,

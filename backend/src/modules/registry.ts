@@ -12,9 +12,21 @@
  * er geen applicatie meer.
  */
 
+/**
+ * De groepen waarin het beheerscherm de modules toont.
+ *
+ * Negentien schakelaars onder elkaar zijn niet te overzien; gegroepeerd wel.
+ * De groep zegt niets over gedrag - hij bepaalt alleen onder welk kopje de
+ * module op het scherm staat. De namen van de kopjes staan in de vertalingen
+ * van de frontend, onder modules.categories.
+ */
+export type ModuleCategory = 'music' | 'planning' | 'communication' | 'assets' | 'finance';
+
 export interface ModuleDefinition {
   /** Sleutel in de database en in de API. Verandert niet meer na uitlevering. */
   key: string;
+  /** Onder welk kopje de module in het beheerscherm staat. */
+  category: ModuleCategory;
   /** Naam zoals de beheerder die ziet. */
   title: string;
   /** Een zin die uitlegt wat er verdwijnt als de module uit gaat. */
@@ -33,6 +45,7 @@ export interface ModuleDefinition {
 export const MODULES: ModuleDefinition[] = [
   {
     key: 'accounting',
+    category: 'finance',
     title: 'Boekhouding',
     description:
       'Grootboek, facturen, bankafschriften, SEPA-incasso en contributie. Zet dit uit als de vereniging de boekhouding buiten Tutti doet.',
@@ -42,6 +55,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'ticketing',
+    category: 'finance',
     title: 'Kaartverkoop',
     description:
       'Kaartverkoop voor concerten, met betaalinstellingen, verkoopoverzicht en de scanner bij de deur. Zet dit uit als er geen kaarten via Tutti worden verkocht.',
@@ -51,6 +65,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'stage',
+    category: 'music',
     title: 'Podium en opstelling',
     description:
       'Podiumindeling, stoelindeling, partijverdeling, bezetting en buurvoorkeuren. Zet dit uit als de opstelling op papier of in het hoofd van de dirigent zit.',
@@ -60,6 +75,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'polls',
+    category: 'communication',
     title: 'Peilingen',
     description:
       'Peilingen onder de leden, inclusief het prikken van een repetitiedatum. Zet dit uit als besluiten in de app-groep of op de repetitie vallen.',
@@ -69,6 +85,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'tasks',
+    category: 'planning',
     title: 'Taken',
     description:
       'Taken toewijzen en afvinken, met sjablonen voor terugkerend werk. Zet dit uit als afspraken mondeling of per mail gaan.',
@@ -78,6 +95,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'posts',
+    category: 'communication',
     title: 'Nieuwsberichten',
     description:
       'Berichten voor de leden, met vastgezette mededelingen op het infoscherm. Zet dit uit als nieuws via de website of een app-groep gaat.',
@@ -87,6 +105,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'mailings',
+    category: 'communication',
     title: 'Mailings',
     description:
       'Bulkmail aan een selectie leden, met bijlagen en verzendstatus. Zet dit uit als er via een externe mailinglijst wordt gemaild.',
@@ -96,6 +115,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'contacts',
+    category: 'communication',
     title: 'Externe contacten',
     description:
       'Adresboek voor mensen buiten de vereniging: zalen, sponsoren, dirigenten van buiten. Zet dit uit als dat elders wordt bijgehouden.',
@@ -105,6 +125,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'issues',
+    category: 'assets',
     title: 'Meldingen',
     description:
       'Leden melden problemen met bladmuziek, instrumenten of de zaal. Zet dit uit als dat via de bestuurstafel loopt.',
@@ -114,6 +135,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'practice',
+    category: 'music',
     title: 'Thuis oefenen',
     description:
       "Oefensessies bijhouden, doelen stellen en oefenschema's maken. Zet dit uit als de vereniging niets van het thuiswerk van leden wil bijhouden.",
@@ -123,6 +145,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'externals',
+    category: 'music',
     title: 'Invallers en vervangers',
     description:
       'Musici van buiten uitnodigen en vervangingsverzoeken beheren. Zet dit uit als invallers via een telefoontje geregeld worden.',
@@ -132,6 +155,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'inventory',
+    category: 'assets',
     title: 'Inventaris',
     description:
       'Instrumenten, uniformen, apparatuur en concertkleding: wie heeft wat, in welke staat, en wanneer terug. Zet dit uit als de vereniging geen eigen bezit uitleent.',
@@ -141,6 +165,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'projects',
+    category: 'planning',
     title: 'Projecten en reizen',
     description:
       'Meerdaagse projecten en concertreizen, met deelnemers, vervoer en kosten. Zet dit uit als het bij losse concerten blijft.',
@@ -150,6 +175,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'resources',
+    category: 'planning',
     title: 'Ruimtes reserveren',
     description:
       'Repetitieruimtes en materiaal reserveren met een bezettingsoverzicht. Zet dit uit als er maar een zaal is en die altijd vrij is.',
@@ -159,6 +185,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'wiki',
+    category: 'communication',
     title: 'Wiki',
     description:
       "Interne kennisbank met pagina's, versies en bijlagen. Zet dit uit als afspraken in een gedeelde map staan.",
@@ -168,6 +195,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'performances',
+    category: 'music',
     title: 'Uitvoeringshistorie',
     description: 'Bijhouden welk stuk wanneer en waar is gespeeld. Zet dit uit als dat niet wordt bijgehouden.',
     defaultEnabled: false,
@@ -176,6 +204,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'workflows',
+    category: 'planning',
     title: 'Workflow-automatisering',
     description:
       'Automatisch acties uitvoeren bij gebeurtenissen, bijvoorbeeld een herinnering sturen voor een concert. Zet dit uit als niemand die regels beheert.',
@@ -185,6 +214,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'seasons',
+    category: 'planning',
     title: 'Seizoensplanning',
     description:
       'Een heel seizoen vooruit plannen met sjablonen, begroting en terugkerende repetities. Zet dit uit als de planning per maand gaat.',
@@ -194,6 +224,7 @@ export const MODULES: ModuleDefinition[] = [
   },
   {
     key: 'attendance',
+    category: 'music',
     title: 'Aanwezigheidsanalyse',
     description:
       'Overzichten en trends van aanwezigheid per lid en per sectie. Zet dit uit als aanwezigheid alleen per repetitie wordt afgetekend.',
