@@ -748,45 +748,18 @@ router.post(
 // ===========================================
 
 /**
- * De verenigingen waarmee een partnerschap aangevraagd kan worden.
+ * Er is bewust geen lijst van verenigingen op het platform.
  *
- * Zonder deze lijst was het aanvragen van een partnerschap in de praktijk
- * onmogelijk: de route erachter wil een id, en een beheerder kon nergens zien
- * welke verenigingen er zijn - dat overzicht is alleen voor een super-admin.
+ * Die stond hier wel - naam en plaats van elke actieve vereniging - omdat het
+ * aanvragen van een partnerschap anders onmogelijk was: de route erachter wil
+ * een id, en een beheerder kon nergens zien welke verenigingen er zijn.
  *
- * Bewust karig: naam en plaats, van verenigingen die actief zijn, zonder de
- * eigen vereniging. Geen adressen, geen aantallen, geen abonnement.
+ * Koppelen gaat nu via een code: POST /music-sharing/link-code maakt er een,
+ * de andere vereniging voert hem in bij /link-code/redeem. Die code geef je
+ * buiten Tutti om door, dus je weet altijd met wie je gekoppeld bent - je hebt
+ * die ander zelf gesproken. Rondkijken wie er verder op het platform zit kan
+ * daarmee niet meer, en dat is de bedoeling.
  */
-router.get(
-  '/directory',
-  authenticateToken,
-  requireRole('board', 'admin'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const verenigingen = db
-      .prepare(
-        `
-        SELECT id, name, display_name, city
-        FROM associations
-        WHERE id != ? AND COALESCE(is_active, 1) = 1
-        ORDER BY name
-    `,
-      )
-      .all(req.user!.associationId) as {
-      id: string;
-      name: string;
-      display_name: string | null;
-      city: string | null;
-    }[];
-
-    res.json(
-      verenigingen.map((v) => ({
-        id: v.id,
-        name: v.display_name || v.name,
-        city: v.city,
-      })),
-    );
-  }),
-);
 
 /**
  * De muziektitels die partners hebben opengesteld.
