@@ -77,6 +77,51 @@ if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
+/**
+ * Tijdelijke bestanden horen bij degene die ze heeft gemaakt.
+ *
+ * De gereedschappen hier - splitsen, samenvoegen, draaien - schrijven hun
+ * resultaat naar TEMP_DIR en geven de bestandsnaam terug. Die map is gedeeld
+ * door alle verenigingen, en de drie routes die er weer uit lezen namen een
+ * naam aan zonder te kijken van wie het bestand was. Elk ingelogd lid kon zo
+ * elk resultaat ophalen, en /save-as-music-piece maakte het scherper: daarmee
+ * kon een muziekcommissielid het resultaat van een andere vereniging als eigen
+ * partij in de bibliotheek opnemen.
+ *
+ * De naam draagt de eigenaar nu mee. Dat scheelt een tabel voor bestanden die
+ * na een uur worden opgeruimd, en het overleeft een herstart - een register in
+ * het geheugen zou dat niet doen.
+ *
+ * Bestanden van voor deze wijziging dragen geen eigenaar en zijn daarmee niet
+ * meer op te halen. Dat is bewust: het zijn tijdelijke bestanden met een
+ * opruimroute, en de veilige kant is hier de juiste.
+ */
+function tijdelijkeNaamVoor(userId: string, basisnaam: string): string {
+  return `${userId}_${uuidv4()}_${basisnaam}`;
+}
+
+/**
+ * Het pad naar een tijdelijk bestand van deze gebruiker, of null.
+ *
+ * Eén antwoord voor "bestaat niet" en "niet van jou": het verschil tussen die
+ * twee vertelt of een naam raak was.
+ */
+function eigenTijdelijkBestand(req: AuthRequest, opgegevenNaam: string): string | null {
+  const veiligeNaam = path.basename(opgegevenNaam);
+  if (!veiligeNaam.startsWith(`${req.user!.id}_`)) return null;
+
+  const pad = path.resolve(TEMP_DIR, veiligeNaam);
+  if (!pad.startsWith(path.resolve(TEMP_DIR) + path.sep)) return null;
+
+  return fs.existsSync(pad) ? pad : null;
+}
+
+/** De oorspronkelijke naam, zonder de eigenaar en het volgnummer ervoor. */
+function oorspronkelijkeNaam(tijdelijkeNaam: string): string {
+  const delen = tijdelijkeNaam.split('_');
+  return delen.length > 2 ? delen.slice(2).join('_') : tijdelijkeNaam;
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
@@ -116,7 +161,7 @@ router.post(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   upload.single('pdf'),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
@@ -167,7 +212,7 @@ router.post(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   upload.single('pdf'),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
@@ -210,7 +255,7 @@ router.post(
       // Save to temp file
       const pdfBytes = await newPdf.save();
       const filename = `${range.name.replace(/[^a-zA-Z0-9_ ()-]/g, '')}.pdf`;
-      const filepath = path.join(TEMP_DIR, `${uuidv4()}_${filename}`);
+      const filepath = path.join(TEMP_DIR, tijdelijkeNaamVoor(req.user!.id, filename));
 
       fs.writeFileSync(filepath, pdfBytes);
 
@@ -232,7 +277,7 @@ router.post(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   upload.single('pdf'),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
@@ -300,7 +345,7 @@ router.post(
 
     const pdfBytes = await newPdf.save();
     const filename = `split_${path.basename(req.file.originalname, '.pdf')}.pdf`;
-    const filepath = path.join(TEMP_DIR, `${uuidv4()}_${filename}`);
+    const filepath = path.join(TEMP_DIR, tijdelijkeNaamVoor(req.user!.id, filename));
 
     fs.writeFileSync(filepath, pdfBytes);
 
@@ -316,22 +361,16 @@ router.post(
 );
 
 // Download processed PDF
-router.get('/download/:filename', authenticateToken, (req: Request, res: Response) => {
+router.get('/download/:filename', authenticateToken, (req: AuthRequest, res: Response) => {
   try {
     const { filename } = req.params;
 
-    // Sanitize filename
-    const sanitizedFilename = path.basename(filename);
-    const filepath = path.join(TEMP_DIR, sanitizedFilename);
-
-    if (!fs.existsSync(filepath)) {
+    const filepath = eigenTijdelijkBestand(req, filename);
+    if (!filepath) {
       return res.status(404).json({ error: 'Bestand niet gevonden' });
     }
 
-    // Extract original filename (after UUID_)
-    const originalFilename = sanitizedFilename.includes('_')
-      ? sanitizedFilename.substring(sanitizedFilename.indexOf('_') + 1)
-      : sanitizedFilename;
+    const originalFilename = oorspronkelijkeNaam(path.basename(filename));
 
     res.download(filepath, originalFilename, (err) => {
       if (err && !res.headersSent) {
@@ -350,7 +389,7 @@ router.post(
   '/download-zip',
   authenticateToken,
   requireRole('music_committee', 'admin'),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { filepaths } = req.body;
 
     if (!filepaths || !Array.isArray(filepaths) || filepaths.length === 0) {
@@ -360,17 +399,12 @@ router.post(
     // Validate all files exist
     const validFiles: { tempPath: string; originalName: string }[] = [];
     for (const filepath of filepaths) {
-      const sanitized = path.basename(filepath);
-      const fullPath = path.join(TEMP_DIR, sanitized);
-
-      if (!fs.existsSync(fullPath)) {
+      const fullPath = eigenTijdelijkBestand(req, filepath);
+      if (!fullPath) {
         continue;
       }
 
-      // Extract original filename (after UUID_)
-      const originalName = sanitized.includes('_') ? sanitized.substring(sanitized.indexOf('_') + 1) : sanitized;
-
-      validFiles.push({ tempPath: fullPath, originalName });
+      validFiles.push({ tempPath: fullPath, originalName: oorspronkelijkeNaam(path.basename(filepath)) });
     }
 
     if (validFiles.length === 0) {
@@ -397,7 +431,7 @@ router.post(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   upload.array('pdfs', 50),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const uploadedFiles = req.files;
     if (!Array.isArray(uploadedFiles) || uploadedFiles.length < 2) {
       return res.status(400).json({ error: 'Minimaal 2 PDF bestanden vereist' });
@@ -414,7 +448,7 @@ router.post(
 
     const pdfBytes = await mergedPdf.save();
     const filename = `merged_${Date.now()}.pdf`;
-    const filepath = path.join(TEMP_DIR, `${uuidv4()}_${filename}`);
+    const filepath = path.join(TEMP_DIR, tijdelijkeNaamVoor(req.user!.id, filename));
 
     fs.writeFileSync(filepath, pdfBytes);
 
@@ -434,7 +468,7 @@ router.post(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   upload.single('pdf'),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Geen PDF bestand ontvangen' });
     }
@@ -460,7 +494,7 @@ router.post(
     const safeOriginalName = path.basename(req.file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_');
     const filename = `rotated_${safeOriginalName || 'document.pdf'}`;
     const tempRoot = path.resolve(TEMP_DIR);
-    const filepath = path.resolve(tempRoot, `${uuidv4()}_${filename}`);
+    const filepath = path.resolve(tempRoot, tijdelijkeNaamVoor(req.user!.id, filename));
 
     if (!filepath.startsWith(tempRoot + path.sep)) {
       return res.status(400).json({ error: 'Ongeldige bestandsnaam' });
@@ -488,11 +522,8 @@ router.post(
       return res.status(400).json({ error: 'Filepath en filename zijn verplicht' });
     }
 
-    // Sanitize and validate filepath
-    const sanitizedFilepath = path.basename(filepath);
-    const tempFilePath = path.join(TEMP_DIR, sanitizedFilepath);
-
-    if (!fs.existsSync(tempFilePath)) {
+    const tempFilePath = eigenTijdelijkBestand(req, filepath);
+    if (!tempFilePath) {
       return res.status(404).json({ error: 'Bestand niet gevonden in temp directory' });
     }
 

@@ -158,6 +158,23 @@ async function importFiles(
 ): Promise<{ uploaded: ImportResult[]; errors: ImportError[] }> {
   if (!user) throw new ApiError(401, 'Unauthorized');
 
+  // music_lists heeft geen association_id; de grens loopt via het orkest.
+  // Zonder deze controle kon een lijst-id van een andere vereniging worden
+  // meegegeven, waarna de geimporteerde stukken daar op de repertoirelijst
+  // belandden en de leden van die vereniging er een melding over kregen.
+  if (listId) {
+    const lijst = db
+      .prepare(
+        `SELECT ml.id FROM music_lists ml
+         JOIN orchestras o ON o.id = ml.orchestra_id
+         WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL`,
+      )
+      .get(listId, user.associationId);
+    if (!lijst) {
+      throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+  }
+
   const uploaded: ImportResult[] = [];
   const errors: ImportError[] = [];
   const savedFiles: { filename: string; filePath: string; originalName: string }[] = [];
@@ -378,19 +395,32 @@ router.post(
  *     security:
  *       - bearerAuth: []
  */
+/**
+ * GET /cloud-import/config
+ *
+ * Hier stond `FROM associations LIMIT 1`, zonder filter en zonder de
+ * aanvrager te gebruiken - de parameter heette niet voor niets `_req`. Elk
+ * ingelogd lid van elke vereniging kreeg zo de instellingen van de eerst
+ * aangemaakte vereniging terug, inclusief google_drive_api_key. Datzelfde veld
+ * staat in settings.ts achter requireRole('admin') en de ip-controle.
+ *
+ * Nu: de eigen vereniging, en dezelfde rol als de importroutes zelf vragen.
+ * Wie niet mag importeren heeft de sleutels om te importeren ook niet nodig.
+ */
 router.get(
   '/config',
   authenticateToken,
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const association = db
       .prepare(
         `
         SELECT microsoft_client_id, microsoft_tenant_id, microsoft_enabled,
                google_drive_client_id, google_drive_api_key, google_drive_enabled
-        FROM associations LIMIT 1
+        FROM associations WHERE id = ?
     `,
       )
-      .get() as
+      .get(req.user!.associationId) as
       | {
           microsoft_client_id: string | null;
           microsoft_tenant_id: string | null;

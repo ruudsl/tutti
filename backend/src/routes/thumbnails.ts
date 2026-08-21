@@ -4,9 +4,51 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import db from '../database/connection';
 import logger from '../utils/logger';
 
 const router = Router();
+
+/**
+ * Mag deze gebruiker dit bestand zien?
+ *
+ * Deze routes namen een bestandsnaam aan en lazen die uit de uploadmap. Path
+ * traversal was afgevangen met path.basename, maar verder werd er niets
+ * gecontroleerd: elk ingelogd lid kon zo een voorbeeld opvragen van elke pdf
+ * in die map. De map is gedeeld door alle verenigingen.
+ *
+ * GET /music-pieces/:id/download - dezelfde bestanden, andere ingang - doet
+ * twee controles: het stuk moet van de eigen vereniging zijn, en een gewoon
+ * lid moet het instrument bespelen. Die twee gelden hier ook. Dat de
+ * bestandsnamen uit een tijdstempel en een uuid bestaan en dus lastig te raden
+ * zijn, is geen toegangscontrole.
+ *
+ * Geeft het pad terug, of null als het bestand niet bestaat of niet van deze
+ * gebruiker is. Eén antwoord voor beide gevallen: het verschil tussen "bestaat
+ * niet" en "niet van jou" vertelt of een bestandsnaam raak was.
+ */
+function haalToegankelijkPdf(req: AuthRequest, bestandsnaam: string): string | null {
+  const veiligeNaam = path.basename(bestandsnaam);
+
+  const partij = db
+    .prepare(
+      `SELECT instrument_id FROM music_pieces
+       WHERE file_path = ? AND association_id = ? AND deleted_at IS NULL`,
+    )
+    .get(veiligeNaam, req.user!.associationId) as { instrument_id: string | null } | undefined;
+
+  if (!partij) return null;
+
+  if (req.user!.role === 'member' && partij.instrument_id) {
+    const speeltMee = db
+      .prepare('SELECT 1 FROM user_instruments WHERE user_id = ? AND instrument_id = ?')
+      .get(req.user!.id, partij.instrument_id);
+    if (!speeltMee) return null;
+  }
+
+  const pad = path.join(UPLOAD_DIR, veiligeNaam);
+  return fs.existsSync(pad) ? pad : null;
+}
 
 // Configure directories
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
@@ -154,12 +196,8 @@ router.get(
       throw new ApiError(400, 'Invalid size. Use: small, medium, or large');
     }
 
-    // Sanitize filename to prevent path traversal
-    const sanitizedFilename = path.basename(filename);
-    const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
-
-    // Check if PDF exists
-    if (!fs.existsSync(pdfPath)) {
+    const pdfPath = haalToegankelijkPdf(req, filename);
+    if (!pdfPath) {
       throw new ApiError(404, 'PDF file not found');
     }
 
@@ -231,12 +269,9 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
 
-    // Sanitize filename
     const sanitizedFilename = path.basename(filename);
-    const pdfPath = path.join(UPLOAD_DIR, sanitizedFilename);
-
-    // Check if PDF exists
-    if (!fs.existsSync(pdfPath)) {
+    const pdfPath = haalToegankelijkPdf(req, filename);
+    if (!pdfPath) {
       throw new ApiError(404, 'PDF file not found');
     }
 
