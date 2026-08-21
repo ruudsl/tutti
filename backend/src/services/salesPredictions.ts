@@ -187,6 +187,7 @@ function getHistoricalData(
         FROM concerts c
         LEFT JOIN ticket_types tt ON c.id = tt.concert_id
         WHERE c.association_id = ?
+        AND c.deleted_at IS NULL
         AND c.date < date('now')
     `;
   const params: (string | null)[] = [associationId];
@@ -336,7 +337,10 @@ export function predictTicketSales(concertId: string): SalesPrediction {
   const daysUntilConcert = Math.max(0, Math.ceil((concertDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
   factors.push(`Days until concert: ${daysUntilConcert}`);
-  factors.push(`Current sales: ${currentSold}/${totalCapacity} (${Math.round((currentSold / totalCapacity) * 100)}%)`);
+  // Zonder plaatsen is currentSold/totalCapacity 0/0; dat is NaN, en dat kwam
+  // zo in de onderbouwing terecht ("0/0 (NaN%)").
+  const currentFillPercentage = totalCapacity > 0 ? Math.round((currentSold / totalCapacity) * 100) : 0;
+  factors.push(`Current sales: ${currentSold}/${totalCapacity} (${currentFillPercentage}%)`);
 
   // Get historical data
   const historicalData = getHistoricalData(concert.association_id, concert.concert_type, concert.venue_type);
@@ -514,7 +518,11 @@ export function calculateOptimalPricing(concertId: string): PricingSuggestion {
   if (historicalData.length > 0) {
     const historicalAvgPrice =
       historicalData.reduce((sum, c) => {
-        return sum + (c.total_capacity > 0 ? c.total_revenue / c.total_sold : 0);
+        // De deler is total_sold, dus daar moet ook op gecontroleerd worden.
+        // De HAVING-clausule garandeert alleen dat er plaatsen waren; een
+        // afgelopen concert dat niets verkocht gaf hier 0/0 = NaN, en die NaN
+        // besmette het hele gemiddelde.
+        return sum + (c.total_sold > 0 ? c.total_revenue / c.total_sold : 0);
       }, 0) / historicalData.length;
 
     const historicalFillRate =
