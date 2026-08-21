@@ -140,6 +140,14 @@ router.put(
       throw new ApiError(400, 'Ongeldig notificatie type');
     }
 
+    // `channels` komt rechtstreeks uit de aanvraag. Zonder deze controle liep
+    // .filter() stuk op een TypeError en kreeg de client een 500 terug op wat
+    // gewoon een verkeerd ingevulde aanvraag is - inclusief een stacktrace in
+    // de logs.
+    if (!Array.isArray(channels)) {
+      throw new ApiError(400, 'Kanalen moeten als lijst worden opgegeven');
+    }
+
     const validChannels: NotificationChannel[] = ['email', 'push', 'whatsapp', 'telegram'];
     const filteredChannels = (channels as string[]).filter((c) => validChannels.includes(c as NotificationChannel));
 
@@ -369,11 +377,18 @@ router.post(
     }
 
     // Find pending verification
+    //
+    // expires_at wordt hierboven als ISO-tekst weggezet
+    // ('2026-08-21T09:00:00.000Z'), terwijl datetime('now') een spatie
+    // gebruikt ('2026-08-21 19:00:00'). Bij een kale tekstvergelijking wint de
+    // 'T' van de spatie, waardoor een code niet tien minuten maar de rest van
+    // de dag geldig bleef. Bij zes cijfers scheelt dat uren raadtijd.
+    // datetime() legt beide kanten op hetzelfde formaat.
     const verification = db
       .prepare(
         `
         SELECT * FROM whatsapp_verifications
-        WHERE user_id = ? AND code = ? AND expires_at > datetime('now')
+        WHERE user_id = ? AND code = ? AND datetime(expires_at) > datetime('now')
     `,
       )
       .get(req.user!.id, code) as { id: string; phone_number: string } | undefined;
