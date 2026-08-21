@@ -29,10 +29,14 @@ router.get(
         `
         SELECT mt.id, mt.title, mt.arranger, mt.youtube_url, mt.duration_seconds, mt.grade,
                uf.created_at as favorited_at,
-               (SELECT COUNT(*) FROM music_pieces mp WHERE mp.title = mt.title AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '') AND mp.association_id = ?) as piece_count
+               (SELECT COUNT(*) FROM music_pieces mp WHERE mp.title = mt.title AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '') AND mp.association_id = ? AND mp.deleted_at IS NULL) as piece_count
         FROM user_favorites uf
         JOIN music_titles mt ON uf.music_title_id = mt.id
-        WHERE uf.user_id = ? AND mt.association_id = ?
+        -- Een zacht verwijderde titel bestaat voor de rest van de applicatie
+        -- niet meer; de favoriet blijft in de tabel staan maar hoort hier niet
+        -- meer op te duiken. Hetzelfde geldt voor het tellen van de
+        -- bladmuziek: weggegooide partijen tellen niet mee.
+        WHERE uf.user_id = ? AND mt.association_id = ? AND mt.deleted_at IS NULL
         ORDER BY uf.created_at DESC
     `,
       )
@@ -84,7 +88,7 @@ router.post(
 
     // Check if title exists and belongs to user's association
     const title = db
-      .prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM music_titles WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(data.musicTitleId, req.user!.associationId);
     if (!title) {
       throw new ApiError(404, 'Titel niet gevonden.');
@@ -174,7 +178,7 @@ router.get(
         `
         SELECT uf.* FROM user_favorites uf
         JOIN music_titles mt ON uf.music_title_id = mt.id
-        WHERE uf.user_id = ? AND uf.music_title_id = ? AND mt.association_id = ?
+        WHERE uf.user_id = ? AND uf.music_title_id = ? AND mt.association_id = ? AND mt.deleted_at IS NULL
     `,
       )
       .get(req.user!.id, req.params.musicTitleId, req.user!.associationId);
