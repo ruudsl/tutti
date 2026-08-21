@@ -216,10 +216,19 @@ router.post(
       throw new ApiError(400, 'Geen account gevonden met dit e-mailadres. Neem contact op met de beheerder.');
     }
 
-    // Update last login timestamp
+    // Geen tweede factor op dit pad, en dat is een keuze.
+    //
+    // POST /auth/login dwingt bij mfa_enabled een TOTP- of herstelcode af
+    // voordat er een token wordt afgegeven; hier gebeurt dat niet. Wie via
+    // Microsoft binnenkomt heeft zijn tweede factor daar al gezet - Entra ID
+    // handhaaft dat aan zijn kant - en die telt hier als voldoende.
+    //
+    // Dus: dit is geen vergeten controle. Wordt de tweede factor hier alsnog
+    // gewenst, dan is dat een bewuste wijziging waar ook het inlogscherm aan
+    // te pas komt, want dat moet dan met requiresMfa om kunnen gaan zoals bij
+    // het wachtwoordpad.
     db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(new Date().toISOString(), user.id);
 
-    // Generate JWT token
     const token = generateToken(user);
 
     // Register the session so it shows up in session management and can be revoked
