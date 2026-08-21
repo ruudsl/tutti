@@ -31,6 +31,28 @@ function generateCsrfToken(): string {
 }
 
 /**
+ * Vergelijk het aangeleverde token met het opgeslagen token zonder dat de
+ * duur van de vergelijking verraadt hoeveel tekens er klopten.
+ *
+ * Een gewone `!==` op een string stopt bij het eerste verschil. Over een
+ * netwerk is dat verschil lastig te meten, maar het is wel precies waarvoor
+ * crypto.timingSafeEqual bestaat, en het kost hier niets.
+ *
+ * De lengtevergelijking vooraf moet: timingSafeEqual gooit een fout bij
+ * ongelijke lengtes. Dat lekt alleen de lengte van het opgeslagen token, en
+ * die ligt met 32 hex-bytes toch al vast.
+ */
+function tokensGelijk(aangeleverd: unknown, opgeslagen: string): boolean {
+  if (typeof aangeleverd !== 'string') return false;
+
+  const a = Buffer.from(aangeleverd, 'utf8');
+  const b = Buffer.from(opgeslagen, 'utf8');
+  if (a.length !== b.length) return false;
+
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
  * Get client identifier from request (IP + User-Agent hash)
  * This helps bind the token to a specific client
  */
@@ -150,7 +172,7 @@ export function validateCsrfToken(req: Request, res: Response, next: NextFunctio
   const cookieToken = req.cookies?.[config.csrfCookieName];
 
   // Validate: header token must match stored token
-  if (!headerToken || headerToken !== storedEntry.token) {
+  if (!headerToken || !tokensGelijk(headerToken, storedEntry.token)) {
     logger.warn('CSRF validation failed: token mismatch', {
       path: req.path,
       method: req.method,
