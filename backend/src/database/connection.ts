@@ -35,6 +35,8 @@ class DatabaseWrapper {
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
   private inTransaction: boolean = false;
+  /** Volgnummer voor savepoints bij geneste transacties. */
+  private savepointTeller = 0;
   private SQL: any = null;
   private dirty: boolean = false;
   private saveTimer: NodeJS.Timeout | null = null;
@@ -315,6 +317,36 @@ class DatabaseWrapper {
   transaction<T>(fn: () => T): () => T {
     return () => {
       const db = this.ensureInit();
+
+      // Loopt er al een transactie, dan is een tweede BEGIN geen optie:
+      // SQLite weigert dat met "cannot start a transaction within a
+      // transaction". Erger nog was wat er daarna gebeurde - de ROLLBACK in de
+      // catch hieronder draaide de BUITENSTE transactie terug, waarna die op
+      // zijn beurt stukliep op "cannot rollback - no transaction is active".
+      // Netto verdween al het werk van de buitenste transactie, met een 500 en
+      // zonder bruikbare melding.
+      //
+      // Zo'n nesting is niet theoretisch: een hulpfunctie die zelf een
+      // transactie opent en wordt aangeroepen vanuit een route die dat al
+      // deed, is precies het geval waarin het misging bij het importeren
+      // vanuit Entra ID.
+      //
+      // Een savepoint doet binnen een lopende transactie wat een transactie
+      // buiten een transactie doet, en kan wel genest worden.
+      if (this.inTransaction) {
+        const naam = `sp_wrapper_${++this.savepointTeller}`;
+        db.run(`SAVEPOINT ${naam}`);
+        try {
+          const result = fn();
+          db.run(`RELEASE SAVEPOINT ${naam}`);
+          return result;
+        } catch (error) {
+          db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
+          db.run(`RELEASE SAVEPOINT ${naam}`);
+          throw error;
+        }
+      }
+
       this.inTransaction = true;
       db.run('BEGIN TRANSACTION');
       try {

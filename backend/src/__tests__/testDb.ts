@@ -147,6 +147,7 @@ class TestDatabaseWrapper {
   private sqlJs: any = null;
   private emptySnapshot: Uint8Array | null = null;
   private inTransaction: boolean = false;
+  private savepointTeller = 0;
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -269,6 +270,24 @@ class TestDatabaseWrapper {
   transaction<T>(fn: () => T): () => T {
     return () => {
       const db = this.ensureInit();
+
+      // Zelfde regel als in database/connection.ts: binnen een lopende
+      // transactie een savepoint in plaats van een tweede BEGIN. Zonder deze
+      // gelijkloop zouden tests iets anders doen dan wat er draait.
+      if (this.inTransaction) {
+        const naam = `sp_wrapper_${++this.savepointTeller}`;
+        db.run(`SAVEPOINT ${naam}`);
+        try {
+          const result = fn();
+          db.run(`RELEASE SAVEPOINT ${naam}`);
+          return result;
+        } catch (error) {
+          db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
+          db.run(`RELEASE SAVEPOINT ${naam}`);
+          throw error;
+        }
+      }
+
       this.inTransaction = true;
       db.run('BEGIN TRANSACTION');
       try {

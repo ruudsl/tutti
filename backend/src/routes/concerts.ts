@@ -1269,6 +1269,41 @@ router.post(
  *     summary: Update program item
  *     tags: [Concerts]
  */
+// LET OP: deze route moet boven '/:id/program/:programId' blijven staan.
+// Express matcht op volgorde van registreren, en een parameter matcht ook
+// het letterlijke woord 'reorder'. Stond hij eronder, dan kwam elk verzoek
+// bij de parameter-route uit met id 'reorder' en eindigde het op een 404 -
+// het herschikken deed dus niets, terwijl het scherm de knop wel toont.
+router.put(
+  '/:id/program/reorder',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { items } = req.body; // Array of { id, sortOrder }
+
+    if (!Array.isArray(items)) {
+      throw new ApiError(400, 'Items array is verplicht.');
+    }
+
+    const concert = db
+      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+      .get(req.params.id, req.user!.associationId);
+
+    if (!concert) {
+      throw new ApiError(404, 'Concert niet gevonden.');
+    }
+
+    withTransaction(() => {
+      const stmt = db.prepare('UPDATE concert_program SET sort_order = ? WHERE id = ? AND concert_id = ?');
+      for (const item of items) {
+        stmt.run(item.sortOrder, item.id, req.params.id);
+      }
+    });
+
+    res.json({ message: 'Volgorde bijgewerkt.' });
+  }),
+);
+
 router.put(
   '/:id/program/:programId',
   authenticateToken,
@@ -1355,35 +1390,6 @@ router.delete(
  *     summary: Reorder program items
  *     tags: [Concerts]
  */
-router.put(
-  '/:id/program/reorder',
-  authenticateToken,
-  requireRole('admin', 'music_committee'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { items } = req.body; // Array of { id, sortOrder }
-
-    if (!Array.isArray(items)) {
-      throw new ApiError(400, 'Items array is verplicht.');
-    }
-
-    const concert = db
-      .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
-      .get(req.params.id, req.user!.associationId);
-
-    if (!concert) {
-      throw new ApiError(404, 'Concert niet gevonden.');
-    }
-
-    withTransaction(() => {
-      const stmt = db.prepare('UPDATE concert_program SET sort_order = ? WHERE id = ? AND concert_id = ?');
-      for (const item of items) {
-        stmt.run(item.sortOrder, item.id, req.params.id);
-      }
-    });
-
-    res.json({ message: 'Volgorde bijgewerkt.' });
-  }),
-);
 
 /**
  * @swagger
