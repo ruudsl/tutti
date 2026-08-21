@@ -43,6 +43,26 @@ function tik(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/**
+ * Wacht tot de klok aantoonbaar verder staat.
+ *
+ * `cleanup(0)` gooit weg wat `now - completedAt > 0` is, dus er moet echt een
+ * hele milliseconde voorbij zijn. Een `setTimeout(0)` garandeert dat niet: op
+ * een snelle of onbelaste machine keert die terug binnen dezelfde milliseconde,
+ * en dan ruimt cleanup niets op. Zo viel deze test om zodra de suite parallel
+ * ging draaien - niet door het parallellisme zelf, maar doordat de timing
+ * anders uitpakte en de aanname zichtbaar werd.
+ *
+ * Wachten tot Date.now() echt verspringt is deterministisch: geen vaste
+ * wachttijd die op de ene machine te kort en op de andere verspild is.
+ */
+async function wachtOpKlokTik(): Promise<void> {
+  const start = Date.now();
+  while (Date.now() === start) {
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
 describe('BackgroundQueue', () => {
   let queue: BackgroundQueue;
 
@@ -412,8 +432,8 @@ describe('BackgroundQueue', () => {
       await klaar;
 
       // maxAge 0: alles wat af is en ook maar iets ouder is dan nu mag weg.
-      // Even wachten zodat de klok gegarandeerd verder staat dan completedAt.
-      await tik();
+      // De klok moet daarvoor aantoonbaar verder staan dan completedAt.
+      await wachtOpKlokTik();
       expect(queue.cleanup(0)).toBe(2);
       expect(queue.getStats().total).toBe(0);
     });

@@ -78,11 +78,20 @@ export default defineConfig({
       // Het doel van >80 procent uit WP8 staat daarmee veel verder weg dan het
       // leek: daarvoor moeten er ruim veertienduizend statements bij afgedekt
       // worden.
+      // Bijgewerkt op 21-08-2026. Gemeten:
+      //   statements 64,36 (14583/22658)
+      //   branches   55,43 (7516/13558)
+      //   functions  68,04 (1921/2823)
+      //   lines      64,64 (14174/21926)
+      //
+      // Drempels net onder de gemeten stand: hoog genoeg om een terugval te
+      // vangen, laag genoeg om niet af te gaan op meetruis. Het doel van >80
+      // procent uit WP8 is daarmee in zicht maar nog niet gehaald.
       thresholds: {
-        statements: 12,
-        branches: 8,
-        functions: 13,
-        lines: 12,
+        statements: 63,
+        branches: 54,
+        functions: 67,
+        lines: 63,
       },
     },
   },
