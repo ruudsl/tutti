@@ -1189,7 +1189,7 @@ CREATE TABLE IF NOT EXISTS ticket_orders (
     user_id TEXT,
     concert_id TEXT NOT NULL,
     total REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending', -- pending, paid, cancelled, refunded, expired
+    status TEXT NOT NULL DEFAULT 'pending', -- pending, paid, refunding (kortstondig, tijdens het terugbetalen), cancelled, refunded, expired
     payment_id TEXT,
     payment_method TEXT,
     buyer_name TEXT NOT NULL,

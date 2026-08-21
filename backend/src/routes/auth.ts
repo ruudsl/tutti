@@ -79,6 +79,8 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  /** active, inactive of pending - zie de kolomcommentaar in schema.ts. */
+  status: string;
   association_id: string | null;
   mfa_secret: string | null;
   mfa_enabled: boolean;
@@ -214,6 +216,31 @@ router.post(
     if (!validPassword) {
       recordFailedLoginAttempt(user, req.ip, req.get('user-agent'));
       throw new ApiError(401, 'Ongeldige inloggegevens.');
+    }
+
+    // `role` regelt wat je mag, `status` of je binnenkomt - en die tweede helft
+    // werd nergens afgedwongen. Een lid uit dienst nemen zet status op
+    // 'inactive' (routes/onboarding.ts), maar dat lid kon daarna gewoon opnieuw
+    // inloggen met zijn wachtwoord.
+    //
+    // De controle staat bewust NA de wachtwoordcontrole. Ervoor zou de melding
+    // verklappen welke adressen bestaan en welke daarvan uit dienst zijn.
+    //
+    // 'pending' blijft toegestaan: een gepromoveerd contact (routes/contacts.ts)
+    // krijgt die status met een wachtwoord dat niemand kent, en komt alleen
+    // binnen via 'wachtwoord vergeten'. Dat pad moet open blijven.
+    if (user.status === 'inactive') {
+      logAuditEvent(
+        user.id,
+        'login_blocked',
+        'user',
+        user.id,
+        `${user.first_name} ${user.last_name}`,
+        { reason: 'account_inactive' },
+        req.ip,
+        req.get('user-agent'),
+      );
+      throw new ApiError(403, 'Dit account is niet meer actief. Neem contact op met je vereniging.');
     }
 
     // Check if MFA is enabled
@@ -968,12 +995,20 @@ router.post(
         SELECT prt.*, u.email
         FROM password_reset_tokens prt
         JOIN users u ON prt.user_id = u.id
-        WHERE prt.token = ? AND prt.used = 0 AND prt.expires_at > datetime('now')
+        WHERE prt.token = ? AND prt.used = 0
     `,
       )
-      .get(hashResetToken(String(token))) as { id: string; user_id: string; email: string } | undefined;
+      .get(hashResetToken(String(token))) as
+      { id: string; user_id: string; email: string; expires_at: string } | undefined;
 
-    if (!resetToken) {
+    // De vervaltijd wordt als ISO-string opgeslagen ('2026-08-21T11:00:00.000Z')
+    // en SQLite vergelijkt tekst. `datetime('now')` levert
+    // '2026-08-21 09:55:00', en op positie 10 staat 'T' (0x54) tegenover een
+    // spatie (0x20). Zolang de datum gelijk is wint de ISO-vorm dus altijd:
+    // een token dat na een uur had moeten verlopen bleef geldig tot middernacht
+    // UTC - tot 24 keer zo lang als bedoeld. Daarom vergelijken we hier in JS,
+    // waar beide notaties gewoon een datum zijn.
+    if (!resetToken || new Date(resetToken.expires_at) <= new Date()) {
       throw new ApiError(400, 'Ongeldige of verlopen reset link. Vraag een nieuwe aan.');
     }
 
@@ -1053,13 +1088,14 @@ router.get(
     const resetToken = db
       .prepare(
         `
-        SELECT id FROM password_reset_tokens
-        WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+        SELECT id, expires_at FROM password_reset_tokens
+        WHERE token = ? AND used = 0
     `,
       )
-      .get(hashResetToken(String(token)));
+      .get(hashResetToken(String(token))) as { id: string; expires_at: string } | undefined;
 
-    if (!resetToken) {
+    // Zelfde tekstvergelijking als bij het echte resetten hierboven.
+    if (!resetToken || new Date(resetToken.expires_at) <= new Date()) {
       throw new ApiError(400, 'Ongeldige of verlopen reset link.');
     }
 

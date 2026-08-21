@@ -80,7 +80,9 @@ const invoiceSchema = z.object({
       z.object({
         description: z.string().min(1),
         quantity: z.number().min(0),
-        unitPrice: z.number(),
+        // Zonder ondergrens maakt een negatieve prijs van een verkoopfactuur
+        // stilzwijgend een creditfactuur; daar is een eigen soort voor.
+        unitPrice: z.number().min(0, 'Stukprijs mag niet negatief zijn.'),
         vatRate: z.number().min(0).max(100).optional(),
         accountId: z.string().uuid().optional().nullable(),
         costCenterId: z.string().uuid().optional().nullable(),
@@ -88,6 +90,18 @@ const invoiceSchema = z.object({
       }),
     )
     .min(1, 'Minimaal één regel vereist.'),
+});
+
+/**
+ * Een betaling op een factuur. Een bedrag is een getal groter dan nul: een
+ * negatieve betaling is een correctie en hoort via een creditfactuur.
+ */
+const invoicePaymentSchema = z.object({
+  amount: z.number().positive('Bedrag moet groter dan nul zijn.').optional(),
+  paymentDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ongeldige datum.')
+    .optional(),
 });
 
 const transactionSchema = z.object({
@@ -108,6 +122,111 @@ const transactionSchema = z.object({
     )
     .min(2, 'Minimaal twee regels vereist.'),
 });
+
+// =====================================================
+// HULPMIDDELEN
+// =====================================================
+
+/**
+ * Rond een bedrag af op hele centen.
+ *
+ * Drijvende komma is voor geld net niet nauwkeurig genoeg: 3 x 19,99 tegen 21%
+ * btw geeft 12,593700000000002. Zo'n bedrag hoort niet in een grootboek en
+ * niet op een btw-aangifte, en het maakt elke vergelijking op gelijkheid
+ * onbetrouwbaar.
+ */
+function afrondenOpCenten(bedrag: number): number {
+  return Math.round((bedrag + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Waar een id uit de aanvraag vandaan mag komen.
+ *
+ * De sleutelcontrole van de database kijkt alleen of een rij bestaat, niet bij
+ * welke vereniging hij hoort. Een beheerder van vereniging A die het id van
+ * een grootboekrekening van vereniging B meestuurt, boekt daar dus gewoon op -
+ * de INSERT slaagt. Deze controle staat tussen de aanvraag en de INSERT.
+ */
+const EIGENDOMSCONTROLES = {
+  account: 'SELECT id FROM accounts WHERE id = ? AND association_id = ?',
+  costCenter: 'SELECT id FROM cost_centers WHERE id = ? AND association_id = ?',
+  fiscalYear: 'SELECT id FROM fiscal_years WHERE id = ? AND association_id = ?',
+  relation: 'SELECT id FROM accounting_relations WHERE id = ? AND association_id = ?',
+  user: 'SELECT id FROM users WHERE id = ? AND association_id = ?',
+  contact: 'SELECT id FROM contacts WHERE id = ? AND association_id = ?',
+  // memberships kent zelf geen vereniging; die loopt via het lid.
+  membership: 'SELECT m.id FROM memberships m JOIN users u ON m.user_id = u.id WHERE m.id = ? AND u.association_id = ?',
+} as const;
+
+/**
+ * Eist dat een id bij de eigen vereniging hoort. Leeg of ontbrekend is goed:
+ * dan wordt er niets gekoppeld.
+ */
+function eisEigenId(
+  soort: keyof typeof EIGENDOMSCONTROLES,
+  id: string | null | undefined,
+  associationId: string | null | undefined,
+  melding: string,
+): void {
+  if (id === null || id === undefined || id === '') return;
+  // Zonder vereniging is er niets om bij te horen; dan gaat er ook niets in.
+  if (!associationId) throw new ApiError(400, 'Geen vereniging.');
+  const rij = db.prepare(EIGENDOMSCONTROLES[soort]).get(id, associationId);
+  if (!rij) throw new ApiError(400, melding);
+}
+
+/**
+ * Leest een bedrag uit een bankbestand.
+ *
+ * Nederlandse export schrijft "1.234,56": punt als duizendtalscheiding, komma
+ * als decimaalteken. Een enkele `replace(',', '.')` vervangt alleen het eerste
+ * voorkomen en laat de punt staan, waarna parseFloat er 1,23 van maakt.
+ * Onleesbare tekst geeft NaN, en die hoort niet in de administratie te
+ * belanden - vandaar een uitzondering in plaats van een stille nul.
+ */
+function leesBedrag(tekst: string): number {
+  const opgeschoond = tekst.replace(/[\s\u00a0]/g, '').replace(/€/g, '');
+  let normaal: string;
+
+  if (opgeschoond.includes(',')) {
+    // Komma is het decimaalteken; punten zijn dan duizendtalscheidingen.
+    normaal = opgeschoond.replace(/\./g, '').replace(',', '.');
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(opgeschoond)) {
+    // "1.234" of "1.234.567": alleen duizendtallen, geen decimalen.
+    normaal = opgeschoond.replace(/\./g, '');
+  } else {
+    normaal = opgeschoond;
+  }
+
+  if (!/^[+-]?\d+(\.\d+)?$/.test(normaal)) {
+    throw new ApiError(400, `Onleesbaar bedrag in het bankbestand: "${tekst.trim()}".`);
+  }
+
+  return afrondenOpCenten(parseFloat(normaal));
+}
+
+/**
+ * Geeft het volgende boekstuknummer voor deze vereniging.
+ *
+ * Het nummer is uniek per vereniging (UNIQUE(association_id,
+ * transaction_number)), dus mag de reeks niet per boekjaar opnieuw beginnen:
+ * de eerste boeking in een nieuw boekjaar botste anders op TX-000001 van het
+ * jaar ervoor.
+ */
+function volgendBoekstuknummer(associationId: string): string {
+  const laatste = db
+    .prepare(
+      `
+        SELECT transaction_number FROM transactions
+        WHERE association_id = ?
+        ORDER BY transaction_number DESC LIMIT 1
+    `,
+    )
+    .get(associationId) as any;
+
+  const volgnummer = laatste ? parseInt(laatste.transaction_number.split('-')[1], 10) + 1 : 1;
+  return `TX-${volgnummer.toString().padStart(6, '0')}`;
+}
 
 // =====================================================
 // FISCAL YEARS
@@ -331,6 +450,10 @@ router.post(
       .prepare('SELECT id FROM accounts WHERE association_id = ? AND code = ?')
       .get(associationId, data.code);
     if (existing) throw new ApiError(409, 'Rekeningcode bestaat al.');
+
+    // Een rekening onder een moederrekening van een andere vereniging hangen
+    // laat het rekeningschema over de verenigingsgrens heen lopen.
+    eisEigenId('account', data.parentId, associationId, 'Onbekende moederrekening.');
 
     db.prepare(
       `
@@ -560,6 +683,8 @@ router.post(
 
     const data = membershipFeeTypeSchema.parse(req.body);
     const id = uuidv4();
+
+    eisEigenId('account', data.incomeAccountId, associationId, 'Onbekende opbrengstrekening.');
 
     if (data.isDefault) {
       db.prepare('UPDATE membership_fee_types SET is_default = 0 WHERE association_id = ?').run(associationId);
@@ -859,18 +984,35 @@ router.post(
       .get(associationId) as any;
     if (!fiscalYear) throw new ApiError(400, 'Geen actief boekjaar gevonden.');
 
+    // Verwijzingen uit de aanvraag horen bij deze vereniging; de
+    // sleutelcontrole van de database let daar niet op.
+    eisEigenId('relation', data.relationId, associationId, 'Onbekende relatie.');
+    eisEigenId('user', data.userId, associationId, 'Onbekend lid.');
+    for (const line of data.lines) {
+      eisEigenId('account', line.accountId, associationId, 'Onbekende grootboekrekening op een factuurregel.');
+      eisEigenId('costCenter', line.costCenterId, associationId, 'Onbekende kostenplaats op een factuurregel.');
+      eisEigenId('membership', line.membershipId, associationId, 'Onbekend lidmaatschap op een factuurregel.');
+    }
+
     // Generate invoice number
+    //
+    // Elke factuursoort heeft een eigen letter ('F', 'I', 'C') en dus een eigen
+    // reeks. Werd het hoogste nummer over alle soorten heen gezocht, dan gaf
+    // 'I' (dat na 'F' sorteert) het volgnummer van de verkoopreeks door, en
+    // botste de volgende verkoopfactuur op UNIQUE(association_id,
+    // invoice_number).
+    const prefix = data.invoiceType === 'sales' ? 'F' : data.invoiceType === 'purchase' ? 'I' : 'C';
     const lastInvoice = db
       .prepare(
         `
-        SELECT invoice_number FROM invoices WHERE association_id = ? AND fiscal_year_id = ?
+        SELECT invoice_number FROM invoices
+        WHERE association_id = ? AND fiscal_year_id = ? AND invoice_type = ?
         ORDER BY invoice_number DESC LIMIT 1
     `,
       )
-      .get(associationId, fiscalYear.id) as any;
+      .get(associationId, fiscalYear.id, data.invoiceType) as any;
 
     const year = new Date().getFullYear();
-    const prefix = data.invoiceType === 'sales' ? 'F' : data.invoiceType === 'purchase' ? 'I' : 'C';
     let nextNumber = 1;
     if (lastInvoice) {
       const match = lastInvoice.invoice_number.match(/\d+$/);
@@ -879,15 +1021,18 @@ router.post(
     const invoiceNumber = `${prefix}${year}-${String(nextNumber).padStart(4, '0')}`;
 
     // Calculate totals
-    let subtotal = 0;
-    let vatAmount = 0;
-    for (const line of data.lines) {
-      const lineTotal = line.quantity * line.unitPrice;
-      const lineVat = lineTotal * ((line.vatRate || 0) / 100);
-      subtotal += lineTotal;
-      vatAmount += lineVat;
-    }
-    const total = subtotal + vatAmount;
+    //
+    // Per regel op centen afronden en pas daarna optellen: dat is wat er ook
+    // op de factuur staat, en het houdt subtotaal, btw en totaal op elkaar
+    // aansluiten.
+    const berekendeRegels = data.lines.map((line) => {
+      const lineTotal = afrondenOpCenten(line.quantity * line.unitPrice);
+      return { line, lineTotal, lineVat: afrondenOpCenten(lineTotal * ((line.vatRate || 0) / 100)) };
+    });
+
+    const subtotal = afrondenOpCenten(berekendeRegels.reduce((som, r) => som + r.lineTotal, 0));
+    const vatAmount = afrondenOpCenten(berekendeRegels.reduce((som, r) => som + r.lineVat, 0));
+    const total = afrondenOpCenten(subtotal + vatAmount);
 
     const invoiceId = uuidv4();
 
@@ -922,9 +1067,7 @@ router.post(
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    data.lines.forEach((line, index) => {
-      const lineTotal = line.quantity * line.unitPrice;
-      const lineVat = lineTotal * ((line.vatRate || 0) / 100);
+    berekendeRegels.forEach(({ line, lineTotal, lineVat }, index) => {
       lineStmt.run(
         uuidv4(),
         invoiceId,
@@ -998,11 +1141,22 @@ router.post(
     if (!invoice) throw new ApiError(404, 'Factuur niet gevonden.');
     if (invoice.status === 'paid') throw new ApiError(400, 'Factuur is al betaald.');
 
-    const { amount, paymentDate } = req.body;
-    const paymentAmount = amount || invoice.total - invoice.amount_paid;
+    // Zonder schema kwam hier alles binnen wat de aanvraag stuurde. Een
+    // negatief bedrag draaide het openstaande saldo omhoog, en amount als
+    // tekst maakte van 0 + "100" de tekst "0100": JavaScript plakt dan aan
+    // elkaar wat opgeteld had moeten worden.
+    const betaling = invoicePaymentSchema.parse(req.body);
 
-    const newAmountPaid = invoice.amount_paid + paymentAmount;
-    const newStatus = newAmountPaid >= invoice.total ? 'paid' : 'partial';
+    const openstaand = afrondenOpCenten(invoice.total - invoice.amount_paid);
+    const paymentAmount = betaling.amount !== undefined ? betaling.amount : openstaand;
+
+    if (paymentAmount > openstaand + 0.005) {
+      throw new ApiError(400, `Bedrag is hoger dan het openstaande bedrag (€${openstaand.toFixed(2)}).`);
+    }
+
+    const newAmountPaid = afrondenOpCenten(invoice.amount_paid + paymentAmount);
+    const newStatus = newAmountPaid >= invoice.total - 0.005 ? 'paid' : 'partial';
+    const paymentDate = betaling.paymentDate;
 
     db.prepare(
       `
@@ -1081,18 +1235,29 @@ router.get(
     const accounts = db
       .prepare(
         `
+        -- De datumgrens hoort bij het optellen zelf en niet in de
+        -- ON-clausule van een LEFT JOIN: daar maakt hij t.* leeg maar blijft
+        -- tl.debit_amount gewoon meetellen. Zo stonden alle boekingen ooit in
+        -- elk rapport, ook die van na de periode. Meteen ook de vereniging en
+        -- de vlag is_posted erbij: een concept hoort niet in een rapport.
         SELECT a.id, a.code, a.name, a.account_type, a.account_subtype, a.opening_balance,
-            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
-            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+            COALESCE(bal.total_debit, 0) AS total_debit,
+            COALESCE(bal.total_credit, 0) AS total_credit
         FROM accounts a
-        LEFT JOIN transaction_lines tl ON tl.account_id = a.id
-        LEFT JOIN transactions t ON tl.transaction_id = t.id AND t.transaction_date <= ?
+        LEFT JOIN (
+            SELECT tl.account_id,
+                SUM(tl.debit_amount) AS total_debit,
+                SUM(tl.credit_amount) AS total_credit
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ? AND t.is_posted = 1 AND t.transaction_date <= ?
+            GROUP BY tl.account_id
+        ) bal ON bal.account_id = a.id
         WHERE a.association_id = ? AND a.is_active = 1
-        GROUP BY a.id
         ORDER BY a.code
     `,
       )
-      .all(endDate, associationId);
+      .all(associationId, endDate, associationId);
 
     const balance: Record<string, any[]> = {
       assets: [],
@@ -1171,20 +1336,31 @@ router.get(
     const accounts = db
       .prepare(
         `
+        -- De datumgrens hoort bij het optellen zelf en niet in de
+        -- ON-clausule van een LEFT JOIN: daar maakt hij t.* leeg maar blijft
+        -- tl.debit_amount gewoon meetellen. Zo stonden alle boekingen ooit in
+        -- elk rapport, ook die van na de periode. Meteen ook de vereniging en
+        -- de vlag is_posted erbij: een concept hoort niet in een rapport.
         SELECT a.id, a.code, a.name, a.account_type, a.account_subtype,
-            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
-            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+            COALESCE(bal.total_debit, 0) AS total_debit,
+            COALESCE(bal.total_credit, 0) AS total_credit
         FROM accounts a
-        LEFT JOIN transaction_lines tl ON tl.account_id = a.id
-        LEFT JOIN transactions t ON tl.transaction_id = t.id
-            AND t.transaction_date >= ? AND t.transaction_date <= ?
+        LEFT JOIN (
+            SELECT tl.account_id,
+                SUM(tl.debit_amount) AS total_debit,
+                SUM(tl.credit_amount) AS total_credit
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ? AND t.is_posted = 1
+                AND t.transaction_date >= ? AND t.transaction_date <= ?
+            GROUP BY tl.account_id
+        ) bal ON bal.account_id = a.id
         WHERE a.association_id = ? AND a.is_active = 1
             AND a.account_type IN ('income', 'expense')
-        GROUP BY a.id
         ORDER BY a.code
     `,
       )
-      .all(start, end, associationId);
+      .all(associationId, start, end, associationId);
 
     const income: any[] = [];
     const expenses: any[] = [];
@@ -1398,14 +1574,18 @@ router.post(
     if (!association) throw new ApiError(404, 'Vereniging niet gevonden.');
 
     // Get bank account
+    //
+    // De aanvraag noemt de grootboekrekening (accounts, subtype 'bank'), maar
+    // de IBAN en de batch horen bij de bankrekening zelf (bank_accounts).
+    // sepa_batches.bank_account_id verwijst naar die tweede tabel: met een
+    // accounts.id valt de INSERT om op de sleutelcontrole.
     const bankAccount = db
       .prepare(
         `
-        -- bank_accounts noemt de tenaamstelling gewoon 'name'; met een alias
-        -- botst hij niet met accounts.name uit a.*.
-        SELECT a.*, ba.iban, ba.bic, ba.name AS account_holder_name
+        SELECT a.id AS ledger_account_id, ba.id AS bank_account_id,
+            ba.iban, ba.bic, ba.name AS account_holder_name
         FROM accounts a
-        LEFT JOIN bank_accounts ba ON ba.account_id = a.id
+        JOIN bank_accounts ba ON ba.account_id = a.id AND ba.association_id = a.association_id
         WHERE a.id = ? AND a.association_id = ? AND a.account_subtype = 'bank'
     `,
       )
@@ -1420,8 +1600,10 @@ router.post(
     const invoices = db
       .prepare(
         `
+        -- accounting_relations heeft geen bic-kolom, en binnen de eurozone
+        -- is een SEPA-betaling op IBAN alleen genoeg.
         SELECT i.*, r.name AS relation_name, r.email AS relation_email,
-            r.iban AS relation_iban, r.bic AS relation_bic
+            r.iban AS relation_iban
         FROM invoices i
         JOIN accounting_relations r ON i.relation_id = r.id
         WHERE i.id IN (${placeholders}) AND i.association_id = ?
@@ -1439,31 +1621,74 @@ router.post(
       throw new ApiError(400, `Relaties zonder IBAN: ${missingIban.map((i) => i.relation_name).join(', ')}`);
     }
 
+    // Bij een incasso haalt de vereniging geld op bij het lid. Dat mag alleen
+    // op een getekend mandaat en dat mandaat moet in het bestand mee: zonder
+    // MndtId weigert de bank de batch. Bij een overboeking bestaat er geen
+    // mandaat, want dan betaalt de vereniging zelf.
+    const mandaatPerRelatie = new Map<string, any>();
+    if (data.paymentType === 'direct_debit') {
+      const relatieIds = [...new Set(invoices.map((i) => i.relation_id as string))];
+      const mandaten = db
+        .prepare(
+          `
+        SELECT * FROM sepa_mandates
+        WHERE association_id = ? AND status = 'active'
+            AND relation_id IN (${relatieIds.map(() => '?').join(',')})
+        ORDER BY signature_date DESC
+    `,
+        )
+        .all(associationId, ...relatieIds) as any[];
+
+      for (const mandaat of mandaten) {
+        if (!mandaatPerRelatie.has(mandaat.relation_id)) mandaatPerRelatie.set(mandaat.relation_id, mandaat);
+      }
+
+      const zonderMandaat = invoices.filter((i) => !mandaatPerRelatie.has(i.relation_id));
+      if (zonderMandaat.length > 0) {
+        throw new ApiError(400, `Geen actief mandaat voor: ${zonderMandaat.map((i) => i.relation_name).join(', ')}`);
+      }
+    }
+
     // Generate SEPA XML
     const messageId = `MSG-${Date.now()}`;
     const paymentId = `PMT-${Date.now()}`;
-    const totalAmount = invoices.reduce((sum, i) => sum + (i.total - i.amount_paid), 0);
+    const transacties = invoices.map((inv) => {
+      const mandaat = mandaatPerRelatie.get(inv.relation_id);
+      return {
+        endToEndId: inv.invoice_number,
+        amount: afrondenOpCenten(inv.total - inv.amount_paid),
+        counterpartyName: inv.relation_name,
+        // Bij een incasso is de IBAN van het mandaat leidend: daarvoor heeft
+        // het lid getekend, en daarop mag afgeschreven worden.
+        counterpartyIban: mandaat ? mandaat.iban : inv.relation_iban,
+        counterpartyBic: mandaat ? mandaat.bic : null,
+        remittanceInfo: `Factuur ${inv.invoice_number}`,
+        mandateReference: mandaat?.mandate_reference,
+        mandateSignatureDate: mandaat?.signature_date,
+        sequenceType: mandaat?.sequence_type || 'RCUR',
+      };
+    });
+
+    // De CtrlSum wordt opgeteld uit dezelfde afgeronde bedragen die straks als
+    // InstdAmt in het bestand staan. Werd hij los uit de ruwe factuurbedragen
+    // berekend, dan konden de twee een cent uiteenlopen - en een pain-bestand
+    // waarvan de CtrlSum niet gelijk is aan de som van de bedragen wordt door
+    // de bank geweigerd.
+    const totalAmount = afrondenOpCenten(transacties.reduce((som, tx) => som + tx.amount, 0));
 
     const sepaXml = generateSepaXml({
       messageId,
       paymentId,
       creationDateTime: new Date().toISOString(),
-      numberOfTransactions: invoices.length,
+      numberOfTransactions: transacties.length,
       controlSum: totalAmount,
       initiatorName: association.display_name || association.name,
       paymentType: data.paymentType,
       executionDate: data.executionDate,
-      debtorName: bankAccount.account_holder_name || association.name,
-      debtorIban: bankAccount.iban,
-      debtorBic: bankAccount.bic,
-      transactions: invoices.map((inv) => ({
-        endToEndId: inv.invoice_number,
-        amount: inv.total - inv.amount_paid,
-        creditorName: inv.relation_name,
-        creditorIban: inv.relation_iban,
-        creditorBic: inv.relation_bic,
-        remittanceInfo: `Factuur ${inv.invoice_number}`,
-      })),
+      accountHolderName: bankAccount.account_holder_name || association.name,
+      accountIban: bankAccount.iban,
+      accountBic: bankAccount.bic,
+      transactions: transacties,
     });
 
     // Store payment batch
@@ -1483,7 +1708,7 @@ router.post(
     ).run(
       batchId,
       associationId,
-      data.bankAccountId,
+      bankAccount.bank_account_id,
       batchReference,
       batchType,
       data.executionDate,
@@ -1495,22 +1720,28 @@ router.post(
       now,
     );
 
-    // Link invoices to batch (simplified - using relation directly since mandates may not exist)
-    const linkInvoice = db.prepare(`
+    // Link invoices to batch
+    //
+    // sepa_batch_items.mandate_id is verplicht en verwijst naar sepa_mandates.
+    // Daar hoorde eerder een relation_id in, wat de sleutelcontrole niet haalt.
+    // Bij een overboeking bestaat er geen mandaat en valt er dus niets vast te
+    // leggen; de regels zelf staan in het XML-bestand van de batch.
+    if (data.paymentType === 'direct_debit') {
+      const linkInvoice = db.prepare(`
         INSERT INTO sepa_batch_items (id, batch_id, invoice_id, mandate_id, relation_id, amount, reference)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    for (const inv of invoices) {
-      const mandateId = inv.relation_id; // Use relation as placeholder for mandate
-      linkInvoice.run(
-        uuidv4(),
-        batchId,
-        inv.id,
-        mandateId,
-        inv.relation_id,
-        inv.total - inv.amount_paid,
-        inv.invoice_number,
-      );
+      for (const inv of invoices) {
+        linkInvoice.run(
+          uuidv4(),
+          batchId,
+          inv.id,
+          mandaatPerRelatie.get(inv.relation_id).id,
+          inv.relation_id,
+          afrondenOpCenten(inv.total - inv.amount_paid),
+          inv.invoice_number,
+        );
+      }
     }
 
     await logAuditEvent(req.user!.id, 'sepa_generate', 'sepa_batch', batchId, `${invoices.length} betalingen`);
@@ -1536,10 +1767,11 @@ router.get(
     const batches = db
       .prepare(
         `
-        SELECT sb.*, a.code AS account_code, a.name AS account_name,
+        SELECT sb.*, ba.account_id AS ledger_account_id, a.code AS account_code, a.name AS account_name,
             u.first_name || ' ' || u.last_name AS created_by_name
         FROM sepa_batches sb
-        LEFT JOIN accounts a ON sb.bank_account_id = a.id
+        LEFT JOIN bank_accounts ba ON sb.bank_account_id = ba.id
+        LEFT JOIN accounts a ON ba.account_id = a.id
         LEFT JOIN users u ON sb.created_by = u.id
         WHERE sb.association_id = ?
         ORDER BY sb.created_at DESC
@@ -1553,6 +1785,9 @@ router.get(
         batchReference: b.batch_reference,
         batchType: b.batch_type,
         collectionDate: b.collection_date,
+        // De client kent bankrekeningen als grootboekrekening; die id geven we
+        // terug, met de bankrekening zelf ernaast.
+        accountId: b.ledger_account_id,
         bankAccountId: b.bank_account_id,
         accountCode: b.account_code,
         accountName: b.account_name,
@@ -1594,8 +1829,22 @@ router.get(
   }),
 );
 
-// Helper function to generate SEPA XML
-function generateSepaXml(data: {
+/** Eén regel uit een SEPA-bestand, gezien vanaf de vereniging. */
+interface SepaTransactie {
+  endToEndId: string;
+  amount: number;
+  /** De tegenpartij: bij een overboeking de begunstigde, bij een incasso de betaler. */
+  counterpartyName: string;
+  counterpartyIban: string;
+  counterpartyBic?: string | null;
+  remittanceInfo: string;
+  /** Alleen bij een incasso: het mandaat waarop wordt geïncasseerd. */
+  mandateReference?: string;
+  mandateSignatureDate?: string;
+  sequenceType?: string;
+}
+
+interface SepaBestand {
   messageId: string;
   paymentId: string;
   creationDateTime: string;
@@ -1604,18 +1853,51 @@ function generateSepaXml(data: {
   initiatorName: string;
   paymentType: 'credit_transfer' | 'direct_debit';
   executionDate: string;
-  debtorName: string;
-  debtorIban: string;
-  debtorBic?: string;
-  transactions: Array<{
-    endToEndId: string;
-    amount: number;
-    creditorName: string;
-    creditorIban: string;
-    creditorBic?: string;
-    remittanceInfo: string;
-  }>;
-}): string {
+  /** De rekening van de vereniging: betaler bij een overboeking, incassant bij een incasso. */
+  accountHolderName: string;
+  accountIban: string;
+  accountBic?: string | null;
+  transactions: SepaTransactie[];
+}
+
+/**
+ * Bouwt het SEPA-bestand.
+ *
+ * De richting van het geld zit niet in een veldje maar in het hele bericht.
+ * Een overboeking is pain.001 (CstmrCdtTrfInitn, PmtMtd TRF): de vereniging
+ * betaalt. Een incasso is pain.008 (CstmrDrctDbtInitn, PmtMtd DD): de
+ * vereniging int. Dit onderscheid werd eerder niet gemaakt - elke batch werd
+ * een overboeking, dus een contributie-incasso betaalde alle leden uit.
+ */
+function generateSepaXml(data: SepaBestand): string {
+  return data.paymentType === 'direct_debit' ? incassoBestand(data) : overboekingBestand(data);
+}
+
+/** Kop van het bericht; gelijk voor beide berichtsoorten. */
+function groepsKop(data: SepaBestand): string {
+  return `        <GrpHdr>
+            <MsgId>${escapeXml(data.messageId)}</MsgId>
+            <CreDtTm>${data.creationDateTime}</CreDtTm>
+            <NbOfTxs>${data.numberOfTransactions}</NbOfTxs>
+            <CtrlSum>${data.controlSum.toFixed(2)}</CtrlSum>
+            <InitgPty>
+                <Nm>${escapeXml(data.initiatorName)}</Nm>
+            </InitgPty>
+        </GrpHdr>`;
+}
+
+function agentBlok(tag: string, bic?: string | null): string {
+  if (!bic) return '';
+  return `
+                    <${tag}>
+                        <FinInstnId>
+                            <BIC>${escapeXml(bic)}</BIC>
+                        </FinInstnId>
+                    </${tag}>`;
+}
+
+/** pain.001: de vereniging maakt geld over naar de tegenpartij. */
+function overboekingBestand(data: SepaBestand): string {
   const txns = data.transactions
     .map(
       (tx) => `
@@ -1627,22 +1909,13 @@ function generateSepaXml(data: {
                         <InstdAmt Ccy="EUR">${tx.amount.toFixed(2)}</InstdAmt>
                     </Amt>
                     <Cdtr>
-                        <Nm>${escapeXml(tx.creditorName)}</Nm>
+                        <Nm>${escapeXml(tx.counterpartyName)}</Nm>
                     </Cdtr>
                     <CdtrAcct>
                         <Id>
-                            <IBAN>${tx.creditorIban}</IBAN>
+                            <IBAN>${escapeXml(tx.counterpartyIban)}</IBAN>
                         </Id>
-                    </CdtrAcct>${
-                      tx.creditorBic
-                        ? `
-                    <CdtrAgt>
-                        <FinInstnId>
-                            <BIC>${tx.creditorBic}</BIC>
-                        </FinInstnId>
-                    </CdtrAgt>`
-                        : ''
-                    }
+                    </CdtrAcct>${agentBlok('CdtrAgt', tx.counterpartyBic)}
                     <RmtInf>
                         <Ustrd>${escapeXml(tx.remittanceInfo)}</Ustrd>
                     </RmtInf>
@@ -1653,40 +1926,106 @@ function generateSepaXml(data: {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
     <CstmrCdtTrfInitn>
-        <GrpHdr>
-            <MsgId>${data.messageId}</MsgId>
-            <CreDtTm>${data.creationDateTime}</CreDtTm>
-            <NbOfTxs>${data.numberOfTransactions}</NbOfTxs>
-            <CtrlSum>${data.controlSum.toFixed(2)}</CtrlSum>
-            <InitgPty>
-                <Nm>${escapeXml(data.initiatorName)}</Nm>
-            </InitgPty>
-        </GrpHdr>
+${groepsKop(data)}
         <PmtInf>
-            <PmtInfId>${data.paymentId}</PmtInfId>
+            <PmtInfId>${escapeXml(data.paymentId)}</PmtInfId>
             <PmtMtd>TRF</PmtMtd>
             <NbOfTxs>${data.numberOfTransactions}</NbOfTxs>
             <CtrlSum>${data.controlSum.toFixed(2)}</CtrlSum>
             <ReqdExctnDt>${data.executionDate}</ReqdExctnDt>
             <Dbtr>
-                <Nm>${escapeXml(data.debtorName)}</Nm>
+                <Nm>${escapeXml(data.accountHolderName)}</Nm>
             </Dbtr>
             <DbtrAcct>
                 <Id>
-                    <IBAN>${data.debtorIban}</IBAN>
+                    <IBAN>${escapeXml(data.accountIban)}</IBAN>
                 </Id>
-            </DbtrAcct>${
-              data.debtorBic
-                ? `
-            <DbtrAgt>
-                <FinInstnId>
-                    <BIC>${data.debtorBic}</BIC>
-                </FinInstnId>
-            </DbtrAgt>`
-                : ''
-            }${txns}
+            </DbtrAcct>${agentBlok('DbtrAgt', data.accountBic)}${txns}
         </PmtInf>
     </CstmrCdtTrfInitn>
+</Document>`;
+}
+
+/**
+ * pain.008: de vereniging incasseert bij de tegenpartij.
+ *
+ * De regels worden per sequentietype gegroepeerd, want SeqTp staat in
+ * pain.008.001.02 op het niveau van PmtInf. Een eerste incasso (FRST) en een
+ * doorlopende (RCUR) door elkaar in één blok maakt het bestand ongeldig.
+ */
+function incassoBestand(data: SepaBestand): string {
+  const perType = new Map<string, SepaTransactie[]>();
+  for (const tx of data.transactions) {
+    const type = tx.sequenceType || 'RCUR';
+    if (!perType.has(type)) perType.set(type, []);
+    perType.get(type)!.push(tx);
+  }
+
+  const blokken = [...perType.entries()]
+    .map(([sequenceType, txs], index) => {
+      const som = txs.reduce((totaal, tx) => totaal + tx.amount, 0);
+      const regels = txs
+        .map(
+          (tx) => `
+                <DrctDbtTxInf>
+                    <PmtId>
+                        <EndToEndId>${escapeXml(tx.endToEndId)}</EndToEndId>
+                    </PmtId>
+                    <InstdAmt Ccy="EUR">${tx.amount.toFixed(2)}</InstdAmt>
+                    <DrctDbtTx>
+                        <MndtRltdInf>
+                            <MndtId>${escapeXml(tx.mandateReference || '')}</MndtId>
+                            <DtOfSgntr>${escapeXml(tx.mandateSignatureDate || '')}</DtOfSgntr>
+                        </MndtRltdInf>
+                    </DrctDbtTx>${agentBlok('DbtrAgt', tx.counterpartyBic)}
+                    <Dbtr>
+                        <Nm>${escapeXml(tx.counterpartyName)}</Nm>
+                    </Dbtr>
+                    <DbtrAcct>
+                        <Id>
+                            <IBAN>${escapeXml(tx.counterpartyIban)}</IBAN>
+                        </Id>
+                    </DbtrAcct>
+                    <RmtInf>
+                        <Ustrd>${escapeXml(tx.remittanceInfo)}</Ustrd>
+                    </RmtInf>
+                </DrctDbtTxInf>`,
+        )
+        .join('');
+
+      return `        <PmtInf>
+            <PmtInfId>${escapeXml(data.paymentId)}-${index + 1}</PmtInfId>
+            <PmtMtd>DD</PmtMtd>
+            <NbOfTxs>${txs.length}</NbOfTxs>
+            <CtrlSum>${som.toFixed(2)}</CtrlSum>
+            <PmtTpInf>
+                <SvcLvl>
+                    <Cd>SEPA</Cd>
+                </SvcLvl>
+                <LclInstrm>
+                    <Cd>CORE</Cd>
+                </LclInstrm>
+                <SeqTp>${escapeXml(sequenceType)}</SeqTp>
+            </PmtTpInf>
+            <ReqdColltnDt>${data.executionDate}</ReqdColltnDt>
+            <Cdtr>
+                <Nm>${escapeXml(data.accountHolderName)}</Nm>
+            </Cdtr>
+            <CdtrAcct>
+                <Id>
+                    <IBAN>${escapeXml(data.accountIban)}</IBAN>
+                </Id>
+            </CdtrAcct>${agentBlok('CdtrAgt', data.accountBic)}${regels}
+        </PmtInf>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.02">
+    <CstmrDrctDbtInitn>
+${groepsKop(data)}
+${blokken}
+    </CstmrDrctDbtInitn>
 </Document>`;
 }
 
@@ -1850,6 +2189,13 @@ router.post(
 
     const data = transactionSchema.parse(req.body);
 
+    // Elke regel boekt op een rekening van deze vereniging; de sleutelcontrole
+    // van de database let daar niet op, dus staat de controle hier.
+    for (const line of data.lines) {
+      eisEigenId('account', line.accountId, associationId, 'Onbekende grootboekrekening op een boekingsregel.');
+      eisEigenId('costCenter', line.costCenterId, associationId, 'Onbekende kostenplaats op een boekingsregel.');
+    }
+
     // Validate debit/credit balance
     let totalDebit = 0;
     let totalCredit = 0;
@@ -1880,18 +2226,7 @@ router.post(
     }
 
     // Generate transaction number
-    const lastTx = db
-      .prepare(
-        `
-        SELECT transaction_number FROM transactions
-        WHERE association_id = ? AND fiscal_year_id = ?
-        ORDER BY transaction_number DESC LIMIT 1
-    `,
-      )
-      .get(associationId, fiscalYear.id) as any;
-
-    const nextNumber = lastTx ? parseInt(lastTx.transaction_number.split('-')[1]) + 1 : 1;
-    const transactionNumber = `TX-${nextNumber.toString().padStart(6, '0')}`;
+    const transactionNumber = volgendBoekstuknummer(associationId);
 
     const transactionId = uuidv4();
     const now = new Date().toISOString();
@@ -1970,6 +2305,13 @@ router.put(
     if (existing.is_posted) throw new ApiError(400, 'Geboekte transacties kunnen niet worden bewerkt.');
 
     const data = transactionSchema.parse(req.body);
+
+    // Elke regel boekt op een rekening van deze vereniging; de sleutelcontrole
+    // van de database let daar niet op, dus staat de controle hier.
+    for (const line of data.lines) {
+      eisEigenId('account', line.accountId, associationId, 'Onbekende grootboekrekening op een boekingsregel.');
+      eisEigenId('costCenter', line.costCenterId, associationId, 'Onbekende kostenplaats op een boekingsregel.');
+    }
 
     // Validate balance
     let totalDebit = 0;
@@ -2105,15 +2447,28 @@ router.post(
     const data = bankImportSchema.parse(req.body);
 
     // Verify account exists and is a bank account
+    //
+    // Een afschrift hangt aan de bankrekening (bank_accounts), niet aan de
+    // grootboekrekening. De aanvraag noemt de grootboekrekening, dus zoeken we
+    // de bankrekening erbij op: met een accounts.id in bank_statements viel
+    // elke import om op de sleutelcontrole.
     const account = db
       .prepare(
         `
-        SELECT * FROM accounts WHERE id = ? AND association_id = ? AND account_subtype = 'bank'
+        SELECT id, name FROM accounts WHERE id = ? AND association_id = ? AND account_subtype = 'bank'
     `,
       )
       .get(data.accountId, associationId) as any;
 
     if (!account) throw new ApiError(404, 'Bankrekening niet gevonden.');
+
+    const bankAccount = db
+      .prepare('SELECT id FROM bank_accounts WHERE account_id = ? AND association_id = ?')
+      .get(data.accountId, associationId) as any;
+
+    if (!bankAccount) {
+      throw new ApiError(400, `Voor grootboekrekening ${account.name} is nog geen bankrekening met IBAN ingericht.`);
+    }
 
     // Get current fiscal year
     const fiscalYear = db
@@ -2126,20 +2481,13 @@ router.post(
 
     if (!fiscalYear) throw new ApiError(400, 'Geen actief boekjaar gevonden.');
 
-    // Create bank statement record
     const statementId = uuidv4();
     const now = new Date().toISOString();
 
-    db.prepare(
-      `
-        INSERT INTO bank_statements (
-            id, bank_account_id, statement_date, opening_balance, closing_balance,
-            status, import_file_name
-        ) VALUES (?, ?, ?, 0, 0, 'imported', ?)
-    `,
-    ).run(statementId, data.accountId, now.split('T')[0], data.format);
-
     // Parse bank statement based on format
+    //
+    // Eerst inlezen, dan pas wegschrijven: een onleesbaar bedrag hoort geen
+    // half afschrift achter te laten.
     const entries: Array<{
       date: string;
       description: string;
@@ -2159,7 +2507,7 @@ router.post(
           entries.push({
             date: parts[0].trim(),
             description: parts[1].trim(),
-            amount: parseFloat(parts[2].replace(',', '.').trim()),
+            amount: leesBedrag(parts[2]),
             reference: parts[3]?.trim(),
             counterpartyName: parts[4]?.trim(),
             counterpartyIban: parts[5]?.trim(),
@@ -2176,11 +2524,11 @@ router.post(
       while ((match = statementRegex.exec(data.content)) !== null) {
         const dateStr = match[1];
         const type = match[3]; // C = credit, D = debit
-        const amountStr = match[4].replace(',', '.');
+        const bedrag = leesBedrag(match[4]);
         amounts.push({
           date: `20${dateStr.slice(0, 2)}-${dateStr.slice(2, 4)}-${dateStr.slice(4, 6)}`,
           type,
-          amount: type === 'D' ? -parseFloat(amountStr) : parseFloat(amountStr),
+          amount: type === 'D' ? -bedrag : bedrag,
         });
       }
 
@@ -2198,6 +2546,16 @@ router.post(
       }
     }
     // CAMT053 would need XML parsing - simplified for now
+
+    // Create bank statement record
+    db.prepare(
+      `
+        INSERT INTO bank_statements (
+            id, bank_account_id, statement_date, opening_balance, closing_balance,
+            status, import_file_name
+        ) VALUES (?, ?, ?, 0, 0, 'imported', ?)
+    `,
+    ).run(statementId, bankAccount.id, now.split('T')[0], data.format);
 
     // Insert entries
     const insertEntry = db.prepare(`
@@ -2263,10 +2621,11 @@ router.get(
     const statements = db
       .prepare(
         `
-        SELECT bs.*, a.code AS account_code, a.name AS account_name
+        SELECT bs.*, ba.account_id AS ledger_account_id, a.code AS account_code, a.name AS account_name
         FROM bank_statements bs
-        LEFT JOIN accounts a ON bs.bank_account_id = a.id
-        WHERE a.association_id = ?
+        JOIN bank_accounts ba ON bs.bank_account_id = ba.id
+        LEFT JOIN accounts a ON ba.account_id = a.id
+        WHERE ba.association_id = ?
         ORDER BY bs.statement_date DESC, bs.imported_at DESC
     `,
       )
@@ -2275,7 +2634,8 @@ router.get(
     res.json(
       statements.map((s: any) => ({
         id: s.id,
-        accountId: s.bank_account_id,
+        accountId: s.ledger_account_id,
+        bankAccountId: s.bank_account_id,
         accountCode: s.account_code,
         accountName: s.account_name,
         statementDate: s.statement_date,
@@ -2301,10 +2661,10 @@ router.get(
     const statement = db
       .prepare(
         `
-        SELECT bs.*, a.association_id
+        SELECT bs.*, ba.association_id
         FROM bank_statements bs
-        LEFT JOIN accounts a ON bs.bank_account_id = a.id
-        WHERE bs.id = ? AND a.association_id = ?
+        JOIN bank_accounts ba ON bs.bank_account_id = ba.id
+        WHERE bs.id = ? AND ba.association_id = ?
     `,
       )
       .get(req.params.id, associationId) as any;
@@ -2361,14 +2721,23 @@ router.post(
     const { counterAccountId, costCenterId } = req.body;
     if (!counterAccountId) throw new ApiError(400, 'Tegenrekening is verplicht.');
 
+    // Zonder deze controle boekt de beheerder van vereniging A op een
+    // grootboekrekening van vereniging B: de sleutelcontrole vindt die rij
+    // gewoon, want die kijkt niet naar de vereniging.
+    eisEigenId('account', counterAccountId, associationId, 'Onbekende tegenrekening.');
+    eisEigenId('costCenter', costCenterId, associationId, 'Onbekende kostenplaats.');
+
     const line = db
       .prepare(
         `
-        SELECT bsl.*, bs.bank_account_id, a.association_id
+        -- De boeking komt op de grootboekrekening achter de bankrekening
+        -- terecht, niet op de bankrekening zelf: transaction_lines.account_id
+        -- verwijst naar accounts.
+        SELECT bsl.*, ba.account_id AS ledger_account_id, ba.association_id
         FROM bank_statement_lines bsl
         JOIN bank_statements bs ON bsl.statement_id = bs.id
-        JOIN accounts a ON bs.bank_account_id = a.id
-        WHERE bsl.id = ? AND bs.id = ? AND a.association_id = ?
+        JOIN bank_accounts ba ON bs.bank_account_id = ba.id
+        WHERE bsl.id = ? AND bs.id = ? AND ba.association_id = ?
     `,
       )
       .get(req.params.lineId, req.params.statementId, associationId) as any;
@@ -2388,18 +2757,7 @@ router.post(
     if (!fiscalYear) throw new ApiError(400, 'Geen actief boekjaar.');
 
     // Generate transaction number
-    const lastTx = db
-      .prepare(
-        `
-        SELECT transaction_number FROM transactions
-        WHERE association_id = ? AND fiscal_year_id = ?
-        ORDER BY transaction_number DESC LIMIT 1
-    `,
-      )
-      .get(associationId, fiscalYear.id) as any;
-
-    const nextNumber = lastTx ? parseInt(lastTx.transaction_number.split('-')[1]) + 1 : 1;
-    const transactionNumber = `TX-${nextNumber.toString().padStart(6, '0')}`;
+    const transactionNumber = volgendBoekstuknummer(associationId);
 
     const transactionId = uuidv4();
     const now = new Date().toISOString();
@@ -2436,11 +2794,11 @@ router.post(
 
     if (line.amount > 0) {
       // Money received: debit bank, credit counter
-      insertLine.run(uuidv4(), transactionId, 1, line.bank_account_id, null, amount, 0);
+      insertLine.run(uuidv4(), transactionId, 1, line.ledger_account_id, null, amount, 0);
       insertLine.run(uuidv4(), transactionId, 2, counterAccountId, costCenterId || null, 0, amount);
     } else {
       // Money paid: credit bank, debit counter
-      insertLine.run(uuidv4(), transactionId, 1, line.bank_account_id, null, 0, amount);
+      insertLine.run(uuidv4(), transactionId, 1, line.ledger_account_id, null, 0, amount);
       insertLine.run(uuidv4(), transactionId, 2, counterAccountId, costCenterId || null, amount, 0);
     }
 
@@ -2536,6 +2894,11 @@ router.post(
     if (!relationType || !name) {
       throw new ApiError(400, 'Type en naam zijn verplicht.');
     }
+
+    // Een relatie koppelen aan een lid of contact van een andere vereniging
+    // maakt van hun naam- en adresgegevens daar een lek.
+    eisEigenId('user', userId, associationId, 'Onbekend lid.');
+    eisEigenId('contact', contactId, associationId, 'Onbekend contact.');
 
     const relationId = uuidv4();
     const now = new Date().toISOString();
@@ -2917,27 +3280,42 @@ router.post(
     }
 
     const account = db
-      .prepare('SELECT id FROM accounts WHERE id = ? AND association_id = ?')
-      .get(accountId, associationId);
+      .prepare('SELECT id, account_type FROM accounts WHERE id = ? AND association_id = ?')
+      .get(accountId, associationId) as any;
     if (!account) {
       throw new ApiError(400, 'Ongeldige rekening.');
     }
+
+    eisEigenId('costCenter', costCenterId, associationId, 'Ongeldige kostenplaats.');
+    eisEigenId('fiscalYear', fiscalYearId, associationId, 'Ongeldig boekjaar.');
+
+    // budgets.fiscal_year_id is verplicht; zonder boekjaar liep de INSERT stuk
+    // op de sleutelcontrole in plaats van dat de aanvraag werd afgewezen.
+    if (!fiscalYearId) {
+      throw new ApiError(400, 'Boekjaar is verplicht.');
+    }
+
+    // budgets.budget_type is verplicht maar stond niet in de INSERT, waardoor
+    // elk budget strandde op NOT NULL. De soort volgt uit de rekening: op een
+    // opbrengstrekening begroot je inkomsten, op de rest uitgaven.
+    const budgetType = account.account_type === 'income' ? 'income' : 'expense';
 
     const budgetId = uuidv4();
     const now = new Date().toISOString();
 
     db.prepare(
       `
-        INSERT INTO budgets (id, association_id, fiscal_year_id, account_id, cost_center_id, name, amount, notes, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO budgets (id, association_id, fiscal_year_id, account_id, cost_center_id, name, budget_type, amount, notes, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     ).run(
       budgetId,
       associationId,
-      fiscalYearId || null,
+      fiscalYearId,
       accountId,
       costCenterId || null,
       name,
+      budgetType,
       amount || 0,
       notes || null,
       req.user!.id,
@@ -2967,6 +3345,12 @@ router.put(
     if (!budget) {
       throw new ApiError(404, 'Budget niet gevonden.');
     }
+
+    // POST /budgets controleert de rekening wel; dat het hier ontbrak was een
+    // omissie, geen keuze.
+    eisEigenId('account', accountId, associationId, 'Ongeldige rekening.');
+    eisEigenId('costCenter', costCenterId, associationId, 'Ongeldige kostenplaats.');
+    eisEigenId('fiscalYear', fiscalYearId, associationId, 'Ongeldig boekjaar.');
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -3343,25 +3727,35 @@ router.get(
     const accounts = db
       .prepare(
         `
+        -- Het boekjaar hoort bij het optellen zelf en niet in de ON-clausule
+        -- van een LEFT JOIN: daar maakt het t.* leeg maar blijft
+        -- tl.debit_amount gewoon meetellen. Zo stond in deze export alles wat
+        -- er ooit geboekt is, uit elk boekjaar. Meteen ook de vereniging en de
+        -- vlag is_posted erbij: een concept hoort niet in een rapport.
         SELECT
             a.code,
             a.name,
             a.account_type,
             a.account_subtype,
             a.opening_balance,
-            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
-            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+            COALESCE(bal.total_debit, 0) AS total_debit,
+            COALESCE(bal.total_credit, 0) AS total_credit
         FROM accounts a
-        LEFT JOIN transaction_lines tl ON a.id = tl.account_id
-        LEFT JOIN transactions t ON tl.transaction_id = t.id
-            AND t.fiscal_year_id = ?
+        LEFT JOIN (
+            SELECT tl.account_id,
+                SUM(tl.debit_amount) AS total_debit,
+                SUM(tl.credit_amount) AS total_credit
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ? AND t.is_posted = 1 AND t.fiscal_year_id = ?
+            GROUP BY tl.account_id
+        ) bal ON bal.account_id = a.id
         WHERE a.association_id = ?
           AND a.account_type IN ('asset', 'liability', 'equity')
-        GROUP BY a.id
         ORDER BY a.code
     `,
       )
-      .all(fiscalYearId, associationId);
+      .all(associationId, fiscalYearId, associationId);
 
     const balanceSheet = accounts.map((a: any) => {
       const balance = (a.opening_balance || 0) + a.total_debit - a.total_credit;
@@ -3417,24 +3811,34 @@ router.get(
     const accounts = db
       .prepare(
         `
+        -- Het boekjaar hoort bij het optellen zelf en niet in de ON-clausule
+        -- van een LEFT JOIN: daar maakt het t.* leeg maar blijft
+        -- tl.debit_amount gewoon meetellen. Zo stond in deze export alles wat
+        -- er ooit geboekt is, uit elk boekjaar. Meteen ook de vereniging en de
+        -- vlag is_posted erbij: een concept hoort niet in een rapport.
         SELECT
             a.code,
             a.name,
             a.account_type,
             a.account_subtype,
-            COALESCE(SUM(tl.debit_amount), 0) AS total_debit,
-            COALESCE(SUM(tl.credit_amount), 0) AS total_credit
+            COALESCE(bal.total_debit, 0) AS total_debit,
+            COALESCE(bal.total_credit, 0) AS total_credit
         FROM accounts a
-        LEFT JOIN transaction_lines tl ON a.id = tl.account_id
-        LEFT JOIN transactions t ON tl.transaction_id = t.id
-            AND t.fiscal_year_id = ?
+        LEFT JOIN (
+            SELECT tl.account_id,
+                SUM(tl.debit_amount) AS total_debit,
+                SUM(tl.credit_amount) AS total_credit
+            FROM transaction_lines tl
+            JOIN transactions t ON tl.transaction_id = t.id
+            WHERE t.association_id = ? AND t.is_posted = 1 AND t.fiscal_year_id = ?
+            GROUP BY tl.account_id
+        ) bal ON bal.account_id = a.id
         WHERE a.association_id = ?
           AND a.account_type IN ('income', 'expense')
-        GROUP BY a.id
         ORDER BY a.account_type DESC, a.code
     `,
       )
-      .all(fiscalYearId, associationId);
+      .all(associationId, fiscalYearId, associationId);
 
     const profitLoss = accounts.map((a: any) => {
       const amount = a.account_type === 'income' ? a.total_credit - a.total_debit : a.total_debit - a.total_credit;
@@ -3518,10 +3922,14 @@ router.get(
 );
 
 // Export relations (debiteuren/crediteuren)
+//
+// Deze export bevat IBAN, e-mailadres en woonadres van leden en leveranciers.
+// GET /relations laat daar alleen de beheerder bij; dan hoort dezelfde lijst
+// als bestand niet ruimer te staan.
 router.get(
   '/export/relations',
   authenticateToken,
-  requireRole('admin', 'board'),
+  requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const associationId = req.user!.associationId;
     const { format = 'csv' } = req.query;

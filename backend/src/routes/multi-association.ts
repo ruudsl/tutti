@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import db from '../database/connection';
+import { revokeUserSessions } from '../utils/sessionStore';
 import { authenticateToken, requireRole, requireSuperAdmin, AuthRequest, generateToken } from '../middleware/auth';
 import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
@@ -461,8 +462,31 @@ router.post(
       }
     }
 
-    // Update user's current association
-    db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(associationId, req.user!.id);
+    // De rol hoort bij de vereniging, niet bij de gebruiker.
+    //
+    // `users.role` is een enkele globale kolom en elke requireRole() leest die.
+    // `user_associations.role` is de rol die je in die ene vereniging hebt
+    // gekregen, en die werd hier genegeerd: wie beheerder is bij A en door B
+    // als gewoon lid wordt uitgenodigd, kreeg na het wisselen een token met
+    // role 'admin' en associationId B. Daarmee ging bij B alles open -
+    // ledenbeheer, wachtwoorden resetten, back-ups, boekhouding.
+    //
+    // Is er geen lidmaatschapsrij, dan blijft de rol staan. Dat is het geval
+    // voor je eigen vereniging (die rij ontstaat alleen bij een uitnodiging) en
+    // voor een super-admin die ergens binnenstapt zonder lid te zijn.
+    const lidmaatschap = db
+      .prepare(`SELECT role FROM user_associations WHERE user_id = ? AND association_id = ? AND status = 'active'`)
+      .get(req.user!.id, associationId) as { role: string } | undefined;
+
+    if (lidmaatschap) {
+      db.prepare('UPDATE users SET association_id = ?, role = ? WHERE id = ?').run(
+        associationId,
+        lidmaatschap.role,
+        req.user!.id,
+      );
+    } else {
+      db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(associationId, req.user!.id);
+    }
 
     // Get updated user data for new token
     const updatedUser = db
@@ -1145,6 +1169,36 @@ router.delete(
     if (result.changes === 0) {
       throw new ApiError(404, 'Lid niet gevonden.');
     }
+
+    // Er zijn twee lidmaatschapsbegrippen: `user_associations` en de kolom
+    // `users.association_id`. Alleen de eerste werd hier bijgewerkt, terwijl
+    // elke andere route op de tweede filtert. Het lid kreeg dus "Lid verwijderd
+    // uit vereniging" te zien en hield ondertussen volledige toegang tot de
+    // ledenlijst, de bladmuziek en de agenda.
+    //
+    // Staat de gebruiker nu in deze vereniging, dan zetten we hem terug naar
+    // een vereniging waar hij nog wel lid van is. Is die er niet, dan blijft
+    // association_id leeg: geen vereniging is beter dan deze vereniging.
+    const staatHier = db.prepare('SELECT association_id FROM users WHERE id = ?').get(req.params.userId) as
+      { association_id: string | null } | undefined;
+
+    if (staatHier?.association_id === req.user!.associationId) {
+      const elders = db
+        .prepare(
+          `SELECT association_id FROM user_associations
+           WHERE user_id = ? AND association_id != ? AND status = 'active'
+           ORDER BY is_primary DESC, joined_at ASC LIMIT 1`,
+        )
+        .get(req.params.userId, req.user!.associationId) as { association_id: string } | undefined;
+
+      db.prepare('UPDATE users SET association_id = ? WHERE id = ?').run(
+        elders?.association_id ?? null,
+        req.params.userId,
+      );
+    }
+
+    // En een token dat al uitgegeven is blijft anders gewoon werken.
+    revokeUserSessions(req.params.userId);
 
     logActivity(req.user!.associationId, req.user!.id, 'member_removed', 'user', req.params.userId, {});
 
