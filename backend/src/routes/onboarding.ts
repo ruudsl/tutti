@@ -8,6 +8,7 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { revokeUserSessions } from '../utils/sessionStore';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -1388,6 +1389,12 @@ router.post(
         `,
       ).run(uuidv4(), userId, req.user!.associationId, JSON.stringify({ m365Removed, offboardedBy: req.user!.id }));
     });
+
+    // Opnieuw inloggen lukt niet meer (routes/auth.ts weigert 'inactive'), maar
+    // een token dat al uitgegeven is blijft geldig tot het verloopt. Zonder
+    // deze regel houdt iemand die net uit dienst is genomen dus nog uren
+    // toegang tot de ledenlijst, de bladmuziek en de agenda.
+    revokeUserSessions(userId);
 
     logger.info(`User offboarded: ${user.email}`, { userId, m365Removed, offboardedBy: req.user!.id });
 

@@ -446,14 +446,16 @@ export function up(): void {
         )
     `);
 
-  // Seed existing admins as super admins
-  const adminUsers = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all() as { id: string }[];
-  for (const user of adminUsers) {
-    db.prepare(`INSERT OR IGNORE INTO super_admins (id, user_id, permissions) VALUES (?, ?, '["all"]')`).run(
-      `super-${user.id}`,
-      user.id,
-    );
-  }
+  // Hier stond een lus die elke gebruiker met role = 'admin' in super_admins
+  // zette. Dat haalde precies de grens weg die deze tabel moet trekken:
+  // requireRole('admin') is de beheerder van een vereniging, requireSuperAdmin
+  // gaat over de hele installatie. Met die seed kon elke verenigingsbeheerder
+  // de gegevens van alle andere verenigingen inzien en wijzigen.
+  //
+  // Een super-admin ontstaat op drie manieren, en alle drie zijn ze expliciet:
+  // de eerste beheerder bij init.ts, MAKE_SUPER_ADMIN in de omgeving, en
+  // POST /multi-association/super-admin/super-admins. Rijen die hier al zijn
+  // aangemaakt worden opgeruimd door 20260821000001_super_admins_opschonen.
 
   // User membership in multiple associations
   db.exec(`

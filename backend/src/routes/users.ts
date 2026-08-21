@@ -29,6 +29,28 @@ import { logAuditEvent } from './audit-logs';
 
 const router = Router();
 
+/**
+ * Controleer dat elk opgegeven orkest bij deze vereniging hoort.
+ *
+ * `orchestraIds` komt uit de aanvraag en werd alleen als uuid gevalideerd. De
+ * gebruiker zelf is wel verenigingsgebonden, het orkest niet - een beheerder
+ * van vereniging A kon zo een eigen lid in een orkest van B zetten. Dat lekt
+ * twee kanten op: GET /orchestras/:id haalt de leden op zonder verenigingsfilter
+ * (naam en e-mailadres van een vreemd lid verschijnen dus in het scherm van B),
+ * en notifyOrchestra stuurt dat lid vanaf dat moment de repetitie- en
+ * muziekmeldingen van B.
+ */
+function bewaakOrkesten(orchestraIds: string[] | undefined, associationId: string | null): void {
+  if (!orchestraIds || orchestraIds.length === 0) return;
+
+  const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
+  for (const orchestraId of orchestraIds) {
+    if (!hoortErbij.get(orchestraId, associationId)) {
+      throw new ApiError(400, 'Een van de gekozen orkesten hoort niet bij deze vereniging.');
+    }
+  }
+}
+
 // Profile photo upload configuration
 const profilePhotoDir = path.resolve(config.uploadDir, 'profile-photos');
 if (!fs.existsSync(profilePhotoDir)) {
@@ -721,6 +743,7 @@ router.post(
 
       // Add orchestras
       if (data.orchestraIds && data.orchestraIds.length > 0) {
+        bewaakOrkesten(data.orchestraIds, req.user!.associationId);
         const insertOrchestra = db.prepare('INSERT INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
         for (const orchestraId of data.orchestraIds) {
           insertOrchestra.run(userId, orchestraId);
@@ -878,6 +901,7 @@ router.put(
 
       // Update orchestras (only if provided)
       if (data.orchestraIds !== undefined) {
+        bewaakOrkesten(data.orchestraIds, req.user!.associationId);
         db.prepare('DELETE FROM user_orchestras WHERE user_id = ?').run(req.params.id);
         if (data.orchestraIds.length > 0) {
           const insertOrchestra = db.prepare('INSERT INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
