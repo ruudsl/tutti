@@ -67,7 +67,9 @@ router.get(
       .prepare(
         `
         SELECT a.id, a.name, a.created_at,
-               (SELECT COUNT(*) FROM users WHERE association_id = a.id) as member_count,
+               -- Een verwijderd lid staat er nog wel, maar telt niet mee: zonder
+               -- deze filter blijft het ledental na een verwijdering te hoog staan.
+               (SELECT COUNT(*) FROM users WHERE association_id = a.id AND deleted_at IS NULL) as member_count,
                (SELECT COUNT(*) FROM orchestras WHERE association_id = a.id) as orchestra_count
         FROM associations a
         WHERE a.id = ?

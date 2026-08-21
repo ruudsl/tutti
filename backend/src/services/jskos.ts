@@ -63,6 +63,27 @@ function rowToConcept(row: VocabularyCacheRow): JskosConcept {
 }
 
 /**
+ * Een taalcode die veilig in een JSON-pad gezet kan worden.
+ *
+ * De taalcode wordt hieronder als tekst in de SQL geplakt - `json_extract(
+ * pref_label, '$.${language}')` - en niet als parameter meegegeven. Dat kan
+ * ook niet: een JSON-pad is geen waarde maar onderdeel van de uitdrukking.
+ * Daarmee is elke aanroeper die `language` ongefilterd doorgeeft een ingang
+ * voor SQL-injectie. `?lang=nl') DESC --` draaide de sortering om; een variant
+ * daarop gaf een 500.
+ *
+ * De route valideert het inmiddels zelf, maar deze functies worden op meer
+ * plekken aangeroepen en een volgende aanroeper weet dat niet. Daarom staat de
+ * grens hier, bij de bron: alleen een BCP 47-achtige code komt erdoor, de rest
+ * valt terug op het Nederlands.
+ */
+const TAALCODE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{2,8})*$/;
+
+function veiligeTaal(language: string): string {
+  return TAALCODE.test(language) ? language : 'nl';
+}
+
+/**
  * Get a concept by URI from cache
  */
 export function getConcept(uri: string): JskosConcept | null {
@@ -105,6 +126,7 @@ export function searchConcepts(
   limit: number = 20,
   language: string = 'nl',
 ): JskosSearchResult {
+  language = veiligeTaal(language);
   const searchQuery = query.toLowerCase().trim();
 
   if (!searchQuery) {
@@ -165,6 +187,7 @@ export function searchConcepts(
  * Get all concepts of a specific type
  */
 export function getConceptsByType(type: 'instrument' | 'genre' | 'composer', language: string = 'nl'): JskosConcept[] {
+  language = veiligeTaal(language);
   const rows = db
     .prepare(
       `
@@ -182,6 +205,7 @@ export function getConceptsByType(type: 'instrument' | 'genre' | 'composer', lan
  * Get root concepts (concepts without broader)
  */
 export function getRootConcepts(type: 'instrument' | 'genre' | 'composer', language: string = 'nl'): JskosConcept[] {
+  language = veiligeTaal(language);
   const rows = db
     .prepare(
       `
@@ -200,6 +224,7 @@ export function getRootConcepts(type: 'instrument' | 'genre' | 'composer', langu
  * Get child concepts (narrower)
  */
 export function getChildConcepts(parentUri: string, language: string = 'nl'): JskosConcept[] {
+  language = veiligeTaal(language);
   // Find concepts where broader contains parentUri
   const rows = db
     .prepare(
@@ -221,6 +246,7 @@ export function buildHierarchy(
   type: 'instrument' | 'genre' | 'composer',
   language: string = 'nl',
 ): JskosHierarchyNode[] {
+  language = veiligeTaal(language);
   const allConcepts = getConceptsByType(type, language);
   const conceptMap = new Map<string, JskosHierarchyNode>();
 
