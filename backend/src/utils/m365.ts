@@ -238,8 +238,18 @@ export async function setupEmailForwarding(
     });
 
     if (!updateResponse.ok) {
-      const errorData = (await updateResponse.json()) as { error?: { message?: string } };
-      logger.warn('Failed to set otherMails', { error: errorData.error?.message });
+      // Het foutantwoord is niet altijd JSON: een gateway of proxy tussen ons
+      // en Graph kan een HTML-pagina teruggeven. Zonder deze vangst gooit
+      // .json() daar, valt de uitzondering in de buitenste catch, en wordt het
+      // doorsturen helemaal niet meer geprobeerd - precies het tegenovergestelde
+      // van wat de regel hieronder belooft.
+      const errorData = (await updateResponse.json().catch(() => ({}))) as {
+        error?: { message?: string };
+      };
+      logger.warn('Failed to set otherMails', {
+        status: updateResponse.status,
+        error: errorData.error?.message,
+      });
       // Continue anyway - the forwarding is more important
     }
 
