@@ -257,6 +257,45 @@ describe('leden in- en uitschrijven', () => {
     });
   });
 
+  describe('functietitels bij instrumenten', () => {
+    // Dit blok stond al in dit bestand voordat ik het uitbreidde en dekt een
+    // route die de rest hier niet raakt.
+    it('geeft de lijst terug', async () => {
+      expect((await als(beheerderToken, 'get', '/job-titles')).status).toBe(200);
+    });
+
+    it('eist een instrument en een titel', async () => {
+      const antwoord = await als(beheerderToken, 'post', '/job-titles').send({ jobTitle: 'Zonder instrument' });
+      expect(antwoord.status).toBe(400);
+    });
+
+    it('meldt dat een onbekend instrument niet bestaat', async () => {
+      const antwoord = await als(beheerderToken, 'post', '/job-titles').send({
+        instrumentId: '11111111-1111-1111-1111-111111111111',
+        jobTitle: 'Trompettist',
+      });
+      expect(antwoord.status).toBe(404);
+    });
+  });
+
+  describe('een lid dat niet bestaat', () => {
+    const onbekend = '11111111-1111-1111-1111-111111111111';
+
+    it('wordt netjes gemeld bij uitschrijven', async () => {
+      expect((await als(beheerderToken, 'post', `/offboard/${onbekend}`).send({})).status).toBe(404);
+    });
+
+    it('wordt netjes gemeld bij weer inschrijven', async () => {
+      expect((await als(beheerderToken, 'post', `/reactivate/${onbekend}`).send({})).status).toBe(404);
+    });
+  });
+
+  describe('het overzicht van uitgeschreven leden, vervolg', () => {
+    it('is niet voor een gewoon lid', async () => {
+      expect((await als(lidToken, 'get', '/inactive-members')).status).toBe(403);
+    });
+  });
+
   describe('openstaande Spond-koppelingen', () => {
     it('toont alleen de eigen vereniging', async () => {
       await nieuwLid(beheerderToken, {});
