@@ -404,6 +404,22 @@ router.put(
       throw new ApiError(400, 'Ongeldige status. Gebruik draft, active, completed of archived.');
     }
 
+    // Het sjabloon moet van de eigen vereniging zijn.
+    //
+    // Het aanmaken controleerde dat wel, het bijwerken niet - terwijl
+    // template_id hieronder gewoon uit de aanvraag wordt weggeschreven. Zo kon
+    // een seizoen aan het sjabloon van een andere vereniging worden gehangen,
+    // en omdat het overzicht de naam met een LEFT JOIN zonder verenigingsfilter
+    // ophaalt stond die vreemde naam daarna in de eigen planning.
+    if (templateId) {
+      const template = db
+        .prepare('SELECT id FROM season_templates WHERE id = ? AND association_id = ?')
+        .get(templateId, req.user!.associationId);
+      if (!template) {
+        throw new ApiError(400, 'Ongeldig template ID.');
+      }
+    }
+
     db.prepare(
       `
     UPDATE seasons SET
@@ -484,6 +500,28 @@ router.post(
     const validTypes = ['concert', 'rehearsal', 'other'];
     if (!validTypes.includes(eventType)) {
       throw new ApiError(400, 'Ongeldig event type. Gebruik concert, rehearsal of other.');
+    }
+
+    // Het gekoppelde evenement moet van de eigen vereniging zijn.
+    //
+    // event_id ging rechtstreeks uit de aanvraag de tabel in, terwijl
+    // GET /seasons/:id de naam ervan opzoekt met een subquery zonder
+    // verenigingsfilter. Een id van de buren liet hun concertnaam dus in het
+    // eigen seizoen zien. Bij 'other' hoort geen tabel, dus daar valt niets te
+    // controleren.
+    if (eventId && eventType !== 'other') {
+      const evenement =
+        eventType === 'concert'
+          ? db
+              .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+              .get(eventId, req.user!.associationId)
+          : db
+              .prepare('SELECT id FROM rehearsals WHERE id = ? AND association_id = ?')
+              .get(eventId, req.user!.associationId);
+
+      if (!evenement) {
+        throw new ApiError(404, 'Evenement niet gevonden.');
+      }
     }
 
     const eventRowId = uuidv4();

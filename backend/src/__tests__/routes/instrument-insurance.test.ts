@@ -336,6 +336,33 @@ describe('instrumentverzekering', () => {
       const polisId = await maakPolis();
       expect((await alsBeheerder('delete', `/policies/${polisId}/coverage/${uuidv4()}`)).status).toBe(404);
     });
+
+    it('haalt een dekking niet weg via een andere polis', async () => {
+      // De dekking werd alleen op vereniging gecontroleerd, niet op de polis
+      // uit het pad. Wie /policies/<polis B>/coverage/<dekking van polis A>
+      // aanriep gooide de dekking van polis A weg, terwijl het instrument
+      // daarna nog steeds naar polis A wees: onverzekerd, maar wel als
+      // verzekerd geadministreerd.
+      const polisA = await maakPolis();
+      const polisB = await maakPolis({ policyNumber: 'POL-2026-002' });
+      const assetId = maakInstrument();
+      const dekking = await alsBeheerder('post', `/policies/${polisA}/coverage`).send({
+        assetId,
+        coveredAmount: 900,
+        coverageStart: '2026-01-01',
+      });
+      expect(dekking.status, JSON.stringify(dekking.body)).toBe(201);
+
+      const antwoord = await alsBeheerder('delete', `/policies/${polisB}/coverage/${dekking.body.id}`);
+      expect(antwoord.status).toBe(404);
+
+      expect((await alsLid('get', `/policies/${polisA}`)).body.coveredAssets).toHaveLength(1);
+
+      const rij = db.prepare('SELECT insurance_policy_id FROM instrument_assets WHERE id = ?').get(assetId) as {
+        insurance_policy_id: string | null;
+      };
+      expect(rij.insurance_policy_id).toBe(polisA);
+    });
   });
 
   describe('schadeclaims', () => {
