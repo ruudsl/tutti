@@ -8,7 +8,7 @@
  */
 
 import { Router, Response } from 'express';
-import { authenticateToken, optionalAuth, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import db from '../database/connection';
 
@@ -94,7 +94,17 @@ router.get(
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
 
-    // Get all titles for this orchestra's association with metadata
+    // Het repertoire van dit orkest, niet van de hele vereniging.
+    //
+    // orchestraId werd hierboven gecontroleerd en daarna niet meer gebruikt:
+    // de query filterde alleen op association_id. Bij een vereniging met een
+    // harmonie en een opleidingsorkest kreeg je dus twee keer dezelfde,
+    // veel te brede lijst - terwijl het antwoord hem wel als het repertoire
+    // van dit ene orkest aanduidt (tutti:orchestra/<id>).
+    //
+    // music_titles kent geen orkest; de weg loopt via de muzieklijsten van
+    // het orkest naar de partijen, en van partij naar titel op titel en
+    // arrangeur - dezelfde koppeling als music-lists.ts legt.
     const titles = db
       .prepare(
         `
@@ -104,10 +114,22 @@ router.get(
     FROM music_titles t
     LEFT JOIN music_metadata m ON m.music_title_id = t.id
     WHERE t.association_id = ?
+      AND t.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1
+        FROM music_pieces mp
+        JOIN music_list_pieces mlp ON mlp.music_piece_id = mp.id
+        JOIN music_lists ml ON ml.id = mlp.music_list_id
+        WHERE ml.orchestra_id = ?
+          AND ml.deleted_at IS NULL
+          AND mp.deleted_at IS NULL
+          AND mp.title = t.title
+          AND COALESCE(mp.arranger, '') = COALESCE(t.arranger, '')
+      )
     ORDER BY t.title
   `,
       )
-      .all(req.user!.associationId) as TitleRow[];
+      .all(req.user!.associationId, orchestraId) as TitleRow[];
 
     // Get instruments for all titles
     const instruments = db
@@ -279,7 +301,7 @@ router.get(
       m.work_number, m.movement_number, m.movement_title, m.lyricist, m.rights, m.source, m.parts
     FROM music_titles t
     LEFT JOIN music_metadata m ON m.music_title_id = t.id
-    WHERE t.id = ? AND t.association_id = ?
+    WHERE t.id = ? AND t.association_id = ? AND t.deleted_at IS NULL
   `,
       )
       .get(titleId, req.user!.associationId) as
@@ -434,10 +456,22 @@ router.get(
     FROM music_titles t
     LEFT JOIN music_metadata m ON m.music_title_id = t.id
     WHERE t.association_id = ?
+      AND t.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1
+        FROM music_pieces mp
+        JOIN music_list_pieces mlp ON mlp.music_piece_id = mp.id
+        JOIN music_lists ml ON ml.id = mlp.music_list_id
+        WHERE ml.orchestra_id = ?
+          AND ml.deleted_at IS NULL
+          AND mp.deleted_at IS NULL
+          AND mp.title = t.title
+          AND COALESCE(mp.arranger, '') = COALESCE(t.arranger, '')
+      )
     ORDER BY t.title
   `,
       )
-      .all(req.user!.associationId) as Array<{
+      .all(req.user!.associationId, orchestraId) as Array<{
       id: string;
       title: string;
       composer: string | null;
@@ -456,8 +490,10 @@ router.get(
       escapeCsvField(t.composer || ''),
       escapeCsvField(t.arranger || ''),
       t.duration_seconds?.toString() || '',
-      t.grade || '',
-      t.work_number || '',
+      // grade en work_number zijn vrije tekstvelden; een komma erin schoof
+      // alle volgende kolommen op. De buurvelden werden wel ontsnapt.
+      escapeCsvField(t.grade || ''),
+      escapeCsvField(t.work_number || ''),
       escapeCsvField(t.movement_title || ''),
     ]);
 

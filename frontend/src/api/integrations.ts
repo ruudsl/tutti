@@ -2,13 +2,13 @@ import api from './client';
 import type { MicrosoftConfig, SmtpConfig, TelegramConfig, WhatsAppConfig, LoginResponse } from '../types';
 
 // Microsoft Entra ID (SSO)
-export const getMicrosoftEnabled = async (): Promise<{ enabled: boolean }> => {
-  const { data } = await api.get('/auth/microsoft/enabled');
+export const getMicrosoftEnabled = async (slug?: string): Promise<{ enabled: boolean }> => {
+  const { data } = await api.get('/auth/microsoft/enabled', slug ? { params: { slug } } : undefined);
   return data;
 };
 
-export const getMicrosoftLoginUrl = async (): Promise<{ authUrl: string }> => {
-  const { data } = await api.get('/auth/microsoft/login');
+export const getMicrosoftLoginUrl = async (slug?: string): Promise<{ authUrl: string }> => {
+  const { data } = await api.get('/auth/microsoft/login', slug ? { params: { slug } } : undefined);
   return data;
 };
 
