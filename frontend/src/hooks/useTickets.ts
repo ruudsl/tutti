@@ -231,7 +231,9 @@ export function useDeleteTicketType() {
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.concertTickets(concertId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.ticketStats(concertId) });
-      showSuccess(t('common.delete'));
+      // 'common.delete' is de knoptekst ("Verwijderen"); als bevestiging
+      // achteraf hoort hier de melding dat het gelukt is.
+      showSuccess(t('tickets.ticketTypeDeleted'));
     },
     onError: (error) => {
       showError(getErrorMessage(error));

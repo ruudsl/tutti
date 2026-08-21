@@ -211,7 +211,10 @@ export function useOfflineData(): OfflineDataHook {
               musicTitleId: f.id || f.music_title_id,
               title: f.title,
               arranger: f.arranger,
-              addedAt: f.created_at || new Date().toISOString(),
+              // De API levert dit veld als `favoritedAt`; zonder die terugval kreeg
+              // elke favoriet het synchronisatiemoment als datum en was de
+              // oorspronkelijke volgorde offline weg.
+              addedAt: f.favoritedAt || f.created_at || new Date().toISOString(),
             }));
             await offlineStorage.saveFavorites(storedFavorites);
             break;
@@ -510,7 +513,8 @@ export function useOfflineData(): OfflineDataHook {
           musicTitleId: f.id || f.music_title_id,
           title: f.title,
           arranger: f.arranger,
-          addedAt: f.created_at || new Date().toISOString(),
+          // Zie syncEntity('favorites'): `favoritedAt` is het veld dat de API stuurt.
+          addedAt: f.favoritedAt || f.created_at || new Date().toISOString(),
         }));
         await offlineStorage.saveFavorites(storedFavorites);
         return storedFavorites;
