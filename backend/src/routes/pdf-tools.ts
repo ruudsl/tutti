@@ -6,7 +6,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
-import { asyncHandler } from '../middleware/errorHandler';
+import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { FileValidationError } from '../utils/errors';
 import db from '../database/connection';
 import logger from '../utils/logger';
@@ -581,6 +581,23 @@ router.post(
       req.user!.associationId,
       req.user!.id,
     );
+
+    // listId komt uit de aanvraag en is dus net zo goed een verwijzing van de
+    // gebruiker als een id in het pad. Zonder deze controle belandde een
+    // geuploade partij op de repertoirelijst van een vreemd orkest.
+    // cloud-import.ts doet hetzelfde; music-pieces.ts eveneens.
+    if (listId) {
+      const lijst = db
+        .prepare(
+          `SELECT ml.id FROM music_lists ml
+           JOIN orchestras o ON o.id = ml.orchestra_id
+           WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL`,
+        )
+        .get(listId, req.user!.associationId);
+      if (!lijst) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+      }
+    }
 
     // Add to list if specified
     if (listId) {

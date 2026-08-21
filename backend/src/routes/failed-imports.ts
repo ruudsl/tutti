@@ -233,12 +233,30 @@ router.post(
           req.user!.id,
         );
 
-        // Add to list if specified
+        // De list_id is ooit met de mislukte import meegekomen uit een
+        // aanvraag en is sindsdien nooit gecontroleerd. Hem hier alsnog toetsen
+        // voorkomt dat een herstelpoging een partij op de lijst van een vreemd
+        // orkest zet - en vangt ook een lijst op die intussen verwijderd is.
         if (failedImport.list_id) {
-          db.prepare('INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)').run(
-            failedImport.list_id,
-            pieceId,
-          );
+          const lijst = db
+            .prepare(
+              `SELECT ml.id FROM music_lists ml
+               JOIN orchestras o ON o.id = ml.orchestra_id
+               WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL`,
+            )
+            .get(failedImport.list_id, req.user!.associationId);
+
+          if (lijst) {
+            db.prepare('INSERT OR IGNORE INTO music_list_pieces (music_list_id, music_piece_id) VALUES (?, ?)').run(
+              failedImport.list_id,
+              pieceId,
+            );
+          } else {
+            logger.warn('Herstelde import niet op de lijst gezet: lijst hoort niet bij deze vereniging', {
+              failedImportId: failedImport.id,
+              listId: failedImport.list_id,
+            });
+          }
         }
       }
 

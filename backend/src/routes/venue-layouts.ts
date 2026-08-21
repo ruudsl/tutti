@@ -49,6 +49,20 @@ const createLayoutSchema = z.object({
 
 const updateLayoutSchema = createLayoutSchema.partial();
 
+/**
+ * Deze route voegt stoelen toe en werkt ze bij in dezelfde aanroep. Dat maakt
+ * een `.default()` op een veld verraderlijk: bij het toevoegen is de standaard
+ * precies goed, bij het bijwerken zet hij een veld terug dat het verzoek niet
+ * noemde. seatType, priceCategory en isAvailable stonden alle drie op een
+ * standaard, dus een stoel een paar pixels verschuiven maakte van een
+ * rolstoelplaats een gewone stoel en zette een uit de verkoop gehaalde stoel
+ * weer op beschikbaar - is_available wordt echt uitgelezen, GET
+ * /concerts/:id/seats zet de stoel daarmee op 'blocked'.
+ *
+ * De velden zijn nu optioneel zonder standaard. Bij het toevoegen vult de
+ * INSERT de standaardwaarde in, bij het bijwerken laat COALESCE staan wat er
+ * stond.
+ */
 const bulkSeatsSchema = z.object({
   seats: z.array(
     z.object({
@@ -56,11 +70,11 @@ const bulkSeatsSchema = z.object({
       section: z.string().min(1, 'Section is required'),
       rowName: z.string().min(1, 'Row name is required'),
       seatNumber: z.string().min(1, 'Seat number is required'),
-      seatType: z.enum(['regular', 'wheelchair', 'companion', 'vip']).default('regular'),
+      seatType: z.enum(['regular', 'wheelchair', 'companion', 'vip']).optional(),
       xPosition: z.number(),
       yPosition: z.number(),
-      priceCategory: z.string().default('standard'),
-      isAvailable: z.boolean().default(true),
+      priceCategory: z.string().optional(),
+      isAvailable: z.boolean().optional(),
     }),
   ),
   deleteOtherSeats: z.boolean().default(false), // If true, delete seats not in the list
@@ -374,30 +388,104 @@ router.put(
         logger.warn(`Updating venue layout in use by concert: ${inUse.name}`, { layoutId: id, concertId: inUse.id });
       }
 
-      // Update seats - delete existing and recreate
-      db.prepare('DELETE FROM venue_seats WHERE layout_id = ?').run(id);
+      // Stoelen bijwerken. Dit ging eerder met een DELETE van alles gevolgd
+      // door een volledige herbouw. Elke stoel kreeg daarbij een nieuw id, en
+      // omdat concert_seat_reservations met ON DELETE CASCADE aan venue_seats
+      // hangt verdween daarmee de complete kaartverkoop - zonder waarschuwing,
+      // ook als de stoel in de nieuwe indeling gewoon weer bestond. De
+      // bulkroute /:id/seats weigerde datzelfde al met een 409.
+      //
+      // Een stoel is te herkennen aan vak, rij en nummer; dat is ook de
+      // UNIQUE-sleutel in het schema. Stoelen die onder die sleutel blijven
+      // bestaan houden nu hun id en dus hun reserveringen, en alleen wat er
+      // echt uit gaat wordt verwijderd - en dat mag niet als er een kaart voor
+      // verkocht of gereserveerd is.
+      const sleutelVan = (vak: string, rij: string, nummer: string) => [vak, rij, nummer].join('\u0000');
+
+      const gewensteStoelen = layoutData.sections.flatMap((section) =>
+        section.rows.flatMap((row) =>
+          row.seats.map((seat) => ({
+            sleutel: sleutelVan(section.name, row.name, seat.number),
+            section: section.name,
+            rowName: row.name,
+            number: seat.number,
+            type: seat.type,
+            x: seat.x + section.x,
+            y: seat.y + section.y,
+            priceCategory: seat.priceCategory,
+          })),
+        ),
+      );
+
+      const huidigeStoelen = db
+        .prepare('SELECT id, section, row_name, seat_number FROM venue_seats WHERE layout_id = ?')
+        .all(id) as { id: string; section: string; row_name: string; seat_number: string }[];
+
+      const gewensteSleutels = new Set(gewensteStoelen.map((s) => s.sleutel));
+      const huidigPerSleutel = new Map(
+        huidigeStoelen.map((s) => [sleutelVan(s.section, s.row_name, s.seat_number), s.id]),
+      );
+
+      const teVerwijderen = huidigeStoelen
+        .filter((s) => !gewensteSleutels.has(sleutelVan(s.section, s.row_name, s.seat_number)))
+        .map((s) => s.id);
+
+      if (teVerwijderen.length > 0) {
+        const bezet = db
+          .prepare(
+            `
+                SELECT s.id, s.seat_number, s.row_name
+                FROM venue_seats s
+                JOIN concert_seat_reservations r ON r.seat_id = s.id
+                WHERE s.id IN (${teVerwijderen.map(() => '?').join(',')})
+                AND r.status IN ('reserved', 'sold')
+            `,
+          )
+          .all(...teVerwijderen) as { id: string; seat_number: string; row_name: string }[];
+
+        if (bezet.length > 0) {
+          throw new ApiError(
+            409,
+            `Cannot delete seats with active reservations: ${bezet.map((s) => `${s.row_name}${s.seat_number}`).join(', ')}`,
+          );
+        }
+
+        db.prepare(
+          `DELETE FROM venue_seats WHERE layout_id = ? AND id IN (${teVerwijderen.map(() => '?').join(',')})`,
+        ).run(id, ...teVerwijderen);
+      }
 
       const insertSeatStmt = db.prepare(`
             INSERT INTO venue_seats (id, layout_id, section, row_name, seat_number, seat_type, x_position, y_position, price_category, is_available)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-      for (const section of layoutData.sections) {
-        for (const row of section.rows) {
-          for (const seat of row.seats) {
-            insertSeatStmt.run(
-              uuidv4(),
-              id,
-              section.name,
-              row.name,
-              seat.number,
-              seat.type,
-              seat.x + section.x,
-              seat.y + section.y,
-              seat.priceCategory,
-              1,
-            );
-          }
+      // is_available blijft bewust buiten deze UPDATE. Een stoel die uit de
+      // verkoop is gehaald hoort daar niet vanzelf weer in te komen doordat
+      // iemand de indeling opslaat.
+      const updateSeatStmt = db.prepare(`
+            UPDATE venue_seats
+            SET seat_type = ?, x_position = ?, y_position = ?, price_category = ?
+            WHERE id = ? AND layout_id = ?
+        `);
+
+      for (const stoel of gewensteStoelen) {
+        const bestaandId = huidigPerSleutel.get(stoel.sleutel);
+        if (bestaandId) {
+          updateSeatStmt.run(stoel.type, stoel.x, stoel.y, stoel.priceCategory, bestaandId, id);
+        } else {
+          insertSeatStmt.run(
+            uuidv4(),
+            id,
+            stoel.section,
+            stoel.rowName,
+            stoel.number,
+            stoel.type,
+            stoel.x,
+            stoel.y,
+            stoel.priceCategory,
+            1,
+          );
         }
       }
     }
@@ -523,7 +611,11 @@ router.post(
 
     const updateStmt = db.prepare(`
         UPDATE venue_seats
-        SET section = ?, row_name = ?, seat_number = ?, seat_type = ?, x_position = ?, y_position = ?, price_category = ?, is_available = ?
+        SET section = ?, row_name = ?, seat_number = ?,
+            seat_type = COALESCE(?, seat_type),
+            x_position = ?, y_position = ?,
+            price_category = COALESCE(?, price_category),
+            is_available = COALESCE(?, is_available)
         WHERE id = ? AND layout_id = ?
     `);
 
@@ -534,11 +626,11 @@ router.post(
           seat.section,
           seat.rowName,
           seat.seatNumber,
-          seat.seatType,
+          seat.seatType ?? null,
           seat.xPosition,
           seat.yPosition,
-          seat.priceCategory,
-          seat.isAvailable ? 1 : 0,
+          seat.priceCategory ?? null,
+          seat.isAvailable === undefined ? null : seat.isAvailable ? 1 : 0,
           seat.id,
           id,
         );
@@ -553,11 +645,11 @@ router.post(
           seat.section,
           seat.rowName,
           seat.seatNumber,
-          seat.seatType,
+          seat.seatType ?? 'regular',
           seat.xPosition,
           seat.yPosition,
-          seat.priceCategory,
-          seat.isAvailable ? 1 : 0,
+          seat.priceCategory ?? 'standard',
+          seat.isAvailable === false ? 0 : 1,
         );
         newSeatIds.add(seatId);
         created++;

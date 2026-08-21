@@ -205,7 +205,11 @@ router.get(
     if (!typeFilter || typeFilter === 'list') {
       let listQuery = `
       SELECT ml.id, ml.name, ml.is_active, o.name as orchestra_name,
-             (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count
+             -- Zie orchestras.ts: zonder de join naar music_pieces tellen
+             -- zacht verwijderde partijen mee in het aantal.
+             (SELECT COUNT(*) FROM music_list_pieces mlp
+               JOIN music_pieces mp ON mp.id = mlp.music_piece_id
+               WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as piece_count
       FROM music_lists ml
       JOIN orchestras o ON ml.orchestra_id = o.id
       WHERE o.association_id = ?

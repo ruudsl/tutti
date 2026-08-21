@@ -400,16 +400,21 @@ router.get(
       SUM(CASE WHEN al.action_type = 'view' THEN 1 ELSE 0 END) as views,
       SUM(CASE WHEN al.action_type = 'play_audio' THEN 1 ELSE 0 END) as audio_plays,
       COUNT(*) as total_access,
+      -- deleted_at hoort in deze subquery's: muziekstukken, titels en lijsten
+      -- worden zacht verwijderd. Zonder die voorwaarde komt de titel er nog
+      -- gewoon uit en blijft een verwijderd stuk in het overzicht staan, ook
+      -- al filtert de route hieronder op een lege titel met de bedoeling
+      -- verwijderde inhoud weg te laten.
       CASE
-        WHEN al.entity_type = 'music_piece' THEN (SELECT mp.title FROM music_pieces mp WHERE mp.id = al.entity_id)
-        WHEN al.entity_type = 'music_title' THEN (SELECT mt.title FROM music_titles mt WHERE mt.id = al.entity_id)
-        WHEN al.entity_type = 'music_list' THEN (SELECT ml.name FROM music_lists ml WHERE ml.id = al.entity_id)
+        WHEN al.entity_type = 'music_piece' THEN (SELECT mp.title FROM music_pieces mp WHERE mp.id = al.entity_id AND mp.deleted_at IS NULL)
+        WHEN al.entity_type = 'music_title' THEN (SELECT mt.title FROM music_titles mt WHERE mt.id = al.entity_id AND mt.deleted_at IS NULL)
+        WHEN al.entity_type = 'music_list' THEN (SELECT ml.name FROM music_lists ml WHERE ml.id = al.entity_id AND ml.deleted_at IS NULL)
         WHEN al.entity_type = 'audio_recording' THEN (SELECT ar.title FROM audio_recordings ar WHERE ar.id = al.entity_id)
         ELSE NULL
       END as content_title,
       CASE
-        WHEN al.entity_type = 'music_piece' THEN (SELECT mp.arranger FROM music_pieces mp WHERE mp.id = al.entity_id)
-        WHEN al.entity_type = 'music_title' THEN (SELECT mt.arranger FROM music_titles mt WHERE mt.id = al.entity_id)
+        WHEN al.entity_type = 'music_piece' THEN (SELECT mp.arranger FROM music_pieces mp WHERE mp.id = al.entity_id AND mp.deleted_at IS NULL)
+        WHEN al.entity_type = 'music_title' THEN (SELECT mt.arranger FROM music_titles mt WHERE mt.id = al.entity_id AND mt.deleted_at IS NULL)
         ELSE NULL
       END as arranger
     FROM activity_log al
@@ -871,14 +876,16 @@ router.get(
           SUM(CASE WHEN al.action_type = 'view' THEN 1 ELSE 0 END) as views,
           SUM(CASE WHEN al.action_type = 'play_audio' THEN 1 ELSE 0 END) as audio_plays,
           COUNT(*) as total_access,
+          -- Zelfde reden als bij /activity/by-content: zonder deze voorwaarde
+          -- staat een zacht verwijderd stuk gewoon in de export.
           CASE
-            WHEN al.entity_type = 'music_piece' THEN (SELECT mp.title FROM music_pieces mp WHERE mp.id = al.entity_id)
-            WHEN al.entity_type = 'music_title' THEN (SELECT mt.title FROM music_titles mt WHERE mt.id = al.entity_id)
+            WHEN al.entity_type = 'music_piece' THEN (SELECT mp.title FROM music_pieces mp WHERE mp.id = al.entity_id AND mp.deleted_at IS NULL)
+            WHEN al.entity_type = 'music_title' THEN (SELECT mt.title FROM music_titles mt WHERE mt.id = al.entity_id AND mt.deleted_at IS NULL)
             ELSE NULL
           END as title,
           CASE
-            WHEN al.entity_type = 'music_piece' THEN (SELECT mp.arranger FROM music_pieces mp WHERE mp.id = al.entity_id)
-            WHEN al.entity_type = 'music_title' THEN (SELECT mt.arranger FROM music_titles mt WHERE mt.id = al.entity_id)
+            WHEN al.entity_type = 'music_piece' THEN (SELECT mp.arranger FROM music_pieces mp WHERE mp.id = al.entity_id AND mp.deleted_at IS NULL)
+            WHEN al.entity_type = 'music_title' THEN (SELECT mt.arranger FROM music_titles mt WHERE mt.id = al.entity_id AND mt.deleted_at IS NULL)
             ELSE NULL
           END as arranger
         FROM activity_log al
@@ -1540,14 +1547,22 @@ router.get(
       i.name as instrument,
       COUNT(DISTINCT u.id) as member_count,
       -- Zelfde reden als hierboven: een aggregaat in een aggregaat mag niet.
-      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END) > 0
-        THEN COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) * 100.0 / COUNT(CASE WHEN a.status IN ('accepted', 'declined') THEN 1 END)
+      --
+      -- De grens van drie maanden hoort in de telling en niet in de
+      -- ON-clausule van de LEFT JOIN. Daar gooit hij de aanwezigheidsrij
+      -- namelijk niet weg maar maakt hij alleen de kolommen van de repetitie
+      -- leeg, waarna de rij in COUNT() gewoon meetelt. Afmeldingen van jaren
+      -- terug drukten zo het gemiddelde van vandaag. De LEFT JOIN zelf blijft
+      -- staan: leden zonder aanwezigheid moeten in member_count meetellen.
+      CASE WHEN COUNT(CASE WHEN a.status IN ('accepted', 'declined') AND r.date >= date('now', '-3 months') THEN 1 END) > 0
+        THEN COUNT(CASE WHEN a.status = 'accepted' AND r.date >= date('now', '-3 months') THEN 1 END) * 100.0
+             / COUNT(CASE WHEN a.status IN ('accepted', 'declined') AND r.date >= date('now', '-3 months') THEN 1 END)
         ELSE 0 END as avg_rate
     FROM users u
     JOIN user_instruments ui ON u.id = ui.user_id
     JOIN instruments i ON ui.instrument_id = i.id
     LEFT JOIN rehearsal_attendance a ON u.id = a.user_id
-    LEFT JOIN rehearsals r ON a.rehearsal_id = r.id AND r.date >= date('now', '-3 months')
+    LEFT JOIN rehearsals r ON a.rehearsal_id = r.id
     WHERE u.association_id = ? AND u.status = 'active'
     GROUP BY i.id
   `,

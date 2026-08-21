@@ -252,6 +252,69 @@ describe('zaalindelingen', () => {
       const id = await maakIndeling();
       expect((await alsLid('put', `/api/venue-layouts/${id}`).send({ name: 'Anders' })).status).toBe(403);
     });
+
+    // De indeling werd bij elke wijziging van layoutData compleet opnieuw
+    // opgebouwd: alle stoelen weg, daarna nieuwe rijen met nieuwe id's. De
+    // reserveringen hangen met ON DELETE CASCADE aan venue_seats, dus die
+    // gingen stilzwijgend mee. Een vak verschuiven tijdens een lopende
+    // kaartverkoop wiste zo de hele verkoop, zonder melding en zonder dat het
+    // antwoord er iets over zei. De bulkroute hiernaast weigerde datzelfde al
+    // met een 409; alleen deze route deed het toch.
+    it('houdt een verkochte stoel overeind als de indeling wordt bijgewerkt', async () => {
+      const id = await maakIndeling('Zaal', 2);
+      const concertId = maakConcert(id);
+      const [, tweede] = stoelenVan(id);
+      db.prepare(
+        `INSERT INTO concert_seat_reservations (id, concert_id, seat_id, status) VALUES (?, ?, ?, 'sold')`,
+      ).run(uuidv4(), concertId, tweede.id);
+
+      const antwoord = await alsBeheerder('put', `/api/venue-layouts/${id}`).send({
+        layoutData: indelingGegevens(3),
+      });
+
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+      const reserveringen = db
+        .prepare('SELECT seat_id FROM concert_seat_reservations WHERE concert_id = ?')
+        .all(concertId) as { seat_id: string }[];
+      expect(reserveringen.map((r) => r.seat_id)).toEqual([tweede.id]);
+      expect(stoelenVan(id)).toHaveLength(3);
+    });
+
+    it('weigert een stoel met een reservering uit de indeling te halen', async () => {
+      const id = await maakIndeling('Zaal', 3);
+      const concertId = maakConcert(id);
+      const stoelen = stoelenVan(id);
+      const derde = stoelen.find((s) => s.seat_number === '3')!;
+      db.prepare(
+        `INSERT INTO concert_seat_reservations (id, concert_id, seat_id, status, reservation_expires_at)
+         VALUES (?, ?, ?, 'reserved', '2099-01-01T00:00:00.000Z')`,
+      ).run(uuidv4(), concertId, derde.id);
+
+      const antwoord = await alsBeheerder('put', `/api/venue-layouts/${id}`).send({
+        layoutData: indelingGegevens(2),
+      });
+
+      expect(antwoord.status).toBe(409);
+      expect(stoelenVan(id)).toHaveLength(3);
+      expect(
+        db.prepare('SELECT COUNT(*) as aantal FROM concert_seat_reservations WHERE concert_id = ?').get(concertId),
+      ).toMatchObject({ aantal: 1 });
+    });
+
+    it('laat een stoel zonder reservering wel verdwijnen', async () => {
+      // De bewaking hierboven mag geen slot op de deur worden: een indeling
+      // waar niets voor verkocht is moet gewoon kleiner kunnen.
+      const id = await maakIndeling('Zaal', 3);
+
+      const antwoord = await alsBeheerder('put', `/api/venue-layouts/${id}`).send({
+        layoutData: indelingGegevens(1),
+      });
+
+      expect(antwoord.status).toBe(200);
+      expect(stoelenVan(id)).toHaveLength(1);
+      expect(db.prepare('SELECT capacity FROM venue_layouts WHERE id = ?').get(id)).toMatchObject({ capacity: 1 });
+    });
   });
 
   describe('verwijderen', () => {
@@ -365,6 +428,71 @@ describe('zaalindelingen', () => {
         seats: [{ section: 'A', rowName: '1', seatNumber: '1', xPosition: 0, yPosition: 0 }],
       });
       expect(antwoord.status).toBe(404);
+    });
+
+    it('laat een geblokkeerde stoel geblokkeerd als de wijziging er niets over zegt', async () => {
+      // isAvailable had een `.default(true)` in het schema. Een stoel die om
+      // wat voor reden dan ook uit de verkoop was - kapot, gereserveerd voor
+      // de techniek - kwam daardoor weer in de verkoop zodra iemand hem een
+      // paar pixels verschoof. Het verzoek zei er niets over; de standaard
+      // deed het werk. is_available wordt echt uitgelezen: GET
+      // /concerts/:id/seats zet de stoel op 'blocked'.
+      const id = await maakIndeling('Zaal', 1);
+      const [stoel] = stoelenVan(id);
+      db.prepare('UPDATE venue_seats SET is_available = 0 WHERE id = ?').run(stoel.id);
+
+      const antwoord = await alsBeheerder('post', `/api/venue-layouts/${id}/seats`).send({
+        seats: [{ id: stoel.id, section: 'Vak A', rowName: 'Rij 1', seatNumber: '1', xPosition: 42, yPosition: 0 }],
+      });
+
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+      const na = db.prepare('SELECT is_available, x_position FROM venue_seats WHERE id = ?').get(stoel.id) as {
+        is_available: number;
+        x_position: number;
+      };
+      expect(na.x_position).toBe(42);
+      expect(na.is_available).toBe(0);
+    });
+
+    it('maakt van een rolstoelplaats geen gewone stoel bij een verplaatsing', async () => {
+      const id = await maakIndeling('Zaal', 1);
+      const [stoel] = stoelenVan(id);
+      db.prepare("UPDATE venue_seats SET seat_type = 'wheelchair', price_category = 'premium' WHERE id = ?").run(
+        stoel.id,
+      );
+
+      await alsBeheerder('post', `/api/venue-layouts/${id}/seats`).send({
+        seats: [{ id: stoel.id, section: 'Vak A', rowName: 'Rij 1', seatNumber: '1', xPosition: 7, yPosition: 0 }],
+      });
+
+      expect(db.prepare('SELECT seat_type, price_category FROM venue_seats WHERE id = ?').get(stoel.id)).toMatchObject({
+        seat_type: 'wheelchair',
+        price_category: 'premium',
+      });
+    });
+
+    it('deblokkeert een stoel wel als het verzoek daarom vraagt', async () => {
+      const id = await maakIndeling('Zaal', 1);
+      const [stoel] = stoelenVan(id);
+      db.prepare('UPDATE venue_seats SET is_available = 0 WHERE id = ?').run(stoel.id);
+
+      await alsBeheerder('post', `/api/venue-layouts/${id}/seats`).send({
+        seats: [
+          {
+            id: stoel.id,
+            section: 'Vak A',
+            rowName: 'Rij 1',
+            seatNumber: '1',
+            xPosition: 0,
+            yPosition: 0,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(db.prepare('SELECT is_available FROM venue_seats WHERE id = ?').get(stoel.id)).toMatchObject({
+        is_available: 1,
+      });
     });
   });
 

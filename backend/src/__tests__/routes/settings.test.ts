@@ -13,6 +13,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 import '../setup';
 import db from '../../database/connection';
 import settingsRoutes from '../../routes/settings';
@@ -117,6 +119,24 @@ describe('instellingen', () => {
         display_name: string | null;
       };
       expect(rij.display_name).toBeNull();
+    });
+
+    it('laat de weergavenaam staan als een wijziging hem niet noemt', async () => {
+      // Een verzoek dat displayName niet noemt hoorde hem ook niet aan te
+      // raken. De route liet het veld door `displayName?.trim() || null` lopen
+      // en schreef dat altijd weg, dus een PUT met een ander veld erin - of
+      // een leeg verzoek - wiste de weergavenaam van de vereniging.
+      // Bewust wissen kan nog steeds, met een lege waarde of met null; dat is
+      // wat de test hierboven nakijkt.
+      await alsBeheerder('put', '/').send({ displayName: 'Sint Caecilia' });
+
+      const antwoord = await alsBeheerder('put', '/').send({ theme: { primaryColor: '#2563eb' } });
+      expect(antwoord.status).toBe(200);
+
+      const rij = db.prepare('SELECT display_name FROM associations WHERE id = ?').get(vereniging.id) as {
+        display_name: string | null;
+      };
+      expect(rij.display_name).toBe('Sint Caecilia');
     });
 
     it('raakt een andere vereniging niet', async () => {
@@ -349,6 +369,71 @@ describe('instellingen', () => {
 
     it('laat een lid geen logo verwijderen', async () => {
       expect((await alsLid('delete', '/logo')).status).toBe(403);
+    });
+  });
+
+  describe('routevolgorde', () => {
+    /**
+     * Lees de routes uit settings.ts, in beide schrijfwijzen.
+     *
+     * route-shadowing.test.ts bewaakt deze eigenschap over alle
+     * routebestanden, maar herkent alleen de vorm waarbij `router.get(` op een
+     * eigen regel staat en het pad op de volgende. POST /settings/logo staat
+     * op een regel - prettier trekt hem daar ook telkens naartoe omdat hij
+     * past - en viel daardoor buiten dat vizier. Deze test kijkt settings.ts
+     * na met een lezer die beide vormen ziet, zodat er geen route onbewaakt
+     * blijft.
+     */
+    function leesRoutes(bron: string): Array<{ methode: string; pad: string; regel: number }> {
+      const regels = bron.split('\n');
+      const routes: Array<{ methode: string; pad: string; regel: number }> = [];
+
+      regels.forEach((regel, i) => {
+        const opEenRegel = regel.match(/^\s*router\.(get|post|put|patch|delete)\(\s*'([^']+)'/);
+        if (opEenRegel) {
+          routes.push({ methode: opEenRegel[1].toUpperCase(), pad: opEenRegel[2], regel: i + 1 });
+          return;
+        }
+
+        const geopend = regel.match(/^\s*router\.(get|post|put|patch|delete)\($/);
+        if (!geopend) return;
+        const pad = (regels[i + 1] ?? '').match(/^\s*'([^']+)'/);
+        if (pad) routes.push({ methode: geopend[1].toUpperCase(), pad: pad[1], regel: i + 2 });
+      });
+
+      return routes;
+    }
+
+    /** Vangt `eerder` het pad van `later` af? */
+    function vangtAf(eerder: { methode: string; pad: string }, later: { methode: string; pad: string }): boolean {
+      if (eerder.methode !== later.methode) return false;
+
+      const a = eerder.pad.split('/').filter(Boolean);
+      const b = later.pad.split('/').filter(Boolean);
+      if (a.length !== b.length) return false;
+      if (!a.some((deel) => deel.startsWith(':'))) return false;
+
+      return a.every((deel, i) => deel.startsWith(':') || deel === b[i]);
+    }
+
+    it('zet geen letterlijk pad onder een parameterpad', () => {
+      const routes = leesRoutes(fs.readFileSync(path.join(__dirname, '../../routes/settings.ts'), 'utf-8'));
+
+      // Zonder deze ondergrens zou de test stilzwijgend niets nakijken als de
+      // schrijfwijze ooit verandert en de lezer niets meer herkent.
+      expect(routes.length).toBeGreaterThan(10);
+
+      const problemen: string[] = [];
+      routes.forEach((later, j) => {
+        if (later.pad.includes(':')) return; // alleen letterlijke paden lopen dit risico
+        routes.slice(0, j).forEach((eerder) => {
+          if (vangtAf(eerder, later)) {
+            problemen.push(`${later.methode} ${later.pad} (regel ${later.regel}) valt achter ${eerder.pad}`);
+          }
+        });
+      });
+
+      expect(problemen).toEqual([]);
     });
   });
 
