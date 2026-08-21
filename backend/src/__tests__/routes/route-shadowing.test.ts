@@ -45,10 +45,26 @@ function leesRoutes(bron: string): Route[] {
   const routes: Route[] = [];
 
   regels.forEach((regel, i) => {
-    const m = regel.match(/^\s*[A-Za-z_$][\w$]*\.(get|post|put|patch|delete)\($/);
-    if (!m || i + 1 >= regels.length) return;
-    const p = regels[i + 1].match(/^\s*'([^']+)'/);
-    if (p) routes.push({ methode: m[1].toUpperCase(), pad: p[1], regel: i + 1 });
+    // Twee schrijfwijzen komen allebei voor: het pad op de regel zelf
+    // (`router.get('/pad', handler)`) en het pad op de volgende regel, zoals
+    // prettier het opmaakt zodra de aanroep te lang wordt. Deze test keek
+    // eerder alleen naar de tweede vorm en liet daarmee 78 registraties
+    // ongezien - waaronder echte gevallen.
+    const m = regel.match(/^\s*[A-Za-z_$][\w$]*\.(get|post|put|patch|delete)\((.*)$/);
+    if (!m) return;
+    const methode = m[1].toUpperCase();
+
+    // Alleen paden tellen. Zonder deze eis leest `req.get('user-agent')` als
+    // een GET-route, want dat is ook `iets.get('tekst')`.
+    const opDezeRegel = m[2].trim().match(/^'(\/[^']*)'/);
+    if (opDezeRegel) {
+      routes.push({ methode, pad: opDezeRegel[1], regel: i + 1 });
+      return;
+    }
+
+    if (m[2].trim() !== '' || i + 1 >= regels.length) return;
+    const opVolgendeRegel = regels[i + 1].match(/^\s*'(\/[^']*)'/);
+    if (opVolgendeRegel) routes.push({ methode, pad: opVolgendeRegel[1], regel: i + 1 });
   });
 
   return routes;
@@ -61,9 +77,14 @@ function vangtAf(eerder: Route, later: Route): boolean {
   const a = eerder.pad.split('/').filter(Boolean);
   const b = later.pad.split('/').filter(Boolean);
   if (a.length !== b.length) return false;
-  if (!a.some((deel) => deel.startsWith(':'))) return false;
 
-  return a.every((deel, i) => deel.startsWith(':') || deel === b[i]);
+  // Elk segment van `eerder` moet dat van `later` kunnen opslokken.
+  if (!a.every((deel, i) => deel.startsWith(':') || deel === b[i])) return false;
+
+  // En ergens moet `eerder` ruimer zijn: een parameter op een plek waar
+  // `later` een letterlijk woord heeft. Zijn beide patronen even ruim, dan
+  // gaat het om een dubbele registratie - ook fout, maar een ander geval.
+  return a.some((deel, i) => deel.startsWith(':') && !b[i].startsWith(':'));
 }
 
 const bestanden = fs
@@ -83,7 +104,13 @@ describe('routes vangen elkaar niet af', () => {
     const problemen: string[] = [];
 
     routes.forEach((later, j) => {
-      if (later.pad.includes(':')) return; // alleen letterlijke paden lopen dit risico
+      // Hier stond `if (later.pad.includes(':')) return;`, met als gedachte dat
+      // alleen een volledig letterlijk pad afgevangen kan worden. Dat klopt
+      // niet: PUT /:id/options/reorder bevat een parameter en werd dus
+      // overgeslagen, terwijl PUT /:pollId/options/:optionId hem wel degelijk
+      // opslokte. Hetzelfde gold voor /:id/program/reorder in concerts.ts.
+      // Waar de parameter staat doet er niet toe - het gaat erom of een eerder
+      // patroon ruimer is. Die vergelijking zit nu volledig in vangtAf.
       routes.slice(0, j).forEach((eerder) => {
         if (vangtAf(eerder, later)) {
           problemen.push(
