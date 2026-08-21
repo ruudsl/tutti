@@ -53,7 +53,7 @@ router.get(
       u.email as reported_by_email,
       ru.first_name || ' ' || ru.last_name as resolved_by_name
     FROM piece_issues pi
-    JOIN music_pieces mp ON pi.music_piece_id = mp.id
+    JOIN music_pieces mp ON pi.music_piece_id = mp.id AND mp.deleted_at IS NULL
     LEFT JOIN instruments i ON mp.instrument_id = i.id
     JOIN users u ON pi.reported_by = u.id
     LEFT JOIN users ru ON pi.resolved_by = ru.id
@@ -99,7 +99,7 @@ router.get(
       mp.arranger as piece_arranger,
       i.name as instrument_name
     FROM piece_issues pi
-    JOIN music_pieces mp ON pi.music_piece_id = mp.id
+    JOIN music_pieces mp ON pi.music_piece_id = mp.id AND mp.deleted_at IS NULL
     LEFT JOIN instruments i ON mp.instrument_id = i.id
     WHERE pi.reported_by = ?
     ORDER BY pi.created_at DESC
@@ -126,7 +126,7 @@ router.get(
       SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved,
       SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
     FROM piece_issues pi
-    JOIN music_pieces mp ON pi.music_piece_id = mp.id
+    JOIN music_pieces mp ON pi.music_piece_id = mp.id AND mp.deleted_at IS NULL
     WHERE mp.association_id = ?
   `,
       )
@@ -182,7 +182,7 @@ router.post(
         `
     SELECT mp.id
     FROM music_pieces mp
-    WHERE mp.id = ? AND mp.association_id = ?
+    WHERE mp.id = ? AND mp.association_id = ? AND mp.deleted_at IS NULL
   `,
       )
       .get(musicPieceId, req.user!.associationId);
