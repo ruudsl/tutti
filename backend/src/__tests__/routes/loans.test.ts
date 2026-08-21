@@ -284,6 +284,18 @@ describe('bladmuziek uitlenen', () => {
       expect(uitleenRij(uitlening.id).status).toBe('overdue');
     });
 
+    it('meldt een verstreken uitlening in dezelfde aanroep als te laat', async () => {
+      // De cijfers werden geteld voordat de verstreken uitleningen op 'overdue'
+      // werden gezet. Het antwoord liep daardoor een aanroep achter: de
+      // uitleenpagina toonde de lening nog als lopend, terwijl de rij in de
+      // database al te laat was.
+      await maakUitlening({ expectedReturn: '2020-01-01' });
+
+      const antwoord = await alsCommissie('get', '/stats');
+
+      expect(antwoord.body).toMatchObject({ total: 1, active: 0, overdue: 1 });
+    });
+
     it('laat een uitlening zonder retourdatum met rust', async () => {
       const uitlening = await maakUitlening({ expectedReturn: undefined });
 

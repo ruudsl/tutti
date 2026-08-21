@@ -73,6 +73,25 @@ router.get(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Eerst de verstreken uitleningen bijwerken, dan pas tellen.
+    //
+    // Andersom liep het antwoord een aanroep achter: een uitlening waarvan de
+    // retourdatum net was verstreken werd nog als lopend geteld en pas daarna
+    // op 'overdue' gezet. De uitleenpagina toonde dan andere cijfers dan de
+    // lijst eronder, tot iemand de pagina nog een keer opvroeg.
+    db.prepare(
+      `
+    UPDATE loans
+    SET status = 'overdue'
+    WHERE status = 'active'
+      AND expected_return IS NOT NULL
+      AND expected_return < date('now')
+      AND music_title_id IN (
+        SELECT id FROM music_titles WHERE association_id = ?
+      )
+  `,
+    ).run(req.user!.associationId);
+
     const stats = db
       .prepare(
         `
@@ -87,20 +106,6 @@ router.get(
   `,
       )
       .get(req.user!.associationId);
-
-    // Update overdue loans
-    db.prepare(
-      `
-    UPDATE loans
-    SET status = 'overdue'
-    WHERE status = 'active'
-      AND expected_return IS NOT NULL
-      AND expected_return < date('now')
-      AND music_title_id IN (
-        SELECT id FROM music_titles WHERE association_id = ?
-      )
-  `,
-    ).run(req.user!.associationId);
 
     res.json(stats);
   }),

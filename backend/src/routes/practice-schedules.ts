@@ -667,12 +667,18 @@ router.post(
     }
 
     // Get all instruments in this orchestra
+    //
+    // Alleen leden die er nog zijn tellen mee. Een lid wordt zacht verwijderd,
+    // maar zijn rijen in user_instruments en user_orchestras blijven staan -
+    // zonder filter op deleted_at kreeg het schema dus een sectie voor een
+    // instrument dat niemand meer speelt.
     const instruments = db
       .prepare(
         `
         SELECT DISTINCT i.id FROM instruments i
         JOIN user_instruments ui ON ui.instrument_id = i.id
         JOIN user_orchestras uo ON uo.user_id = ui.user_id
+        JOIN users u ON u.id = ui.user_id AND u.deleted_at IS NULL
         WHERE uo.orchestra_id = ?
     `,
       )
