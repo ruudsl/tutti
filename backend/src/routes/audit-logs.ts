@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { asyncHandler } from '../middleware/errorHandler';
 import db from '../database/connection';
@@ -85,8 +85,11 @@ router.get(
     const offset = (pageNum - 1) * limit;
 
     // Build WHERE clause
-    const conditions: string[] = ['1=1'];
-    const params: (string | number)[] = [];
+    // Het logboek van de eigen vereniging, en dat van niemand anders. Dit
+    // filter stond er niet, en de route is voor de beheerder van een
+    // vereniging - dus zag elke beheerder de hele installatie.
+    const conditions: string[] = ['al.association_id = ?'];
+    const params: (string | number)[] = [(req as AuthRequest).user!.associationId!];
 
     if (action) {
       conditions.push('al.action = ?');
@@ -257,12 +260,30 @@ export function logAuditEvent(
     const id = uuidv4();
     const changesJson = changes ? JSON.stringify(changes) : null;
 
+    // Bij welke vereniging hoort deze regel? Bij die van het lid dat de
+    // handeling deed, op het moment dat hij hem deed. Vastleggen in plaats van
+    // later uit users halen: een lid kan van vereniging wisselen, en dan zou
+    // zijn logboek meeverhuizen naar een vereniging waar het niet gebeurd is.
+    const lid = db.prepare('SELECT association_id FROM users WHERE id = ?').get(userId) as
+      { association_id: string | null } | undefined;
+
     db.prepare(
       `
-      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, entity_name, changes, ip_address, user_agent, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO audit_logs (id, user_id, association_id, action, entity_type, entity_id, entity_name, changes, ip_address, user_agent, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `,
-    ).run(id, userId, action, entityType, entityId, entityName, changesJson, ipAddress, userAgent);
+    ).run(
+      id,
+      userId,
+      lid?.association_id ?? null,
+      action,
+      entityType,
+      entityId,
+      entityName,
+      changesJson,
+      ipAddress,
+      userAgent,
+    );
 
     const safeAction = sanitizeForLog(action);
     const safeEntityType = sanitizeForLog(entityType);

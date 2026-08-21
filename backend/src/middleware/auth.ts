@@ -182,6 +182,29 @@ export function requireRole(...roles: string[]) {
   };
 }
 
+/**
+ * Alleen voor een super-admin: iemand die over de hele installatie gaat, niet
+ * over een vereniging.
+ *
+ * requireRole('admin') is verenigingsgebonden - het is de beheerder van een
+ * vereniging. Voor handelingen die alle verenigingen tegelijk raken is dat te
+ * ruim. De controle stond tot nu toe als losse regel in elke route van
+ * multi-association.ts; hier staat hij een keer.
+ */
+export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Niet geauthenticeerd.' });
+  }
+
+  const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user.id);
+
+  if (!superAdmin) {
+    return res.status(403).json({ error: 'Super admin rechten vereist.' });
+  }
+
+  next();
+}
+
 export function generateToken(user: {
   id: string;
   email: string;

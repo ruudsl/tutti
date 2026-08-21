@@ -57,7 +57,8 @@ export async function sendWeeklyDigest(): Promise<void> {
                 FROM users u
                 WHERE u.association_id = ?
                   AND u.email IS NOT NULL
-                  AND u.role != 'inactive'
+                  AND u.status != 'inactive'
+                  AND u.deleted_at IS NULL
                   AND NOT EXISTS (
                       SELECT 1 FROM notification_preferences np
                       WHERE np.user_id = u.id AND np.email_enabled = 0

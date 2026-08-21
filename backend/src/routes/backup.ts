@@ -4,7 +4,7 @@ import fs from 'fs';
 import archiver from 'archiver';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { ipWhitelistMiddleware } from '../middleware/ipWhitelist';
 import { FileValidationError } from '../utils/errors';
@@ -17,10 +17,56 @@ import { getBackupDir } from '../scheduler/backup';
 
 const router = Router();
 
+/**
+ * Reservekopie en terugzetten.
+ *
+ * Deze drie routes gaan over de hele installatie, niet over een vereniging.
+ * De reservekopie is het databasebestand plus alle uploads - dus van alle
+ * verenigingen tegelijk - en terugzetten overschrijft datzelfde bestand.
+ *
+ * Ze stonden op requireRole('admin'). Dat is de beheerder van een vereniging,
+ * en die rol heeft elke vereniging zelf in handen. Op een installatie met meer
+ * dan een vereniging kon een beheerder daarmee de bladmuziek, de ledengegevens
+ * en de boekhouding van alle andere verenigingen binnenhalen, en met een eigen
+ * bestand alles overschrijven.
+ *
+ * ipWhitelistMiddleware stond er wel bij, maar die laat alles door zolang
+ * IP_WHITELIST_ENABLED niet aan staat, en dat is de standaard.
+ *
+ * Nu is het super-admin: iemand die over de installatie gaat.
+ */
+
 // Get paths from config/environment
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 const MP3_UPLOAD_DIR = process.env.MP3_UPLOAD_DIR || path.join(__dirname, '../../uploads/mp3');
 const DB_PATH = config.dbPath;
+
+/**
+ * Mag deze naam uit een reservekopie als bestandsnaam gebruikt worden?
+ *
+ * De namen in manifest.json komen uit het aangeleverde zipbestand en zijn dus
+ * door de aanleveraar bepaald. Ze gingen rechtstreeks in path.join(). De
+ * controle op padverkeer die verderop staat kijkt alleen naar entryName - de
+ * naam van de zip-ingang - en niet naar storedName uit het manifest, dus die
+ * werd volledig omzeild: een manifest dat `../../../etc/cron.d/iets` als
+ * storedName opgaf schreef daar ook, met de rechten van het serverproces.
+ *
+ * Een naam uit een reservekopie hoort een bestandsnaam te zijn, geen pad. Deze
+ * controle houdt hem daarop: geen scheidingstekens, geen puntnamen, en niet
+ * leeg. De aanroeper kijkt daarna nog een keer of het samengestelde pad
+ * werkelijk binnen de doelmap valt - dat staat daar bewust en niet hier, zodat
+ * die grens naast de schrijfopdracht zelf te lezen is.
+ *
+ * Die tweede controle gebruikt aan beide kanten path.resolve. Met path.join
+ * zou het samengestelde pad relatief blijven als UPLOAD_DIR dat is - te zetten
+ * via de omgeving - terwijl de grens ernaast absoluut is. De vergelijking gaat
+ * dan altijd mis en er wordt niets meer teruggezet, zonder dat iemand het
+ * merkt.
+ */
+export function isVeiligeBestandsnaam(naam: string): boolean {
+  if (!naam || naam === '.' || naam === '..') return false;
+  return naam === path.basename(naam);
+}
 
 /**
  * @swagger
@@ -42,7 +88,7 @@ const DB_PATH = config.dbPath;
 router.get(
   '/',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -198,7 +244,7 @@ router.get(
 router.get(
   '/info',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     let dbSize = 0;
@@ -298,7 +344,7 @@ const backupUpload = multer({
 router.post(
   '/restore',
   authenticateToken,
-  requireRole('admin'),
+  requireSuperAdmin,
   ipWhitelistMiddleware,
   backupUpload.single('backup'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -405,14 +451,32 @@ router.post(
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = mp3ArchiveToStored.get(archiveName) || archiveName;
-          fs.writeFileSync(path.join(MP3_UPLOAD_DIR, storedName), entry.getData());
+          if (!isVeiligeBestandsnaam(storedName)) {
+            logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          const doel = path.resolve(MP3_UPLOAD_DIR, storedName);
+          if (!doel.startsWith(path.resolve(MP3_UPLOAD_DIR) + path.sep)) {
+            logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
+            continue;
+          }
+          fs.writeFileSync(doel, entry.getData());
           restoredMp3s++;
         } else if (entryName.startsWith('uploads/') && entryName.endsWith('.pdf')) {
           // Restore PDF file
           const archiveName = path.basename(entryName);
           // Use manifest mapping if available, otherwise use archive filename (legacy format)
           const storedName = pdfArchiveToStored.get(archiveName) || archiveName;
-          fs.writeFileSync(path.join(UPLOAD_DIR, storedName), entry.getData());
+          if (!isVeiligeBestandsnaam(storedName)) {
+            logger.warn(`Overgeslagen: onveilige bestandsnaam in reservekopie: ${storedName}`);
+            continue;
+          }
+          const doel = path.resolve(UPLOAD_DIR, storedName);
+          if (!doel.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) {
+            logger.warn(`Overgeslagen: pad valt buiten de doelmap: ${storedName}`);
+            continue;
+          }
+          fs.writeFileSync(doel, entry.getData());
           restoredPdfs++;
         }
       }
