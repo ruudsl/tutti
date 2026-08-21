@@ -251,15 +251,18 @@ const FONT_FAMILIES: Record<string, string> = {
  */
 router.get(
   '/theme',
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
-    // Get first association's theme (for login page before we know which user)
-    const association = db
-      .prepare(
-        `
-        SELECT theme_json FROM associations LIMIT 1
-    `,
-      )
-      .get() as any;
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Dezelfde regel als bij /settings/branding hieronder: met meer dan een
+    // vereniging is er zonder slug niet te zeggen wiens thema het moet zijn,
+    // en dan is het thema van de eerst aangemaakte vereniging het verkeerde
+    // antwoord. Liever geen kleuren dan die van een ander.
+    const slug = typeof req.query.slug === 'string' ? req.query.slug : undefined;
+    const association = (
+      slug
+        ? (db.prepare('SELECT theme_json FROM associations WHERE slug = ? AND COALESCE(is_active, 1) = 1').get(slug) as
+            { theme_json: string | null } | undefined)
+        : enigeVerenigingThema()
+    ) as { theme_json: string | null } | undefined;
 
     res.json({
       theme: association?.theme_json ? JSON.parse(association.theme_json) : null,
@@ -280,6 +283,13 @@ interface BrandingRij {
  * Het aantal wordt geteld en niet met LIMIT 1 opgehaald: bij twee verenigingen
  * hoort het antwoord "geen" te zijn, niet "de eerste".
  */
+/** Het thema van de enige vereniging, of undefined als er meer zijn. */
+function enigeVerenigingThema(): { theme_json: string | null } | undefined {
+  const { aantal } = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
+  if (aantal !== 1) return undefined;
+  return db.prepare('SELECT theme_json FROM associations').get() as { theme_json: string | null } | undefined;
+}
+
 function enigeVereniging(): BrandingRij | undefined {
   const { aantal } = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
   if (aantal !== 1) return undefined;

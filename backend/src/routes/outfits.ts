@@ -274,9 +274,18 @@ router.delete(
   '/:id/concerts/:concertId',
   requireRole('admin', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // concert_outfits heeft zelf geen association_id; de grens loopt via de
+    // outfit en het concert. De route die de koppeling aanmaakt controleert
+    // die twee wel, deze deed dat niet - dus kon een koppeling van een andere
+    // vereniging worden weggehaald.
     const result = db
-      .prepare(`DELETE FROM concert_outfits WHERE outfit_id = ? AND concert_id = ?`)
-      .run(req.params.id, req.params.concertId);
+      .prepare(
+        `DELETE FROM concert_outfits
+         WHERE outfit_id = ? AND concert_id = ?
+           AND outfit_id IN (SELECT id FROM outfits WHERE association_id = ?)
+           AND concert_id IN (SELECT id FROM concerts WHERE association_id = ?)`,
+      )
+      .run(req.params.id, req.params.concertId, req.user!.associationId, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Link not found');

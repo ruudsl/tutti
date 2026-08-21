@@ -1,12 +1,37 @@
 import { Router, Request, Response } from 'express';
 import db from '../database/connection';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 import twilio from 'twilio';
 
 const router = Router();
+
+/**
+ * Meldingen rond de podiumopstelling: instellingen, versturen, logboek.
+ *
+ * In dit bestand stond geen enkele rolcontrole - alleen authenticateToken.
+ * De buurbestanden van dezelfde module doen dat wel: seating.ts veertien keer
+ * en stage-layouts.ts zeven keer, telkens met admin, conductor of
+ * music_committee.
+ *
+ * Wat een gewoon lid daardoor kon:
+ *
+ * - De instellingen uitlezen. Het auth-token wordt gemaskeerd teruggegeven,
+ *   maar de webhook-url, de Twilio-account-sid, het afzendernummer en de
+ *   bestemmingsnummers niet.
+ * - Die instellingen wijzigen of weggooien, en de meldingen uitzetten.
+ * - De webhook-url op een eigen adres zetten en dan zelf een verzending
+ *   starten. Het bericht bevat de volledige opstelling met alle ledennamen en
+ *   de lijst afgemelde leden; het antwoord van dat adres komt in het logboek
+ *   en is daar weer op te vragen.
+ *
+ * Dat laatste blijft mogelijk voor wie de instellingen wel mag beheren - een
+ * beheerder die een koppeling inricht wijst nu eenmaal een adres aan. Het
+ * verschil is dat het nu een bewuste beheerdershandeling is in plaats van iets
+ * wat elk lid kan opzetten.
+ */
 
 interface NotificationSettings {
   id: string;
@@ -36,103 +61,112 @@ interface NotificationLog {
 }
 
 // Get notification settings for an orchestra
-router.get('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
-  try {
-    const { orchestraId } = req.params;
-    const authReq = req as AuthRequest;
+router.get(
+  '/settings/:orchestraId',
+  authenticateToken,
+  requireRole('admin', 'conductor', 'music_committee'),
+  (req: Request, res: Response) => {
+    try {
+      const { orchestraId } = req.params;
+      const authReq = req as AuthRequest;
 
-    // Verify orchestra belongs to user's association
-    const orchestra = db
-      .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-      .get(orchestraId, authReq.user!.associationId);
-    if (!orchestra) {
-      return res.status(404).json({ error: 'Orchestra not found' });
-    }
+      // Verify orchestra belongs to user's association
+      const orchestra = db
+        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+        .get(orchestraId, authReq.user!.associationId);
+      if (!orchestra) {
+        return res.status(404).json({ error: 'Orchestra not found' });
+      }
 
-    const settings = db
-      .prepare(
-        `
+      const settings = db
+        .prepare(
+          `
             SELECT * FROM seating_notification_settings WHERE orchestra_id = ?
         `,
-      )
-      .get(orchestraId) as NotificationSettings | undefined;
+        )
+        .get(orchestraId) as NotificationSettings | undefined;
 
-    if (!settings) {
-      return res.json(null);
+      if (!settings) {
+        return res.json(null);
+      }
+
+      // Don't send the auth token back to the frontend
+      res.json({
+        ...settings,
+        twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
+        enabled: Boolean(settings.enabled),
+        include_image: Boolean(settings.include_image),
+      });
+    } catch (error) {
+      logger.error('Error fetching notification settings', { error });
+      res.status(500).json({ error: 'Failed to fetch notification settings' });
     }
-
-    // Don't send the auth token back to the frontend
-    res.json({
-      ...settings,
-      twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
-      enabled: Boolean(settings.enabled),
-      include_image: Boolean(settings.include_image),
-    });
-  } catch (error) {
-    logger.error('Error fetching notification settings', { error });
-    res.status(500).json({ error: 'Failed to fetch notification settings' });
-  }
-});
+  },
+);
 
 // Create or update notification settings
-router.put('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
-  try {
-    const { orchestraId } = req.params;
-    const authReq = req as AuthRequest;
+router.put(
+  '/settings/:orchestraId',
+  authenticateToken,
+  requireRole('admin', 'conductor', 'music_committee'),
+  (req: Request, res: Response) => {
+    try {
+      const { orchestraId } = req.params;
+      const authReq = req as AuthRequest;
 
-    // Verify orchestra belongs to user's association
-    const orchestra = db
-      .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-      .get(orchestraId, authReq.user!.associationId);
-    if (!orchestra) {
-      return res.status(404).json({ error: 'Orchestra not found' });
-    }
-
-    const {
-      notification_type,
-      webhook_url,
-      twilio_account_sid,
-      twilio_auth_token,
-      twilio_whatsapp_from,
-      twilio_whatsapp_to,
-      minutes_before,
-      enabled,
-      include_image,
-      message_template,
-    } = req.body;
-
-    const notifType = notification_type || 'webhook';
-
-    // Validate based on type
-    if (notifType === 'webhook' && !webhook_url) {
-      return res.status(400).json({ error: 'webhook_url is required for webhook type' });
-    }
-    if (notifType === 'whatsapp') {
-      if (!twilio_account_sid) {
-        return res.status(400).json({ error: 'twilio_account_sid is required for WhatsApp' });
+      // Verify orchestra belongs to user's association
+      const orchestra = db
+        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+        .get(orchestraId, authReq.user!.associationId);
+      if (!orchestra) {
+        return res.status(404).json({ error: 'Orchestra not found' });
       }
-      if (!twilio_whatsapp_from) {
-        return res.status(400).json({ error: 'twilio_whatsapp_from is required for WhatsApp' });
-      }
-      if (!twilio_whatsapp_to) {
-        return res.status(400).json({ error: 'twilio_whatsapp_to is required for WhatsApp' });
-      }
-    }
 
-    const existing = db
-      .prepare(
-        `
+      const {
+        notification_type,
+        webhook_url,
+        twilio_account_sid,
+        twilio_auth_token,
+        twilio_whatsapp_from,
+        twilio_whatsapp_to,
+        minutes_before,
+        enabled,
+        include_image,
+        message_template,
+      } = req.body;
+
+      const notifType = notification_type || 'webhook';
+
+      // Validate based on type
+      if (notifType === 'webhook' && !webhook_url) {
+        return res.status(400).json({ error: 'webhook_url is required for webhook type' });
+      }
+      if (notifType === 'whatsapp') {
+        if (!twilio_account_sid) {
+          return res.status(400).json({ error: 'twilio_account_sid is required for WhatsApp' });
+        }
+        if (!twilio_whatsapp_from) {
+          return res.status(400).json({ error: 'twilio_whatsapp_from is required for WhatsApp' });
+        }
+        if (!twilio_whatsapp_to) {
+          return res.status(400).json({ error: 'twilio_whatsapp_to is required for WhatsApp' });
+        }
+      }
+
+      const existing = db
+        .prepare(
+          `
             SELECT id, twilio_auth_token FROM seating_notification_settings WHERE orchestra_id = ?
         `,
-      )
-      .get(orchestraId) as { id: string; twilio_auth_token: string | null } | undefined;
+        )
+        .get(orchestraId) as { id: string; twilio_auth_token: string | null } | undefined;
 
-    // Keep existing token if not changed (masked value sent back)
-    const tokenToSave = twilio_auth_token === '••••••••' ? existing?.twilio_auth_token : twilio_auth_token;
+      // Keep existing token if not changed (masked value sent back)
+      const tokenToSave = twilio_auth_token === '••••••••' ? existing?.twilio_auth_token : twilio_auth_token;
 
-    if (existing) {
-      db.prepare(
-        `
+      if (existing) {
+        db.prepare(
+          `
                 UPDATE seating_notification_settings
                 SET notification_type = ?, webhook_url = ?, twilio_account_sid = ?, twilio_auth_token = ?,
                     twilio_whatsapp_from = ?, twilio_whatsapp_to = ?,
@@ -140,123 +174,134 @@ router.put('/settings/:orchestraId', authenticateToken, (req: Request, res: Resp
                     updated_at = CURRENT_TIMESTAMP
                 WHERE orchestra_id = ?
             `,
-      ).run(
-        notifType,
-        webhook_url || null,
-        twilio_account_sid || null,
-        tokenToSave || null,
-        twilio_whatsapp_from || null,
-        twilio_whatsapp_to || null,
-        minutes_before ?? 15,
-        enabled ?? true,
-        include_image ?? true,
-        message_template || null,
-        orchestraId,
-      );
-    } else {
-      const id = uuidv4();
-      db.prepare(
-        `
+        ).run(
+          notifType,
+          webhook_url || null,
+          twilio_account_sid || null,
+          tokenToSave || null,
+          twilio_whatsapp_from || null,
+          twilio_whatsapp_to || null,
+          minutes_before ?? 15,
+          enabled ?? true,
+          include_image ?? true,
+          message_template || null,
+          orchestraId,
+        );
+      } else {
+        const id = uuidv4();
+        db.prepare(
+          `
                 INSERT INTO seating_notification_settings
                 (id, orchestra_id, notification_type, webhook_url, twilio_account_sid, twilio_auth_token,
                  twilio_whatsapp_from, twilio_whatsapp_to, minutes_before, enabled, include_image, message_template)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
-      ).run(
-        id,
-        orchestraId,
-        notifType,
-        webhook_url || null,
-        twilio_account_sid || null,
-        twilio_auth_token || null,
-        twilio_whatsapp_from || null,
-        twilio_whatsapp_to || null,
-        minutes_before ?? 15,
-        enabled ?? true,
-        include_image ?? true,
-        message_template || null,
-      );
-    }
+        ).run(
+          id,
+          orchestraId,
+          notifType,
+          webhook_url || null,
+          twilio_account_sid || null,
+          twilio_auth_token || null,
+          twilio_whatsapp_from || null,
+          twilio_whatsapp_to || null,
+          minutes_before ?? 15,
+          enabled ?? true,
+          include_image ?? true,
+          message_template || null,
+        );
+      }
 
-    const settings = db
-      .prepare(
-        `
+      const settings = db
+        .prepare(
+          `
             SELECT * FROM seating_notification_settings WHERE orchestra_id = ?
         `,
-      )
-      .get(orchestraId) as NotificationSettings;
+        )
+        .get(orchestraId) as NotificationSettings;
 
-    res.json({
-      ...settings,
-      twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
-      enabled: Boolean(settings.enabled),
-      include_image: Boolean(settings.include_image),
-    });
-  } catch (error) {
-    logger.error('Error saving notification settings', { error });
-    res.status(500).json({ error: 'Failed to save notification settings' });
-  }
-});
+      res.json({
+        ...settings,
+        twilio_auth_token: settings.twilio_auth_token ? '••••••••' : null,
+        enabled: Boolean(settings.enabled),
+        include_image: Boolean(settings.include_image),
+      });
+    } catch (error) {
+      logger.error('Error saving notification settings', { error });
+      res.status(500).json({ error: 'Failed to save notification settings' });
+    }
+  },
+);
 
 // Delete notification settings
-router.delete('/settings/:orchestraId', authenticateToken, (req: Request, res: Response) => {
-  try {
-    const { orchestraId } = req.params;
-    const authReq = req as AuthRequest;
+router.delete(
+  '/settings/:orchestraId',
+  authenticateToken,
+  requireRole('admin', 'conductor', 'music_committee'),
+  (req: Request, res: Response) => {
+    try {
+      const { orchestraId } = req.params;
+      const authReq = req as AuthRequest;
 
-    // Verify orchestra belongs to user's association
-    const orchestra = db
-      .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-      .get(orchestraId, authReq.user!.associationId);
-    if (!orchestra) {
-      return res.status(404).json({ error: 'Orchestra not found' });
+      // Verify orchestra belongs to user's association
+      const orchestra = db
+        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+        .get(orchestraId, authReq.user!.associationId);
+      if (!orchestra) {
+        return res.status(404).json({ error: 'Orchestra not found' });
+      }
+
+      db.prepare(`DELETE FROM seating_notification_settings WHERE orchestra_id = ?`).run(orchestraId);
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Error deleting notification settings', { error });
+      res.status(500).json({ error: 'Failed to delete notification settings' });
     }
-
-    db.prepare(`DELETE FROM seating_notification_settings WHERE orchestra_id = ?`).run(orchestraId);
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error('Error deleting notification settings', { error });
-    res.status(500).json({ error: 'Failed to delete notification settings' });
-  }
-});
+  },
+);
 
 // Get notification logs for a rehearsal
-router.get('/logs/:rehearsalId', authenticateToken, (req: Request, res: Response) => {
-  try {
-    const { rehearsalId } = req.params;
-    const authReq = req as AuthRequest;
+router.get(
+  '/logs/:rehearsalId',
+  authenticateToken,
+  requireRole('admin', 'conductor', 'music_committee'),
+  (req: Request, res: Response) => {
+    try {
+      const { rehearsalId } = req.params;
+      const authReq = req as AuthRequest;
 
-    // Verify rehearsal belongs to user's association
-    const rehearsal = db
-      .prepare(
-        `
+      // Verify rehearsal belongs to user's association
+      const rehearsal = db
+        .prepare(
+          `
             SELECT r.id FROM rehearsals r
             JOIN orchestras o ON r.orchestra_id = o.id
             WHERE r.id = ? AND o.association_id = ?
         `,
-      )
-      .get(rehearsalId, authReq.user!.associationId);
-    if (!rehearsal) {
-      return res.status(404).json({ error: 'Rehearsal not found' });
-    }
+        )
+        .get(rehearsalId, authReq.user!.associationId);
+      if (!rehearsal) {
+        return res.status(404).json({ error: 'Rehearsal not found' });
+      }
 
-    const logs = db
-      .prepare(
-        `
+      const logs = db
+        .prepare(
+          `
             SELECT * FROM seating_notification_logs
             WHERE rehearsal_id = ?
             ORDER BY sent_at DESC
         `,
-      )
-      .all(rehearsalId) as NotificationLog[];
+        )
+        .all(rehearsalId) as NotificationLog[];
 
-    res.json(logs);
-  } catch (error) {
-    logger.error('Error fetching notification logs', { error });
-    res.status(500).json({ error: 'Failed to fetch notification logs' });
-  }
-});
+      res.json(logs);
+    } catch (error) {
+      logger.error('Error fetching notification logs', { error });
+      res.status(500).json({ error: 'Failed to fetch notification logs' });
+    }
+  },
+);
 
 // Helper function to send via WhatsApp
 async function sendWhatsApp(
@@ -342,6 +387,7 @@ async function sendWebhook(
 router.post(
   '/send/:rehearsalId',
   authenticateToken,
+  requireRole('admin', 'conductor', 'music_committee'),
   asyncHandler(async (req: Request, res: Response) => {
     const { rehearsalId } = req.params;
     const authReq = req as AuthRequest;
@@ -537,6 +583,7 @@ router.post(
 router.post(
   '/test-twilio',
   authenticateToken,
+  requireRole('admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const { account_sid, auth_token, whatsapp_from, whatsapp_to } = req.body;
 
