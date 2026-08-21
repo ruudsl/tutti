@@ -215,6 +215,19 @@ async function meetEenRonde() {
     } catch {
       // Een browser die al weg is hoeft niet nog eens te sluiten.
     }
+
+    // En dan het geval waar kill() niets meer aan te doen heeft: een browser
+    // die al gecrasht was. Zijn kindproces blijft dan als handle aan de
+    // gebeurtenislus hangen, waardoor node na afloop niet meer afsluit. In CI
+    // zag je precies dat: alle metingen klaar en afgedrukt, en daarna twaalf
+    // minuten stilte tot de job werd afgebroken - met chrome en
+    // chrome_crashpad_handler nog in de lijst met weesprocessen.
+    try {
+      chrome.process?.kill('SIGKILL');
+      chrome.process?.unref();
+    } catch {
+      // Ook goed: dan was hij echt weg.
+    }
   }
 }
 
@@ -303,4 +316,16 @@ async function meetEenRonde() {
     console.error('\nLighthouse-controle mislukt:\n  ' + alleProblemen.join('\n  '));
     process.exitCode = 1;
   }
+
+  // Expliciet afsluiten. Het werk is hier klaar en het rapport staat al op
+  // schijf, maar een enkele achtergebleven handle - een gecrashte browser, een
+  // socket die niet opruimt - houdt node anders wachten tot de job in zijn
+  // tijdslimiet loopt. Dat leverde een 'cancelled' op terwijl elke drempel
+  // gehaald was, wat het vervelendste soort rode CI is: een uitslag die niets
+  // zegt over de code.
+  //
+  // Eerst de uitvoer laten leeglopen, want stdout naar een pijp schrijft niet
+  // synchroon en process.exit() zou de laatste regels afkappen.
+  await new Promise((klaar) => process.stdout.write('', klaar));
+  process.exit(process.exitCode ?? 0);
 }
