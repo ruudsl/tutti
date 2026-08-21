@@ -20,6 +20,16 @@ import { logAuditEvent } from './audit-logs';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 
+/**
+ * Mag deze gebruiker een lijst zien die op inactief staat?
+ *
+ * Alleen wie de lijsten beheert. Voor de rest bestaat een verborgen lijst niet,
+ * net als in GET /my-lists.
+ */
+function magVerborgenLijstZien(req: AuthRequest): boolean {
+  return req.user!.role === 'admin' || req.user!.role === 'music_committee';
+}
+
 const router = Router();
 
 /**
@@ -55,22 +65,31 @@ router.get(
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
 
+    // De drie tellingen kijken alleen naar wat er nu echt op de lijst staat:
+    // zacht verwijderde partijen tellen niet mee, en de speelduur komt uit de
+    // titelgegevens van de eigen vereniging. music_titles is uniek per
+    // (titel, arrangeur, vereniging), dus zonder die grens telde dezelfde titel
+    // bij elke andere vereniging mee en stond er een veelvoud in het overzicht.
     const lists = db
       .prepare(
         `
         SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
                ml.list_type, ml.concert_date, ml.concert_location,
-               (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+               (SELECT COUNT(*) FROM music_list_pieces mlp
+                JOIN music_pieces mp ON mp.id = mlp.music_piece_id
+                WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as piece_count,
                (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                WHERE mlp.music_list_id = ml.id) as title_count,
+                WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as title_count,
                (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
-                WHERE EXISTS (
+                WHERE mt.deleted_at IS NULL AND EXISTS (
                     SELECT 1 FROM music_pieces mp
                     JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
                     WHERE mlp.music_list_id = ml.id
+                    AND mp.deleted_at IS NULL
                     AND mp.title = mt.title
                     AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                    AND mt.association_id = mp.association_id
                 )) as total_duration
         FROM music_lists ml
         WHERE ml.orchestra_id = ? AND ml.deleted_at IS NULL
@@ -117,23 +136,32 @@ router.get(
     const isPrivileged = req.user!.role === 'admin' || req.user!.role === 'music_committee';
     const activeFilter = isPrivileged ? '' : 'AND ml.is_active = 1';
 
+    // De drie tellingen kijken alleen naar wat er nu echt op de lijst staat:
+    // zacht verwijderde partijen tellen niet mee, en de speelduur komt uit de
+    // titelgegevens van de eigen vereniging. music_titles is uniek per
+    // (titel, arrangeur, vereniging), dus zonder die grens telde dezelfde titel
+    // bij elke andere vereniging mee en stond er een veelvoud in het overzicht.
     const lists = db
       .prepare(
         `
         SELECT ml.id, ml.name, ml.position, ml.is_active, ml.created_at,
                ml.list_type, ml.concert_date, ml.concert_location,
                o.name as orchestra_name, o.id as orchestra_id,
-               (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count,
+               (SELECT COUNT(*) FROM music_list_pieces mlp
+                JOIN music_pieces mp ON mp.id = mlp.music_piece_id
+                WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as piece_count,
                (SELECT COUNT(DISTINCT mp.title) FROM music_pieces mp
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
-                WHERE mlp.music_list_id = ml.id) as title_count,
+                WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as title_count,
                (SELECT COALESCE(SUM(mt.duration_seconds), 0) FROM music_titles mt
-                WHERE EXISTS (
+                WHERE mt.deleted_at IS NULL AND EXISTS (
                     SELECT 1 FROM music_pieces mp
                     JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
                     WHERE mlp.music_list_id = ml.id
+                    AND mp.deleted_at IS NULL
                     AND mp.title = mt.title
                     AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
+                    AND mt.association_id = mp.association_id
                 )) as total_duration
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
@@ -246,13 +274,18 @@ router.get(
   '/:id',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Een lijst op inactief is voor leden uit beeld terwijl de muziekcommissie
+    // er nog aan werkt. GET /my-lists hield daar rekening mee, deze ingang niet:
+    // met het id in de hand was zo'n lijst gewoon te lezen.
+    const alleenActief = magVerborgenLijstZien(req) ? '' : 'AND ml.is_active = 1';
+
     const list = db
       .prepare(
         `
         SELECT ml.id, ml.name, ml.created_at, ml.orchestra_id, ml.list_type, ml.concert_date, ml.concert_location, o.name as orchestra_name
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
-        WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL
+        WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL ${alleenActief}
     `,
       )
       .get(req.params.id, req.user!.associationId) as any;
@@ -286,7 +319,7 @@ router.get(
             JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
             LEFT JOIN instruments i ON mp.instrument_id = i.id
             WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL
-            ORDER BY mp.title, i.name, mp.group_number
+            ORDER BY mlp.position, mp.title, i.name, mp.group_number
         `,
         )
         .all(req.params.id);
@@ -306,7 +339,7 @@ router.get(
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
                 LEFT JOIN instruments i ON mp.instrument_id = i.id
                 WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL AND mp.instrument_id IN (${placeholders})
-                ORDER BY mp.title, i.name, mp.group_number
+                ORDER BY mlp.position, mp.title, i.name, mp.group_number
             `,
           )
           .all(req.params.id, ...instrumentIds);
@@ -363,13 +396,17 @@ router.get(
   '/:listId/download-zip',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Zelfde grens als bij het opvragen: een verborgen lijst is voor een lid ook
+    // niet te downloaden.
+    const alleenActief = magVerborgenLijstZien(req) ? '' : 'AND ml.is_active = 1';
+
     const list = db
       .prepare(
         `
         SELECT ml.id, ml.name, o.name as orchestra_name
         FROM music_lists ml
         JOIN orchestras o ON ml.orchestra_id = o.id
-        WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL
+        WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL ${alleenActief}
     `,
       )
       .get(req.params.listId, req.user!.associationId) as
@@ -402,7 +439,7 @@ router.get(
             JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
             LEFT JOIN instruments i ON mp.instrument_id = i.id
             WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL
-            ORDER BY mp.title, i.name, mp.group_number
+            ORDER BY mlp.position, mp.title, i.name, mp.group_number
         `,
         )
         .all(req.params.listId);
@@ -420,7 +457,7 @@ router.get(
                 JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
                 LEFT JOIN instruments i ON mp.instrument_id = i.id
                 WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL AND mp.instrument_id IN (${placeholders})
-                ORDER BY mp.title, i.name, mp.group_number
+                ORDER BY mlp.position, mp.title, i.name, mp.group_number
             `,
           )
           .all(req.params.listId, ...instrumentIds);
@@ -818,7 +855,7 @@ router.post(
 
     // Verify piece exists and belongs to same association
     const piece = db
-      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ?')
+      .prepare('SELECT id FROM music_pieces WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
       .get(data.pieceId, req.user!.associationId);
 
     if (!piece) {
@@ -1110,18 +1147,25 @@ router.get(
     }
 
     // Get distinct titles on this list, ordered by position
+    //
+    // GROUP BY in plaats van DISTINCT: een titel heeft meerdere partijen en dus
+    // meerdere posities. De laagste daarvan bepaalt waar de titel in het
+    // programma staat, zodat de gesleepte volgorde uit reorder-titles ook hier
+    // doorwerkt.
     const titles = db
       .prepare(
         `
-        SELECT DISTINCT mp.title, mp.arranger,
+        SELECT mp.title, mp.arranger,
                mt.duration_seconds, mt.description
         FROM music_pieces mp
         JOIN music_list_pieces mlp ON mp.id = mlp.music_piece_id
         LEFT JOIN music_titles mt ON mp.title = mt.title
             AND COALESCE(mp.arranger, '') = COALESCE(mt.arranger, '')
             AND mt.association_id = ?
-        WHERE mlp.music_list_id = ?
-        ORDER BY mp.title
+            AND mt.deleted_at IS NULL
+        WHERE mlp.music_list_id = ? AND mp.deleted_at IS NULL
+        GROUP BY mp.title, mp.arranger
+        ORDER BY MIN(mlp.position), mp.title
     `,
       )
       .all(req.user!.associationId, req.params.id) as any[];
@@ -1383,10 +1427,10 @@ router.put(
                 SET position = ?
                 WHERE music_list_id = ?
                 AND music_piece_id IN (
-                    SELECT id FROM music_pieces WHERE title = ?
+                    SELECT id FROM music_pieces WHERE title = ? AND association_id = ?
                 )
             `,
-        ).run(i, req.params.id, title);
+        ).run(i, req.params.id, title, req.user!.associationId);
       }
     });
 

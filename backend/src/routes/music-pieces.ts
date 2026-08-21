@@ -249,6 +249,48 @@ function findInstrumentId(instrumentName: string, instrumentMap?: Map<string, st
   return alias ? alias.instrument_id : null;
 }
 
+/**
+ * Extra voorwaarde die een gewoon lid tot zijn eigen partijen beperkt.
+ *
+ * GET /:id/download legt de regel vast: van een stuk met een instrument mag een
+ * lid alleen de partij ophalen van een instrument dat hij bespeelt. Partijen
+ * zonder instrument (de losse bestanden) blijven voor iedereen bereikbaar,
+ * precies zoals daar. De routes die dit filter niet hadden leverden elk lid de
+ * dirigentenpartituur van de hele vereniging.
+ *
+ * Levert een SQL-fragment op dat achter een WHERE hoort waarin de tabel
+ * music_pieces als `mp` staat, plus de bijbehorende parameters.
+ */
+function instrumentFilterVoorLid(req: AuthRequest): { sql: string; params: string[] } {
+  if (req.user!.role !== 'member') return { sql: '', params: [] };
+
+  return {
+    sql: ` AND (mp.instrument_id IS NULL OR mp.instrument_id IN (
+             SELECT instrument_id FROM user_instruments WHERE user_id = ?
+           ))`,
+    params: [req.user!.id],
+  };
+}
+
+/**
+ * De muzieklijst met dit id, maar alleen als hij bij de eigen vereniging hoort.
+ *
+ * Een lijst-id komt bij de uploads uit de body van het verzoek en is dus net zo
+ * goed een verwijzing van de gebruiker als een id in het pad. Zonder deze
+ * controle belandde een geuploade partij op de lijst van een vreemd orkest - en
+ * kreeg dat orkest er ook nog een pushbericht over.
+ */
+function eigenMuzieklijst(req: AuthRequest, listId: string): { id: string; orchestra_id: string } | undefined {
+  return db
+    .prepare(
+      `SELECT ml.id, ml.orchestra_id
+       FROM music_lists ml
+       JOIN orchestras o ON ml.orchestra_id = o.id
+       WHERE ml.id = ? AND o.association_id = ? AND ml.deleted_at IS NULL`,
+    )
+    .get(listId, req.user!.associationId) as { id: string; orchestra_id: string } | undefined;
+}
+
 // Delete file safely (async)
 async function deleteFile(filePath: string): Promise<void> {
   try {
@@ -455,6 +497,13 @@ router.get(
     const instrumentIds = userInstruments.map((i) => i.instrument_id);
     const orchestraIds = userOrchestras.map((o) => o.orchestra_id);
 
+    // Dezelfde drie grenzen als bij GET /music-lists/my-lists. Een orkest waar
+    // je in zit hoort bij je eigen vereniging, maar een partij op zo'n lijst
+    // hoeft dat niet te zijn: music_list_pieces legt geen vereniging vast. En
+    // een verwijderde of verborgen lijst hoort hier evenmin door te schemeren.
+    const isPrivileged = req.user!.role === 'admin' || req.user!.role === 'music_committee';
+    const actieveLijsten = isPrivileged ? '' : 'AND ml.is_active = 1';
+
     // Get pieces that are on lists for user's orchestras and match user's instruments
     const pieces = db
       .prepare(
@@ -471,10 +520,13 @@ router.get(
         WHERE mp.instrument_id IN (${instrumentIds.map(() => '?').join(',')})
         AND o.id IN (${orchestraIds.map(() => '?').join(',')})
         AND mp.deleted_at IS NULL
+        AND ml.deleted_at IS NULL ${actieveLijsten}
+        AND mp.association_id = ?
+        AND o.association_id = ?
         ORDER BY o.name, ml.name, mp.title
     `,
       )
-      .all(...instrumentIds, ...orchestraIds);
+      .all(...instrumentIds, ...orchestraIds, req.user!.associationId, req.user!.associationId);
 
     res.json(
       pieces.map((p: any) => ({
@@ -677,8 +729,11 @@ router.get(
   authenticateToken,
   requireRole('admin', 'music_committee'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const title = decodeURIComponent(req.params.title);
-    const arranger = req.query.arranger ? decodeURIComponent(req.query.arranger as string) : null;
+    // Express decodeert het pad en de queryreeks zelf al. Nog een keer
+    // decoderen liet een titel als "100% Trombone" als escape-reeks lezen en
+    // gaf een URIError, dus een serverfout op een volstrekt normale titel.
+    const title = req.params.title;
+    const arranger = (req.query.arranger as string | undefined) || null;
 
     const meta = db
       .prepare(
@@ -762,14 +817,21 @@ router.put(
     let titleId: string;
 
     // Check if title metadata already exists
+    //
+    // Ook zacht verwijderde rijen tellen mee: music_titles heeft
+    // UNIQUE(title, arranger, association_id), dus een verwijderde rij
+    // overslaan zou de INSERT hieronder laten stuklopen. Bijwerken zet zo'n rij
+    // daarom weer terug (deleted_at = NULL) in plaats van hem stilzwijgend in
+    // verwijderde toestand bij te werken.
     const existing = db
       .prepare(
         `
-        SELECT id FROM music_titles
+        SELECT id, deleted_at FROM music_titles
         WHERE title = ? AND COALESCE(arranger, '') = COALESCE(?, '') AND association_id = ?
     `,
       )
-      .get(data.title.trim(), data.arranger || null, req.user!.associationId) as { id: string } | undefined;
+      .get(data.title.trim(), data.arranger || null, req.user!.associationId) as
+      { id: string; deleted_at: string | null } | undefined;
 
     withTransaction(() => {
       if (existing) {
@@ -777,7 +839,8 @@ router.put(
         db.prepare(
           `
                 UPDATE music_titles
-                SET youtube_url = ?, description = ?, duration_seconds = ?, grade = ?, is_shared = ?, internal_notes = ?
+                SET youtube_url = ?, description = ?, duration_seconds = ?, grade = ?, is_shared = ?, internal_notes = ?,
+                    deleted_at = NULL
                 WHERE id = ?
             `,
         ).run(
@@ -1034,6 +1097,20 @@ router.get(
     // Validate filename to prevent path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       throw new ApiError(400, 'Ongeldige bestandsnaam.');
+    }
+
+    // Het bestand hoort bij een titel, en die titel hoort bij een vereniging.
+    // Zonder deze vraag was elk fragment op de installatie op te halen door wie
+    // de bestandsnaam kende; padverkeer afvangen is geen toegangscontrole.
+    const titel = db
+      .prepare(
+        `SELECT id FROM music_titles
+         WHERE mp3_file_path = ? AND association_id = ? AND deleted_at IS NULL`,
+      )
+      .get(filename, req.user!.associationId);
+
+    if (!titel) {
+      throw new ApiError(404, 'MP3 bestand niet gevonden.');
     }
 
     const filePath = path.join(MP3_UPLOAD_DIR, filename);
@@ -1972,6 +2049,16 @@ router.post(
     }
 
     const { listId, youtubeUrls } = req.body;
+
+    // Controleer het lijst-id voordat er ook maar iets wordt weggeschreven.
+    // De bestanden staan hier al op schijf (multer schrijft ze voor de handler
+    // begint), dus die worden bij een afwijzing meteen opgeruimd.
+    const doellijst = listId ? eigenMuzieklijst(req, listId) : undefined;
+    if (listId && !doellijst) {
+      await Promise.all(files.map((bestand) => deleteFile(bestand.path)));
+      throw new ApiError(404, 'Muzieklijst niet gevonden.');
+    }
+
     const youtubeUrlMap: Record<string, string> = youtubeUrls ? JSON.parse(youtubeUrls) : {};
 
     const results: any[] = [];
@@ -2088,12 +2175,11 @@ router.post(
           : `Er zijn ${results.length} nieuwe muziekstukken beschikbaar gesteld.`;
       const notifData = { count: results.length, listId: listId || null };
 
-      if (listId) {
-        // Notify the specific orchestra that owns this music list
-        const musicList = db.prepare('SELECT orchestra_id FROM music_lists WHERE id = ?').get(listId) as
-          { orchestra_id: string } | undefined;
-        if (musicList?.orchestra_id) {
-          notifyOrchestra(musicList.orchestra_id, 'new_music', notifTitle, notifBody, notifData, req.user!.id).catch(
+      if (doellijst) {
+        // Notify the specific orchestra that owns this music list; doellijst is
+        // hierboven al aan de eigen vereniging getoetst.
+        if (doellijst.orchestra_id) {
+          notifyOrchestra(doellijst.orchestra_id, 'new_music', notifTitle, notifBody, notifData, req.user!.id).catch(
             (err: Error) => logger.error('Failed to send new_music notification', { error: err.message }),
           );
         }
@@ -2154,6 +2240,13 @@ router.post(
     const tempDir = path.join(UPLOAD_DIR, `temp-${uuidv4()}`);
 
     try {
+      // Zelfde grens als bij /upload: een lijst-id uit de body moet bij de
+      // eigen vereniging horen. Staat binnen de try, zodat het finally-blok de
+      // geuploade zip ook bij een afwijzing opruimt.
+      if (listId && !eigenMuzieklijst(req, listId)) {
+        throw new ApiError(404, 'Muzieklijst niet gevonden.');
+      }
+
       // Extract ZIP file
       const zip = new AdmZip(file.path);
       const zipEntries = zip.getEntries();
@@ -2940,6 +3033,7 @@ router.post(
 
     // Get pieces with their metadata
     const placeholders = pieceIds.map(() => '?').join(', ');
+    const eigenInstrumenten = instrumentFilterVoorLid(req);
     const pieces = db
       .prepare(
         `
@@ -2949,9 +3043,10 @@ router.post(
         FROM music_pieces mp
         LEFT JOIN instruments i ON mp.instrument_id = i.id
         WHERE mp.id IN (${placeholders}) AND mp.association_id = ? AND mp.deleted_at IS NULL
+        ${eigenInstrumenten.sql}
     `,
       )
-      .all(...pieceIds, req.user!.associationId) as any[];
+      .all(...pieceIds, req.user!.associationId, ...eigenInstrumenten.params) as any[];
 
     if (pieces.length === 0) {
       throw new ApiError(404, 'Geen muziekstukken gevonden.');
@@ -3077,6 +3172,12 @@ router.post(
         WHERE mp.title = ? AND mp.association_id = ? AND mp.deleted_at IS NULL
     `;
     const params: any[] = [title, req.user!.associationId];
+
+    // Zelfde grens als bij de andere export: een lid krijgt alleen de partijen
+    // van de instrumenten die hij bespeelt.
+    const eigenInstrumenten = instrumentFilterVoorLid(req);
+    query += eigenInstrumenten.sql;
+    params.push(...eigenInstrumenten.params);
 
     if (arranger) {
       query += ' AND mp.arranger = ?';
