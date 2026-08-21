@@ -15,6 +15,16 @@ const TWILIO_ACCOUNT_SID_ENV = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN_ENV = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_WHATSAPP_FROM_ENV = process.env.TWILIO_WHATSAPP_FROM; // e.g., 'whatsapp:+14155238886'
 
+/**
+ * Tijdslimiet op elke aanroep naar Meta of Twilio.
+ *
+ * axios wacht zonder deze optie oneindig lang. Een melding wordt verstuurd
+ * binnen het verzoek van een gebruiker, dus een aanbieder die de verbinding
+ * openhoudt zonder te antwoorden houdt daarmee ook die gebruiker vast - en bij
+ * een verzendronde naar alle leden de hele ronde.
+ */
+const WHATSAPP_TIMEOUT_MS = 10_000;
+
 export interface WhatsAppMessage {
   to: string; // Phone number with country code (e.g., +31612345678)
   templateName?: string;
@@ -208,6 +218,7 @@ async function sendMetaWhatsAppMessage(
         Authorization: `Bearer ${config.accessToken}`,
         'Content-Type': 'application/json',
       },
+      timeout: WHATSAPP_TIMEOUT_MS,
     });
 
     const messageId = response.data.messages?.[0]?.id;
@@ -253,6 +264,7 @@ async function sendTwilioWhatsAppMessage(
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
+      timeout: WHATSAPP_TIMEOUT_MS,
     });
 
     const messageId = response.data.sid;
@@ -324,7 +336,12 @@ export async function sendWhatsAppNotification(
  * Generate a verification code for WhatsApp number linking
  */
 export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // crypto.randomInt en niet Math.random: deze code is de enige drempel tussen
+  // "ik ken jouw telefoonnummer" en "ik ontvang jouw meldingen". Math.random is
+  // een voorspelbare generator - uit een handvol uitkomsten valt de volgende te
+  // berekenen - en de code wordt via een open route aangevraagd.
+  // De bovengrens is exclusief, dus dit blijft 100000 t/m 999999.
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 /**

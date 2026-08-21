@@ -8,6 +8,16 @@ import logger from '../utils/logger';
 const TELEGRAM_BOT_TOKEN_ENV = process.env.TELEGRAM_BOT_TOKEN;
 
 /**
+ * Tijdslimiet op elke aanroep naar Telegram.
+ *
+ * axios wacht zonder deze optie oneindig lang. Een melding wordt verstuurd
+ * binnen het verzoek van een gebruiker, dus een Telegram dat de verbinding
+ * openhoudt zonder te antwoorden houdt daarmee ook die gebruiker vast - en bij
+ * een verzendronde naar alle leden de hele ronde.
+ */
+const TELEGRAM_TIMEOUT_MS = 10_000;
+
+/**
  * Gedeeld geheim tussen Telegram en deze server.
  *
  * De webhook staat open op het internet en kan zonder inloggen een koppeling
@@ -184,13 +194,17 @@ export async function sendTelegramMessage(message: TelegramMessage, associationI
   }
 
   try {
-    const response = await axios.post(`${config.apiUrl}/sendMessage`, {
-      chat_id: message.chatId,
-      text: message.text,
-      parse_mode: message.parseMode || 'HTML',
-      disable_notification: message.disableNotification || false,
-      reply_markup: message.replyMarkup,
-    });
+    const response = await axios.post(
+      `${config.apiUrl}/sendMessage`,
+      {
+        chat_id: message.chatId,
+        text: message.text,
+        parse_mode: message.parseMode || 'HTML',
+        disable_notification: message.disableNotification || false,
+        reply_markup: message.replyMarkup,
+      },
+      { timeout: TELEGRAM_TIMEOUT_MS },
+    );
 
     if (response.data.ok) {
       const messageId = response.data.result.message_id;
@@ -299,13 +313,16 @@ export async function getBotUsername(associationId?: string): Promise<string | n
   }
 
   try {
-    const response = await axios.get(`${config.apiUrl}/getMe`);
+    const response = await axios.get(`${config.apiUrl}/getMe`, { timeout: TELEGRAM_TIMEOUT_MS });
     if (response.data.ok) {
       return response.data.result.username;
     }
     return null;
-  } catch (error) {
-    logger.error('Failed to get Telegram bot info:', error);
+  } catch (error: any) {
+    // Niet het hele foutobject loggen: een axios-fout draagt `config.url` mee,
+    // en die url is `https://api.telegram.org/bot<token>/getMe`. Het bottoken
+    // zou daarmee in de logbestanden belanden.
+    logger.error('Failed to get Telegram bot info:', error.response?.data || error.message);
     return null;
   }
 }
@@ -401,7 +418,11 @@ Beschikbare commando's:
   // Get user name for confirmation
   const user = db.prepare(`SELECT first_name, last_name FROM users WHERE id = ?`).get(linkData.user_id) as
     { first_name: string; last_name: string } | undefined;
-  const userName = user ? `${user.first_name} ${user.last_name}` : 'onbekende gebruiker';
+  // Dit antwoord gaat via sendTelegramMessage naar buiten, en dat zet
+  // parse_mode standaard op HTML. Een lid dat "Jan <de> Vries" heet zou dan
+  // ongeldige HTML opleveren en Telegram weigert zo'n bericht met een 400: de
+  // koppeling is dan wel gelegd, maar de gebruiker ziet geen bevestiging.
+  const userName = user ? escapeHtml(`${user.first_name} ${user.last_name}`) : 'onbekende gebruiker';
 
   return `Je Telegram account is succesvol gekoppeld aan ${userName}!
 
@@ -499,9 +520,12 @@ export async function handleStatusCommand(chatId: number): Promise<string> {
     return 'Je Telegram account is niet gekoppeld aan een Harmonie account.';
   }
 
+  // Zelfde reden als in handleStartCommand: dit gaat in HTML-modus naar
+  // Telegram. Een `&` in een e-mailadres is al genoeg om het bericht te laten
+  // weigeren.
   return `Je Telegram account is gekoppeld aan:
-- Naam: ${channel.first_name} ${channel.last_name}
-- E-mail: ${channel.email}
+- Naam: ${escapeHtml(`${channel.first_name} ${channel.last_name}`)}
+- E-mail: ${escapeHtml(channel.email)}
 
 Gebruik /stop om de koppeling te verwijderen.`;
 }
@@ -540,9 +564,11 @@ export async function processUpdate(update: TelegramUpdate, associationId?: stri
   if (update.callback_query) {
     const config = getTelegramConfig(associationId);
     if (config) {
-      await axios.post(`${config.apiUrl}/answerCallbackQuery`, {
-        callback_query_id: update.callback_query.id,
-      });
+      await axios.post(
+        `${config.apiUrl}/answerCallbackQuery`,
+        { callback_query_id: update.callback_query.id },
+        { timeout: TELEGRAM_TIMEOUT_MS },
+      );
     }
   }
 }
@@ -564,11 +590,15 @@ export async function setWebhook(webhookUrl: string, associationId?: string): Pr
       return false;
     }
 
-    const response = await axios.post(`${config.apiUrl}/setWebhook`, {
-      url: webhookUrl,
-      allowed_updates: ['message', 'callback_query'],
-      secret_token: geheim,
-    });
+    const response = await axios.post(
+      `${config.apiUrl}/setWebhook`,
+      {
+        url: webhookUrl,
+        allowed_updates: ['message', 'callback_query'],
+        secret_token: geheim,
+      },
+      { timeout: TELEGRAM_TIMEOUT_MS },
+    );
 
     if (response.data.ok) {
       logger.info(`Telegram webhook set to: ${webhookUrl}`);
@@ -593,10 +623,11 @@ export async function deleteWebhook(associationId?: string): Promise<boolean> {
   }
 
   try {
-    const response = await axios.post(`${config.apiUrl}/deleteWebhook`);
+    const response = await axios.post(`${config.apiUrl}/deleteWebhook`, {}, { timeout: TELEGRAM_TIMEOUT_MS });
     return response.data.ok;
-  } catch (error) {
-    logger.error('Failed to delete Telegram webhook:', error);
+  } catch (error: any) {
+    // Zie getBotUsername: het foutobject draagt de api-url met het token erin.
+    logger.error('Failed to delete Telegram webhook:', error.response?.data || error.message);
     return false;
   }
 }
