@@ -660,7 +660,7 @@ router.get(
         SELECT c.id, c.name as concert_name, c.date, c.location, cp.notes
         FROM concert_program cp
         JOIN concerts c ON cp.concert_id = c.id
-        WHERE c.association_id = ? AND LOWER(cp.title) = LOWER(?)
+        WHERE c.association_id = ? AND c.deleted_at IS NULL AND LOWER(cp.title) = LOWER(?)
         ORDER BY c.date DESC
     `,
       )
@@ -1542,6 +1542,20 @@ router.post(
 
     if (!concert) {
       throw new ApiError(404, 'Concert niet gevonden.');
+    }
+
+    // Het lid-id komt uit het verzoek en werd niet gecontroleerd, terwijl de
+    // bulk-variant hieronder de gebruikers wel ophaalt met association_id.
+    // GET /concerts/:id joint users op deze rij en geeft naam en e-mailadres
+    // terug, dus een lid van een andere vereniging aanmelden lekte diens
+    // adres.
+    if (data.userId) {
+      const lid = db
+        .prepare('SELECT id FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+        .get(data.userId, req.user!.associationId);
+      if (!lid) {
+        throw new ApiError(404, 'Lid niet gevonden.');
+      }
     }
 
     // Check for duplicate user attendance
