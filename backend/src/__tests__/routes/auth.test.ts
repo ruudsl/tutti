@@ -8,6 +8,31 @@ import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateSecret, generateSync } from 'otplib';
+
+/**
+ * Een TOTP-code met genoeg geldigheid over.
+ *
+ * Een code hoort bij een tijdvak van dertig seconden en is daarbuiten
+ * ongeldig - verifySync kent geen speling, de window-optie wordt door deze
+ * API stil genegeerd. Een code die vlak voor het einde van zo'n tijdvak wordt
+ * gemaakt en daarna pas door de server wordt gecontroleerd, valt er soms net
+ * buiten. Dat gebeurde: een enkele keer viel deze test om met "Ongeldige MFA
+ * code" terwijl er niets mis was.
+ *
+ * Zit het huidige tijdvak bijna aan zijn eind, dan wacht deze helper het uit.
+ * De code die daarna komt heeft weer bijna dertig seconden, en dat is ruim
+ * genoeg voor een verzoek.
+ */
+async function verseTotpCode(secret: string): Promise<string> {
+  const TIJDVAK_MS = 30_000;
+  const MINIMAAL_OVER_MS = 5_000;
+
+  const resterend = TIJDVAK_MS - (Date.now() % TIJDVAK_MS);
+  if (resterend < MINIMAAL_OVER_MS) {
+    await new Promise((klaar) => setTimeout(klaar, resterend + 50));
+  }
+  return generateSync({ secret });
+}
 import '../setup';
 import app from '../testApp';
 import testDb from '../testDb';
@@ -684,7 +709,7 @@ describe('Auth Routes', () => {
         expect(storedAfterSetup.mfa_secret).not.toBe(secret);
 
         // Enable with a valid TOTP code
-        const code = generateSync({ secret });
+        const code = await verseTotpCode(secret);
         const enableResponse = await request(app)
           .post('/api/auth/mfa/enable')
           .set('Authorization', `Bearer ${memberToken}`)
@@ -713,7 +738,7 @@ describe('Auth Routes', () => {
           .send({
             email: memberUser.email,
             password: memberUser.password,
-            mfaCode: generateSync({ secret }),
+            mfaCode: await verseTotpCode(secret),
           });
         expect(loginResponse.status).toBe(200);
         expect(loginResponse.body).toHaveProperty('token');
@@ -813,7 +838,7 @@ describe('Auth Routes', () => {
         const response = await request(app)
           .post('/api/auth/mfa/recovery-codes/regenerate')
           .set('Authorization', `Bearer ${mfaToken}`)
-          .send({ code: generateSync({ secret: mfaSecret }) });
+          .send({ code: await verseTotpCode(mfaSecret) });
 
         expect(response.status).toBe(200);
         expect(response.body.recoveryCodes).toHaveLength(10);
