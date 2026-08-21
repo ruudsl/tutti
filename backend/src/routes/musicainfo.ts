@@ -40,6 +40,17 @@ interface DetailResult {
 }
 
 /**
+ * Een query-parameter hoeft geen tekst te zijn: bij ?q=a&q=b maakt Express er
+ * een lijst van, en bij ?q[x]=1 een object. Rechtstreeks .trim() aanroepen
+ * loopt daarop stuk en levert een 500 op, terwijl er niets aan onze kant mis
+ * is. Alles wat geen tekst is telt hier daarom als niet ingevuld, waarna de
+ * gewone controle er een nette 400 van maakt.
+ */
+function alsTekst(waarde: unknown): string {
+  return typeof waarde === 'string' ? waarde.trim() : '';
+}
+
+/**
  * Parse a duration string like "05:30" or "5:30" into seconds
  */
 export function parseDurationToSeconds(durationStr: string): number {
@@ -56,12 +67,23 @@ export function parseDurationToSeconds(durationStr: string): number {
 }
 
 /**
+ * Hoe lang we hooguit op musicainfo.net wachten.
+ *
+ * Zonder limiet blijft een verzoek aan een trage of hangende site staan tot
+ * de andere kant hem sluit. Onze eigen aanvraag blijft dan net zo lang open,
+ * met een verbinding en een werker eraan vast. Beter is: opgeven en de
+ * gebruiker een 502 geven, want dat is wat het is.
+ */
+const MUSICAINFO_TIMEOUT_MS = 15000;
+
+/**
  * Fetch a page from musicainfo.net with browser-like headers
  */
 async function fetchPage(url: string): Promise<string> {
   const response = await fetch(url, {
     headers: BROWSER_HEADERS,
     redirect: 'follow',
+    signal: AbortSignal.timeout(MUSICAINFO_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -78,7 +100,7 @@ router.get(
   '/search',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const query = ((req.query.q as string) || '').trim();
+    const query = alsTekst(req.query.q);
     if (!query) {
       throw new ApiError(400, 'Search query is required');
     }
@@ -160,7 +182,7 @@ router.get(
   '/detail',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const artnr = ((req.query.artnr as string) || '').trim();
+    const artnr = alsTekst(req.query.artnr);
     if (!artnr) {
       throw new ApiError(400, 'Article number (artnr) is required');
     }

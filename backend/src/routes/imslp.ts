@@ -17,6 +17,17 @@ const MAX_PDF_BYTES = 50 * 1024 * 1024;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads');
 
 /**
+ * Een query-parameter hoeft geen tekst te zijn: bij ?q=a&q=b maakt Express er
+ * een lijst van, en bij ?q[x]=1 een object. Rechtstreeks .trim() aanroepen
+ * loopt daarop stuk en levert een 500 op, terwijl er niets aan onze kant mis
+ * is. Alles wat geen tekst is telt hier daarom als niet ingevuld, waarna de
+ * gewone controle er een nette 400 van maakt.
+ */
+function alsTekst(waarde: unknown): string {
+  return typeof waarde === 'string' ? waarde.trim() : '';
+}
+
+/**
  * @swagger
  * /imslp/search:
  *   get:
@@ -44,8 +55,8 @@ router.get(
   '/search',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const query = ((req.query.q as string) || '').trim();
-    const composer = ((req.query.composer as string) || '').trim() || undefined;
+    const query = alsTekst(req.query.q);
+    const composer = alsTekst(req.query.composer) || undefined;
 
     if (!query) {
       throw new ApiError(400, 'Search query is required');
@@ -53,7 +64,16 @@ router.get(
 
     logger.info(`IMSLP search request: q="${query}", composer="${composer || ''}"`);
 
-    const result = await searchImslp(query, composer);
+    // Een storing, een tijdslimiet of onzin uit IMSLP is geen defect van ons.
+    // Zonder deze vertaling belandt zo'n fout als 500 bij de gebruiker: die
+    // gaat dan (net als de monitoring) een fout zoeken op de verkeerde plek.
+    let result;
+    try {
+      result = await searchImslp(query, composer);
+    } catch (error: any) {
+      logger.error(`IMSLP search failed: ${error.message}`);
+      throw new ApiError(502, 'IMSLP is nu niet bereikbaar. Probeer het later opnieuw.');
+    }
 
     res.json(result);
   }),
@@ -92,7 +112,15 @@ router.get(
 
     logger.info(`IMSLP work detail request: id="${workId}"`);
 
-    const work = await getWorkDetails(workId);
+    // Zelfde reden als bij /search: wat er bij IMSLP misgaat komt hier als
+    // 502 naar buiten en niet als 500.
+    let work;
+    try {
+      work = await getWorkDetails(workId);
+    } catch (error: any) {
+      logger.error(`IMSLP work detail failed: ${error.message}`);
+      throw new ApiError(502, 'IMSLP is nu niet bereikbaar. Probeer het later opnieuw.');
+    }
 
     if (!work) {
       throw new ApiError(404, 'Work not found');
