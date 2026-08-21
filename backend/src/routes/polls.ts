@@ -832,6 +832,40 @@ router.post(
 );
 
 // Update option
+// LET OP: deze route moet boven '/:pollId/options/:optionId' blijven staan.
+// Express matcht op volgorde van registreren, en een parameter matcht ook
+// het letterlijke woord 'reorder'. Stond hij eronder, dan kwam elk verzoek
+// bij de parameter-route uit met id 'reorder' en eindigde het op een 404 -
+// het herschikken deed dus niets, terwijl het scherm de knop wel toont.
+router.put(
+  '/:id/options/reorder',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { optionIds } = req.body;
+    const associationId = req.user!.associationId;
+
+    if (!Array.isArray(optionIds)) {
+      throw new ApiError(400, 'optionIds moet een array zijn.');
+    }
+
+    const poll = db
+      .prepare('SELECT * FROM polls WHERE id = ? AND association_id = ?')
+      .get(req.params.id, associationId) as any;
+
+    if (!poll) {
+      throw new ApiError(404, 'Poll niet gevonden.');
+    }
+
+    const updateOrder = db.prepare('UPDATE poll_options SET sort_order = ? WHERE id = ? AND poll_id = ?');
+    optionIds.forEach((optionId: string, index: number) => {
+      updateOrder.run(index, optionId, req.params.id);
+    });
+
+    res.json({ message: 'Volgorde bijgewerkt.' });
+  }),
+);
+
 router.put(
   '/:pollId/options/:optionId',
   authenticateToken,
@@ -916,34 +950,6 @@ router.delete(
 );
 
 // Reorder options
-router.put(
-  '/:id/options/reorder',
-  authenticateToken,
-  requireRole('admin', 'music_committee'),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { optionIds } = req.body;
-    const associationId = req.user!.associationId;
-
-    if (!Array.isArray(optionIds)) {
-      throw new ApiError(400, 'optionIds moet een array zijn.');
-    }
-
-    const poll = db
-      .prepare('SELECT * FROM polls WHERE id = ? AND association_id = ?')
-      .get(req.params.id, associationId) as any;
-
-    if (!poll) {
-      throw new ApiError(404, 'Poll niet gevonden.');
-    }
-
-    const updateOrder = db.prepare('UPDATE poll_options SET sort_order = ? WHERE id = ? AND poll_id = ?');
-    optionIds.forEach((optionId: string, index: number) => {
-      updateOrder.run(index, optionId, req.params.id);
-    });
-
-    res.json({ message: 'Volgorde bijgewerkt.' });
-  }),
-);
 
 // =====================================================
 // VOTING ROUTES
@@ -1181,9 +1187,18 @@ router.put(
       throw new ApiError(400, 'Reactie mag niet leeg zijn.');
     }
 
+    // Beide id's komen uit de url; zonder de peiling aan de vereniging te
+    // binden voldoet een beheerder van een andere vereniging aan de
+    // eigenaarscontrole hieronder - die kijkt alleen naar de rol. De buurroutes
+    // die reacties lezen en plaatsen halen de peiling wel eerst op met
+    // association_id.
     const comment = db
-      .prepare('SELECT * FROM poll_comments WHERE id = ? AND poll_id = ? AND deleted_at IS NULL')
-      .get(req.params.commentId, req.params.pollId) as any;
+      .prepare(
+        `SELECT c.* FROM poll_comments c
+         JOIN polls p ON p.id = c.poll_id
+         WHERE c.id = ? AND c.poll_id = ? AND c.deleted_at IS NULL AND p.association_id = ?`,
+      )
+      .get(req.params.commentId, req.params.pollId, req.user!.associationId) as any;
 
     if (!comment) {
       throw new ApiError(404, 'Reactie niet gevonden.');
@@ -1210,9 +1225,18 @@ router.delete(
   '/:pollId/comments/:commentId',
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Beide id's komen uit de url; zonder de peiling aan de vereniging te
+    // binden voldoet een beheerder van een andere vereniging aan de
+    // eigenaarscontrole hieronder - die kijkt alleen naar de rol. De buurroutes
+    // die reacties lezen en plaatsen halen de peiling wel eerst op met
+    // association_id.
     const comment = db
-      .prepare('SELECT * FROM poll_comments WHERE id = ? AND poll_id = ? AND deleted_at IS NULL')
-      .get(req.params.commentId, req.params.pollId) as any;
+      .prepare(
+        `SELECT c.* FROM poll_comments c
+         JOIN polls p ON p.id = c.poll_id
+         WHERE c.id = ? AND c.poll_id = ? AND c.deleted_at IS NULL AND p.association_id = ?`,
+      )
+      .get(req.params.commentId, req.params.pollId, req.user!.associationId) as any;
 
     if (!comment) {
       throw new ApiError(404, 'Reactie niet gevonden.');
@@ -1340,6 +1364,20 @@ router.post(
     }
 
     const { orchestraId, location, notes } = req.body;
+
+    // Het orkest-id komt uit het verzoek en gaat straks als orchestra_id in
+    // rehearsal_instances, terwijl association_id die van de aanvrager wordt.
+    // Zonder deze controle ontstaat er een repetitie die bij twee
+    // verenigingen tegelijk hoort en in geen enkel orkestfilter thuis is.
+    // rehearsals.ts doet deze controle op dezelfde manier.
+    if (orchestraId) {
+      const orkest = db
+        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+        .get(orchestraId, associationId);
+      if (!orkest) {
+        throw new ApiError(404, 'Orkest niet gevonden.');
+      }
+    }
 
     const poll = db
       .prepare('SELECT * FROM polls WHERE id = ? AND association_id = ?')

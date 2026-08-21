@@ -145,12 +145,16 @@ router.get(
     const { id: concertId } = req.params;
 
     // Check if concert exists
+    //
+    // concerts.ts verwijdert zacht: het concert blijft als rij bestaan met een
+    // deleted_at erin. Zonder die voorwaarde bleef de publieke kaartpagina van
+    // een afgevoerd concert gewoon in de lucht en kon er nog besteld worden.
     const concert = db
       .prepare(
         `
         SELECT id, name, date, end_date, location, description, concert_type
         FROM concerts
-        WHERE id = ?
+        WHERE id = ? AND deleted_at IS NULL
     `,
       )
       .get(concertId) as
@@ -258,7 +262,26 @@ router.post(
       throw new ApiError(400, validation.error.issues[0].message);
     }
 
-    const { items, buyerName, buyerEmail, buyerPhone, notes, captchaToken, language } = validation.data;
+    const {
+      items: aangeleverdeRegels,
+      buyerName,
+      buyerEmail,
+      buyerPhone,
+      notes,
+      captchaToken,
+      language,
+    } = validation.data;
+
+    // Regels met dezelfde kaartsoort worden eerst bij elkaar opgeteld. De
+    // controles hieronder - max_per_order en de beschikbaarheid - keken per
+    // regel, en drie regels van twee kaarten kwamen zo langs een grens van
+    // vier. Bij elkaar optellen is ook wat de koper bedoelt: hij bestelt zes
+    // kaarten, niet drie keer twee.
+    const gebundeld = new Map<string, number>();
+    for (const regel of aangeleverdeRegels) {
+      gebundeld.set(regel.ticketTypeId, (gebundeld.get(regel.ticketTypeId) ?? 0) + regel.quantity);
+    }
+    const items = [...gebundeld].map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }));
 
     // Get client IP address
     const clientIp =
@@ -268,13 +291,14 @@ router.post(
     // Track checkout request for rate limiting
     trackCheckoutRequest(clientIp);
 
-    // Check concert exists
+    // Check concert exists (verwijderde concerten verkopen niets meer, zie
+    // de toelichting bij GET /concerts/:id/tickets)
     const concert = db
       .prepare(
         `
         SELECT id, name, date, location, association_id
         FROM concerts
-        WHERE id = ?
+        WHERE id = ? AND deleted_at IS NULL
     `,
       )
       .get(concertId) as
@@ -436,6 +460,12 @@ router.post(
     try {
       createOrder();
     } catch (error) {
+      // reserveTickets meldt "nog maar twee kaarten beschikbaar" met een
+      // ApiError(400). Die hoort de koper te zien; hem hier tot een 500
+      // omsmelten maakt van een uitverkochte kaartsoort een storing.
+      if (error instanceof ApiError) {
+        throw error;
+      }
       logger.error('Failed to create order:', error);
       throw new ApiError(500, 'Failed to create order');
     }
@@ -496,7 +526,8 @@ router.get(
             o.created_at,
             c.name as concert_name,
             c.date as concert_date,
-            c.location as concert_location
+            c.location as concert_location,
+            c.association_id
         FROM ticket_orders o
         JOIN concerts c ON o.concert_id = c.id
         WHERE o.id = ?
@@ -521,10 +552,31 @@ router.get(
           concert_name: string;
           concert_date: string;
           concert_location: string | null;
+          association_id: string;
         }
       | undefined;
 
     if (!order) {
+      throw new ApiError(404, 'Order not found');
+    }
+
+    // Het antwoord bevat naam, e-mailadres, telefoonnummer en na betaling de
+    // kaartcodes van de koper. Hier stond alleen `WHERE o.id = ?`, waarmee
+    // iedere ingelogde gebruiker met een bestelnummer die gegevens kon
+    // ophalen, ook over de grens van zijn eigen vereniging heen.
+    //
+    // Een gastbestelling heeft geen account achter zich; daar is het
+    // bestelnummer uit de betaalterugkeer het enige dat de koper heeft, dus
+    // die weg blijft open. Hoort er wel een account bij, dan moet de vrager
+    // die koper zijn of de kaartverkoop van de eigen vereniging beheren.
+    const vrager = req.user;
+    const magBestellingZien = vrager
+      ? vrager.id === order.user_id ||
+        vrager.email.toLowerCase() === order.buyer_email.toLowerCase() ||
+        (['admin', 'music_committee'].includes(vrager.role) && vrager.associationId === order.association_id)
+      : order.user_id === null;
+
+    if (!magBestellingZien) {
       throw new ApiError(404, 'Order not found');
     }
 
@@ -639,7 +691,7 @@ router.post(
             c.association_id
         FROM ticket_orders o
         JOIN concerts c ON o.concert_id = c.id
-        WHERE o.id = ?
+        WHERE o.id = ? AND c.deleted_at IS NULL
     `,
       )
       .get(orderId) as
@@ -655,6 +707,8 @@ router.post(
         }
       | undefined;
 
+    // Een verwijderd concert valt hierboven al af: een bestelling voor een
+    // avond die niet meer bestaat hoort ook niet meer afgerekend te worden.
     if (!order) {
       throw new ApiError(404, 'Order not found');
     }
@@ -1725,8 +1779,19 @@ router.post(
       throw new ApiError(400, 'Transfer has expired');
     }
 
-    // Optional: verify recipient email matches (be lenient - allow any authenticated user)
-    // In production you might want to enforce this more strictly
+    // De overdrachtscode gaat per e-mail naar één adres. Hier stond dat elke
+    // ingelogde gebruiker hem mocht verzilveren; wie de code onderweg oppikt
+    // nam daarmee de kaart over van degene voor wie hij bedoeld was.
+    if (transfer.recipient_email.toLowerCase() !== userEmail.toLowerCase()) {
+      throw new ApiError(403, 'This transfer is addressed to someone else');
+    }
+
+    // De kaart kan na het aanmaken van de overdracht ingetrokken of al
+    // gescand zijn. Dan valt er niets over te dragen: de ontvanger zou een
+    // kaart op naam krijgen die aan de deur wordt geweigerd.
+    if (transfer.ticket_status !== 'valid') {
+      throw new ApiError(400, `Cannot transfer ticket with status: ${transfer.ticket_status}`);
+    }
 
     // Transfer the ticket
     const acceptTransfer = db.transaction(() => {
@@ -2230,8 +2295,12 @@ router.post(
     const { code } = req.params;
     const { concertId } = req.body;
 
+    // De vereniging van de scanner gaat mee: een kaartcode van een andere
+    // vereniging hoort hier niet gevonden te worden, laat staan afgestempeld.
+    const associationId = req.user!.associationId ?? undefined;
+
     // First validate
-    const validation = validateTicket(code, concertId);
+    const validation = validateTicket(code, concertId, associationId);
 
     if (!validation.valid) {
       res.json(validation);
@@ -2239,7 +2308,7 @@ router.post(
     }
 
     // Mark as used
-    const result = markTicketAsUsed(code, req.user!.id);
+    const result = markTicketAsUsed(code, req.user!.id, associationId);
 
     if (!result.success) {
       throw new ApiError(400, result.message);
@@ -2284,7 +2353,7 @@ router.post(
     const concert = db
       .prepare(
         `
-        SELECT id FROM concerts WHERE id = ? AND association_id = ?
+        SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(concertId, req.user!.associationId) as { id: string } | undefined;
@@ -2909,13 +2978,42 @@ router.post(
       throw new ApiError(400, 'No payment to refund');
     }
 
+    // De bestelling wordt eerst vastgezet, en pas daarna gaat de opdracht naar
+    // de betaaldienst. Tussen de statuscontrole hierboven en het wegschrijven
+    // van 'refunded' verderop zit namelijk een await; twee verzoeken tegelijk
+    // - een dubbele klik is genoeg - kwamen daar allebei langs en gaven het
+    // bedrag allebei terug. Deze bijwerking slaagt maar één keer, want de
+    // voorwaarde status = 'paid' geldt dan niet meer.
+    const vastgezet = db
+      .prepare(
+        `
+        UPDATE ticket_orders SET status = 'refunding', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'paid'
+    `,
+      )
+      .run(orderId);
+
+    if (vastgezet.changes === 0) {
+      throw new ApiError(400, 'Cannot refund order: a refund is already in progress');
+    }
+
     // Create refund
-    const refundResult = await createRefund({
-      paymentId: order.payment_id,
-      reason,
-    });
+    let refundResult;
+    try {
+      refundResult = await createRefund({
+        paymentId: order.payment_id,
+        reason,
+      });
+    } catch (error) {
+      db.prepare(`UPDATE ticket_orders SET status = 'paid' WHERE id = ? AND status = 'refunding'`).run(orderId);
+      throw error;
+    }
 
     if (!refundResult.success) {
+      // Er is niets terugbetaald, dus de bestelling hoort weer gewoon betaald
+      // te zijn. Bleef hij op 'refunding' staan, dan was een tweede poging na
+      // een storing bij de betaaldienst niet meer mogelijk.
+      db.prepare(`UPDATE ticket_orders SET status = 'paid' WHERE id = ? AND status = 'refunding'`).run(orderId);
       throw new ApiError(500, refundResult.error || 'Failed to create refund');
     }
 
@@ -2932,16 +3030,24 @@ router.post(
       const tickets = db
         .prepare(
           `
-            SELECT t.id, t.ticket_type_id
+            SELECT t.id, t.ticket_type_id, t.status
             FROM tickets t
             WHERE t.order_id = ?
         `,
         )
-        .all(orderId) as { id: string; ticket_type_id: string }[];
+        .all(orderId) as { id: string; ticket_type_id: string; status: string }[];
 
       for (const ticket of tickets) {
+        // Een kaart die al ingetrokken of eerder teruggegeven is, is ook al
+        // teruggeboekt op de voorraad. Hem hier nog een keer vrijgeven laat
+        // meer plaatsen vrij lijken dan de zaal heeft.
+        const alTeruggegeven = ticket.status === 'cancelled' || ticket.status === 'refunded';
+
         db.prepare(`UPDATE tickets SET status = 'refunded' WHERE id = ?`).run(ticket.id);
-        releaseTickets(ticket.ticket_type_id, 1);
+
+        if (!alTeruggegeven) {
+          releaseTickets(ticket.ticket_type_id, 1);
+        }
       }
     });
 

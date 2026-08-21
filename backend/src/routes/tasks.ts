@@ -672,6 +672,32 @@ router.put(
       throw new ApiError(404, 'Taak niet gevonden.');
     }
 
+    // Dezelfde twee controles als bij het aanmaken. Ze stonden alleen daar,
+    // terwijl deze route precies dezelfde velden wegschrijft: een taak van de
+    // eigen vereniging kon zo alsnog op een takenlijst van een andere belanden,
+    // of worden toegewezen aan iemand daar. Die toewijzing is een doodlopende
+    // weg - het overzicht filtert op vereniging, dus de toegewezene ziet de
+    // taak nooit - terwijl zijn naam hier wel in beeld komt.
+    //
+    // null betekent losmaken; dat mag zonder controle.
+    if (data.taskListId) {
+      const lijst = db
+        .prepare('SELECT id FROM task_lists WHERE id = ? AND association_id = ?')
+        .get(data.taskListId, associationId);
+      if (!lijst) {
+        throw new ApiError(404, 'Takenlijst niet gevonden.');
+      }
+    }
+
+    if (data.assignedTo) {
+      const toegewezene = db
+        .prepare('SELECT id FROM users WHERE id = ? AND association_id = ?')
+        .get(data.assignedTo, associationId);
+      if (!toegewezene) {
+        throw new ApiError(404, 'Gebruiker niet gevonden.');
+      }
+    }
+
     const updates: string[] = [];
     const params: any[] = [];
 

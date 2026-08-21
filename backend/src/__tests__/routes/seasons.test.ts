@@ -278,6 +278,38 @@ describe('seizoenen', () => {
       expect(rij.name).toBe('Seizoen van de buren');
     });
 
+    it('hangt geen sjabloon van een andere vereniging aan het seizoen', async () => {
+      // Het aanmaken controleerde het sjabloon wel, het bijwerken niet, terwijl
+      // template_id daar gewoon uit de aanvraag wordt weggeschreven. Het
+      // overzicht haalt de naam met een LEFT JOIN zonder verenigingsfilter op,
+      // dus zo verscheen de naam van het sjabloon van de buren in het eigen
+      // seizoen.
+      const id = await maakSeizoen();
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const maker = createTestUser(andere.id, { email: `sjabloon-${uuidv4()}@test.nl`, role: 'admin' });
+      const vreemd = uuidv4();
+      db.prepare('INSERT INTO season_templates (id, association_id, name, created_by) VALUES (?, ?, ?, ?)').run(
+        vreemd,
+        andere.id,
+        'Van de buren',
+        maker.id,
+      );
+
+      expect((await alsBeheerder('put', `/${id}`).send({ templateId: vreemd })).status).toBe(400);
+
+      const na = await alsLid('get', `/${id}`);
+      expect(na.body.templateId).toBeNull();
+      expect(na.body.templateName).toBeNull();
+    });
+
+    it('hangt een eigen sjabloon wel aan het seizoen', async () => {
+      const id = await maakSeizoen();
+      const sjabloonId = await maakSjabloon({ name: 'Jubileumjaar' });
+
+      expect((await alsBeheerder('put', `/${id}`).send({ templateId: sjabloonId })).status).toBe(200);
+      expect((await alsLid('get', `/${id}`)).body.templateName).toBe('Jubileumjaar');
+    });
+
     it('verwijdert een seizoen', async () => {
       const id = await maakSeizoen();
 
@@ -355,6 +387,63 @@ describe('seizoenen', () => {
       const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
       const antwoord = await alsBeheerder('post', `/${vreemdSeizoen(andere.id)}/events`).send({
         eventType: 'concert',
+        plannedDate: '2026-12-20',
+      });
+      expect(antwoord.status).toBe(404);
+    });
+
+    it('koppelt geen concert van een andere vereniging aan het seizoen', async () => {
+      // event_id ging rechtstreeks uit de aanvraag de tabel in. GET /seasons/:id
+      // zoekt de naam van dat evenement op met een subquery zonder
+      // verenigingsfilter, dus een vreemd id liet de naam van het concert van
+      // de buren in het eigen seizoen zien.
+      const id = await maakSeizoen();
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const vreemdConcert = uuidv4();
+      db.prepare(
+        "INSERT INTO concerts (id, association_id, name, date) VALUES (?, ?, 'Concert van de buren', '2026-12-20')",
+      ).run(vreemdConcert, andere.id);
+
+      const antwoord = await alsBeheerder('post', `/${id}/events`).send({
+        eventType: 'concert',
+        eventId: vreemdConcert,
+        plannedDate: '2026-12-20',
+      });
+      expect(antwoord.status).toBe(404);
+
+      expect((await alsLid('get', `/${id}`)).body.events).toEqual([]);
+    });
+
+    it('koppelt een eigen concert wel en toont de naam', async () => {
+      const id = await maakSeizoen();
+      const concertId = uuidv4();
+      db.prepare(
+        "INSERT INTO concerts (id, association_id, name, date) VALUES (?, ?, 'Kerstconcert', '2026-12-20')",
+      ).run(concertId, vereniging.id);
+
+      const antwoord = await alsBeheerder('post', `/${id}/events`).send({
+        eventType: 'concert',
+        eventId: concertId,
+        plannedDate: '2026-12-20',
+      });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(201);
+
+      const seizoen = await alsLid('get', `/${id}`);
+      expect(seizoen.body.events[0]).toMatchObject({ eventId: concertId, eventName: 'Kerstconcert' });
+    });
+
+    it('koppelt geen concert dat is weggegooid', async () => {
+      // Concerten worden zacht verwijderd. Een weggegooid concert hoort niet
+      // meer in de seizoensplanning te kunnen belanden.
+      const id = await maakSeizoen();
+      const concertId = uuidv4();
+      db.prepare(
+        "INSERT INTO concerts (id, association_id, name, date, deleted_at) VALUES (?, ?, 'Afgelast', '2026-12-20', '2026-08-01 10:00:00')",
+      ).run(concertId, vereniging.id);
+
+      const antwoord = await alsBeheerder('post', `/${id}/events`).send({
+        eventType: 'concert',
+        eventId: concertId,
         plannedDate: '2026-12-20',
       });
       expect(antwoord.status).toBe(404);

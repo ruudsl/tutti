@@ -167,8 +167,15 @@ export interface TicketValidationResult {
 
 /**
  * Validate a ticket by its QR code
+ *
+ * associationId hoort erbij zodra er een ingelogde scanner achter zit. Zonder
+ * die grens vindt een kaartcode zijn kaart bij elke vereniging, en kan de
+ * dirigent van de ene club de kaart van de andere op 'gebruikt' zetten - de
+ * echte bezoeker staat dan bij de deur met een kaart die al gescand heet te
+ * zijn. Blijft optioneel voor aanroepen zonder gebruiker (de publieke
+ * kaartpagina).
  */
-export function validateTicket(qrCode: string, concertId?: string): TicketValidationResult {
+export function validateTicket(qrCode: string, concertId?: string, associationId?: string): TicketValidationResult {
   // Look up the ticket
   const ticket = db
     .prepare(
@@ -189,9 +196,10 @@ export function validateTicket(qrCode: string, concertId?: string): TicketValida
         JOIN ticket_types tt ON t.ticket_type_id = tt.id
         JOIN concerts c ON tt.concert_id = c.id
         WHERE t.qr_code = ?
+          AND (? IS NULL OR c.association_id = ?)
     `,
     )
-    .get(qrCode) as
+    .get(qrCode, associationId ?? null, associationId ?? null) as
     | {
         id: string;
         qr_code: string;
@@ -327,9 +335,17 @@ export function validateTicket(qrCode: string, concertId?: string): TicketValida
 
 /**
  * Mark a ticket as used (scanned at entrance)
+ *
+ * associationId begrenst dezelfde zoekopdracht als in validateTicket; de
+ * bijwerking hieronder gaat op qr_code, dus zonder die controle vooraf zou een
+ * kaart van een andere vereniging alsnog worden weggeschreven.
  */
-export function markTicketAsUsed(qrCode: string, validatedBy: string): { success: boolean; message: string } {
-  const validation = validateTicket(qrCode);
+export function markTicketAsUsed(
+  qrCode: string,
+  validatedBy: string,
+  associationId?: string,
+): { success: boolean; message: string } {
+  const validation = validateTicket(qrCode, undefined, associationId);
 
   if (!validation.valid) {
     return {

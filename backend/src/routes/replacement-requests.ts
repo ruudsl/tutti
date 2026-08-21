@@ -288,8 +288,12 @@ router.post(
 
     // Verify event exists
     if (data.eventType === 'concert') {
+      // Concerten worden zacht verwijderd. Zonder `deleted_at IS NULL` kon er
+      // nog een invalverzoek worden gemaakt voor een concert dat al was
+      // weggegooid; het overzicht haalt de naam met een subquery op en toonde
+      // dat verdwenen concert dan gewoon.
       const concert = db
-        .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ?')
+        .prepare('SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
         .get(data.eventId, associationId);
       if (!concert) {
         throw new ApiError(404, 'Concert niet gevonden');
@@ -652,7 +656,12 @@ router.put(
       }
 
       // Update musician stats if completed
-      if (data.status === 'completed') {
+      //
+      // Alleen bij de overgang naar 'completed'. Stond de uitnodiging al op
+      // afgerond, dan is het optreden al geteld: nog een keer ophogen geeft de
+      // muzikant een optreden extra in zijn staat van dienst, en die telling
+      // bepaalt mede de volgorde van de voorstellen.
+      if (data.status === 'completed' && assignment.old_status !== 'completed') {
         const musicianId = db
           .prepare(
             `

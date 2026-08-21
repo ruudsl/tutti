@@ -520,6 +520,21 @@ describe('muziek delen tussen verenigingen', () => {
       expect(await toegangGeweigerd(hunToken)).toContain('Geen toegang');
     });
 
+    it('weigert ook als de termijn vandaag al verstreken is', async () => {
+      // access_expires_at wordt als ISO-tekst weggeschreven
+      // ('2026-09-20T12:00:00.000Z'), CURRENT_TIMESTAMP heeft de vorm
+      // '2026-09-20 12:00:00'. Die twee vergelijken als tekst gaat mis op de
+      // elfde positie: 'T' staat achter een spatie, dus elke ISO-tijd van
+      // vandaag telde als toekomst en liep de toegang pas 's nachts af.
+      await als(onsToken, 'post', `/requests/${verzoekId}/approve`);
+      const vandaagMiddernacht = `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
+      db.prepare('UPDATE music_file_requests SET access_expires_at = ? WHERE id = ?').run(
+        vandaagMiddernacht,
+        verzoekId,
+      );
+      expect(await toegangGeweigerd(hunToken)).toContain('Geen toegang');
+    });
+
     it('weigert zodra de deling wordt ingetrokken', async () => {
       await als(onsToken, 'post', `/requests/${verzoekId}/approve`);
       await als(onsToken, 'put', `/titles/${titelId}/shares`).send({ partnerIds: [] });

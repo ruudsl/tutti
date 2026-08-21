@@ -8,6 +8,7 @@ import db from '../database/connection';
 import config from '../config';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
+import { revokeUserSessions } from '../utils/sessionStore';
 import { withTransaction } from '../utils/database';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
@@ -884,7 +885,24 @@ router.post(
       }
 
       // Add orchestras
+      //
+      // De id's komen uit het verzoek en gingen er zonder controle in. Een
+      // orkest hoort bij een vereniging (orchestras.association_id), dus een
+      // beheerder kon zo een nieuw lid in het orkest van een andere vereniging
+      // zetten. Dat lid komt daarna in hun repetitieoverzicht, hun
+      // beschikbaarheid en hun opstelling terecht - user_orchestras is op al
+      // die plekken de bron.
+      //
+      // Instrumenten hebben deze controle niet nodig: die tabel is gedeeld en
+      // heeft geen association_id.
       if (orchestraIds && orchestraIds.length > 0) {
+        const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
+        for (const orchestraId of orchestraIds) {
+          if (!hoortErbij.get(orchestraId, req.user!.associationId)) {
+            throw new ApiError(400, 'Een van de gekozen orkesten hoort niet bij deze vereniging.');
+          }
+        }
+
         const insertOrchestra = db.prepare('INSERT INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
         for (const orchestraId of orchestraIds) {
           insertOrchestra.run(userId, orchestraId);
@@ -1371,6 +1389,12 @@ router.post(
         `,
       ).run(uuidv4(), userId, req.user!.associationId, JSON.stringify({ m365Removed, offboardedBy: req.user!.id }));
     });
+
+    // Opnieuw inloggen lukt niet meer (routes/auth.ts weigert 'inactive'), maar
+    // een token dat al uitgegeven is blijft geldig tot het verloopt. Zonder
+    // deze regel houdt iemand die net uit dienst is genomen dus nog uren
+    // toegang tot de ledenlijst, de bladmuziek en de agenda.
+    revokeUserSessions(userId);
 
     logger.info(`User offboarded: ${user.email}`, { userId, m365Removed, offboardedBy: req.user!.id });
 

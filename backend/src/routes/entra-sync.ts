@@ -175,7 +175,22 @@ function findOrCreateOrchestras(orchestraNames: string[], associationId: string 
   if (!associationId) return [];
   const orchestraIds: string[] = [];
 
-  db.transaction(() => {
+  // withTransaction en niet db.transaction: deze functie wordt uitsluitend
+  // aangeroepen van binnen een withTransaction() van de import- en
+  // sync-routes, en db.transaction doet een kale BEGIN zonder te weten dat er
+  // er al een transactie loopt.
+  //
+  // Wat er dan gebeurde: de binnenste BEGIN faalt met "cannot start a
+  // transaction within a transaction", de catch eromheen doet ROLLBACK - en
+  // die draait de BUITENSTE transactie terug - waarna de buitenste catch stukloopt
+  // op "cannot rollback - no transaction is active". Netto: 500 en nul
+  // geimporteerde gebruikers, zodra ook maar een geselecteerde persoon een
+  // afdeling ingevuld heeft. Dat is de normale situatie, want de afdeling is
+  // juist waar de orkestindeling vandaan komt.
+  //
+  // withTransaction telt de diepte en gebruikt een savepoint als er al een
+  // transactie loopt.
+  withTransaction(() => {
     for (const name of orchestraNames) {
       // Try to find existing orchestra (case-insensitive)
       const orchestra = db
@@ -192,7 +207,7 @@ function findOrCreateOrchestras(orchestraNames: string[], associationId: string 
         orchestraIds.push(orchestra.id);
       }
     }
-  })();
+  });
 
   return orchestraIds;
 }

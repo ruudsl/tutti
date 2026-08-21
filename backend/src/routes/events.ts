@@ -117,7 +117,7 @@ router.get(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, venueType, isFavorite } = req.query;
-    const { limit, offset } = getPaginationParams(req);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
     let whereClause = 'WHERE association_id = ?';
     const params: any[] = [req.user!.associationId];
@@ -152,7 +152,7 @@ router.get(
       )
       .all(...params, limit, offset);
 
-    res.json(createPaginatedResult(locations.map(mapLocation), countResult.total, limit, offset));
+    res.json(createPaginatedResult(locations.map(mapLocation), countResult.total, page, limit));
   }),
 );
 
@@ -318,7 +318,7 @@ router.get(
   authenticateToken,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, status, eventType, from, to, upcoming } = req.query;
-    const { limit, offset } = getPaginationParams(req);
+    const { page, limit, offset } = getPaginationParams(req.query);
 
     let whereClause = 'WHERE e.association_id = ?';
     const params: any[] = [req.user!.associationId];
@@ -405,8 +405,8 @@ router.get(
           orchestras: orchestraMap.get(e.id) || [],
         })),
         countResult.total,
+        page,
         limit,
-        offset,
       ),
     );
   }),
@@ -1022,8 +1022,21 @@ router.put(
     }
 
     if (updates.length > 0) {
-      values.push(req.params.transportId, req.params.eventId);
-      db.prepare(`UPDATE event_transport SET ${updates.join(', ')} WHERE id = ? AND event_id = ?`).run(...values);
+      // event_transport heeft zelf geen association_id; de grens loopt via het
+      // event. De DELETE hieronder bindt het event wel aan de vereniging, deze
+      // route deed dat niet - dus kon het vervoer van een andere vereniging
+      // worden overschreven: chauffeur, kenteken, vertrektijd en notities.
+      values.push(req.params.transportId, req.params.eventId, req.user!.associationId);
+      const resultaat = db
+        .prepare(
+          `UPDATE event_transport SET ${updates.join(', ')}
+           WHERE id = ? AND event_id IN (SELECT id FROM events WHERE id = ? AND association_id = ?)`,
+        )
+        .run(...values);
+
+      if (resultaat.changes === 0) {
+        throw new ApiError(404, 'Vervoer niet gevonden.');
+      }
     }
 
     res.json({ message: 'Vervoer bijgewerkt.' });
@@ -1111,10 +1124,14 @@ router.delete(
       .prepare(
         `
         DELETE FROM event_transport_passengers
-        WHERE id = ? AND transport_id = ?
+        WHERE id = ? AND transport_id IN (
+          SELECT t.id FROM event_transport t
+          JOIN events e ON e.id = t.event_id
+          WHERE t.id = ? AND e.association_id = ?
+        )
     `,
       )
-      .run(req.params.passengerId, req.params.transportId);
+      .run(req.params.passengerId, req.params.transportId, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Passagier niet gevonden.');
@@ -1320,6 +1337,20 @@ router.post(
     const data = createPackingListSchema.parse(req.body);
     const id = uuidv4();
 
+    // Het sjabloon-id komt uit het verzoek en werd niet gecontroleerd, terwijl
+    // packing_list_templates een association_id heeft en de leesroutes daar
+    // wel op filteren. De inhoud van het sjabloon wordt hieronder gekopieerd
+    // naar de nieuwe lijst, dus een sjabloon van een andere vereniging kwam zo
+    // in het eigen archief terecht.
+    if (data.templateId) {
+      const sjabloon = db
+        .prepare('SELECT id FROM packing_list_templates WHERE id = ? AND association_id = ?')
+        .get(data.templateId, req.user!.associationId);
+      if (!sjabloon) {
+        throw new ApiError(404, 'Sjabloon niet gevonden.');
+      }
+    }
+
     withTransaction(() => {
       db.prepare(
         `
@@ -1459,10 +1490,15 @@ router.delete(
     const result = db
       .prepare(
         `
-        DELETE FROM event_packing_items WHERE id = ? AND packing_list_id = ?
+        DELETE FROM event_packing_items
+        WHERE id = ? AND packing_list_id IN (
+          SELECT l.id FROM event_packing_lists l
+          JOIN events e ON e.id = l.event_id
+          WHERE l.id = ? AND e.association_id = ?
+        )
     `,
       )
-      .run(req.params.itemId, req.params.listId);
+      .run(req.params.itemId, req.params.listId, req.user!.associationId);
 
     if (result.changes === 0) {
       throw new ApiError(404, 'Item niet gevonden.');

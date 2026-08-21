@@ -247,13 +247,19 @@ export function magTitelZien(kijkerAssociationId: string, titelId: string): bool
  * de toegang meteen - een eerdere goedkeuring is geen blijvend recht.
  */
 export function magBestandOphalen(kijkerAssociationId: string, partijId: string): boolean {
+  // De vervaldatum staat als ISO-tekst in de kolom ('2026-09-20T12:00:00.000Z')
+  // en wordt als tekst vergeleken. CURRENT_TIMESTAMP levert '2026-09-20
+  // 12:00:00': dezelfde volgorde tot en met de datum, maar op positie elf staat
+  // een 'T' tegenover een spatie, en 'T' is groter. Elke vervaltijd van vandaag
+  // gold daardoor als toekomst en de toegang liep pas om middernacht af. Nu
+  // gaat het nu-moment in dezelfde ISO-vorm mee als parameter.
   const verzoek = db
     .prepare(
       `SELECT id FROM music_file_requests
        WHERE music_piece_id = ? AND requesting_association_id = ? AND status = 'approved'
-         AND (access_expires_at IS NULL OR access_expires_at > CURRENT_TIMESTAMP)`,
+         AND (access_expires_at IS NULL OR access_expires_at > ?)`,
     )
-    .get(partijId, kijkerAssociationId);
+    .get(partijId, kijkerAssociationId, new Date().toISOString());
 
   if (!verzoek) return false;
 

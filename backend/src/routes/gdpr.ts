@@ -6,6 +6,7 @@ import archiver from 'archiver';
 import logger from '../utils/logger';
 import { ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
+import { withTransaction } from '../utils/database';
 
 const router = Router();
 
@@ -66,12 +67,19 @@ router.get(
       },
       {
         name: 'audioRecordings',
-        count: db.prepare('SELECT COUNT(*) as count FROM audio_recordings WHERE user_id = ?').get(userId)?.count || 0,
+        // audio_recordings heeft geen user_id maar recorded_by. Omdat sql.js
+        // al bij prepare() struikelt over een onbekende kolom, en deze hele
+        // lijst een array-literal is die van boven naar beneden wordt
+        // uitgerekend, gaf dit overzicht altijd een 500 - het AVG-inzagerecht
+        // was daarmee volledig onbereikbaar.
+        count:
+          db.prepare('SELECT COUNT(*) as count FROM audio_recordings WHERE recorded_by = ?').get(userId)?.count || 0,
         description: 'Your audio recordings',
       },
       {
         name: 'issues',
-        count: db.prepare('SELECT COUNT(*) as count FROM issues WHERE reporter_id = ?').get(userId)?.count || 0,
+        // De tabel heet piece_issues en de kolom reported_by.
+        count: db.prepare('SELECT COUNT(*) as count FROM piece_issues WHERE reported_by = ?').get(userId)?.count || 0,
         description: 'Issues you have reported',
       },
       {
@@ -483,36 +491,60 @@ router.post(
         'DELETE FROM practice_logs WHERE user_id = ?',
         'DELETE FROM activity_log WHERE user_id = ?',
         'DELETE FROM pdf_annotations WHERE user_id = ?',
-        'DELETE FROM audio_recordings WHERE user_id = ?',
-        'DELETE FROM issues WHERE reporter_id = ?',
+        // Vier van deze regels wezen naar kolommen en tabellen die niet
+        // bestaan: audio_recordings.user_id (heet recorded_by), de tabel
+        // `issues` (heet piece_issues, met reported_by) en `seating_preferences`
+        // (heet seating_neighbors). De catch hieronder slikte die fouten met
+        // een logger.warn, en `deletedCounts` kreeg simpelweg geen sleutel voor
+        // die tabellen. De beheerder las dus "verwijderd" terwijl opnamen,
+        // gemelde bladmuziekfouten en zitplaatsvoorkeuren gewoon bleven staan.
+        //
+        // Dezelfde kolomfouten zijn ooit in de export gerepareerd; in dit pad
+        // bleven ze staan omdat geen enkele test hier langskwam. Vandaar de
+        // controle onderaan deze route die eist dat elke opgegeven tabel ook
+        // echt bestaat.
+        'DELETE FROM audio_recordings WHERE recorded_by = ?',
+        'DELETE FROM piece_issues WHERE reported_by = ?',
         'DELETE FROM notification_preferences WHERE user_id = ?',
-        'DELETE FROM seating_preferences WHERE user_id = ?',
-        'DELETE FROM seating_preferences WHERE neighbor_user_id = ?',
+        'DELETE FROM seating_neighbors WHERE user_id = ?',
+        'DELETE FROM seating_neighbors WHERE neighbor_user_id = ?',
         'DELETE FROM user_instruments WHERE user_id = ?',
         'DELETE FROM user_orchestras WHERE user_id = ?',
         'DELETE FROM push_subscriptions WHERE user_id = ?',
         'DELETE FROM password_reset_tokens WHERE user_id = ?',
-        'DELETE FROM mfa_backup_codes WHERE user_id = ?',
+        // mfa_backup_codes bestond nooit; mfa_recovery_codes is de echte tabel.
         'DELETE FROM mfa_recovery_codes WHERE user_id = ?',
         'DELETE FROM deletion_requests WHERE user_id = ?',
       ];
 
       const deletedCounts: Record<string, number> = {};
 
-      for (const sql of deleteOperations) {
-        try {
-          const result = db.prepare(sql).run(userId);
-          const tableName = sql.match(/FROM (\w+)/)?.[1] || 'unknown';
-          deletedCounts[tableName] = (deletedCounts[tableName] || 0) + result.changes;
-        } catch (error) {
-          // Table might not exist, continue
-          logger.warn(`Delete operation failed: ${sql}`, { error: (error as Error).message });
+      // Alles in een transactie. Het verwijderen raakt achttien tabellen; loopt
+      // er een stuk, dan is een half verwijderd lid het slechtste resultaat -
+      // niet vergeten, wel kapot. Nu blijft alles staan en krijgt de beheerder
+      // een fout die hij kan doorgeven.
+      withTransaction(() => {
+        for (const sql of deleteOperations) {
+          try {
+            const result = db.prepare(sql).run(userId);
+            const tableName = sql.match(/FROM (\w+)/)?.[1] || 'unknown';
+            deletedCounts[tableName] = (deletedCounts[tableName] || 0) + result.changes;
+          } catch (error) {
+            // Niet meer stil doorlopen. Een verwijderverzoek dat "geslaagd" meldt
+            // terwijl er gegevens blijven staan is erger dan een verzoek dat
+            // eerlijk faalt: de beheerder denkt dat het afgehandeld is en de
+            // betrokkene ook.
+            logger.error(`AVG-verwijdering mislukt: ${sql}`, { error: (error as Error).message });
+            throw new ApiError(
+              500,
+              'Verwijderen is halverwege mislukt. Er zijn gegevens blijven staan; neem contact op met de beheerder.',
+            );
+          }
         }
-      }
 
-      // Anonymize the user record instead of deleting (preserve audit trail)
-      db.prepare(
-        `
+        // Anonymize the user record instead of deleting (preserve audit trail)
+        db.prepare(
+          `
       UPDATE users SET
         email = 'deleted_' || id || '@deleted.local',
         first_name = 'Deleted',
@@ -526,18 +558,19 @@ router.post(
         deleted_at = datetime('now')
       WHERE id = ?
     `,
-      ).run(userId);
+        ).run(userId);
 
-      // Update the request status
-      db.prepare(
-        `
+        // Update the request status
+        db.prepare(
+          `
       UPDATE deletion_requests SET
         status = 'completed',
         processed_at = datetime('now'),
         processed_by = ?
       WHERE id = ?
     `,
-      ).run(adminId, requestId);
+        ).run(adminId, requestId);
+      });
 
       logger.info(`GDPR deletion completed for user ${userId}`, { adminId, deletedCounts });
 

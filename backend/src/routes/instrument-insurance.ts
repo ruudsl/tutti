@@ -522,15 +522,21 @@ router.delete(
   authenticateToken,
   requireRole('admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    // De dekking moet ook echt bij de polis uit het pad horen.
+    //
+    // Zonder die voorwaarde werd de dekking van polis A weggegooid via het pad
+    // van polis B. Het instrument bleef daarna naar polis A wijzen, want de
+    // UPDATE hieronder gebruikt de polis uit het pad - het stond dan als
+    // verzekerd geadministreerd zonder dekking.
     const coverage = db
       .prepare(
         `
         SELECT c.* FROM instrument_insurance_coverage c
         JOIN instrument_insurance_policies p ON c.policy_id = p.id
-        WHERE c.id = ? AND p.association_id = ?
+        WHERE c.id = ? AND c.policy_id = ? AND p.association_id = ?
     `,
       )
-      .get(req.params.coverageId, req.user!.associationId) as any;
+      .get(req.params.coverageId, req.params.policyId, req.user!.associationId) as any;
 
     if (!coverage) {
       throw new ApiError(404, 'Dekking niet gevonden');

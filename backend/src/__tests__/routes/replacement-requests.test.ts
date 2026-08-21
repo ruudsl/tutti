@@ -189,6 +189,22 @@ describe('invalverzoeken', () => {
       expect(antwoord.status).toBe(404);
     });
 
+    it('weigert een concert dat is weggegooid', async () => {
+      // Concerten worden zacht verwijderd; de controle keek alleen naar de
+      // vereniging. Er kon dus een invalverzoek worden gemaakt voor een concert
+      // dat niet meer bestaat, en het overzicht toonde de naam ervan gewoon.
+      const concertId = maakConcert();
+      db.prepare('UPDATE concerts SET deleted_at = ? WHERE id = ?').run('2026-08-01 10:00:00', concertId);
+
+      const antwoord = await alsBeheerder('post', '/').send({
+        eventType: 'concert',
+        eventId: concertId,
+        eventDate: '2026-11-14',
+        instrumentId: trompet.id,
+      });
+      expect(antwoord.status).toBe(404);
+    });
+
     it('weigert een tweede verzoek voor hetzelfde instrument bij hetzelfde concert', async () => {
       const { concertId } = await maakVerzoek();
 
@@ -430,6 +446,23 @@ describe('invalverzoeken', () => {
         .prepare('SELECT total_performances, last_played_date FROM external_musicians WHERE id = ?')
         .get(muzikantId) as { total_performances: number; last_played_date: string };
       expect(rij).toMatchObject({ total_performances: 1, last_played_date: '2026-11-14' });
+    });
+
+    it('telt een optreden maar een keer mee', async () => {
+      // Het aantal optredens werd bij elke aanroep met 'completed' opgehoogd,
+      // ook als de uitnodiging al op afgerond stond. Twee keer op dezelfde knop
+      // drukken gaf de muzikant dus een optreden extra in zijn staat van dienst.
+      const { id } = await maakVerzoek();
+      const muzikantId = maakMuzikant();
+      const uitnodiging = await nodigUit(id, muzikantId);
+
+      await alsBeheerder('put', `/${id}/assignments/${uitnodiging.body.id}`).send({ status: 'completed' });
+      await alsBeheerder('put', `/${id}/assignments/${uitnodiging.body.id}`).send({ status: 'completed' });
+
+      const rij = db.prepare('SELECT total_performances FROM external_musicians WHERE id = ?').get(muzikantId) as {
+        total_performances: number;
+      };
+      expect(rij.total_performances).toBe(1);
     });
 
     it('legt het afgesproken bedrag vast', async () => {

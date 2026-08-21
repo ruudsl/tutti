@@ -51,12 +51,13 @@ describe('gastenlijst', () => {
       email: 'jan@test.nl',
       ticket_count: 2,
       notes: null,
+      ticket_type_id: null,
       ...overrides,
     };
     db.prepare(
-      `INSERT INTO guest_list (id, concert_id, organisation, name, email, ticket_count, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, w.concert_id, w.organisation, w.name, w.email, w.ticket_count, w.notes);
+      `INSERT INTO guest_list (id, concert_id, organisation, name, email, ticket_count, notes, ticket_type_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, w.concert_id, w.organisation, w.name, w.email, w.ticket_count, w.notes, w.ticket_type_id);
     return id;
   }
 
@@ -286,6 +287,75 @@ describe('gastenlijst', () => {
   });
 
   describe('kaarten versturen', () => {
+    function maakKaartsoort(vanConcert = concertId): string {
+      const id = uuidv4();
+      db.prepare(
+        "INSERT INTO ticket_types (id, concert_id, name, price, quantity) VALUES (?, ?, 'Regulier', 15, 50)",
+      ).run(id, vanConcert);
+      return id;
+    }
+
+    it('maakt de kaarten aan en zet de gast op verstuurd', async () => {
+      const soortId = maakKaartsoort();
+      const gastId = maakGast({ ticket_type_id: soortId, ticket_count: 2 });
+
+      const antwoord = await alsBeheerder('post', `/guest-list/${gastId}/send-tickets`);
+
+      expect(antwoord.status).toBe(200);
+      expect(antwoord.body.ticketCount).toBe(2);
+      const kaarten = db
+        .prepare('SELECT ticket_type_id FROM tickets WHERE order_id = ?')
+        .all(antwoord.body.orderId) as Array<{ ticket_type_id: string }>;
+      expect(kaarten).toHaveLength(2);
+      expect(kaarten.every((k) => k.ticket_type_id === soortId)).toBe(true);
+    });
+
+    it('weigert versturen zolang er geen kaartsoort bij de gast staat', async () => {
+      // Zonder kaartsoort is er niets om de kaart aan te hangen: tickets
+      // verwijst met een verplichte sleutel naar ticket_types. Dat hoort een
+      // duidelijke afwijzing te zijn en geen storing halverwege het aanmaken.
+      const gastId = maakGast({ ticket_type_id: null, ticket_count: 2 });
+
+      const antwoord = await alsBeheerder('post', `/guest-list/${gastId}/send-tickets`);
+
+      expect(antwoord.status).toBe(400);
+      const rij = db.prepare('SELECT tickets_sent FROM guest_list WHERE id = ?').get(gastId) as {
+        tickets_sent: number;
+      };
+      expect(rij.tickets_sent).toBe(0);
+      const aantal = db.prepare("SELECT COUNT(*) AS n FROM tickets WHERE buyer_email = 'jan@test.nl'").get() as {
+        n: number;
+      };
+      expect(aantal.n).toBe(0);
+    });
+
+    it('slaat bij verstuur-alles de gasten zonder kaartsoort over', async () => {
+      const soortId = maakKaartsoort();
+      maakGast({ ticket_type_id: soortId, name: 'Met soort', email: 'met@test.nl' });
+      maakGast({ ticket_type_id: null, name: 'Zonder soort', email: 'zonder@test.nl' });
+
+      const antwoord = await alsBeheerder('post', `/concerts/${concertId}/guest-list/send-all`);
+
+      expect(antwoord.status).toBe(200);
+      expect(antwoord.body.sent).toBe(1);
+      expect(antwoord.body.failed).toBe(1);
+      const verstuurd = db
+        .prepare('SELECT name FROM guest_list WHERE tickets_sent = 1 AND concert_id = ?')
+        .all(concertId) as Array<{ name: string }>;
+      expect(verstuurd.map((v) => v.name)).toEqual(['Met soort']);
+    });
+
+    it('verstuurt niets voor een verwijderd concert', async () => {
+      // concerts.ts verwijdert zacht; het concert staat er dus nog. Gratis
+      // kaarten versturen voor een avond die niet doorgaat hoort niet.
+      const soortId = maakKaartsoort();
+      const gastId = maakGast({ ticket_type_id: soortId });
+      db.prepare('UPDATE concerts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(concertId);
+
+      const antwoord = await alsBeheerder('post', `/guest-list/${gastId}/send-tickets`);
+      expect(antwoord.status).toBe(404);
+    });
+
     it('weigert kaarten te versturen voor een gast van een andere vereniging', async () => {
       const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
       const vreemdConcert = maakConcert(andere.id);

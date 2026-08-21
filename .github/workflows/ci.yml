@@ -9,7 +9,20 @@ on:
 jobs:
   backend:
     name: Backend
-    timeout-minutes: 20
+    # De backendsuite draait bewust serieel: alle tests delen een sql.js-database
+    # in het geheugen, dus fileParallelism staat uit in vitest.config.ts. De
+    # looptijd schaalt daarmee recht mee met het aantal tests, en dat is deze
+    # ronde van 2895 naar ruim 3000 gegaan.
+    #
+    # Op twintig minuten liep hij precies stuk: 19m32s geslaagd, en de volgende
+    # keer 20m10s afgebroken. Dat leverde een rode uitslag op die niets zei over
+    # de code - het vervelendste soort. Vijfendertig geeft ruimte om te groeien
+    # zonder dat een echte vastloper een half uur blijft hangen.
+    #
+    # De echte oplossing is de tests parallel kunnen draaien, en daarvoor moet
+    # elk testbestand zijn eigen database krijgen. Dat is een grotere ingreep dan
+    # deze reparatie hoort te zijn.
+    timeout-minutes: 35
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

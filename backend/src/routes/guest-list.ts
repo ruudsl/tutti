@@ -242,10 +242,14 @@ router.post(
     const { organisation, name, email, ticketCount, ticketTypeId, notes } = validation.data;
 
     // Check if concert exists and belongs to user's association
+    //
+    // concerts.ts verwijdert zacht, dus een afgevoerd concert staat er nog.
+    // Gasten toevoegen aan een concert dat niet doorgaat levert kaarten op
+    // voor een avond die er niet komt.
     const concert = db
       .prepare(
         `
-        SELECT id, name, date, location FROM concerts WHERE id = ? AND association_id = ?
+        SELECT id, name, date, location FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL
     `,
       )
       .get(concertId, req.user!.associationId) as
@@ -549,7 +553,7 @@ router.post(
         FROM guest_list gl
         JOIN concerts c ON gl.concert_id = c.id
         LEFT JOIN ticket_types tt ON gl.ticket_type_id = tt.id
-        WHERE gl.id = ?
+        WHERE gl.id = ? AND c.deleted_at IS NULL
     `,
       )
       .get(id) as
@@ -572,13 +576,23 @@ router.post(
 
     // De query haalde association_id al op maar deed er niets mee, waardoor
     // een beheerder kaarten kon versturen voor het concert van een andere
-    // vereniging.
+    // vereniging. De voorwaarde c.deleted_at IS NULL hierboven houdt daarnaast
+    // een zacht verwijderd concert tegen: daar hoeven geen kaarten meer heen.
     if (!entry || entry.association_id !== req.user!.associationId) {
       throw new ApiError(404, 'Guest list entry not found');
     }
 
     if (entry.tickets_sent === 1) {
       throw new ApiError(400, 'Tickets have already been sent to this guest');
+    }
+
+    // tickets.ticket_type_id is verplicht en verwijst naar ticket_types. Hier
+    // stond bij een gast zonder kaartsoort de letterlijke tekst 'guest' in dat
+    // veld; zo'n rij bestaat niet, dus liep het aanmaken vast op de sleutel en
+    // kreeg de beheerder een storing te zien. Een gast zonder kaartsoort hoort
+    // een duidelijke afwijzing te krijgen: kies eerst een kaartsoort.
+    if (!entry.ticket_type_id) {
+      throw new ApiError(400, 'Select a ticket type for this guest before sending tickets');
     }
 
     // Create a guest order (total = 0 for free tickets)
@@ -614,7 +628,7 @@ router.post(
                 INSERT INTO tickets (id, ticket_type_id, order_id, buyer_name, buyer_email, status, qr_code)
                 VALUES (?, ?, ?, ?, ?, 'valid', ?)
             `,
-        ).run(ticketId, entry.ticket_type_id || 'guest', orderId, entry.name, entry.email, ticketCode);
+        ).run(ticketId, entry.ticket_type_id, orderId, entry.name, entry.email, ticketCode);
 
         tickets.push({ id: ticketId, code: ticketCode, qrDataUrl: '' });
       }
@@ -709,7 +723,7 @@ router.post(
         SELECT gl.id
         FROM guest_list gl
         JOIN concerts c ON c.id = gl.concert_id
-        WHERE gl.concert_id = ? AND gl.tickets_sent = 0 AND c.association_id = ?
+        WHERE gl.concert_id = ? AND gl.tickets_sent = 0 AND c.association_id = ? AND c.deleted_at IS NULL
     `,
       )
       .all(concertId, req.user!.associationId) as { id: string }[];
@@ -758,6 +772,14 @@ router.post(
           ticket_type_name: string | null;
         };
 
+        // Zie de toelichting bij send-tickets: zonder kaartsoort valt er geen
+        // kaart aan te maken. Deze gast wordt overgeslagen en telt hieronder
+        // als mislukt, in plaats van de hele ronde te laten struikelen over
+        // een sleutelfout.
+        if (!guestEntry.ticket_type_id) {
+          throw new ApiError(400, 'Select a ticket type for this guest before sending tickets');
+        }
+
         const orderId = uuidv4();
         const tickets: { code: string; qrDataUrl: string }[] = [];
 
@@ -787,14 +809,7 @@ router.post(
                         INSERT INTO tickets (id, ticket_type_id, order_id, buyer_name, buyer_email, status, qr_code)
                         VALUES (?, ?, ?, ?, ?, 'valid', ?)
                     `,
-            ).run(
-              ticketId,
-              guestEntry.ticket_type_id || 'guest',
-              orderId,
-              guestEntry.name,
-              guestEntry.email,
-              ticketCode,
-            );
+            ).run(ticketId, guestEntry.ticket_type_id, orderId, guestEntry.name, guestEntry.email, ticketCode);
 
             tickets.push({ code: ticketCode, qrDataUrl: '' });
           }

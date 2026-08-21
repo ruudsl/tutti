@@ -9,6 +9,7 @@ import '../setup';
 import app from '../testApp';
 import testDb from '../testDb';
 import {
+  createTestAssociation,
   createTestEnvironment,
   createTestOrchestra,
   createTestRehearsal,
@@ -1082,6 +1083,193 @@ describe('Rehearsals Routes', () => {
         .query({ from: '2026-04-01', to: '2026-04-30' });
 
       expect(response.status).toBe(401);
+    });
+  });
+  // ==================
+  // PUT CONTROLEERT WAT POST OOK CONTROLEERT
+  // ==================
+
+  describe('bijwerken kent dezelfde eisen als aanmaken', () => {
+    // Het aanmaken keurt het type en de verplichte velden af, het bijwerken
+    // liet ze door. Dat is niet cosmetisch: het type wordt echt uitgelezen -
+    // het aanwezigheidsoverzicht slaat 'cancelled' over en de melding aan de
+    // leden hangt ervan af of de repetitie geannuleerd is. Een onbekend type
+    // is nooit 'cancelled' en glipt overal langs.
+
+    it('weigert een onbekend type', async () => {
+      const repetitie = createTestRehearsal(association.id, adminUser.id, { date: '2026-07-01' });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/${repetitie.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ date: '2026-07-01', startTime: '19:00', endTime: '21:00', type: 'onzin' });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT type FROM rehearsals WHERE id = ?').get(repetitie.id) as { type: string };
+      expect(na.type).toBe('regular');
+    });
+
+    it('meldt een ontbrekende datum als een verkeerd verzoek en niet als een storing', async () => {
+      // Zonder controle liep dit door tot in de database, die met een
+      // NOT NULL-fout kwam. Dat werd een 500: een fout van de server, terwijl
+      // de aanvraag zelf niet klopte.
+      const repetitie = createTestRehearsal(association.id, adminUser.id, { date: '2026-07-02' });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/${repetitie.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ startTime: '19:00', endTime: '21:00' });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT date FROM rehearsals WHERE id = ?').get(repetitie.id) as { date: string };
+      expect(na.date).toBe('2026-07-02');
+    });
+
+    it('weigert een standaard repetitiedag zonder tijden', async () => {
+      const dag = createTestDefaultDay(association.id, { dayOfWeek: 4, startTime: '18:00' });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/default-days/${dag.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ dayOfWeek: 4 });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT start_time FROM rehearsal_default_days WHERE id = ?').get(dag.id) as {
+        start_time: string;
+      };
+      expect(na.start_time).toBe('18:00');
+    });
+
+    it('weigert een dag van de week buiten het bereik', async () => {
+      const dag = createTestDefaultDay(association.id, { dayOfWeek: 4 });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/default-days/${dag.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ dayOfWeek: 9, startTime: '19:00', endTime: '21:00' });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT day_of_week FROM rehearsal_default_days WHERE id = ?').get(dag.id) as {
+        day_of_week: number;
+      };
+      expect(na.day_of_week).toBe(4);
+    });
+  });
+
+  // ==================
+  // VERENIGINGSGRENS OP orchestraId
+  // ==================
+
+  describe('orkest uit het verzoek blijft binnen de eigen vereniging', () => {
+    // POST controleert het orkest wel, maar PUT nam de waarde ongezien over.
+    // Daarmee kon een beheerder de repetitie aan het orkest van een andere
+    // vereniging hangen. notifyOrchestra kijkt alleen naar user_orchestras en
+    // filtert niet op vereniging, dus de leden van dat vreemde orkest kregen
+    // vervolgens een melding over een repetitie die hen niets aangaat.
+    let vreemdOrkest: TestOrchestra;
+    let vreemdLid: TestUser;
+
+    beforeEach(() => {
+      const andereVereniging = createTestAssociation({ name: `Andere-${Date.now()}` });
+      vreemdOrkest = createTestOrchestra(andereVereniging.id, { name: 'Orkest van de buren' });
+      vreemdLid = createTestUser(andereVereniging.id, { email: `buur-${Date.now()}@test.nl` });
+      addUserToOrchestra(vreemdLid.id, vreemdOrkest.id);
+    });
+
+    /** Meldingen gaan fire-and-forget de deur uit; even wachten tot de microtaken klaar zijn. */
+    const laatMeldingenBezinken = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+    function meldingenVoor(userId: string): number {
+      const rij = testDb.prepare('SELECT COUNT(*) as aantal FROM notifications WHERE user_id = ?').get(userId) as {
+        aantal: number;
+      };
+      return rij.aantal;
+    }
+
+    it('weigert een repetitie te koppelen aan een orkest van een andere vereniging', async () => {
+      const repetitie = createTestRehearsal(association.id, adminUser.id, { date: '2026-06-01' });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/${repetitie.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          date: '2026-06-01',
+          startTime: '19:00',
+          endTime: '21:00',
+          orchestraId: vreemdOrkest.id,
+        });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT orchestra_id FROM rehearsals WHERE id = ?').get(repetitie.id) as {
+        orchestra_id: string | null;
+      };
+      expect(na.orchestra_id).toBeNull();
+    });
+
+    it('stuurt geen melding naar het orkest van een andere vereniging', async () => {
+      const repetitie = createTestRehearsal(association.id, adminUser.id, { date: '2026-06-02' });
+
+      await request(app).put(`/api/rehearsals/${repetitie.id}`).set('Authorization', `Bearer ${adminToken}`).send({
+        date: '2026-06-02',
+        startTime: '19:00',
+        endTime: '21:00',
+        orchestraId: vreemdOrkest.id,
+      });
+
+      await laatMeldingenBezinken();
+
+      expect(meldingenVoor(vreemdLid.id)).toBe(0);
+    });
+
+    it('koppelt een repetitie wel aan een orkest van de eigen vereniging', async () => {
+      const eigenOrkest = createTestOrchestra(association.id, { name: 'Eigen orkest' });
+      const repetitie = createTestRehearsal(association.id, adminUser.id, { date: '2026-06-03' });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/${repetitie.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          date: '2026-06-03',
+          startTime: '19:00',
+          endTime: '21:00',
+          orchestraId: eigenOrkest.id,
+        });
+
+      expect(antwoord.status).toBe(200);
+
+      const na = testDb.prepare('SELECT orchestra_id FROM rehearsals WHERE id = ?').get(repetitie.id) as {
+        orchestra_id: string | null;
+      };
+      expect(na.orchestra_id).toBe(eigenOrkest.id);
+    });
+
+    it('weigert een standaard repetitiedag aan een vreemd orkest te hangen', async () => {
+      // Dezelfde fout stond in de PUT van de standaard repetitiedagen: het
+      // orkest werd daar alleen bij het aanmaken gecontroleerd. Via
+      // /rehearsals/generate belandt zo'n orkest daarna in echte repetities.
+      const dag = createTestDefaultDay(association.id, { dayOfWeek: 3 });
+
+      const antwoord = await request(app)
+        .put(`/api/rehearsals/default-days/${dag.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          dayOfWeek: 3,
+          startTime: '19:00',
+          endTime: '21:00',
+          orchestraId: vreemdOrkest.id,
+        });
+
+      expect(antwoord.status).toBe(400);
+
+      const na = testDb.prepare('SELECT orchestra_id FROM rehearsal_default_days WHERE id = ?').get(dag.id) as {
+        orchestra_id: string | null;
+      };
+      expect(na.orchestra_id).toBeNull();
     });
   });
 });

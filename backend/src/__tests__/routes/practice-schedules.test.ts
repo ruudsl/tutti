@@ -483,6 +483,33 @@ describe('oefenschemas', () => {
       expect(tweede.body.message).toContain('0 sectie');
     });
 
+    it('zet geen sectie klaar voor een lid dat is uitgeschreven', async () => {
+      // Leden worden zacht verwijderd; hun rijen in user_instruments en
+      // user_orchestras blijven staan. Zonder filter op deleted_at kreeg het
+      // schema dus een sectie voor een instrument dat niemand meer speelt.
+      const { id } = await schemaMetMijlpaal();
+      const hoorn = createTestInstrument({ name: `Hoorn-${uuidv4().slice(0, 8)}` });
+      const vertrokken = createTestUser(vereniging.id, { email: `weg-${uuidv4()}@test.nl`, role: 'member' });
+      addInstrumentToUser(vertrokken.id, hoorn.id);
+      addUserToOrchestra(vertrokken.id, orkest.id);
+      db.prepare("UPDATE users SET deleted_at = ?, status = 'inactive' WHERE id = ?").run(
+        '2026-08-01 10:00:00',
+        vertrokken.id,
+      );
+
+      addInstrumentToUser(lid.id, trompet.id);
+      addUserToOrchestra(lid.id, orkest.id);
+
+      const antwoord = await alsDirigent('post', `/${id}/initialize-sections`);
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+      expect(antwoord.body.message).toContain('1 sectie');
+
+      const secties = db.prepare('SELECT instrument_id FROM practice_section_progress').all() as {
+        instrument_id: string;
+      }[];
+      expect(secties.map((r) => r.instrument_id)).toEqual([trompet.id]);
+    });
+
     it('zet niets klaar voor een schema van een andere vereniging', async () => {
       const buren = buurschema();
       expect((await alsDirigent('post', `/${buren.schemaId}/initialize-sections`)).status).toBe(404);
