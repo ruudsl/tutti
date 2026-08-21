@@ -237,6 +237,52 @@ describe('kortingscodes', () => {
       expect(rij.discount_value).toBe(10);
     });
 
+    it('laat een uitgezette code uit staan bij een kleine wijziging', async () => {
+      // Het wijzigingsschema hield de standaardwaarden van het aanmaakschema
+      // vast. Een PUT met alleen een omschrijving stuurde daardoor stilzwijgend
+      // isActive true mee en zette een ingetrokken kortingscode weer aan.
+      const id = maakCode({ is_active: 0, min_order_amount: 50, max_uses_per_user: 3 });
+
+      const antwoord = await alsBeheerder('put', `/${id}`).send({ description: 'Alleen de omschrijving' });
+      expect(antwoord.status).toBe(200);
+
+      const rij = db
+        .prepare('SELECT is_active, min_order_amount, max_uses_per_user FROM discount_codes WHERE id = ?')
+        .get(id) as { is_active: number; min_order_amount: number; max_uses_per_user: number };
+      expect(rij).toMatchObject({ is_active: 0, min_order_amount: 50, max_uses_per_user: 3 });
+    });
+
+    it('zet een code aan of uit als de aanvraag daar wel om vraagt', async () => {
+      // De standaardwaarden weglaten mag niet betekenen dat het veld zelf niet
+      // meer te wijzigen is.
+      const id = maakCode({ is_active: 0 });
+
+      expect((await alsBeheerder('put', `/${id}`).send({ isActive: true })).status).toBe(200);
+      const rij = db.prepare('SELECT is_active FROM discount_codes WHERE id = ?').get(id) as { is_active: number };
+      expect(rij.is_active).toBe(1);
+    });
+
+    it('houdt een percentage onder de honderd, ook als de soort niet meekomt', async () => {
+      // De controle keek naar discountType uit de aanvraag. Noemde de PUT die
+      // niet, dan sloeg hij niet aan en kon een bestaande procentuele code op
+      // 500% gezet worden.
+      const id = maakCode({ discount_type: 'percentage', discount_value: 10 });
+
+      const antwoord = await alsBeheerder('put', `/${id}`).send({ discountValue: 500 });
+      expect(antwoord.status).toBe(400);
+
+      const rij = db.prepare('SELECT discount_value FROM discount_codes WHERE id = ?').get(id) as {
+        discount_value: number;
+      };
+      expect(rij.discount_value).toBe(10);
+    });
+
+    it('staat een vast bedrag boven de honderd nog steeds toe', async () => {
+      const id = maakCode({ discount_type: 'fixed_amount', discount_value: 10 });
+
+      expect((await alsBeheerder('put', `/${id}`).send({ discountValue: 250 })).status).toBe(200);
+    });
+
     it('verwijdert een code', async () => {
       const id = maakCode();
       expect((await alsBeheerder('delete', `/${id}`)).status).toBe(200);
@@ -266,6 +312,18 @@ describe('kortingscodes', () => {
       const id = maakCode();
       const antwoord = await controleer({ code: codeVan(id).code, concertId, orderTotal: 100 });
       expect(antwoord.body.valid).toBe(true);
+    });
+
+    it('geeft nooit meer korting dan het ordertotaal', async () => {
+      // Een procentuele code boven de honderd hoort niet te bestaan, maar als
+      // er er toch een in de database staat mag de uitkomst geen negatief te
+      // betalen bedrag worden - dat is geld teruggeven bij een bestelling.
+      const id = maakCode({ discount_type: 'percentage', discount_value: 150 });
+
+      const antwoord = await controleer({ code: codeVan(id).code, concertId, orderTotal: 100 });
+      expect(antwoord.status).toBe(200);
+      expect(antwoord.body.valid).toBe(true);
+      expect(antwoord.body.discountAmount).toBe(100);
     });
 
     it('wijst een onbekende code af', async () => {

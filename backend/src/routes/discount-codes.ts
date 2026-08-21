@@ -5,6 +5,7 @@ import { authenticateToken, optionalAuth, requireRole, AuthRequest } from '../mi
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { z } from 'zod';
 import logger from '../utils/logger';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -47,9 +48,16 @@ const createDiscountCodeSchema = baseDiscountCodeSchema
     { message: 'Valid from date must be before valid until date' },
   );
 
-const updateDiscountCodeSchema = baseDiscountCodeSchema
-  .omit({ code: true })
-  .partial()
+/**
+ * Wijzigen is niet hetzelfde als aanmaken.
+ *
+ * `.partial()` maakt elk veld optioneel maar laat de `.default()` staan. Een
+ * PUT met alleen een omschrijving kreeg daardoor ook minOrderAmount 0,
+ * maxUsesPerUser 1 en isActive true mee - en zette zo een uitgezette code weer
+ * aan. wijzigingsschema() pelt die standaardwaarden eraf; de validatie zelf
+ * blijft staan.
+ */
+const updateDiscountCodeSchema = wijzigingsschema(baseDiscountCodeSchema.omit({ code: true }))
   .refine(
     (data) => {
       if (data.discountType === 'percentage' && data.discountValue !== undefined && data.discountValue > 100) {
@@ -143,7 +151,11 @@ function calculateDiscount(
   orderTotal: number,
 ): number {
   if (discountType === 'percentage') {
-    return Math.round(((orderTotal * discountValue) / 100) * 100) / 100;
+    const korting = Math.round(((orderTotal * discountValue) / 100) * 100) / 100;
+    // Nooit meer korting dan de order zelf. De vaste-bedragtak deed dit al;
+    // zonder deze grens levert een percentage boven de honderd een negatief
+    // te betalen bedrag op, oftewel geld terug.
+    return Math.min(korting, orderTotal);
   }
   return Math.min(discountValue, orderTotal);
 }
@@ -441,6 +453,16 @@ router.put(
     }
 
     const data = validation.data;
+
+    // Het schema ziet alleen wat de aanvraag meestuurt. Staat discountType er
+    // niet bij, dan slaat de controle op 'percentage' niet aan en kon een code
+    // op 500% uitkomen. De soort die straks in de database staat is leidend.
+    const nieuweSoort = data.discountType ?? existing.discount_type;
+    const nieuweWaarde = data.discountValue ?? existing.discount_value;
+    if (nieuweSoort === 'percentage' && nieuweWaarde > 100) {
+      throw new ApiError(400, 'Percentage discount cannot exceed 100%');
+    }
+
     const updates: string[] = [];
     const params: (string | number | null)[] = [];
 

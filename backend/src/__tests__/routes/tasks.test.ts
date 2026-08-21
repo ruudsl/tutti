@@ -208,3 +208,67 @@ describe('Scheiding tussen verenigingen', () => {
     expect(db.prepare('SELECT id FROM tasks WHERE id = ?').get(id)).toBeTruthy();
   });
 });
+
+describe('Bijwerken kent dezelfde grenzen als aanmaken', () => {
+  // POST controleerde de takenlijst en de toegewezene wel tegen de eigen
+  // vereniging, PUT niet - terwijl die route precies dezelfde twee velden
+  // wegschrijft. Een taak was daarmee alsnog over de grens te tillen.
+
+  it('weigert een takenlijst van een andere vereniging', async () => {
+    const andere = createTestAssociation();
+    const hunBeheerder = createTestUser(andere.id, { email: 'hunbeheerder-taak@test.com', role: 'admin' });
+    const hunLijst = uuidv4();
+    db.prepare('INSERT INTO task_lists (id, association_id, name, created_by) VALUES (?, ?, ?, ?)').run(
+      hunLijst,
+      andere.id,
+      'Hun lijst',
+      hunBeheerder.id,
+    );
+    const id = await maakTaak();
+
+    const res = await alsAdmin('put', `/${id}`).send({ taskListId: hunLijst });
+
+    expect(res.status).toBe(404);
+    const taak = db.prepare('SELECT task_list_id FROM tasks WHERE id = ?').get(id) as {
+      task_list_id: string | null;
+    };
+    expect(taak.task_list_id).toBeNull();
+  });
+
+  it('weigert een toegewezene van een andere vereniging', async () => {
+    const andere = createTestAssociation();
+    const hunLid = createTestUser(andere.id, { email: 'hunlid-taak@test.com', role: 'member' });
+    const id = await maakTaak();
+
+    const res = await alsAdmin('put', `/${id}`).send({ assignedTo: hunLid.id });
+
+    expect(res.status).toBe(404);
+    const taak = db.prepare('SELECT assigned_to FROM tasks WHERE id = ?').get(id) as {
+      assigned_to: string | null;
+    };
+    expect(taak.assigned_to).toBeNull();
+  });
+
+  it('laat een eigen lijst en een eigen lid gewoon toe', async () => {
+    const lijst = await maakLijst('Eigen lijst');
+    const eigenLid = createTestUser(associationId, { email: 'eigenlid-taak@test.com', role: 'member' });
+    const id = await maakTaak();
+
+    const res = await alsAdmin('put', `/${id}`).send({ taskListId: lijst, assignedTo: eigenLid.id });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('laat losmaken met null gewoon toe', async () => {
+    const lijst = await maakLijst('Tijdelijk');
+    const id = await maakTaak({ taskListId: lijst });
+
+    const res = await alsAdmin('put', `/${id}`).send({ taskListId: null, assignedTo: null });
+
+    expect(res.status).toBe(200);
+    const taak = db.prepare('SELECT task_list_id FROM tasks WHERE id = ?').get(id) as {
+      task_list_id: string | null;
+    };
+    expect(taak.task_list_id).toBeNull();
+  });
+});
