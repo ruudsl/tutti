@@ -15,3 +15,29 @@ paths-ignore:
   - '**/*.test.tsx'
   - '**/*.spec.ts'
   - 'e2e/**'
+
+# js/missing-token-validation ("Missing CSRF middleware") staat uit, en dat
+# verdient uitleg.
+#
+# Die regel meldt elke cookie-middleware die request-handlers bedient zonder
+# CSRF-bescherming die hij herkent - en hij herkent alleen csurf, lusca en
+# csrf-csrf. Deze applicatie heeft een eigen middleware (middleware/csrf.ts),
+# dus de melding komt hoe dan ook, ongeacht hoe goed die is.
+#
+# Belangrijker: CSRF is hier structureel niet van toepassing. Een CSRF-aanval
+# werkt doordat de browser bij een verzoek vanaf een vreemde site vanzelf
+# inloggegevens meestuurt. Deze applicatie kent geen sessiecookie en geen
+# inlogcookie: authenticateToken leest het token uit de Authorization-header
+# (of uit een query-parameter bij downloads), nooit uit een cookie. De enige
+# cookie die de applicatie zet is het CSRF-token zelf. Er is dus niets wat een
+# aanvaller ongemerkt kan laten meesturen.
+#
+# Deze uitsluiting geldt voor de hele repository, en daarmee vervalt ook de
+# terechte melding als er ooit wél op cookies wordt ingelogd. Daarom staat er
+# een test naast die daarop let: backend/src/__tests__/middleware/
+# geen-cookie-authenticatie.test.ts leest de bron en valt om zodra
+# authenticateToken een cookie gaat lezen. Gaat die test af, haal dan eerst
+# deze uitsluiting weg voordat je hem "oplost".
+query-filters:
+  - exclude:
+      id: js/missing-token-validation
