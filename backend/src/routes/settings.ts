@@ -93,10 +93,16 @@ router.put(
       throw new ApiError(400, 'displayName mag maximaal 100 tekens bevatten.');
     }
 
-    db.prepare('UPDATE associations SET display_name = ? WHERE id = ?').run(
-      displayName?.trim() || null,
-      req.user!.associationId,
-    );
+    // Alleen schrijven wat het verzoek noemt. Stond hier eerder onvoorwaardelijk,
+    // waardoor een PUT zonder displayName - een verzoek dat alleen een ander veld
+    // meestuurt, of een leeg verzoek - de weergavenaam van de vereniging wiste.
+    // Bewust wissen kan nog steeds: een lege tekst of null valt na trim() op null.
+    if (displayName !== undefined) {
+      db.prepare('UPDATE associations SET display_name = ? WHERE id = ?').run(
+        displayName?.trim() || null,
+        req.user!.associationId,
+      );
+    }
 
     logger.info(`Association settings updated`, { associationId: req.user!.associationId, updatedBy: req.user!.id });
 

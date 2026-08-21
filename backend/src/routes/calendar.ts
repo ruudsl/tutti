@@ -75,7 +75,7 @@ router.get(
       const concert = db
         .prepare(
           `
-            SELECT * FROM concerts WHERE id = ? AND association_id = ?
+            SELECT * FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL
         `,
         )
         .get(id, req.user!.associationId) as any;
@@ -132,25 +132,25 @@ router.get(
     }
 
     // Get user info for calendar name
+    //
+    // deleted_at hoort hier bij: een verwijderd lid houdt anders een werkende
+    // agenda van de vereniging. De token zit in zijn agendaprogramma en wordt
+    // daar uit zichzelf opgehaald, dus het verwijderen van de gebruiker moet
+    // de feed afsluiten - niemand komt er later nog aan te pas om de token in
+    // te trekken.
     const user = db
       .prepare(
         `
-        SELECT u.first_name, u.last_name, a.name as association_name
+        SELECT u.first_name, u.last_name, u.association_id, a.name as association_name
         FROM users u
         LEFT JOIN associations a ON u.association_id = a.id
-        WHERE u.id = ?
+        WHERE u.id = ? AND u.deleted_at IS NULL
     `,
       )
-      .get(userId) as { first_name: string; last_name: string; association_name: string } | undefined;
+      .get(userId) as
+      { first_name: string; last_name: string; association_id: string; association_name: string } | undefined;
 
     if (!user) {
-      throw new ApiError(404, 'Gebruiker niet gevonden.');
-    }
-
-    // Get user's association_id
-    const userRecord = db.prepare('SELECT association_id FROM users WHERE id = ?').get(userId) as
-      { association_id: string } | undefined;
-    if (!userRecord) {
       throw new ApiError(404, 'Gebruiker niet gevonden.');
     }
 
@@ -173,7 +173,7 @@ router.get(
             ORDER BY r.date
         `,
         )
-        .all(userRecord.association_id, today, endDate) as any[];
+        .all(user.association_id, today, endDate) as any[];
 
       for (const rehearsal of rehearsals) {
         events.push(rehearsalToCalendarEvent(rehearsal));
@@ -181,6 +181,11 @@ router.get(
     }
 
     // Get future concerts (next 12 months)
+    //
+    // Concerten worden zacht verwijderd; alle andere routes filteren op
+    // deleted_at. Zonder die voorwaarde blijft een ingetrokken concert in de
+    // agenda van elk lid staan, want die feed wordt door hun agendaprogramma
+    // vanzelf opnieuw opgehaald.
     if (settings.include_concerts) {
       const today = new Date().toISOString().split('T')[0];
       const oneYearLater = new Date();
@@ -191,11 +196,11 @@ router.get(
         .prepare(
           `
             SELECT * FROM concerts
-            WHERE association_id = ? AND date >= ? AND date <= ?
+            WHERE association_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
             ORDER BY date
         `,
         )
-        .all(userRecord.association_id, today, endDate) as any[];
+        .all(user.association_id, today, endDate) as any[];
 
       for (const concert of concerts) {
         events.push(concertToCalendarEvent(concert));
@@ -624,7 +629,7 @@ router.post(
         .prepare(
           `
             SELECT * FROM concerts
-            WHERE association_id = ? AND date >= ? AND date <= ?
+            WHERE association_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
             ORDER BY date
         `,
         )
@@ -695,9 +700,17 @@ router.get(
       throw new ApiError(404, 'Association not found');
     }
 
+    // De url van de openbare agenda staat op de website van de vereniging en
+    // is door iedereen aan te passen. parseInt('zes') geeft NaN, een datum die
+    // daarmee is opgeschoven is ongeldig en toISOString() gooit daarop - een
+    // 500 op een publieke pagina. Bij een onbruikbare waarde geldt daarom de
+    // standaard van drie maanden; het bereik blijft begrensd op een jaar.
+    const gevraagdeMaanden = parseInt(months as string, 10);
+    const maanden = Number.isFinite(gevraagdeMaanden) ? Math.min(Math.max(gevraagdeMaanden, 1), 12) : 3;
+
     const today = new Date().toISOString().split('T')[0];
     const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + parseInt(months as string, 10));
+    endDate.setMonth(endDate.getMonth() + maanden);
     const endDateStr = endDate.toISOString().split('T')[0];
 
     // Get public concerts
@@ -853,9 +866,24 @@ router.get(
       .get(association.id, today) as any;
 
     // Get next rehearsal
-    const nextRehearsal = db
+    //
+    // Het infoscherm is net zo openbaar als de kalender hierboven: geen
+    // aanmelding, en Access-Control-Allow-Origin op *. Een repetitierooster
+    // zegt waar de leden op welk moment zijn, dus dezelfde instelling die
+    // repetities uit de openbare agenda houdt hoort ze ook hier weg te laten.
+    // Anders is show_rehearsals_public met een andere url alsnog te omzeilen.
+    const openbareInstellingen = db
       .prepare(
         `
+        SELECT show_rehearsals_public FROM associations WHERE id = ?
+    `,
+      )
+      .get(association.id) as { show_rehearsals_public: number } | undefined;
+
+    const nextRehearsal = openbareInstellingen?.show_rehearsals_public
+      ? (db
+          .prepare(
+            `
         SELECT r.id, r.date, r.start_time, r.end_time, r.location,
                o.name as orchestra_name
         FROM rehearsals r
@@ -864,8 +892,9 @@ router.get(
         ORDER BY r.date, r.start_time
         LIMIT 1
     `,
-      )
-      .get(association.id, today) as any;
+          )
+          .get(association.id, today) as any)
+      : null;
 
     // Get upcoming events (next 5)
     const upcomingConcerts = db

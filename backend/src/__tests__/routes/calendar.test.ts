@@ -136,6 +136,16 @@ describe('agenda', () => {
       expect((await alsLid('get', `/export/concert/${vreemdConcert}`)).status).toBe(404);
     });
 
+    it('exporteert een verwijderd concert niet', async () => {
+      // Concerten worden zacht verwijderd; overal elders in de applicatie
+      // filtert de vraag op deleted_at. Zonder die voorwaarde blijft een
+      // afgelast en verwijderd concert hier gewoon op te halen.
+      const id = maakConcert();
+      db.prepare('UPDATE concerts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
+
+      expect((await alsLid('get', `/export/concert/${id}`)).status).toBe(404);
+    });
+
     it('vraagt om een geldige aanmelding', async () => {
       expect((await request(app).get(`/api/calendar/export/concert/${uuidv4()}`)).status).toBe(401);
     });
@@ -258,6 +268,39 @@ describe('agenda', () => {
       const antwoord = await request(app).get(`/api/calendar/feed/${userId}?token=${token}`);
       expect(antwoord.text).not.toContain('Concert van de buren');
     });
+
+    it('laat een verwijderd concert uit de feed weg', async () => {
+      // De feed staat in het agendaprogramma van het lid en wordt daar
+      // periodiek opgehaald. Een concert dat is ingetrokken hoort er dus ook
+      // uit te verdwijnen; anders blijft het bij iedereen in de agenda staan.
+      const id = maakConcert();
+      db.prepare('UPDATE concerts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
+      const { token, userId } = await feedUrlVanLid();
+
+      const antwoord = await request(app).get(`/api/calendar/feed/${userId}?token=${token}`);
+      expect(antwoord.status).toBe(200);
+      expect(antwoord.text).not.toContain('Kerstconcert');
+    });
+
+    it('sluit de feed van een verwijderd lid af', async () => {
+      // De feed hangt aan een token in de url en niet aan een sessie. Wie
+      // verwijderd wordt, verliest zijn aanmelding, maar de token in zijn
+      // agendaprogramma blijft staan en wordt daar elk uur opnieuw opgehaald.
+      // Zonder controle op deleted_at blijft een oud-lid dus de repetities en
+      // concerten van de vereniging binnenkrijgen zolang niemand de token
+      // vervangt.
+      maakConcert();
+      const { token, userId } = await feedUrlVanLid();
+      expect((await request(app).get(`/api/calendar/feed/${userId}?token=${token}`)).status).toBe(200);
+
+      // Zo verwijdert users.ts een lid: een tijdstip in deleted_at en de
+      // status op inactive.
+      db.prepare("UPDATE users SET deleted_at = CURRENT_TIMESTAMP, status = 'inactive' WHERE id = ?").run(userId);
+
+      const antwoord = await request(app).get(`/api/calendar/feed/${userId}?token=${token}`);
+      expect(antwoord.status).toBe(404);
+      expect(antwoord.text).not.toContain('Kerstconcert');
+    });
   });
 
   describe('de publieke kalender', () => {
@@ -321,6 +364,27 @@ describe('agenda', () => {
       expect(lang.body.events).toHaveLength(1);
     });
 
+    it('valt niet om op een onzinnig aantal maanden', async () => {
+      // De url van de openbare agenda staat op websites van verenigingen en
+      // is door iedereen aan te passen. parseInt('zes') geeft NaN, en een
+      // datum die daarmee is opgeschoven gooit bij toISOString(). Dat is een
+      // 500 op een publieke pagina, en dat hoort een onzinnige parameter niet
+      // op te leveren.
+      maakConcert();
+
+      const antwoord = await request(app).get(`/api/calendar/public/${vereniging.id}?months=zes`);
+      expect(antwoord.status).toBe(200);
+    });
+
+    it('valt niet om op een absurd aantal maanden', async () => {
+      // Ook een getal kan de datum buiten het bereik van Date duwen, met
+      // dezelfde 500 tot gevolg. Het bereik wordt daarom begrensd.
+      maakConcert();
+
+      const antwoord = await request(app).get(`/api/calendar/public/${vereniging.id}?months=99999999`);
+      expect(antwoord.status).toBe(200);
+    });
+
     it('levert desgevraagd een ICS-bestand', async () => {
       maakConcert();
 
@@ -356,6 +420,10 @@ describe('agenda', () => {
     }
 
     it('noemt het eerstvolgende concert en de eerstvolgende repetitie', async () => {
+      // De repetitie hoort er alleen bij als de vereniging repetities
+      // openbaar heeft gezet; het infoscherm is net zo publiek als de
+      // openbare agenda.
+      db.prepare('UPDATE associations SET show_rehearsals_public = 1 WHERE id = ?').run(vereniging.id);
       maakConcert();
       maakRepetitie();
 
@@ -363,6 +431,23 @@ describe('agenda', () => {
       expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
       expect(antwoord.body.nextConcert).toMatchObject({ name: 'Kerstconcert', venue: 'Kerk' });
       expect(antwoord.body.nextRehearsal).toMatchObject({ startTime: '19:30', location: 'Dorpshuis' });
+    });
+
+    it('houdt de repetitie eruit zolang de vereniging die niet openbaar heeft gezet', async () => {
+      // Het scherm hangt in de hal en is zonder aanmelding op te vragen, met
+      // Access-Control-Allow-Origin: *. Een repetitierooster zegt waar de
+      // leden op welk moment zijn, dus de openbare agenda laat het pas zien
+      // als de vereniging show_rehearsals_public aan zet. Het infoscherm haalt
+      // zijn gegevens uit dezelfde tabel en hoort zich aan dezelfde
+      // instelling te houden - anders is de instelling met een andere url
+      // alsnog te omzeilen.
+      maakConcert();
+      maakRepetitie();
+
+      const antwoord = await request(app).get(`/api/calendar/info-screen/${vereniging.id}`);
+      expect(antwoord.status).toBe(200);
+      expect(antwoord.body.nextConcert).toMatchObject({ name: 'Kerstconcert' });
+      expect(antwoord.body.nextRehearsal).toBeNull();
     });
 
     it('geeft null als er niets gepland staat', async () => {
