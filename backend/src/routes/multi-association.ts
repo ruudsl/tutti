@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import db from '../database/connection';
-import { authenticateToken, requireRole, AuthRequest, generateToken } from '../middleware/auth';
+import { authenticateToken, requireRole, requireSuperAdmin, AuthRequest, generateToken } from '../middleware/auth';
 import { registerSession } from '../utils/sessionStore';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { withTransaction } from '../utils/database';
@@ -58,13 +58,8 @@ const partnershipRequestSchema = z.object({
 router.get(
   '/super-admin/associations',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const associations = db
       .prepare(
         `
@@ -98,13 +93,8 @@ router.get(
 router.post(
   '/super-admin/associations',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const data = createAssociationSchema.parse(req.body);
 
     const existing = db.prepare('SELECT id FROM associations WHERE LOWER(name) = LOWER(?)').get(data.name.trim());
@@ -160,13 +150,8 @@ router.post(
 router.put(
   '/super-admin/associations/:id',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const data = createAssociationSchema.partial().parse(req.body);
 
     const existing = db.prepare('SELECT id FROM associations WHERE id = ?').get(req.params.id);
@@ -225,13 +210,8 @@ router.put(
 router.put(
   '/super-admin/associations/:id/subscription',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const { subscriptionTier, subscriptionExpires, maxMembers, maxOrchestras, maxStorageMb, isActive } = req.body;
 
     db.prepare(
@@ -266,13 +246,8 @@ router.put(
 router.delete(
   '/super-admin/associations/:id',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const memberCount = db
       .prepare('SELECT COUNT(*) as count FROM users WHERE association_id = ?')
       .get(req.params.id) as { count: number };
@@ -292,13 +267,8 @@ router.delete(
 router.get(
   '/super-admin/super-admins',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const admins = db
       .prepare(
         `
@@ -326,13 +296,8 @@ router.get(
 router.post(
   '/super-admin/super-admins',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const { userId, permissions } = req.body;
 
     if (!userId) {
@@ -366,13 +331,8 @@ router.post(
 router.delete(
   '/super-admin/super-admins/:id',
   authenticateToken,
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const superAdmin = db.prepare('SELECT id FROM super_admins WHERE user_id = ?').get(req.user!.id);
-
-    if (!superAdmin) {
-      throw new ApiError(403, 'Super admin rechten vereist.');
-    }
-
     const count = db.prepare('SELECT COUNT(*) as count FROM super_admins').get() as { count: number };
 
     if (count.count <= 1) {

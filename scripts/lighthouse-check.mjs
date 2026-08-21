@@ -19,6 +19,43 @@ import * as chromeLauncher from 'chrome-launcher';
 const url = process.argv[2] || 'http://localhost:3001/';
 
 /**
+ * Chrome valt op een gedeelde runner soms om. Daar is de lus met pogingen
+ * hieronder voor: een mislukte ronde telt als mislukt en de volgende volgt.
+ *
+ * Maar niet elke fout komt bij die afvang uit. Lighthouse houdt per
+ * protocolopdracht een promise bij, en als de browser omvalt verwerpt hij die
+ * allemaal - ook de opdrachten waar op dat moment niemand meer op wacht,
+ * bijvoorbeeld omdat de ronde al is afgehandeld of de browser net wordt
+ * afgesloten. Zo'n losse verwerping heeft geen afvang, en daar stopt Node het
+ * hele proces op. Dat is precies wat er in CI gebeurde: exit 1 met
+ * `LighthouseError: TARGET_CRASHED` en geen enkele meting, terwijl de lus er
+ * juist op gebouwd is dat dit een keer misgaat.
+ *
+ * Een omgevallen browser mag hier dus geen proces slopen. Alles wat daar niet
+ * op lijkt wel: dan is er iets anders aan de hand en hoort de meting te
+ * stoppen in plaats van stilletjes door te gaan.
+ */
+const BROWSERFOUTEN = [
+  'TARGET_CRASHED',
+  'PROTOCOL_TIMEOUT',
+  'CRI_TIMEOUT',
+  'Session closed',
+  'Target closed',
+  'Protocol error',
+  'WebSocket is not open',
+  'socket hang up',
+];
+
+process.on('unhandledRejection', (reden) => {
+  const melding = reden instanceof Error ? `${reden.code ?? ''} ${reden.message}` : String(reden);
+  if (BROWSERFOUTEN.some((f) => melding.includes(f))) {
+    console.log(`losse verwerping van een omgevallen browser genegeerd: ${melding.trim()}`);
+    return;
+  }
+  throw reden;
+});
+
+/**
  * Ondergrenzen per categorie.
  *
  * Deze staan bewust op de gemeten stand met wat marge eronder, niet op een
