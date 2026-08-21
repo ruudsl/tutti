@@ -101,20 +101,28 @@ router.get(
         SELECT u.id, u.first_name, u.last_name, u.email
         FROM users u
         JOIN user_orchestras uo ON u.id = uo.user_id
-        WHERE uo.orchestra_id = ?
+        WHERE uo.orchestra_id = ? AND u.association_id = ? AND u.deleted_at IS NULL
         ORDER BY u.last_name, u.first_name
     `,
       )
-      .all(req.params.id);
+      // Het orkest zelf is hierboven op vereniging gecontroleerd, maar
+      // user_orchestras legt geen vereniging vast: een koppeling naar een lid
+      // van een andere vereniging leverde hier naam en e-mailadres op. En een
+      // zacht verwijderd lid bleef gewoon in de bezetting staan.
+      .all(req.params.id, req.user!.associationId);
 
     // Get music lists
     const lists = db
       .prepare(
         `
         SELECT ml.id, ml.name, ml.created_at,
-               (SELECT COUNT(*) FROM music_list_pieces WHERE music_list_id = ml.id) as piece_count
+               -- Zacht verwijderde partijen tellen niet mee: het overzicht
+               -- meldde anders meer partijen dan de lijst zelf laat zien.
+               (SELECT COUNT(*) FROM music_list_pieces mlp
+                 JOIN music_pieces mp ON mp.id = mlp.music_piece_id
+                 WHERE mlp.music_list_id = ml.id AND mp.deleted_at IS NULL) as piece_count
         FROM music_lists ml
-        WHERE ml.orchestra_id = ?
+        WHERE ml.orchestra_id = ? AND ml.deleted_at IS NULL
         ORDER BY ml.name
     `,
       )

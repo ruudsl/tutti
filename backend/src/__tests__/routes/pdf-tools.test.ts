@@ -32,6 +32,7 @@ import db from '../../database/connection';
 import {
   createTestEnvironment,
   createTestAssociation,
+  createTestOrchestra,
   createTestUser,
   generateTestToken,
   TestAssociation,
@@ -205,6 +206,54 @@ describe('bladmuziekgereedschap', () => {
         .set('Authorization', `Bearer ${commissieToken}`)
         .send({ title: 'Zonder bestand' });
       expect(antwoord.status).toBe(400);
+    });
+
+    it('zet de partij niet op een lijst van een andere vereniging', async () => {
+      // De listId komt uit de aanvraag en werd rechtstreeks in
+      // music_list_pieces geschreven. Zo belandde een eigen partij op de
+      // repertoirelijst van een vreemd orkest - cloud-import.ts controleert dit
+      // wel, deze route niet.
+      const hunOrkest = createTestOrchestra(andereVereniging.id);
+      const hunLijst = uuidv4();
+      db.prepare('INSERT INTO music_lists (id, orchestra_id, name) VALUES (?, ?, ?)').run(
+        hunLijst,
+        hunOrkest.id,
+        'Hun lijst',
+      );
+      const naam = legTijdelijkBestandNeer(commissielid);
+
+      const antwoord = await request(app)
+        .post('/api/pdf-tools/save-as-music-piece')
+        .set('Authorization', `Bearer ${commissieToken}`)
+        .send({ filepath: naam, filename: 'partij.pdf', title: 'Een stuk', listId: hunLijst });
+
+      expect(antwoord.status).toBe(404);
+      const opLijst = db
+        .prepare('SELECT COUNT(*) as aantal FROM music_list_pieces WHERE music_list_id = ?')
+        .get(hunLijst) as { aantal: number };
+      expect(opLijst.aantal).toBe(0);
+    });
+
+    it('zet de partij wel op een eigen lijst', async () => {
+      const eigenOrkest = createTestOrchestra(vereniging.id);
+      const eigenLijst = uuidv4();
+      db.prepare('INSERT INTO music_lists (id, orchestra_id, name) VALUES (?, ?, ?)').run(
+        eigenLijst,
+        eigenOrkest.id,
+        'Eigen lijst',
+      );
+      const naam = legTijdelijkBestandNeer(commissielid);
+
+      const antwoord = await request(app)
+        .post('/api/pdf-tools/save-as-music-piece')
+        .set('Authorization', `Bearer ${commissieToken}`)
+        .send({ filepath: naam, filename: 'partij.pdf', title: 'Een stuk', listId: eigenLijst });
+
+      expect(antwoord.status).toBe(200);
+      const opLijst = db
+        .prepare('SELECT COUNT(*) as aantal FROM music_list_pieces WHERE music_list_id = ?')
+        .get(eigenLijst) as { aantal: number };
+      expect(opLijst.aantal).toBe(1);
     });
   });
 });
