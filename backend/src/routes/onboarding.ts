@@ -884,7 +884,24 @@ router.post(
       }
 
       // Add orchestras
+      //
+      // De id's komen uit het verzoek en gingen er zonder controle in. Een
+      // orkest hoort bij een vereniging (orchestras.association_id), dus een
+      // beheerder kon zo een nieuw lid in het orkest van een andere vereniging
+      // zetten. Dat lid komt daarna in hun repetitieoverzicht, hun
+      // beschikbaarheid en hun opstelling terecht - user_orchestras is op al
+      // die plekken de bron.
+      //
+      // Instrumenten hebben deze controle niet nodig: die tabel is gedeeld en
+      // heeft geen association_id.
       if (orchestraIds && orchestraIds.length > 0) {
+        const hoortErbij = db.prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?');
+        for (const orchestraId of orchestraIds) {
+          if (!hoortErbij.get(orchestraId, req.user!.associationId)) {
+            throw new ApiError(400, 'Een van de gekozen orkesten hoort niet bij deze vereniging.');
+          }
+        }
+
         const insertOrchestra = db.prepare('INSERT INTO user_orchestras (user_id, orchestra_id) VALUES (?, ?)');
         for (const orchestraId of orchestraIds) {
           insertOrchestra.run(userId, orchestraId);
