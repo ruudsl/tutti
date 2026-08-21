@@ -113,7 +113,10 @@ async function createMolliePayment(request: PaymentRequest): Promise<PaymentResp
 
 /**
  * Een betaalkenmerk van Mollie of Stripe bestaat uit letters, cijfers en
- * liggende streepjes. Alles daarbuiten hoort niet in een pad thuis.
+ * onderstrepingstekens (tr_..., cs_test_...). Alles daarbuiten hoort niet in
+ * een pad thuis. Let op de bovengrens van 64 tekens: die is korter dan wat
+ * Stripe in de praktijk aan sessiekenmerken uitdeelt, en een kenmerk dat hier
+ * afvalt levert stilzwijgend 'geen gegevens' op.
  */
 function controleerBetaalId(paymentId: string): string {
   if (!/^[A-Za-z0-9_]{1,64}$/.test(paymentId)) {
@@ -292,6 +295,27 @@ async function getStripePaymentStatus(sessionId: string): Promise<PaymentStatus 
 // ========================================
 
 /**
+ * De nepbetaalprovider hieronder is bedoeld voor ontwikkelen en testen: hij
+ * verzint een betaling die niemand ooit voldoet, meldt elk kenmerk dat met
+ * 'mock_' begint als betaald, en meldt een terugbetaling als geslaagd zonder
+ * dat er een cent beweegt. De aanroeper zet op grond daarvan een bestelling op
+ * betaald of op terugbetaald.
+ *
+ * Een deploy zonder MOLLIE_API_KEY en zonder STRIPE_SECRET_KEY is genoeg om in
+ * die tak te belanden - precies het soort schakelaar dat per ongeluk open
+ * blijft staan. In productie hoort deze dienst dan dicht te gaan in plaats van
+ * te doen alsof: alle drie de aanroepers verwerken een mislukking netjes
+ * (geen betaallink, geen statusgegevens, geen terugbetaling), terwijl een
+ * verzonnen 'geslaagd' de vereniging kaarten of geld kost.
+ *
+ * NODE_ENV wordt hier per aanroep gelezen en niet in een module-constante
+ * vastgelegd, zodat de waarde telt die het proces draait.
+ */
+function nepbetalingenToegestaan(): boolean {
+  return process.env.NODE_ENV !== 'production';
+}
+
+/**
  * Get the configured payment provider
  */
 export function getPaymentProvider(): PaymentProvider | null {
@@ -324,6 +348,11 @@ export async function createPayment(request: PaymentRequest): Promise<PaymentRes
   const provider = getPaymentProvider();
 
   if (!provider) {
+    if (!nepbetalingenToegestaan()) {
+      logger.error('No payment provider configured in production - refusing to create a mock payment');
+      return { success: false, error: 'Payment provider not configured' };
+    }
+
     // Development mode: simulate payment
     logger.warn('No payment provider configured - using mock payment');
     return {
@@ -347,6 +376,10 @@ export async function getPaymentStatus(paymentId: string): Promise<PaymentStatus
   const provider = getPaymentProvider();
 
   if (!provider) {
+    if (!nepbetalingenToegestaan()) {
+      return null;
+    }
+
     // Mock payment status check
     if (paymentId.startsWith('mock_')) {
       return {
@@ -542,6 +575,11 @@ export async function createRefund(request: RefundRequest): Promise<RefundRespon
   const provider = getPaymentProvider();
 
   if (!provider) {
+    if (!nepbetalingenToegestaan()) {
+      logger.error('No payment provider configured in production - refusing to report a mock refund as successful');
+      return { success: false, error: 'Payment provider not configured' };
+    }
+
     // Mock refund
     return {
       success: true,
