@@ -44,7 +44,7 @@ export default function Login() {
         /* fallback to defaults */
       });
 
-    getMicrosoftEnabled()
+    getMicrosoftEnabled(slug)
       .then(({ enabled }) => setMicrosoftEnabled(enabled))
       .catch(() => {
         /* Microsoft not available */
@@ -87,7 +87,7 @@ export default function Login() {
     setError('');
     setMicrosoftLoading(true);
     try {
-      const { authUrl } = await getMicrosoftLoginUrl();
+      const { authUrl } = await getMicrosoftLoginUrl(slug);
       window.location.href = authUrl;
     } catch (err: any) {
       setError(err.response?.data?.error || t('auth.microsoft.loginFailed'));

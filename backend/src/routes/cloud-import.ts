@@ -99,7 +99,19 @@ function validateCloudDownloadUrl(rawUrl: string): string {
   }
 
   const hostname = parsed.hostname.toLowerCase();
-  const allowedExactHosts = new Set(['graph.microsoft.com', 'onedrive.live.com']);
+  // Google Drive stond hier niet bij. Die lijst kwam erbij om server-side
+  // request forgery te stoppen, maar nam alleen de Microsoft-hosts mee -
+  // terwijl /google-drive hieronder een adres op www.googleapis.com bouwt.
+  // Elke download liep daardoor op deze controle stuk, en omdat de fout per
+  // bestand in `errors` wordt opgevangen antwoordde de route vrolijk 201 met
+  // "0 bestanden geimporteerd". Een stille storing: de koppeling deed niets
+  // en zei dat het gelukt was.
+  const allowedExactHosts = new Set([
+    'graph.microsoft.com',
+    'onedrive.live.com',
+    'www.googleapis.com',
+    'drive.google.com',
+  ]);
   const allowedHostSuffixes = ['.sharepoint.com', '.1drv.com'];
 
   const allowed = allowedExactHosts.has(hostname) || allowedHostSuffixes.some((suffix) => hostname.endsWith(suffix));

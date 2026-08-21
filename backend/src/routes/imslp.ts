@@ -211,9 +211,15 @@ router.post(
     // Create or get the music_title entry
     let musicTitleId: string;
 
+    // music_titles heeft UNIQUE(title, arranger, association_id): de sleutel is
+    // drieledig. De opzoeking was tweeledig en liet de arrangeur weg, dus bij
+    // twee arrangementen van hetzelfde werk werd er willekeurig een gepakt -
+    // en kreeg dat vreemde arrangement de IMSLP-gegevens opgestempeld, met de
+    // nieuwe partij eronder. `IS` en niet `=`, want de arrangeur kan aan beide
+    // kanten NULL zijn en NULL = NULL is in SQL nooit waar.
     const existingTitle = db
-      .prepare(`SELECT id FROM music_titles WHERE title = ? AND association_id = ?`)
-      .get(title, user.associationId) as { id: string } | undefined;
+      .prepare(`SELECT id FROM music_titles WHERE title = ? AND arranger IS ? AND association_id = ?`)
+      .get(title, arranger || null, user.associationId) as { id: string } | undefined;
 
     if (existingTitle) {
       musicTitleId = existingTitle.id;

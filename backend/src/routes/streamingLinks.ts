@@ -8,6 +8,41 @@ import logger from '../utils/logger';
 
 const router = Router();
 
+/**
+ * Een adres dat de frontend als href mag zetten.
+ *
+ * De vijf velden gingen rechtstreeks uit req.body de database in, en het
+ * scherm zet ze ongefilterd in een href. Een `javascript:`-adres voert dan
+ * code uit in de context van de pagina zodra een lid op het icoontje klikt.
+ * React waarschuwt daar wel over in de console, maar blokkeert het niet.
+ *
+ * Alleen http en https, en het adres moet te ontleden zijn. Verder geen
+ * hostcontrole: welke dienst iemand aanwijst is zijn eigen keuze, en deze
+ * routes vragen al muziekcommissie of beheerder.
+ *
+ * Leeg of null betekent "weghalen"; dat mag hier gewoon langs.
+ */
+function isBruikbaarAdres(waarde: unknown): boolean {
+  if (waarde === undefined || waarde === null || waarde === '') return true;
+  if (typeof waarde !== 'string') return false;
+
+  try {
+    const ontleed = new URL(waarde);
+    return ontleed.protocol === 'http:' || ontleed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/** De vijf velden waar een adres in kan staan. */
+const ADRESVELDEN = [
+  'spotify_url',
+  'apple_music_url',
+  'youtube_music_url',
+  'spotify_preview_url',
+  'apple_music_preview_url',
+] as const;
+
 export interface StreamingLinks {
   spotify_url?: string | null;
   apple_music_url?: string | null;
@@ -249,6 +284,12 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { spotify_url, apple_music_url, youtube_music_url, spotify_preview_url, apple_music_preview_url } = req.body;
+
+    for (const veld of ADRESVELDEN) {
+      if (!isBruikbaarAdres(req.body[veld])) {
+        throw new ApiError(400, `Ongeldig adres voor ${veld}. Alleen http en https.`);
+      }
+    }
 
     // Check if title exists and belongs to user's association
     const title = db

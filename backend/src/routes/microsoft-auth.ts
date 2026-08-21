@@ -49,15 +49,54 @@ setInterval(
   5 * 60 * 1000,
 );
 
-function getMicrosoftConfig(): MicrosoftConfig | null {
+/**
+ * Bij welke vereniging hoort deze inlogpoging?
+ *
+ * /enabled en /login zijn publiek - er is nog geen ingelogde gebruiker om het
+ * aan af te leiden. Hier stond daarom `FROM associations LIMIT 1`: zonder
+ * ORDER BY en zonder filter, dus de eerst aangemaakte vereniging. Op een
+ * installatie met een vereniging klopte dat toevallig; met meer verenigingen
+ * gebruikte iedereen de Azure-app van vereniging A, en werd er ook in haar
+ * ledenlijst gezocht. Een beheerder van B zag in zijn scherm "geconfigureerd"
+ * staan terwijl inloggen bij A uitkwam.
+ *
+ * De slug bepaalt het nu, net als bij /settings/branding en het inlogscherm:
+ * /login/harmonie-sint-cecilia stuurt ?slug=harmonie-sint-cecilia mee. Zonder
+ * slug hangt het van de installatie af - precies een vereniging: die; meer dan
+ * een: geen enkele, want dan is er niets te kiezen en is elke keuze de
+ * verkeerde.
+ */
+function bepaalVereniging(slug: string | undefined): string | null {
+  if (slug) {
+    const gevonden = db
+      .prepare('SELECT id FROM associations WHERE slug = ? AND COALESCE(is_active, 1) = 1')
+      .get(slug) as { id: string } | undefined;
+    return gevonden?.id ?? null;
+  }
+
+  const { aantal } = db.prepare('SELECT COUNT(*) AS aantal FROM associations').get() as { aantal: number };
+  if (aantal !== 1) return null;
+
+  const enige = db.prepare('SELECT id FROM associations').get() as { id: string } | undefined;
+  return enige?.id ?? null;
+}
+
+/** De slug uit de querystring, als die er als tekst in staat. */
+function slugUit(req: Request): string | undefined {
+  return typeof req.query.slug === 'string' && req.query.slug ? req.query.slug : undefined;
+}
+
+function getMicrosoftConfig(associationId: string | null): MicrosoftConfig | null {
+  if (!associationId) return null;
+
   const association = db
     .prepare(
       `
         SELECT microsoft_client_id, microsoft_client_secret, microsoft_tenant_id, microsoft_enabled
-        FROM associations LIMIT 1
+        FROM associations WHERE id = ?
     `,
     )
-    .get() as MicrosoftConfig | undefined;
+    .get(associationId) as MicrosoftConfig | undefined;
 
   if (
     !association ||
@@ -80,8 +119,8 @@ function getRedirectUri(): string {
  */
 router.get(
   '/enabled',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const msConfig = getMicrosoftConfig();
+  asyncHandler(async (req: Request, res: Response) => {
+    const msConfig = getMicrosoftConfig(bepaalVereniging(slugUit(req)));
     res.json({ enabled: !!msConfig });
   }),
 );
@@ -92,20 +131,15 @@ router.get(
  */
 router.get(
   '/login',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const msConfig = getMicrosoftConfig();
-    if (!msConfig) {
+  asyncHandler(async (req: Request, res: Response) => {
+    const associationId = bepaalVereniging(slugUit(req));
+    const msConfig = getMicrosoftConfig(associationId);
+    if (!msConfig || !associationId) {
       throw new ApiError(400, 'Microsoft login is niet geconfigureerd.');
     }
 
-    // Get association ID for state
-    const association = db.prepare('SELECT id FROM associations LIMIT 1').get() as { id: string } | undefined;
-    if (!association) {
-      throw new ApiError(500, 'Geen vereniging gevonden.');
-    }
-
     const state = crypto.randomBytes(32).toString('hex');
-    stateStore.set(state, { createdAt: Date.now(), associationId: association.id });
+    stateStore.set(state, { createdAt: Date.now(), associationId });
 
     const params = new URLSearchParams({
       client_id: msConfig.microsoft_client_id!,
@@ -148,7 +182,9 @@ router.post(
       throw new ApiError(400, 'Login sessie verlopen. Probeer opnieuw.');
     }
 
-    const msConfig = getMicrosoftConfig();
+    // Niet opnieuw de slug: de vereniging staat vast sinds /login en is
+    // onderdeel van de state die hierboven is gecontroleerd.
+    const msConfig = getMicrosoftConfig(storedState.associationId);
     if (!msConfig) {
       throw new ApiError(400, 'Microsoft login is niet geconfigureerd.');
     }
