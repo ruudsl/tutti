@@ -50,6 +50,41 @@ const createNeighborSchema = z.object({
   preference: z.enum(['preferred', 'avoid']),
 });
 
+/**
+ * Bewaakt dat een lid-id uit het verzoek bij de eigen vereniging hoort.
+ *
+ * De routes hieronder controleerden alleen het orkest en namen het lid uit de
+ * body ongezien over. Een opstelling geeft bij het opvragen naam, e-mailadres
+ * en instrumenten van dat lid terug, opgehaald uit de gekoppelde tabellen. Een
+ * vreemd lid-id naar binnen schrijven was daarmee genoeg om die gegevens
+ * daarna gewoon terug te lezen.
+ *
+ * Een lid dat zacht verwijderd is telt hier niet mee: dat hoort niet opnieuw
+ * in een opstelling te belanden.
+ */
+function bewaakLidVanVereniging(userId: string, associationId: string | null): void {
+  const lid = db
+    .prepare('SELECT id FROM users WHERE id = ? AND association_id = ? AND deleted_at IS NULL')
+    .get(userId, associationId);
+
+  if (!lid) throw new ApiError(404, 'Lid niet gevonden.');
+}
+
+/**
+ * Bewaakt dat een rij-id uit het verzoek bij het opgegeven orkest hoort.
+ *
+ * Zonder deze controle kon een zitplaats verwijzen naar een rij van een ander
+ * orkest - ook een van een andere vereniging - en verscheen de naam van die
+ * rij in het overzicht van het eigen orkest.
+ */
+function bewaakRijVanOrkest(sectionId: string, orchestraId: string): void {
+  const rij = db
+    .prepare('SELECT id FROM seating_sections WHERE id = ? AND orchestra_id = ?')
+    .get(sectionId, orchestraId);
+
+  if (!rij) throw new ApiError(404, 'Sectie niet gevonden.');
+}
+
 // ============================================
 // SEATING SECTIONS
 // ============================================
@@ -501,7 +536,7 @@ router.get(
         FROM seating_assignments sa
         JOIN users u ON sa.user_id = u.id
         JOIN seating_sections ss ON sa.section_id = ss.id
-        WHERE sa.orchestra_id = ?
+        WHERE sa.orchestra_id = ? AND u.deleted_at IS NULL
         ORDER BY ss.row_number, sa.position_in_section
     `,
       )
@@ -543,6 +578,9 @@ router.post(
     if (!orchestra) {
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
+
+    bewaakLidVanVereniging(data.userId, req.user!.associationId);
+    bewaakRijVanOrkest(data.sectionId, data.orchestraId);
 
     // Check if user already has an assignment in this orchestra
     const existingAssignment = db
@@ -591,16 +629,20 @@ router.put(
     const assignment = db
       .prepare(
         `
-        SELECT sa.id
+        SELECT sa.id, sa.orchestra_id
         FROM seating_assignments sa
         JOIN orchestras o ON sa.orchestra_id = o.id
         WHERE sa.id = ? AND o.association_id = ?
     `,
       )
-      .get(id, req.user!.associationId);
+      .get(id, req.user!.associationId) as any;
 
     if (!assignment) {
       throw new ApiError(404, 'Zitplaats niet gevonden.');
+    }
+
+    if (data.sectionId !== undefined) {
+      bewaakRijVanOrkest(data.sectionId, assignment.orchestra_id);
     }
 
     const updates: string[] = [];
@@ -687,6 +729,17 @@ router.put(
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
 
+    if (!Array.isArray(assignments)) {
+      throw new ApiError(400, 'Zitplaatsen moeten een array zijn.');
+    }
+
+    // Eerst alles nalopen, dan pas schrijven. Een sleepactie is een geheel:
+    // afbreken halverwege zou de opstelling in een tussenstand achterlaten.
+    for (const assignment of assignments) {
+      bewaakLidVanVereniging(assignment.userId, req.user!.associationId);
+      bewaakRijVanOrkest(assignment.sectionId, orchestraId);
+    }
+
     const transaction = db.transaction(() => {
       for (const assignment of assignments) {
         // Check if assignment exists
@@ -751,7 +804,7 @@ router.get(
         FROM seating_neighbors sn
         JOIN users u1 ON sn.user_id = u1.id
         JOIN users u2 ON sn.neighbor_user_id = u2.id
-        WHERE sn.orchestra_id = ?
+        WHERE sn.orchestra_id = ? AND u1.deleted_at IS NULL AND u2.deleted_at IS NULL
     `,
       )
       .all(orchestraId);
@@ -787,6 +840,9 @@ router.post(
     if (!orchestra) {
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
+
+    bewaakLidVanVereniging(data.userId, req.user!.associationId);
+    bewaakLidVanVereniging(data.neighborUserId, req.user!.associationId);
 
     const neighborId = uuidv4();
     db.prepare(
@@ -1265,6 +1321,21 @@ router.get(
       throw new ApiError(404, 'Orkest niet gevonden.');
     }
 
+    // Het orkest in het pad werd gecontroleerd, de repetitie uit de
+    // queryparameter niet. Die ging rechtstreeks de zoekopdracht naar
+    // rehearsal_seating in, en die tabel bevat de namen van de leden. Elke
+    // ingelogde gebruiker kon zo de opstelling van een repetitie van een
+    // andere vereniging opvragen.
+    if (rehearsalId) {
+      const repetitie = db
+        .prepare('SELECT id FROM rehearsals WHERE id = ? AND association_id = ?')
+        .get(rehearsalId, req.user!.associationId);
+
+      if (!repetitie) {
+        throw new ApiError(404, 'Repetitie niet gevonden.');
+      }
+    }
+
     // Get sections
     const sections = db
       .prepare(
@@ -1312,7 +1383,7 @@ router.get(
             FROM seating_assignments sa
             JOIN users u ON sa.user_id = u.id
             JOIN seating_sections ss ON sa.section_id = ss.id
-            WHERE sa.orchestra_id = ?
+            WHERE sa.orchestra_id = ? AND u.deleted_at IS NULL
             ORDER BY ss.row_number, sa.position_in_section
         `,
         )

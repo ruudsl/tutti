@@ -22,6 +22,58 @@ function getUserOrchestraIds(userId: string): string[] {
   return rows.map((r) => r.orchestra_id);
 }
 
+/** De toegestane soorten repetitie; type wordt uitgelezen, dus onzin hoort er niet in. */
+const REPETITIE_TYPES = ['regular', 'extra', 'cancelled'];
+
+/**
+ * De eisen die het aanmaken al stelde, gelden net zo goed bij het bijwerken.
+ *
+ * Het bijwerken sloeg deze controles over. Een ontbrekende datum liep daardoor
+ * door tot de NOT NULL-melding uit de database - een 500, terwijl het verzoek
+ * zelf niet klopte - en een onbekend type werd gewoon opgeslagen. Dat laatste
+ * is niet onschuldig: het aanwezigheidsoverzicht slaat 'cancelled' over en de
+ * melding aan de leden hangt ervan af, dus een repetitie met een onbekend type
+ * glipt overal langs.
+ */
+function bewaakRepetitieVelden(date: unknown, startTime: unknown, endTime: unknown, type: unknown): void {
+  if (!date || !startTime || !endTime) {
+    throw new ApiError(400, 'Datum, begin- en eindtijd zijn verplicht.');
+  }
+  if (type && !REPETITIE_TYPES.includes(type as string)) {
+    throw new ApiError(400, 'Ongeldig type. Gebruik regular, extra of cancelled.');
+  }
+}
+
+/** Idem voor een standaard repetitiedag. */
+function bewaakStandaardDagVelden(dayOfWeek: unknown, startTime: unknown, endTime: unknown): void {
+  if (dayOfWeek === undefined || (dayOfWeek as number) < 0 || (dayOfWeek as number) > 6) {
+    throw new ApiError(400, 'Ongeldige dag van de week (0-6).');
+  }
+  if (!startTime || !endTime) {
+    throw new ApiError(400, 'Begin- en eindtijd zijn verplicht.');
+  }
+}
+
+/**
+ * Controleert dat een orkest uit het verzoek bij de eigen vereniging hoort.
+ *
+ * Het aanmaken deed dit al, het bijwerken niet. Een orkest-id uit de body
+ * belandde daar ongezien in de UPDATE, en daarna in notifyOrchestra - die
+ * zoekt zijn ontvangers alleen via user_orchestras en filtert niet op
+ * vereniging. Een beheerder kon zo meldingen laten bezorgen bij de leden van
+ * een orkest van een andere vereniging, en die repetitie ook nog aan dat
+ * vreemde orkest hangen.
+ */
+function bewaakOrkestVanVereniging(orchestraId: unknown, associationId: string | null): void {
+  if (!orchestraId) return;
+
+  const orkest = db
+    .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
+    .get(orchestraId, associationId);
+
+  if (!orkest) throw new ApiError(400, 'Orkest niet gevonden.');
+}
+
 // ========================
 // DEFAULT DAYS (recurring schedule)
 // ========================
@@ -60,20 +112,8 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { dayOfWeek, startTime, endTime, location, orchestraId } = req.body;
 
-    if (dayOfWeek === undefined || dayOfWeek < 0 || dayOfWeek > 6) {
-      throw new ApiError(400, 'Ongeldige dag van de week (0-6).');
-    }
-    if (!startTime || !endTime) {
-      throw new ApiError(400, 'Begin- en eindtijd zijn verplicht.');
-    }
-
-    // Validate orchestraId if provided
-    if (orchestraId) {
-      const orch = db
-        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-        .get(orchestraId, req.user!.associationId) as any;
-      if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
-    }
+    bewaakStandaardDagVelden(dayOfWeek, startTime, endTime);
+    bewaakOrkestVanVereniging(orchestraId, req.user!.associationId);
 
     const id = uuidv4();
     db.prepare(
@@ -106,6 +146,9 @@ router.put(
     if (!existing) {
       throw new ApiError(404, 'Standaard repetitiedag niet gevonden.');
     }
+
+    bewaakStandaardDagVelden(dayOfWeek, startTime, endTime);
+    bewaakOrkestVanVereniging(orchestraId, req.user!.associationId);
 
     db.prepare(
       `
@@ -238,13 +281,7 @@ router.post(
       throw new ApiError(400, 'RRULE, begintijd en eindtijd zijn verplicht.');
     }
 
-    // Validate orchestraId if provided
-    if (orchestraId) {
-      const orch = db
-        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-        .get(orchestraId, req.user!.associationId) as any;
-      if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
-    }
+    bewaakOrkestVanVereniging(orchestraId, req.user!.associationId);
 
     let parsed: ReturnType<typeof rrulestr>;
     try {
@@ -632,21 +669,8 @@ router.post(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { date, startTime, endTime, location, type, notes, orchestraId } = req.body;
 
-    if (!date || !startTime || !endTime) {
-      throw new ApiError(400, 'Datum, begin- en eindtijd zijn verplicht.');
-    }
-
-    const validTypes = ['regular', 'extra', 'cancelled'];
-    if (type && !validTypes.includes(type)) {
-      throw new ApiError(400, 'Ongeldig type. Gebruik regular, extra of cancelled.');
-    }
-
-    if (orchestraId) {
-      const orch = db
-        .prepare('SELECT id FROM orchestras WHERE id = ? AND association_id = ?')
-        .get(orchestraId, req.user!.associationId) as any;
-      if (!orch) throw new ApiError(400, 'Orkest niet gevonden.');
-    }
+    bewaakRepetitieVelden(date, startTime, endTime, type);
+    bewaakOrkestVanVereniging(orchestraId, req.user!.associationId);
 
     const id = uuidv4();
     db.prepare(
@@ -721,6 +745,9 @@ router.put(
     if (!existing) {
       throw new ApiError(404, 'Repetitie niet gevonden.');
     }
+
+    bewaakRepetitieVelden(date, startTime, endTime, type);
+    bewaakOrkestVanVereniging(orchestraId, req.user!.associationId);
 
     db.prepare(
       `
