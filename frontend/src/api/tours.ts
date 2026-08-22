@@ -189,7 +189,13 @@ export interface AddTourDayData {
 }
 
 export async function addTourDay(tourId: string, data: AddTourDayData): Promise<{ id: string; message: string }> {
-  const response = await api.post(`/tours/${tourId}/days`, data);
+  // tourDaySchema in backend/src/routes/tours.ts leest `dayDate`, niet `date`.
+  // Zonder deze vertaling gooit zod het veld weg en antwoordt de server 400,
+  // waardoor er nooit een dag aan de reis toegevoegd kon worden.
+  const response = await api.post(`/tours/${tourId}/days`, {
+    dayDate: data.date,
+    title: data.title,
+  });
   return response.data;
 }
 
@@ -199,11 +205,18 @@ export async function deleteTourDay(tourId: string, dayId: string): Promise<{ me
 }
 
 // Tour Day Activities API
+
+/** De soorten activiteiten die activitySchema in de backend accepteert. */
+export type TourActivityType =
+  'travel' | 'rehearsal' | 'concert' | 'meal' | 'accommodation' | 'sightseeing' | 'free_time' | 'meeting' | 'other';
+
 export interface AddDayActivityData {
   time: string;
   title: string;
   description?: string;
   location?: string;
+  /** Weggelaten betekent 'other'; de backend eist altijd een soort. */
+  activityType?: TourActivityType;
 }
 
 export async function addDayActivity(
@@ -211,7 +224,17 @@ export async function addDayActivity(
   dayId: string,
   data: AddDayActivityData,
 ): Promise<{ id: string; message: string }> {
-  const response = await api.post(`/tours/${tourId}/days/${dayId}/activities`, data);
+  // activitySchema in backend/src/routes/tours.ts leest `startTime` en eist
+  // een `activityType` uit een enum zonder standaardwaarde. De body zoals het
+  // formulier hem samenstelt (`time`, geen soort) werd daardoor altijd met 400
+  // afgewezen: activiteiten toevoegen werkte niet.
+  const response = await api.post(`/tours/${tourId}/days/${dayId}/activities`, {
+    activityType: data.activityType ?? 'other',
+    title: data.title,
+    description: data.description,
+    location: data.location,
+    startTime: data.time,
+  });
   return response.data;
 }
 
