@@ -54,6 +54,25 @@ pull request achterblijven.
    bij een storing álle echte gebruikers buiten); vastgelegd in een test zodat
    het een keuze blijft en geen ongeluk
 
+7. **`POST /tasks/templates/:id/apply` bestaat niet aan de serverkant.** De
+   frontend heeft er een functie voor; de backend heeft alleen
+   `/templates/:id/create-task`, en het woord "apply" komt in `tasks.ts`
+   nergens voor. Wat "apply" zou moeten doen dat "create-task" niet doet —
+   vermoedelijk meerdere taken tegelijk aanmaken — staat nergens vastgelegd.
+   De functie wordt op dit moment niet vanuit de interface aangeroepen, dus er
+   is niets stuk; bouwen zou gokken naar een bedoeling zijn
+8. **`CampaignRecipient` noemt `deliveredAt` en `bouncedAt`**, en
+   `EmailCampaigns.tsx` rendert een tak op `deliveredAt`. Die kolommen bestaan
+   niet in `email_campaign_recipients` en de namen komen nergens in de backend
+   voor. Een kolom erbij vraagt eerst een antwoord op wie hem vult — de mailer
+   zet nu nergens 'delivered'. Tot die keuze gemaakt is, is die tak dode code
+9. **Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
+   de drie talen** (`errors.invalidType`, `invalidUrl`, `invalidUuid`,
+   `invalidFormat`, `invalidSelection`, `minValue`, `maxValue`, `minItems`,
+   `maxItems`). Door de meegegeven standaardtekst krijgt een Nederlands of Duits
+   lid daar Engelse validatiemeldingen. Makkelijke winst, maar het raakt
+   `src/locales/*.json` en dat is een eigen ronde waard
+
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
 uitleg in plaats van met een fout, en rolt er dus niets uit:
@@ -241,12 +260,13 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **64,4%** (14583/22658) | 55,4%    | 68,0%     | 64,6% |
-| Frontend | **6,9%** (1710/24789)   | 3,3%     | 6,6%      | 7,0%  |
+| Frontend | **24,2%** (6036/24902)  | 8,7%     | 23,9%     | 24,7% |
 
-- CI-drempels: backend 63 / 54 / 67 / 63, frontend 6 / 3 / 6 / 6 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 63 / 54 / 67 / 63, frontend 24 / 8 / 23 / 24 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
-- **De frontend is nu de rem.** 350 bronbestanden, 32 testbestanden. `src/api.ts` alleen al is 3.967 regels met 741 exports en geen enkele test
+- De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32). `src/api.ts` - 3.967 regels, 741 exports, eerder zonder ook maar één test - staat nu op 99,9%
+- **Wat nog ontbreekt zit vrijwel helemaal in de pagina's.** Dat verklaart ook waarom branches (8,7%) zo ver achterblijft bij statements (24,2%): de pagina's staan op nul en juist daar zit het overgrote deel van de vertakkingen. Geen enkele hoeveelheid api- en hooktests tilt dat getal mee omhoog
 - **Waarom de eerdere cijfers niet klopten:** er stond geen `include` in de coverage-instellingen, en de v8-provider telt dan alleen bestanden die een test toevallig inlaadt. Bestanden die geen enkele test aanraakt verdwenen uit de noemer in plaats van als nul mee te tellen. Aan de backendkant ging de meting over 6.140 van de 21.664 statements; aan de frontendkant over 2.134 van de 24.789, wat als 82 procent las. Dat gaf ook een averechtse prikkel: een test toevoegen trok het aangeroepen bestand de noemer in, waardoor het percentage dáálde terwijl er méér getest werd
 - Er zijn twee waaktests bijgekomen die een hele klasse fouten afvangen in plaats van één geval: `route-shadowing.test.ts` (een letterlijk pad onder een parameterpad — dat kwam vijf keer eerder voor) en `wijzigingsschema-standaardwaarden.test.ts`
 - De backendsuite draait sinds #163 parallel (`fileParallelism: true`): 19m35s → 7m52s lokaal, 11m06s op CI. De oude reden om dat uit te zetten — "om databaseconflicten te voorkomen" — gold niet: de testdatabase zit volledig in het geheugen
@@ -263,10 +283,10 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend 64,4%, frontend 6,9%_
+- [~] Unit tests: >80% coverage — _backend 64,4%, frontend 24,2%_
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
-  - Wat er nog moet gebeuren zit vrijwel helemaal aan de frontendkant: 350 bronbestanden tegenover 32 testbestanden. De grootste brokken zijn `src/api.ts` (3.967 regels, 741 exports), 54 ongeteste hooks, 55 ongeteste `src/api/*`-modules en de grote pagina's (`Accounting.tsx` 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655)
-  - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet — daar is 40% al een stevig doel, en pagina's van tweeduizend regels testen is pas zinnig als ze eerst opgeknipt worden
+  - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
+  - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan
 - [x] Integration tests voor tenant isolatie
 - [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
 - [x] Dependabot of Renovate configuratie
