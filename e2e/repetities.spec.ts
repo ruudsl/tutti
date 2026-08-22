@@ -24,7 +24,6 @@ import {
   haalToken,
   lijstDatum,
   login,
-  veldBijLabel,
   verwijderRepetitiesOpLocatie,
   zetAanwezigheidOpAfwezig,
   zetTaalVast,
@@ -91,11 +90,11 @@ test.describe('Repetitie plannen en aanwezigheid melden', () => {
     const formulier = kaartMetKop(page, 'Repetitie toevoegen');
     await expect(formulier).toBeVisible();
 
-    await veldBijLabel(formulier, 'Datum').fill(datum);
-    await veldBijLabel(formulier, 'Begintijd').fill('19:45');
-    await veldBijLabel(formulier, 'Eindtijd').fill('21:45');
-    await veldBijLabel(formulier, 'Locatie').fill(PLANNING_LOCATIE);
-    await veldBijLabel(formulier, 'Notities').fill('Aangemaakt door de E2E-test.');
+    await formulier.getByLabel('Datum').fill(datum);
+    await formulier.getByLabel('Begintijd').fill('19:45');
+    await formulier.getByLabel('Eindtijd').fill('21:45');
+    await formulier.getByLabel('Locatie').fill(PLANNING_LOCATIE);
+    await formulier.getByLabel('Notities').fill('Aangemaakt door de E2E-test.');
     await keuzelijstMetOptie(formulier, 'Alle orkesten').selectOption({ label: E2E_ORKEST_NAAM });
 
     await formulier.getByRole('button', { name: 'Opslaan' }).click();

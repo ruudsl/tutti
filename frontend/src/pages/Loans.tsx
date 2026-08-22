@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../hooks/useConfirm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { Icon } from '../components/Icon';
 import LoanReceiptPrinter from '../components/LoanReceiptPrinter';
 
@@ -47,6 +48,8 @@ export default function Loans() {
   const confirmDialog = useConfirm();
   useDocumentTitle('pageTitle.loans');
   const queryClient = useQueryClient();
+  // Id voor het enige veld dat niet via FormField loopt; zie de opmerking daar.
+  const titelZoekId = useId();
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
   const [titleSearch, setTitleSearch] = useState('');
@@ -400,8 +403,15 @@ export default function Loans() {
           }
         >
           <form id="new-loan-form" onSubmit={handleSubmit}>
+            {/* Met de hand gekoppeld: in deze form-group staat geen enkel veld zolang er
+                een titel gekozen is, en anders een zoekveld met een resultatenlijst
+                eronder. FormField neemt één kind, dus dit past niet. Het label wijst
+                naar het zoekveld; is er een titel gekozen, dan staat er niets om naar te
+                wijzen en leest het label als kop boven de gekozen titel. */}
             <div className="form-group">
-              <label className="form-label">{t('loans.musicPiece')} *</label>
+              <label className="form-label" htmlFor={titelZoekId}>
+                {t('loans.musicPiece')} *
+              </label>
               {selectedTitle ? (
                 <div
                   style={{
@@ -428,6 +438,7 @@ export default function Loans() {
               ) : (
                 <>
                   <input
+                    id={titelZoekId}
                     type="text"
                     className="form-control"
                     value={titleSearch}
@@ -473,8 +484,7 @@ export default function Loans() {
               )}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">{t('loans.borrowerName')} *</label>
+            <FormField label={`${t('loans.borrowerName')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -483,11 +493,10 @@ export default function Loans() {
                 placeholder={t('loans.borrowerNamePlaceholder')}
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid grid-2" style={{ gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">{t('loans.borrowerEmail')}</label>
+              <FormField label={t('loans.borrowerEmail')}>
                 <input
                   type="email"
                   className="form-control"
@@ -495,9 +504,8 @@ export default function Loans() {
                   onChange={(e) => setBorrowerEmail(e.target.value)}
                   placeholder={t('loans.borrowerEmailPlaceholder')}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('loans.borrowerOrganization')}</label>
+              </FormField>
+              <FormField label={t('loans.borrowerOrganization')}>
                 <input
                   type="text"
                   className="form-control"
@@ -505,11 +513,10 @@ export default function Loans() {
                   onChange={(e) => setBorrowerOrganization(e.target.value)}
                   placeholder={t('loans.borrowerOrgPlaceholder')}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">{t('loans.expectedReturnDate')}</label>
+            <FormField label={t('loans.expectedReturnDate')}>
               <input
                 type="date"
                 className="form-control"
@@ -517,10 +524,9 @@ export default function Loans() {
                 onChange={(e) => setExpectedReturn(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">{t('loans.notes')}</label>
+            <FormField label={t('loans.notes')}>
               <textarea
                 className="form-control"
                 value={notes}
@@ -528,7 +534,7 @@ export default function Loans() {
                 rows={2}
                 placeholder={t('loans.notesPlaceholder')}
               />
-            </div>
+            </FormField>
           </form>
         </Modal>
       )}

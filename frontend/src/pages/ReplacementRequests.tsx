@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FormField } from '../components/FormField';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
@@ -114,6 +115,9 @@ export default function ReplacementRequests() {
   const [selectedMusicianId, setSelectedMusicianId] = useState<string>('');
   const [inviteNotes, setInviteNotes] = useState('');
   const [inviteFee, setInviteFee] = useState<string>('');
+
+  // Vast id voor het enige veld dat niet via FormField loopt (zie de opmerking daar)
+  const muzikantVeldId = useId();
 
   const canEdit = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE || user?.role === ROLES.CONDUCTOR;
 
@@ -495,8 +499,7 @@ export default function ReplacementRequests() {
           isSubmitting={createMutation.isPending}
         >
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.eventType')} *</label>
+            <FormField label={`${t('replacementRequests.eventType')} *`}>
               <select
                 className="form-control"
                 value={createForm.eventType}
@@ -506,9 +509,10 @@ export default function ReplacementRequests() {
                 <option value="concert">{t('replacementRequests.concert')}</option>
                 <option value="rehearsal">{t('replacementRequests.rehearsal')}</option>
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.event')} *</label>
+            </FormField>
+            {/* Het kind is hier een keuze tussen twee velden; wat het ook wordt, het is
+                één element en krijgt dus het id van het label. */}
+            <FormField label={`${t('replacementRequests.event')} *`}>
               {createForm.eventType === 'concert' ? (
                 <select
                   className="form-control"
@@ -533,12 +537,11 @@ export default function ReplacementRequests() {
                   required
                 />
               )}
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('common.date')} *</label>
+            <FormField label={`${t('common.date')} *`}>
               <input
                 type="date"
                 className="form-control"
@@ -546,9 +549,8 @@ export default function ReplacementRequests() {
                 onChange={(e) => setCreateForm({ ...createForm, eventDate: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.instrument')} *</label>
+            </FormField>
+            <FormField label={`${t('replacementRequests.instrument')} *`}>
               <select
                 className="form-control"
                 value={createForm.instrumentId}
@@ -562,12 +564,11 @@ export default function ReplacementRequests() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.positions')} *</label>
+            <FormField label={`${t('replacementRequests.positions')} *`}>
               <input
                 type="number"
                 className="form-control"
@@ -576,9 +577,8 @@ export default function ReplacementRequests() {
                 onChange={(e) => setCreateForm({ ...createForm, positionsNeeded: parseInt(e.target.value) || 1 })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.urgency')} *</label>
+            </FormField>
+            <FormField label={`${t('replacementRequests.urgency')} *`}>
               <select
                 className="form-control"
                 value={createForm.urgency}
@@ -590,27 +590,25 @@ export default function ReplacementRequests() {
                 <option value="high">{URGENCY_LABELS.high}</option>
                 <option value="critical">{URGENCY_LABELS.critical}</option>
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('replacementRequests.deadline')}</label>
+            </FormField>
+            <FormField label={t('replacementRequests.deadline')}>
               <input
                 type="date"
                 className="form-control"
                 value={createForm.deadline}
                 onChange={(e) => setCreateForm({ ...createForm, deadline: e.target.value })}
               />
-            </div>
+            </FormField>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('common.notes')}</label>
+          <FormField label={t('common.notes')}>
             <textarea
               className="form-control"
               rows={3}
               value={createForm.notes}
               onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -623,9 +621,16 @@ export default function ReplacementRequests() {
           submitLabel={t('replacementRequests.invite')}
           isSubmitting={inviteMutation.isPending}
         >
+          {/* Met de hand gekoppeld in plaats van via FormField: onder het veld staat nog
+              een melding wanneer er geen muzikanten zijn. Die hoort binnen dezelfde
+              form-group te blijven, en FormField neemt maar één kindelement. */}
           <div className="form-group">
-            <label className="form-label">{t('replacementRequests.selectMusician')} *</label>
+            <label className="form-label" htmlFor={muzikantVeldId}>
+              {t('replacementRequests.selectMusician')} *
+            </label>
             <select
+              id={muzikantVeldId}
+              aria-describedby={suggestedMusicians.length === 0 ? `${muzikantVeldId}-melding` : undefined}
               className="form-control"
               value={selectedMusicianId}
               onChange={(e) => setSelectedMusicianId(e.target.value)}
@@ -641,12 +646,13 @@ export default function ReplacementRequests() {
               ))}
             </select>
             {suggestedMusicians.length === 0 && (
-              <p className="text-muted text-sm mt-1">{t('replacementRequests.noMusiciansForInstrument')}</p>
+              <p id={`${muzikantVeldId}-melding`} className="text-muted text-sm mt-1">
+                {t('replacementRequests.noMusiciansForInstrument')}
+              </p>
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('replacementRequests.fee')}</label>
+          <FormField label={t('replacementRequests.fee')}>
             <input
               type="number"
               className="form-control"
@@ -656,10 +662,9 @@ export default function ReplacementRequests() {
               onChange={(e) => setInviteFee(e.target.value)}
               placeholder="0.00"
             />
-          </div>
+          </FormField>
 
-          <div className="form-group">
-            <label className="form-label">{t('common.notes')}</label>
+          <FormField label={t('common.notes')}>
             <textarea
               className="form-control"
               rows={3}
@@ -667,7 +672,7 @@ export default function ReplacementRequests() {
               onChange={(e) => setInviteNotes(e.target.value)}
               placeholder={t('replacementRequests.inviteNotesPlaceholder')}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

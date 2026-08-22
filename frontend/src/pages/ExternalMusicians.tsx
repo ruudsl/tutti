@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FormField } from '../components/FormField';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
@@ -95,6 +96,11 @@ export default function ExternalMusicians() {
   const { user } = useAuth();
   const { t } = useTranslation();
   useDocumentTitle('externalMusicians.title');
+
+  // Koppen boven een groep bedieningselementen; zie de opmerkingen daar.
+  const veldId = useId();
+  const beoordelingLabelId = `${veldId}-beoordeling`;
+  const instrumentenLabelId = `${veldId}-instrumenten`;
 
   // Filters
   const [filterType, setFilterType] = useState<string>('');
@@ -537,8 +543,7 @@ export default function ExternalMusicians() {
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         >
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.firstName')} *</label>
+            <FormField label={`${t('externalMusicians.firstName')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -546,9 +551,8 @@ export default function ExternalMusicians() {
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.lastName')} *</label>
+            </FormField>
+            <FormField label={`${t('externalMusicians.lastName')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -556,33 +560,30 @@ export default function ExternalMusicians() {
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 required
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('common.email')}</label>
+            <FormField label={t('common.email')}>
               <input
                 type="email"
                 className="form-control"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('common.phone')}</label>
+            </FormField>
+            <FormField label={t('common.phone')}>
               <input
                 type="tel"
                 className="form-control"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.type')} *</label>
+            <FormField label={`${t('externalMusicians.type')} *`}>
               <select
                 className="form-control"
                 value={formData.musicianType}
@@ -594,15 +595,25 @@ export default function ExternalMusicians() {
                 <option value="substitute">{MUSICIAN_TYPE_LABELS.substitute}</option>
                 <option value="friend">{MUSICIAN_TYPE_LABELS.friend}</option>
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.rating')}</label>
+            </FormField>
+            {/* Geen veld maar vijf sterknoppen: een <label> kan daar niet naartoe
+                wijzen. Dus een groepskop met een <span>. */}
+            <div className="form-group" role="group" aria-labelledby={beoordelingLabelId}>
+              <span id={beoordelingLabelId} className="form-label">
+                {t('externalMusicians.rating')}
+              </span>
               <StarRating rating={formData.rating} onChange={(r) => setFormData({ ...formData, rating: r })} />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('externalMusicians.instruments')}</label>
+          {/* Geen veld maar een rij per instrument, elk met twee keuzelijsten, een
+              aankruisvakje en een knop. Een <label> hoort bij één veld; dit is een
+              groepskop. De keuzelijsten in de rijen dragen zelf nog geen naam - zie
+              het rapport. */}
+          <div className="form-group" role="group" aria-labelledby={instrumentenLabelId}>
+            <span id={instrumentenLabelId} className="form-label">
+              {t('externalMusicians.instruments')}
+            </span>
             {formData.instruments.map((inst, index) => (
               <div key={index} className="flex gap-2 mb-2 items-center">
                 <select
@@ -649,15 +660,14 @@ export default function ExternalMusicians() {
             </button>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('common.notes')}</label>
+          <FormField label={t('common.notes')}>
             <textarea
               className="form-control"
               rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

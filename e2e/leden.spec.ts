@@ -22,7 +22,6 @@ import {
   E2E_TWEEDE_ORKEST_NAAM,
   haalToken,
   login,
-  veldBijLabel,
   verwijderLidOpEmail,
   zetTaalVast,
 } from './hulpfuncties';
@@ -58,12 +57,12 @@ test.describe('Lid toevoegen en aan een orkest koppelen', () => {
     const venster = page.getByRole('dialog', { name: 'Nieuw lid' });
     await expect(venster).toBeVisible();
 
-    await veldBijLabel(venster, 'Voornaam').fill(NIEUW_LID_VOORNAAM);
-    await veldBijLabel(venster, 'Achternaam').fill(NIEUW_LID_ACHTERNAAM);
-    await veldBijLabel(venster, 'E-mail').fill(NIEUW_LID_EMAIL);
-    await veldBijLabel(venster, 'Wachtwoord').fill(NIEUW_LID_WACHTWOORD);
+    await venster.getByLabel('Voornaam').fill(NIEUW_LID_VOORNAAM);
+    await venster.getByLabel('Achternaam').fill(NIEUW_LID_ACHTERNAAM);
+    await venster.getByLabel('E-mail').fill(NIEUW_LID_EMAIL);
+    await venster.getByLabel('Wachtwoord').fill(NIEUW_LID_WACHTWOORD);
 
-    // De orkestkeuze zit wél netjes in zijn label, dus die is op naam te vinden
+    // Elk aankruisvakje zit in zijn eigen label, dus dat is op naam te vinden
     await venster.getByRole('checkbox', { name: E2E_TWEEDE_ORKEST_NAAM }).check();
 
     // Het toevoegvenster verstuurt met "Toevoegen"; het bewerkvenster met "Opslaan"
