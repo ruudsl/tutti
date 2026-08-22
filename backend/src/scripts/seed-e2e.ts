@@ -4,8 +4,9 @@
  * Creates a deterministic test environment for Playwright E2E tests:
  * - one association ("E2E Vereniging")
  * - an admin user (e2e-admin@test.local) and a member user (e2e-member@test.local)
- * - one orchestra ("E2E Orkest") with both users as members
+ * - two orchestras ("E2E Orkest" with both users as members, "E2E Tweede Orkest")
  * - a few music titles
+ * - two rehearsals with fixed ids, a fixed number of days from today
  *
  * The script is idempotent (upserts): running it multiple times against the
  * same database always converges to the same state, and it re-activates the
@@ -31,6 +32,55 @@ export const E2E_ORCHESTRA_NAME = 'E2E Orkest';
 export const E2E_ADMIN_EMAIL = 'e2e-admin@test.local';
 export const E2E_MEMBER_EMAIL = 'e2e-member@test.local';
 export const DEFAULT_E2E_PASSWORD = 'E2eTest!2026';
+
+/**
+ * Het tweede orkest bestaat zodat "koppel dit lid aan een orkest" een echte
+ * keuze is. Met maar één orkest kan een test niet zien of het aanvinken iets
+ * doet: er is dan geen verkeerd antwoord.
+ */
+export const E2E_TWEEDE_ORKEST_NAAM = 'E2E Tweede Orkest';
+
+/**
+ * Vaste id's voor de rijen die de E2E-tests aansturen.
+ *
+ * De oorspronkelijke seed liet uuidv4() de id's bepalen. Dat mag voor rijen
+ * die je alleen op naam opzoekt, maar een test die zijn eigen uitgangssituatie
+ * moet kunnen vinden heeft een adres nodig dat niet per database verschilt.
+ * Deze id's zijn geldige v4-uuids en veranderen nooit, zodat een test de rij
+ * rechtstreeks via de API kan opvragen.
+ */
+export const E2E_TWEEDE_ORKEST_ID = 'e2e0a17e-0000-4000-8000-000000000010';
+export const E2E_REPETITIE_AANWEZIGHEID_ID = 'e2e0a17e-0000-4000-8000-000000000001';
+export const E2E_REPETITIE_OVERZICHT_ID = 'e2e0a17e-0000-4000-8000-000000000002';
+
+/**
+ * De datums van de gezaaide repetities liggen een vast aantal dagen ná vandaag.
+ *
+ * Een harde datum ('2026-11-14') is wél reproduceerbaar maar niet houdbaar: de
+ * repetitielijst toont alleen vandaag tot een half jaar vooruit, dus zo'n
+ * datum valt vanzelf een keer uit beeld en dan faalt de test zonder dat er
+ * iets stuk is. Een vast aantal dagen erbij is net zo voorspelbaar - geen
+ * willekeur, geen klok, alleen de kalenderdag - en blijft altijd binnen de
+ * getoonde periode.
+ */
+export const E2E_REPETITIE_AANWEZIGHEID_DAGEN = 21;
+export const E2E_REPETITIE_OVERZICHT_DAGEN = 28;
+
+/** Herkenbare locaties, zodat een test zijn eigen repetitie eruit pikt. */
+export const E2E_REPETITIE_AANWEZIGHEID_LOCATIE = 'E2E Zaal Aanwezigheid';
+export const E2E_REPETITIE_OVERZICHT_LOCATIE = 'E2E Zaal Overzicht';
+
+/**
+ * De kalenderdag over `aantalDagen`, als jjjj-mm-dd.
+ *
+ * Rekent in hele dagen in UTC: het tijdstip van draaien mag er niet toe doen,
+ * anders zou dezelfde seed 's avonds een andere datum opleveren dan 's ochtends.
+ */
+export function datumOverDagen(aantalDagen: number): string {
+  const vandaag = new Date();
+  const dag = Date.UTC(vandaag.getUTCFullYear(), vandaag.getUTCMonth(), vandaag.getUTCDate());
+  return new Date(dag + aantalDagen * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+}
 
 interface SeedUserInput {
   email: string;
@@ -59,7 +109,7 @@ function upsertAssociation(name: string): string {
 /**
  * Insert-or-update an orchestra by (name, association). Returns its id.
  */
-function upsertOrchestra(name: string, associationId: string): string {
+function upsertOrchestra(name: string, associationId: string, vasteId?: string): string {
   const existing = db
     .prepare('SELECT id FROM orchestras WHERE name = ? AND association_id = ?')
     .get(name, associationId) as { id: string } | undefined;
@@ -67,7 +117,7 @@ function upsertOrchestra(name: string, associationId: string): string {
     return existing.id;
   }
 
-  const id = uuidv4();
+  const id = vasteId || uuidv4();
   db.prepare('INSERT INTO orchestras (id, name, association_id) VALUES (?, ?, ?)').run(id, name, associationId);
   console.log(`Created orchestra "${name}"`);
   return id;
@@ -192,6 +242,79 @@ function upsertMusicTitle(
   return id;
 }
 
+/**
+ * Insert-or-update a rehearsal by its fixed id.
+ *
+ * Draait de seed opnieuw, dan schuift alleen de datum mee; de id blijft
+ * dezelfde, zodat een test de repetitie via de API kan opvragen zonder eerst
+ * te hoeven zoeken.
+ */
+function upsertRepetitie(input: {
+  id: string;
+  associationId: string;
+  orchestraId: string | null;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  type: string;
+  notes: string;
+  createdBy: string;
+}): string {
+  const bestaand = db.prepare('SELECT id FROM rehearsals WHERE id = ?').get(input.id) as { id: string } | undefined;
+
+  if (bestaand) {
+    db.prepare(
+      `UPDATE rehearsals
+             SET association_id = ?, orchestra_id = ?, date = ?, start_time = ?, end_time = ?,
+                 location = ?, type = ?, notes = ?, created_by = ?
+             WHERE id = ?`,
+    ).run(
+      input.associationId,
+      input.orchestraId,
+      input.date,
+      input.startTime,
+      input.endTime,
+      input.location,
+      input.type,
+      input.notes,
+      input.createdBy,
+      input.id,
+    );
+    console.log(`Updated rehearsal ${input.date} (${input.location})`);
+    return input.id;
+  }
+
+  db.prepare(
+    `INSERT INTO rehearsals (id, association_id, orchestra_id, date, start_time, end_time, location, type, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    input.id,
+    input.associationId,
+    input.orchestraId,
+    input.date,
+    input.startTime,
+    input.endTime,
+    input.location,
+    input.type,
+    input.notes,
+    input.createdBy,
+  );
+  console.log(`Created rehearsal ${input.date} (${input.location})`);
+  return input.id;
+}
+
+/**
+ * Wis de aanwezigheidsregels van een gezaaide repetitie.
+ *
+ * Een test die zich aanmeldt laat een regel achter. Zonder dit begint de
+ * volgende zaaibeurt niet meer bij nul en zou de test moeten raden waar hij
+ * vandaan komt. Na de seed is de stand altijd "nog niet aangegeven".
+ */
+function wisAanwezigheid(repetitieId: string): void {
+  db.prepare('DELETE FROM rehearsal_attendance WHERE rehearsal_id = ?').run(repetitieId);
+}
+
 export async function seedE2E(): Promise<void> {
   const adminPassword = process.env.E2E_ADMIN_PASSWORD || DEFAULT_E2E_PASSWORD;
   const memberPassword = process.env.E2E_MEMBER_PASSWORD || adminPassword;
@@ -202,6 +325,7 @@ export async function seedE2E(): Promise<void> {
 
   const associationId = upsertAssociation(E2E_ASSOCIATION_NAME);
   const orchestraId = upsertOrchestra(E2E_ORCHESTRA_NAME, associationId);
+  upsertOrchestra(E2E_TWEEDE_ORKEST_NAAM, associationId, E2E_TWEEDE_ORKEST_ID);
 
   const adminId = upsertUser({
     email: E2E_ADMIN_EMAIL,
@@ -231,12 +355,45 @@ export async function seedE2E(): Promise<void> {
   upsertMusicTitle(associationId, 'E2E Mars', 'Johann Smoke', 'B. Ranger', 180);
   upsertMusicTitle(associationId, 'E2E Finale', 'Clara Testmann', 'C. Ranger', 320);
 
+  // Twee repetities om aan te werken. Ze staan op het orkest waar beide
+  // gezaaide gebruikers in zitten: een lid ziet alleen repetities van zijn
+  // eigen orkesten, dus zonder die koppeling zou het lid een lege lijst zien.
+  upsertRepetitie({
+    id: E2E_REPETITIE_AANWEZIGHEID_ID,
+    associationId,
+    orchestraId,
+    date: datumOverDagen(E2E_REPETITIE_AANWEZIGHEID_DAGEN),
+    startTime: '19:30',
+    endTime: '21:30',
+    location: E2E_REPETITIE_AANWEZIGHEID_LOCATIE,
+    type: 'regular',
+    notes: 'Repetitie voor de aanwezigheidstest.',
+    createdBy: adminId,
+  });
+  wisAanwezigheid(E2E_REPETITIE_AANWEZIGHEID_ID);
+
+  upsertRepetitie({
+    id: E2E_REPETITIE_OVERZICHT_ID,
+    associationId,
+    orchestraId,
+    date: datumOverDagen(E2E_REPETITIE_OVERZICHT_DAGEN),
+    startTime: '20:00',
+    endTime: '22:00',
+    location: E2E_REPETITIE_OVERZICHT_LOCATIE,
+    type: 'extra',
+    notes: 'Repetitie die alleen bekeken wordt.',
+    createdBy: adminId,
+  });
+  wisAanwezigheid(E2E_REPETITIE_OVERZICHT_ID);
+
   // Persist any pending (debounced) writes to disk before the process exits.
   db.flush();
 
   console.log('E2E seed complete.');
   console.log(`  Admin:  ${E2E_ADMIN_EMAIL}`);
   console.log(`  Member: ${E2E_MEMBER_EMAIL}`);
+  console.log(`  Orkesten: ${E2E_ORCHESTRA_NAME}, ${E2E_TWEEDE_ORKEST_NAAM}`);
+  console.log(`  Repetities: ${E2E_REPETITIE_AANWEZIGHEID_ID}, ${E2E_REPETITIE_OVERZICHT_ID}`);
 }
 
 // Run when executed directly (npm run seed:e2e)
