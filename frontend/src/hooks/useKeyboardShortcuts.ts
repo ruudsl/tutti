@@ -392,7 +392,11 @@ export function useKeyboardShortcuts(additionalShortcuts: Shortcut[] = EMPTY_SHO
         if (shortcut.sequence) continue;
 
         const ctrlMatch = shortcut.ctrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
-        const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey;
+        // Een '?' typ je op vrijwel elk toetsenbord als Shift + '/'. Shift hoort
+        // daar dus bij de toets zelf en mag de sneltoets niet blokkeren, anders
+        // gaat de hulpdialoog nooit open.
+        const keyIsTypedWithShift = shortcut.key === '?';
+        const shiftMatch = shortcut.shift ? e.shiftKey : keyIsTypedWithShift || !e.shiftKey;
         const altMatch = shortcut.alt ? e.altKey : !e.altKey;
 
         // Handle special keys

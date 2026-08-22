@@ -221,9 +221,17 @@ export function useLazyLoadMultiple(options: UseLazyLoadMultipleOptions): UseLaz
 
       elementsRef.current.set(index, el);
 
+      // Het volgnummer moet er altijd op, ook als de waarnemer nog niet
+      // bestaat: React koppelt de refs vóór de effecten draaien, dus bij de
+      // eerste render is observerRef nog leeg. Zonder dit kenmerk weet de
+      // waarnemer straks niet welk item in beeld komt en blijft de hele lijst
+      // ongeladen staan.
+      if (el) {
+        el.setAttribute('data-lazy-index', String(index));
+      }
+
       // Observe new element
       if (el && observerRef.current) {
-        el.setAttribute('data-lazy-index', String(index));
         observerRef.current.observe(el);
       }
     };

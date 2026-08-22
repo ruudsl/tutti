@@ -54,6 +54,10 @@ export function useTheme() {
         '--text',
         '--text-light',
         '--border',
+        // De focusrand wordt hieronder uit de hoofdkleur berekend en moet er
+        // dus ook weer af; anders houdt de gebruiker een focusrand in de kleur
+        // van het vorige thema terwijl al het andere standaard is.
+        '--focus-ring',
         '--font-family',
         '--font-size-base',
         '--radius',

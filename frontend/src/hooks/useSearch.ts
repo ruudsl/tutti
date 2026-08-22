@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDebounce } from './useDebounce';
 
 export interface SearchResult {
@@ -119,10 +119,36 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
   const debouncedQuery = useDebounce(query, 200);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // `filters` is bij elke render een ander object: de standaardwaarde is een
+  // vers `{}` en aanroepers geven doorgaans een letterlijk object mee. Stond
+  // dat object rechtstreeks in de dependency-lijst van het zoek-effect, dan
+  // draaide dat effect na iedere render opnieuw - en omdat het effect zelf
+  // state zet, joeg het zichzelf eindeloos aan. Vergelijken op inhoud houdt
+  // het bij een verzoek per daadwerkelijke filterwijziging.
+  //
+  // De sleutel wordt over het hele object gemaakt en niet over een handmatige
+  // opsomming van velden. Dat scheelt een stille fout later: wie er een derde
+  // filter bij zet, zou bij een opsomming zien dat die wel meegestuurd wordt
+  // maar geen nieuwe zoekopdracht meer uitlokt. Sleutels worden gesorteerd
+  // omdat JSON.stringify de invoegvolgorde aanhoudt en {type, orchestraId}
+  // anders een andere sleutel geeft dan {orchestraId, type}.
+  const filtersKey = JSON.stringify(
+    Object.entries(filters)
+      .filter(([, waarde]) => waarde !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+  const stableFilters = useMemo<SearchFilters>(
+    () => ({ ...filters }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtersKey],
+  );
+
   // Fetch search results
   const search = useCallback(async (searchQuery: string, searchFilters: SearchFilters = {}) => {
     if (!searchQuery || searchQuery.length < 2) {
-      setResults([]);
+      // Alleen vervangen als er echt iets stond: een verse lege array zou een
+      // render veroorzaken die niets toevoegt.
+      setResults((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -263,9 +289,9 @@ export function useSearch(initialQuery = '', filters: SearchFilters = {}) {
 
   // Search when debounced query changes
   useEffect(() => {
-    search(debouncedQuery, filters);
+    search(debouncedQuery, stableFilters);
     fetchSuggestions(debouncedQuery);
-  }, [debouncedQuery, filters, search, fetchSuggestions]);
+  }, [debouncedQuery, stableFilters, search, fetchSuggestions]);
 
   // Load recent searches on mount
   useEffect(() => {
