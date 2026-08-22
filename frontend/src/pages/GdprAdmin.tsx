@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon } from '../components/Icon';
@@ -351,13 +352,21 @@ export default function GdprAdmin() {
                   {editingSettings ? (
                     <div>
                       {editingSettings.map((setting, index) => (
+                        // Met de hand gekoppeld: tussen label en veld staat de
+                        // uitleg, en het veld zit met de eenheid in een eigen
+                        // omhulsel. FormField kloont maar één kind. De uitleg
+                        // hangt via aria-describedby aan het veld.
                         <div key={setting.dataType} className="form-group">
-                          <label className="form-label">
+                          <label className="form-label" htmlFor={`bewaartermijn-${setting.dataType}`}>
                             {t(`gdprAdmin.dataTypes.${setting.dataType}`, setting.dataType)}
                           </label>
-                          <p className="text-muted text-sm mb-2">{setting.description}</p>
+                          <p id={`bewaartermijn-${setting.dataType}-uitleg`} className="text-muted text-sm mb-2">
+                            {setting.description}
+                          </p>
                           <div className="flex items-center gap-2">
                             <input
+                              id={`bewaartermijn-${setting.dataType}`}
+                              aria-describedby={`bewaartermijn-${setting.dataType}-uitleg`}
                               type="number"
                               className="form-control"
                               style={{ width: '120px' }}
@@ -475,10 +484,13 @@ export default function GdprAdmin() {
               <div className="alert alert-info mb-3">
                 <strong>{selectedRequest.name}</strong> ({selectedRequest.email})
               </div>
-              <div className="form-group">
-                <label className="form-label">
-                  {t('gdprAdmin.notes', 'Notities')} ({t('common.optional')})
-                </label>
+              <FormField
+                label={
+                  <>
+                    {t('gdprAdmin.notes', 'Notities')} ({t('common.optional')})
+                  </>
+                }
+              >
                 <textarea
                   className="form-control"
                   rows={3}
@@ -486,7 +498,7 @@ export default function GdprAdmin() {
                   onChange={(e) => setProcessNotes(e.target.value)}
                   placeholder={t('gdprAdmin.notesPlaceholder', 'Voeg eventuele notities toe...')}
                 />
-              </div>
+              </FormField>
             </div>
           }
           confirmLabel={

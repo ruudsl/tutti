@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { SkeletonTable } from '../../components/Skeleton';
+import { FormField } from '../../components/FormField';
 import type { AttendanceMember } from '../../api';
 import type { Orchestra } from '../../types';
 
@@ -40,27 +41,24 @@ export function AttendanceTab({
       <div className="card mb-3">
         <div className="card-body">
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ flex: 1, minWidth: '140px' }}>
-              <label className="form-label">{t('rehearsals.attendance.from')}</label>
+            <FormField style={{ flex: 1, minWidth: '140px' }} label={t('rehearsals.attendance.from')}>
               <input
                 type="date"
                 className="form-control"
                 value={attendanceFrom}
                 onChange={(e) => setAttendanceFrom(e.target.value)}
               />
-            </div>
-            <div className="form-group" style={{ flex: 1, minWidth: '140px' }}>
-              <label className="form-label">{t('rehearsals.attendance.to')}</label>
+            </FormField>
+            <FormField style={{ flex: 1, minWidth: '140px' }} label={t('rehearsals.attendance.to')}>
               <input
                 type="date"
                 className="form-control"
                 value={attendanceTo}
                 onChange={(e) => setAttendanceTo(e.target.value)}
               />
-            </div>
+            </FormField>
             {orchestras.length > 0 && (
-              <div className="form-group" style={{ flex: 1, minWidth: '160px' }}>
-                <label className="form-label">{t('rehearsals.orchestra')}</label>
+              <FormField style={{ flex: 1, minWidth: '160px' }} label={t('rehearsals.orchestra')}>
                 <select
                   className="form-control form-select"
                   value={attendanceOrchestraId}
@@ -73,7 +71,7 @@ export function AttendanceTab({
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
             )}
           </div>
           {attendanceRehearsalCount > 0 && (

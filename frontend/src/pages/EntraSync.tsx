@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import {
   getJobTitleMappings,
@@ -22,6 +23,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function EntraSync() {
   const { t } = useTranslation();
+  const functieId = useId();
   useDocumentTitle('pageTitle.entraSync');
 
   // State
@@ -664,9 +666,14 @@ export default function EntraSync() {
           onSubmit={editingMapping ? handleUpdateMapping : handleCreateMapping}
           isSubmitting={isSubmitting}
         >
+          {/* Met de hand gekoppeld: onder het veld staat ook nog een rij
+              suggestieknoppen, en FormField kloont maar één kind. */}
           <div className="form-group">
-            <label className="form-label">{t('entraSync.jobTitleLabel')} *</label>
+            <label className="form-label" htmlFor={functieId}>
+              {t('entraSync.jobTitleLabel')} *
+            </label>
             <input
+              id={functieId}
               type="text"
               className="form-control"
               value={mappingFormData.jobTitle}
@@ -694,8 +701,7 @@ export default function EntraSync() {
               </div>
             )}
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('entraSync.instrumentLabel')} *</label>
+          <FormField label={`${t('entraSync.instrumentLabel')} *`}>
             <select
               className="form-control"
               value={mappingFormData.instrumentId}
@@ -710,7 +716,7 @@ export default function EntraSync() {
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
         </FormModal>
       )}
 

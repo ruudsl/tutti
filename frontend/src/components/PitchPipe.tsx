@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface Note {
@@ -46,6 +46,8 @@ interface PitchPipeProps {
  */
 export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
   const { t } = useTranslation();
+  const referentieKopId = useId();
+  const tonenKopId = useId();
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [tuningPitch, setTuningPitch] = useState(440);
@@ -187,8 +189,12 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
         <h4 style={{ marginBottom: '1rem' }}>{t('tools.pitchPipe.title', 'Stemfluit')}</h4>
 
         {/* Tuning pitch selector */}
-        <div className="form-group" style={{ marginBottom: '1rem' }}>
-          <label className="form-label">{t('tools.pitchPipe.referencePitch', 'Referentietoon')}</label>
+        {/* Geen veldlabel maar een groepskop: de referentietoon wordt met
+            knoppen gekozen, en die dragen hun naam al in zichzelf. */}
+        <div className="form-group" style={{ marginBottom: '1rem' }} role="group" aria-labelledby={referentieKopId}>
+          <span className="form-label" id={referentieKopId}>
+            {t('tools.pitchPipe.referencePitch', 'Referentietoon')}
+          </span>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[440, 442, 443].map((pitch) => (
               <button
@@ -203,8 +209,11 @@ export function PitchPipe({ compact = false, className = '' }: PitchPipeProps) {
         </div>
 
         {/* Common pitches */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label className="form-label">{t('tools.pitchPipe.commonPitches', 'Veelgebruikte tonen')}</label>
+        {/* Idem: een raster met tonenknoppen, geen invoerveld. */}
+        <div style={{ marginBottom: '1rem' }} role="group" aria-labelledby={tonenKopId}>
+          <span className="form-label" id={tonenKopId}>
+            {t('tools.pitchPipe.commonPitches', 'Veelgebruikte tonen')}
+          </span>
           <div
             style={{
               display: 'grid',

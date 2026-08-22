@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon, type IconName } from '../components/Icon';
@@ -242,10 +243,13 @@ export default function DataExport() {
           message={
             <div>
               <p className="mb-3">{t('dataExport.confirmDeleteMessage')}</p>
-              <div className="form-group">
-                <label className="form-label">
-                  {t('dataExport.deleteReason')} ({t('common.optional')})
-                </label>
+              <FormField
+                label={
+                  <>
+                    {t('dataExport.deleteReason')} ({t('common.optional')})
+                  </>
+                }
+              >
                 <textarea
                   className="form-control"
                   rows={3}
@@ -253,7 +257,7 @@ export default function DataExport() {
                   onChange={(e) => setDeleteReason(e.target.value)}
                   placeholder={t('dataExport.deleteReasonPlaceholder')}
                 />
-              </div>
+              </FormField>
             </div>
           }
           confirmLabel={t('dataExport.confirmDelete')}

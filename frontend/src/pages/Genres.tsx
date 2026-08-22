@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getMusicTitles } from '../api';
 import { Icon } from '../components/Icon';
 import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '../hooks/useGenres';
+import { FormField } from '../components/FormField';
 import { queryKeys } from '../lib/queryClient';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -242,8 +243,7 @@ export default function Genres() {
           submitLabel={t('common.add')}
           isSubmitting={createGenreMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('genres.name')}</label>
+          <FormField label={t('genres.name')}>
             <input
               type="text"
               className="form-control"
@@ -253,7 +253,7 @@ export default function Genres() {
               placeholder={t('genres.namePlaceholder')}
               autoFocus
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -268,8 +268,7 @@ export default function Genres() {
           onSubmit={handleUpdate}
           isSubmitting={updateGenreMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('genres.name')}</label>
+          <FormField label={t('genres.name')}>
             <input
               type="text"
               className="form-control"
@@ -278,7 +277,7 @@ export default function Genres() {
               required
               autoFocus
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

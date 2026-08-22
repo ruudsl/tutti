@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getWhatsAppConfig, saveWhatsAppConfig, deleteWhatsAppConfig } from '../../api';
@@ -15,6 +15,7 @@ import { foutmelding } from './foutmelding';
  */
 export function WhatsAppSectie() {
   const { t } = useTranslation();
+  const aanbiederKopId = useId();
   const queryClient = useQueryClient();
 
   const { data: whatsappConfig = null } = useQuery({
@@ -105,9 +106,18 @@ export function WhatsAppSectie() {
           <p className="piece-meta mb-3">{t('settings.whatsapp.description')}</p>
 
           <form onSubmit={handleWhatsAppSave}>
+            {/* Geen veldlabel maar een groepskop: hieronder staan twee
+                keuzerondjes die elk al in hun eigen label zitten. Voor rondjes
+                is role="radiogroup" de juiste groepsrol. */}
             <div className="form-group">
-              <label className="form-label">{t('settings.whatsapp.provider')}</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span className="form-label" id={aanbiederKopId}>
+                {t('settings.whatsapp.provider')}
+              </span>
+              <div
+                role="radiogroup"
+                aria-labelledby={aanbiederKopId}
+                style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+              >
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="radio"

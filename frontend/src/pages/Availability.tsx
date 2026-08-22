@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { FormField } from '../components/FormField';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
 import { currentLocale } from '../utils/locale';
@@ -459,18 +460,16 @@ export default function Availability() {
           <div className="card mb-3">
             <div className="card-body">
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
-                <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
-                  <label className="form-label">{t('availability.selectDate')}</label>
+                <FormField style={{ flex: 1, minWidth: '200px' }} label={t('availability.selectDate')}>
                   <input
                     type="date"
                     className="form-control"
                     value={selectedDate || ''}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
-                </div>
+                </FormField>
                 {orchestras.length > 0 && (
-                  <div className="form-group" style={{ flex: 1, minWidth: '200px' }}>
-                    <label className="form-label">{t('rehearsals.orchestra')}</label>
+                  <FormField style={{ flex: 1, minWidth: '200px' }} label={t('rehearsals.orchestra')}>
                     <select
                       className="form-control form-select"
                       value={orchestraFilter}
@@ -483,7 +482,7 @@ export default function Availability() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
                 )}
               </div>
             </div>

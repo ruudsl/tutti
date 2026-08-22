@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormModal } from './Modal';
+import { FormField } from './FormField';
 import { useLogPractice } from '../hooks/usePractice';
 
 interface PracticeLogModalProps {
@@ -11,6 +12,7 @@ interface PracticeLogModalProps {
 
 export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: PracticeLogModalProps) {
   const { t } = useTranslation();
+  const duurId = useId();
   const [duration, setDuration] = useState(30);
   const [notes, setNotes] = useState('');
   const logPractice = useLogPractice();
@@ -35,8 +37,12 @@ export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: Practice
       submitLabel={t('common.save')}
       isSubmitting={logPractice.isPending}
     >
+      {/* Met de hand gekoppeld: tussen label en veld staan hier ook nog de
+          voorkeuzeknoppen, en FormField kloont maar één kind. */}
       <div className="form-group">
-        <label className="form-label">{t('practice.duration')}</label>
+        <label className="form-label" htmlFor={duurId}>
+          {t('practice.duration')}
+        </label>
         <div className="flex gap-1 mb-1">
           {presetDurations.map((d) => (
             <button
@@ -50,6 +56,7 @@ export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: Practice
           ))}
         </div>
         <input
+          id={duurId}
           type="number"
           className="form-control"
           value={duration}
@@ -59,10 +66,13 @@ export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: Practice
           required
         />
       </div>
-      <div className="form-group">
-        <label className="form-label">
-          {t('practice.notes')} ({t('common.optional')})
-        </label>
+      <FormField
+        label={
+          <>
+            {t('practice.notes')} ({t('common.optional')})
+          </>
+        }
+      >
         <textarea
           className="form-control"
           value={notes}
@@ -70,7 +80,7 @@ export function PracticeLogModal({ musicTitleId, musicTitle, onClose }: Practice
           rows={3}
           placeholder="Wat heb je geoefend? Moeilijke passages, tempo, etc."
         />
-      </div>
+      </FormField>
     </FormModal>
   );
 }

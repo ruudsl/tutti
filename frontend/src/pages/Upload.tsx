@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOrchestras } from '../hooks/useOrchestras';
+import { FormField } from '../components/FormField';
 import { useMusicLists, useCreateMusicList } from '../hooks/useMusicLists';
 import { uploadMusicPieces, uploadMusicPiecesZip } from '../api';
 import { FileDropzone } from '../components/FileDropzone';
@@ -19,6 +20,7 @@ interface FileItem {
 
 export default function Upload() {
   const { t } = useTranslation();
+  const lijstId = useId();
   useDocumentTitle('pageTitle.upload');
   const [selectedOrchestra, setSelectedOrchestra] = useState('');
   const [selectedList, setSelectedList] = useState('');
@@ -150,8 +152,7 @@ export default function Upload() {
         </div>
         <div className="card-body">
           <div className="grid grid-2">
-            <div className="form-group mb-0">
-              <label className="form-label">{t('upload.orchestra')}</label>
+            <FormField className="form-group mb-0" label={t('upload.orchestra')}>
               <select
                 className="form-control form-select"
                 value={selectedOrchestra}
@@ -164,12 +165,19 @@ export default function Upload() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
+            {/* Met de hand gekoppeld: onder dit label staat óf een nieuw-veld
+                met twee knoppen, óf een keuzelijst met een knop. FormField
+                kloont maar één kind. Er staat er altijd precies één van de twee
+                op het scherm, dus beide dragen hetzelfde id. */}
             <div className="form-group mb-0">
-              <label className="form-label">{t('upload.musicList')}</label>
+              <label className="form-label" htmlFor={lijstId}>
+                {t('upload.musicList')}
+              </label>
               {showNewList ? (
                 <div className="flex gap-1">
                   <input
+                    id={lijstId}
                     type="text"
                     className="form-control"
                     value={newListName}
@@ -208,6 +216,7 @@ export default function Upload() {
               ) : (
                 <div className="flex gap-1">
                   <select
+                    id={lijstId}
                     className="form-control form-select"
                     value={selectedList}
                     onChange={(e) => setSelectedList(e.target.value)}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -57,6 +57,7 @@ import { naarDatumTijdVeld, naarIsoDatumTijd } from './datumTijd';
 
 export default function Concerts() {
   const { t } = useTranslation();
+  const ledenKopId = useId();
   useDocumentTitle('pageTitle.concerts');
 
   // Tab state
@@ -1045,8 +1046,15 @@ export default function Concerts() {
           isSubmitting={addAttendanceMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">{t('users.title')}</label>
+            {/* Kop boven een groep aankruisvakjes, geen veldlabel: elk vakje
+                heeft zijn eigen label al. De groep krijgt een naam via
+                role="group" en aria-labelledby. */}
+            <span className="form-label" id={ledenKopId}>
+              {t('users.title')}
+            </span>
             <div
+              role="group"
+              aria-labelledby={ledenKopId}
               style={{
                 maxHeight: '300px',
                 overflow: 'auto',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
 import { Icon } from './Icon';
@@ -39,6 +39,7 @@ const SCANS_STORE = 'scans';
 
 export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProps) {
   const { t } = useTranslation();
+  const scanVeldId = useId();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [tickets, setTickets] = useState<OfflineTicket[]>([]);
   const [pendingScans, setPendingScans] = useState<OfflineScan[]>([]);
@@ -374,10 +375,15 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
         </div>
 
         <form onSubmit={handleInputSubmit} className="mb-4">
+          {/* Met de hand gekoppeld: veld en knop staan samen in een eigen
+              omhulsel onder het label, dus FormField past hier niet. */}
           <div className="form-group">
-            <label className="form-label">{t('offlineScanner.scanOrEnter')}</label>
+            <label className="form-label" htmlFor={scanVeldId}>
+              {t('offlineScanner.scanOrEnter')}
+            </label>
             <div className="flex gap-2">
               <input
+                id={scanVeldId}
                 ref={inputRef}
                 type="text"
                 className="form-control"

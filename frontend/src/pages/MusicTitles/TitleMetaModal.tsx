@@ -289,7 +289,10 @@ export function TitleMetaModal({
           </FormField>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('titles.mp3Preview')}</label>
+          {/* Bijschrift, geen veldlabel: hieronder staat een <audio>, een
+              bijlagestrook of een verborgen bestandsveld achter een knop. Geen
+              van drieën is een bedienbaar veld om een label aan te hangen. */}
+          <span className="form-label">{t('titles.mp3Preview')}</span>
           {currentMp3Path ? (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <audio controls src={getMp3Url(currentMp3Path)} style={{ flex: 1, height: '40px' }} />
@@ -396,8 +399,18 @@ export function TitleMetaModal({
           </small>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('titles.genres')}</label>
-          <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {/* Kop boven een groep aankruisvakjes, geen veldlabel: elk vakje heeft
+              zijn eigen label al. De groep krijgt hier een naam via role="group"
+              en aria-labelledby. */}
+          <span className="form-label" id="edit-title-meta-genres-kop">
+            {t('titles.genres')}
+          </span>
+          <div
+            className="checkbox-grid"
+            role="group"
+            aria-labelledby="edit-title-meta-genres-kop"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}
+          >
             {genres.map((genre) => (
               <label
                 key={genre.id}

@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
@@ -21,6 +21,8 @@ type TabType = 'transfer' | 'pending' | 'history';
 
 export default function TicketTransferPage() {
   const { t } = useTranslation();
+  const emailId = useId();
+  const naamId = useId();
   useDocumentTitle('pageTitle.ticketTransfer');
 
   const queryClient = useQueryClient();
@@ -523,32 +525,47 @@ export default function TicketTransferPage() {
             </div>
           </div>
 
+          {/* Met de hand gekoppeld: naast label en veld staat hier ook nog een
+              foutmelding, en FormField kloont maar één kind. De melding hangt
+              via aria-describedby aan het veld. */}
           <div className="form-group">
-            <label className="form-label">
+            <label className="form-label" htmlFor={emailId}>
               {t('ticketTransfer.recipientEmail')} <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id={emailId}
+              aria-describedby={formErrors.recipientEmail ? `${emailId}-fout` : undefined}
               type="email"
               className={`form-control ${formErrors.recipientEmail ? 'is-invalid' : ''}`}
               value={formData.recipientEmail}
               onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })}
               placeholder={t('ticketTransfer.recipientEmailPlaceholder')}
             />
-            {formErrors.recipientEmail && <div className="invalid-feedback">{formErrors.recipientEmail}</div>}
+            {formErrors.recipientEmail && (
+              <div id={`${emailId}-fout`} className="invalid-feedback">
+                {formErrors.recipientEmail}
+              </div>
+            )}
           </div>
 
           <div className="form-group">
-            <label className="form-label">
+            <label className="form-label" htmlFor={naamId}>
               {t('ticketTransfer.recipientName')} <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id={naamId}
+              aria-describedby={formErrors.recipientName ? `${naamId}-fout` : undefined}
               type="text"
               className={`form-control ${formErrors.recipientName ? 'is-invalid' : ''}`}
               value={formData.recipientName}
               onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
               placeholder={t('ticketTransfer.recipientNamePlaceholder')}
             />
-            {formErrors.recipientName && <div className="invalid-feedback">{formErrors.recipientName}</div>}
+            {formErrors.recipientName && (
+              <div id={`${naamId}-fout`} className="invalid-feedback">
+                {formErrors.recipientName}
+              </div>
+            )}
           </div>
 
           <div className="alert alert-warning" style={{ marginTop: '1rem' }}>

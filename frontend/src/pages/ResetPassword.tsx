@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,8 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const token = searchParams.get('token');
   const { t } = useTranslation();
+  const wachtwoordId = useId();
+  const herhalingId = useId();
   useDocumentTitle('pageTitle.resetPassword');
 
   const [isValidating, setIsValidating] = useState(true);
@@ -149,9 +151,16 @@ export default function ResetPassword() {
         <div className="login-body">
           {error && <div className="alert alert-error mb-2">{error}</div>}
           <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Met de hand gekoppeld: naast label en veld staat hier ook nog
+                een foutmelding, en FormField kloont maar één kind. De melding
+                hangt via aria-describedby aan het veld. */}
             <div className="form-group">
-              <label className="form-label">{t('resetPassword.newPassword')} *</label>
+              <label className="form-label" htmlFor={wachtwoordId}>
+                {t('resetPassword.newPassword')} *
+              </label>
               <input
+                id={wachtwoordId}
+                aria-describedby={errors.password ? `${wachtwoordId}-fout` : undefined}
                 type="password"
                 className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                 {...register('password', {
@@ -161,11 +170,19 @@ export default function ResetPassword() {
                 placeholder={t('resetPassword.minLength')}
                 autoFocus
               />
-              {errors.password && <span className="form-error">{errors.password.message}</span>}
+              {errors.password && (
+                <span id={`${wachtwoordId}-fout`} className="form-error">
+                  {errors.password.message}
+                </span>
+              )}
             </div>
             <div className="form-group">
-              <label className="form-label">{t('resetPassword.confirmPassword')} *</label>
+              <label className="form-label" htmlFor={herhalingId}>
+                {t('resetPassword.confirmPassword')} *
+              </label>
               <input
+                id={herhalingId}
+                aria-describedby={errors.confirmPassword ? `${herhalingId}-fout` : undefined}
                 type="password"
                 className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
                 {...register('confirmPassword', {
@@ -174,7 +191,11 @@ export default function ResetPassword() {
                 })}
                 placeholder={t('resetPassword.repeatPassword')}
               />
-              {errors.confirmPassword && <span className="form-error">{errors.confirmPassword.message}</span>}
+              {errors.confirmPassword && (
+                <span id={`${herhalingId}-fout`} className="form-error">
+                  {errors.confirmPassword.message}
+                </span>
+              )}
             </div>
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={isSubmitting}>
               {isSubmitting ? t('resetPassword.resetting') : t('resetPassword.resetButton')}

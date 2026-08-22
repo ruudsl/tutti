@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useAdminConcertTypes,
@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useConcerts';
 import { FormModal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { FormField } from '../../components/FormField';
 
 interface Concerttype {
   id: string;
@@ -31,6 +32,7 @@ const LEEG_FORMULIER = { value: '', label: '', sortOrder: 0 };
  */
 export function ConcerttypenSectie() {
   const { t } = useTranslation();
+  const waardeId = useId();
   const { data: concertTypesData, isLoading } = useAdminConcertTypes();
   const createMutation = useCreateConcertType();
   const updateMutation = useUpdateConcertType();
@@ -163,9 +165,15 @@ export function ConcerttypenSectie() {
           onSubmit={bewerken ? handleUpdate : handleCreate}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         >
+          {/* Met de hand gekoppeld: naast label en veld staat hier ook een
+              hulptekst, en FormField kloont maar één kind. */}
           <div className="form-group">
-            <label className="form-label">{t('settings.concertTypes.value')} *</label>
+            <label className="form-label" htmlFor={waardeId}>
+              {t('settings.concertTypes.value')} *
+            </label>
             <input
+              id={waardeId}
+              aria-describedby={`${waardeId}-hulp`}
               type="text"
               className="form-control"
               value={formulier.value}
@@ -175,10 +183,11 @@ export function ConcerttypenSectie() {
               placeholder="bijv. christmas, summer, concert"
               required
             />
-            <small style={{ color: 'var(--text-muted)' }}>{t('settings.concertTypes.valueHelp')}</small>
+            <small id={`${waardeId}-hulp`} style={{ color: 'var(--text-muted)' }}>
+              {t('settings.concertTypes.valueHelp')}
+            </small>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('settings.concertTypes.label')} *</label>
+          <FormField label={`${t('settings.concertTypes.label')} *`}>
             <input
               type="text"
               className="form-control"
@@ -187,9 +196,8 @@ export function ConcerttypenSectie() {
               placeholder="bijv. Kerstconcert, Zomerconcert"
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('settings.concertTypes.sortOrder')}</label>
+          </FormField>
+          <FormField label={t('settings.concertTypes.sortOrder')}>
             <input
               type="number"
               className="form-control"
@@ -197,7 +205,7 @@ export function ConcerttypenSectie() {
               onChange={(e) => setFormulier({ ...formulier, sortOrder: parseInt(e.target.value) || 0 })}
               min="0"
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

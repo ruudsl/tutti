@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from './FormField';
 
 interface MetronomeProps {
   compact?: boolean;
@@ -7,6 +8,7 @@ interface MetronomeProps {
 
 export function Metronome({ compact = false }: MetronomeProps) {
   const { t } = useTranslation();
+  const maatsoortKopId = useId();
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(120);
   const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
@@ -240,8 +242,7 @@ export function Metronome({ compact = false }: MetronomeProps) {
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">{t('tools.metronome.tempoLabel', { bpm })}</label>
+        <FormField label={t('tools.metronome.tempoLabel', { bpm })}>
           <input
             type="range"
             className="form-control"
@@ -251,10 +252,14 @@ export function Metronome({ compact = false }: MetronomeProps) {
             max={300}
             style={{ width: '100%' }}
           />
-        </div>
+        </FormField>
 
-        <div className="form-group">
-          <label className="form-label">{t('tools.metronome.timeSignature')}</label>
+        {/* Geen veldlabel maar een groepskop: hieronder staan knoppen, en die
+            dragen hun naam al in zichzelf. Een <label> zou naar niets wijzen. */}
+        <div className="form-group" role="group" aria-labelledby={maatsoortKopId}>
+          <span className="form-label" id={maatsoortKopId}>
+            {t('tools.metronome.timeSignature')}
+          </span>
           <div className="flex gap-2">
             {[2, 3, 4, 5, 6].map((beats) => (
               <button

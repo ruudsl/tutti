@@ -5,6 +5,7 @@ import { getGoogleDriveSettings, updateGoogleDriveSettings, deleteGoogleDriveSet
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import { ConfirmDialog } from './ConfirmDialog';
+import { FormField } from './FormField';
 
 export function GoogleDriveSettings() {
   const { t } = useTranslation();
@@ -80,8 +81,7 @@ export function GoogleDriveSettings() {
           </a>
         </p>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">{t('googleDriveSettings.clientId', 'OAuth Client ID')}</label>
+          <FormField label={t('googleDriveSettings.clientId', 'OAuth Client ID')}>
             <input
               type="text"
               className="form-control"
@@ -90,9 +90,8 @@ export function GoogleDriveSettings() {
               placeholder="123456789-abc.apps.googleusercontent.com"
               autoComplete="off"
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('googleDriveSettings.apiKey', 'API Key')}</label>
+          </FormField>
+          <FormField label={t('googleDriveSettings.apiKey', 'API Key')}>
             <input
               type="password"
               className="form-control"
@@ -101,7 +100,7 @@ export function GoogleDriveSettings() {
               placeholder="AIza..."
               autoComplete="off"
             />
-          </div>
+          </FormField>
           <div className="form-group">
             <label className="form-check">
               <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />{' '}

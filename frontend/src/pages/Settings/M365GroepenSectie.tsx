@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../../api';
 import { showSuccess, showError } from '../../utils/toast';
 import { useOrchestras } from '../../hooks/useOrchestras';
+import { FormField } from '../../components/FormField';
 import { FormModal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { foutmelding } from './foutmelding';
@@ -43,6 +44,7 @@ const LEEG_FORMULIER = {
  */
 export function M365GroepenSectie({ microsoftIngesteld }: { microsoftIngesteld: boolean }) {
   const { t } = useTranslation();
+  const groepsnaamId = useId();
   const queryClient = useQueryClient();
 
   const { data: mappings = [], isLoading } = useQuery({
@@ -224,8 +226,7 @@ export function M365GroepenSectie({ microsoftIngesteld }: { microsoftIngesteld: 
           isSubmitting={opslaan}
         >
           {!bewerken && (
-            <div className="form-group">
-              <label className="form-label">{t('settings.m365Groups.type')} *</label>
+            <FormField label={`${t('settings.m365Groups.type')} *`}>
               <select
                 className="form-control"
                 value={formulier.groupType}
@@ -243,12 +244,11 @@ export function M365GroepenSectie({ microsoftIngesteld }: { microsoftIngesteld: 
                   {t('settings.m365Groups.typePercussion')}
                 </option>
               </select>
-            </div>
+            </FormField>
           )}
 
           {!bewerken && formulier.groupType === 'orchestra' && (
-            <div className="form-group">
-              <label className="form-label">{t('settings.m365Groups.orchestra')} *</label>
+            <FormField label={`${t('settings.m365Groups.orchestra')} *`}>
               <select
                 className="form-control"
                 value={formulier.orchestraId}
@@ -262,12 +262,18 @@ export function M365GroepenSectie({ microsoftIngesteld }: { microsoftIngesteld: 
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
           )}
 
+          {/* Met de hand gekoppeld: naast label en veld staat hier ook een
+              hulptekst, en FormField kloont maar één kind. */}
           <div className="form-group">
-            <label className="form-label">{t('settings.m365Groups.groupName')} *</label>
+            <label className="form-label" htmlFor={groepsnaamId}>
+              {t('settings.m365Groups.groupName')} *
+            </label>
             <input
+              id={groepsnaamId}
+              aria-describedby={`${groepsnaamId}-hulp`}
               type="text"
               className="form-control"
               value={formulier.groupName}
@@ -275,7 +281,9 @@ export function M365GroepenSectie({ microsoftIngesteld }: { microsoftIngesteld: 
               placeholder={t('settings.m365Groups.groupNamePlaceholder')}
               required
             />
-            <small style={{ color: 'var(--text-muted)' }}>{t('settings.m365Groups.groupNameHelp')}</small>
+            <small id={`${groepsnaamId}-hulp`} style={{ color: 'var(--text-muted)' }}>
+              {t('settings.m365Groups.groupNameHelp')}
+            </small>
           </div>
         </FormModal>
       )}
