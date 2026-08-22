@@ -50,10 +50,33 @@ const controles = [
     async doe() {
       // Deze route leest uit de database en heeft geen aanmelding nodig. Komt
       // hier een 5xx, dan draait het proces wel maar staat het schema niet.
+      //
+      // Deze controle keurde eerder alles onder de 500 goed, en maakte van een
+      // mislukte JSON-ontleding een leeg object. Elke 401, 403 of 404 gaf
+      // daarmee "ok", en een antwoord dat helemaal geen JSON was ook - de
+      // controle werd groen zonder ooit de database gesproken te hebben. Dat
+      // kwam aan het licht toen een proxy onderweg 403 met text/plain
+      // terugstuurde: drie controles vielen om en juist deze meldde "ok".
+      //
+      // In een rookproef is dat de verkeerde kant om fout te gaan. Hij bestaat
+      // om een kapotte uitrol te vangen, dus alles wat niet aantoonbaar goed is
+      // hoort te falen.
       const res = await haal('/api/health');
-      if (res.status >= 500) return `status ${res.status}`;
-      const body = await res.json().catch(() => ({}));
-      if (body.database && body.database !== 'connected' && body.database !== 'ok') {
+      if (!res.ok) return `status ${res.status}`;
+
+      const tekst = await res.text();
+      let body;
+      try {
+        body = JSON.parse(tekst);
+      } catch {
+        return `antwoord is geen JSON (${res.headers.get('content-type') || 'zonder content-type'})`;
+      }
+
+      // Het veld moet er zijn. Ontbreekt het, dan antwoordt er wel iets op deze
+      // URL maar is het niet deze applicatie - een proxy, een foutpagina, of een
+      // andere dienst die toevallig op dit adres luistert.
+      if (!body.database) return 'antwoord noemt de database niet';
+      if (body.database !== 'connected' && body.database !== 'ok') {
         return `database meldt "${body.database}"`;
       }
       return null;

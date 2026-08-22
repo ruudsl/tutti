@@ -88,26 +88,40 @@ op een tweede service levert een kopie op die naar dezelfde database wijst.
 
 Neem de instellingen over van de productie-service, met deze verschillen:
 
-| Instelling        | Waarde                                                              |
-| ----------------- | ------------------------------------------------------------------- |
-| Name              | `harmonie-staging`                                                  |
-| Branch            | `main`                                                              |
-| Root Directory    | `backend`                                                           |
-| Build Command     | `cp ../CHANGELOG*.md . && npm install && npm run build`             |
-| Start Command     | `npm start`                                                         |
-| Health Check Path | `/api/health`                                                       |
-| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer |
-| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                              |
-| `DB_PATH`         | een eigen pad, nooit dat van productie                              |
-| `FRONTEND_URL`    | de staging-URL van de frontend                                      |
+| Instelling        | Waarde                                                                |
+| ----------------- | --------------------------------------------------------------------- |
+| Name              | `harmonie-staging`                                                    |
+| Branch            | `main`                                                                |
+| Root Directory    | `backend`                                                             |
+| Build Command     | `cp ../CHANGELOG*.md . && npm install --include=dev && npm run build` |
+| Start Command     | `npm start`                                                           |
+| Health Check Path | `/api/health`                                                         |
+| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer   |
+| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                                |
+| `DB_PATH`         | een eigen pad, nooit dat van productie                                |
+| `FRONTEND_URL`    | **verplicht** — de staging-URL, zie hieronder                         |
 
 Twee daarvan zijn geen smaakkwestie. **Auto-Deploy uit**, anders rolt Render zelf
 óók uit bij elke push en gebeurt het twee keer; die twee lopen elkaar in de weg.
 En een **eigen `JWT_SECRET`**, want wordt die gedeeld met productie, dan is een
 token dat iemand op staging krijgt ook geldig op productie.
 
-De build command is niet dezelfde als bij de productie-instructies bovenaan dit
-document: zonder dat `cp` mist de build de changelog-bestanden.
+De build command verdient twee opmerkingen. Zonder dat `cp` mist de build de
+changelog-bestanden. En `--include=dev` is geen netheid maar noodzaak: `NODE_ENV`
+staat op `production`, en dan laat npm de devDependencies weg — waaronder alle
+`@types/*`, die `tsc` juist nodig heeft. Zonder die vlag stopt de build met
+tientallen "Could not find a declaration file"-fouten.
+
+De Dockerfile heeft dat probleem niet, omdat daar de build-laag en de draai-laag
+gescheiden zijn: die installeert eerst mét devDependencies, bouwt, en zet
+`NODE_ENV` pas in de runtime-laag. Op Render staat de variabele er vanaf het
+begin, dus ook tijdens de build.
+
+**`FRONTEND_URL` is verplicht.** Zonder die waarde weigert de server te starten
+(`config.ts`), en terecht: hij weet dan niet welke oorsprong CORS mag passeren en
+zou anders met een opengezette deur draaien. Is er nog geen aparte
+staging-frontend, vul dan de staging-URL zelf in — de rookproef logt nergens in en
+heeft geen CORS nodig.
 
 **Met of zonder disk**
 
