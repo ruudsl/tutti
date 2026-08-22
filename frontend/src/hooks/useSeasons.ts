@@ -26,12 +26,26 @@ export const seasonQueryKeys = {
 };
 
 /**
+ * Opties die een aanroeper aan een ophaal-hook mee kan geven.
+ *
+ * Voorlopig alleen `enabled`, zodat een pagina de query uit kan laten staan
+ * zolang de gebruiker de gegevens niet mag zien. Zonder deze optie kan zo'n
+ * pagina alleen kiezen tussen de query altijd draaien of de hook helemaal niet
+ * aanroepen, en dat laatste mag niet: hooks moeten elke render in dezelfde
+ * volgorde draaien.
+ */
+export interface SeizoenQueryOpties {
+  enabled?: boolean;
+}
+
+/**
  * Hook to fetch all seasons
  */
-export function useSeasons(status?: string) {
+export function useSeasons(status?: string, opties?: SeizoenQueryOpties) {
   return useQuery({
     queryKey: seasonQueryKeys.list(status),
     queryFn: () => getSeasons(status),
+    enabled: opties?.enabled ?? true,
   });
 }
 
@@ -49,10 +63,11 @@ export function useSeason(id: string) {
 /**
  * Hook to fetch season templates
  */
-export function useSeasonTemplates() {
+export function useSeasonTemplates(opties?: SeizoenQueryOpties) {
   return useQuery({
     queryKey: seasonQueryKeys.templates,
     queryFn: getSeasonTemplates,
+    enabled: opties?.enabled ?? true,
   });
 }
 

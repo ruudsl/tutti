@@ -313,3 +313,74 @@ describe('titelpagina - vastgelegd gedrag vóór het opknippen', () => {
     expect(screen.getByPlaceholderText('titles.searchPlaceholder')).toBeInTheDocument();
   });
 });
+
+/**
+ * Hieronder staan geen karakteriseringstests maar regressietests: ze leggen
+ * gedrag vast zoals het hoort te zijn, na het herstellen van twee fouten.
+ * Zonder die reparaties zijn ze rood.
+ */
+describe('titelpagina - herstelde fouten', () => {
+  it('klapt maar één van twee gelijknamige titels open', async () => {
+    const gebruiker = userEvent.setup();
+
+    // Dezelfde mars in twee uitvoeringen: gelijke titel, gelijke arrangeur,
+    // een eigen id en een eigen beschrijving. Met titel+arrangeur als sleutel
+    // deelden deze twee rijen hun open/dicht-toestand.
+    vi.mocked(api.getMusicTitles).mockResolvedValue([
+      maakTitel({ id: 'titel-a', title: 'Mars der Medici', arranger: 'Wichers', description: 'Uitvoering A' }),
+      maakTitel({ id: 'titel-b', title: 'Mars der Medici', arranger: 'Wichers', description: 'Uitvoering B' }),
+    ]);
+
+    render(<MusicTitles />, { wrapper: wikkel });
+
+    const namen = await screen.findAllByText('Mars der Medici');
+    expect(namen).toHaveLength(2);
+
+    await gebruiker.click(namen[0].closest('tr')!);
+
+    expect(await screen.findByText(/Uitvoering A/)).toBeInTheDocument();
+    expect(screen.queryByText(/Uitvoering B/)).not.toBeInTheDocument();
+  });
+
+  it('houdt ook titels zonder id uit elkaar', async () => {
+    const gebruiker = userEvent.setup();
+
+    // De server geeft alleen een id als er al metagegevens bewaard zijn; een
+    // verse titel komt zonder id binnen. De terugvalsleutel moet die twee dan
+    // nog steeds uit elkaar houden.
+    vi.mocked(api.getMusicTitles).mockResolvedValue([
+      maakTitel({ id: undefined, title: 'Mars-Jan', arranger: 'Piet', description: 'Eerste' }),
+      maakTitel({ id: undefined, title: 'Mars', arranger: 'Jan-Piet', description: 'Tweede' }),
+    ]);
+
+    render(<MusicTitles />, { wrapper: wikkel });
+
+    await gebruiker.click((await screen.findByText('Mars-Jan')).closest('tr')!);
+
+    expect(await screen.findByText(/Eerste/)).toBeInTheDocument();
+    expect(screen.queryByText(/Tweede/)).not.toBeInTheDocument();
+  });
+
+  it('opent het zoekmenu pas na een klik en sluit het bij een klik erbuiten', async () => {
+    const gebruiker = userEvent.setup();
+    render(<MusicTitles />, { wrapper: wikkel });
+
+    const rij = (await screen.findByText('Also sprach Zarathustra')).closest('tr')!;
+    await gebruiker.click(within(rij).getByRole('button'));
+
+    const venster = await screen.findByRole('dialog');
+
+    // Dicht betekent: niet in de boom. Vroeger stond het menu er altijd, met
+    // alleen een display:none dat langs React heen gezet werd.
+    expect(within(venster).queryByRole('button', { name: 'imslp.findOnImslp' })).not.toBeInTheDocument();
+
+    await gebruiker.click(within(venster).getByRole('button', { name: 'titles.searchOnSites' }));
+    expect(within(venster).getByRole('button', { name: 'imslp.findOnImslp' })).toBeInTheDocument();
+
+    // Een klik ergens anders in het venster sluit het menu.
+    await gebruiker.click(within(venster).getByText('titles.durationFormat'));
+    await waitFor(() =>
+      expect(within(venster).queryByRole('button', { name: 'imslp.findOnImslp' })).not.toBeInTheDocument(),
+    );
+  });
+});

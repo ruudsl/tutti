@@ -292,7 +292,22 @@ router.post(
 
     // Limit to max 52 occurrences (1 year of weekly) for safety
     const maxOccurrences = 52;
-    const untilDate = until ? new Date(until) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    // Het veld heet "tot en met", dus de einddatum hoort er zelf bij. `new
+    // Date('2026-09-28')` is middernacht UTC, en een repetitie die om 19:30 op
+    // die dag valt ligt daar ná - die verdween dus stilzwijgend uit de reeks.
+    // Vandaar het eind van de dag.
+    //
+    // Alleen het datumdeel wordt gebruikt. Het invoerveld is `type="date"` en
+    // levert dus YYYY-MM-DD, maar er is geen schema dat dat afdwingt: wie een
+    // volledige tijdstempel meestuurt zou anders een ongeldige datum opleveren,
+    // en `between()` met een Invalid Date geeft geen fout maar een lege reeks.
+    const untilDate = until
+      ? new Date(`${String(until).slice(0, 10)}T23:59:59.999Z`)
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    if (isNaN(untilDate.getTime())) {
+      throw new ApiError(400, 'Ongeldige einddatum.');
+    }
 
     const occurrences = parsed.between(new Date(), untilDate, true).slice(0, maxOccurrences);
 

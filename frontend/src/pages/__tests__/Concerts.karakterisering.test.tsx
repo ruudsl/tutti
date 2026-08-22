@@ -26,6 +26,13 @@
  *     zijn (`activeTab === 'statistics' && statistics`). Dat is bestaand
  *     gedrag, geen wenselijk gedrag, maar het hoort de verhuizing te
  *     overleven.
+ *
+ * Dat laatste punt is inmiddels achterhaald: het lege statistiektabblad was
+ * hier vastgelegd omdat het opviel, niet omdat het klopte, en is op 22-08-2026
+ * gerepareerd. De bijbehorende test hieronder is toen omgeschreven van "toont
+ * niets" naar "meldt wat er misging"; wat er nog wél overeind moet blijven -
+ * dat de tabbladen staan en de statistiekinhoud ontbreekt - staat er nog
+ * precies zo in. Zie Concerts.herstel.test.tsx voor de rest van die reparatie.
  */
 
 import '@testing-library/jest-dom';
@@ -256,14 +263,20 @@ describe('concertpagina - vastgelegd gedrag vóór het opknippen', () => {
 
     await gebruiker.type(screen.getByPlaceholderText('concerts.searchPieceHistory'), 'Bolero');
 
+    // Het verzoek komt sinds 22-08-2026 ontdubbeld, dus pas nadat het typen
+    // stilvalt; `waitFor` wacht dat af. Dát er ook maar één verzoek uitgaat,
+    // staat in Concerts.herstel.test.tsx.
     await waitFor(() => expect(api.getPieceHistory).toHaveBeenCalledWith('Bolero'));
   });
 
-  // Vastgelegd omdat het opvalt, niet omdat het klopt: het statistiektabblad
-  // hangt aan `activeTab === 'statistics' && statistics`. Komen de statistieken
-  // niet binnen, dan is het tabblad wél actief maar helemaal leeg - geen
-  // melding, geen laadindicator.
-  it('toont een leeg statistiektabblad als de statistieken niet binnenkomen', async () => {
+  // Bijgewerkt op 22-08-2026. Deze test legde vast dat het tabblad bij een
+  // mislukte aanroep helemaal leeg bleef - geen melding, geen laadindicator.
+  // Dat was de fout, niet het gedrag dat bewaard moest blijven, en hij is
+  // gerepareerd: het tabblad meldt nu wat er misging en biedt een nieuwe
+  // poging, net als de modulepagina. De naam en de eerste verwachting zijn
+  // daarop aangepast; de twee verwachtingen die zeggen dat de statistiekinhoud
+  // ontbreekt staan er nog, want die hoorden altijd al bij dit geval.
+  it('meldt het als de statistieken niet binnenkomen, in plaats van een leeg tabblad', async () => {
     vi.mocked(api.getConcertStatistics).mockRejectedValue(new Error('geen verbinding'));
     const gebruiker = userEvent.setup();
     render(<Concerts />, { wrapper: wikkel });
@@ -272,6 +285,7 @@ describe('concertpagina - vastgelegd gedrag vóór het opknippen', () => {
     await gebruiker.click(tabblad('concerts.statistics'));
 
     await waitFor(() => expect(tabblad('concerts.statistics').className).toContain('btn-primary'));
+    await waitFor(() => expect(screen.getByText('concerts.statisticsError')).toBeInTheDocument());
     expect(screen.queryByText('concerts.bumaStemraExport')).not.toBeInTheDocument();
     expect(screen.queryByText('concerts.mostPlayedPieces')).not.toBeInTheDocument();
   });

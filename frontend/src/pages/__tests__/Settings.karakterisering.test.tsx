@@ -21,6 +21,13 @@
  *     verwijderacties, gestuurd door één stukje toestand. Dat is de knoop die
  *     de secties aan elkaar bindt; wie de secties uit elkaar haalt, moet
  *     hierlangs.
+ *
+ * NA HET HERONTWERP (map `src/pages/Settings/`). De pagina is uit elkaar
+ * gehaald: elke kaart is een eigen component met zijn eigen toestand, zijn eigen
+ * query en zijn eigen bevestigingsdialoog. Beide hierboven vastgelegde punten
+ * zijn daarmee veranderd, en vier tests zijn aangepast in plaats van
+ * weggehaald. Bij elke aanpassing staat wat er anders is en waarom. De
+ * bijbehorende nieuwe tests staan in `Settings.herontwerp.test.tsx`.
  */
 
 import '@testing-library/jest-dom';
@@ -168,7 +175,10 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
     expect(await screen.findByTestId('google-drive')).toBeInTheDocument();
   });
 
-  it('haalt bij het openen alle zes configuraties op, plus concerttypen en orkesten', async () => {
+  // AANGEPAST NA HET HERONTWERP. `getM365GroupMappings` stond hier ook in.
+  // Die aanroep gebeurt niet meer zolang Microsoft niet ingesteld is; zie de
+  // test hieronder. De overige zeven aanroepen zijn ongewijzigd.
+  it('haalt bij het openen de configuraties van de zichtbare secties op, plus concerttypen en orkesten', async () => {
     render(<Settings />, { wrapper: wikkel });
 
     await waitFor(() => {
@@ -177,21 +187,23 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
       expect(api.getSmtpConfig).toHaveBeenCalled();
       expect(api.getTelegramConfig).toHaveBeenCalled();
       expect(api.getWhatsAppConfig).toHaveBeenCalled();
-      expect(api.getM365GroupMappings).toHaveBeenCalled();
       expect(api.getAdminConcertTypes).toHaveBeenCalled();
       expect(api.getOrchestras).toHaveBeenCalled();
     });
   });
 
-  // Geen van de queries heeft een `enabled`. De M365-groepen worden dus
-  // opgehaald terwijl de sectie die ze toont verborgen blijft. Vastgelegd omdat
-  // het opvalt, niet omdat het goed is: wie hier een `enabled` bij zet,
-  // verandert gedrag en hoort dat bewust te doen.
-  it('haalt de M365-groepen ook op als die sectie verborgen blijft', async () => {
+  // OMGEDRAAID NA HET HERONTWERP. Hier stond dat de M365-groepen óók werden
+  // opgehaald als de sectie die ze toont verborgen bleef - het gevolg van zes
+  // queries zonder `enabled`. Die query staat nu in de sectie zelf, met
+  // `enabled: microsoftIngesteld`. Wie geen Microsoft gebruikt haalt dus geen
+  // groepen meer op. Dat is de bewuste gedragswijziging; de test blijft staan,
+  // maar meet nu het omgekeerde.
+  it('haalt de M365-groepen niet op zolang die sectie verborgen blijft', async () => {
     render(<Settings />, { wrapper: wikkel });
 
-    await waitFor(() => expect(api.getM365GroupMappings).toHaveBeenCalled());
+    await waitFor(() => expect(api.getSmtpConfig).toHaveBeenCalled());
 
+    expect(api.getM365GroupMappings).not.toHaveBeenCalled();
     expect(screen.queryByText('settings.m365Groups.title')).not.toBeInTheDocument();
   });
 
@@ -206,7 +218,11 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
     render(<Settings />, { wrapper: wikkel });
 
     expect(await screen.findByText('settings.m365Groups.title')).toBeInTheDocument();
-    expect(screen.getByText('settings.m365Groups.noMappings')).toBeInTheDocument();
+    // AANGEPAST NA HET HERONTWERP: `getByText` werd `findByText`. De query van
+    // een sectie start nu pas als die sectie er staat, en de secties verschijnen
+    // pas als de instellingen binnen zijn. De lijst komt dus een tel later dan
+    // het kopje; wachten hoort daarbij.
+    expect(await screen.findByText('settings.m365Groups.noMappings')).toBeInTheDocument();
   });
 
   it('toont een laadmelding zolang de instellingen nog binnenkomen', () => {
@@ -239,16 +255,16 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
   });
 
   /**
-   * Vastgelegd omdat het opvalt, niet omdat het goed is: het naamveld is niet
-   * leeg te maken. Het effect dat de naam uit de opgehaalde instellingen
-   * overneemt kijkt naar `!displayName` en heeft `displayName` in zijn
-   * afhankelijkheden staan, dus zodra het veld leeg is vult het zichzelf weer.
-   * Wie de naam wil wissen krijgt de oude naam terug.
+   * OMGEDRAAID NA HET HERONTWERP. Hier stond vastgelegd dat het naamveld zich
+   * meteen weer vulde zodra je het leegmaakte: het effect dat de opgehaalde
+   * naam overnam keek naar `!displayName` en had `displayName` in zijn
+   * afhankelijkheden staan. Dat is gerepareerd - het effect hangt nu alleen aan
+   * de naam die van de server komt - dus de test meet nu het omgekeerde.
    *
-   * Dit is bestaand gedrag; het staat hier zodat een latere verandering
-   * zichtbaar is, niet als goedkeuring.
+   * Wat er misging als je doortypte, en wat er bij het opslaan van een leeg veld
+   * gebeurt, staat in `Settings.herontwerp.test.tsx`.
    */
-  it('vult het naamveld meteen weer als je het leegmaakt', async () => {
+  it('houdt het naamveld leeg als je het leegmaakt', async () => {
     const gebruiker = userEvent.setup();
     render(<Settings />, { wrapper: wikkel });
 
@@ -257,9 +273,7 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
 
     await gebruiker.clear(veld);
 
-    await waitFor(() =>
-      expect((screen.getByLabelText('settings.organizationName') as HTMLInputElement).value).toBe('Harmonie Tutti'),
-    );
+    expect((screen.getByLabelText('settings.organizationName') as HTMLInputElement).value).toBe('');
   });
 
   it('slaat op wat er in het naamveld staat', async () => {
@@ -307,7 +321,10 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
     await screen.findByText('settings.title');
     expect(screen.queryByText('settings.concertTypes.valueHelp')).not.toBeInTheDocument();
 
-    await gebruiker.click(screen.getByText('+ settings.concertTypes.add'));
+    // AANGEPAST NA HET HERONTWERP: `getByText` werd `findByText`, om dezelfde
+    // reden als bij de M365-groepen hierboven. De concerttypen worden opgehaald
+    // door de sectie zelf, dus de knop verschijnt een tel na het kopje.
+    await gebruiker.click(await screen.findByText('+ settings.concertTypes.add'));
 
     expect(await screen.findByText('settings.concertTypes.valueHelp')).toBeInTheDocument();
   });

@@ -55,6 +55,58 @@ describe('Rehearsals Routes', () => {
   });
 
   // ==================
+  // TERUGKERENDE REPETITIES
+  // ==================
+
+  describe('POST /api/rehearsals/recurring', () => {
+    /**
+     * Het veld heet "tot en met", dus de einddatum hoort er zelf bij.
+     *
+     * `new Date('2026-09-28')` is middernacht UTC. Een repetitie die om 19:30
+     * op die dag valt ligt daar ná, en verdween daardoor stilzwijgend uit de
+     * reeks: de gebruiker vraagt om een reeks tot en met maandag en krijgt er
+     * een minder terug, zonder melding. Het voorbeeldscherm in de frontend
+     * rekende dezelfde fout, dus de twee waren het eens - allebei fout.
+     */
+    it('neemt een repetitie op de einddatum zelf mee', async () => {
+      // Twee maandagen: 7 en 14 september 2026. De einddatum is de tweede.
+      const respons = await request(app)
+        .post('/api/rehearsals/recurring')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          rrule: 'DTSTART:20260907T193000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO',
+          startTime: '19:30',
+          endTime: '21:30',
+          until: '2026-09-14',
+        });
+
+      expect(respons.status).toBe(201);
+      const data = testDb
+        .prepare('SELECT date FROM rehearsals WHERE association_id = ? ORDER BY date')
+        .all(association.id) as { date: string }[];
+
+      expect(data.map((r) => r.date)).toContain('2026-09-14');
+    });
+
+    // Het invoerveld is type="date", maar geen enkel schema dwingt dat af. Een
+    // volledige tijdstempel mag de reeks niet stilzwijgend leegmaken: `between()`
+    // met een Invalid Date geeft geen fout maar nul resultaten.
+    it('weigert een einddatum die geen datum is', async () => {
+      const respons = await request(app)
+        .post('/api/rehearsals/recurring')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          rrule: 'DTSTART:20260907T193000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO',
+          startTime: '19:30',
+          endTime: '21:30',
+          until: 'geen-datum',
+        });
+
+      expect(respons.status).toBe(400);
+    });
+  });
+
+  // ==================
   // DEFAULT DAYS
   // ==================
 

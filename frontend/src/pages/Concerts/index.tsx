@@ -24,6 +24,7 @@ import {
 import { useUsers } from '../../hooks/useUsers';
 import { Icon } from '../../components/Icon';
 import { useMusicTitles } from '../../hooks/useMusicTitles';
+import { useDebounce } from '../../hooks/useDebounce';
 import { Modal, FormModal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SkeletonTable } from '../../components/Skeleton';
@@ -51,6 +52,7 @@ import { SetlistBuilderTab } from './SetlistBuilderTab';
 import { PosterGeneratorTab } from './PosterGeneratorTab';
 import { BumaStemraModal } from './BumaStemraModal';
 import { AttendancePredictionModal } from './AttendancePredictionModal';
+import { naarDatumTijdVeld, naarIsoDatumTijd } from './datumTijd';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -144,11 +146,20 @@ export default function Concerts() {
   });
   const { data: typesData } = useConcertTypes();
   const { data: years = [] } = useConcertYears();
-  const { data: statistics } = useConcertStatistics();
+  const {
+    data: statistics,
+    isLoading: statistiekenLaden,
+    isError: statistiekenMislukt,
+    refetch: haalStatistiekenOpnieuw,
+  } = useConcertStatistics();
   const { data: concertDetail } = useConcert(viewingConcert || '');
   const { data: users = [] } = useUsers();
   const { data: musicTitles = [] } = useMusicTitles();
-  const { data: pieceHistoryData } = usePieceHistory(searchTitle);
+  // De stukgeschiedenis hangt aan een invoerveld. Zonder ontdubbeling vuurt
+  // elke toetsaanslag een eigen verzoek af - "Bolero" intypen kostte er zes.
+  // Ontdubbeld blijft alleen de titel over waar de gebruiker bij stilvalt.
+  const gedebouncedeZoektitel = useDebounce(searchTitle, 300);
+  const { data: pieceHistoryData } = usePieceHistory(gedebouncedeZoektitel);
 
   // Ticket data for the viewing concert
   const { data: ticketData, refetch: refetchTickets } = useQuery({
@@ -259,15 +270,6 @@ export default function Concerts() {
     });
   };
 
-  // Convert datetime-local value to ISO 8601 format
-  const toISODateTime = (localDateTime: string): string | undefined => {
-    if (!localDateTime) return undefined;
-    // datetime-local gives "YYYY-MM-DDTHH:mm", we need full ISO with timezone
-    const date = new Date(localDateTime);
-    if (isNaN(date.getTime())) return undefined;
-    return date.toISOString();
-  };
-
   const handleCreateTicketType = async (e: React.FormEvent) => {
     e.preventDefault();
     createTicketTypeMutation.mutate({
@@ -276,8 +278,8 @@ export default function Concerts() {
       quantity: parseInt(ticketTypeFormData.quantity, 10),
       description: ticketTypeFormData.description || undefined,
       maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
-      saleStart: toISODateTime(ticketTypeFormData.saleStart),
-      saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
+      saleStart: naarIsoDatumTijd(ticketTypeFormData.saleStart),
+      saleEnd: naarIsoDatumTijd(ticketTypeFormData.saleEnd),
       serviceFee: ticketTypeFormData.serviceFee ? parseFloat(ticketTypeFormData.serviceFee) : 0,
       showServiceFeeSeparate: ticketTypeFormData.showServiceFeeSeparate,
     });
@@ -294,21 +296,12 @@ export default function Concerts() {
         quantity: parseInt(ticketTypeFormData.quantity, 10),
         description: ticketTypeFormData.description || undefined,
         maxPerOrder: parseInt(ticketTypeFormData.maxPerOrder, 10) || 10,
-        saleStart: toISODateTime(ticketTypeFormData.saleStart),
-        saleEnd: toISODateTime(ticketTypeFormData.saleEnd),
+        saleStart: naarIsoDatumTijd(ticketTypeFormData.saleStart),
+        saleEnd: naarIsoDatumTijd(ticketTypeFormData.saleEnd),
         serviceFee: ticketTypeFormData.serviceFee ? parseFloat(ticketTypeFormData.serviceFee) : 0,
         showServiceFeeSeparate: ticketTypeFormData.showServiceFeeSeparate,
       },
     });
-  };
-
-  // Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
-  const toDateTimeLocal = (isoDate: string | null): string => {
-    if (!isoDate) return '';
-    const date = new Date(isoDate);
-    if (isNaN(date.getTime())) return '';
-    // Format as YYYY-MM-DDTHH:mm for datetime-local input
-    return date.toISOString().slice(0, 16);
   };
 
   const openEditTicketTypeModal = (ticketType: TicketType) => {
@@ -319,8 +312,8 @@ export default function Concerts() {
       quantity: ticketType.quantity.toString(),
       description: ticketType.description || '',
       maxPerOrder: ticketType.maxPerOrder.toString(),
-      saleStart: toDateTimeLocal(ticketType.saleStart),
-      saleEnd: toDateTimeLocal(ticketType.saleEnd),
+      saleStart: naarDatumTijdVeld(ticketType.saleStart),
+      saleEnd: naarDatumTijdVeld(ticketType.saleEnd),
       serviceFee: ticketType.serviceFee ? ticketType.serviceFee.toString() : '',
       showServiceFeeSeparate: ticketType.showServiceFeeSeparate || false,
     });
@@ -549,8 +542,14 @@ export default function Concerts() {
         />
       )}
 
-      {activeTab === 'statistics' && statistics && (
-        <ConcertStatisticsTab statistics={statistics} setShowBumaStemraModal={setShowBumaStemraModal} />
+      {activeTab === 'statistics' && (
+        <ConcertStatisticsTab
+          statistics={statistics}
+          isLoading={statistiekenLaden}
+          isError={statistiekenMislukt}
+          refetch={haalStatistiekenOpnieuw}
+          setShowBumaStemraModal={setShowBumaStemraModal}
+        />
       )}
 
       {activeTab === 'history' && (

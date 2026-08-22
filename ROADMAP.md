@@ -260,9 +260,9 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **64,7%** (14740/22775) | 55,7%    | 68,3%     | 65,0% |
-| Frontend | **27,6%** (6903/24977)  | 14,0%    | 26,0%     | 28,2% |
+| Frontend | **28,3%** (7078/25048)  | 14,9%    | 26,8%     | 28,8% |
 
-- CI-drempels: backend 64 / 55 / 68 / 64, frontend 27 / 13 / 25 / 28 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 64 / 55 / 68 / 64, frontend 28 / 14 / 26 / 28 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
 - De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32). `src/api.ts` - 3.967 regels, 741 exports, eerder zonder ook maar één test - staat nu op 99,9%
@@ -295,7 +295,7 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend 64,7%, frontend 27,6%_
+- [~] Unit tests: >80% coverage — _backend 64,7%, frontend 28,3%_
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan

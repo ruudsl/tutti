@@ -29,6 +29,30 @@ import { TitleMetaModal } from './TitleMetaModal';
 // Number of table rows rendered per incremental batch
 const TITLES_BATCH_SIZE = 100;
 
+/**
+ * De sleutel waarmee één titelrij te herkennen is - zowel als React-sleutel
+ * als voor het onthouden welke rij uitgeklapt staat.
+ *
+ * Dat was eerder `${title}-${arranger}`. Twee titels met dezelfde naam én
+ * dezelfde arrangeur - dezelfde mars in twee uitvoeringen, in een
+ * muziekbibliotheek een gewoon geval - kregen daardoor dezelfde sleutel en
+ * deelden hun open/dicht-toestand: klapte je de ene open, dan ging de andere
+ * mee. Het koppelteken plakte bovendien twee verschillende titels op elkaar:
+ * "Mars-Jan" van "Piet" en "Mars" van "Jan-Piet" gaven allebei
+ * "Mars-Jan-Piet".
+ *
+ * `MusicTitle.id` is de sleutel van de bijbehorende metagegevensrij en is
+ * uniek, maar hij is niet altijd gevuld: de server geeft `null` voor een titel
+ * waarvan nog nooit metagegevens bewaard zijn. Voor die gevallen blijft er
+ * niets anders over dan titel plus arrangeur, en die gaan hier als JSON-paar
+ * mee: de scheiding tussen de twee velden zit dan in de opmaak en niet in een
+ * teken dat ook in een titel kan staan. Een index als sleutel is geen optie,
+ * want de lijst wordt gefilterd en gesorteerd.
+ */
+function titelSleutel(title: MusicTitle): string {
+  return title.id ?? JSON.stringify([title.title, title.arranger]);
+}
+
 export default function MusicTitles() {
   const { t } = useTranslation();
   const confirmDialog = useConfirm();
@@ -335,15 +359,18 @@ export default function MusicTitles() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleTitles.map((title) => (
-                    <TitleRow
-                      key={`${title.title}-${title.arranger}`}
-                      title={title}
-                      isExpanded={expandedTitle === `${title.title}-${title.arranger}`}
-                      onToggle={() => toggleExpand(`${title.title}-${title.arranger}`)}
-                      onEdit={() => openTitleMetaModal(title)}
-                    />
-                  ))}
+                  {visibleTitles.map((title) => {
+                    const sleutel = titelSleutel(title);
+                    return (
+                      <TitleRow
+                        key={sleutel}
+                        title={title}
+                        isExpanded={expandedTitle === sleutel}
+                        onToggle={() => toggleExpand(sleutel)}
+                        onEdit={() => openTitleMetaModal(title)}
+                      />
+                    );
+                  })}
                 </tbody>
               </table>
               {hasMoreTitles && (

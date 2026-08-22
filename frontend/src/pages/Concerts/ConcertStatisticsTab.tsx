@@ -1,15 +1,58 @@
 import { useTranslation } from 'react-i18next';
 import type { ConcertStatistics } from '../../types';
+import { Icon } from '../../components/Icon';
+import { SkeletonTable } from '../../components/Skeleton';
 
-/** Het statistiektabblad, met de knop naar de Buma/Stemra-export. */
+/**
+ * Het statistiektabblad, met de knop naar de Buma/Stemra-export.
+ *
+ * Het tabblad tekent zelf zijn drie toestanden. Eerder hing het aan
+ * `activeTab === 'statistics' && statistics` in de hoofdcomponent: mislukte de
+ * aanroep, dan stond het tabblad wél open maar volkomen leeg - geen melding,
+ * geen laadindicator, niets waaraan te zien was of het aan het laden was, of
+ * kapot. Dat is nu opgesplitst, net als op de modulepagina.
+ */
 export function ConcertStatisticsTab({
   statistics,
+  isLoading,
+  isError,
+  refetch,
   setShowBumaStemraModal,
 }: {
-  statistics: ConcertStatistics;
+  statistics: ConcertStatistics | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
   setShowBumaStemraModal: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+
+  if (isError) {
+    return (
+      <div className="card">
+        <div className="card-body">
+          <div className="alert alert-danger">
+            <Icon name="warning" /> {t('concerts.statisticsError')}
+          </div>
+          <button className="btn btn-secondary" onClick={() => refetch()}>
+            <Icon name="refresh" /> {t('common.retry')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Nog onderweg, of binnen zonder inhoud: in beide gevallen valt er nog niets
+  // te tonen, maar de gebruiker hoort te zien dát er iets gebeurt.
+  if (isLoading || !statistics) {
+    return (
+      <div className="card">
+        <div className="card-body">
+          <SkeletonTable rows={5} columns={3} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card">

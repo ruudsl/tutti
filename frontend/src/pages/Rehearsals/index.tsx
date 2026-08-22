@@ -43,6 +43,7 @@ import {
   EMPTY_REHEARSAL_FORM,
   MANAGER_ROLES,
   WEEKDAY_CODES,
+  berekenHerhaalVoorbeeld,
   formatDate,
   type DefaultDayFormState,
   type RecurringFormState,
@@ -253,9 +254,22 @@ export default function Rehearsals() {
     return rehearsals.filter((r) => r.date >= today);
   }, [rehearsals]);
 
+  // De opstellingskaart hoort bij één repetitie. Hij werd nergens teruggezet,
+  // dus wie repetitie A bekeek en daarna B opende, kreeg bij B de indeling van
+  // A te zien - met stoelnummers en al.
+  const verbergOpstelling = () => {
+    setShowSeating(false);
+    setRehearsalSeating([]);
+  };
+
   const handleOpenDetail = async (id: string) => {
     try {
       const detail = await getRehearsal(id);
+      // Alleen bij een ándere repetitie. `handleOpenDetail` wordt ook gebruikt
+      // om hetzelfde detailscherm te verversen (na het opslaan van stukken of
+      // een spond-synchronisatie); daar zou de kaart onder de gebruiker
+      // vandaan dichtklappen.
+      if (id !== selectedRehearsal?.id) verbergOpstelling();
       setSelectedRehearsal(detail);
       setEditingPieces(false);
       // Load my attendance status
@@ -268,7 +282,10 @@ export default function Rehearsals() {
         setCanSyncToSpond(false);
       }
     } catch (e) {
-      console.error(e);
+      // Mislukte de aanroep, dan bleef de gebruiker met alleen een
+      // console.error op de lijst staan, alsof zijn klik niet aankwam. Zelfde
+      // melding als de rest van de pagina bij een mislukt ophalen.
+      showError(getErrorMessage(e, t('common.error')));
     }
   };
 
@@ -444,24 +461,14 @@ export default function Rehearsals() {
     return rrule;
   };
 
+  // Het formulier kent geen begindatum: een reeks loopt vanaf vandaag, net als
+  // aan de serverkant. `today` is dezelfde kale datum waarmee de pagina ook de
+  // repetities opvraagt, zodat het voorbeeld en de lijst het over dezelfde dag
+  // hebben. Het rekenwerk zelf staat in hulpfuncties.ts.
   const calculateRecurringPreview = () => {
-    if (!recurringForm.until) {
-      setRecurringPreview([]);
-      return;
-    }
-    const dates: string[] = [];
-    const endDate = new Date(recurringForm.until);
-    const current = new Date();
-    // Find first occurrence of selected day
-    while (current.getDay() !== recurringForm.dayOfWeek) {
-      current.setDate(current.getDate() + 1);
-    }
-    // Generate dates
-    while (current <= endDate && dates.length < 52) {
-      dates.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 7 * recurringForm.interval);
-    }
-    setRecurringPreview(dates);
+    setRecurringPreview(
+      berekenHerhaalVoorbeeld(today, recurringForm.dayOfWeek, recurringForm.interval, recurringForm.until),
+    );
   };
 
   useEffect(() => {
@@ -612,7 +619,13 @@ export default function Rehearsals() {
   if (selectedRehearsal) {
     return (
       <div>
-        <button className="btn btn-outline mb-3" onClick={() => setSelectedRehearsal(null)}>
+        <button
+          className="btn btn-outline mb-3"
+          onClick={() => {
+            setSelectedRehearsal(null);
+            verbergOpstelling();
+          }}
+        >
           &larr; {t('common.back')}
         </button>
 
