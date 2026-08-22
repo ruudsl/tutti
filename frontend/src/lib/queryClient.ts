@@ -66,12 +66,43 @@ export const cacheTimes = {
   seating: 1000 * 60 * 10,
 };
 
+/**
+ * De 4xx-statussen die na een korte pauze alsnog kunnen slagen: een
+ * tijdslimiet en een snelheidsbegrenzing. De rest van de 4xx-familie niet.
+ */
+const HERPROBEERBARE_STATUSSEN = new Set([408, 425, 429]);
+
+/** De HTTP-status uit een axios-fout, of undefined bij een netwerkfout. */
+function statusVan(error: unknown): number | undefined {
+  const response = (error as { response?: { status?: unknown } } | null | undefined)?.response;
+  return typeof response?.status === 'number' ? response.status : undefined;
+}
+
+/**
+ * Bepaalt of een mislukte aanvraag nog een keer geprobeerd wordt.
+ *
+ * Een 401, 403, 404 of 422 verandert niet door hem te herhalen: de sessie is
+ * verlopen, het mag niet, het bestaat niet of de invoer deugt niet. De
+ * herhaling stelde alleen het foutscherm uit terwijl de gebruiker naar een
+ * draaiend rondje keek - bij een verlopen sessie op elk scherm tegelijk.
+ *
+ * Een serverfout of een wegvallende verbinding is wél vaak van voorbijgaande
+ * aard; die krijgt één herkansing.
+ */
+export function moetOpnieuwProberen(failureCount: number, error: unknown): boolean {
+  const status = statusVan(error);
+  if (status !== undefined && status >= 400 && status < 500 && !HERPROBEERBARE_STATUSSEN.has(status)) {
+    return false;
+  }
+  return failureCount < 1;
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes default
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - extended for offline support
-      retry: 1,
+      retry: moetOpnieuwProberen,
       refetchOnWindowFocus: false,
     },
     mutations: {

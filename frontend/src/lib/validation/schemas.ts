@@ -8,8 +8,15 @@ import { z } from 'zod';
 // Base field schemas
 // ============================================
 
-/** Email field with validation */
-export const emailSchema = z.string().min(1).email();
+/**
+ * Email field with validation.
+ *
+ * Trimt eerst: een uit een e-mail of chatbericht geplakt adres draagt bijna
+ * altijd een spatie mee, en die spatie is in het invoerveld niet te zien.
+ * Zonder trim kreeg de gebruiker "geen geldig e-mailadres" bij een adres dat
+ * er voor hem volkomen goed uitzag.
+ */
+export const emailSchema = z.string().trim().min(1).email();
 
 /** Password field with minimum length */
 export const passwordSchema = z.string().min(8);
@@ -17,17 +24,35 @@ export const passwordSchema = z.string().min(8);
 /** Optional password (for edit forms where password change is optional) */
 export const optionalPasswordSchema = z.string().min(8).optional().or(z.literal(''));
 
-/** Name field (first name, last name, etc.) */
-export const nameSchema = z.string().min(1).max(100);
+/**
+ * Name field (first name, last name, etc.).
+ *
+ * Trimt voor de lengtecheck, zodat '   ' niet langs `min(1)` glipt. Een lid
+ * met een naam van alleen spaties staat als lege regel in de ledenlijst, is
+ * niet te zoeken en niet te sorteren, en niemand weet achteraf nog wie het is.
+ */
+export const nameSchema = z.string().trim().min(1).max(100);
 
 /** Optional text field */
 export const optionalTextSchema = z.string().max(500).optional().or(z.literal(''));
 
-/** Required text field */
-export const requiredTextSchema = z.string().min(1).max(500);
+/** Required text field. Trimt, zodat alleen spaties niet als tekst telt. */
+export const requiredTextSchema = z.string().trim().min(1).max(500);
 
-/** URL field */
-export const urlSchema = z.string().url().optional().or(z.literal(''));
+/**
+ * URL field.
+ *
+ * `z.string().url()` keurt élk schema goed, ook `javascript:` en `data:`. Zo'n
+ * waarde gaat ongehinderd door de database heen en komt er als href weer uit;
+ * een klik op de "website" van een vereniging voert dan code uit in de sessie
+ * van wie er klikt. Alleen http en https komen er langs.
+ */
+export const urlSchema = z
+  .string()
+  .url()
+  .refine((val) => /^https?:\/\//i.test(val), { message: 'Invalid URL' })
+  .optional()
+  .or(z.literal(''));
 
 /** Date string in ISO format */
 export const dateSchema = z
@@ -148,6 +173,19 @@ export type ConcertFormData = z.infer<typeof concertSchema>;
 // Rehearsal schemas
 // ============================================
 
+/**
+ * Zet "H:mm" of "HH:mm" om naar minuten sinds middernacht.
+ *
+ * Nodig omdat `timeSchema` een tijd zonder voorloopnul toestaat. Twee van die
+ * tijden als tekst vergelijken gaat mis: '9:00' < '10:00' is onwaar, want '9'
+ * komt ná '1'. Een repetitie van 9:00 tot 10:00 werd daardoor geweigerd, en
+ * een repetitie van 10:00 tot 9:00 juist goedgekeurd.
+ */
+function tijdInMinuten(tijd: string): number {
+  const [uren, minuten] = tijd.split(':');
+  return Number(uren) * 60 + Number(minuten);
+}
+
 /** Schema for creating/updating a rehearsal */
 export const rehearsalSchema = z
   .object({
@@ -162,7 +200,7 @@ export const rehearsalSchema = z
   .refine(
     (data) => {
       if (data.startTime && data.endTime) {
-        return data.startTime < data.endTime;
+        return tijdInMinuten(data.startTime) < tijdInMinuten(data.endTime);
       }
       return true;
     },

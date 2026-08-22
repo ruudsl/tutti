@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { User, LoginResponse } from '../types';
 import { login as apiLogin, getProfile } from '../api/auth';
 import { clearPersistedCache } from '../lib/queryClient';
+import { clearDownloadTokenCache } from '../utils/downloadUrl';
 import { clearAllData } from '../lib/offlineStorage';
 import { wisAlleOfflineGegevens } from '../lib/offlineDb';
 
@@ -20,7 +21,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const cachedUser = localStorage.getItem('user');
-      return cachedUser ? JSON.parse(cachedUser) : null;
+      if (!cachedUser) {
+        return null;
+      }
+      const gelezen: unknown = JSON.parse(cachedUser);
+
+      // Alleen een object telt als gebruiker. `JSON.parse` gooit wel op halve
+      // tekst, maar niet op een geldige waarde van de verkeerde soort
+      // ('"ruud"', '123', '[]'). Zo'n waarde is waar, dus de app ging ermee
+      // door alsof er iemand was ingelogd: het inlogscherm is dan onbereikbaar
+      // (dat stuurt ingelogde bezoekers weg) terwijl elk veld van die
+      // "gebruiker" leeg is.
+      if (typeof gelezen !== 'object' || gelezen === null || Array.isArray(gelezen)) {
+        return null;
+      }
+      return gelezen as User;
     } catch {
       return null;
     }
@@ -94,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('user');
     // Remove the persisted React Query cache so no cached data lingers after logout
     clearPersistedCache();
+
+    // En het kortlopende downloadtoken. Dat hangt vier minuten in het geheugen
+    // en kan geen Authorization-kop meesturen, dus het staat in de URL van elke
+    // pasfoto en elk pdf-fragment. Bleef het staan, dan haalde de volgende
+    // gebruiker op een gedeelde tablet zijn afbeeldingen op met het token van
+    // zijn voorganger.
+    clearDownloadTokenCache();
 
     // En de offline opslag, want die overleefde het uitloggen.
     //
