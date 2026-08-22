@@ -2932,6 +2932,55 @@ router.post(
   }),
 );
 
+// Een enkele relatie, in dezelfde vorm als het overzicht hierboven. De PUT en
+// de DELETE eronder bestonden al; het detail ontbrak.
+router.get(
+  '/relations/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const r = db
+      .prepare(
+        `
+        SELECT ar.*, u.first_name || ' ' || u.last_name AS user_name
+        FROM accounting_relations ar
+        LEFT JOIN users u ON ar.user_id = u.id
+        WHERE ar.id = ? AND ar.association_id = ?
+    `,
+      )
+      .get(req.params.id, associationId) as any;
+
+    if (!r) throw new ApiError(404, 'Relatie niet gevonden.');
+
+    res.json({
+      id: r.id,
+      relationType: r.relation_type,
+      userId: r.user_id,
+      userName: r.user_name,
+      contactId: r.contact_id,
+      relationNumber: r.relation_number,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      addressLine: r.address_line,
+      postalCode: r.postal_code,
+      city: r.city,
+      country: r.country,
+      iban: r.iban,
+      vatNumber: r.vat_number,
+      paymentTermDays: r.payment_term_days,
+      receivableAccountId: r.receivable_account_id,
+      payableAccountId: r.payable_account_id,
+      creditLimit: r.credit_limit,
+      balance: r.balance,
+      isActive: !!r.is_active,
+      createdAt: r.created_at,
+    });
+  }),
+);
+
 router.put(
   '/relations/:id',
   authenticateToken,
@@ -3074,6 +3123,41 @@ router.post(
     ).run(costCenterId, associationId, code, name, description || null, orchestraId || null, budgetAmount || null, now);
 
     res.status(201).json({ id: costCenterId, message: 'Kostenplaats aangemaakt.' });
+  }),
+);
+
+// Een enkele kostenplaats, in dezelfde vorm als het overzicht hierboven.
+router.get(
+  '/cost-centers/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const cc = db
+      .prepare(
+        `
+        SELECT cc.*, o.name AS orchestra_name
+        FROM cost_centers cc
+        LEFT JOIN orchestras o ON cc.orchestra_id = o.id
+        WHERE cc.id = ? AND cc.association_id = ?
+    `,
+      )
+      .get(req.params.id, associationId) as any;
+
+    if (!cc) throw new ApiError(404, 'Kostenplaats niet gevonden.');
+
+    res.json({
+      id: cc.id,
+      code: cc.code,
+      name: cc.name,
+      description: cc.description,
+      orchestraId: cc.orchestra_id,
+      orchestraName: cc.orchestra_name,
+      isActive: !!cc.is_active,
+      budgetAmount: cc.budget_amount,
+      createdAt: cc.created_at,
+    });
   }),
 );
 

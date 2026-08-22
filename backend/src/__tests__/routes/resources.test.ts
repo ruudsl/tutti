@@ -49,7 +49,7 @@ describe('reserveerbare spullen', () => {
     lidToken = omgeving.memberToken;
   });
 
-  type Methode = 'get' | 'post' | 'patch' | 'delete';
+  type Methode = 'get' | 'post' | 'put' | 'patch' | 'delete';
   const als = (token: string, methode: Methode, pad: string) =>
     request(app)[methode](`/api/resources${pad}`).set('Authorization', `Bearer ${token}`);
   const alsBeheerder = (methode: Methode, pad: string) => als(beheerderToken, methode, pad);
@@ -142,6 +142,147 @@ describe('reserveerbare spullen', () => {
       );
 
       expect((await alsBeheerder('delete', `/categories/${vreemd}`)).status).toBe(404);
+    });
+
+    /** Een categorie van een andere vereniging, rechtstreeks in de database. */
+    function vreemdeCategorie(naam = 'Van de buren'): string {
+      const andere = createTestAssociation({ name: `Andere-${uuidv4()}` });
+      const id = uuidv4();
+      db.prepare('INSERT INTO resource_categories (id, association_id, name) VALUES (?, ?, ?)').run(
+        id,
+        andere.id,
+        naam,
+      );
+      return id;
+    }
+
+    describe('wijzigen', () => {
+      it('hernoemt een categorie en geeft hem een andere kleur', async () => {
+        const categorie = await alsBeheerder('post', '/categories').send({ name: 'Zalen', color: '#00ff00' });
+
+        const antwoord = await alsBeheerder('patch', `/categories/${categorie.body.id}`).send({
+          name: 'Repetitieruimtes',
+          color: '#ff0000',
+        });
+        expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+        const lijst = await alsLid('get', '/categories');
+        expect(lijst.body[0]).toMatchObject({ name: 'Repetitieruimtes', color: '#ff0000' });
+      });
+
+      it('laat velden staan die niet worden meegestuurd', async () => {
+        const categorie = await alsBeheerder('post', '/categories').send({
+          name: 'Zalen',
+          description: 'Alles waar je in kunt repeteren',
+          color: '#00ff00',
+        });
+
+        await alsBeheerder('patch', `/categories/${categorie.body.id}`).send({ name: 'Alleen de naam' });
+
+        const lijst = await alsLid('get', '/categories');
+        expect(lijst.body[0]).toMatchObject({
+          name: 'Alleen de naam',
+          description: 'Alles waar je in kunt repeteren',
+          color: '#00ff00',
+        });
+      });
+
+      it('weigert een lege naam', async () => {
+        const categorie = await alsBeheerder('post', '/categories').send({ name: 'Zalen' });
+        expect((await alsBeheerder('patch', `/categories/${categorie.body.id}`).send({ name: '' })).status).toBe(400);
+      });
+
+      it('meldt een dubbele naam bij het hernoemen', async () => {
+        await alsBeheerder('post', '/categories').send({ name: 'Zalen' });
+        const tweede = await alsBeheerder('post', '/categories').send({ name: 'Busjes' });
+
+        const antwoord = await alsBeheerder('patch', `/categories/${tweede.body.id}`).send({ name: 'Zalen' });
+        expect(antwoord.status).toBe(409);
+        expect(antwoord.body.error).toBe('Categorie met deze naam bestaat al');
+      });
+
+      it('geeft 404 bij een categorie die niet bestaat', async () => {
+        expect((await alsBeheerder('patch', `/categories/${uuidv4()}`).send({ name: 'Spook' })).status).toBe(404);
+      });
+
+      it('wijzigt geen categorie van een andere vereniging', async () => {
+        const vreemd = vreemdeCategorie();
+
+        expect((await alsBeheerder('patch', `/categories/${vreemd}`).send({ name: 'Gekaapt' })).status).toBe(404);
+
+        const rij = db.prepare('SELECT name FROM resource_categories WHERE id = ?').get(vreemd) as { name: string };
+        expect(rij.name).toBe('Van de buren');
+      });
+
+      it('houdt een gewoon lid van het wijzigen af', async () => {
+        const categorie = await alsBeheerder('post', '/categories').send({ name: 'Zalen' });
+        expect((await alsLid('patch', `/categories/${categorie.body.id}`).send({ name: 'Van mij' })).status).toBe(403);
+      });
+    });
+
+    describe('volgorde', () => {
+      /** Drie categorieen, in de volgorde waarin ze zijn aangemaakt. */
+      async function maakDrie(): Promise<string[]> {
+        const ids: string[] = [];
+        for (const naam of ['Aaa', 'Bbb', 'Ccc']) {
+          const antwoord = await alsBeheerder('post', '/categories').send({ name: naam });
+          expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(201);
+          ids.push(antwoord.body.id);
+        }
+        return ids;
+      }
+
+      const namen = async () => (await alsLid('get', '/categories')).body.map((c: { name: string }) => c.name);
+
+      it('legt een nieuwe volgorde vast', async () => {
+        const [aaa, bbb, ccc] = await maakDrie();
+        expect(await namen()).toEqual(['Aaa', 'Bbb', 'Ccc']);
+
+        const antwoord = await alsBeheerder('put', '/categories/reorder').send({ categoryIds: [ccc, aaa, bbb] });
+        expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+        expect(await namen()).toEqual(['Ccc', 'Aaa', 'Bbb']);
+      });
+
+      it('wordt niet afgevangen door het pad met het id erin', async () => {
+        // Stond de reorder-route onder /categories/:id, dan zocht de server een
+        // categorie die "reorder" heet en kwam hier een 404 of 400 uit.
+        const [aaa] = await maakDrie();
+        const antwoord = await alsBeheerder('put', '/categories/reorder').send({ categoryIds: [aaa] });
+        expect(antwoord.status).toBe(200);
+      });
+
+      it('weigert een lege lijst', async () => {
+        expect((await alsBeheerder('put', '/categories/reorder').send({ categoryIds: [] })).status).toBe(400);
+      });
+
+      it('weigert een id dat geen uuid is', async () => {
+        expect((await alsBeheerder('put', '/categories/reorder').send({ categoryIds: ['reorder'] })).status).toBe(400);
+      });
+
+      it('zet de volgorde niet door als er een categorie van een andere vereniging tussen zit', async () => {
+        const [aaa, bbb, ccc] = await maakDrie();
+        const vreemd = vreemdeCategorie();
+
+        const antwoord = await alsBeheerder('put', '/categories/reorder').send({
+          categoryIds: [ccc, vreemd, aaa, bbb],
+        });
+        expect(antwoord.status).toBe(404);
+
+        // Ook de eigen categorieen mogen niet half verschoven zijn.
+        expect(await namen()).toEqual(['Aaa', 'Bbb', 'Ccc']);
+      });
+
+      it('geeft 404 bij een categorie die niet bestaat', async () => {
+        const [aaa] = await maakDrie();
+        const antwoord = await alsBeheerder('put', '/categories/reorder').send({ categoryIds: [aaa, uuidv4()] });
+        expect(antwoord.status).toBe(404);
+      });
+
+      it('houdt een gewoon lid van het herordenen af', async () => {
+        const [aaa] = await maakDrie();
+        expect((await alsLid('put', '/categories/reorder').send({ categoryIds: [aaa] })).status).toBe(403);
+      });
     });
   });
 

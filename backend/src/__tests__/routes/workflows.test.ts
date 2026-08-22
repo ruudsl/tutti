@@ -262,6 +262,82 @@ describe('workflows', () => {
 
       expect((await alsBeheerder('delete', `/${eerste}/triggers/${triggerVanTweede}`)).status).toBe(404);
     });
+
+    it('werkt een eigen trigger bij', async () => {
+      const id = await maakWorkflow();
+      const triggerId = (await alsBeheerder('get', `/${id}`)).body.triggers[0].id;
+
+      const antwoord = await alsBeheerder('patch', `/${id}/triggers/${triggerId}`).send({
+        daysBefore: 7,
+        timeOfDay: '09:30',
+      });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+      const trigger = (await alsBeheerder('get', `/${id}`)).body.triggers[0];
+      expect(trigger).toMatchObject({ daysBefore: 7, timeOfDay: '09:30' });
+    });
+
+    it('laat velden staan die niet worden meegestuurd', async () => {
+      const id = await maakWorkflow();
+      const triggerId = (await alsBeheerder('get', `/${id}`)).body.triggers[0].id;
+
+      await alsBeheerder('patch', `/${id}/triggers/${triggerId}`).send({ daysBefore: 7 });
+
+      const trigger = (await alsBeheerder('get', `/${id}`)).body.triggers[0];
+      expect(trigger).toMatchObject({
+        triggerType: 'date_field',
+        dateFieldEntity: 'concerts',
+        dateFieldName: 'date',
+      });
+    });
+
+    it('bewaart voorwaarden als json', async () => {
+      const id = await maakWorkflow();
+      const triggerId = (await alsBeheerder('get', `/${id}`)).body.triggers[0].id;
+
+      await alsBeheerder('patch', `/${id}/triggers/${triggerId}`).send({ conditions: { orkest: 'A-orkest' } });
+
+      const trigger = (await alsBeheerder('get', `/${id}`)).body.triggers[0];
+      expect(trigger.conditions).toEqual({ orkest: 'A-orkest' });
+    });
+
+    it('weigert een soort trigger die niet bestaat', async () => {
+      const id = await maakWorkflow();
+      const triggerId = (await alsBeheerder('get', `/${id}`)).body.triggers[0].id;
+
+      const antwoord = await alsBeheerder('patch', `/${id}/triggers/${triggerId}`).send({ triggerType: 'volle_maan' });
+      expect(antwoord.status).toBe(400);
+    });
+
+    it('geeft 404 bij het bijwerken van een trigger die niet bestaat', async () => {
+      const id = await maakWorkflow();
+      expect((await alsBeheerder('patch', `/${id}/triggers/${uuidv4()}`).send({ daysBefore: 1 })).status).toBe(404);
+    });
+
+    it('werkt geen trigger van een andere vereniging bij', async () => {
+      const elders = maakWorkflowElders();
+
+      const antwoord = await alsBeheerder('patch', `/${elders.id}/triggers/${elders.triggerId}`).send({
+        triggerType: 'schedule',
+        scheduleCron: '0 3 * * *',
+      });
+      expect(antwoord.status).toBe(404);
+
+      const rij = db.prepare('SELECT trigger_type FROM workflow_triggers WHERE id = ?').get(elders.triggerId) as {
+        trigger_type: string;
+      };
+      expect(rij.trigger_type).toBe('manual');
+    });
+
+    it('werkt geen trigger bij die niet bij deze workflow hoort', async () => {
+      const eerste = await maakWorkflow();
+      const tweede = await maakWorkflow({ name: 'Tweede' });
+      const triggerVanTweede = (await alsBeheerder('get', `/${tweede}`)).body.triggers[0].id;
+
+      expect(
+        (await alsBeheerder('patch', `/${eerste}/triggers/${triggerVanTweede}`).send({ daysBefore: 9 })).status,
+      ).toBe(404);
+    });
   });
 
   describe('acties', () => {
@@ -299,6 +375,74 @@ describe('workflows', () => {
 
       const rij = db.prepare('SELECT id FROM workflow_actions WHERE id = ?').get(elders.actionId);
       expect(rij).toBeDefined();
+    });
+
+    it('werkt de instellingen van een eigen actie bij', async () => {
+      const id = await maakWorkflow();
+      const actionId = (await alsBeheerder('get', `/${id}`)).body.actions[0].id;
+
+      const antwoord = await alsBeheerder('patch', `/${id}/actions/${actionId}`).send({
+        config: { subject: 'Toch anders' },
+      });
+      expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
+
+      const actie = (await alsBeheerder('get', `/${id}`)).body.actions[0];
+      expect(actie.config).toEqual({ subject: 'Toch anders' });
+      expect(actie.actionType).toBe('send_email');
+    });
+
+    it('verandert het soort actie en de plaats in de rij', async () => {
+      const id = await maakWorkflow();
+      const actionId = (await alsBeheerder('get', `/${id}`)).body.actions[0].id;
+
+      await alsBeheerder('patch', `/${id}/actions/${actionId}`).send({
+        actionType: 'create_task',
+        actionOrder: 5,
+      });
+
+      const actie = (await alsBeheerder('get', `/${id}`)).body.actions[0];
+      expect(actie).toMatchObject({ actionType: 'create_task', actionOrder: 5 });
+    });
+
+    it('weigert een soort actie die niet bestaat', async () => {
+      const id = await maakWorkflow();
+      const actionId = (await alsBeheerder('get', `/${id}`)).body.actions[0].id;
+
+      const antwoord = await alsBeheerder('patch', `/${id}/actions/${actionId}`).send({ actionType: 'raket_lanceren' });
+      expect(antwoord.status).toBe(400);
+    });
+
+    it('geeft 404 bij het bijwerken van een actie die niet bestaat', async () => {
+      const id = await maakWorkflow();
+      const antwoord = await alsBeheerder('patch', `/${id}/actions/${uuidv4()}`).send({ actionOrder: 1 });
+      expect(antwoord.status).toBe(404);
+    });
+
+    it('werkt geen actie van een andere vereniging bij', async () => {
+      const elders = maakWorkflowElders();
+
+      const antwoord = await alsBeheerder('patch', `/${elders.id}/actions/${elders.actionId}`).send({
+        actionType: 'webhook',
+        config: { url: 'https://voorbeeld.test/haak' },
+      });
+      expect(antwoord.status).toBe(404);
+
+      const rij = db.prepare('SELECT action_type, config FROM workflow_actions WHERE id = ?').get(elders.actionId) as {
+        action_type: string;
+        config: string;
+      };
+      expect(rij.action_type).toBe('send_email');
+      expect(rij.config).toBe('{}');
+    });
+
+    it('werkt geen actie bij die niet bij deze workflow hoort', async () => {
+      const eerste = await maakWorkflow();
+      const tweede = await maakWorkflow({ name: 'Tweede' });
+      const actieVanTweede = (await alsBeheerder('get', `/${tweede}`)).body.actions[0].id;
+
+      expect(
+        (await alsBeheerder('patch', `/${eerste}/actions/${actieVanTweede}`).send({ actionOrder: 3 })).status,
+      ).toBe(404);
     });
   });
 

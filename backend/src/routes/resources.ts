@@ -16,6 +16,12 @@ const createCategorySchema = z.object({
   icon: z.string().optional(),
 });
 
+const updateCategorySchema = wijzigingsschema(createCategorySchema);
+
+const reorderCategoriesSchema = z.object({
+  categoryIds: z.array(z.string().uuid()).min(1, 'Geef minstens een categorie op'),
+});
+
 const createResourceSchema = z.object({
   name: z.string().min(1, 'Naam is verplicht'),
   description: z.string().optional(),
@@ -118,6 +124,94 @@ router.post(
     }
 
     res.status(201).json({ id, message: 'Categorie aangemaakt' });
+  }),
+);
+
+// PUT /resources/categories/reorder - Volgorde van de categorieen vastleggen
+//
+// Deze route staat bewust boven /categories/:id. Zou hij eronder staan, dan
+// vangt het parameterpad hem af en gaat de server een categorie zoeken die
+// "reorder" heet.
+router.put(
+  '/categories/reorder',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { categoryIds } = reorderCategoriesSchema.parse(req.body);
+    const associationId = req.user!.associationId;
+
+    const eigen = db
+      .prepare(
+        `SELECT id FROM resource_categories
+         WHERE association_id = ? AND id IN (${categoryIds.map(() => '?').join(',')})`,
+      )
+      .all(associationId, ...categoryIds) as { id: string }[];
+
+    // Een id dat niet van deze vereniging is (of niet bestaat) mag de volgorde
+    // van de rest niet stilletjes wel doorzetten.
+    if (eigen.length !== categoryIds.length) {
+      throw new ApiError(404, 'Categorie niet gevonden');
+    }
+
+    const zet = db.prepare('UPDATE resource_categories SET sort_order = ? WHERE id = ? AND association_id = ?');
+    db.transaction(() => {
+      categoryIds.forEach((categoryId, volgnummer) => zet.run(volgnummer, categoryId, associationId));
+    })();
+
+    res.json({ message: 'Volgorde bijgewerkt' });
+  }),
+);
+
+// PATCH /resources/categories/:id - Update category
+router.patch(
+  '/categories/:id',
+  authenticateToken,
+  requireRole('admin'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = updateCategorySchema.parse(req.body);
+    const { id } = req.params;
+    const associationId = req.user!.associationId;
+
+    const bestaat = db
+      .prepare('SELECT id FROM resource_categories WHERE id = ? AND association_id = ?')
+      .get(id, associationId);
+    if (!bestaat) {
+      throw new ApiError(404, 'Categorie niet gevonden');
+    }
+
+    const kolommen: Record<string, string> = {
+      name: 'name',
+      description: 'description',
+      color: 'color',
+      icon: 'icon',
+    };
+
+    const zetten: string[] = [];
+    const waarden: unknown[] = [];
+    for (const [veld, kolom] of Object.entries(kolommen)) {
+      const waarde = (data as Record<string, unknown>)[veld];
+      if (waarde === undefined) continue;
+      zetten.push(`${kolom} = ?`);
+      waarden.push(waarde);
+    }
+
+    // Een verzoek zonder velden is geen fout, maar er valt ook niets te doen.
+    if (zetten.length > 0) {
+      try {
+        db.prepare(`UPDATE resource_categories SET ${zetten.join(', ')} WHERE id = ? AND association_id = ?`).run(
+          ...waarden,
+          id,
+          associationId,
+        );
+      } catch (err: any) {
+        if (isUniekheidsfout(err)) {
+          throw new ApiError(409, 'Categorie met deze naam bestaat al');
+        }
+        throw err;
+      }
+    }
+
+    res.json({ message: 'Categorie bijgewerkt' });
   }),
 );
 

@@ -531,6 +531,71 @@ router.delete(
   }),
 );
 
+// Get delivery status per recipient
+//
+// Niet te verwarren met /preview-recipients hierboven: dat berekent wie de
+// campagne zou krijgen op grond van de doelgroep. Deze route kijkt naar wat er
+// na het verzenden werkelijk is gebeurd, per ontvanger.
+router.get(
+  '/:id/recipients',
+  authenticateToken,
+  requireRole('admin', 'music_committee'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+
+    const campaign = db
+      .prepare('SELECT id FROM email_campaigns WHERE id = ? AND association_id = ?')
+      .get(req.params.id, associationId) as any;
+
+    if (!campaign) {
+      throw new ApiError(404, 'Campagne niet gevonden.');
+    }
+
+    const rijen = db
+      .prepare(
+        `
+        SELECT ecr.id, ecr.email, ecr.status, ecr.sent_at, ecr.opened_at, ecr.clicked_at, ecr.bounce_reason,
+               u.first_name, u.last_name
+        FROM email_campaign_recipients ecr
+        LEFT JOIN users u ON ecr.user_id = u.id
+        WHERE ecr.campaign_id = ?
+        ORDER BY u.last_name, u.first_name, ecr.email
+    `,
+      )
+      .all(req.params.id) as any[];
+
+    // Alle statussen komen voor, ook die met nul. Het overzicht toont ze
+    // namelijk alle zeven; zonder de nullen valt een kolom weg.
+    const byStatus: Record<string, number> = {
+      pending: 0,
+      sent: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      bounced: 0,
+      failed: 0,
+    };
+
+    const recipients = rijen.map((r) => {
+      byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+      return {
+        id: r.id,
+        email: r.email,
+        // Een ontvanger van wie het account inmiddels weg is heeft geen naam
+        // meer; dan is het mailadres het enige dat overblijft.
+        name: r.first_name || r.last_name ? `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() : r.email,
+        status: r.status,
+        sentAt: r.sent_at ?? undefined,
+        openedAt: r.opened_at ?? undefined,
+        clickedAt: r.clicked_at ?? undefined,
+        bounceReason: r.bounce_reason ?? undefined,
+      };
+    });
+
+    res.json({ recipients, total: recipients.length, byStatus });
+  }),
+);
+
 // Get preview of recipients
 router.get(
   '/:id/preview-recipients',
