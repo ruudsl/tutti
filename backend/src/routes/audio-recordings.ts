@@ -26,6 +26,85 @@ const audioStorage = multer.diskStorage({
   },
 });
 
+/**
+ * Een gekoppeld id (orkest, repetitie, titel) komt uit de body en is geen
+ * geheim: ids circuleren via gedeelde muzieklijsten en gezamenlijke agenda's.
+ * Zonder controle belandt een vreemd id in de opname, waarna GET het via de
+ * LEFT JOIN met naam en al teruggeeft - de naam van een orkest of de titel
+ * van een stuk uit een andere vereniging in ons eigen scherm. Elk gekoppeld
+ * id moet dus van de eigen vereniging zijn.
+ */
+function controleerKoppeling(
+  tabel: 'orchestras' | 'rehearsals' | 'music_titles',
+  id: unknown,
+  // associationId is string | null: een gebruiker zonder vereniging kan
+  // simpelweg niets koppelen, want NULL matcht nooit.
+  associationId: string | null,
+  foutmelding: string,
+): string | null {
+  if (id === undefined || id === null || id === '') return null;
+  const gevonden = db
+    .prepare(`SELECT id FROM ${tabel} WHERE id = ? AND association_id = ?`)
+    .get(String(id), associationId);
+  if (!gevonden) {
+    throw new ApiError(400, foutmelding);
+  }
+  return String(id);
+}
+
+/**
+ * file_path staat in de database en wordt bij het uploaden zelf gezet, maar
+ * zowel /stream als DELETE plakken hem met path.join achter process.cwd().
+ * Een pad met '..' erin wijst dan buiten de uploadmap: bij het streamen is
+ * dat een leesvenster op de hele server, bij het verwijderen een sloopkogel.
+ * Vandaar een expliciete controle dat het resultaat binnen uploads/ blijft.
+ */
+function veiligBestandspad(filePath: string | null | undefined): string | null {
+  if (!filePath) return null;
+  const wortel = path.resolve(process.cwd(), 'uploads');
+  const volledig = path.resolve(path.join(process.cwd(), filePath));
+  if (volledig !== wortel && !volledig.startsWith(wortel + path.sep)) return null;
+  return volledig;
+}
+
+/**
+ * Leest een Range-header uit.
+ *
+ * Terug: null = geen (bruikbaar) bereik, stuur het hele bestand;
+ * 'onbevredigbaar' = een bereik dat buiten het bestand valt (416);
+ * anders het bereik zelf. Een onleesbare header wordt genegeerd in plaats van
+ * blind door parseInt gehaald - dat leverde NaN op, en met NaN in
+ * createReadStream klapte de route om in een 500 op een header die de
+ * gebruiker zelf kan sturen.
+ */
+function leesBereik(
+  header: string | undefined,
+  grootte: number,
+): { start: number; end: number } | null | 'onbevredigbaar' {
+  if (!header) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!match) return null;
+
+  const [, ruweStart, ruwEind] = match;
+  if (ruweStart === '' && ruwEind === '') return null;
+
+  let start: number;
+  let end: number;
+  if (ruweStart === '') {
+    // Achterwaarts bereik: de laatste N bytes.
+    const aantal = parseInt(ruwEind, 10);
+    if (aantal === 0) return 'onbevredigbaar';
+    start = Math.max(0, grootte - aantal);
+    end = grootte - 1;
+  } else {
+    start = parseInt(ruweStart, 10);
+    end = ruwEind === '' ? grootte - 1 : Math.min(parseInt(ruwEind, 10), grootte - 1);
+  }
+
+  if (start >= grootte || start > end) return 'onbevredigbaar';
+  return { start, end };
+}
+
 const audioUpload = multer({
   storage: audioStorage,
   limits: {
@@ -44,7 +123,9 @@ const audioUpload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Ongeldig bestandstype. Alleen audio bestanden zijn toegestaan.'));
+      // Een kale Error valt in de centrale errorHandler door naar 500, terwijl
+      // dit een fout van de client is. ApiError levert netjes een 400 op.
+      cb(new ApiError(400, 'Ongeldig bestandstype. Alleen audio bestanden zijn toegestaan.'));
     }
   },
 });
@@ -166,14 +247,6 @@ router.post(
       throw new ApiError(400, 'Geen audio bestand geüpload');
     }
 
-    // Magic-byte check after multer stored the file (mimetype is spoofable);
-    // deletes the file and throws FileValidationError on mismatch
-    await validateUploadedFile(
-      req.file.path,
-      isAudio,
-      'Ongeldig bestandstype. Alleen audio bestanden zijn toegestaan.',
-    );
-
     const {
       title,
       description,
@@ -185,8 +258,50 @@ router.post(
       isPublic,
     } = req.body;
 
-    if (!title) {
-      throw new ApiError(400, 'Titel is verplicht');
+    // multer heeft het bestand al weggeschreven voordat deze handler draait,
+    // dus elke afwijzing hierna moet het zelf opruimen - anders blijft er bij
+    // elke mislukte upload een weesbestand op schijf achter.
+    let gekoppeldOrkest: string | null;
+    let gekoppeldeRepetitie: string | null;
+    let gekoppeldeTitel: string | null;
+    try {
+      // Magic-byte check after multer stored the file (mimetype is spoofable);
+      // deletes the file and throws FileValidationError on mismatch
+      await validateUploadedFile(
+        req.file.path,
+        isAudio,
+        'Ongeldig bestandstype. Alleen audio bestanden zijn toegestaan.',
+      );
+
+      if (!title) {
+        throw new ApiError(400, 'Titel is verplicht');
+      }
+
+      gekoppeldOrkest = controleerKoppeling(
+        'orchestras',
+        orchestraId,
+        req.user!.associationId,
+        'Orkest niet gevonden.',
+      );
+      gekoppeldeRepetitie = controleerKoppeling(
+        'rehearsals',
+        rehearsalId,
+        req.user!.associationId,
+        'Repetitie niet gevonden.',
+      );
+      gekoppeldeTitel = controleerKoppeling(
+        'music_titles',
+        musicTitleId,
+        req.user!.associationId,
+        'Titel niet gevonden.',
+      );
+    } catch (fout) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        // validateUploadedFile ruimt bij een mismatch zelf al op
+      }
+      throw fout;
     }
 
     const id = uuidv4();
@@ -203,9 +318,9 @@ router.post(
     ).run(
       id,
       req.user!.associationId,
-      orchestraId || null,
-      rehearsalId || null,
-      musicTitleId || null,
+      gekoppeldOrkest,
+      gekoppeldeRepetitie,
+      gekoppeldeTitel,
       title,
       description || null,
       filePath,
@@ -345,11 +460,11 @@ router.patch(
     }
     if (musicTitleId !== undefined) {
       updates.push('music_title_id = ?');
-      params.push(musicTitleId || null);
+      params.push(controleerKoppeling('music_titles', musicTitleId, req.user!.associationId, 'Titel niet gevonden.'));
     }
     if (orchestraId !== undefined) {
       updates.push('orchestra_id = ?');
-      params.push(orchestraId || null);
+      params.push(controleerKoppeling('orchestras', orchestraId, req.user!.associationId, 'Orkest niet gevonden.'));
     }
 
     if (updates.length > 0) {
@@ -392,8 +507,8 @@ router.delete(
     }
 
     // Delete file from disk
-    const filePath = path.join(process.cwd(), recording.file_path);
-    if (fs.existsSync(filePath)) {
+    const filePath = veiligBestandspad(recording.file_path);
+    if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
@@ -435,25 +550,28 @@ router.get(
       throw new ApiError(403, 'Geen toegang tot deze opname');
     }
 
-    const filePath = path.join(process.cwd(), recording.file_path);
-    if (!fs.existsSync(filePath)) {
+    const filePath = veiligBestandspad(recording.file_path);
+    if (!filePath || !fs.existsSync(filePath)) {
       throw new ApiError(404, 'Audio bestand niet gevonden');
     }
 
     const stat = fs.statSync(filePath);
-    const range = req.headers.range;
+    const bereik = leesBereik(req.headers.range, stat.size);
 
-    if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-      const chunksize = end - start + 1;
+    if (bereik === 'onbevredigbaar') {
+      res.writeHead(416, {
+        'Content-Range': `bytes */${stat.size}`,
+        'Accept-Ranges': 'bytes',
+      });
+      res.end();
+    } else if (bereik) {
+      const { start, end } = bereik;
       const file = fs.createReadStream(filePath, { start, end });
 
       res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${stat.size}`,
         'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
+        'Content-Length': end - start + 1,
         'Content-Type': recording.mime_type,
       });
       file.pipe(res);

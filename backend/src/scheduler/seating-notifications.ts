@@ -302,9 +302,16 @@ async function sendNotification(settings: NotificationSettings, rehearsal: Rehea
   }
 }
 
-async function checkAndSendNotifications(): Promise<void> {
-  if (!schedulerRunning) return;
-
+/**
+ * Eén ronde: alle ingeschakelde instellingen langs en versturen wat binnen het
+ * tijdvenster valt.
+ *
+ * Dit stond in checkAndSendNotifications, samen met de aan/uit-vlag van de
+ * planner en het inplannen van de volgende ronde. Zo losgetrokken is een ronde
+ * rechtstreeks aan te roepen - door een test, of later door een beheerscherm -
+ * zonder de lus te starten. Het gedrag van de planner zelf verandert niet.
+ */
+export async function runNotificationRound(): Promise<void> {
   try {
     const now = new Date();
 
@@ -364,6 +371,12 @@ async function checkAndSendNotifications(): Promise<void> {
   } catch (error) {
     logger.error('Error in notification scheduler', { error });
   }
+}
+
+async function checkAndSendNotifications(): Promise<void> {
+  if (!schedulerRunning) return;
+
+  await runNotificationRound();
 
   // Schedule next check
   if (schedulerRunning) {

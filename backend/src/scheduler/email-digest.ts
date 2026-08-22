@@ -69,11 +69,19 @@ export async function sendWeeklyDigest(): Promise<void> {
 
       if (users.length === 0) continue;
 
-      // Get upcoming rehearsals
+      // De kolomnamen worden hier omgezet naar de namen die DigestData en de
+      // mailtekst gebruiken. Zonder die aliassen leverde de query start_time,
+      // end_time en orchestra_name, terwijl de tekst startTime, endTime en
+      // orchestraName leest: in de verstuurde mail stond bij elke repetitie
+      // letterlijk "undefined-undefined - undefined".
       const upcomingRehearsals = db
         .prepare(
           `
-                SELECT r.date, r.start_time, r.end_time, r.location, o.name as orchestra_name
+                SELECT r.date,
+                       r.start_time as startTime,
+                       r.end_time as endTime,
+                       r.location,
+                       o.name as orchestraName
                 FROM rehearsals r
                 JOIN orchestras o ON r.orchestra_id = o.id
                 WHERE o.association_id = ?
@@ -85,28 +93,43 @@ export async function sendWeeklyDigest(): Promise<void> {
         )
         .all(association.id) as DigestData['upcomingRehearsals'];
 
-      // Get new music pieces from last week
+      // Nieuwe muziek van de afgelopen week. Drie dingen zijn hier van belang:
+      //
+      // - De koppeling naar music_titles gaat op de titeltekst. Twee
+      //   verenigingen kunnen dezelfde titel in de kast hebben, dus zonder
+      //   `mt.association_id = mp.association_id` komt de arrangeur van de
+      //   buren in de mail te staan.
+      // - Een zacht verwijderd stuk is voor de leden weg en hoort niet als
+      //   nieuwe aanwinst aangekondigd te worden.
+      // - De grens komt als ISO-tekst binnen ('2026-08-14T20:00:00.000Z')
+      //   terwijl SQLite zelf '2026-08-14 20:00:00' schrijft. Een spatie is
+      //   kleiner dan een T, dus een kale tekstvergelijking laat alles wat op
+      //   de grensdag is toegevoegd ten onrechte buiten de week vallen.
+      //   datetime() maakt van beide vormen dezelfde.
       const newMusicPieces = db
         .prepare(
           `
                 SELECT DISTINCT mt.title, mt.arranger, mp.created_at as added_at
                 FROM music_pieces mp
-                JOIN music_titles mt ON mp.title = mt.title
+                JOIN music_titles mt ON mp.title = mt.title AND mt.association_id = mp.association_id
                 WHERE mp.association_id = ?
-                  AND mp.created_at >= ?
+                  AND mp.deleted_at IS NULL
+                  AND datetime(mp.created_at) >= datetime(?)
                 ORDER BY mp.created_at DESC
                 LIMIT 10
             `,
         )
         .all(association.id, oneWeekAgo.toISOString()) as DigestData['newMusicPieces'];
 
-      // Get upcoming concerts
+      // Komende concerten. Een afgelast concert wordt zacht verwijderd; dat
+      // hoort niet meer als aankondiging de deur uit te gaan.
       const upcomingConcerts = db
         .prepare(
           `
                 SELECT name, date, location
                 FROM concerts
                 WHERE association_id = ?
+                  AND deleted_at IS NULL
                   AND date >= date('now')
                   AND date <= date('now', '+30 days')
                 ORDER BY date
@@ -123,6 +146,10 @@ export async function sendWeeklyDigest(): Promise<void> {
       for (const user of users) {
         try {
           // Get user's practice stats
+          // De grens gaat als ISO-tekst mee terwijl practiced_at zowel in ISO-
+          // als in SQLite-vorm voorkomt; datetime() aan beide kanten maakt de
+          // vergelijking onafhankelijk van de vorm (zie de nieuwe muziek
+          // hierboven).
           // De kolomnamen worden hier omgezet naar de namen die DigestData
           // gebruikt. Zonder die aliassen leverde de query total_minutes en
           // session_count, terwijl de mailtekst sessionCount leest: die was dus
@@ -136,7 +163,7 @@ export async function sendWeeklyDigest(): Promise<void> {
                             COUNT(*) as sessionCount
                         FROM practice_logs
                         WHERE user_id = ?
-                          AND practiced_at >= ?
+                          AND datetime(practiced_at) >= datetime(?)
                     `,
                 )
                 .get(user.id, oneWeekAgo.toISOString()) as DigestData['practiceStats'])

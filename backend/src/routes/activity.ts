@@ -198,7 +198,10 @@ router.get(
   authenticateToken,
   requireRole('music_committee', 'admin'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { limit = '50' } = req.query;
+    // parseInt('onzin') is NaN en dat als LIMIT binden laat de query klappen
+    // (een 500 op een querystring die een gebruiker zelf kan typen). Vandaar
+    // de terugval op 50 en een bovengrens, net als in performances.ts.
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 50, 200));
 
     const activities = db
       .prepare(
@@ -210,9 +213,17 @@ router.get(
       al.entity_id,
       al.created_at,
       u.first_name || ' ' || u.last_name as user_name,
+      -- entity_id komt ongecontroleerd uit de body van POST /log: een lid dat
+      -- een id uit een andere vereniging kent kan dat loggen. De naam mag dus
+      -- alleen opgezocht worden binnen de vereniging van het lid zelf,
+      -- anders lekt de feed de titel van die andere vereniging.
       CASE
-        WHEN al.entity_type = 'music_title' THEN (SELECT title FROM music_titles WHERE id = al.entity_id)
-        WHEN al.entity_type = 'music_piece' THEN (SELECT title FROM music_pieces WHERE id = al.entity_id)
+        WHEN al.entity_type = 'music_title' THEN (
+          SELECT title FROM music_titles WHERE id = al.entity_id AND association_id = u.association_id
+        )
+        WHEN al.entity_type = 'music_piece' THEN (
+          SELECT title FROM music_pieces WHERE id = al.entity_id AND association_id = u.association_id
+        )
         ELSE NULL
       END as entity_name
     FROM activity_log al
@@ -222,7 +233,7 @@ router.get(
     LIMIT ?
   `,
       )
-      .all(req.user!.associationId, parseInt(limit as string));
+      .all(req.user!.associationId, limit);
 
     res.json(activities);
   }),

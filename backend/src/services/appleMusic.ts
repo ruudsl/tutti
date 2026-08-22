@@ -3,6 +3,16 @@ import jwt from 'jsonwebtoken';
 
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
 
+/**
+ * Hoe lang we hooguit op Apple Music wachten.
+ *
+ * Zonder limiet blijft een verzoek aan een trage of hangende dienst staan tot
+ * de andere kant hem sluit. Onze eigen aanvraag blijft dan net zo lang open,
+ * met een verbinding en een werker eraan vast, terwijl het hier om een
+ * bijzaak gaat: een streaminglink bij een titel. Beter is: opgeven.
+ */
+const APPLE_MUSIC_TIMEOUT_MS = 10000;
+
 export interface AppleMusicTrack {
   id: string;
   type: string;
@@ -130,6 +140,7 @@ export class AppleMusicClient {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      signal: AbortSignal.timeout(APPLE_MUSIC_TIMEOUT_MS),
     });
 
     if (!response.ok) {

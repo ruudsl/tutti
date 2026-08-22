@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { User, LoginResponse } from '../types';
 import { login as apiLogin, getProfile } from '../api/auth';
 import { clearPersistedCache } from '../lib/queryClient';
+import { clearAllData } from '../lib/offlineStorage';
+import { wisAlleOfflineGegevens } from '../lib/offlineDb';
 
 interface AuthContextType {
   user: User | null;
@@ -92,6 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('user');
     // Remove the persisted React Query cache so no cached data lingers after logout
     clearPersistedCache();
+
+    // En de offline opslag, want die overleefde het uitloggen.
+    //
+    // Beide databases hebben een vaste naam en geen enkel record draagt een
+    // gebruiker- of verenigingsid. Wie na het uitloggen als lid van een andere
+    // vereniging inlogt, hield daardoor het repertoire, de repetities, de
+    // favorieten, het profiel en de annotaties van zijn voorganger. Op een
+    // gedeelde tablet in de repetitieruimte is dat geen randgeval maar de
+    // normale gang van zaken.
+    //
+    // De synchronisatiewachtrij overleefde het ook. Dat is het ergste deel: de
+    // nieuwe gebruiker verstuurt de openstaande wijzigingen van de vorige met
+    // zijn eigen token, en aan de serverkant is dat niet van echt te
+    // onderscheiden.
+    //
+    // Bewust zonder await: uitloggen mag niet blijven hangen op een database
+    // die niet meewerkt. Een fout bij het opruimen wordt gelogd, niet
+    // doorgegeven - de gebruiker is dan hoe dan ook uitgelogd.
+    void Promise.allSettled([clearAllData(), wisAlleOfflineGegevens()]).then((uitkomsten) => {
+      for (const uitkomst of uitkomsten) {
+        if (uitkomst.status === 'rejected') {
+          console.error('Offline gegevens konden niet worden gewist bij uitloggen:', uitkomst.reason);
+        }
+      }
+    });
+
     setUser(null);
   };
 

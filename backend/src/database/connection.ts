@@ -341,14 +341,24 @@ class DatabaseWrapper {
           db.run(`RELEASE SAVEPOINT ${naam}`);
           return result;
         } catch (error) {
-          db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
-          db.run(`RELEASE SAVEPOINT ${naam}`);
+          // Loopt het terugdraaien zelf stuk, dan is dat niet de fout waar de
+          // aanroeper iets aan heeft: die staat in `error`. Hem overschrijven
+          // maakt van een begrijpelijke melding een raadsel over savepoints.
+          try {
+            db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
+            db.run(`RELEASE SAVEPOINT ${naam}`);
+          } catch (terugdraaifout) {
+            console.warn(`Terugdraaien naar savepoint ${naam} mislukt:`, terugdraaifout);
+          }
           throw error;
         }
       }
 
-      this.inTransaction = true;
+      // De vlag gaat pas om als BEGIN gelukt is. Zou BEGIN stuklopen terwijl
+      // de vlag al aan stond, dan bleef hij daarna voorgoed aan staan - zie de
+      // toelichting in de catch hieronder.
       db.run('BEGIN TRANSACTION');
+      this.inTransaction = true;
       try {
         const result = fn();
         db.run('COMMIT');
@@ -356,8 +366,20 @@ class DatabaseWrapper {
         this.scheduleSave();
         return result;
       } catch (error) {
-        db.run('ROLLBACK');
+        // Eerst de vlag terug, dan pas terugdraaien. SQLite draait een
+        // transactie bij sommige fouten zelf al terug; de ROLLBACK hieronder
+        // loopt dan stuk op "cannot rollback - no transaction is active". Met
+        // de oude volgorde bleef inTransaction daarna op true staan, en dat is
+        // erger dan het lijkt: elke schrijfactie slaat het inplannen van een
+        // save over zolang die vlag aan staat. De wrapper stopte dus stil - en
+        // voor de rest van het proces - met wegschrijven naar schijf, terwijl
+        // alles in het geheugen gewoon leek te werken.
         this.inTransaction = false;
+        try {
+          db.run('ROLLBACK');
+        } catch (terugdraaifout) {
+          console.warn('ROLLBACK mislukt; de oorspronkelijke fout blijft leidend:', terugdraaifout);
+        }
         throw error;
       }
     };

@@ -357,7 +357,10 @@ export async function saveAnnotationOffline(
     ...annotation,
     version: 1,
     lastModified: new Date().toISOString(),
-    syncStatus: navigator.onLine ? 'pending' : 'pending',
+    // Ook online blijft dit 'pending': de annotatie gaat via de wachtrij en is
+    // pas 'synced' als de server hem heeft bevestigd. (Stond hier als een
+    // ternair met twee gelijke takken; de uitkomst is ongewijzigd.)
+    syncStatus: 'pending',
   };
 
   await offlineDb.annotations.put(fullAnnotation);
@@ -375,4 +378,25 @@ export async function getAnnotationsForPiece(musicPieceId: string, pageNumber?: 
   }
 
   return query.toArray();
+}
+
+/**
+ * Alles wissen. Bedoeld voor het uitloggen.
+ *
+ * De database heeft een vaste naam en geen enkel record draagt een gebruiker-
+ * of verenigingsid. Zonder deze opruiming houdt de volgende die op dit apparaat
+ * inlogt het repertoire, de annotaties, de repetities en de oefenlogs van zijn
+ * voorganger - op een gedeelde tablet in de repetitieruimte is dat precies wat
+ * er gebeurt. De synchronisatiewachtrij overleeft het ook, dus de nieuwe
+ * gebruiker verstuurt die wijzigingen met zijn eigen token.
+ */
+export async function wisAlleOfflineGegevens(): Promise<void> {
+  await Promise.all([
+    offlineDb.musicPieces.clear(),
+    offlineDb.annotations.clear(),
+    offlineDb.rehearsals.clear(),
+    offlineDb.practiceLogs.clear(),
+    offlineDb.syncQueue.clear(),
+    offlineDb.conflicts.clear(),
+  ]);
 }

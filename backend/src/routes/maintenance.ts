@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, requireSuperAdmin, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
 import { z } from 'zod';
@@ -249,7 +249,11 @@ router.post(
 router.post(
   '/check-all',
   authenticateToken,
-  requireRole('admin'),
+  // Deze route draait de controle voor alle verenigingen en stuurt daarbij
+  // meldingen naar hun leden. requireRole('admin') is verenigingsgebonden en
+  // dus te ruim: daarmee kon de beheerder van een enkele vereniging werk in
+  // gang zetten dat over de grens heen gaat.
+  requireSuperAdmin,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     await runMaintenanceCheck();
 

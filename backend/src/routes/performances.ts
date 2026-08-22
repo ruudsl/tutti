@@ -5,6 +5,18 @@ import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
+/**
+ * Uitvoeringsgeschiedenis.
+ *
+ * concert_program heeft zelf geen association_id; de verenigingsgrens loopt
+ * uitsluitend via de JOIN op concerts. Elke query hieronder moet dus zowel
+ * `c.association_id = ?` als `c.deleted_at IS NULL` bevatten: concerts kent
+ * een soft delete en concerts.ts filtert daar overal op, dus een weggegooid
+ * concert hoort ook hier nergens meer in mee te tellen - niet in de
+ * geschiedenis, niet in de statistieken, en niet in de subquery van
+ * /never-played (een stuk dat alleen op een verwijderd concert stond is in de
+ * praktijk nooit uitgevoerd).
+ */
 router.use(authenticateToken);
 
 // GET /api/performances/history - Get performance history for a piece
@@ -33,7 +45,7 @@ router.get(
       c.concert_type
     FROM concert_program cp
     JOIN concerts c ON cp.concert_id = c.id
-    WHERE c.association_id = ?
+    WHERE c.association_id = ? AND c.deleted_at IS NULL
   `;
     const params: any[] = [associationId];
 
@@ -82,7 +94,7 @@ router.get(
       COUNT(*) as times_played
     FROM concert_program cp
     JOIN concerts c ON cp.concert_id = c.id
-    WHERE c.association_id = ?
+    WHERE c.association_id = ? AND c.deleted_at IS NULL
     GROUP BY cp.title, cp.composer, cp.music_title_id
     ORDER BY MAX(c.date) DESC
   `,
@@ -118,7 +130,7 @@ router.get(
         SELECT DISTINCT cp.music_title_id
         FROM concert_program cp
         JOIN concerts c ON cp.concert_id = c.id
-        WHERE c.association_id = ? AND cp.music_title_id IS NOT NULL
+        WHERE c.association_id = ? AND c.deleted_at IS NULL AND cp.music_title_id IS NOT NULL
       )
     ORDER BY mt.title
   `,
@@ -154,7 +166,7 @@ router.get(
       MIN(c.date) as first_played
     FROM concert_program cp
     JOIN concerts c ON cp.concert_id = c.id
-    WHERE c.association_id = ?
+    WHERE c.association_id = ? AND c.deleted_at IS NULL
     GROUP BY cp.title, cp.composer, cp.music_title_id
     ORDER BY COUNT(*) DESC
     LIMIT ?
@@ -191,7 +203,7 @@ router.get(
       COUNT(DISTINCT cp.title) as unique_pieces
     FROM concerts c
     LEFT JOIN concert_program cp ON cp.concert_id = c.id
-    WHERE c.association_id = ?
+    WHERE c.association_id = ? AND c.deleted_at IS NULL
     GROUP BY strftime('%Y', c.date)
     ORDER BY year DESC
   `,
@@ -226,7 +238,7 @@ router.get(
       MAX(c.date) as last_played
     FROM concert_program cp
     JOIN concerts c ON cp.concert_id = c.id
-    WHERE c.association_id = ? AND cp.composer IS NOT NULL AND cp.composer != ''
+    WHERE c.association_id = ? AND c.deleted_at IS NULL AND cp.composer IS NOT NULL AND cp.composer != ''
     GROUP BY cp.composer
     ORDER BY COUNT(*) DESC
     LIMIT ?
@@ -270,7 +282,7 @@ router.get(
       c.id as concert_id
     FROM concert_program cp
     JOIN concerts c ON cp.concert_id = c.id
-    WHERE c.association_id = ?
+    WHERE c.association_id = ? AND c.deleted_at IS NULL
       AND (cp.title LIKE ? OR cp.composer LIKE ?)
     ORDER BY c.date DESC
     LIMIT 50

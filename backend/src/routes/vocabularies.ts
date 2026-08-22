@@ -26,6 +26,40 @@ import {
 
 const router = Router();
 
+/**
+ * De taalcode komt in de service rechtstreeks in de SQL-tekst terecht
+ * (json_extract(pref_label, '$.<taal>')), en is dus geen gewone parameter maar
+ * een stukje opdracht. Zonder deze controle kan een aanroeper met
+ * ?lang=nl') DESC -- de zoekopdracht zelf sturen. Een taalcode is hooguit een
+ * paar letters met eventueel een regioachtervoegsel; al het andere wordt
+ * geweigerd voordat het de service in gaat.
+ */
+const TAALCODE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{2,8})*$/;
+
+function taalUit(req: AuthRequest): string {
+  const taal = (req.query.lang as string) || 'nl';
+
+  if (!TAALCODE.test(taal)) {
+    throw new ApiError(400, 'Ongeldige taalcode.');
+  }
+
+  return taal;
+}
+
+/**
+ * Express heeft de padparameter zelf al gedecodeerd; de tweede ronde hieronder
+ * is er voor aanroepers die hun URI dubbel coderen. Op een losse procentteken
+ * loopt decodeURIComponent stuk, en dat hoort een nette 404 op te leveren in
+ * plaats van een serverfout.
+ */
+function uriUit(param: string): string {
+  try {
+    return decodeURIComponent(param);
+  } catch {
+    return param;
+  }
+}
+
 // Vocabulary data is static and global (identical for every association), so
 // the response cache does not need to vary by association. This router has no
 // mutation endpoints, so no cache invalidation is needed.
@@ -66,7 +100,7 @@ router.get(
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const query = (req.query.q as string) || '';
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (query) {
@@ -110,7 +144,7 @@ router.get(
   authenticateToken,
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
     const tree = buildHierarchy('instrument', lang);
 
     res.json({
@@ -150,8 +184,8 @@ router.get(
   authenticateToken,
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uri = decodeURIComponent(req.params.uri);
-    const lang = (req.query.lang as string) || 'nl';
+    const uri = uriUit(req.params.uri);
+    const lang = taalUit(req);
 
     const concept = getConcept(uri);
     if (!concept || concept.type !== 'instrument') {
@@ -201,7 +235,7 @@ router.get(
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const query = (req.query.q as string) || '';
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (query) {
@@ -244,7 +278,7 @@ router.get(
   authenticateToken,
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
     const tree = buildHierarchy('genre', lang);
 
     res.json({
@@ -281,8 +315,8 @@ router.get(
   authenticateToken,
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const uri = decodeURIComponent(req.params.uri);
-    const lang = (req.query.lang as string) || 'nl';
+    const uri = uriUit(req.params.uri);
+    const lang = taalUit(req);
 
     const concept = getConcept(uri);
     if (!concept || concept.type !== 'genre') {
@@ -338,7 +372,7 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const query = req.query.q as string;
     const type = req.query.type as 'instrument' | 'genre' | 'composer' | undefined;
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!query) {
@@ -386,7 +420,7 @@ router.get(
   vocabCache,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const urisParam = req.query.uris as string;
-    const lang = (req.query.lang as string) || 'nl';
+    const lang = taalUit(req);
 
     if (!urisParam) {
       throw new ApiError(400, 'Query parameter "uris" is verplicht');

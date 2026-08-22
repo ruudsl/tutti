@@ -493,6 +493,11 @@ export function useUpdateMyAttendance() {
     onSuccess: (_, { eventId }) => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['attendanceSummary', eventId] });
+      // De evenementenlijst toont per evenement het aantal aanwezigen
+      // (Event.attendingCount), en op diezelfde pagina meldt de gebruiker zich
+      // aan. Zonder deze invalidatie blijft die teller op het oude aantal
+      // staan tot de pagina ververst wordt.
+      queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
 }

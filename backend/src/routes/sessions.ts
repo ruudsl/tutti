@@ -28,6 +28,11 @@ function getRequestToken(req: AuthRequest): string | undefined {
  *       200:
  *         description: List of active sessions
  */
+// expires_at wordt als ISO-tekst weggeschreven ('2026-08-21T09:00:00.000Z'),
+// datetime('now') levert een spatie ('2026-08-21 19:00:00'). Een kale
+// tekstvergelijking laat de 'T' van de spatie winnen, waardoor een sessie die
+// vandaag verliep de rest van de dag nog als actief in het overzicht stond.
+// datetime() legt beide kanten op hetzelfde formaat.
 router.get(
   '/',
   authenticateToken,
@@ -37,7 +42,7 @@ router.get(
         `
         SELECT id, token_hash, ip_address, user_agent, last_active, created_at, expires_at
         FROM user_sessions
-        WHERE user_id = ? AND revoked_at IS NULL AND expires_at > datetime('now')
+        WHERE user_id = ? AND revoked_at IS NULL AND datetime(expires_at) > datetime('now')
         ORDER BY last_active DESC
     `,
       )

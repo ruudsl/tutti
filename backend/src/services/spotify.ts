@@ -3,6 +3,16 @@ import logger from '../utils/logger';
 const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token';
 
+/**
+ * Hoe lang we hooguit op Spotify wachten.
+ *
+ * Zonder limiet blijft een verzoek aan een trage of hangende dienst staan tot
+ * de andere kant hem sluit. Onze eigen aanvraag blijft dan net zo lang open,
+ * met een verbinding en een werker eraan vast, terwijl het hier om een
+ * bijzaak gaat: een streaminglink bij een titel. Beter is: opgeven.
+ */
+const SPOTIFY_TIMEOUT_MS = 10000;
+
 export interface SpotifyTrack {
   id: string;
   name: string;
@@ -85,6 +95,7 @@ export class SpotifyClient {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -117,6 +128,7 @@ export class SpotifyClient {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
     });
 
     if (!response.ok) {

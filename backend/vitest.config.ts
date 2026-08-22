@@ -8,8 +8,27 @@ export default defineConfig({
     setupFiles: ['src/__tests__/setup.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
-    // Run tests sequentially to avoid database conflicts
-    fileParallelism: false,
+    // Testbestanden draaien parallel.
+    //
+    // Hier stond `fileParallelism: false` met als reden "to avoid database
+    // conflicts". Die reden klopte niet meer, en waarschijnlijk al langer niet:
+    // de testdatabase is puur in-geheugen (`new SQL.Database()` in
+    // __tests__/testDb.ts) en `isolate: true` geeft elk testbestand een eigen
+    // moduleregistratie. Elk bestand had dus allang zijn eigen database - er
+    // viel niets te botsen.
+    //
+    // Het echte risico zat bij de tien testbestanden die naar schijf schrijven
+    // en samen de uploads-map delen. Die zijn eerst apart parallel gedraaid:
+    // 148 tests groen, en 65 seconden testtijd in 24 seconden wandkloktijd.
+    //
+    // Daarna de hele suite, drie keer achter elkaar: 4358 tests, elke keer
+    // groen. Drie keer, omdat een parallelle suite die één keer slaagt niets
+    // bewijst - een test die soms omvalt is erger dan een suite die traag is.
+    //
+    // Wat het oplevert: 19m35s serieel wordt 10m50s parallel op vier kernen.
+    // De suite groeit lineair met het aantal tests, dus dit is niet alleen
+    // sneller vandaag maar schuift ook de tijdslimiet in CI vooruit.
+    fileParallelism: true,
     isolate: true,
     coverage: {
       provider: 'v8',
@@ -59,11 +78,20 @@ export default defineConfig({
       // Het doel van >80 procent uit WP8 staat daarmee veel verder weg dan het
       // leek: daarvoor moeten er ruim veertienduizend statements bij afgedekt
       // worden.
+      // Bijgewerkt op 21-08-2026. Gemeten:
+      //   statements 64,36 (14583/22658)
+      //   branches   55,43 (7516/13558)
+      //   functions  68,04 (1921/2823)
+      //   lines      64,64 (14174/21926)
+      //
+      // Drempels net onder de gemeten stand: hoog genoeg om een terugval te
+      // vangen, laag genoeg om niet af te gaan op meetruis. Het doel van >80
+      // procent uit WP8 is daarmee in zicht maar nog niet gehaald.
       thresholds: {
-        statements: 12,
-        branches: 8,
-        functions: 13,
-        lines: 12,
+        statements: 63,
+        branches: 54,
+        functions: 67,
+        lines: 63,
       },
     },
   },

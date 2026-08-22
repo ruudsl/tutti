@@ -267,9 +267,16 @@ async function processTask(task: PendingTask): Promise<void> {
   }
 }
 
-async function checkAndProcessPendingTasks(): Promise<void> {
-  if (!schedulerRunning) return;
-
+/**
+ * Eén ronde: alle openstaande taken langs.
+ *
+ * Losgetrokken uit checkAndProcessPendingTasks zodat een ronde rechtstreeks
+ * aan te roepen is zonder de lus te starten. De wachttijd tussen twee taken
+ * (bedoeld om de Graph-API niet te overladen) is een parameter geworden met
+ * dezelfde standaardwaarde als voorheen; een aanroeper die geen echte API
+ * raakt kan er 0 van maken.
+ */
+export async function processPendingTasks(delayBetweenTasksMs: number = 1000): Promise<void> {
   try {
     // Find all pending email forwarding tasks
     const pendingTasks = db
@@ -290,11 +297,19 @@ async function checkAndProcessPendingTasks(): Promise<void> {
     for (const task of pendingTasks) {
       await processTask(task);
       // Small delay between tasks to avoid overwhelming the API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (delayBetweenTasksMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayBetweenTasksMs));
+      }
     }
   } catch (err) {
     logger.error('Error in email forwarding retry scheduler', { error: err });
   }
+}
+
+async function checkAndProcessPendingTasks(): Promise<void> {
+  if (!schedulerRunning) return;
+
+  await processPendingTasks();
 
   // Schedule next check
   if (schedulerRunning) {

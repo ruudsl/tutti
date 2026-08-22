@@ -16,10 +16,12 @@
  *   Twee leden delen een sectie als een instrument dat de een speelt en een
  *   instrument dat de ander speelt in dezelfde sectie vallen.
  *
- * Secties hangen aan een orkest en orkesten aan een vereniging, dus de
- * verenigingsgrens zit al in de gegevens. De aanroeper controleert daarnaast
- * altijd zelf dat kijker en eigenaar bij dezelfde vereniging horen; deze
- * module gaat daarvan uit en beslist alleen over zichtbaarheid.
+ * Secties hangen aan een orkest en orkesten aan een vereniging. Instrumenten
+ * niet: die lijst is voor het hele platform gemeenschappelijk, en daardoor zit
+ * de verenigingsgrens niet vanzelf in de gegevens - `sectiesPerLid` legt hem er
+ * uitdrukkelijk in. De aanroeper controleert daarnaast altijd zelf dat kijker
+ * en eigenaar bij dezelfde vereniging horen; deze module gaat daarvan uit en
+ * beslist alleen over zichtbaarheid.
  */
 
 import db from '../database/connection';
@@ -62,6 +64,17 @@ export function orkestenPerLid(userIds: string[]): Map<string, Set<string>> {
  * Een lid zit in een sectie als een van zijn instrumenten in die sectie
  * thuishoort. Dat kunnen er meer zijn: wie zowel bugel als trompet speelt zit
  * in beide rijen.
+ *
+ * Alleen rijen van de eigen vereniging tellen mee. `instruments` is een platte
+ * lijst voor het hele platform - "Trompet" is er een, voor iedereen - en
+ * `seating_section_instruments` hangt zo'n instrument aan een sectie van een
+ * orkest van een bepaalde vereniging. Zonder de sprong naar `orchestras` kreeg
+ * een trompettist dus ook de sectie-id's van elke andere vereniging waar
+ * trompet in een rij staat. Twee leden van onze vereniging die hier in
+ * verschillende rijen staan deelden daardoor alsnog een sectie zodra een
+ * willekeurige andere vereniging hun instrumenten bij elkaar zette, en een veld
+ * op `section` ging open door een opstelling waar wij niets over te zeggen
+ * hebben.
  */
 export function sectiesPerLid(userIds: string[]): Map<string, Set<string>> {
   const perLid = new Map<string, Set<string>>();
@@ -72,7 +85,10 @@ export function sectiesPerLid(userIds: string[]): Map<string, Set<string>> {
     .prepare(
       `SELECT ui.user_id, ssi.section_id
        FROM user_instruments ui
+       JOIN users u ON u.id = ui.user_id
        JOIN seating_section_instruments ssi ON ssi.instrument_id = ui.instrument_id
+       JOIN seating_sections ss ON ss.id = ssi.section_id
+       JOIN orchestras o ON o.id = ss.orchestra_id AND o.association_id = u.association_id
        WHERE ui.user_id IN (${plaatshouders})`,
     )
     .all(...userIds) as { user_id: string; section_id: string }[];

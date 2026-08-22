@@ -77,19 +77,24 @@ router.get(
       throw new ApiError(404, 'Outfit not found');
     }
 
-    // Get concerts using this outfit
+    // Get concerts using this outfit.
+    // Een zacht verwijderd concert telt in de rest van de applicatie niet
+    // meer mee, dus hoort het hier ook niet in de lijst. De vereniging staat
+    // er nog een keer bij: concert_outfits kent zelf geen association_id, dus
+    // een koppeling die ooit over de grens heen is gelegd mag hier geen namen
+    // van concerten van een andere vereniging prijsgeven.
     const concerts = db
       .prepare(
         `
     SELECT c.id, c.name, c.date
     FROM concerts c
     JOIN concert_outfits co ON co.concert_id = c.id
-    WHERE co.outfit_id = ?
+    WHERE co.outfit_id = ? AND c.association_id = ? AND c.deleted_at IS NULL
     ORDER BY c.date DESC
     LIMIT 10
   `,
       )
-      .all(req.params.id);
+      .all(req.params.id, associationId);
 
     res.json({
       id: outfit.id,
@@ -244,8 +249,11 @@ router.post(
     const outfit = db
       .prepare(`SELECT id FROM outfits WHERE id = ? AND association_id = ? AND deleted_at IS NULL`)
       .get(req.params.id, associationId);
+    // Ook hier deleted_at meenemen: een zacht verwijderd concert bestaat voor
+    // de rest van de applicatie niet meer, dus er hoort geen nieuwe kleding
+    // meer aan gekoppeld te kunnen worden.
     const concert = db
-      .prepare(`SELECT id FROM concerts WHERE id = ? AND association_id = ?`)
+      .prepare(`SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL`)
       .get(req.params.concertId, associationId);
 
     if (!outfit) throw new ApiError(404, 'Outfit not found');

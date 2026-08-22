@@ -282,22 +282,38 @@ class TestDatabaseWrapper {
           db.run(`RELEASE SAVEPOINT ${naam}`);
           return result;
         } catch (error) {
-          db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
-          db.run(`RELEASE SAVEPOINT ${naam}`);
+          // Zelfde vorm als in database/connection.ts: het terugdraaien mag de
+          // oorspronkelijke fout niet overschrijven.
+          try {
+            db.run(`ROLLBACK TO SAVEPOINT ${naam}`);
+            db.run(`RELEASE SAVEPOINT ${naam}`);
+          } catch (terugdraaifout) {
+            console.warn(`Terugdraaien naar savepoint ${naam} mislukt:`, terugdraaifout);
+          }
           throw error;
         }
       }
 
-      this.inTransaction = true;
+      // De vlag pas om als BEGIN gelukt is - zie connection.ts.
       db.run('BEGIN TRANSACTION');
+      this.inTransaction = true;
       try {
         const result = fn();
         db.run('COMMIT');
         this.inTransaction = false;
         return result;
       } catch (error) {
-        db.run('ROLLBACK');
+        // Eerst de vlag terug, dan pas terugdraaien. Blijft inTransaction op
+        // true staan, dan slaat elke schrijfactie daarna het inplannen van een
+        // save over: de wrapper stopt stil met wegschrijven. Deze kopie loopt
+        // bewust gelijk met connection.ts; er staat een test op die die
+        // gelijkloop bewaakt.
         this.inTransaction = false;
+        try {
+          db.run('ROLLBACK');
+        } catch (terugdraaifout) {
+          console.warn('ROLLBACK mislukt; de oorspronkelijke fout blijft leidend:', terugdraaifout);
+        }
         throw error;
       }
     };

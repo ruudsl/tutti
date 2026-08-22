@@ -65,7 +65,12 @@ function generateGuestCheckoutToken(profile: SocialUserProfile): string {
     exp: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
   };
 
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: '30m' });
+  // Geen `expiresIn` erbij: jsonwebtoken weigert een payload die zelf al een
+  // `exp` heeft ("Bad options.expiresIn option the payload already has an exp
+  // property") en gooit dan. Elke geslaagde login via Google of Facebook liep
+  // daardoor op een 500 uit, precies op het punt waar het token gemaakt wordt.
+  // De `exp` hierboven is de vervaltijd; die staat ook in het type.
+  return jwt.sign(payload, config.jwtSecret);
 }
 
 /**

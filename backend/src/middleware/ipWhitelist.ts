@@ -18,7 +18,14 @@ function ipToNumber(ip: string): bigint | null {
   if (ipv4Match) {
     const [, a, b, c, d] = ipv4Match.map(Number);
     if ([a, b, c, d].every((n) => n >= 0 && n <= 255)) {
-      return BigInt((a << 24) | (b << 16) | (c << 8) | d);
+      // Rekenen in BigInt, niet met `a << 24`. De shift-operator van
+      // JavaScript werkt op 32-bits *signed* getallen, dus alles vanaf 128 in
+      // het eerste octet kwam er negatief uit. De bereikgrenzen uit parseCidr
+      // komen wel positief uit de bus (die gaan door een BigInt-masker), zodat
+      // `ipNum >= start` voor zulke adressen altijd onwaar was: 192.168.0.0/16,
+      // 172.16.0.0/12 en elk publiek bereik vanaf 128.x kwamen met geen enkel
+      // adres overeen.
+      return (BigInt(a) << BigInt(24)) | (BigInt(b) << BigInt(16)) | (BigInt(c) << BigInt(8)) | BigInt(d);
     }
   }
 
