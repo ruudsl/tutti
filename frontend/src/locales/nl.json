@@ -563,7 +563,9 @@
     "statusUpdated": "Status bijgewerkt",
     "errorUpdateStatus": "Fout bij bijwerken status",
     "deleted": "Melding verwijderd",
-    "errorDelete": "Fout bij verwijderen"
+    "errorDelete": "Fout bij verwijderen",
+    "filterStatus": "Filter op status",
+    "changeStatusFor": "Status van \"{{title}}\" wijzigen"
   },
   "contacts": {
     "title": "Contacten",
@@ -5523,7 +5525,11 @@
     "addInstrument": "Instrument toevoegen",
     "lastPlayed": "Laatst gespeeld",
     "recentAssignments": "Recente toewijzingen",
-    "event": "Evenement"
+    "event": "Evenement",
+    "filterSearch": "Zoeken",
+    "filterType": "Filter op soort",
+    "filterInstrument": "Filter op instrument",
+    "filterStatus": "Filter op status"
   },
   "replacementRequests": {
     "title": "Invalverzoeken",
@@ -5556,7 +5562,10 @@
     "inviteNotesPlaceholder": "Voeg details over het optreden toe...",
     "invite": "Uitnodigen",
     "cancelRequest": "Verzoek Annuleren",
-    "cancelConfirm": "Weet je zeker dat je dit verzoek wilt annuleren?"
+    "cancelConfirm": "Weet je zeker dat je dit verzoek wilt annuleren?",
+    "filterStatus": "Filter op status",
+    "filterUrgency": "Filter op urgentie",
+    "filterEventType": "Filter op soort activiteit"
   },
   "replacementFinder": {
     "title": "Invaller Zoeken",

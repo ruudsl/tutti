@@ -195,3 +195,45 @@ describe('externe muzikanten - het detailvenster labelt niets, dus staat er geen
     expect(zonderVeld.map((label) => label.textContent)).toEqual([]);
   });
 });
+
+/**
+ * De filterbalk boven de lijst: vier bedieningen die nooit een label hebben
+ * gehad, en daardoor ook buiten de labelronde vielen - die zette bestaande
+ * labels om, en hier was er niets om om te zetten.
+ *
+ * Voor wie het scherm ziet is de balk duidelijk: in het zoekveld staat een
+ * placeholder, en in elke keuzelijst staat "alle soorten", "alle instrumenten",
+ * "alle statussen". Een schermlezer heeft daar niets aan. Een placeholder telt
+ * niet als naam, en van een keuzelijst leest hij alleen de gekozen waarde voor,
+ * niet de opties eronder. Vier keer "keuzelijst" achter elkaar dus.
+ *
+ * Een zichtbaar label boven elk van de vier zou de balk twee keer zo hoog
+ * maken voor informatie die je al ziet staan, dus dit zijn `aria-label`s: een
+ * naam die alleen in de toegankelijkheidsboom staat.
+ */
+describe('externe muzikanten - de filterbalk heeft namen', () => {
+  it.each([
+    ['externalMusicians.filterSearch', 'INPUT'],
+    ['externalMusicians.filterType', 'SELECT'],
+    ['externalMusicians.filterInstrument', 'SELECT'],
+    ['externalMusicians.filterStatus', 'SELECT'],
+  ])('vindt %s', async (naam, soort) => {
+    render(<ExternalMusicians />, { wrapper: wikkel });
+
+    const bediening = await screen.findByLabelText(naam);
+    expect(bediening.tagName).toBe(soort);
+  });
+
+  it('geeft elk filter een eigen naam', async () => {
+    render(<ExternalMusicians />, { wrapper: wikkel });
+    await screen.findByLabelText('externalMusicians.filterSearch');
+
+    // Vier keer dezelfde naam is net zo onbruikbaar als geen naam: dan weet je
+    // nog steeds niet welke van de vier je te pakken hebt.
+    const namen = [...document.querySelectorAll('[aria-label^="externalMusicians.filter"]')].map((element) =>
+      element.getAttribute('aria-label'),
+    );
+    expect(new Set(namen).size).toBe(namen.length);
+    expect(namen).toHaveLength(4);
+  });
+});

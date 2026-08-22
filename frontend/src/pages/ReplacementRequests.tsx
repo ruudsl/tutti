@@ -238,8 +238,15 @@ export default function ReplacementRequests() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="grid grid-cols-3 gap-2">
+            {/* Namen via aria-label, niet via een zichtbaar label: zie de
+                toelichting bij dezelfde balk in ExternalMusicians.tsx. */}
             <div className="form-group mb-0">
-              <select className="form-control" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <select
+                className="form-control"
+                aria-label={t('replacementRequests.filterStatus')}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
                 <option value="">{t('replacementRequests.allStatuses')}</option>
                 <option value="open">{STATUS_LABELS.open}</option>
                 <option value="partially_filled">{STATUS_LABELS.partially_filled}</option>
@@ -248,7 +255,12 @@ export default function ReplacementRequests() {
               </select>
             </div>
             <div className="form-group mb-0">
-              <select className="form-control" value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+              <select
+                className="form-control"
+                aria-label={t('replacementRequests.filterUrgency')}
+                value={filterUrgency}
+                onChange={(e) => setFilterUrgency(e.target.value)}
+              >
                 <option value="">{t('replacementRequests.allUrgencies')}</option>
                 <option value="low">{URGENCY_LABELS.low}</option>
                 <option value="normal">{URGENCY_LABELS.normal}</option>
@@ -259,6 +271,7 @@ export default function ReplacementRequests() {
             <div className="form-group mb-0">
               <select
                 className="form-control"
+                aria-label={t('replacementRequests.filterEventType')}
                 value={filterEventType}
                 onChange={(e) => setFilterEventType(e.target.value)}
               >

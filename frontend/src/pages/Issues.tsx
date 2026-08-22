@@ -160,6 +160,7 @@ export default function Issues() {
             <div className="flex gap-2">
               <select
                 className="form-control form-select"
+                aria-label={t('issues.filterStatus')}
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 style={{ maxWidth: '200px' }}
@@ -248,6 +249,7 @@ export default function Issues() {
                       {isMusicCommittee && issue.status !== 'resolved' && issue.status !== 'rejected' ? (
                         <select
                           className={`form-control form-select ${STATUS_COLORS[issue.status]}`}
+                          aria-label={t('issues.changeStatusFor', { title: issue.piece_title })}
                           value={issue.status}
                           onChange={(e) => handleStatusChange(issue, e.target.value)}
                           style={{ minWidth: '140px' }}

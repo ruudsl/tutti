@@ -220,3 +220,32 @@ describe('vervangingsaanvragen - het detailvenster labelt niets, dus staat er ge
     expect(zonderVeld.map((label) => label.textContent)).toEqual([]);
   });
 });
+
+/**
+ * De filterbalk boven de lijst. Zie de toelichting bij dezelfde balk in
+ * ExternalMusicians.labels.test.tsx: drie keuzelijsten waarvan de eerste optie
+ * het enige aanknopingspunt was, en die optie leest een schermlezer niet voor.
+ */
+describe('invalverzoeken - de filterbalk heeft namen', () => {
+  it.each([
+    'replacementRequests.filterStatus',
+    'replacementRequests.filterUrgency',
+    'replacementRequests.filterEventType',
+  ])('vindt %s', async (naam) => {
+    render(<ReplacementRequests />, { wrapper: wikkel });
+
+    const filter = await screen.findByLabelText(naam);
+    expect(filter.tagName).toBe('SELECT');
+  });
+
+  it('geeft elk filter een eigen naam', async () => {
+    render(<ReplacementRequests />, { wrapper: wikkel });
+    await screen.findByLabelText('replacementRequests.filterStatus');
+
+    const namen = [...document.querySelectorAll('[aria-label^="replacementRequests.filter"]')].map((element) =>
+      element.getAttribute('aria-label'),
+    );
+    expect(new Set(namen).size).toBe(namen.length);
+    expect(namen).toHaveLength(3);
+  });
+});

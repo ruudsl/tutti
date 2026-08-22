@@ -60,8 +60,21 @@ vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', role: 'music_committee' } }),
 }));
 
+// De vertaalfunctie geeft de sleutel terug, en plakt de meegegeven waarden
+// erachter. Die staart is er voor `issues.changeStatusFor`: de test hieronder
+// controleert dat de titel van de melding echt in de naam van de keuzelijst
+// terechtkomt. In de echte vertaling zit de titel in een plaatshouder, maar de
+// sleutel zelf heeft die plaatshouder niet - dus zonder deze staart zou een
+// test op de naam ook slagen als de titel nooit was meegegeven.
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (sleutel: string) => sleutel }),
+  useTranslation: () => ({
+    t: (sleutel: string, opties?: Record<string, unknown>) =>
+      opties
+        ? `${sleutel}[${Object.entries(opties)
+            .map(([naam, waarde]) => `${naam}=${String(waarde)}`)
+            .join(',')}]`
+        : sleutel,
+  }),
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
@@ -138,5 +151,35 @@ describe('meldingen - de opschriften boven de uitgelezen waarden labelen niets',
     const labels = Array.from(venster.querySelectorAll('label'));
     expect(labels).toHaveLength(1);
     expect(labels[0].getAttribute('for')).toBe(screen.getByLabelText(/issues\.responseNotes/).id);
+  });
+});
+
+/**
+ * De twee keuzelijsten op deze pagina hadden geen naam. Ze staan er niet kaal
+ * bij voor wie het scherm ziet - de gekozen status staat erin - maar een
+ * schermlezer leest een keuzelijst voor als "keuzelijst, open" zonder erbij te
+ * vertellen waar die over gaat. Bij tien meldingen onder elkaar is dat tien
+ * keer dezelfde zin.
+ *
+ * Een zichtbaar label was hier de verkeerde oplossing: in de tabel zou het per
+ * rij herhaald worden, en boven de filterbalk maakt het de balk twee keer zo
+ * hoog voor informatie die de eerste optie al geeft. Vandaar `aria-label`, en
+ * in de tabel eentje die de melding bij naam noemt.
+ */
+describe('meldingen - de keuzelijsten hebben een naam', () => {
+  it('noemt het statusfilter bij naam', async () => {
+    render(<Issues />, { wrapper: wikkel });
+
+    const filter = await screen.findByLabelText('issues.filterStatus');
+    expect(filter.tagName).toBe('SELECT');
+  });
+
+  it('noemt in de tabel de melding waar de keuzelijst bij hoort', async () => {
+    render(<Issues />, { wrapper: wikkel });
+
+    // De naam bevat de titel van de partij. Zonder die titel zouden tien rijen
+    // tien keer dezelfde naam dragen, en dan is de naam niets waard.
+    const keuze = await screen.findByLabelText('issues.changeStatusFor[title=Also sprach Zarathustra]');
+    expect(keuze).toHaveValue('open');
   });
 });

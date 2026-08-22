@@ -261,17 +261,30 @@ export default function ExternalMusicians() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="grid grid-cols-4 gap-2">
+            {/* De filterbalk kreeg zijn namen via aria-label in plaats van een
+                zichtbaar label: vier labels boven vier smalle velden maken de
+                balk twee keer zo hoog, terwijl de eerste optie ("alle soorten")
+                voor wie het scherm ziet al vertelt waar het filter over gaat.
+                Voor een schermlezer vertelt die optie niets - die leest alleen
+                de gekozen waarde voor - dus zonder naam waren dit vier keer
+                "keuzelijst" achter elkaar. */}
             <div className="form-group mb-0">
               <input
                 type="text"
                 className="form-control"
+                aria-label={t('externalMusicians.filterSearch')}
                 placeholder={t('common.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="form-group mb-0">
-              <select className="form-control" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <select
+                className="form-control"
+                aria-label={t('externalMusicians.filterType')}
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
                 <option value="">{t('externalMusicians.allTypes')}</option>
                 <option value="alumni">{MUSICIAN_TYPE_LABELS.alumni}</option>
                 <option value="guest">{MUSICIAN_TYPE_LABELS.guest}</option>
@@ -282,6 +295,7 @@ export default function ExternalMusicians() {
             <div className="form-group mb-0">
               <select
                 className="form-control"
+                aria-label={t('externalMusicians.filterInstrument')}
                 value={filterInstrument}
                 onChange={(e) => setFilterInstrument(e.target.value)}
               >
@@ -296,6 +310,7 @@ export default function ExternalMusicians() {
             <div className="form-group mb-0">
               <select
                 className="form-control"
+                aria-label={t('externalMusicians.filterStatus')}
                 value={filterActive === undefined ? '' : filterActive ? 'true' : 'false'}
                 onChange={(e) => {
                   if (e.target.value === '') setFilterActive(undefined);

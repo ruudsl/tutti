@@ -609,7 +609,9 @@
     "statusUpdated": "Status aktualisiert",
     "errorUpdateStatus": "Fehler beim Aktualisieren des Status",
     "deleted": "Meldung gelöscht",
-    "errorDelete": "Fehler beim Löschen"
+    "errorDelete": "Fehler beim Löschen",
+    "filterStatus": "Nach Status filtern",
+    "changeStatusFor": "Status von „{{title}}\" ändern"
   },
   "contacts": {
     "title": "Kontakte",
@@ -5488,7 +5490,11 @@
     "addInstrument": "Instrument hinzufügen",
     "lastPlayed": "Zuletzt gespielt",
     "recentAssignments": "Letzte Einsätze",
-    "event": "Veranstaltung"
+    "event": "Veranstaltung",
+    "filterSearch": "Suchen",
+    "filterType": "Nach Art filtern",
+    "filterInstrument": "Nach Instrument filtern",
+    "filterStatus": "Nach Status filtern"
   },
   "replacementRequests": {
     "title": "Vertretungsanfragen",
@@ -5521,7 +5527,10 @@
     "inviteNotesPlaceholder": "Details zum Auftritt hinzufügen...",
     "invite": "Einladen",
     "cancelRequest": "Anfrage stornieren",
-    "cancelConfirm": "Bist du sicher, dass du diese Anfrage stornieren möchtest?"
+    "cancelConfirm": "Bist du sicher, dass du diese Anfrage stornieren möchtest?",
+    "filterStatus": "Nach Status filtern",
+    "filterUrgency": "Nach Dringlichkeit filtern",
+    "filterEventType": "Nach Aktivitätsart filtern"
   },
   "replacementFinder": {
     "title": "Vertretung finden",
