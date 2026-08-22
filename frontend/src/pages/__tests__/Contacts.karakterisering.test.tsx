@@ -27,7 +27,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -294,5 +294,51 @@ describe('contactenpagina - vastgelegd gedrag vóór het opknippen', () => {
     expect(await screen.findByText('contacts.noContacts')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('contacts.title');
     expect(screen.getByPlaceholderText('contacts.searchPlaceholder')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Hieronder staan geen karakteriseringstests maar regressietests: ze leggen
+ * gedrag vast zoals het hoort te zijn, na het herstellen van een fout in de
+ * terugweg van het bewerkformulier. Zonder die reparatie is de eerste rood.
+ */
+describe('contactenpagina - herstelde fouten', () => {
+  it('keert na het opslaan van een bewerking terug in het detailvenster', async () => {
+    const gebruiker = userEvent.setup();
+    render(<Contacts />, { wrapper: wikkel });
+
+    await gebruiker.click(await screen.findByRole('button', { name: 'Concertgebouw' }));
+
+    const detail = await screen.findByRole('dialog');
+    await gebruiker.click(within(detail).getByRole('button', { name: 'common.edit' }));
+
+    const formulier = await screen.findByRole('dialog');
+    expect(formulier).toHaveTextContent('contacts.editContact');
+
+    await gebruiker.click(within(formulier).getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => expect(contactenApi.updateContact).toHaveBeenCalled());
+
+    // Het venster blijft open en toont weer het contact zelf; wie net iets
+    // bewerkt heeft wil vaak nog iets anders nakijken.
+    const terug = await screen.findByRole('dialog');
+    await waitFor(() => expect(terug).not.toHaveTextContent('contacts.editContact'));
+    expect(terug).toHaveTextContent('Concertgebouw');
+    expect(terug).toHaveTextContent('contacts.contactPersons');
+  });
+
+  it('sluit het formulier voor een nieuw contact wel helemaal', async () => {
+    const gebruiker = userEvent.setup();
+    render(<Contacts />, { wrapper: wikkel });
+
+    // De tweede ingang van hetzelfde formulier: vanuit de lijst, zonder
+    // detailvenster erachter. Daar hoort sluiten wél terug naar de lijst te
+    // leiden - de reparatie hierboven mag dat niet omgooien.
+    await gebruiker.click(await screen.findByRole('button', { name: /contacts.addContact/ }));
+
+    const formulier = await screen.findByRole('dialog');
+    await gebruiker.click(within(formulier).getByRole('button', { name: 'common.cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });

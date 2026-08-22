@@ -72,10 +72,22 @@ export function ContactDetailModal({
     return (
       <ContactFormModal
         contact={contact}
-        onClose={() => {
-          setIsEditing(false);
-          onClose();
-        }}
+        /**
+         * Hetzelfde formulier heeft twee ingangen, en die zijn te herkennen aan
+         * wie het opent - niet aan iets in het formulier zelf. Vanuit de lijst
+         * (Contacts/index.tsx) gaat het zonder `contact` open om een nieuw
+         * contact aan te maken; daar betekent sluiten terug naar de lijst, en
+         * die ingang zet zijn eigen `onClose`. Hier, vanuit het detailvenster,
+         * wordt een bestaand contact bewerkt en hoort sluiten terug te leiden
+         * naar datzelfde detailvenster.
+         *
+         * Dat gaat ook over opslaan: het formulier roept na een geslaagde
+         * mutatie zijn `onClose` aan. Deze riep behalve `setIsEditing(false)`
+         * ook die van de pagina aan, en dus verdween met het formulier het
+         * detailvenster mee - na opslaan stond je weer in de lijst in plaats
+         * van bij het contact dat je net bewerkt had.
+         */
+        onClose={() => setIsEditing(false)}
         categories={categories}
       />
     );
