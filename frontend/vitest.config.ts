@@ -1,9 +1,20 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // vite-plugin-pwa draait hier niet, dus deze virtuele module bestaat niet
+      // tijdens het testen. Zonder alias faalt niet de test maar de
+      // dekkingsmeting: PWAUpdatePrompt.tsx werd niet getransformeerd, waarna
+      // de v8-provider het rauw probeerde te ontleden, over de JSX struikelde
+      // en het bestand stilzwijgend uit de noemer liet vallen.
+      'virtual:pwa-register/react': path.resolve(__dirname, 'src/test/pwa-register-stub.ts'),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
@@ -42,11 +53,22 @@ export default defineConfig({
       // Drempels net onder de gemeten stand, zodat ze een terugval vangen
       // zonder bij de eerste de beste meetruis af te gaan. Verhoog ze als er
       // tests bij komen - dat is het hele punt van een ratel.
+      // Bijgewerkt op 22-08-2026. Gemeten:
+      //   statements 24,23 (6036/24902)
+      //   branches    8,68 (1436/16534)
+      //   functions  23,91 (2100/8780)
+      //   lines      24,71 (5784/23400)
+      //
+      // Branches blijft ver achter bij statements, en dat is geen meetfout: de
+      // pagina's staan nog op nul en juist daar zit het overgrote deel van de
+      // vertakkingen. Zolang bestanden als Accounting.tsx (2680 regels) ongetest
+      // zijn, tilt geen enkele hoeveelheid api- en hooktests dat getal mee
+      // omhoog.
       thresholds: {
-        statements: 6,
-        branches: 3,
-        functions: 6,
-        lines: 6,
+        statements: 24,
+        branches: 8,
+        functions: 23,
+        lines: 24,
       },
     },
   },
