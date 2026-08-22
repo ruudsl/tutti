@@ -97,10 +97,14 @@ export function useDeleteMusicPiece() {
     mutationFn: (id: string) => deleteMusicPiece(id),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      // De lijstoverzichten tellen alleen stukken zonder deleted_at
+      // (routes/music-lists.ts), dus pieceCount en titleCount veranderen mee.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
       showUndoToast(t('musicPieces.deleted'), t('common.undo'), async () => {
         try {
           await restoreMusicPiece(id);
           queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+          queryClient.invalidateQueries({ queryKey: ['musicLists'] });
           showSuccess(t('musicPieces.restored'));
         } catch (error) {
           showError(getErrorMessage(error));
@@ -124,10 +128,14 @@ export function useDeleteMusicPiecesBulk() {
     mutationFn: (ids: string[]) => deleteMusicPiecesBulk(ids),
     onSuccess: (result, ids) => {
       queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+      // De lijstoverzichten tellen alleen stukken zonder deleted_at
+      // (routes/music-lists.ts), dus pieceCount en titleCount veranderen mee.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
       showUndoToast(t('musicPieces.deletedBulk', { count: result.count }), t('common.undo'), async () => {
         try {
           await Promise.all(ids.map((id) => restoreMusicPiece(id)));
           queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
+          queryClient.invalidateQueries({ queryKey: ['musicLists'] });
           showSuccess(t('musicPieces.restoredBulk', { count: ids.length }));
         } catch (error) {
           showError(getErrorMessage(error));

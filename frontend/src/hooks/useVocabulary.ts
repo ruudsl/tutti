@@ -146,7 +146,11 @@ export function useUpdateTitleMetadata() {
     },
     onSuccess: (_, { titleId }) => {
       queryClient.invalidateQueries({ queryKey: ['music-pieces', 'metadata', titleId] });
-      queryClient.invalidateQueries({ queryKey: ['music-pieces'] });
+      // De muziekstukken staan in de cache onder 'musicPieces', niet onder
+      // 'music-pieces'. Met dat laatste raakte deze regel geen enkele lijst,
+      // maar wél de titelgegevens van alle andere titels - die haalde hij
+      // onnodig opnieuw op.
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
     },
   });
 }
@@ -167,7 +171,11 @@ export function useUploadMusicXML() {
     },
     onSuccess: (_, { titleId }) => {
       queryClient.invalidateQueries({ queryKey: ['music-pieces', 'metadata', titleId] });
-      queryClient.invalidateQueries({ queryKey: ['music-pieces'] });
+      // De muziekstukken staan in de cache onder 'musicPieces', niet onder
+      // 'music-pieces'. Met dat laatste raakte deze regel geen enkele lijst,
+      // maar wél de titelgegevens van alle andere titels - die haalde hij
+      // onnodig opnieuw op.
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
     },
   });
 }

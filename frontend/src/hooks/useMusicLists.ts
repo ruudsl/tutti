@@ -123,6 +123,13 @@ export function useAddPieceToList() {
     mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) => addPieceToList(listId, pieceId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
+      // De overzichten tonen per lijst pieceCount en titleCount; die staan
+      // onder ['musicLists', orkestId] en ['musicLists','my'], buiten het
+      // bereik van de detailsleutel. En useMusicPieces({ listId }) filtert op
+      // lijst. Vergelijk useBulkUpdatePieces, die bij dezelfde soort wijziging
+      // beide al vernieuwt.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
     },
     onError: (error) => {
       showError(getErrorMessage(error));
@@ -140,6 +147,13 @@ export function useRemovePieceFromList() {
     mutationFn: ({ listId, pieceId }: { listId: string; pieceId: string }) => removePieceFromList(listId, pieceId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
+      // De overzichten tonen per lijst pieceCount en titleCount; die staan
+      // onder ['musicLists', orkestId] en ['musicLists','my'], buiten het
+      // bereik van de detailsleutel. En useMusicPieces({ listId }) filtert op
+      // lijst. Vergelijk useBulkUpdatePieces, die bij dezelfde soort wijziging
+      // beide al vernieuwt.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
     },
     onError: (error) => {
       showError(getErrorMessage(error));
@@ -157,6 +171,13 @@ export function useAddTitleToList() {
     mutationFn: ({ listId, title }: { listId: string; title: string }) => addTitleToList(listId, title),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
+      // De overzichten tonen per lijst pieceCount en titleCount; die staan
+      // onder ['musicLists', orkestId] en ['musicLists','my'], buiten het
+      // bereik van de detailsleutel. En useMusicPieces({ listId }) filtert op
+      // lijst. Vergelijk useBulkUpdatePieces, die bij dezelfde soort wijziging
+      // beide al vernieuwt.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess(`${result.added} stuk(ken) toegevoegd aan lijst`);
     },
     onError: (error) => {
@@ -175,6 +196,13 @@ export function useRemoveTitleFromList() {
     mutationFn: ({ listId, title }: { listId: string; title: string }) => removeTitleFromList(listId, title),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.musicList(variables.listId) });
+      // De overzichten tonen per lijst pieceCount en titleCount; die staan
+      // onder ['musicLists', orkestId] en ['musicLists','my'], buiten het
+      // bereik van de detailsleutel. En useMusicPieces({ listId }) filtert op
+      // lijst. Vergelijk useBulkUpdatePieces, die bij dezelfde soort wijziging
+      // beide al vernieuwt.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess(`${result.removed} stuk(ken) verwijderd uit lijst`);
     },
     onError: (error) => {

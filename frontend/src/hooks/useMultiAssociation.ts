@@ -178,6 +178,10 @@ export function useCreateInvitation() {
       createInvitation(email, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }
@@ -255,6 +259,10 @@ export function useRequestPartnership() {
       // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
       queryClient.invalidateQueries({ queryKey: ['partner-music'] });
       queryClient.invalidateQueries({ queryKey: ['partner-events'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }
@@ -269,6 +277,10 @@ export function useApprovePartnership() {
       // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
       queryClient.invalidateQueries({ queryKey: ['partner-music'] });
       queryClient.invalidateQueries({ queryKey: ['partner-events'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }
@@ -283,6 +295,10 @@ export function useRejectPartnership() {
       // Goedkeuren, afwijzen en beeindigen veranderen ook wat er gedeeld wordt.
       queryClient.invalidateQueries({ queryKey: ['partner-music'] });
       queryClient.invalidateQueries({ queryKey: ['partner-events'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }
@@ -366,6 +382,10 @@ export function useUpdateMemberRole() {
       updateMemberRole(userId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['associationMembers'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }
@@ -377,6 +397,10 @@ export function useRemoveMember() {
     mutationFn: (userId: string) => removeMember(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['associationMembers'] });
+      // De backend schrijft deze actie in het activiteitenlogboek; dat staat
+      // als tabblad op dezelfde pagina en zou anders vijf minuten lang
+      // (de staleTime uit lib/queryClient.ts) de actie missen.
+      queryClient.invalidateQueries({ queryKey: ['activityLog'] });
     },
   });
 }

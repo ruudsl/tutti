@@ -76,6 +76,10 @@ export function useCreateUser() {
     mutationFn: (data: CreateUserData) => createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      // Het aanmaken, wijzigen en verwijderen van een lid raakt ook
+      // user_orchestras (routes/users.ts). De orkestenlijst telt daaruit
+      // memberCount en het orkestdetail toont de ledennamen.
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
       showSuccess('Lid aangemaakt');
     },
     onError: (error) => {
@@ -94,6 +98,10 @@ export function useUpdateUser() {
     mutationFn: ({ id, data }: { id: string; data: UpdateUserData }) => updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      // Het aanmaken, wijzigen en verwijderen van een lid raakt ook
+      // user_orchestras (routes/users.ts). De orkestenlijst telt daaruit
+      // memberCount en het orkestdetail toont de ledennamen.
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
       showSuccess('Lid bijgewerkt');
     },
     onError: (error) => {
@@ -112,6 +120,10 @@ export function useDeleteUser() {
     mutationFn: (id: string) => deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users });
+      // Het aanmaken, wijzigen en verwijderen van een lid raakt ook
+      // user_orchestras (routes/users.ts). De orkestenlijst telt daaruit
+      // memberCount en het orkestdetail toont de ledennamen.
+      queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
       showSuccess('Lid verwijderd');
     },
     onError: (error) => {

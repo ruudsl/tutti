@@ -52,7 +52,8 @@ const queryKeys = {
   repairs: (assetId: string) => ['instrumentAssets', 'repairs', assetId] as const,
   loans: (assetId: string) => ['instrumentAssets', 'loans', assetId] as const,
   documents: (assetId: string) => ['instrumentAssets', 'documents', assetId] as const,
-  history: (assetId: string) => ['instrumentAssets', 'history', assetId] as const,
+  history: (assetId: string, params?: { page?: number; limit?: number }) =>
+    ['instrumentAssets', 'history', assetId, params] as const,
   insurancePolicies: (filters?: Record<string, string>) => ['insurance', 'policies', filters] as const,
   insuranceSummary: ['insurance', 'summary'] as const,
   expiringPolicies: (days?: number) => ['insurance', 'expiring', days] as const,
@@ -214,6 +215,9 @@ export function useCreateAssetValuation() {
     onSuccess: (_, { assetId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.valuations(assetId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.asset(assetId) });
+      // Een waardering wijzigt current_value op het instrument zelf, dus ook
+      // de overzichtslijst en de samenvatting (totale waarde) zijn verouderd.
+      queryClient.invalidateQueries({ queryKey: ['instrumentAssets'] });
       showSuccess('Waardering toegevoegd');
     },
     onError: (error) => {
@@ -243,6 +247,9 @@ export function useCreateAssetRepair() {
     onSuccess: (_, { assetId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.repairs(assetId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.asset(assetId) });
+      // De backend zet het instrument op 'in_repair'; zonder dit blijft de
+      // overzichtslijst het als beschikbaar tonen.
+      queryClient.invalidateQueries({ queryKey: ['instrumentAssets'] });
       showSuccess('Reparatie aangemeld');
     },
     onError: (error) => {
@@ -267,6 +274,8 @@ export function useUpdateAssetRepair() {
     onSuccess: (_, { assetId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.repairs(assetId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.asset(assetId) });
+      // Een afgeronde reparatie zet het instrument terug op 'available'.
+      queryClient.invalidateQueries({ queryKey: ['instrumentAssets'] });
       showSuccess('Reparatie bijgewerkt');
     },
     onError: (error) => {
@@ -382,7 +391,7 @@ export function useDeleteAssetDocument() {
 
 export function useAssetHistory(assetId: string, params?: { page?: number; limit?: number }) {
   return useQuery({
-    queryKey: queryKeys.history(assetId),
+    queryKey: queryKeys.history(assetId, params),
     queryFn: () => getAssetHistory(assetId, params),
     enabled: !!assetId,
   });

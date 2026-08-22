@@ -51,6 +51,9 @@ export function useUpdateInstrument() {
       updateInstrument(id, data.name, data.tuning, data.clef),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.instruments });
+      // De stukkenlijst joint op instruments en toont de instrumentnaam per
+      // partij, dus die is na een hernoeming verouderd.
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess('Instrument bijgewerkt');
     },
     onError: (error) => {
@@ -69,6 +72,9 @@ export function useDeleteInstrument() {
     mutationFn: (id: string) => deleteInstrument(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.instruments });
+      // music_pieces.instrument_id verwijst naar instruments met ON DELETE
+      // SET NULL, dus elke partij die eraan hing raakt zijn koppeling kwijt.
+      queryClient.invalidateQueries({ queryKey: ['musicPieces'] });
       showSuccess('Instrument verwijderd');
     },
     onError: (error) => {
