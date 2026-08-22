@@ -53,22 +53,22 @@ export default defineConfig({
       // Drempels net onder de gemeten stand, zodat ze een terugval vangen
       // zonder bij de eerste de beste meetruis af te gaan. Verhoog ze als er
       // tests bij komen - dat is het hele punt van een ratel.
-      // Bijgewerkt op 22-08-2026. Gemeten:
-      //   statements 24,23 (6036/24902)
-      //   branches    8,68 (1436/16534)
-      //   functions  23,91 (2100/8780)
-      //   lines      24,71 (5784/23400)
+      // Bijgewerkt op 22-08-2026, na het opknippen van de pagina's. Gemeten:
+      //   statements 27,63 (6903/24977)
+      //   branches   14,01 (2317/16534)
+      //   functions  26,04 (2298/8822)
+      //   lines      28,24 (6630/23475)
       //
-      // Branches blijft ver achter bij statements, en dat is geen meetfout: de
-      // pagina's staan nog op nul en juist daar zit het overgrote deel van de
-      // vertakkingen. Zolang bestanden als Accounting.tsx (2680 regels) ongetest
-      // zijn, tilt geen enkele hoeveelheid api- en hooktests dat getal mee
-      // omhoog.
+      // Branches is bijna verdubbeld (8,68 -> 14,01) terwijl statements maar
+      // drie punten steeg. Dat bevestigt waarom de pagina's eerst opgeknipt
+      // moesten worden: daar zat het overgrote deel van de vertakkingen, en
+      // geen enkele hoeveelheid api- en hooktests kon dat getal meetillen.
+      // De 122 karakteriseringstests op zeven pagina's doen dat wel.
       thresholds: {
-        statements: 24,
-        branches: 8,
-        functions: 23,
-        lines: 24,
+        statements: 27,
+        branches: 13,
+        functions: 25,
+        lines: 28,
       },
     },
   },
