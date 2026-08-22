@@ -78,20 +78,25 @@ export default defineConfig({
       // Het doel van >80 procent uit WP8 staat daarmee veel verder weg dan het
       // leek: daarvoor moeten er ruim veertienduizend statements bij afgedekt
       // worden.
-      // Bijgewerkt op 21-08-2026. Gemeten:
-      //   statements 64,36 (14583/22658)
-      //   branches   55,43 (7516/13558)
-      //   functions  68,04 (1921/2823)
-      //   lines      64,64 (14174/21926)
+      // Bijgewerkt op 22-08-2026. Gemeten:
+      //   statements 64,72 (14740/22775)
+      //   branches   55,65 (7591/13640)
+      //   functions  68,32 (1937/2835)
+      //   lines      65,00 (14320/22030)
+      //
+      // Er kwamen zeven routes bij die de frontend al aanriep maar die niet
+      // bestonden. Dat is meer code in de noemer, en het percentage ging tóch
+      // omhoog: de tests die erbij hoorden dekken meer af dan de routes zelf
+      // toevoegen.
       //
       // Drempels net onder de gemeten stand: hoog genoeg om een terugval te
       // vangen, laag genoeg om niet af te gaan op meetruis. Het doel van >80
       // procent uit WP8 is daarmee in zicht maar nog niet gehaald.
       thresholds: {
-        statements: 63,
-        branches: 54,
-        functions: 67,
-        lines: 63,
+        statements: 64,
+        branches: 55,
+        functions: 68,
+        lines: 64,
       },
     },
   },
