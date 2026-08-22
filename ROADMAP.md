@@ -260,13 +260,25 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **64,7%** (14740/22775) | 55,7%    | 68,3%     | 65,0% |
-| Frontend | **24,2%** (6036/24902)  | 8,7%     | 23,9%     | 24,7% |
+| Frontend | **27,6%** (6903/24977)  | 14,0%    | 26,0%     | 28,2% |
 
-- CI-drempels: backend 64 / 55 / 68 / 64, frontend 24 / 8 / 23 / 24 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 64 / 55 / 68 / 64, frontend 27 / 13 / 25 / 28 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
 - De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32). `src/api.ts` - 3.967 regels, 741 exports, eerder zonder ook maar één test - staat nu op 99,9%
-- **Wat nog ontbreekt zit vrijwel helemaal in de pagina's.** Dat verklaart ook waarom branches (8,7%) zo ver achterblijft bij statements (24,2%): de pagina's staan op nul en juist daar zit het overgrote deel van de vertakkingen. Geen enkele hoeveelheid api- en hooktests tilt dat getal mee omhoog
+- Op 22-08-2026 zijn de grote pagina's opgeknipt, met per pagina eerst een karakteriseringstest als vangnet. **Branches ging daarmee van 8,7% naar 14,0%** terwijl statements maar drie punten steeg - dat bevestigt dat daar het overgrote deel van de vertakkingen zat, en dat geen enkele hoeveelheid api- en hooktests dat getal kon meetillen:
+
+| pagina        | was   | index nu                  |
+| ------------- | ----- | ------------------------- |
+| Accounting    | 2.680 | 851                       |
+| Rehearsals    | 1.950 | 886                       |
+| Concerts      | 1.655 | 1.289                     |
+| SeasonPlanner | 1.352 | 277                       |
+| Contacts      | 1.344 | 311                       |
+| MusicTitles   | 1.317 | 411                       |
+| Settings      | 1.495 | ongewijzigd, wel 17 tests |
+
+- **`Settings.tsx` is bewust niet opgeknipt.** 40 useState, 6 useQuery, 5 useEffect en 19 handlers in één functie. De secties lijken zelfstandig, maar de toestand hoort bij de sectie en niet bij de pagina: alleen de opmaak van de SMTP-sectie verplaatsen geeft een component met twintig props, en de toestand meeverhuizen is geen verhuizing meer maar een herontwerp - bij de Microsoft 365-sectie verandert dat aantoonbaar gedrag, want die query draait nu onvoorwaardelijk terwijl de sectie alleen zichtbaar is als Microsoft is ingesteld. Daarbij bedient één bevestigingsdialoog vijf secties. Wat wél goedkoop te knippen viel is samen 150 van de 1.495 regels: dat haalt tien procent weg, laat de zware negentig procent staan, en levert wel een map op die suggereert dat de pagina opgedeeld is. Een herontwerp per sectie is een aparte, bewuste keuze; het vangnet dat er nu staat maakt hem na te lopen
 - **Waarom de eerdere cijfers niet klopten:** er stond geen `include` in de coverage-instellingen, en de v8-provider telt dan alleen bestanden die een test toevallig inlaadt. Bestanden die geen enkele test aanraakt verdwenen uit de noemer in plaats van als nul mee te tellen. Aan de backendkant ging de meting over 6.140 van de 21.664 statements; aan de frontendkant over 2.134 van de 24.789, wat als 82 procent las. Dat gaf ook een averechtse prikkel: een test toevoegen trok het aangeroepen bestand de noemer in, waardoor het percentage dáálde terwijl er méér getest werd
 - Er zijn twee waaktests bijgekomen die een hele klasse fouten afvangen in plaats van één geval: `route-shadowing.test.ts` (een letterlijk pad onder een parameterpad — dat kwam vijf keer eerder voor) en `wijzigingsschema-standaardwaarden.test.ts`
 - De backendsuite draait sinds #163 parallel (`fileParallelism: true`): 19m35s → 7m52s lokaal, 11m06s op CI. De oude reden om dat uit te zetten — "om databaseconflicten te voorkomen" — gold niet: de testdatabase zit volledig in het geheugen
@@ -283,7 +295,7 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend 64,7%, frontend 24,2%_
+- [~] Unit tests: >80% coverage — _backend 64,7%, frontend 27,6%_
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan
