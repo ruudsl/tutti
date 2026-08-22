@@ -23,6 +23,48 @@ Dit document beschrijft de geplande ontwikkeling van Tutti voor de komende 12 ma
 
 ---
 
+## Openstaande beslissingen
+
+Bevindingen uit de dekkingsronde van augustus 2026 die bewust níét zelf zijn
+ingevuld: ze vragen een keuze die van de omgeving of van de bedoeling afhangt,
+niet van de code. Ze staan hier zodat ze niet in een samengevoegde
+pull request achterblijven.
+
+1. **`X-Forwarded-For` wordt onvoorwaardelijk vertrouwd.** Wie die kopregel zelf
+   meestuurt, kiest daarmee zijn eigen IP-adres — en daarmee wat er in het
+   auditlogboek komt te staan, hoe de snelheidsbegrenzer telt en of hij door de
+   IP-witlijst komt. De reparatie is één regel `trust proxy` in
+   `backend/src/index.ts`, maar welke waarde daar moet staan hangt af van
+   hoeveel proxy's er vóór de applicatie staan. Een verkeerde waarde is net zo
+   fout als geen waarde
+2. **`payment_settings` heeft Mollie-sleutels per vereniging die nergens
+   gebruikt worden.** Alle betalingen lopen over één sleutel uit de omgeving.
+   Ofwel de tabel gaat weg, ofwel de code gaat hem gebruiken — nu wekt hij de
+   indruk dat verenigingen hun eigen betaalaccount kunnen instellen
+3. **`notificationChannels` geeft geen `associationId` door.** Of dat erbij moet
+   hangt ervan af of een kanaal per vereniging verschilt
+4. **`controleerBetaalId` kapt af op 64 tekens.** Echte Stripe-sessie-id's zijn
+   langer, dus die worden geweigerd. Of dat erg is hangt ervan af of Stripe
+   ooit gebruikt gaat worden
+5. **`backend/src/database/migrations.ts` is dood gewicht** naast de echte
+   migratieloper. Weghalen is veilig, maar het is een bestand dat iemand ooit
+   met opzet heeft neergezet
+6. **De captcha valt open bij een fout.** Gaat de controledienst plat, dan komt
+   iedereen erdoor. Dat is bewust zo gelaten (een captcha die dichtvalt sluit
+   bij een storing álle echte gebruikers buiten); vastgelegd in een test zodat
+   het een keuze blijft en geen ongeluk
+
+Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
+repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
+uitleg in plaats van met een fout, en rolt er dus niets uit:
+
+- secret `RENDER_STAGING_DEPLOY_HOOK`
+- variable `STAGING_URL`
+
+Het inrichten staat beschreven in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+---
+
 ## WP1: Onafhankelijke Security Audit
 
 **Doorlooptijd:** 2-3 weken  
@@ -110,6 +152,7 @@ Formele audit van WCAG 2.1 AA compliance:
 - [x] Self-hosting guide voor non-developers
 - [x] Backup/restore scripts
 - [x] Health check endpoints
+- [ ] PostgreSQL migratiepad gedocumenteerd — _staat wel in de scope hierboven, maar er is niets over geschreven. `docs/adr/0001-use-sqlite.md` noemt het alleen als iets om te overwegen als de schaal daarom vraagt; dat is een afweging, geen migratiepad. Dit is het enige dat WP4 nog openhoudt_
 
 ---
 
@@ -193,13 +236,23 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Huidige Status
 
-- Coverage backend (19-08-2026, over de **hele** backend): statements 13,1% (2838/21664), branches 9,3%, functions 14,5%, lines 13,1%
-- CI-drempels backend (`backend/vitest.config.ts`): 12 / 8 / 13 / 12 (statements / branches / functions / lines)
-- **De eerdere cijfers klopten niet.** Er stond geen `include` in de coverage-instellingen, en de v8-provider telt dan alleen bestanden die een test toevallig inlaadt. Bestanden die geen enkele test aanraakt verdwenen uit de noemer in plaats van als nul mee te tellen. De meting ging over 6140 van de 21664 statements — ruim zeventig procent van de code werd niet bekeken, waaronder `accounting.ts`, `tickets.ts`, `events.ts` en `analytics.ts` (samen ruim tienduizend regels)
-- Er zat ook een averechtse prikkel in: een test toevoegen trok het aangeroepen bestand de noemer in, waardoor het percentage dáálde terwijl er meer getest werd (54,4% → 47,4%). De hoeveelheid geteste code veranderde niet door deze correctie; alleen de noemer klopt nu
+Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
+
+|          | statements              | branches | functions | lines |
+| -------- | ----------------------- | -------- | --------- | ----- |
+| Backend  | **64,4%** (14583/22658) | 55,4%    | 68,0%     | 64,6% |
+| Frontend | **6,9%** (1710/24789)   | 3,3%     | 6,6%      | 7,0%  |
+
+- CI-drempels: backend 63 / 54 / 67 / 63, frontend 6 / 3 / 6 / 6 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
+- Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
+- **De frontend is nu de rem.** 350 bronbestanden, 32 testbestanden. `src/api.ts` alleen al is 3.967 regels met 741 exports en geen enkele test
+- **Waarom de eerdere cijfers niet klopten:** er stond geen `include` in de coverage-instellingen, en de v8-provider telt dan alleen bestanden die een test toevallig inlaadt. Bestanden die geen enkele test aanraakt verdwenen uit de noemer in plaats van als nul mee te tellen. Aan de backendkant ging de meting over 6.140 van de 21.664 statements; aan de frontendkant over 2.134 van de 24.789, wat als 82 procent las. Dat gaf ook een averechtse prikkel: een test toevoegen trok het aangeroepen bestand de noemer in, waardoor het percentage dáálde terwijl er méér getest werd
+- Er zijn twee waaktests bijgekomen die een hele klasse fouten afvangen in plaats van één geval: `route-shadowing.test.ts` (een letterlijk pad onder een parameterpad — dat kwam vijf keer eerder voor) en `wijzigingsschema-standaardwaarden.test.ts`
+- De backendsuite draait sinds #163 parallel (`fileParallelism: true`): 19m35s → 7m52s lokaal, 11m06s op CI. De oude reden om dat uit te zetten — "om databaseconflicten te voorkomen" — gold niet: de testdatabase zit volledig in het geheugen
 - Integratietests draaien tegen het echte schema (`src/database/schema.ts` + migraties)
-- CI: GitHub Actions — jobs voor backend, frontend, E2E (Playwright), lint, security audit en Docker build
-- CD: Docker build in CI (geen registry push, geen staging deploy)
+- CI: GitHub Actions — jobs voor backend, frontend, E2E (Playwright), lint, security audit, CodeQL, Lighthouse en Docker build
+- CD: images naar ghcr.io bij elke merge op `main`; staging-uitrol staat klaar maar wacht op twee instellingen (zie hieronder)
 
 ### Scope
 
@@ -210,10 +263,10 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Deliverables
 
-- [ ] Unit tests: >80% coverage — _nu 13,1% statements / 9,3% branches over de hele backend_
-  - **De 50 uur die hiervoor begroot staat is niet realistisch.** Van 2838 naar 80% betekent ruim veertienduizend statements erbij afdekken. Dat is werk van maanden, niet van een week
-  - Grootste gaten in wat wél gemeten werd: `music-pieces.ts` (472 ongedekte statements), `spond.ts` (339), `polls.ts` (303), `tasks.ts` (293), `concerts.ts` (266)
-  - Overweging voor de planning: een tussendoel dat wel haalbaar is (bijvoorbeeld 30%) zegt meer dan een doel dat niemand gaat halen
+- [~] Unit tests: >80% coverage — _backend 64,4%, frontend 6,9%_
+  - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
+  - Wat er nog moet gebeuren zit vrijwel helemaal aan de frontendkant: 350 bronbestanden tegenover 32 testbestanden. De grootste brokken zijn `src/api.ts` (3.967 regels, 741 exports), 54 ongeteste hooks, 55 ongeteste `src/api/*`-modules en de grote pagina's (`Accounting.tsx` 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655)
+  - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet — daar is 40% al een stevig doel, en pagina's van tweeduizend regels testen is pas zinnig als ze eerst opgeknipt worden
 - [x] Integration tests voor tenant isolatie
 - [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
 - [x] Dependabot of Renovate configuratie
