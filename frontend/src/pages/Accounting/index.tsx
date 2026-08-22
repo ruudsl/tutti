@@ -35,7 +35,7 @@ import {
 } from '../../api/accounting';
 import InvoicePrinter from '../../components/InvoicePrinter';
 import { showSuccess, showError } from '../../utils/toast';
-import { SkeletonTable, SkeletonCard } from '../../components/Skeleton';
+import { SkeletonTable } from '../../components/Skeleton';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { currentLocale } from '../../utils/locale';
 import { AccountModal } from './AccountModal';
@@ -45,6 +45,13 @@ import { RelationModal } from './RelationModal';
 import { CostCenterModal } from './CostCenterModal';
 import { BudgetModal } from './BudgetModal';
 import { FiscalYearModal } from './FiscalYearModal';
+import { formatCurrency } from './formatteer';
+import { RapportagesTab } from './RapportagesTab';
+import { BudgettenTab } from './BudgettenTab';
+import { KostenplaatsenTab } from './KostenplaatsenTab';
+import { RelatiesTab } from './RelatiesTab';
+import { FacturenTab } from './FacturenTab';
+import { BoekingenTab } from './BoekingenTab';
 
 type TabType = 'overview' | 'chart' | 'transactions' | 'invoices' | 'relations' | 'costcenters' | 'budgets' | 'reports';
 
@@ -236,10 +243,6 @@ export default function Accounting() {
       showError(error.response?.data?.error || t('accounting.errorSave'));
     },
   });
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(currentLocale(), { style: 'currency', currency: 'EUR' }).format(amount);
-  };
 
   const handleExport = async (type: string) => {
     setIsExporting(true);
@@ -688,543 +691,59 @@ export default function Accounting() {
 
       {/* Transactions/Journal Entries Tab */}
       {activeTab === 'transactions' && (
-        <div className="space-y-4">
-          <div className="page-header">
-            <h2 className="text-xl font-semibold">{t('accounting.journalEntries')}</h2>
-            <button className="btn btn-primary gap-2" onClick={() => setShowTransactionModal(true)}>
-              <Icon name="plus" size={16} />
-              {t('accounting.newEntry')}
-            </button>
-          </div>
-
-          {loadingTransactions ? (
-            <SkeletonTable rows={10} columns={6} />
-          ) : transactions.length === 0 ? (
-            <div className="card bg-base-200 p-8 text-center">
-              <Icon name="fileText" size={48} className="mx-auto opacity-50 mb-4" />
-              <p className="text-base-content/70">{t('accounting.noTransactions')}</p>
-            </div>
-          ) : (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('accounting.transactionNumber')}</th>
-                        <th>{t('accounting.date')}</th>
-                        <th>{t('accounting.type')}</th>
-                        <th>{t('accounting.description')}</th>
-                        <th className="text-right">{t('accounting.amount')}</th>
-                        <th>{t('common.status')}</th>
-                        <th>
-                          <span className="sr-only">{t('common.actions')}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((tx) => (
-                        <tr key={tx.id}>
-                          <td className="font-mono">{tx.transactionNumber}</td>
-                          <td>{new Date(tx.transactionDate).toLocaleDateString(currentLocale())}</td>
-                          <td>
-                            <span className="badge badge-ghost badge-sm">
-                              {t(`accounting.transactionTypes.${tx.transactionType}`)}
-                            </span>
-                          </td>
-                          <td className="max-w-xs truncate">{tx.description}</td>
-                          <td className="text-right font-mono">{formatCurrency(tx.totalAmount)}</td>
-                          <td>
-                            <span className={`badge badge-sm ${tx.isPosted ? 'badge-success' : 'badge-warning'}`}>
-                              {tx.isPosted ? t('accounting.posted') : t('accounting.draft')}
-                            </span>
-                          </td>
-                          <td>
-                            {/* Een geboekte transactie staat vast: bewerken,
-                                opnieuw boeken en verwijderen kan alleen zolang
-                                hij op concept staat. */}
-                            {!tx.isPosted && (
-                              <div className="flex gap-1 justify-end">
-                                <button
-                                  className="btn btn-ghost btn-xs"
-                                  onClick={() => openBewerken(tx.id)}
-                                  title={t('common.edit')}
-                                >
-                                  <Icon name="pencil" size={16} />
-                                </button>
-                                <button
-                                  className="btn btn-ghost btn-xs text-success"
-                                  onClick={() => boekingMutatie.mutate(tx.id)}
-                                  disabled={boekingMutatie.isPending}
-                                  title={t('accounting.postTransaction')}
-                                >
-                                  <Icon name="check" size={16} />
-                                </button>
-                                <button
-                                  className="btn btn-ghost btn-xs text-error"
-                                  onClick={() => {
-                                    if (window.confirm(t('accounting.confirmDeleteTransaction'))) {
-                                      boekingVerwijderMutatie.mutate(tx.id);
-                                    }
-                                  }}
-                                  disabled={boekingVerwijderMutatie.isPending}
-                                  title={t('common.delete')}
-                                >
-                                  <Icon name="trash" size={16} />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <BoekingenTab
+          transactions={transactions}
+          loadingTransactions={loadingTransactions}
+          boekingMutatie={boekingMutatie}
+          boekingVerwijderMutatie={boekingVerwijderMutatie}
+          openBewerken={openBewerken}
+          setShowTransactionModal={setShowTransactionModal}
+        />
       )}
 
       {/* Invoices Tab */}
       {activeTab === 'invoices' && (
-        <div className="space-y-4">
-          <div className="page-header">
-            <h2 className="text-xl font-semibold">{t('accounting.invoices')}</h2>
-            <button className="btn btn-primary gap-2" onClick={() => setShowInvoiceModal(true)}>
-              <Icon name="plus" size={16} />
-              {t('accounting.newInvoice')}
-            </button>
-          </div>
-
-          {loadingInvoices ? (
-            <SkeletonTable rows={10} columns={6} />
-          ) : invoices.length === 0 ? (
-            <div className="card bg-base-200 p-8 text-center">
-              <Icon name="clipboard" size={48} className="mx-auto opacity-50 mb-4" />
-              <p className="text-base-content/70">{t('accounting.noInvoices')}</p>
-            </div>
-          ) : (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('accounting.invoiceNumber')}</th>
-                        <th>{t('accounting.relation')}</th>
-                        <th>{t('accounting.date')}</th>
-                        <th>{t('accounting.due')}</th>
-                        <th className="text-right">{t('accounting.amount')}</th>
-                        <th>{t('common.status')}</th>
-                        <th>
-                          <span className="sr-only">{t('common.actions')}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoices.map((invoice) => (
-                        <tr key={invoice.id}>
-                          <td className="font-mono">{invoice.invoiceNumber}</td>
-                          <td>{invoice.relationName}</td>
-                          <td>{new Date(invoice.invoiceDate).toLocaleDateString(currentLocale())}</td>
-                          <td>{new Date(invoice.dueDate).toLocaleDateString(currentLocale())}</td>
-                          <td className="text-right font-mono">{formatCurrency(invoice.total)}</td>
-                          <td>
-                            <span
-                              className={`badge badge-sm ${
-                                invoice.status === 'paid'
-                                  ? 'badge-success'
-                                  : invoice.status === 'overdue'
-                                    ? 'badge-error'
-                                    : invoice.status === 'sent'
-                                      ? 'badge-info'
-                                      : 'badge-ghost'
-                              }`}
-                            >
-                              {t(`accounting.invoiceStatus.${invoice.status}`)}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="flex gap-1 justify-end">
-                              <button
-                                className="btn btn-ghost btn-xs"
-                                onClick={() => setPrintInvoice(invoice)}
-                                title={t('printTemplates.invoice.printButton')}
-                              >
-                                {t('printTemplates.print')}
-                              </button>
-                              {/* Een concept moet eerst verstuurd worden; pas
-                                  daarna kan hij betaald gemeld worden. */}
-                              {invoice.status === 'draft' && (
-                                <>
-                                  <button
-                                    className="btn btn-ghost btn-xs text-info"
-                                    onClick={() => factuurVerzendMutatie.mutate(invoice.id)}
-                                    disabled={factuurVerzendMutatie.isPending}
-                                    title={t('accounting.sendInvoice')}
-                                  >
-                                    <Icon name="envelope" size={16} />
-                                  </button>
-                                  <button
-                                    className="btn btn-ghost btn-xs text-error"
-                                    onClick={() => {
-                                      if (window.confirm(t('accounting.confirmDeleteInvoice'))) {
-                                        factuurVerwijderMutatie.mutate(invoice.id);
-                                      }
-                                    }}
-                                    disabled={factuurVerwijderMutatie.isPending}
-                                    title={t('common.delete')}
-                                  >
-                                    <Icon name="trash" size={16} />
-                                  </button>
-                                </>
-                              )}
-                              {invoice.status !== 'draft' && invoice.status !== 'paid' && (
-                                <button
-                                  className="btn btn-ghost btn-xs text-success"
-                                  onClick={() => factuurBetaaldMutatie.mutate(invoice.id)}
-                                  disabled={factuurBetaaldMutatie.isPending}
-                                  title={t('accounting.markPaid')}
-                                >
-                                  <Icon name="check" size={16} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <FacturenTab
+          invoices={invoices}
+          loadingInvoices={loadingInvoices}
+          factuurVerzendMutatie={factuurVerzendMutatie}
+          factuurBetaaldMutatie={factuurBetaaldMutatie}
+          factuurVerwijderMutatie={factuurVerwijderMutatie}
+          setPrintInvoice={setPrintInvoice}
+          setShowInvoiceModal={setShowInvoiceModal}
+        />
       )}
 
       {/* Relations Tab */}
       {activeTab === 'relations' && (
-        <div className="space-y-4">
-          <div className="page-header">
-            <h2 className="text-xl font-semibold">{t('accounting.relations')}</h2>
-            <button className="btn btn-primary gap-2" onClick={() => setShowRelationModal(true)}>
-              <Icon name="plus" size={16} />
-              {t('accounting.newRelation')}
-            </button>
-          </div>
-
-          {loadingRelations ? (
-            <SkeletonTable rows={10} columns={5} />
-          ) : relations.length === 0 ? (
-            <div className="card bg-base-200 p-8 text-center">
-              <Icon name="users" size={48} className="mx-auto opacity-50 mb-4" />
-              <p className="text-base-content/70">{t('accounting.noRelations')}</p>
-            </div>
-          ) : (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('accounting.relationNumber')}</th>
-                        <th>{t('common.name')}</th>
-                        <th>{t('accounting.type')}</th>
-                        <th>{t('common.email')}</th>
-                        <th className="text-right">{t('accounting.balance')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {relations.map((rel) => (
-                        <tr key={rel.id}>
-                          <td className="font-mono">{rel.relationNumber || '-'}</td>
-                          <td>{rel.name}</td>
-                          <td>
-                            <span
-                              className={`badge badge-sm ${
-                                rel.relationType === 'customer'
-                                  ? 'badge-success'
-                                  : rel.relationType === 'supplier'
-                                    ? 'badge-warning'
-                                    : 'badge-info'
-                              }`}
-                            >
-                              {t(`accounting.relationTypes.${rel.relationType}`)}
-                            </span>
-                          </td>
-                          <td className="text-sm">{rel.email || '-'}</td>
-                          <td className={`text-right font-mono ${rel.balance >= 0 ? 'text-success' : 'text-error'}`}>
-                            {formatCurrency(rel.balance)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <RelatiesTab
+          relations={relations}
+          loadingRelations={loadingRelations}
+          setShowRelationModal={setShowRelationModal}
+        />
       )}
 
       {/* Cost Centers Tab */}
       {activeTab === 'costcenters' && (
-        <div className="space-y-4">
-          <div className="page-header">
-            <h2 className="text-xl font-semibold">{t('accounting.costCenters')}</h2>
-            <button className="btn btn-primary gap-2" onClick={() => setShowCostCenterModal(true)}>
-              <Icon name="plus" size={16} />
-              {t('accounting.newCostCenter')}
-            </button>
-          </div>
-
-          {loadingCostCenters ? (
-            <SkeletonTable rows={5} columns={4} />
-          ) : costCenters.length === 0 ? (
-            <div className="card bg-base-200 p-8 text-center">
-              <Icon name="folder" size={48} className="mx-auto opacity-50 mb-4" />
-              <p className="text-base-content/70">{t('accounting.noCostCenters')}</p>
-            </div>
-          ) : (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('accounting.code')}</th>
-                        <th>{t('common.name')}</th>
-                        <th>{t('common.description')}</th>
-                        <th className="text-right">{t('accounting.budget')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {costCenters.map((cc) => (
-                        <tr key={cc.id}>
-                          <td className="font-mono">{cc.code}</td>
-                          <td>{cc.name}</td>
-                          <td className="text-sm text-base-content/70">{cc.description || '-'}</td>
-                          <td className="text-right font-mono">
-                            {cc.budgetAmount ? formatCurrency(cc.budgetAmount) : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <KostenplaatsenTab
+          costCenters={costCenters}
+          loadingCostCenters={loadingCostCenters}
+          setShowCostCenterModal={setShowCostCenterModal}
+        />
       )}
 
       {/* Budgets Tab */}
       {activeTab === 'budgets' && (
-        <div className="space-y-4">
-          <div className="page-header">
-            <h2 className="text-xl font-semibold">{t('accounting.budgets')}</h2>
-            <button className="btn btn-primary gap-2" onClick={() => setShowBudgetModal(true)}>
-              <Icon name="plus" size={16} />
-              {t('accounting.newBudget')}
-            </button>
-          </div>
-
-          {loadingBudgets ? (
-            <SkeletonTable rows={5} columns={5} />
-          ) : budgets.length === 0 ? (
-            <div className="card bg-base-200 p-8 text-center">
-              <Icon name="chart" size={48} className="mx-auto opacity-50 mb-4" />
-              <p className="text-base-content/70">{t('accounting.noBudgets')}</p>
-            </div>
-          ) : (
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body">
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('common.name')}</th>
-                        <th>{t('accounting.account')}</th>
-                        <th className="text-right">{t('accounting.budgetAmount')}</th>
-                        <th className="text-right">{t('accounting.actual')}</th>
-                        <th className="text-right">{t('accounting.remaining')}</th>
-                        <th>{t('common.status')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {budgets.map((budget) => {
-                        const percentUsed = budget.amount > 0 ? (budget.actual / budget.amount) * 100 : 0;
-                        return (
-                          <tr key={budget.id}>
-                            <td>{budget.name}</td>
-                            <td className="text-sm">
-                              <span className="font-mono">{budget.accountCode}</span> - {budget.accountName}
-                            </td>
-                            <td className="text-right font-mono">{formatCurrency(budget.amount)}</td>
-                            <td className="text-right font-mono">{formatCurrency(budget.actual)}</td>
-                            <td
-                              className={`text-right font-mono ${budget.remaining >= 0 ? 'text-success' : 'text-error'}`}
-                            >
-                              {formatCurrency(budget.remaining)}
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <progress
-                                  className={`progress w-16 ${percentUsed > 100 ? 'progress-error' : percentUsed > 80 ? 'progress-warning' : 'progress-success'}`}
-                                  value={Math.min(percentUsed, 100)}
-                                  max="100"
-                                />
-                                <span className="text-sm">{percentUsed.toFixed(0)}%</span>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <BudgettenTab budgets={budgets} loadingBudgets={loadingBudgets} setShowBudgetModal={setShowBudgetModal} />
       )}
 
       {/* Reports Tab */}
       {activeTab === 'reports' && (
-        <div className="space-y-6">
-          {!currentFiscalYear && (
-            <div className="alert alert-warning">
-              <Icon name="warning" size={16} />
-              <span>{t('accounting.noFiscalYearForReports')}</span>
-            </div>
-          )}
-          {/* Balance Report */}
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h3 className="card-title">{t('accounting.balanceSheet')}</h3>
-              {!currentFiscalYear ? (
-                <p className="text-base-content/60">{t('accounting.selectFiscalYearFirst')}</p>
-              ) : !balanceReport ? (
-                <SkeletonCard />
-              ) : balanceReport.assets?.length === 0 &&
-                balanceReport.liabilities?.length === 0 &&
-                balanceReport.equity?.length === 0 ? (
-                <p className="text-base-content/60">{t('accounting.noAccountsForReport')}</p>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-semibold mb-2 text-info">{t('accounting.assets')}</h4>
-                    <div className="space-y-2">
-                      {balanceReport.assets?.map((item: any) => (
-                        <div key={item.code} className="flex justify-between">
-                          <span>
-                            {item.code} - {item.name}
-                          </span>
-                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between font-bold border-t pt-2">
-                        <span>{t('accounting.totalAssets')}</span>
-                        <span className="font-mono">{formatCurrency(balanceReport.totals?.assets || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2 text-warning">{t('accounting.liabilitiesAndEquity')}</h4>
-                    <div className="space-y-2">
-                      {balanceReport.liabilities?.map((item: any) => (
-                        <div key={item.code} className="flex justify-between">
-                          <span>
-                            {item.code} - {item.name}
-                          </span>
-                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
-                        </div>
-                      ))}
-                      {balanceReport.equity?.map((item: any) => (
-                        <div key={item.code} className="flex justify-between">
-                          <span>
-                            {item.code} - {item.name}
-                          </span>
-                          <span className="font-mono">{formatCurrency(item.currentBalance)}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between font-bold border-t pt-2">
-                        <span>{t('accounting.totalLiabilitiesEquity')}</span>
-                        <span className="font-mono">
-                          {formatCurrency(balanceReport.totals?.liabilitiesAndEquity || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Profit & Loss Report */}
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body">
-              <h3 className="card-title">{t('accounting.profitLoss')}</h3>
-              {!currentFiscalYear ? (
-                <p className="text-base-content/60">{t('accounting.selectFiscalYearFirst')}</p>
-              ) : !profitLossReport ? (
-                <SkeletonCard />
-              ) : profitLossReport.income?.length === 0 && profitLossReport.expenses?.length === 0 ? (
-                <p className="text-base-content/60">{t('accounting.noTransactionsForReport')}</p>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2 text-success">{t('accounting.income')}</h4>
-                    <div className="space-y-1">
-                      {profitLossReport.income?.map((item: any) => (
-                        <div key={item.code} className="flex justify-between">
-                          <span>
-                            {item.code} - {item.name}
-                          </span>
-                          <span className="font-mono">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between font-bold border-t pt-2">
-                        <span>{t('accounting.totalIncome')}</span>
-                        <span className="font-mono">{formatCurrency(profitLossReport.totals?.income || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2 text-error">{t('accounting.expenses')}</h4>
-                    <div className="space-y-1">
-                      {profitLossReport.expenses?.map((item: any) => (
-                        <div key={item.code} className="flex justify-between">
-                          <span>
-                            {item.code} - {item.name}
-                          </span>
-                          <span className="font-mono">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between font-bold border-t pt-2">
-                        <span>{t('accounting.totalExpenses')}</span>
-                        <span className="font-mono">{formatCurrency(profitLossReport.totals?.expenses || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className={`text-xl font-bold p-4 rounded-lg ${
-                      (profitLossReport.totals?.netResult || 0) >= 0
-                        ? 'bg-success/10 text-success'
-                        : 'bg-error/10 text-error'
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <span>{t('accounting.netResult')}</span>
-                      <span className="font-mono">{formatCurrency(profitLossReport.totals?.netResult || 0)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <RapportagesTab
+          balanceReport={balanceReport}
+          currentFiscalYear={currentFiscalYear}
+          profitLossReport={profitLossReport}
+        />
       )}
 
       {/* Account Modal */}

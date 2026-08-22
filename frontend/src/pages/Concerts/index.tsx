@@ -20,32 +20,37 @@ import {
   useDeleteConcertAttendance,
   useExportConcertProgram,
   useExportBumaStemra,
-} from '../hooks/useConcerts';
-import { useUsers } from '../hooks/useUsers';
-import { Icon } from '../components/Icon';
-import { useMusicTitles } from '../hooks/useMusicTitles';
-import { Modal, FormModal } from '../components/Modal';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { SkeletonTable } from '../components/Skeleton';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { AddToCalendarButton } from '../components/CalendarSync';
-import AccessibilityInfo, { AccessibilityIndicator } from '../components/AccessibilityInfo';
-import SetlistBuilder, { SetlistPiece, Setlist } from '../components/SetlistBuilder';
-import ConcertPosterGenerator from '../components/ConcertPosterGenerator';
-import { SetlistMode } from '../components/SetlistMode';
+} from '../../hooks/useConcerts';
+import { useUsers } from '../../hooks/useUsers';
+import { Icon } from '../../components/Icon';
+import { useMusicTitles } from '../../hooks/useMusicTitles';
+import { Modal, FormModal } from '../../components/Modal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SkeletonTable } from '../../components/Skeleton';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { AddToCalendarButton } from '../../components/CalendarSync';
+import AccessibilityInfo from '../../components/AccessibilityInfo';
+import { SetlistMode } from '../../components/SetlistMode';
 import {
   getConcertTickets,
   createTicketType,
   updateTicketType,
   deleteTicketType,
   getAttendancePrediction,
-} from '../api';
-import type { AttendancePrediction } from '../api/concerts';
-import { showSuccess, showError } from '../utils/toast';
-import { getErrorMessage } from '../utils/errors';
-import type { Concert, TicketType } from '../types';
-import { FloatingActionButton } from '../components/FloatingActionButton';
-import { CustomFieldRenderer, CustomFieldFormSection } from '../components/CustomFields';
+} from '../../api';
+import type { AttendancePrediction } from '../../api/concerts';
+import { showSuccess, showError } from '../../utils/toast';
+import { getErrorMessage } from '../../utils/errors';
+import type { Concert, TicketType } from '../../types';
+import { FloatingActionButton } from '../../components/FloatingActionButton';
+import { CustomFieldRenderer, CustomFieldFormSection } from '../../components/CustomFields';
+import { ConcertListTab } from './ConcertListTab';
+import { ConcertStatisticsTab } from './ConcertStatisticsTab';
+import { PieceHistoryTab } from './PieceHistoryTab';
+import { SetlistBuilderTab } from './SetlistBuilderTab';
+import { PosterGeneratorTab } from './PosterGeneratorTab';
+import { BumaStemraModal } from './BumaStemraModal';
+import { AttendancePredictionModal } from './AttendancePredictionModal';
 
 export default function Concerts() {
   const { t } = useTranslation();
@@ -527,243 +532,38 @@ export default function Concerts() {
       </div>
 
       {activeTab === 'list' && (
-        <>
-          {/* Filters */}
-          <div className="card mb-3">
-            <div className="card-body">
-              <div className="flex gap-2 flex-wrap">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder={t('concerts.searchPlaceholder')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ maxWidth: '250px' }}
-                />
-                <select
-                  className="form-control"
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                  style={{ maxWidth: '150px' }}
-                >
-                  <option value="">{t('concerts.allYears')}</option>
-                  {years.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="form-control"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  style={{ maxWidth: '180px' }}
-                >
-                  <option value="">{t('concerts.allTypes')}</option>
-                  {concertTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Concerts Table */}
-          <div className="card">
-            <div className="card-body" style={{ padding: 0 }}>
-              <table className="table mb-0">
-                <thead>
-                  <tr>
-                    <th>{t('common.name')}</th>
-                    <th>{t('common.date')}</th>
-                    <th>{t('concerts.location')}</th>
-                    <th>{t('concerts.concertType')}</th>
-                    <th>{t('concerts.program')}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {concerts.map((concert) => (
-                    <tr key={concert.id}>
-                      <td>
-                        <strong>{concert.name}</strong>
-                        <AccessibilityIndicator hasAccessibilityInfo={concert.hasAccessibilityInfo || false} />
-                      </td>
-                      <td>{concert.date}</td>
-                      <td>{concert.location || '-'}</td>
-                      <td>{concert.concertType ? getConcertTypeLabel(concert.concertType) : '-'}</td>
-                      <td>
-                        <span className="badge badge-outline">
-                          {concert.programCount} {t('concerts.programCount')}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex gap-1">
-                          <button className="btn btn-outline btn-sm" onClick={() => setViewingConcert(concert.id)}>
-                            <Icon name="eye" size={16} />
-                          </button>
-                          <button className="btn btn-outline btn-sm" onClick={() => openEditModal(concert)}>
-                            <Icon name="pencil" size={16} />
-                          </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => setDeletingConcert(concert)}>
-                            <Icon name="trash" size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {concerts.length === 0 && (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                        {t('concerts.noConcerts')}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
+        <ConcertListTab
+          search={search}
+          setSearch={setSearch}
+          years={years}
+          yearFilter={yearFilter}
+          setYearFilter={setYearFilter}
+          concertTypes={concertTypes}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+          concerts={concerts}
+          getConcertTypeLabel={getConcertTypeLabel}
+          setViewingConcert={setViewingConcert}
+          openEditModal={openEditModal}
+          setDeletingConcert={setDeletingConcert}
+        />
       )}
 
       {activeTab === 'statistics' && statistics && (
-        <div className="card">
-          <div className="card-body">
-            <div className="page-header">
-              <h3 style={{ margin: 0 }}>{t('concerts.statistics')}</h3>
-              <button className="btn btn-outline" onClick={() => setShowBumaStemraModal(true)}>
-                {t('concerts.bumaStemraExport')}
-              </button>
-            </div>
-            <div className="flex gap-3 mb-3">
-              <div className="card" style={{ flex: 1, padding: '1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{statistics.totalConcerts}</div>
-                <div>{t('concerts.totalConcerts')}</div>
-              </div>
-            </div>
-
-            <h4>{t('concerts.mostPlayedPieces')}</h4>
-            {statistics.mostPlayedPieces.length > 0 ? (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('myMusic.table.title')}</th>
-                    <th>{t('concerts.timesPlayed', { count: 0 }).replace('0x', '#')}</th>
-                    <th>{t('concerts.lastPlayed')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statistics.mostPlayedPieces.slice(0, 10).map((piece, i) => (
-                    <tr key={i}>
-                      <td>
-                        <strong>{piece.title}</strong>
-                      </td>
-                      <td>
-                        <span className="badge badge-primary">{piece.playCount}x</span>
-                      </td>
-                      <td>{piece.lastPlayed}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p style={{ color: 'var(--text-muted)' }}>Geen data.</p>
-            )}
-          </div>
-        </div>
+        <ConcertStatisticsTab statistics={statistics} setShowBumaStemraModal={setShowBumaStemraModal} />
       )}
 
       {activeTab === 'history' && (
-        <div className="card">
-          <div className="card-body">
-            <h3 style={{ marginTop: 0 }}>{t('concerts.whenLastPlayed')}</h3>
-            <div className="form-group">
-              <input
-                type="text"
-                className="form-control"
-                placeholder={t('concerts.searchPieceHistory')}
-                value={searchTitle}
-                onChange={(e) => setSearchTitle(e.target.value)}
-                style={{ maxWidth: '400px' }}
-              />
-            </div>
-
-            {searchTitle && pieceHistoryData && (
-              <div>
-                <h4>"{pieceHistoryData.title}"</h4>
-                <p>
-                  {pieceHistoryData.playCount > 0 ? (
-                    <>
-                      {t('concerts.timesPlayed', { count: pieceHistoryData.playCount })} -{t('concerts.lastPlayed')}:{' '}
-                      {pieceHistoryData.lastPlayed}
-                    </>
-                  ) : (
-                    t('concerts.neverPlayed')
-                  )}
-                </p>
-
-                {pieceHistoryData.history.length > 0 && (
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t('common.date')}</th>
-                        <th>{t('concerts.concertName')}</th>
-                        <th>{t('concerts.location')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pieceHistoryData.history.map((h, i) => (
-                        <tr key={i}>
-                          <td>{h.date}</td>
-                          <td>{h.concertName}</td>
-                          <td>{h.location || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <PieceHistoryTab
+          searchTitle={searchTitle}
+          setSearchTitle={setSearchTitle}
+          pieceHistoryData={pieceHistoryData}
+        />
       )}
 
-      {activeTab === 'setlist' && (
-        <div className="card">
-          <div className="card-body" style={{ padding: 0 }}>
-            <SetlistBuilder
-              availablePieces={musicTitles.map(
-                (title, index) =>
-                  ({
-                    id: title.id || `temp-${index}`,
-                    title: title.title,
-                    arranger: title.arranger || undefined,
-                    durationSeconds: title.durationSeconds || undefined,
-                  }) as SetlistPiece,
-              )}
-              onSave={(setlist: Setlist) => {
-                showSuccess(t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`));
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {activeTab === 'setlist' && <SetlistBuilderTab musicTitles={musicTitles} />}
 
-      {activeTab === 'poster' && (
-        <div className="card">
-          <div className="card-body" style={{ padding: 0 }}>
-            <ConcertPosterGenerator
-              onDownload={(format, data) => {
-                showSuccess(
-                  t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ${format.toUpperCase()}`),
-                );
-              }}
-            />
-          </div>
-        </div>
-      )}
+      {activeTab === 'poster' && <PosterGeneratorTab />}
 
       {/* Add/Edit Concert Modal */}
       {(showAddModal || editingConcert) && (
@@ -1295,37 +1095,15 @@ export default function Concerts() {
 
       {/* Buma/Stemra Export Modal */}
       {showBumaStemraModal && (
-        <FormModal
-          title={t('concerts.bumaStemraExport')}
+        <BumaStemraModal
+          bumaStemraStartDate={bumaStemraStartDate}
+          setBumaStemraStartDate={setBumaStemraStartDate}
+          bumaStemraEndDate={bumaStemraEndDate}
+          setBumaStemraEndDate={setBumaStemraEndDate}
           onClose={() => setShowBumaStemraModal(false)}
           onSubmit={handleExportBumaStemra}
           isSubmitting={exportBumaStemraMutation.isPending}
-          submitLabel={t('concerts.downloadExport')}
-        >
-          <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>{t('concerts.bumaStemraDescription')}</p>
-          <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.startDate')}</label>
-              <input
-                type="date"
-                className="form-control"
-                value={bumaStemraStartDate}
-                onChange={(e) => setBumaStemraStartDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.endDateExport')}</label>
-              <input
-                type="date"
-                className="form-control"
-                value={bumaStemraEndDate}
-                onChange={(e) => setBumaStemraEndDate(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-        </FormModal>
+        />
       )}
 
       {/* Delete Confirmation */}
@@ -1477,155 +1255,11 @@ export default function Concerts() {
 
       {/* Attendance Prediction Modal */}
       {showPredictionModal && (
-        <Modal title={t('concerts.prediction.title')} onClose={closePredictionModal} size="large">
-          {loadingPrediction ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-              <span className="loading loading-spinner loading-lg" />
-            </div>
-          ) : predictionData ? (
-            <div>
-              {/* Summary stats */}
-              <div
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}
-              >
-                <div className="card">
-                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                      {predictionData.prediction.expectedAttendance}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {t('concerts.prediction.expected')}
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--success)' }}>
-                      {predictionData.prediction.confidenceBreakdown.highConfidenceYes}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {t('concerts.prediction.likelyYes')}
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--warning, orange)' }}>
-                      {predictionData.prediction.confidenceBreakdown.uncertain}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {t('concerts.prediction.uncertain')}
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="card-body" style={{ textAlign: 'center', padding: '1rem' }}>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--danger)' }}>
-                      {predictionData.prediction.confidenceBreakdown.highConfidenceNo}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {t('concerts.prediction.likelyNo')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* By instrument */}
-              <h4 style={{ marginBottom: '0.75rem' }}>{t('concerts.prediction.byInstrument')}</h4>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                  gap: '0.5rem',
-                  marginBottom: '1.5rem',
-                }}
-              >
-                {predictionData.prediction.byInstrument.map((inst) => (
-                  <div
-                    key={inst.instrument}
-                    style={{ padding: '0.5rem', background: 'var(--background)', borderRadius: 'var(--radius-sm)' }}
-                  >
-                    <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>{inst.instrument}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {inst.expected.toFixed(1)} / {inst.total} {t('concerts.prediction.expected').toLowerCase()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Member predictions */}
-              <h4 style={{ marginBottom: '0.75rem' }}>{t('concerts.prediction.memberPredictions')}</h4>
-              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t('common.name')}</th>
-                      <th>{t('concerts.instrument')}</th>
-                      <th style={{ textAlign: 'center' }}>{t('concerts.prediction.probability')}</th>
-                      <th style={{ textAlign: 'center' }}>{t('concerts.prediction.history')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {predictionData.members.map((member) => {
-                      const probability = Math.round(member.attendanceProbability * 100);
-                      const probabilityColor =
-                        probability >= 80
-                          ? 'var(--success)'
-                          : probability <= 20
-                            ? 'var(--danger)'
-                            : 'var(--warning, orange)';
-                      return (
-                        <tr key={member.memberId}>
-                          <td>{member.memberName}</td>
-                          <td>{member.instrument || '-'}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                            >
-                              <div
-                                style={{
-                                  width: '50px',
-                                  height: '6px',
-                                  background: 'var(--border)',
-                                  borderRadius: '3px',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                <div
-                                  style={{ width: `${probability}%`, height: '100%', background: probabilityColor }}
-                                />
-                              </div>
-                              <span style={{ fontSize: '0.875rem', fontWeight: '500', color: probabilityColor }}>
-                                {probability}%
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                            {member.attendedConcerts} / {member.totalConcerts}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div
-                style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem',
-                  background: 'var(--background)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-light)',
-                }}
-              >
-                <Icon name="info" size={14} style={{ marginRight: '0.5rem' }} />
-                {t('concerts.prediction.disclaimer')}
-              </div>
-            </div>
-          ) : null}
-        </Modal>
+        <AttendancePredictionModal
+          loadingPrediction={loadingPrediction}
+          predictionData={predictionData}
+          closePredictionModal={closePredictionModal}
+        />
       )}
 
       {/* Floating Action Button for mobile - quick add new concert */}
