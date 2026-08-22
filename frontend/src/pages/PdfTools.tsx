@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import PdfPagePreview from '../components/PdfPagePreview';
+import { FormField } from '../components/FormField';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicLists } from '../hooks/useMusicLists';
 import { useInstruments } from '../hooks/useInstruments';
@@ -57,6 +58,28 @@ interface SplitResult {
   tuning?: string;
   groupNumber?: string;
   clef?: string;
+}
+
+/**
+ * Waar begint en eindigt het volgende deel bij het opsplitsen van een pdf?
+ *
+ * Stond als twee regels binnen de component. Alleen de eindpagina werd begrensd
+ * op het aantal pagina's, de beginpagina niet - dus bij een pdf van vier
+ * pagina's met een bereik dat tot 4 loopt kwam er een deel bij met "van 5, tot
+ * 4": een omgekeerd bereik dat buiten het document begint. updateSplitRange
+ * corrigeert dat zodra je het veld aanraakt, maar de beginwaarde stond er al
+ * fout in, en wie meteen op opslaan klikt houdt hem.
+ *
+ * Hier apart omdat het rekenwerk is en geen opmaak: zo is het te toetsen zonder
+ * eerst een pdf te uploaden.
+ */
+export function volgendPaginabereik(
+  eindVorigeBereik: number | undefined,
+  aantalPaginas: number | undefined,
+): { start: number; end: number } {
+  const laatste = aantalPaginas ?? Number.MAX_SAFE_INTEGER;
+  const start = eindVorigeBereik === undefined ? 1 : Math.min(eindVorigeBereik + 1, laatste);
+  return { start, end: Math.min(start, laatste) };
 }
 
 export default function PdfTools() {
@@ -434,8 +457,7 @@ export default function PdfTools() {
 
   const addSplitRange = () => {
     const lastRange = splitRanges[splitRanges.length - 1];
-    const newStart = lastRange ? lastRange.end + 1 : 1;
-    const newEnd = pdfInfo ? Math.min(newStart, pdfInfo.pageCount) : newStart;
+    const { start: newStart, end: newEnd } = volgendPaginabereik(lastRange?.end, pdfInfo?.pageCount);
     setSplitRanges([
       ...splitRanges,
       {
@@ -575,8 +597,7 @@ export default function PdfTools() {
           {/* Split Tab */}
           {activeTab === 'split' && (
             <>
-              <div className="form-group">
-                <label className="form-label">{t('pdfTools.pdfFile')}</label>
+              <FormField label={t('pdfTools.pdfFile')}>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -584,7 +605,7 @@ export default function PdfTools() {
                   onChange={handleFileSelect}
                   className="form-control"
                 />
-              </div>
+              </FormField>
 
               {loading && (
                 <div className="text-center" style={{ padding: '2rem' }}>
@@ -661,8 +682,7 @@ export default function PdfTools() {
                     }}
                   >
                     <div className="grid grid-2" style={{ gap: '1rem' }}>
-                      <div className="form-group mb-0">
-                        <label className="form-label">{t('pdfTools.musicTitle')}</label>
+                      <FormField label={t('pdfTools.musicTitle')} className="form-group mb-0">
                         <input
                           type="text"
                           className="form-control"
@@ -670,9 +690,8 @@ export default function PdfTools() {
                           onChange={(e) => setSplitTitle(e.target.value)}
                           placeholder={t('pdfTools.musicTitlePlaceholder')}
                         />
-                      </div>
-                      <div className="form-group mb-0">
-                        <label className="form-label">{t('pdfTools.arranger')}</label>
+                      </FormField>
+                      <FormField label={t('pdfTools.arranger')} className="form-group mb-0">
                         <input
                           type="text"
                           className="form-control"
@@ -680,14 +699,17 @@ export default function PdfTools() {
                           onChange={(e) => setSplitArranger(e.target.value)}
                           placeholder={t('pdfTools.arrangerPlaceholder')}
                         />
-                      </div>
+                      </FormField>
                     </div>
                   </div>
 
                   {splitRanges.map((range, index) => (
                     <div key={index} className="flex gap-2 mb-2 items-end" style={{ flexWrap: 'wrap' }}>
-                      <div className="form-group mb-0" style={{ flex: 2, minWidth: '200px' }}>
-                        <label className="form-label">{t('pdfTools.instrument')}</label>
+                      <FormField
+                        label={t('pdfTools.instrument')}
+                        className="form-group mb-0"
+                        style={{ flex: 2, minWidth: '200px' }}
+                      >
                         <select
                           className="form-control form-select"
                           value={range.instrumentId}
@@ -700,9 +722,8 @@ export default function PdfTools() {
                             </option>
                           ))}
                         </select>
-                      </div>
-                      <div className="form-group mb-0" style={{ width: '70px' }}>
-                        <label className="form-label">{t('pdfTools.number')}</label>
+                      </FormField>
+                      <FormField label={t('pdfTools.number')} className="form-group mb-0" style={{ width: '70px' }}>
                         <input
                           type="number"
                           className="form-control"
@@ -710,9 +731,8 @@ export default function PdfTools() {
                           onChange={(e) => updateSplitRange(index, 'number', e.target.value)}
                           min={1}
                         />
-                      </div>
-                      <div className="form-group mb-0" style={{ width: '80px' }}>
-                        <label className="form-label">{t('pdfTools.from')}</label>
+                      </FormField>
+                      <FormField label={t('pdfTools.from')} className="form-group mb-0" style={{ width: '80px' }}>
                         <input
                           type="number"
                           className="form-control"
@@ -721,9 +741,8 @@ export default function PdfTools() {
                           min={1}
                           max={pdfInfo.pageCount}
                         />
-                      </div>
-                      <div className="form-group mb-0" style={{ width: '80px' }}>
-                        <label className="form-label">{t('pdfTools.to')}</label>
+                      </FormField>
+                      <FormField label={t('pdfTools.to')} className="form-group mb-0" style={{ width: '80px' }}>
                         <input
                           type="number"
                           className="form-control"
@@ -732,7 +751,7 @@ export default function PdfTools() {
                           min={1}
                           max={pdfInfo.pageCount}
                         />
-                      </div>
+                      </FormField>
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => removeSplitRange(index)}
@@ -890,8 +909,7 @@ export default function PdfTools() {
             <>
               <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>{t('pdfTools.a3Description')}</p>
 
-              <div className="form-group">
-                <label className="form-label">{t('pdfTools.pdfFile')}</label>
+              <FormField label={t('pdfTools.pdfFile')}>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -899,7 +917,7 @@ export default function PdfTools() {
                   onChange={handleFileSelect}
                   className="form-control"
                 />
-              </div>
+              </FormField>
 
               {loading && (
                 <div className="text-center" style={{ padding: '2rem' }}>
@@ -972,8 +990,7 @@ export default function PdfTools() {
             <>
               <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>{t('pdfTools.mergeDescription')}</p>
 
-              <div className="form-group">
-                <label className="form-label">{t('pdfTools.pdfFiles')}</label>
+              <FormField label={t('pdfTools.pdfFiles')}>
                 <input
                   ref={mergeInputRef}
                   type="file"
@@ -986,7 +1003,7 @@ export default function PdfTools() {
                   }}
                   className="form-control"
                 />
-              </div>
+              </FormField>
 
               {mergeFiles.length > 0 && (
                 <div

@@ -15,6 +15,13 @@
  * is met de hand gekoppeld omdat er een melding in dezelfde `form-group` staat
  * wanneer er niemand op dat instrument te vinden is; ook die staat hieronder,
  * want handwerk raakt eerder zoek dan een component.
+ *
+ * Het detailvenster is een geval apart. Daar staat geen enkel veld: alleen
+ * uitgelezen waarden met een kopje erboven, en een kop boven de tabel met
+ * uitnodigingen. Die kopjes waren `<label>`-en, en een label belooft iets te
+ * bedienen dat er niet is - een schermlezer kondigt "label" aan zonder dat er
+ * iets bij hoort. Ze zijn nu `<span>`-en met dezelfde klasse. De test daarvoor
+ * telt de `<label>`-en in dat venster: nul.
  */
 
 import '@testing-library/jest-dom';
@@ -46,7 +53,7 @@ vi.mock('../../context/AuthContext', () => ({
 
 // vi.mock wordt naar boven getild, dus alles wat een mock-fabriek gebruikt moet
 // via vi.hoisted mee omhoog.
-const { AANVRAAG, muteerder } = vi.hoisted(() => ({
+const { AANVRAAG, houder, muteerder } = vi.hoisted(() => ({
   AANVRAAG: {
     id: 'aanvraag-1',
     eventType: 'concert',
@@ -63,12 +70,15 @@ const { AANVRAAG, muteerder } = vi.hoisted(() => ({
     urgency: 'normal',
     status: 'open',
   },
+  // Het detail is per test in te stellen; standaard leeg, zodat de bestaande
+  // tests van de invoervensters er niets van merken.
+  houder: { detail: null as unknown },
   muteerder: () => ({ mutate: () => {}, mutateAsync: async () => {}, isPending: false }),
 }));
 
 vi.mock('../../hooks/useReplacementRequests', () => ({
   useReplacementRequests: () => ({ data: [AANVRAAG], isLoading: false }),
-  useReplacementRequest: () => ({ data: null }),
+  useReplacementRequest: () => ({ data: houder.detail }),
   useCreateReplacementRequest: muteerder,
   useCancelReplacementRequest: muteerder,
   useInviteMusician: muteerder,
@@ -103,7 +113,22 @@ async function openVenster(knopnaam: RegExp) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  houder.detail = null;
 });
+
+/** Open het detailvenster van een aanvraag zoals een lezer dat doet. */
+async function openDetailvenster() {
+  houder.detail = {
+    ...AANVRAAG,
+    deadline: '2026-08-30',
+    notes: 'Graag iemand met eigen partituur',
+    assignments: [],
+  };
+  const gebruiker = userEvent.setup();
+  render(<ReplacementRequests />, { wrapper: wikkel });
+  await gebruiker.click(await screen.findByRole('button', { name: 'Voorjaarsconcert' }));
+  return await screen.findByRole('dialog');
+}
 
 describe('vervangingsaanvragen - labels gekoppeld aan hun veld', () => {
   it('vindt de velden van het aanvraagvenster op hun labeltekst', async () => {
@@ -154,5 +179,44 @@ describe('vervangingsaanvragen - labels gekoppeld aan hun veld', () => {
     // koppeling niet, en het is de reden dat een label bij een veld hoort.
     await gebruiker.click(within(venster).getByText('replacementRequests.fee'));
     expect(within(venster).getByLabelText('replacementRequests.fee')).toHaveFocus();
+  });
+});
+
+describe('vervangingsaanvragen - het detailvenster labelt niets, dus staat er geen label', () => {
+  it('toont de kopjes zonder er een label van te maken', async () => {
+    const venster = await openDetailvenster();
+
+    // Er valt in dit venster niets te bedienen: elke waarde is uitgelezen
+    // tekst. Vóór de reparatie stonden hier zeven <label>-en die naar niets
+    // wezen; nu hoort er geen enkele meer te staan.
+    expect(venster.querySelectorAll('label')).toHaveLength(0);
+
+    // De kopjes zelf zijn niet verdwenen - ze zien er hetzelfde uit.
+    for (const kopje of [
+      'common.date',
+      'replacementRequests.urgency',
+      'common.status',
+      'replacementRequests.positions',
+      'replacementRequests.deadline',
+      'common.notes',
+      'replacementRequests.invitations',
+    ]) {
+      const element = within(venster).getByText(kopje);
+      expect(element.tagName).toBe('SPAN');
+      expect(element).toHaveClass('form-label');
+    }
+  });
+
+  it('laat geen enkel label op de pagina naar niets wijzen', async () => {
+    await openDetailvenster();
+
+    // Ruimer dan het venster alleen: elk <label> dat de pagina toont hoort een
+    // veld te hebben - via htmlFor, of doordat het er een omsluit. Een label
+    // dat aan geen van beide voldoet belooft iets te bedienen wat er niet is.
+    const zonderVeld = [...document.querySelectorAll('label')].filter(
+      (label) => !label.htmlFor && !label.querySelector('input, select, textarea'),
+    );
+
+    expect(zonderVeld.map((label) => label.textContent)).toEqual([]);
   });
 });

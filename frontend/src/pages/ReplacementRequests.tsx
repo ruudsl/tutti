@@ -362,6 +362,12 @@ export default function ReplacementRequests() {
       </div>
 
       {/* View Request Modal */}
+      {/* Dit venster toont alleen uitgelezen waarden; er valt niets te bedienen.
+          De kopjes erboven waren <label>-elementen, maar een label belooft een
+          veld dat hier niet bestaat. Het zijn <span>'s met dezelfde klasse, dus
+          het ziet er hetzelfde uit en de lege belofte aan een schermlezer is
+          weg. Ook de kop "uitnodigingen" is er een: die staat boven een tabel
+          met een knop ernaast, geen veld. */}
       {viewingRequest && requestDetail && (
         <Modal
           title={`${requestDetail.eventName || requestDetail.eventType} - ${requestDetail.instrumentName}`}
@@ -371,11 +377,11 @@ export default function ReplacementRequests() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="form-label text-muted">{t('common.date')}</label>
+                <span className="form-label text-muted">{t('common.date')}</span>
                 <p>{new Date(requestDetail.eventDate).toLocaleDateString()}</p>
               </div>
               <div>
-                <label className="form-label text-muted">{t('replacementRequests.urgency')}</label>
+                <span className="form-label text-muted">{t('replacementRequests.urgency')}</span>
                 <p>
                   <span className={`badge ${URGENCY_COLORS[requestDetail.urgency]}`}>
                     {URGENCY_LABELS[requestDetail.urgency]}
@@ -383,7 +389,7 @@ export default function ReplacementRequests() {
                 </p>
               </div>
               <div>
-                <label className="form-label text-muted">{t('common.status')}</label>
+                <span className="form-label text-muted">{t('common.status')}</span>
                 <p>
                   <span className={`badge ${STATUS_COLORS[requestDetail.status]}`}>
                     {STATUS_LABELS[requestDetail.status]}
@@ -394,14 +400,14 @@ export default function ReplacementRequests() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label text-muted">{t('replacementRequests.positions')}</label>
+                <span className="form-label text-muted">{t('replacementRequests.positions')}</span>
                 <p>
                   {requestDetail.positionsFilled} / {requestDetail.positionsNeeded} {t('replacementRequests.filled')}
                 </p>
               </div>
               {requestDetail.deadline && (
                 <div>
-                  <label className="form-label text-muted">{t('replacementRequests.deadline')}</label>
+                  <span className="form-label text-muted">{t('replacementRequests.deadline')}</span>
                   <p>{new Date(requestDetail.deadline).toLocaleDateString()}</p>
                 </div>
               )}
@@ -409,14 +415,14 @@ export default function ReplacementRequests() {
 
             {requestDetail.notes && (
               <div>
-                <label className="form-label text-muted">{t('common.notes')}</label>
+                <span className="form-label text-muted">{t('common.notes')}</span>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{requestDetail.notes}</p>
               </div>
             )}
 
             <div>
               <div className="page-header">
-                <label className="form-label text-muted mb-0">{t('replacementRequests.invitations')}</label>
+                <span className="form-label text-muted mb-0">{t('replacementRequests.invitations')}</span>
                 {canEdit && requestDetail.status !== 'filled' && requestDetail.status !== 'cancelled' && (
                   <button className="btn btn-primary btn-sm" onClick={() => openInviteModal(requestDetail)}>
                     <Icon name="plus" size={16} className="mr-1" />

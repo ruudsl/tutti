@@ -5,6 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { getAuditLogs } from '../api';
 import { SkeletonTableRow } from '../components/Skeleton';
 import { Pagination } from '../components/Pagination';
+import { FormField } from '../components/FormField';
 import { Icon, type IconName } from '../components/Icon';
 
 const ACTION_ICONS: Record<string, IconName> = {
@@ -87,8 +88,7 @@ export default function AuditLogs() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="filter-bar">
-            <div className="form-group">
-              <label className="form-label">{t('auditLogs.filterAction')}</label>
+            <FormField label={t('auditLogs.filterAction')}>
               <select
                 className="form-control form-select"
                 value={actionFilter}
@@ -106,10 +106,9 @@ export default function AuditLogs() {
                 <option value="upload">{t('auditLogs.actions.upload')}</option>
                 <option value="download">{t('auditLogs.actions.download')}</option>
               </select>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">{t('auditLogs.filterEntity')}</label>
+            <FormField label={t('auditLogs.filterEntity')}>
               <select
                 className="form-control form-select"
                 value={entityFilter}
@@ -128,10 +127,9 @@ export default function AuditLogs() {
                 <option value="rehearsal">{t('auditLogs.entities.rehearsal')}</option>
                 <option value="concert">{t('auditLogs.entities.concert')}</option>
               </select>
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">{t('auditLogs.dateFrom')}</label>
+            <FormField label={t('auditLogs.dateFrom')}>
               <input
                 type="date"
                 className="form-control"
@@ -141,10 +139,9 @@ export default function AuditLogs() {
                   setPage(1);
                 }}
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">{t('auditLogs.dateTo')}</label>
+            <FormField label={t('auditLogs.dateTo')}>
               <input
                 type="date"
                 className="form-control"
@@ -154,7 +151,7 @@ export default function AuditLogs() {
                   setPage(1);
                 }}
               />
-            </div>
+            </FormField>
 
             <div className="form-group" style={{ alignSelf: 'flex-end' }}>
               <button

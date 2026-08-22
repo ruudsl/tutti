@@ -5,6 +5,7 @@ import { getOrchestra, createMusicList, updateMusicList, deleteMusicList } from 
 import { useOrchestras, useCreateOrchestra, useUpdateOrchestra, useDeleteOrchestra } from '../hooks/useOrchestras';
 import { queryKeys } from '../lib/queryClient';
 import { FormModal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Skeleton, SkeletonListItem } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
@@ -346,8 +347,7 @@ export default function Orchestras() {
           submitLabel={t('common.add')}
           isSubmitting={createMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('orchestras.name')}</label>
+          <FormField label={t('orchestras.name')}>
             <input
               type="text"
               className="form-control"
@@ -356,7 +356,7 @@ export default function Orchestras() {
               required
               autoFocus
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -372,8 +372,7 @@ export default function Orchestras() {
           onSubmit={handleUpdate}
           isSubmitting={updateMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('orchestras.name')}</label>
+          <FormField label={t('orchestras.name')}>
             <input
               type="text"
               className="form-control"
@@ -382,7 +381,7 @@ export default function Orchestras() {
               required
               autoFocus
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -412,8 +411,7 @@ export default function Orchestras() {
           submitLabel={t('common.add')}
           isSubmitting={createListMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('orchestras.name')}</label>
+          <FormField label={t('orchestras.name')}>
             <input
               type="text"
               className="form-control"
@@ -423,7 +421,7 @@ export default function Orchestras() {
               autoFocus
               placeholder={t('orchestras.listNamePlaceholder')}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -439,8 +437,7 @@ export default function Orchestras() {
           onSubmit={handleUpdateList}
           isSubmitting={updateListMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('orchestras.name')}</label>
+          <FormField label={t('orchestras.name')}>
             <input
               type="text"
               className="form-control"
@@ -449,7 +446,7 @@ export default function Orchestras() {
               required
               autoFocus
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

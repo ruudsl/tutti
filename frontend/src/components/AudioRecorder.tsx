@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormModal } from './Modal';
 import { Icon } from './Icon';
+import { FormField } from './FormField';
 import { useCreateRecording } from '../hooks/useAudioRecordings';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useMusicTitles } from '../hooks/useMusicTitles';
@@ -205,7 +206,9 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
         {/* Audio Preview */}
         {audioUrl && (
           <div className="form-group">
-            <label className="form-label">{t('audio.preview')}</label>
+            {/* Bijschrift, geen veldlabel: een <audio> is geen bedienbaar
+                formulierveld, dus er valt niets te koppelen. */}
+            <span className="form-label">{t('audio.preview')}</span>
             <audio src={audioUrl} controls className="w-full" />
           </div>
         )}
@@ -213,8 +216,7 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
         {/* Metadata Form */}
         {audioBlob && (
           <>
-            <div className="form-group">
-              <label className="form-label">{t('common.title')} *</label>
+            <FormField label={`${t('common.title')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -223,10 +225,9 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
                 placeholder={t('audio.titlePlaceholder')}
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="form-group">
-              <label className="form-label">{t('common.description')}</label>
+            <FormField label={t('common.description')}>
               <textarea
                 className="form-control"
                 value={description}
@@ -234,11 +235,10 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
                 rows={2}
                 placeholder={t('audio.descriptionPlaceholder')}
               />
-            </div>
+            </FormField>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">{t('common.orchestra')}</label>
+              <FormField label={t('common.orchestra')}>
                 <select className="form-control" value={orchestraId} onChange={(e) => setOrchestraId(e.target.value)}>
                   <option value="">{t('common.selectOptional')}</option>
                   {orchestras?.map((o) => (
@@ -247,10 +247,9 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
 
-              <div className="form-group">
-                <label className="form-label">{t('music.title')}</label>
+              <FormField label={t('music.title')}>
                 <select className="form-control" value={musicTitleId} onChange={(e) => setMusicTitleId(e.target.value)}>
                   <option value="">{t('common.selectOptional')}</option>
                   {musicTitles?.map((mt) => (
@@ -259,7 +258,7 @@ export function AudioRecorder({ onClose, rehearsalId, defaultMusicTitleId, defau
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
             </div>
 
             <div className="form-group">

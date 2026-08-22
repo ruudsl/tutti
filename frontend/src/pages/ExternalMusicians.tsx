@@ -398,6 +398,11 @@ export default function ExternalMusicians() {
       </div>
 
       {/* View Modal */}
+      {/* Dit venster toont alleen uitgelezen waarden; er valt niets te bedienen.
+          De kopjes erboven waren <label>-elementen, maar een label belooft een
+          veld dat hier niet bestaat: een schermlezer kondigde "label" aan zonder
+          dat er iets bij hoorde. Het zijn <span>'s met dezelfde klasse, dus het
+          ziet er hetzelfde uit en de lege belofte is weg. */}
       {viewingMusician && musicianDetail && (
         <Modal
           title={`${musicianDetail.firstName} ${musicianDetail.lastName}`}
@@ -406,13 +411,13 @@ export default function ExternalMusicians() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.type')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.type')}</span>
                 <p>
                   <span className="badge badge-info">{MUSICIAN_TYPE_LABELS[musicianDetail.musicianType]}</span>
                 </p>
               </div>
               <div>
-                <label className="form-label text-muted">{t('common.status')}</label>
+                <span className="form-label text-muted">{t('common.status')}</span>
                 <p>
                   <span className={`badge ${musicianDetail.isActive ? 'badge-success' : 'badge-secondary'}`}>
                     {musicianDetail.isActive ? t('externalMusicians.active') : t('externalMusicians.inactive')}
@@ -425,7 +430,7 @@ export default function ExternalMusicians() {
               <div className="grid grid-cols-2 gap-3">
                 {musicianDetail.email && (
                   <div>
-                    <label className="form-label text-muted">{t('common.email')}</label>
+                    <span className="form-label text-muted">{t('common.email')}</span>
                     <p>
                       <a href={`mailto:${musicianDetail.email}`}>{musicianDetail.email}</a>
                     </p>
@@ -433,7 +438,7 @@ export default function ExternalMusicians() {
                 )}
                 {musicianDetail.phone && (
                   <div>
-                    <label className="form-label text-muted">{t('common.phone')}</label>
+                    <span className="form-label text-muted">{t('common.phone')}</span>
                     <p>
                       <a href={`tel:${musicianDetail.phone}`}>{musicianDetail.phone}</a>
                     </p>
@@ -444,11 +449,11 @@ export default function ExternalMusicians() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.rating')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.rating')}</span>
                 <StarRating rating={musicianDetail.rating} readOnly />
               </div>
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.performances')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.performances')}</span>
                 <p>
                   {musicianDetail.totalPerformances} {t('externalMusicians.total')}
                 </p>
@@ -457,14 +462,14 @@ export default function ExternalMusicians() {
 
             {musicianDetail.lastPlayedDate && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.lastPlayed')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.lastPlayed')}</span>
                 <p>{new Date(musicianDetail.lastPlayedDate).toLocaleDateString()}</p>
               </div>
             )}
 
             {musicianDetail.instruments.length > 0 && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.instruments')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.instruments')}</span>
                 <div className="flex flex-wrap gap-2">
                   {musicianDetail.instruments.map((i) => (
                     <span key={i.id} className={`badge ${i.isPrimary ? 'badge-primary' : 'badge-secondary'}`}>
@@ -479,14 +484,14 @@ export default function ExternalMusicians() {
 
             {musicianDetail.notes && (
               <div>
-                <label className="form-label text-muted">{t('common.notes')}</label>
+                <span className="form-label text-muted">{t('common.notes')}</span>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{musicianDetail.notes}</p>
               </div>
             )}
 
             {musicianDetail.recentAssignments.length > 0 && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.recentAssignments')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.recentAssignments')}</span>
                 <table className="table table-sm">
                   <thead>
                     <tr>

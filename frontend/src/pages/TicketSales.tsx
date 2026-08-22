@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getTicketSales, getPaymentDetails, exportTicketSalesCsv, refundOrder } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { SkeletonTable } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
@@ -205,8 +206,7 @@ export default function TicketSales() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="grid grid-cols-4 gap-2">
-            <div>
-              <label className="form-label">{t('tickets.concert')}</label>
+            <FormField className="" label={t('tickets.concert')}>
               <select
                 className="form-control"
                 value={concertFilter}
@@ -222,9 +222,8 @@ export default function TicketSales() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="form-label">{t('common.status')}</label>
+            </FormField>
+            <FormField className="" label={t('common.status')}>
               <select
                 className="form-control"
                 value={statusFilter}
@@ -240,9 +239,8 @@ export default function TicketSales() {
                 <option value="refunded">{t('tickets.status.refunded')}</option>
                 <option value="expired">{t('tickets.status.expired')}</option>
               </select>
-            </div>
-            <div>
-              <label className="form-label">{t('common.startDate')}</label>
+            </FormField>
+            <FormField className="" label={t('common.startDate')}>
               <input
                 type="date"
                 className="form-control"
@@ -252,9 +250,8 @@ export default function TicketSales() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
-              <label className="form-label">{t('common.endDate')}</label>
+            </FormField>
+            <FormField className="" label={t('common.endDate')}>
               <input
                 type="date"
                 className="form-control"
@@ -264,7 +261,7 @@ export default function TicketSales() {
                   setPage(1);
                 }}
               />
-            </div>
+            </FormField>
           </div>
         </div>
       </div>
@@ -559,8 +556,7 @@ export default function TicketSales() {
               buyer: selectedOrder.buyerName,
             })}
           </p>
-          <div className="form-group">
-            <label className="form-label">{t('tickets.refundReason')}</label>
+          <FormField label={t('tickets.refundReason')}>
             <textarea
               className="form-control"
               rows={3}
@@ -568,7 +564,7 @@ export default function TicketSales() {
               onChange={(e) => setRefundReason(e.target.value)}
               placeholder={t('tickets.refundReasonPlaceholder')}
             />
-          </div>
+          </FormField>
           <div className="flex justify-end gap-2 mt-3">
             <button
               className="btn btn-outline"

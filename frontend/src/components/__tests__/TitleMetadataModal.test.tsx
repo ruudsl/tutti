@@ -65,11 +65,11 @@ function maakTitel(overschrijving: Partial<MusicTitle> = {}): MusicTitle {
   } as MusicTitle;
 }
 
-function toon() {
+function toon(genres: { id: string; name: string }[] = []) {
   return render(
     <TitleMetadataModal
       title={maakTitel()}
-      genres={[]}
+      genres={genres as never}
       onClose={vi.fn()}
       onSave={vi.fn().mockResolvedValue(undefined)}
     />,
@@ -260,5 +260,43 @@ describe('TitleMetadataModal - labels gekoppeld aan hun veld', () => {
     const notities = screen.getByLabelText('titles.internalNotes');
     expect(notities.tagName).toBe('TEXTAREA');
     expect(notities).toHaveAccessibleDescription('titles.internalNotesHelp');
+  });
+});
+
+/**
+ * De kop boven de genrevakjes is geen veldlabel.
+ *
+ * Er stond een `<label className="form-label">` boven een raster met
+ * aankruisvakjes. Zo'n kop kan geen `htmlFor` krijgen: er is niet één veld om
+ * naar te wijzen, en elk vakje heeft binnenin al zijn eigen label. Een
+ * schermlezer kondigde daar dus "label" aan zonder dat er iets te bedienen
+ * viel, en de vakjes hoorden bij niets.
+ *
+ * De kop is een `<span>` geworden - dezelfde klasse, dus dezelfde opmaak - en
+ * benoemt nu de groep als geheel, via `role="group"` met `aria-labelledby`.
+ */
+describe('TitleMetadataModal - de kop boven de genrevakjes', () => {
+  const GENRES = [
+    { id: 'gen-1', name: 'Marsen' },
+    { id: 'gen-2', name: 'Filmmuziek' },
+  ];
+
+  it('zet geen <label> boven het vakjesraster', async () => {
+    toon(GENRES);
+    const venster = await screen.findByRole('dialog');
+
+    const kop = within(venster).getByText('titles.genres');
+    expect(kop.tagName).toBe('SPAN');
+    expect(kop.closest('label')).toBeNull();
+    // Maar het ziet er nog precies hetzelfde uit.
+    expect(kop).toHaveClass('form-label');
+  });
+
+  it('benoemt in plaats daarvan de groep vakjes als geheel', async () => {
+    toon(GENRES);
+    const venster = await screen.findByRole('dialog');
+
+    const groep = within(venster).getByRole('group', { name: 'titles.genres' });
+    expect(within(groep).getAllByRole('checkbox', { hidden: true })).toHaveLength(GENRES.length);
   });
 });

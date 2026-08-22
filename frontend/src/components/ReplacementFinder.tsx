@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Icon } from './Icon';
+import { FormField } from './FormField';
 import { useInstruments } from '../hooks/useInstruments';
 import { useExternalMusicianSearch } from '../hooks/useExternalMusicians';
 import { useInviteMusician, useCreateReplacementRequest } from '../hooks/useReplacementRequests';
@@ -134,8 +135,7 @@ export function ReplacementFinder({
 
         {/* Filters */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="form-group mb-0">
-            <label className="form-label">{t('replacementFinder.instrument')} *</label>
+          <FormField label={`${t('replacementFinder.instrument')} *`} className="form-group mb-0">
             <select
               className="form-control"
               value={selectedInstrumentId}
@@ -148,9 +148,8 @@ export function ReplacementFinder({
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group mb-0">
-            <label className="form-label">{t('replacementFinder.skillLevel')}</label>
+          </FormField>
+          <FormField label={t('replacementFinder.skillLevel')} className="form-group mb-0">
             <select className="form-control" value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)}>
               <option value="">{t('replacementFinder.allLevels')}</option>
               <option value="beginner">{SKILL_LEVEL_LABELS.beginner}</option>
@@ -158,17 +157,16 @@ export function ReplacementFinder({
               <option value="advanced">{SKILL_LEVEL_LABELS.advanced}</option>
               <option value="professional">{SKILL_LEVEL_LABELS.professional}</option>
             </select>
-          </div>
+          </FormField>
           {!existingRequestId && eventId && (
-            <div className="form-group mb-0">
-              <label className="form-label">{t('replacementFinder.urgency')}</label>
+            <FormField label={t('replacementFinder.urgency')} className="form-group mb-0">
               <select className="form-control" value={urgency} onChange={(e) => setUrgency(e.target.value as any)}>
                 <option value="low">{t('replacementFinder.urgencyLow')}</option>
                 <option value="normal">{t('replacementFinder.urgencyNormal')}</option>
                 <option value="high">{t('replacementFinder.urgencyHigh')}</option>
                 <option value="critical">{t('replacementFinder.urgencyCritical')}</option>
               </select>
-            </div>
+            </FormField>
           )}
         </div>
 
@@ -267,8 +265,7 @@ export function ReplacementFinder({
             }}
           >
             <div className="space-y-3">
-              <div className="form-group">
-                <label className="form-label">{t('replacementFinder.fee')}</label>
+              <FormField label={t('replacementFinder.fee')}>
                 <input
                   type="number"
                   className="form-control"
@@ -278,9 +275,8 @@ export function ReplacementFinder({
                   onChange={(e) => setInviteFee(e.target.value)}
                   placeholder="0.00"
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('common.notes')}</label>
+              </FormField>
+              <FormField label={t('common.notes')}>
                 <textarea
                   className="form-control"
                   rows={3}
@@ -288,7 +284,7 @@ export function ReplacementFinder({
                   onChange={(e) => setInviteNotes(e.target.value)}
                   placeholder={t('replacementFinder.notesPlaceholder')}
                 />
-              </div>
+              </FormField>
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn btn-secondary" onClick={() => setInvitingMusician(null)}>
                   {t('common.cancel')}

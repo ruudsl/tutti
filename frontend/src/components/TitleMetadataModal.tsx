@@ -762,8 +762,18 @@ export function TitleMetadataModal({
           </small>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('titles.genres')}</label>
-          <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {/* Kop boven een groep aankruisvakjes, geen veldlabel: elk vakje heeft
+              zijn eigen label al. De groep krijgt hier een naam via role="group"
+              en aria-labelledby. */}
+          <span className="form-label" id="title-meta-genres-kop">
+            {t('titles.genres')}
+          </span>
+          <div
+            className="checkbox-grid"
+            role="group"
+            aria-labelledby="title-meta-genres-kop"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}
+          >
             {genres.map((genre) => (
               <label
                 key={genre.id}
