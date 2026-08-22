@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { getSettings, updateTheme } from '../api';
+import { updateTheme } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useConfirm } from '../hooks/useConfirm';
+import { useSettings } from '../hooks/useSettings';
 import type { ThemeSettings } from '../types';
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -47,12 +47,11 @@ export default function ThemeSettingsPage() {
   const [theme, setTheme] = useState<ThemeSettings>({ ...DEFAULT_THEME });
   const [isSaving, setIsSaving] = useState(false);
 
-  // React Query for settings
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ['settings'],
-    queryFn: getSettings,
-    staleTime: 5 * 60 * 1000,
-  });
+  // Dezelfde hook als de instellingenpagina gebruikt. Hier stond een eigen
+  // `useQuery` op sleutel `['settings']` met een eigen opties-blok; welke van
+  // de twee blokken gold, hing af van welke pagina je het eerst opende. Zie
+  // `src/hooks/useSettings.ts`.
+  const { data: settings, isLoading } = useSettings();
 
   // Initialize theme from settings
   useEffect(() => {
