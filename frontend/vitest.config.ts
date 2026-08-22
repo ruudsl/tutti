@@ -53,12 +53,11 @@ export default defineConfig({
       // Drempels net onder de gemeten stand, zodat ze een terugval vangen
       // zonder bij de eerste de beste meetruis af te gaan. Verhoog ze als er
       // tests bij komen - dat is het hele punt van een ratel.
-      // Bijgewerkt op 22-08-2026, na het repareren van de fouten die tijdens het
-      // opknippen bewust waren blijven staan. Gemeten:
-      //   statements 28,25 (7078/25048)
-      //   branches   14,89 (2462/16530)
-      //   functions  26,78 (2371/8853)
-      //   lines      28,84 (6791/23544)
+      // Bijgewerkt op 22-08-2026, na de restpuntenronde. Gemeten:
+      //   statements 28,81 (7225/25070)
+      //   branches   15,70 (2599/16544)
+      //   functions  27,26 (2416/8860)
+      //   lines      29,40 (6929/23563)
       //
       // Branches is bijna verdubbeld (8,68 -> 14,01) terwijl statements maar
       // drie punten steeg. Dat bevestigt waarom de pagina's eerst opgeknipt
@@ -67,9 +66,9 @@ export default defineConfig({
       // De 122 karakteriseringstests op zeven pagina's doen dat wel.
       thresholds: {
         statements: 28,
-        branches: 14,
-        functions: 26,
-        lines: 28,
+        branches: 15,
+        functions: 27,
+        lines: 29,
       },
     },
   },
