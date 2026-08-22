@@ -195,17 +195,41 @@ export const restoreMusicPiece = async (id: string): Promise<void> => {
   await api.post(`/music-pieces/${id}/restore`);
 };
 
+/**
+ * Haalt de bestandsnaam uit een Content-Disposition-kopregel.
+ *
+ * Express stuurt bij een naam met niet-ASCII tekens twee vormen mee: `filename`
+ * met een vraagteken op de plek van elk bijzonder teken, en `filename*` met de
+ * echte naam in UTF-8 (RFC 5987). Wie alleen naar `filename` keek, bood
+ * "Ma?ana.pdf" aan - een naam die Windows niet eens accepteert. `filename*`
+ * wint daarom, met `filename` als terugval.
+ */
+function leesBestandsnaam(contentDisposition?: string): string {
+  const standaard = 'muziekstuk.pdf';
+  if (!contentDisposition) return standaard;
+
+  const gecodeerd = contentDisposition.match(/filename\*=\s*[^']*'[^']*'([^;]+)/i);
+  if (gecodeerd) {
+    try {
+      return decodeURIComponent(gecodeerd[1].trim());
+    } catch {
+      // Een half gecodeerde naam mag de download niet tegenhouden; val terug
+      // op de gewone vorm hieronder.
+    }
+  }
+
+  const gewoon = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/i);
+  if (gewoon) return gewoon[1] || gewoon[2];
+
+  return standaard;
+}
+
 export const downloadMusicPiece = async (id: string): Promise<void> => {
   const response = await api.get(`/music-pieces/${id}/download`, {
     responseType: 'blob',
   });
 
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = 'muziekstuk.pdf';
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
-    if (match) filename = match[1] || match[2];
-  }
+  const filename = leesBestandsnaam(response.headers['content-disposition']);
 
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
