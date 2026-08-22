@@ -297,6 +297,126 @@ describe('Relaties', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
+
+  it('geeft een enkele relatie terug', async () => {
+    const res = await alsAdmin('post', '/relations').send({
+      relationType: 'customer',
+      name: 'Muziekhandel De Klank',
+      email: 'post@deklank.test',
+      city: 'Zwolle',
+      paymentTermDays: 14,
+    });
+    expect(res.status).toBe(201);
+
+    const detail = await alsAdmin('get', `/relations/${res.body.id}`);
+    expect(detail.status, JSON.stringify(detail.body)).toBe(200);
+    expect(detail.body).toMatchObject({
+      id: res.body.id,
+      relationType: 'customer',
+      name: 'Muziekhandel De Klank',
+      email: 'post@deklank.test',
+      city: 'Zwolle',
+      paymentTermDays: 14,
+      isActive: true,
+    });
+  });
+
+  it('laat een wijziging terugzien in het detail', async () => {
+    const id = await maakRelatie('Oude naam');
+    await alsAdmin('put', `/relations/${id}`).send({ name: 'Nieuwe naam', city: 'Deventer' });
+
+    const detail = await alsAdmin('get', `/relations/${id}`);
+    expect(detail.body).toMatchObject({ name: 'Nieuwe naam', city: 'Deventer' });
+  });
+
+  it('geeft 404 voor een relatie die niet bestaat', async () => {
+    const res = await alsAdmin('get', '/relations/bestaat-niet');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Relatie niet gevonden.');
+  });
+
+  it('geeft een relatie van een andere vereniging niet vrij', async () => {
+    const id = await maakRelatie('Van de buren');
+
+    const andere = createTestAssociation();
+    const andereToken = generateTestToken(
+      createTestUser(andere.id, { email: 'admin-rel-detail@test.com', role: 'admin' }),
+    );
+
+    const res = await request(app).get(`/api/accounting/relations/${id}`).set('Authorization', `Bearer ${andereToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('laat een gewoon lid geen relatie inzien', async () => {
+    const id = await maakRelatie();
+
+    const res = await request(app).get(`/api/accounting/relations/${id}`).set('Authorization', `Bearer ${memberToken}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Kostenplaatsen', () => {
+  async function maakKostenplaats(overschrijf: Record<string, unknown> = {}) {
+    const res = await alsAdmin('post', '/cost-centers').send({
+      code: 'KP-100',
+      name: 'Concerten',
+      description: 'Alles rond de uitvoeringen',
+      budgetAmount: 2500,
+      ...overschrijf,
+    });
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    return res.body.id as string;
+  }
+
+  it('geeft een enkele kostenplaats terug', async () => {
+    const id = await maakKostenplaats();
+
+    const detail = await alsAdmin('get', `/cost-centers/${id}`);
+    expect(detail.status, JSON.stringify(detail.body)).toBe(200);
+    expect(detail.body).toMatchObject({
+      id,
+      code: 'KP-100',
+      name: 'Concerten',
+      description: 'Alles rond de uitvoeringen',
+      budgetAmount: 2500,
+      isActive: true,
+    });
+  });
+
+  it('laat een wijziging terugzien in het detail', async () => {
+    const id = await maakKostenplaats();
+    await alsAdmin('put', `/cost-centers/${id}`).send({ name: 'Concertreeks', isActive: false });
+
+    const detail = await alsAdmin('get', `/cost-centers/${id}`);
+    expect(detail.body).toMatchObject({ name: 'Concertreeks', isActive: false });
+  });
+
+  it('geeft 404 voor een kostenplaats die niet bestaat', async () => {
+    const res = await alsAdmin('get', '/cost-centers/bestaat-niet');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Kostenplaats niet gevonden.');
+  });
+
+  it('geeft een kostenplaats van een andere vereniging niet vrij', async () => {
+    const id = await maakKostenplaats();
+
+    const andere = createTestAssociation();
+    const andereToken = generateTestToken(createTestUser(andere.id, { email: 'admin-kp@test.com', role: 'admin' }));
+
+    const res = await request(app)
+      .get(`/api/accounting/cost-centers/${id}`)
+      .set('Authorization', `Bearer ${andereToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('laat een gewoon lid geen kostenplaats inzien', async () => {
+    const id = await maakKostenplaats();
+
+    const res = await request(app)
+      .get(`/api/accounting/cost-centers/${id}`)
+      .set('Authorization', `Bearer ${memberToken}`);
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('Facturen', () => {

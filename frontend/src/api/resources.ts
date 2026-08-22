@@ -211,7 +211,15 @@ export async function addResourceAvailability(
   resourceId: string,
   data: AddAvailabilityData,
 ): Promise<{ id: string; message: string }> {
-  const response = await api.post(`/resources/${resourceId}/availability`, data);
+  // availabilitySchema in backend/src/routes/resources.ts eist een
+  // `availabilityType` uit de enum available/blocked/maintenance en kent geen
+  // `isAvailable`. Zonder deze vertaling werd elke beschikbaarheidsregel met
+  // een 400 afgewezen en kon er geen enkele regel worden toegevoegd.
+  const { isAvailable, ...rest } = data;
+  const response = await api.post(`/resources/${resourceId}/availability`, {
+    availabilityType: isAvailable ? 'available' : 'blocked',
+    ...rest,
+  });
   return response.data;
 }
 

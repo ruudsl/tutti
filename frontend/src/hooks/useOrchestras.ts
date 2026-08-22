@@ -44,6 +44,10 @@ export function useUpdateOrchestra() {
     mutationFn: ({ id, name }: { id: string; name: string }) => updateOrchestra(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
+      // De muzieklijsten dragen orchestraName mee en de ledenlijst toont per
+      // lid bij welke orkesten hij speelt; beide bevatten nu de oude naam.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
       showSuccess('Orkest bijgewerkt');
     },
     onError: (error) => {
@@ -62,6 +66,11 @@ export function useDeleteOrchestra() {
     mutationFn: (id: string) => deleteOrchestra(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orchestras });
+      // music_lists.orchestra_id en user_orchestras.orchestra_id verwijzen
+      // naar orchestras met ON DELETE CASCADE (database/schema.ts): met het
+      // orkest verdwijnen ook zijn muzieklijsten en de koppelingen met leden.
+      queryClient.invalidateQueries({ queryKey: ['musicLists'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users });
       showSuccess('Orkest verwijderd');
     },
     onError: (error) => {

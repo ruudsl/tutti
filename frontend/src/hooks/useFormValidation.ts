@@ -14,6 +14,23 @@ interface UseFormValidationOptions {
 }
 
 /**
+ * Zoekt het invoerelement dat bij een veldnaam hoort.
+ *
+ * Namen uit samengestelde formulieren ("stukken[0].titel") zijn geen geldige
+ * CSS-identifier. Zo'n naam achter een `#` in een selector plakken laat
+ * querySelector een SyntaxError gooien, waardoor het valideren halverwege
+ * afbreekt en de gebruiker helemaal geen foutmelding te zien krijgt. Daarom
+ * zoeken we op kenmerk via een selector en op id via getElementById, dat geen
+ * selector hoeft te ontleden.
+ */
+function findFieldElement(field: string): HTMLElement | null {
+  const value = field.replace(/(["\\])/g, '\\$1');
+  const byAttribute = document.querySelector<HTMLElement>(`[name="${value}"], [data-field="${value}"]`);
+  if (byAttribute) return byAttribute;
+  return document.getElementById(field);
+}
+
+/**
  * Hook for accessible form validation with focus management.
  *
  * When validation errors occur, this hook will:
@@ -74,9 +91,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
 
       // Find and focus the first error field
       const firstError = errors[0];
-      const element = document.querySelector<HTMLElement>(
-        `[name="${firstError.field}"], #${firstError.field}, [data-field="${firstError.field}"]`,
-      );
+      const element = findFieldElement(firstError.field);
 
       if (element) {
         // Set aria-invalid on the element
@@ -111,7 +126,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
   const setFieldError = useCallback((field: string, message: string) => {
     errorsRef.current = { ...errorsRef.current, [field]: message };
 
-    const element = document.querySelector<HTMLElement>(`[name="${field}"], #${field}, [data-field="${field}"]`);
+    const element = findFieldElement(field);
 
     if (element) {
       element.setAttribute('aria-invalid', 'true');
@@ -125,7 +140,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
   const clearErrors = useCallback((field?: string) => {
     if (field) {
       delete errorsRef.current[field];
-      const element = document.querySelector<HTMLElement>(`[name="${field}"], #${field}, [data-field="${field}"]`);
+      const element = findFieldElement(field);
       if (element) {
         element.removeAttribute('aria-invalid');
         element.classList.remove('has-error');
@@ -133,7 +148,7 @@ export function useFormValidation(options: UseFormValidationOptions = {}) {
     } else {
       // Clear all errors
       Object.keys(errorsRef.current).forEach((f) => {
-        const element = document.querySelector<HTMLElement>(`[name="${f}"], #${f}, [data-field="${f}"]`);
+        const element = findFieldElement(f);
         if (element) {
           element.removeAttribute('aria-invalid');
           element.classList.remove('has-error');

@@ -128,5 +128,16 @@ export function validateField<T extends z.ZodType>(schema: T, value: unknown, t?
     return undefined;
   }
 
-  return result.error?.issues[0]?.message;
+  const message = result.error?.issues[0]?.message;
+
+  // Zod raadpleegt de foutkaart hierboven niet zodra een controle zijn eigen
+  // melding meebrengt. De tak in `createI18nErrorMap` die een melding als
+  // 'errors.iets' alsnog wil vertalen, wordt daardoor nooit bereikt en de
+  // gebruiker kreeg de kale sleutel onder zijn invoerveld te zien. Vandaar dat
+  // de vertaalslag hier nog een keer langskomt.
+  if (message && t && message.startsWith('errors.')) {
+    return t(message, { defaultValue: message });
+  }
+
+  return message;
 }

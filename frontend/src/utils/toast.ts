@@ -22,7 +22,21 @@ export { toast, Toaster };
  * @param {'polite' | 'assertive'} [priority='polite'] - Announcement priority
  * @private
  */
+/**
+ * De teksten die op dit moment in een aria-live-gebied staan.
+ *
+ * Twee gelijke gebieden tegelijk betekent dat de schermlezer de gebruiker twee
+ * keer onderbreekt met dezelfde zin - bij een dubbelklik op opslaan, of bij een
+ * lijst die per rij dezelfde netwerkfout meldt.
+ */
+const lopendeAankondigingen = new Set<string>();
+
 function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
+  if (lopendeAankondigingen.has(message)) {
+    return;
+  }
+  lopendeAankondigingen.add(message);
+
   const announcement = document.createElement('div');
   announcement.setAttribute('role', priority === 'assertive' ? 'alert' : 'status');
   announcement.setAttribute('aria-live', priority);
@@ -32,9 +46,15 @@ function announceToScreenReader(message: string, priority: 'polite' | 'assertive
 
   document.body.appendChild(announcement);
 
-  // Remove after announcement is read
+  // Remove after announcement is read.
+  //
+  // `announcement.remove()` en niet `document.body.removeChild(...)`: een
+  // routewissel kan het element al hebben weggehaald, en removeChild gooit dan
+  // een NotFoundError uit een timer - een fout zonder aanroeper die hem nog kan
+  // opvangen.
   setTimeout(() => {
-    document.body.removeChild(announcement);
+    lopendeAankondigingen.delete(message);
+    announcement.remove();
   }, 1000);
 }
 
@@ -48,7 +68,10 @@ function announceToScreenReader(message: string, priority: 'polite' | 'assertive
  * showSuccess('Changes saved successfully');
  */
 export function showSuccess(message: string): void {
-  toast.success(message);
+  // Vaste id per tekst, zodat een tweede gelijke melding de eerste vervangt in
+  // plaats van eronder te komen. Twee keer op opslaan klikken leverde anders
+  // twee identieke meldingen op die samen het halve scherm wegduwden.
+  toast.success(message, { id: `success:${message}` });
   announceToScreenReader(message, 'polite');
 }
 
@@ -63,6 +86,9 @@ export function showSuccess(message: string): void {
  * @param {string} undoLabel - Label for the undo button (e.g. "Undo")
  * @param {() => void | Promise<void>} onUndo - Callback invoked when undo is clicked
  * @param {number} [duration=8000] - How long the toast stays visible (ms)
+ * @remarks Bewust zónder vaste id: twee verwijderde stukken leveren twee
+ * meldingen op die elk hun eigen terugdraaiactie dragen. Zouden ze samenvallen,
+ * dan is het eerste stuk niet meer terug te halen.
  * @example
  * showUndoToast(t('musicPieces.deleted'), t('common.undo'), async () => {
  *   await restoreMusicPiece(id);
@@ -109,7 +135,9 @@ export function showUndoToast(
  * showError('Failed to save changes');
  */
 export function showError(message: string): void {
-  toast.error(message);
+  // Zie showSuccess. Een lijst die per rij dezelfde netwerkfout meldt, vulde
+  // anders het hele scherm met dezelfde zin.
+  toast.error(message, { id: `error:${message}` });
   announceToScreenReader(message, 'assertive');
 }
 

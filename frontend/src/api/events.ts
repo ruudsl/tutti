@@ -253,6 +253,18 @@ export interface AttendanceSummary {
 // LOCATIONS
 // ===========================================
 
+/**
+ * De backend leest de paginagrootte uit `limit` (getPaginationParams in
+ * utils/database.ts). Een meegegeven `pageSize` kwam daar dus nooit aan: de
+ * lijst bleef op de standaard van 25 rijen staan, hoeveel er ook gevraagd werd.
+ * Daarom wordt de naam hier vertaald naar wat de server werkelijk leest.
+ */
+function metPaginering<T extends { pageSize?: number }>(params?: T): Record<string, unknown> | undefined {
+  if (!params) return undefined;
+  const { pageSize, ...rest } = params;
+  return pageSize === undefined ? { ...rest } : { ...rest, limit: pageSize };
+}
+
 export async function getEventLocations(params?: {
   search?: string;
   venueType?: string;
@@ -260,7 +272,7 @@ export async function getEventLocations(params?: {
   page?: number;
   pageSize?: number;
 }) {
-  const response = await api.get('/events/locations', { params });
+  const response = await api.get('/events/locations', { params: metPaginering(params) });
   return response.data;
 }
 
@@ -296,7 +308,7 @@ export async function getEvents(params?: {
   page?: number;
   pageSize?: number;
 }) {
-  const response = await api.get('/events', { params });
+  const response = await api.get('/events', { params: metPaginering(params) });
   return response.data;
 }
 

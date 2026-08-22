@@ -5,6 +5,7 @@ import db from '../database/connection';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth';
 import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { executeWorkflow, processScheduledWorkflows, processDateFieldWorkflows } from '../services/workflowEngine';
+import { wijzigingsschema } from '../utils/schema';
 
 const router = Router();
 
@@ -33,6 +34,9 @@ const actionSchema = z.object({
   config: z.any(),
   conditions: z.any().optional(),
 });
+
+const updateTriggerSchema = wijzigingsschema(triggerSchema);
+const updateActionSchema = wijzigingsschema(actionSchema);
 
 const createWorkflowSchema = z.object({
   name: z.string().min(1).max(100),
@@ -341,6 +345,58 @@ router.post(
   }),
 );
 
+// PATCH /api/workflows/:id/triggers/:triggerId - Update trigger
+//
+// De tenantcontrole loopt net als bij de buurroutes via de workflow: het
+// trigger-id zegt op zichzelf niets over de vereniging.
+router.patch(
+  '/:id/triggers/:triggerId',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const data = updateTriggerSchema.parse(req.body);
+
+    const trigger = db
+      .prepare(
+        `SELECT t.id FROM workflow_triggers t
+         JOIN workflows w ON t.workflow_id = w.id
+         WHERE t.id = ? AND w.id = ? AND w.association_id = ? AND w.deleted_at IS NULL`,
+      )
+      .get(req.params.triggerId, req.params.id, associationId);
+    if (!trigger) {
+      throw new ApiError(404, 'Trigger not found');
+    }
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    const zet = (kolom: string, waarde: any) => {
+      updates.push(`${kolom} = ?`);
+      values.push(waarde);
+    };
+
+    if (data.triggerType !== undefined) zet('trigger_type', data.triggerType);
+    if (data.eventName !== undefined) zet('event_name', data.eventName || null);
+    if (data.scheduleCron !== undefined) zet('schedule_cron', data.scheduleCron || null);
+    if (data.dateFieldEntity !== undefined) zet('date_field_entity', data.dateFieldEntity || null);
+    if (data.dateFieldName !== undefined) zet('date_field_name', data.dateFieldName || null);
+    if (data.daysBefore !== undefined) zet('days_before', data.daysBefore);
+    if (data.daysAfter !== undefined) zet('days_after', data.daysAfter);
+    if (data.timeOfDay !== undefined) zet('time_of_day', data.timeOfDay || null);
+    if (data.conditions !== undefined) zet('conditions', data.conditions ? JSON.stringify(data.conditions) : null);
+
+    // Een verzoek zonder velden laat de trigger staan zoals hij is; een lege
+    // SET-lijst zou een SQL-fout geven.
+    if (updates.length > 0) {
+      db.prepare(`UPDATE workflow_triggers SET ${updates.join(', ')} WHERE id = ?`).run(
+        ...values,
+        req.params.triggerId,
+      );
+    }
+
+    res.json({ message: 'Trigger updated' });
+  }),
+);
+
 // DELETE /api/workflows/:id/triggers/:triggerId - Remove trigger
 //
 // Het workflow-id komt uit het pad en zei op zichzelf niets over de vereniging.
@@ -403,6 +459,52 @@ router.post(
     );
 
     res.status(201).json({ id, message: 'Action added' });
+  }),
+);
+
+// PATCH /api/workflows/:id/actions/:actionId - Update action (zie de trigger hierboven)
+router.patch(
+  '/:id/actions/:actionId',
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const associationId = req.user!.associationId;
+    const data = updateActionSchema.parse(req.body);
+
+    const action = db
+      .prepare(
+        `SELECT a.id FROM workflow_actions a
+         JOIN workflows w ON a.workflow_id = w.id
+         WHERE a.id = ? AND w.id = ? AND w.association_id = ? AND w.deleted_at IS NULL`,
+      )
+      .get(req.params.actionId, req.params.id, associationId);
+    if (!action) {
+      throw new ApiError(404, 'Action not found');
+    }
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (data.actionType !== undefined) {
+      updates.push('action_type = ?');
+      values.push(data.actionType);
+    }
+    if (data.actionOrder !== undefined) {
+      updates.push('action_order = ?');
+      values.push(data.actionOrder);
+    }
+    if (data.config !== undefined) {
+      updates.push('config = ?');
+      values.push(JSON.stringify(data.config));
+    }
+    if (data.conditions !== undefined) {
+      updates.push('conditions = ?');
+      values.push(data.conditions ? JSON.stringify(data.conditions) : null);
+    }
+
+    if (updates.length > 0) {
+      db.prepare(`UPDATE workflow_actions SET ${updates.join(', ')} WHERE id = ?`).run(...values, req.params.actionId);
+    }
+
+    res.json({ message: 'Action updated' });
   }),
 );
 

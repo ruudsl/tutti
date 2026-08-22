@@ -158,9 +158,14 @@ export interface UsersFilters {
 
 // Users - backwards compatible version that fetches all
 export const getUsers = async (filters?: UsersFilters): Promise<User[]> => {
-  // For backwards compatibility, fetch all users when no filters provided
-  // Use a high limit for existing components that expect all users
-  const params = filters ? { ...filters } : { limit: 1000 };
+  // Deze functie belooft alle leden. De backend leest de paginagrootte uit
+  // `limit` en kent `pageSize` niet (backend/src/routes/users.ts, GET '/'), en
+  // valt zonder limit terug op 25 rijen. `filters` werd hier ongewijzigd
+  // doorgegeven, dus zodra er ook maar één filter meeging - bijvoorbeeld een
+  // zoekterm - kwamen er stilzwijgend maximaal 25 leden terug in plaats van
+  // alle treffers.
+  const { pageSize, ...overigeFilters } = filters ?? {};
+  const params = { ...overigeFilters, limit: Math.min(pageSize || 1000, 1000) };
   const { data } = await api.get('/users', { params });
   // Backend returns paginated data, extract the data array
   return Array.isArray(data) ? data : data.data || [];
@@ -168,10 +173,16 @@ export const getUsers = async (filters?: UsersFilters): Promise<User[]> => {
 
 // Users - paginated version for new components
 export const getUsersPaginated = async (filters?: UsersFilters): Promise<PaginatedResponse<User>> => {
+  // `...filters` stond hier ACHTER page en pageSize en overschreef die weer met
+  // de onbewerkte invoer. De begrenzing op MAX_PAGE_SIZE deed daardoor niets:
+  // een scherm dat om pageSize 5000 vroeg, vroeg de server ook echt om 5000.
+  //
+  // Daarnaast heet de parameter aan de serverkant `limit`, niet `pageSize`.
+  const { page, pageSize, ...overigeFilters } = filters ?? {};
   const params = {
-    page: filters?.page || 1,
-    pageSize: Math.min(filters?.pageSize || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
-    ...filters,
+    ...overigeFilters,
+    page: page || 1,
+    limit: Math.min(pageSize || DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
   };
   const { data } = await api.get('/users', { params });
   // Ensure we return proper paginated structure
@@ -182,6 +193,21 @@ export const getUsersPaginated = async (filters?: UsersFilters): Promise<Paginat
       page: 1,
       pageSize: data.length,
       totalPages: 1,
+    };
+  }
+  // De backend antwoordt met { data, pagination: { page, limit, total,
+  // totalPages, ... } } (createPaginatedResult in backend/src/utils/database.ts).
+  // Dat werd hier ongewijzigd teruggegeven onder een plat type, waardoor total,
+  // page, pageSize en totalPages allemaal undefined bleven. useUsersInfinite
+  // rekent met lastPage.page + 1 en lastPage.totalPages en kwam zo nooit verder
+  // dan de eerste pagina.
+  if (data && typeof data === 'object' && data.pagination) {
+    return {
+      data: data.data ?? [],
+      total: data.pagination.total,
+      page: data.pagination.page,
+      pageSize: data.pagination.limit,
+      totalPages: data.pagination.totalPages,
     };
   }
   return data;
@@ -2148,8 +2174,29 @@ export const getRecentActivity = async (
     createdAt: string;
   }[]
 > => {
-  const { data } = await api.get('/activity/recent', { params: { limit } });
-  return data;
+  // Dit stond op '/activity/recent'. Die route bestaat aan de serverkant niet:
+  // backend/src/routes/activity.ts kent alleen /log, /stats en /feed, en
+  // /api/activity/recent belandt dus in de notFoundHandler. Het blokje
+  // "recente activiteit" op het dashboard kreeg daardoor een 404 in plaats van
+  // gegevens. Statistics.tsx haalt dezelfde lijst met een kale fetch op en
+  // gebruikt daar wél /activity/feed.
+  //
+  // De feed antwoordt met de kolomnamen uit de database (action_type,
+  // entity_type, entity_name, created_at), terwijl het beloofde type hierboven
+  // camelCase gebruikt. Zonder omzetting zijn alle vier die velden `undefined`
+  // bij de aanroeper, en dat is precies het soort afwijking waar niemand een
+  // foutmelding van krijgt: het scherm blijft leeg en het type zegt dat alles
+  // in orde is. De functie wordt op dit moment nergens aangeroepen, dus dit is
+  // vooruit repareren voor wie hem als eerste gaat gebruiken.
+  const { data } = await api.get('/activity/feed', { params: { limit } });
+  if (!Array.isArray(data)) return [];
+  return data.map((regel) => ({
+    id: regel.id,
+    actionType: regel.action_type,
+    entityType: regel.entity_type,
+    entityName: regel.entity_name ?? undefined,
+    createdAt: regel.created_at,
+  }));
 };
 
 // ==================== SEATING (ORKEST OPSTELLING) ====================

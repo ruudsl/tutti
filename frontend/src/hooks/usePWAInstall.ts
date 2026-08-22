@@ -37,15 +37,23 @@ export function usePWAInstall() {
       setInstallPrompt(e as BeforeInstallPromptEvent);
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
-
-    window.addEventListener('appinstalled', () => {
+    // Beide luisteraars moeten een naam hebben, anders is er bij het opruimen
+    // niets om los te halen. Een anonieme luisteraar op 'appinstalled' blijft
+    // hangen: hij stapelt op bij elk scherm dat deze hook gebruikt en wist ook
+    // na het opruimen nog de bewaarde keuze van de gebruiker.
+    const installedHandler = () => {
       setIsInstalled(true);
       setInstallPrompt(null);
       localStorage.removeItem(DISMISSED_KEY);
-    });
+    };
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
   }, []);
 
   const promptInstall = useCallback(async () => {

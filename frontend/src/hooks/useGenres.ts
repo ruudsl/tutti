@@ -42,6 +42,9 @@ export function useUpdateGenre() {
     mutationFn: ({ id, name }: { id: string; name: string }) => updateGenre(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.genres });
+      // Elke muziektitel draagt zijn genres mee (MusicTitle.genres), dus na
+      // een hernoeming staat daar nog de oude naam.
+      queryClient.invalidateQueries({ queryKey: ['musicTitles'] });
       showSuccess('Genre bijgewerkt');
     },
     onError: (error) => {
@@ -60,6 +63,9 @@ export function useDeleteGenre() {
     mutationFn: (id: string) => deleteGenre(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.genres });
+      // music_title_genres verwijst naar genres met ON DELETE CASCADE
+      // (database/schema.ts): met het genre verdwijnt het bij alle titels.
+      queryClient.invalidateQueries({ queryKey: ['musicTitles'] });
       showSuccess('Genre verwijderd');
     },
     onError: (error) => {

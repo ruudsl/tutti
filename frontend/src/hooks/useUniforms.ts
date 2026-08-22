@@ -136,6 +136,9 @@ export function useUpdateUniformItem() {
       queryClient.invalidateQueries({ queryKey: ['uniforms', 'items'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.uniformItem(id) });
       queryClient.invalidateQueries({ queryKey: ['uniforms', 'availability'] });
+      // GET /uniforms/user/:userId geeft de velden van het onderdeel zelf
+      // terug (maat, kleur, staat), dus de pagina van het lid is nu verouderd.
+      queryClient.invalidateQueries({ queryKey: ['uniforms', 'user'] });
       showSuccess('Onderdeel bijgewerkt');
     },
     onError: (error) => {
@@ -155,6 +158,9 @@ export function useDeleteUniformItem() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['uniforms', 'items'] });
       queryClient.invalidateQueries({ queryKey: ['uniforms', 'availability'] });
+      // Een verwijderd onderdeel verdwijnt ook uit de lijst van het lid dat
+      // het in bruikleen had.
+      queryClient.invalidateQueries({ queryKey: ['uniforms', 'user'] });
       showSuccess('Onderdeel verwijderd');
     },
     onError: (error) => {

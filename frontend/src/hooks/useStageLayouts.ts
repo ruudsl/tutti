@@ -106,6 +106,11 @@ export function useUpdateStageLayout() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: stageLayoutKeys.all });
       queryClient.invalidateQueries({ queryKey: stageLayoutKeys.detail(id) });
+      // GET /concerts/:id/stage joint op stage_layouts en geeft layout_data,
+      // naam en afmetingen live mee; er wordt geen kopie bewaard. Zonder deze
+      // invalidatie tonen het concertpodium en de printkaarten de oude
+      // stoelopstelling.
+      queryClient.invalidateQueries({ queryKey: ['concertStage'] });
       showSuccess('Podiumindeling bijgewerkt');
     },
     onError: (error) => {

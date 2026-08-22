@@ -23,6 +23,14 @@ let cachedToken: string | null = null;
 let cachedAt = 0;
 let pendingRequest: Promise<string> | null = null;
 
+/**
+ * Telt op bij elke keer dat de cache wordt leeggemaakt.
+ *
+ * Een aanvraag die op dat moment nog onderweg is, hoort niet meer in de cache
+ * terecht te komen: bij uitloggen is dat het token van de vórige gebruiker.
+ */
+let cacheGeneratie = 0;
+
 function getFreshCachedToken(): string | null {
   return cachedToken && Date.now() - cachedAt < TOKEN_CACHE_MS ? cachedToken : null;
 }
@@ -53,14 +61,21 @@ export async function getDownloadToken(): Promise<string> {
     return fresh;
   }
   if (!pendingRequest) {
+    const generatie = cacheGeneratie;
     pendingRequest = requestDownloadToken()
       .then((token) => {
-        cachedToken = token;
-        cachedAt = Date.now();
+        // Alleen bewaren als de cache ondertussen niet is leeggemaakt.
+        if (generatie === cacheGeneratie) {
+          cachedToken = token;
+          cachedAt = Date.now();
+        }
         return token;
       })
       .finally(() => {
-        pendingRequest = null;
+        // Niet de aanvraag van een nieuwere generatie weggooien.
+        if (generatie === cacheGeneratie) {
+          pendingRequest = null;
+        }
       });
   }
   return pendingRequest;
@@ -79,10 +94,21 @@ export async function withDownloadToken(url: string): Promise<string> {
   return `${url}${separator}token=${encodeURIComponent(token)}`;
 }
 
-/** Clear the cached token (e.g. on logout). */
+/**
+ * Clear the cached token (e.g. on logout).
+ *
+ * Maakt ook de aanvraag ongeldig die op dit moment nog onderweg is. Zonder die
+ * stap schreef een tokenaanvraag die tijdens het uitloggen liep het token van
+ * de vorige gebruiker alsnog in de cache, tot vier minuten lang. Op een
+ * gedeelde tablet haalde de volgende gebruiker zijn pasfoto's dan op met het
+ * token van zijn voorganger, en aan de serverkant is dat niet van echt te
+ * onderscheiden.
+ */
 export function clearDownloadTokenCache(): void {
   cachedToken = null;
   cachedAt = 0;
+  cacheGeneratie += 1;
+  pendingRequest = null;
 }
 
 /**
