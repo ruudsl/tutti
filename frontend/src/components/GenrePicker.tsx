@@ -53,8 +53,11 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
         left: rect.left,
         width: rect.width,
         zIndex: 9999,
-        backgroundColor: '#ffffff',
-        border: '1px solid #e5e7eb',
+        // Kleuren uit het thema in plaats van vast wit: in het donkere thema
+        // gaf dit menu anders een wit vlak met een lichte rand.
+        backgroundColor: 'var(--surface)',
+        border: '1px solid var(--border)',
+        color: 'var(--text)',
         borderRadius: '0.5rem',
         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       });
@@ -123,7 +126,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
           createPortal(
             <div ref={dropdownRef} style={dropdownStyle}>
               {/* Filter input */}
-              <div style={{ padding: '0.5rem', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                 <input
                   type="text"
                   className="input input-sm input-bordered w-full"
@@ -131,7 +134,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   autoFocus
-                  style={{ backgroundColor: '#fff' }}
+                  style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
                 />
               </div>
 
@@ -143,7 +146,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                   padding: '0.25rem',
                   margin: 0,
                   listStyle: 'none',
-                  backgroundColor: '#fff',
+                  backgroundColor: 'var(--surface)',
                 }}
               >
                 {isLoading ? (
@@ -151,7 +154,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                     <span className="loading loading-spinner loading-sm" />
                   </li>
                 ) : filteredGenres.length === 0 ? (
-                  <li style={{ padding: '0.5rem 1rem', color: '#6b7280' }}>{t('metadata.noResults')}</li>
+                  <li style={{ padding: '0.5rem 1rem', color: 'var(--text-light)' }}>{t('metadata.noResults')}</li>
                 ) : (
                   filteredGenres.map((genre) => {
                     const isSelected = value.includes(genre.uri);
@@ -165,10 +168,12 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
                             padding: '0.5rem 0.75rem',
                             borderRadius: '0.25rem',
                             cursor: 'pointer',
-                            backgroundColor: '#fff',
+                            backgroundColor: 'transparent',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                          // Aanwijzen licht de regel op; loslaten geeft het vlak
+                          // van het menu eronder terug in plaats van vast wit.
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface-hover)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
                           <input
                             type="checkbox"
@@ -188,7 +193,7 @@ export function GenrePicker({ value, onChange, disabled }: GenrePickerProps) {
               <div
                 style={{
                   padding: '0.5rem',
-                  borderTop: '1px solid #e5e7eb',
+                  borderTop: '1px solid var(--border)',
                   display: 'flex',
                   justifyContent: 'flex-end',
                   gap: '0.5rem',

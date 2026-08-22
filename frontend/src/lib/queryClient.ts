@@ -218,6 +218,11 @@ export const queryKeys = {
   association: ['association'] as const,
   associations: ['associations'] as const,
 
+  // Verenigingsinstellingen (naam, logo, thema). Zie `useSettings` in
+  // `src/hooks/useSettings.ts`: die hook is de enige plek die deze sleutel
+  // ophaalt, zodat de opties niet per pagina verschillen.
+  settings: ['settings'] as const,
+
   // Equipment
   equipment: (filters?: Record<string, string>) => ['equipment', filters] as const,
   equipmentItem: (id: string) => ['equipment', id] as const,

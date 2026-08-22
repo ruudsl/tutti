@@ -1,4 +1,5 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { LOGIN_KNOP, login } from './hulpfuncties';
 
 /**
  * Smoke tests for Harmonie application
@@ -9,27 +10,10 @@ import { test, expect, Page } from '@playwright/test';
  *
  *   DB_PATH=/tmp/harmonie-e2e/harmonie-e2e.db npm run seed:e2e --workspace=backend
  *   DB_PATH=/tmp/harmonie-e2e/harmonie-e2e.db npx playwright test
+ *
+ * De inloghulp en de inloggegevens staan in ./hulpfuncties, zodat de
+ * flowtests dezelfde route naar binnen gebruiken als deze smoke-tests.
  */
-
-const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-admin@test.local';
-const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'E2eTest!2026';
-
-// Login/submit button label in nl/en/de
-const LOGIN_BUTTON = /inloggen|log ?in|sign in|anmelden/i;
-
-async function login(page: Page, email = E2E_ADMIN_EMAIL, password = E2E_ADMIN_PASSWORD) {
-  await page.goto('/');
-
-  const emailInput = page.getByLabel(/email|e-mail/i).or(page.locator('input[type="email"]'));
-  const passwordInput = page.getByLabel(/wachtwoord|password|passwort/i).or(page.locator('input[type="password"]'));
-
-  await emailInput.fill(email);
-  await passwordInput.fill(password);
-  await page.getByRole('button', { name: LOGIN_BUTTON }).click();
-
-  // Successful login navigates away from the login page
-  await expect(page).not.toHaveURL(/login/i, { timeout: 15000 });
-}
 
 test.describe('Smoke Tests', () => {
   test('should load the application', async ({ page }) => {
@@ -67,7 +51,7 @@ test.describe('Authentication', () => {
     await passwordInput.fill('wrongpassword');
 
     // Submit the form
-    const submitButton = page.getByRole('button', { name: LOGIN_BUTTON });
+    const submitButton = page.getByRole('button', { name: LOGIN_KNOP });
     await submitButton.click();
 
     // De foutmelding zelf, niet zomaar iets met role="alert".

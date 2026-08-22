@@ -2131,7 +2131,16 @@
     "invalidDate": "Voer een geldige datum in",
     "invalidNumber": "Voer een geldig nummer in",
     "minLength": "Minimaal {{min}} tekens vereist",
-    "maxLength": "Maximaal {{max}} tekens toegestaan"
+    "maxLength": "Maximaal {{max}} tekens toegestaan",
+    "invalidType": "Voer een geldige waarde in",
+    "invalidUrl": "Voer een geldig webadres in",
+    "invalidUuid": "Voer een geldig ID in",
+    "invalidFormat": "Voer de waarde in de gevraagde opmaak in",
+    "invalidSelection": "Kies een van de beschikbare opties",
+    "minValue": "Voer een waarde van minimaal {{min}} in",
+    "maxValue": "Voer een waarde van maximaal {{max}} in",
+    "minItems": "Selecteer minimaal {{min}} items",
+    "maxItems": "Selecteer maximaal {{max}} items"
   },
   "equipment": {
     "title": "Apparatuur",
@@ -5386,7 +5395,8 @@
       "noBudgetSet": "Geen totaalbudget ingesteld. Ga terug naar stap 1 om een budget in te stellen.",
       "rehearsalsToCreate": "Repetities aan te maken",
       "concertsToCreate": "Concerten aan te maken",
-      "plannedConcerts": "Geplande Concerten"
+      "plannedConcerts": "Geplande Concerten",
+      "seasonAlreadyCreated": "Het seizoen zelf is al aangemaakt; alleen het genereren van de repetities en concerten ging mis. Probeer je het opnieuw, dan wordt er geen tweede seizoen aangemaakt."
     },
     "fields": {
       "name": "Naam",

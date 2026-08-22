@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { showSuccess, showError } from '../utils/toast';
+import { currentLocale } from '../utils/locale';
 import {
   getMyAvailability,
   getTeamAvailability,
@@ -165,7 +166,13 @@ export default function Availability() {
   };
 
   const formatMonthYear = (date: Date): string => {
-    return date.toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' });
+    // Stond hier als `t('locale')`, maar de sleutel `locale` bestaat in geen van
+    // de drie taalbestanden. i18next geeft dan de sleutel zelf terug, dus kreeg
+    // toLocaleDateString de tekst 'locale' als taalcode. Dat gooit niet - het
+    // valt stilzwijgend terug op het Engels, en de maandkop van de
+    // beschikbaarheidskalender las "March 2026" waar "maart 2026" hoorde.
+    // currentLocale() is precies waarvoor het bedoeld is.
+    return date.toLocaleDateString(currentLocale(), { month: 'long', year: 'numeric' });
   };
 
   if (myLoading) {

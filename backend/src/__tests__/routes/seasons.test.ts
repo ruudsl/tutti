@@ -548,6 +548,59 @@ describe('seizoenen', () => {
       expect(aantal.n).toBe(5);
     });
 
+    // De test hierboven zet generateConcerts op false en zag daarmee precies het
+    // geval waar het misging: repetities werden wél ontdubbeld, concerten niet.
+    // Een tweede keer uitrollen leverde dus dubbele concerten op én telde het
+    // budget er nog een keer bovenop, zodat het toegewezen bedrag niet meer
+    // klopte met wat er in de agenda stond.
+    //
+    // Dat is geen randgeval: de wizard rolt meteen na het aanmaken uit, en
+    // mislukt die stap halverwege, dan is opnieuw proberen precies wat de
+    // gebruiker hoort te doen.
+    it('maakt bij een tweede keer uitrollen ook geen dubbele concerten aan', async () => {
+      const id = await maakSeizoen({ startDate: '2026-09-01', endDate: '2026-09-30' });
+      const concerten = [{ name: 'Najaarsconcert', date: '2026-09-19', budgetAmount: 500 }];
+
+      await alsBeheerder('post', `/${id}/generate`).send({ generateConcerts: true, concerts: concerten });
+      const tweede = await alsBeheerder('post', `/${id}/generate`).send({
+        generateConcerts: true,
+        concerts: concerten,
+      });
+
+      expect(tweede.body.concertCount).toBe(0);
+
+      const aantal = db.prepare('SELECT COUNT(*) AS n FROM concerts WHERE association_id = ?').get(vereniging.id) as {
+        n: number;
+      };
+      expect(aantal.n).toBe(1);
+
+      // Het toegewezen budget mag niet meegegroeid zijn met de tweede poging.
+      const seizoen = db.prepare('SELECT budget_allocated FROM seasons WHERE id = ?').get(id) as {
+        budget_allocated: number | null;
+      };
+      expect(seizoen.budget_allocated).toBe(500);
+    });
+
+    // Twee identieke concerten in één verzoek horen elkaar ook niet te
+    // verdubbelen - anders staat de ontdubbeling er alleen voor herhaalde
+    // verzoeken en niet voor een lijst die per ongeluk een dubbele regel bevat.
+    it('maakt van twee identieke concerten in één verzoek er één', async () => {
+      const id = await maakSeizoen({ startDate: '2026-09-01', endDate: '2026-09-30' });
+
+      await alsBeheerder('post', `/${id}/generate`).send({
+        generateConcerts: true,
+        concerts: [
+          { name: 'Najaarsconcert', date: '2026-09-19' },
+          { name: 'Najaarsconcert', date: '2026-09-19' },
+        ],
+      });
+
+      const aantal = db.prepare('SELECT COUNT(*) AS n FROM concerts WHERE association_id = ?').get(vereniging.id) as {
+        n: number;
+      };
+      expect(aantal.n).toBe(1);
+    });
+
     it('gebruikt de tijd uit het sjabloon als er geen wordt meegegeven', async () => {
       const sjabloonId = await maakSjabloon({
         defaultRehearsalDay: 2,

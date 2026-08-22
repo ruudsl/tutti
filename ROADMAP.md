@@ -66,12 +66,19 @@ pull request achterblijven.
    niet in `email_campaign_recipients` en de namen komen nergens in de backend
    voor. Een kolom erbij vraagt eerst een antwoord op wie hem vult — de mailer
    zet nu nergens 'delivered'. Tot die keuze gemaakt is, is die tak dode code
-9. **Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
-   de drie talen** (`errors.invalidType`, `invalidUrl`, `invalidUuid`,
-   `invalidFormat`, `invalidSelection`, `minValue`, `maxValue`, `minItems`,
-   `maxItems`). Door de meegegeven standaardtekst krijgt een Nederlands of Duits
-   lid daar Engelse validatiemeldingen. Makkelijke winst, maar het raakt
-   `src/locales/*.json` en dat is een eigen ronde waard
+9. ~~Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
+   de drie talen.~~ **Opgelost op 22-08-2026**, en het bleek de top van een
+   ijsberg: er ontbraken er nog 75 andere. De bestaande waaktest kon dit soort
+   gat per definitie niet vinden, want die vergeleek de drie talen onderling en
+   een sleutel die overal ontbreekt ontbreekt overal even hard. Er staat nu een
+   controle naast die de code met de bestanden vergelijkt.
+
+   De resterende 75 staan als expliciete achterstandslijst in
+   `src/locales/__tests__/translations.test.ts`, met een tweede test die de lijst
+   schoonhoudt. Grote clusters: `sync.*` (16 sleutels), `offline.*` (9),
+   `shareTarget.*` (8), `memberDirectory.*` (4). Dat is een eigen ronde waard —
+   niet omdat het moeilijk is, maar omdat het per sleutel een keuze over
+   formulering vraagt in drie talen
 
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
@@ -260,9 +267,9 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **64,7%** (14740/22775) | 55,7%    | 68,3%     | 65,0% |
-| Frontend | **28,3%** (7078/25048)  | 14,9%    | 26,8%     | 28,8% |
+| Frontend | **28,8%** (7225/25070)  | 15,7%    | 27,3%     | 29,4% |
 
-- CI-drempels: backend 64 / 55 / 68 / 64, frontend 28 / 14 / 26 / 28 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 64 / 55 / 68 / 64, frontend 28 / 15 / 27 / 29 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
 - De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32). `src/api.ts` - 3.967 regels, 741 exports, eerder zonder ook maar één test - staat nu op 99,9%
@@ -295,12 +302,16 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend 64,7%, frontend 28,3%_
+- [~] Unit tests: >80% coverage — _backend 64,8%, frontend 28,8%_
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan
 - [x] Integration tests voor tenant isolatie
-- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
+- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus twee flowbestanden_
+  - `e2e/repetities.spec.ts`: een beheerder plant een repetitie, een lid meldt zich aan en weer af, en een lid krijgt de beheerknoppen niet te zien
+  - `e2e/leden.spec.ts`: een beheerder voegt een lid toe en koppelt het aan een orkest, en een lid komt niet op de ledenbeheerpagina
+  - De seed (`backend/src/scripts/seed-e2e.ts`) zet daar repetities en een tweede orkest voor klaar, met vaste id's
+  - Nog niet gedekt: concerten met een programma. De knoppen in de concerttabel zijn pictogrammen zonder toegankelijke naam, dus een test zou ze op positie moeten aanwijzen. Eerst die knoppen een naam geven
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
 - [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_

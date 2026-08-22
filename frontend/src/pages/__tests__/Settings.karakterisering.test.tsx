@@ -38,6 +38,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import Settings from '../Settings';
+import ThemeSettingsPage from '../ThemeSettings';
+import { ConfirmProvider } from '../../hooks/useConfirm';
+import { SETTINGS_STALE_TIME } from '../../hooks/useSettings';
 import * as api from '../../api';
 import type { AssociationSettings, MicrosoftConfig, SmtpConfig, TelegramConfig, WhatsAppConfig } from '../../types';
 
@@ -373,5 +376,94 @@ describe('instellingenpagina - vastgelegd gedrag', () => {
       .map((link) => link.getAttribute('href'));
 
     expect(verwijzingen).toEqual(['/issues', '/user-guide', '/accessibility']);
+  });
+});
+
+/**
+ * De instellingenpagina en de themapagina vroegen allebei hun eigen `useQuery`
+ * aan op cachesleutel `['settings']`, elk met een eigen opties-blok eronder.
+ * React Query houdt per sleutel één query bij, en de opties die daarvoor gelden
+ * zijn die van de waarnemer die als eerste aanhaakt. Welke `staleTime` er dus
+ * gold, hing af van welke pagina je het eerst opende.
+ *
+ * De twee blokken waren woord voor woord gelijk, dus in de praktijk viel het
+ * niet op - maar dat is geen eigenschap van de code, dat was toeval. Beide
+ * pagina's halen de instellingen nu uit `useSettings` (zie
+ * `src/hooks/useSettings.ts`). Deze tests leggen vast wat dat oplevert: één
+ * query, één set opties, ongeacht de volgorde waarin de pagina's renderen.
+ */
+describe('de instellingen komen uit één query', () => {
+  function maakClient(): QueryClient {
+    return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  }
+
+  function wikkelMet(client: QueryClient) {
+    return function Wikkel({ children }: { children: ReactNode }) {
+      return (
+        <QueryClientProvider client={client}>
+          <ConfirmProvider>
+            <MemoryRouter>{children}</MemoryRouter>
+          </ConfirmProvider>
+        </QueryClientProvider>
+      );
+    };
+  }
+
+  /** De queries in de cache die op sleutel `['settings']` staan. */
+  function settingsQueries(client: QueryClient) {
+    return client.getQueryCache().findAll({ queryKey: ['settings'], exact: true });
+  }
+
+  /** De `staleTime` die elke aangehaakte pagina voor die query hanteert. */
+  function staleTimes(client: QueryClient): unknown[] {
+    return settingsQueries(client).flatMap((query) => query.observers.map((waarnemer) => waarnemer.options.staleTime));
+  }
+
+  it.each([
+    ['instellingen eerst', true],
+    ['thema eerst', false],
+  ])('houdt bij %s één query met één set opties over', async (_volgorde, instellingenEerst) => {
+    const client = maakClient();
+    render(
+      instellingenEerst ? (
+        <>
+          <Settings />
+          <ThemeSettingsPage />
+        </>
+      ) : (
+        <>
+          <ThemeSettingsPage />
+          <Settings />
+        </>
+      ),
+      { wrapper: wikkelMet(client) },
+    );
+
+    await screen.findByText('settings.title');
+    await screen.findByText('theme.title');
+
+    expect(settingsQueries(client)).toHaveLength(1);
+    expect(staleTimes(client)).toEqual([SETTINGS_STALE_TIME, SETTINGS_STALE_TIME]);
+  });
+
+  it("haalt de instellingen één keer op voor beide pagina's samen", async () => {
+    const client = maakClient();
+    render(
+      <>
+        <Settings />
+        <ThemeSettingsPage />
+      </>,
+      { wrapper: wikkelMet(client) },
+    );
+
+    await screen.findByText('theme.title');
+
+    expect(vi.mocked(api.getSettings)).toHaveBeenCalledTimes(1);
+  });
+
+  it('houdt de instellingen vijf minuten geldig', () => {
+    // De waarde stond twee keer in de broncode. Hier staat hij één keer als
+    // verwachting, zodat een wijziging een bewuste wijziging is.
+    expect(SETTINGS_STALE_TIME).toBe(5 * 60 * 1000);
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { updateSettings } from '../../api';
+import { useVerversSettings } from '../../hooks/useSettings';
 import { showSuccess, showError } from '../../utils/toast';
 import type { AssociationSettings } from '../../types';
 import { foutmelding } from './foutmelding';
@@ -16,7 +16,7 @@ import { foutmelding } from './foutmelding';
  */
 export function OrganisatieSectie({ settings }: { settings: AssociationSettings | null }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const verversSettings = useVerversSettings();
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,7 +53,7 @@ export function OrganisatieSectie({ settings }: { settings: AssociationSettings 
       // verenigingsnaam.
       await updateSettings({ displayName: displayName.trim() });
       showSuccess(t('settings.saved'));
-      void queryClient.invalidateQueries({ queryKey: ['settings'] });
+      verversSettings();
       window.dispatchEvent(new Event('settings-updated'));
     } catch (error) {
       showError(foutmelding(error, t('settings.errorSaving')));

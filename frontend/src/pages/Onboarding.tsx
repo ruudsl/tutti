@@ -564,7 +564,14 @@ export default function Onboarding() {
                       <div className="flex items-center gap-2">
                         <code
                           style={{
-                            background: 'white',
+                            // Stond op een vaste witte achtergrond terwijl de
+                            // tekstkleur van de ouder wordt geërfd. In het
+                            // donkere thema is die licht, dus stond hier lichte
+                            // tekst op wit: het tijdelijke wachtwoord dat de
+                            // gebruiker moet overtypen was onleesbaar. Beide
+                            // komen nu uit het thema.
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
                             padding: '0.5rem 1rem',
                             borderRadius: '0.25rem',
                             fontSize: '1.1rem',

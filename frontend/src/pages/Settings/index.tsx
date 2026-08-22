@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getSettings, getMicrosoftConfig } from '../../api';
+import { getMicrosoftConfig } from '../../api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useSettings } from '../../hooks/useSettings';
 import { GoogleDriveSettings } from '../../components/GoogleDriveSettings';
 import { OrganisatieSectie } from './OrganisatieSectie';
 import { LogoSectie } from './LogoSectie';
@@ -67,11 +68,11 @@ export default function Settings() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.settings');
 
-  const { data: settings = null, isLoading } = useQuery({
-    queryKey: ['settings'],
-    queryFn: getSettings,
-    staleTime: 5 * 60 * 1000,
-  });
+  // De instellingen komen uit `useSettings`, samen met ThemeSettings.tsx. Die
+  // twee pagina's hadden allebei hun eigen query op sleutel `['settings']`
+  // staan; zie de uitleg bij de hook waarom dat een sleutel met twee gezichten
+  // opleverde.
+  const { data: settings = null, isLoading } = useSettings();
 
   const { data: msConfig = null } = useQuery({
     queryKey: ['microsoftConfig'],

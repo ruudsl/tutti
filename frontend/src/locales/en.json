@@ -2222,7 +2222,16 @@
     "invalidDate": "Please enter a valid date",
     "invalidNumber": "Please enter a valid number",
     "minLength": "Minimum {{min}} characters required",
-    "maxLength": "Maximum {{max}} characters allowed"
+    "maxLength": "Maximum {{max}} characters allowed",
+    "invalidType": "Please enter a valid value",
+    "invalidUrl": "Please enter a valid web address",
+    "invalidUuid": "Please enter a valid ID",
+    "invalidFormat": "Please enter the value in the requested format",
+    "invalidSelection": "Please choose one of the available options",
+    "minValue": "Please enter a value of at least {{min}}",
+    "maxValue": "Please enter a value of at most {{max}}",
+    "minItems": "Please select at least {{min}} items",
+    "maxItems": "Please select at most {{max}} items"
   },
   "equipment": {
     "title": "Equipment",
@@ -5386,7 +5395,8 @@
       "noBudgetSet": "No total budget set. Go back to step 1 to set a budget.",
       "rehearsalsToCreate": "Rehearsals to create",
       "concertsToCreate": "Concerts to create",
-      "plannedConcerts": "Planned Concerts"
+      "plannedConcerts": "Planned Concerts",
+      "seasonAlreadyCreated": "The season itself has already been created; only generating the rehearsals and concerts failed. Trying again will not create a second season."
     },
     "fields": {
       "name": "Name",

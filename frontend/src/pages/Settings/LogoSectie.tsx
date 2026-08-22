@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { uploadLogo, removeLogo } from '../../api';
+import { useVerversSettings } from '../../hooks/useSettings';
 import { showSuccess, showError } from '../../utils/toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { LazyImage } from '../../components/LazyImage';
@@ -19,12 +19,11 @@ const MAX_BESTANDSGROOTTE = 2 * 1024 * 1024;
  */
 export function LogoSectie({ logoUrl }: { logoUrl: string | null }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [bevestigVerwijderen, setBevestigVerwijderen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const ververs = () => void queryClient.invalidateQueries({ queryKey: ['settings'] });
+  const ververs = useVerversSettings();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -11,6 +11,11 @@ import { defineConfig, devices } from '@playwright/test';
  *     DB_PATH=/tmp/harmonie-e2e/harmonie-e2e.db npx playwright test
  *
  * In CI only the chromium project runs; locally the full browser matrix runs.
+ *
+ * Let op bij lokaal draaien: zaai met de servers uit. De database is sql.js en
+ * die houdt de hele inhoud in het geheugen van het serverproces. Een server die
+ * al draaide ziet nieuw gezaaide rijen niet, en schrijft bij zijn eerstvolgende
+ * bewaarmoment zijn eigen oudere beeld over het zojuist gezaaide bestand heen.
  */
 
 const allProjects = [
@@ -76,7 +81,21 @@ export default defineConfig({
    */
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    /*
+     * Wachten tot de API antwoordt, niet tot Vite antwoordt.
+     *
+     * Hier stond http://localhost:5173. Vite staat binnen een seconde klaar,
+     * maar de backend heeft er meer nodig: sql.js inlezen, migraties draaien,
+     * de database initialiseren. In dat gat serveerde Vite de pagina al terwijl
+     * elke /api-aanroep afketste op ECONNREFUSED, en dan mislukt de eerste test
+     * die inlogt - soms, want het hangt af van wie er net eerder klaar was.
+     *
+     * /api/health gaat door dezelfde proxy als alle andere aanroepen, dus deze
+     * ene url dekt beide helften af: Vite moet het verzoek aannemen en de
+     * backend moet het beantwoorden. Zolang de backend nog opstart geeft de
+     * proxy een 500 en blijft Playwright wachten.
+     */
+    url: 'http://localhost:5173/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 180 * 1000,
   },
