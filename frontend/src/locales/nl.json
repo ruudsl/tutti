@@ -2369,6 +2369,7 @@
     "totalConcerts": "Totaal concerten",
     "concertsThisYear": "Concerten dit jaar",
     "mostPlayedPieces": "Meest gespeelde stukken",
+    "statisticsError": "De statistieken konden niet worden opgehaald.",
     "pieceHistory": "Stuk historie",
     "lastPlayed": "Laatst gespeeld",
     "timesPlayed": "{{count}}x gespeeld",

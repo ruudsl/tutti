@@ -2437,6 +2437,7 @@
     "totalConcerts": "Gesamtkonzerte",
     "concertsThisYear": "Konzerte dieses Jahr",
     "mostPlayedPieces": "Meistgespielte Stücke",
+    "statisticsError": "Die Statistiken konnten nicht geladen werden.",
     "pieceHistory": "Stückhistorie",
     "lastPlayed": "Zuletzt gespielt",
     "timesPlayed": "{{count}}x gespielt",
