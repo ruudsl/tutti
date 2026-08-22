@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PlannedConcert, SeasonTemplate } from '../../api';
+import { getErrorMessage } from '../../utils/errors';
 import type { ConcertType, Orchestra } from '../../types';
 import { useCreateSeason, useGenerateSeasonEvents } from '../../hooks/useSeasons';
 import { defaultWizardState } from './types';
@@ -49,6 +50,17 @@ export function SeizoenWizard({
 
   const [wizardStep, setWizardStep] = useState<WizardStep>('info');
   const [wizardState, setWizardState] = useState<WizardState>(defaultWizardState);
+
+  /**
+   * De melding die op de overzichtsstap verschijnt als het afronden mislukt.
+   *
+   * De mutaties tonen zelf al een toast, maar die is weg voor je hem gezien
+   * hebt en de gebruiker blijft op dezelfde stap staan: de knop lijkt dan
+   * gewoon niets gedaan te hebben. Andere pagina's zetten bij zo'n mislukking
+   * een `alert alert-danger` op het scherm (zie Login.tsx, Tuner.tsx); dat doet
+   * de wizard nu ook, met dezelfde tekst als de toast.
+   */
+  const [afrondFout, setAfrondFout] = useState<string | null>(null);
 
   // Calculated rehearsal preview
   const rehearsalPreview = useMemo(() => {
@@ -155,6 +167,7 @@ export function SeizoenWizard({
   };
 
   const handleFinishWizard = async () => {
+    setAfrondFout(null);
     try {
       // Create the season
       const result = await createSeason.mutateAsync({
@@ -186,7 +199,10 @@ export function SeizoenWizard({
 
       onKlaar(result.id);
     } catch (error) {
-      // Error is handled by the mutation
+      // De toast komt van de mutatie zelf; hier blijft de melding staan zolang
+      // de gebruiker op de overzichtsstap is, zodat zichtbaar is dat er iets
+      // misging en wat.
+      setAfrondFout(getErrorMessage(error));
     }
   };
 
@@ -303,6 +319,12 @@ export function SeizoenWizard({
           {/* Step 5: Review */}
           {wizardStep === 'review' && (
             <WizardStapOverzicht wizardState={wizardState} rehearsalPreview={rehearsalPreview} />
+          )}
+
+          {afrondFout && (
+            <div className="alert alert-danger" role="alert" style={{ marginTop: '1rem' }}>
+              {afrondFout}
+            </div>
           )}
         </div>
 

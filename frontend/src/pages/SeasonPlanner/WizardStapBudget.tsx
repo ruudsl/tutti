@@ -6,10 +6,12 @@ import type { WizardState } from './types';
 /**
  * Stap 4 van de wizard: het budget over de concerten verdelen.
  *
- * Letterlijk uit SeasonPlanner.tsx overgenomen, inclusief de eigenaardigheid
- * dat de lijst eerst op naam gefilterd wordt maar het bedrag daarna op de
- * index in díe gefilterde lijst wordt weggeschreven. Dat is bestaand gedrag,
- * geen gevolg van deze verhuizing; zie het rapport.
+ * De lijst werd eerst op naam gefilterd en het bedrag daarna weggeschreven op
+ * de index in díe gefilterde lijst, terwijl `updateConcert` op de ongefilterde
+ * lijst werkt. Stond er een naamloos concert vóór een concert mét naam, dan
+ * kwam het bedrag bij het verkeerde concert terecht - of bij een naamloos
+ * concert dat niet eens op het scherm stond. Dat is nu gerepareerd; zie de
+ * opmerking bij de lijst hieronder.
  */
 export function WizardStapBudget({
   wizardState,
@@ -68,8 +70,16 @@ export function WizardStapBudget({
         <div>
           <h3>{t('seasonPlanner.wizard.concertBudgets')}</h3>
           {wizardState.concerts
-            .filter((c) => c.name)
-            .map((concert, index) => (
+            // Eerst de positie in de échte lijst vastleggen, pas daarna
+            // filteren. `updateConcert` zoekt het concert op met `i === index`
+            // in de ongefilterde lijst, dus die index moet meereizen met de
+            // rij. `PlannedConcert` heeft geen id om op te werken, dus de
+            // index is het enige wat een rij aan zijn concert koppelt.
+            // Map-dan-filter laat de getoonde volgorde ongemoeid: beide
+            // bewerkingen houden de volgorde van de bronlijst aan.
+            .map((concert, index) => ({ concert, index }))
+            .filter(({ concert }) => concert.name)
+            .map(({ concert, index }) => (
               <div key={index} className="flex items-center gap-2 mb-2">
                 <span style={{ minWidth: '200px' }}>{concert.name || `Concert ${index + 1}`}</span>
                 <input

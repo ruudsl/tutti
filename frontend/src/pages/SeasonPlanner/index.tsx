@@ -38,18 +38,33 @@ export default function SeasonPlanner() {
   const { user } = useAuth();
   useDocumentTitle('pageTitle.seasonPlanner');
 
-  const isManager = user && MANAGER_ROLES.includes(user.role as (typeof MANAGER_ROLES)[number]);
+  const isManager = !!user && MANAGER_ROLES.includes(user.role as (typeof MANAGER_ROLES)[number]);
 
-  // Data queries
-  const { data: seasons = [], isLoading: seasonsLoading } = useSeasons();
-  const { data: templates = [] } = useSeasonTemplates();
+  /**
+   * De gegevens van de pagina.
+   *
+   * Alle vier de queries staan uit voor wie de pagina niet mag zien. Ze stonden
+   * eerder vóór de rechtencontrole en draaiden dus altijd: een gewoon lid kreeg
+   * `common.noPermission` te zien, maar had dan al seizoenen, sjablonen,
+   * orkesten en concerttypen opgehaald. Vier verzoeken om gegevens die de
+   * gebruiker niet mag zien; de server weigert ze hopelijk, maar de pagina
+   * hoort er niet eens om te vragen.
+   *
+   * Dit gaat met `enabled` en niet met een vroege `return`: de hooks moeten bij
+   * elke render in dezelfde volgorde blijven draaien, en de rechtencontrole
+   * staat verderop tussen andere hooks in.
+   */
+  const { data: seasons = [], isLoading: seasonsLoading } = useSeasons(undefined, { enabled: isManager });
+  const { data: templates = [] } = useSeasonTemplates({ enabled: isManager });
   const { data: orchestras = [] } = useQuery({
     queryKey: ['orchestras'],
     queryFn: getOrchestras,
+    enabled: isManager,
   });
   const { data: concertTypesData } = useQuery({
     queryKey: ['concertTypes'],
     queryFn: getConcertTypes,
+    enabled: isManager,
   });
   const concertTypes = concertTypesData?.concertTypes || [];
 

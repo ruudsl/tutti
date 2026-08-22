@@ -22,10 +22,10 @@
  *   - De volgorde van de tabbladen en van de wizardstappen. Die staan in de
  *     opmaak respectievelijk in één array; een verhuizing die ze herschikt
  *     verandert wat de gebruiker als eerste ziet.
- *   - Dat de rechtencontrole ná de queries komt. De pagina haalt haar gegevens
- *     op vóórdat ze kijkt of de gebruiker er iets mee mag. Dat is niet fraai,
- *     maar het is wat er staat, en het opknippen hoort het niet stilletjes te
- *     veranderen.
+ *   - Dat de rechtencontrole ná de queries kwam. De pagina haalde haar gegevens
+ *     op vóórdat ze keek of de gebruiker er iets mee mocht. Dat is inmiddels
+ *     bewust gerepareerd - de queries staan nu op `enabled` - en de test
+ *     hieronder is meegedraaid; zie de opmerking bij die test.
  */
 
 import '@testing-library/jest-dom';
@@ -448,15 +448,20 @@ describe('seizoensplanner - vastgelegd gedrag vóór het opknippen', () => {
     expect(screen.queryByText('seasonPlanner.title')).not.toBeInTheDocument();
   });
 
-  // Vastgelegd omdat het opvalt, niet omdat het goed is: de queries staan vóór
-  // de rechtencontrole, dus ook wie de pagina niet mag zien haalt de seizoenen
-  // op. Verandert dit tijdens het opknippen, dan is dat een gedragswijziging en
-  // hoort er een aparte keuze aan vooraf te gaan.
-  it('haalt de seizoenen ook op voor iemand zonder rechten', async () => {
+  // Deze test legde vast dat de queries vóór de rechtencontrole stonden: ook wie
+  // de pagina niet mocht zien haalde de seizoenen op. Dat was destijds
+  // opgeschreven omdat het opviel, niet omdat het goed was. Het is nu bewust
+  // gerepareerd - de vier queries van de pagina staan op `enabled` en draaien
+  // alleen voor een beheerder - dus de verwachting is omgedraaid: er hoort nu
+  // niets opgehaald te worden. De uitgebreide versie, met alle vier de
+  // aanroepen, staat in SeasonPlanner.reparaties.test.tsx.
+  it('haalt de seizoenen niet op voor iemand zonder rechten', async () => {
     ingelogdeGebruiker.rol = 'member';
 
     render(<SeasonPlanner />, { wrapper: wikkel });
 
-    await waitFor(() => expect(api.getSeasons).toHaveBeenCalled());
+    await screen.findByText('common.noPermission');
+
+    expect(api.getSeasons).not.toHaveBeenCalled();
   });
 });
