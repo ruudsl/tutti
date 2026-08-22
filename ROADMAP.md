@@ -66,12 +66,19 @@ pull request achterblijven.
    niet in `email_campaign_recipients` en de namen komen nergens in de backend
    voor. Een kolom erbij vraagt eerst een antwoord op wie hem vult — de mailer
    zet nu nergens 'delivered'. Tot die keuze gemaakt is, is die tak dode code
-9. **Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
-   de drie talen** (`errors.invalidType`, `invalidUrl`, `invalidUuid`,
-   `invalidFormat`, `invalidSelection`, `minValue`, `maxValue`, `minItems`,
-   `maxItems`). Door de meegegeven standaardtekst krijgt een Nederlands of Duits
-   lid daar Engelse validatiemeldingen. Makkelijke winst, maar het raakt
-   `src/locales/*.json` en dat is een eigen ronde waard
+9. ~~Negen vertaalsleutels die `createI18nErrorMap` opvraagt bestaan in geen van
+   de drie talen.~~ **Opgelost op 22-08-2026**, en het bleek de top van een
+   ijsberg: er ontbraken er nog 75 andere. De bestaande waaktest kon dit soort
+   gat per definitie niet vinden, want die vergeleek de drie talen onderling en
+   een sleutel die overal ontbreekt ontbreekt overal even hard. Er staat nu een
+   controle naast die de code met de bestanden vergelijkt.
+
+   De resterende 75 staan als expliciete achterstandslijst in
+   `src/locales/__tests__/translations.test.ts`, met een tweede test die de lijst
+   schoonhoudt. Grote clusters: `sync.*` (16 sleutels), `offline.*` (9),
+   `shareTarget.*` (8), `memberDirectory.*` (4). Dat is een eigen ronde waard —
+   niet omdat het moeilijk is, maar omdat het per sleutel een keuze over
+   formulering vraagt in drie talen
 
 Daarnaast wachten twee GitHub-instellingen die alleen de eigenaar van de
 repository kan zetten. Zonder deze twee stopt `deploy-staging.yml` met een
@@ -300,7 +307,11 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan
 - [x] Integration tests voor tenant isolatie
-- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job), voorlopig alleen `e2e/smoke.spec.ts`_
+- [~] E2E tests voor kritieke flows — _Playwright draait in CI (`e2e` job): `e2e/smoke.spec.ts` plus twee flowbestanden_
+  - `e2e/repetities.spec.ts`: een beheerder plant een repetitie, een lid meldt zich aan en weer af, en een lid krijgt de beheerknoppen niet te zien
+  - `e2e/leden.spec.ts`: een beheerder voegt een lid toe en koppelt het aan een orkest, en een lid komt niet op de ledenbeheerpagina
+  - De seed (`backend/src/scripts/seed-e2e.ts`) zet daar repetities en een tweede orkest voor klaar, met vaste id's
+  - Nog niet gedekt: concerten met een programma. De knoppen in de concerttabel zijn pictogrammen zonder toegankelijke naam, dus een test zou ze op positie moeten aanwijzen. Eerst die knoppen een naam geven
 - [x] Dependabot of Renovate configuratie
 - [x] SAST scanning (CodeQL of Semgrep)
 - [x] Automated staging deployments — _`.github/workflows/deploy-staging.yml`: rolt uit zodra CI op `main` slaagt, wacht tot de omgeving antwoordt en draait daarna `scripts/smoke-test.mjs`_
