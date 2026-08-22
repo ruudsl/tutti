@@ -417,7 +417,11 @@ export default function EntraSync() {
                     <span
                       key={dept}
                       style={{
-                        background: 'white',
+                        // Zelfde geval als het tijdelijke wachtwoord in
+                        // Onboarding: vaste witte achtergrond met geërfde
+                        // tekstkleur, dus onleesbaar in het donkere thema.
+                        background: 'var(--surface)',
+                        color: 'var(--text)',
                         borderRadius: '0.25rem',
                         padding: '0.1rem 0.5rem',
                       }}

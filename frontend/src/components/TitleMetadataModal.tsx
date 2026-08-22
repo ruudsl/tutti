@@ -1,4 +1,4 @@
-import { useState, ReactNode, useEffect } from 'react';
+import { useState, ReactNode, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getYouTubeMeta, searchMusicaInfo, getMusicaInfoDetail } from '../api';
 import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
@@ -65,6 +65,29 @@ export function TitleMetadataModal({
   saving = false,
 }: TitleMetadataModalProps) {
   const { t, i18n } = useTranslation();
+
+  // Het zoekmenu naast het titelveld hangt aan gewone React-state, net als de
+  // andere uitklapmenu's in dit project (zie GenrePicker, SortDropdown, en het
+  // gelijknamige menu in pages/MusicTitles/TitleMetaModal.tsx). Het opende
+  // eerder door in de klikafhandelaar `nextElementSibling.style.display` te
+  // zetten: dan weet React er niets van, ging het menu nooit vanzelf dicht en
+  // moest de achtergrondkleur met de hand teruggezet worden - met `white` als
+  // vaste waarde, wat in het donkere thema fout uitpakt.
+  const [zoekmenuOpen, setZoekmenuOpen] = useState(false);
+  const zoekmenuRef = useRef<HTMLDivElement>(null);
+
+  // Klik ergens buiten knop en menu: dichtdoen. De luisteraar staat er alleen
+  // zolang het menu open is.
+  useEffect(() => {
+    if (!zoekmenuOpen) return;
+    function bijKlikBuiten(event: MouseEvent) {
+      if (zoekmenuRef.current && !zoekmenuRef.current.contains(event.target as Node)) {
+        setZoekmenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', bijKlikBuiten);
+    return () => document.removeEventListener('mousedown', bijKlikBuiten);
+  }, [zoekmenuOpen]);
 
   const [form, setForm] = useState<TitleMetaForm>({
     youtubeUrl: title.youtubeUrl || '',
@@ -249,62 +272,65 @@ export function TitleMetadataModal({
           <label className="form-label">{t('myMusic.table.title')}</label>
           <div className="flex gap-2">
             <input type="text" className="form-control" value={title.title} disabled style={{ flex: 1 }} />
-            <div className="dropdown" style={{ position: 'relative' }}>
+            <div className="dropdown" style={{ position: 'relative' }} ref={zoekmenuRef}>
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={(e) => {
-                  const dropdown = e.currentTarget.nextElementSibling as HTMLElement;
-                  dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                }}
+                onClick={() => setZoekmenuOpen((open) => !open)}
                 title={t('titles.searchOnSites')}
+                aria-expanded={zoekmenuOpen}
               >
                 <Icon name="search" size={16} />
               </button>
-              <div
-                style={{
-                  display: 'none',
-                  position: 'absolute',
-                  right: 0,
-                  top: '100%',
-                  background: 'white',
-                  border: '1px solid var(--border)',
-                  borderRadius: '0.25rem',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  zIndex: 1000,
-                  minWidth: '200px',
-                }}
-              >
+              {zoekmenuOpen && (
                 <div
                   style={{
-                    padding: '0.5rem',
-                    borderBottom: '1px solid var(--border)',
-                    fontWeight: 'bold',
-                    fontSize: '0.875rem',
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    // Het vlak van het venster zelf, dus in beide thema's goed.
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '0.25rem',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                    minWidth: '200px',
                   }}
                 >
-                  {t('titles.searchOnSites')}:
-                </div>
-                {searchSheetMusicWebsites(title.title).map((site) => (
-                  <a
-                    key={site.name}
-                    href={site.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <div
                     style={{
-                      display: 'block',
-                      padding: '0.5rem 1rem',
-                      color: 'inherit',
-                      textDecoration: 'none',
+                      padding: '0.5rem',
                       borderBottom: '1px solid var(--border)',
+                      fontWeight: 'bold',
+                      fontSize: '0.875rem',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
                   >
-                    {site.name}
-                  </a>
-                ))}
-              </div>
+                    {t('titles.searchOnSites')}:
+                  </div>
+                  {searchSheetMusicWebsites(title.title).map((site) => (
+                    <a
+                      key={site.name}
+                      href={site.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setZoekmenuOpen(false)}
+                      style={{
+                        display: 'block',
+                        padding: '0.5rem 1rem',
+                        color: 'inherit',
+                        textDecoration: 'none',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                      // Aanwijzen licht de regel op; loslaten geeft het vlak van
+                      // het menu eronder terug in plaats van een vaste kleur.
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      {site.name}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -547,7 +573,7 @@ export function TitleMetadataModal({
                     cursor: 'pointer',
                   }}
                   onClick={() => loadMusicaInfoDetail(result.articleNumber)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'white')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -590,7 +616,7 @@ export function TitleMetadataModal({
             <div
               style={{
                 fontSize: '0.8rem',
-                background: 'white',
+                background: 'var(--surface)',
                 padding: '0.5rem',
                 borderRadius: '0.25rem',
                 border: '1px solid var(--border)',

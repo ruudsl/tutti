@@ -115,7 +115,9 @@ export function MusicaInfoPanel({
                 cursor: 'pointer',
               }}
               onClick={() => onLoadDetail(result.articleNumber)}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'white')}
+              // Aanwijzen licht de regel op met het vlak uit het thema; een
+              // vaste witte kleur gaf in het donkere thema een lichte balk.
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -163,7 +165,8 @@ export function MusicaInfoPanel({
         <div
           style={{
             fontSize: '0.8rem',
-            background: 'white',
+            // Het vlak van het venster, dus in beide thema's goed.
+            background: 'var(--surface)',
             padding: '0.5rem',
             borderRadius: '0.25rem',
             border: '1px solid var(--border)',
