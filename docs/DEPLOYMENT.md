@@ -10,6 +10,14 @@
 
 ## Deploy Backend on Render.com
 
+> **Let op de naamgeving.** De namen hieronder (`tutti-backend`, `tutti.db`)
+> komen niet overeen met `render.yaml` in de repo, waar de service
+> `harmonie-backend` heet en de database `harmonie.db`. Welke van de twee klopt
+> hangt af van hoe de service ooit is aangemaakt — kijk in het Render-dashboard
+> voordat je een pad overneemt. Een `DB_PATH` die net naast de bestaande wijst
+> geeft geen foutmelding: de applicatie maakt dan gewoon een nieuwe, lege
+> database aan en het lijkt alsof alle gegevens weg zijn.
+
 1. **Create an account** on [render.com](https://render.com) and log in
 
 2. **Click "New" → "Web Service"**
@@ -74,24 +82,65 @@ De workflow (`.github/workflows/deploy-staging.yml`) doet drie dingen: hij start
 
 **1. Maak een staging-service in Render**
 
-Dezelfde instellingen als de productie-service, met drie verschillen:
+Kies **New → Web Service** en vul handmatig in. Laat Render hier géén Blueprint
+uit `render.yaml` toepassen: die beschrijft de _productie_-service, en toepassen
+op een tweede service levert een kopie op die naar dezelfde database wijst.
 
-| Instelling     | Waarde                                                              |
-| -------------- | ------------------------------------------------------------------- |
-| Name           | `tutti-staging`                                                     |
-| Branch         | `main`                                                              |
-| Auto-Deploy    | **Off** — de workflow start de uitrol, anders gebeurt het twee keer |
-| `DB_PATH`      | een eigen pad op een eigen disk, nooit die van productie            |
-| `FRONTEND_URL` | de staging-URL van de frontend                                      |
+Neem de instellingen over van de productie-service, met deze verschillen:
 
-Geef staging een **eigen `JWT_SECRET`**. Wordt die gedeeld met productie, dan is een token van staging ook geldig op productie.
+| Instelling        | Waarde                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| Name              | `harmonie-staging`                                                  |
+| Branch            | `main`                                                              |
+| Root Directory    | `backend`                                                           |
+| Build Command     | `cp ../CHANGELOG*.md . && npm install && npm run build`             |
+| Start Command     | `npm start`                                                         |
+| Health Check Path | `/api/health`                                                       |
+| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer |
+| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                              |
+| `DB_PATH`         | een eigen pad, nooit dat van productie                              |
+| `FRONTEND_URL`    | de staging-URL van de frontend                                      |
+
+Twee daarvan zijn geen smaakkwestie. **Auto-Deploy uit**, anders rolt Render zelf
+óók uit bij elke push en gebeurt het twee keer; die twee lopen elkaar in de weg.
+En een **eigen `JWT_SECRET`**, want wordt die gedeeld met productie, dan is een
+token dat iemand op staging krijgt ook geldig op productie.
+
+De build command is niet dezelfde als bij de productie-instructies bovenaan dit
+document: zonder dat `cp` mist de build de changelog-bestanden.
+
+**Met of zonder disk**
+
+Op het gratis plan van Render kun je geen disk aanmaken. Dat is geen blokkade:
+de applicatie maakt de map zelf aan en draait de migraties bij het opstarten, dus
+zonder disk komt hij gewoon op met een lege database.
+
+|                        | Met disk (betaald plan)                     | Zonder disk (gratis) |
+| ---------------------- | ------------------------------------------- | -------------------- |
+| `DB_PATH`              | `/opt/render/project/data/staging.db`       | `/tmp/staging.db`    |
+| `UPLOAD_DIR`           | `/opt/render/project/data/uploads`          | `/tmp/uploads`       |
+| `MP3_UPLOAD_DIR`       | `/opt/render/project/data/uploads/mp3`      | `/tmp/uploads/mp3`   |
+| Disk toevoegen         | Mount Path `/opt/render/project/data`, 1 GB | niet                 |
+| Gegevens na een uitrol | blijven staan                               | weg                  |
+
+Zonder disk is staging een **rookproef-omgeving en geen klikomgeving**: bij elke
+uitrol, en elke keer dat de service uit de slaapstand komt, begin je met niets.
+Voor de vraag die deze workflow stelt — komt de applicatie na deze merge overeind
+en lopen de migraties door — is dat genoeg, en zuiverder ook: je test elke keer
+de route die een nieuwe installatie ook doorloopt. Wil je met de hand rondklikken
+in gevulde gegevens, dan heb je een betaald plan met disk nodig.
+
+Let op het gratis plan ook hierop: de service slaapt na een kwartier zonder
+verkeer, en het eerste verzoek daarna duurt ongeveer een minuut. De workflow
+wacht tot tien minuten in stappen van tien seconden, dus dat past ruim — maar als
+je zelf gaat kijken en het duurt even, is dat dit en geen storing.
 
 **2. Zet de gegevens in GitHub**
 
-| Soort    | Naam                         | Waar vandaan                                                                     |
-| -------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| Secret   | `RENDER_STAGING_DEPLOY_HOOK` | Render → staging-service → Settings → Deploy Hook                                |
-| Variable | `STAGING_URL`                | de URL van de staging-service, bijvoorbeeld `https://tutti-staging.onrender.com` |
+| Soort    | Naam                         | Waar vandaan                                                                                                            |
+| -------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Secret   | `RENDER_STAGING_DEPLOY_HOOK` | Render → staging-service → Settings → Deploy Hook                                                                       |
+| Variable | `STAGING_URL`                | de URL van de staging-service, bijvoorbeeld `https://harmonie-staging.onrender.com`, zonder schuine streep aan het eind |
 
 Onder Settings → Secrets and variables → Actions; de eerste bij _Secrets_, de tweede bij _Variables_.
 
