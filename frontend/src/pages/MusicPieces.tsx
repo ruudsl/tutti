@@ -14,6 +14,7 @@ import { useInstruments } from '../hooks/useInstruments';
 import { useAuth } from '../context/AuthContext';
 import { downloadMusicPiece, logActivity } from '../api';
 import { Modal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
@@ -586,8 +587,7 @@ export default function MusicPieces() {
           isSubmitting={updateMutation.isPending}
         >
           <>
-            <div className="form-group">
-              <label className="form-label">{t('musicPieces.edit.pieceTitle')}</label>
+            <FormField label={t('musicPieces.edit.pieceTitle')}>
               <input
                 type="text"
                 className="form-control"
@@ -595,18 +595,16 @@ export default function MusicPieces() {
                 onChange={(e) => setEditingPiece({ ...editingPiece, title: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('musicPieces.edit.arranger')}</label>
+            </FormField>
+            <FormField label={t('musicPieces.edit.arranger')}>
               <input
                 type="text"
                 className="form-control"
                 value={editingPiece.arranger || ''}
                 onChange={(e) => setEditingPiece({ ...editingPiece, arranger: e.target.value })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('musicPieces.edit.instrument')}</label>
+            </FormField>
+            <FormField label={t('musicPieces.edit.instrument')}>
               <select
                 className="form-control form-select"
                 value={editingPiece.instrumentId || ''}
@@ -619,10 +617,9 @@ export default function MusicPieces() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
             <div className="grid grid-2">
-              <div className="form-group">
-                <label className="form-label">{t('musicPieces.edit.tuning')}</label>
+              <FormField label={t('musicPieces.edit.tuning')}>
                 <input
                   type="text"
                   className="form-control"
@@ -630,9 +627,8 @@ export default function MusicPieces() {
                   onChange={(e) => setEditingPiece({ ...editingPiece, tuning: e.target.value })}
                   placeholder={t('musicPieces.edit.tuningPlaceholder')}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('musicPieces.edit.groupNumber')}</label>
+              </FormField>
+              <FormField label={t('musicPieces.edit.groupNumber')}>
                 <input
                   type="text"
                   className="form-control"
@@ -640,10 +636,9 @@ export default function MusicPieces() {
                   onChange={(e) => setEditingPiece({ ...editingPiece, groupNumber: e.target.value })}
                   placeholder={t('musicPieces.edit.groupPlaceholder')}
                 />
-              </div>
+              </FormField>
             </div>
-            <div className="form-group">
-              <label className="form-label">{t('musicPieces.edit.clef')}</label>
+            <FormField label={t('musicPieces.edit.clef')}>
               <input
                 type="text"
                 className="form-control"
@@ -651,17 +646,26 @@ export default function MusicPieces() {
                 onChange={(e) => setEditingPiece({ ...editingPiece, clef: e.target.value })}
                 placeholder={t('musicPieces.edit.clefPlaceholder')}
               />
-            </div>
+            </FormField>
+            {/* Geen FormField: er staat naast het veld ook een hulptekst in de
+                form-group en FormField neemt maar een kind aan. Met de hand
+                gekoppeld, met aria-describedby voor de hulptekst. */}
             <div className="form-group">
-              <label className="form-label">{t('musicPieces.edit.youtubeUrl')}</label>
+              <label className="form-label" htmlFor="piece-youtube-url">
+                {t('musicPieces.edit.youtubeUrl')}
+              </label>
               <input
+                id="piece-youtube-url"
+                aria-describedby="piece-youtube-url-hulp"
                 type="url"
                 className="form-control"
                 value={editingPiece.youtubeUrl || ''}
                 onChange={(e) => setEditingPiece({ ...editingPiece, youtubeUrl: e.target.value })}
                 placeholder={t('musicPieces.edit.youtubePlaceholder')}
               />
-              <small className="text-light">{t('musicPieces.edit.youtubeNote')}</small>
+              <small id="piece-youtube-url-hulp" className="text-light">
+                {t('musicPieces.edit.youtubeNote')}
+              </small>
             </div>
           </>
         </FormModal>
@@ -695,9 +699,14 @@ export default function MusicPieces() {
       {showBulkInstrumentModal && (
         <Modal title={t('bulk.changeInstrument')} onClose={() => setShowBulkInstrumentModal(false)}>
           <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
+          {/* Geen FormField: hulptekst naast het veld in dezelfde form-group. */}
           <div className="form-group">
-            <label className="form-label">{t('musicPieces.edit.instrument')}</label>
+            <label className="form-label" htmlFor="bulk-instrument">
+              {t('musicPieces.edit.instrument')}
+            </label>
             <select
+              id="bulk-instrument"
+              aria-describedby="bulk-instrument-hulp"
               className="form-control form-select"
               value={bulkInstrumentId}
               onChange={(e) => setBulkInstrumentId(e.target.value)}
@@ -709,7 +718,9 @@ export default function MusicPieces() {
                 </option>
               ))}
             </select>
-            <small className="text-light">{t('bulk.instrumentHelp')}</small>
+            <small id="bulk-instrument-hulp" className="text-light">
+              {t('bulk.instrumentHelp')}
+            </small>
           </div>
           <div className="flex gap-1 justify-end mt-2">
             <button
@@ -736,8 +747,7 @@ export default function MusicPieces() {
       {showBulkAddToListModal && (
         <Modal title={t('bulk.addToList')} onClose={() => setShowBulkAddToListModal(false)}>
           <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
-          <div className="form-group">
-            <label className="form-label">{t('bulk.selectList')}</label>
+          <FormField label={t('bulk.selectList')}>
             <select
               className="form-control form-select"
               value={bulkListId}
@@ -750,7 +760,7 @@ export default function MusicPieces() {
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
           <div className="flex gap-1 justify-end mt-2">
             <button
               className="btn btn-secondary"
@@ -776,8 +786,7 @@ export default function MusicPieces() {
       {showBulkRemoveFromListModal && (
         <Modal title={t('bulk.removeFromList')} onClose={() => setShowBulkRemoveFromListModal(false)}>
           <p className="text-light mb-2">{t('musicPieces.bulk.selectedCount', { count: selectedIds.size })}</p>
-          <div className="form-group">
-            <label className="form-label">{t('bulk.selectList')}</label>
+          <FormField label={t('bulk.selectList')}>
             <select
               className="form-control form-select"
               value={bulkListId}
@@ -790,7 +799,7 @@ export default function MusicPieces() {
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
           <div className="flex gap-1 justify-end mt-2">
             <button
               className="btn btn-secondary"

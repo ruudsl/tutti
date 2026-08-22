@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
 import { Icon } from '../components/Icon';
+import { FormField } from '../components/FormField';
 import {
   usePracticeSchedules,
   usePracticeSchedule,
@@ -162,8 +163,7 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
       isSubmitting={createSchedule.isPending}
     >
       <div className="space-y-4">
-        <div className="form-group">
-          <label className="form-label">{t('music.title')} *</label>
+        <FormField label={<>{t('music.title')} *</>}>
           <select
             className="form-control"
             value={musicTitleId}
@@ -177,9 +177,8 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('common.orchestra')} *</label>
+        </FormField>
+        <FormField label={<>{t('common.orchestra')} *</>}>
           <select
             className="form-control"
             value={orchestraId}
@@ -193,9 +192,8 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('practiceSchedules.targetDate')} *</label>
+        </FormField>
+        <FormField label={<>{t('practiceSchedules.targetDate')} *</>}>
           <input
             type="date"
             className="form-control"
@@ -203,19 +201,17 @@ function CreateScheduleModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => setTargetDate(e.target.value)}
             required
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('practiceSchedules.priority')}</label>
+        </FormField>
+        <FormField label={t('practiceSchedules.priority')}>
           <select className="form-control" value={priority} onChange={(e) => setPriority(parseInt(e.target.value))}>
             <option value={1}>{t('practiceSchedules.priorityLow')}</option>
             <option value={2}>{t('practiceSchedules.priorityNormal')}</option>
             <option value={3}>{t('practiceSchedules.priorityHigh')}</option>
           </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('common.notes')}</label>
+        </FormField>
+        <FormField label={t('common.notes')}>
           <textarea className="form-control" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-        </div>
+        </FormField>
       </div>
     </FormModal>
   );
@@ -454,8 +450,7 @@ function AddMilestoneModal({ scheduleId, onClose }: { scheduleId: string; onClos
       isSubmitting={addMilestone.isPending}
     >
       <div className="space-y-4">
-        <div className="form-group">
-          <label className="form-label">{t('common.title')} *</label>
+        <FormField label={<>{t('common.title')} *</>}>
           <input
             type="text"
             className="form-control"
@@ -464,18 +459,16 @@ function AddMilestoneModal({ scheduleId, onClose }: { scheduleId: string; onClos
             placeholder={t('practiceSchedules.milestonePlaceholder')}
             required
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('common.description')}</label>
+        </FormField>
+        <FormField label={t('common.description')}>
           <textarea
             className="form-control"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('practiceSchedules.targetDate')} *</label>
+        </FormField>
+        <FormField label={<>{t('practiceSchedules.targetDate')} *</>}>
           <input
             type="date"
             className="form-control"
@@ -483,7 +476,7 @@ function AddMilestoneModal({ scheduleId, onClose }: { scheduleId: string; onClos
             onChange={(e) => setTargetDate(e.target.value)}
             required
           />
-        </div>
+        </FormField>
       </div>
     </FormModal>
   );

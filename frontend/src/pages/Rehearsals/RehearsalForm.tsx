@@ -1,6 +1,7 @@
 /** Het formulier om een repetitie toe te voegen of te bewerken. Letterlijk overgenomen uit Rehearsals.tsx. */
 
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { Orchestra } from '../../types';
 import type { RehearsalFormState } from './hulpfuncties';
 
@@ -32,46 +33,41 @@ export function RehearsalForm({
       </div>
       <div className="card-body">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.date')}</label>
+          <FormField label={t('rehearsals.date')}>
             <input
               type="date"
               className="form-control"
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.startTime')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.startTime')}>
             <input
               type="time"
               className="form-control"
               value={form.startTime}
               onChange={(e) => setForm({ ...form, startTime: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.endTime')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.endTime')}>
             <input
               type="time"
               className="form-control"
               value={form.endTime}
               onChange={(e) => setForm({ ...form, endTime: e.target.value })}
             />
-          </div>
+          </FormField>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.location')}</label>
+          <FormField label={t('rehearsals.location')}>
             <input
               type="text"
               className="form-control"
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.type')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.type')}>
             <select
               className="form-control form-select"
               value={form.type}
@@ -81,9 +77,8 @@ export function RehearsalForm({
               <option value="extra">{t('rehearsals.types.extra')}</option>
               <option value="cancelled">{t('rehearsals.types.cancelled')}</option>
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.orchestra')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.orchestra')}>
             <select
               className="form-control form-select"
               value={form.orchestraId}
@@ -96,17 +91,16 @@ export function RehearsalForm({
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
         </div>
-        <div className="form-group" style={{ marginTop: '1rem' }}>
-          <label className="form-label">{t('rehearsals.notes')}</label>
+        <FormField label={t('rehearsals.notes')} style={{ marginTop: '1rem' }}>
           <input
             type="text"
             className="form-control"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
-        </div>
+        </FormField>
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
           <button className="btn btn-primary" onClick={handleSaveRehearsal} disabled={!form.date || isSaving}>
             {isSaving ? t('common.loading') : t('common.save')}

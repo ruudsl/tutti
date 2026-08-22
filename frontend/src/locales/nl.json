@@ -95,7 +95,13 @@
     "selectOptional": "Kies (optioneel)",
     "startDate": "Startdatum",
     "viewAll": "Alles bekijken",
-    "warnings": "Waarschuwingen"
+    "warnings": "Waarschuwingen",
+    "apply": "Toepassen",
+    "selectAll": "Alles selecteren",
+    "deselectAll": "Alles deselecteren",
+    "dismiss": "Sluiten",
+    "showingOf": "Toont {{from}}-{{to}} van {{total}}",
+    "user": "Gebruiker"
   },
   "lazyImage": {
     "notLoaded": "Niet geladen"
@@ -273,7 +279,8 @@
     "attendanceAnalytics": "Aanwezigheidsanalyse",
     "externalMusicians": "Externe Muzikanten",
     "replacementRequests": "Invalverzoeken",
-    "musicSharing": "Muziek delen"
+    "musicSharing": "Muziek delen",
+    "mobileMenu": "Menu"
   },
   "roles": {
     "admin": "Beheerder",
@@ -458,7 +465,9 @@
     "offlineReady": "Offline beschikbaar",
     "cachedPieces": "{{count}} stukken gecached",
     "compactView": "Compacte weergave",
-    "fullView": "Volledige weergave"
+    "fullView": "Volledige weergave",
+    "gridView": "Tegels",
+    "swipeView": "Swipen"
   },
   "tools": {
     "title": "Muziek Tools",
@@ -968,7 +977,9 @@
     "recipientName": "Naam",
     "recipientStatusLabel": "Status",
     "searchRecipients": "Zoek in ontvangers",
-    "viewRecipients": "Ontvangers bekijken"
+    "viewRecipients": "Ontvangers bekijken",
+    "openedAt": "Geopend op {{date}}",
+    "deliveredAt": "Afgeleverd op {{date}}"
   },
   "customFields": {
     "title": "Aangepaste velden",
@@ -1805,6 +1816,16 @@
       "errorUpdating": "Fout bij bijwerken koppeling",
       "errorDeleting": "Fout bij verwijderen koppeling",
       "deleteConfirm": "Weet je zeker dat je de koppeling naar '{{groupName}}' wilt verwijderen?"
+    },
+    "support": {
+      "title": "Ondersteuning en hulp",
+      "description": "Meld problemen, lees de handleiding of bekijk wat er over toegankelijkheid geregeld is.",
+      "reportIssue": "Fout melden",
+      "reportIssueDesc": "Meld problemen met bladmuziek",
+      "userGuide": "Handleiding",
+      "userGuideDesc": "Leer hoe je de app gebruikt",
+      "accessibility": "Toegankelijkheid",
+      "accessibilityDesc": "Informatie over toegankelijkheid"
     }
   },
   "theme": {
@@ -1973,7 +1994,8 @@
       "create": "{{count}} repetities aanmaken",
       "created": "{{count}} terugkerende repetities aangemaakt"
     },
-    "deleteTitle": "Repetitie verwijderen"
+    "deleteTitle": "Repetitie verwijderen",
+    "attendanceDashboard": "Overzicht"
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -2036,7 +2058,8 @@
     "typeToSearch": "Typ om te zoeken",
     "log": "Loggen",
     "deleteGoalTitle": "Doel verwijderen",
-    "deleteLogTitle": "Sessie verwijderen"
+    "deleteLogTitle": "Sessie verwijderen",
+    "quickLog": "Loggen"
   },
   "accessibilityInfo": {
     "title": "Toegankelijkheidsinformatie",
@@ -2421,7 +2444,9 @@
       "history": "Historie",
       "disclaimer": "Voorspellingen zijn gebaseerd op historische opkomstdata en kunnen afwijken van de werkelijke opkomst."
     },
-    "instrument": "Instrument"
+    "instrument": "Instrument",
+    "setlistBuilder": "Setlist",
+    "posterGenerator": "Poster"
   },
   "tickets": {
     "title": "Tickets",
@@ -2616,7 +2641,9 @@
       "yourTickets": "Uw Tickets",
       "findQRInAccount": "U vindt de QR-code in de HTML-versie van deze e-mail of in uw account onder \"Mijn Tickets\".",
       "lookForward": "We kijken ernaar uit u te zien!"
-    }
+    },
+    "offlineMode": "Offline modus",
+    "onlineMode": "Online modus"
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",
@@ -2936,7 +2963,10 @@
     "pending_changes": "{{count}} wijziging(en) wachtend op synchronisatie",
     "syncing": "Synchroniseren...",
     "sync_complete": "Synchronisatie voltooid",
-    "sync_failed": "Synchronisatie mislukt"
+    "sync_failed": "Synchronisatie mislukt",
+    "back_online": "Je bent weer online",
+    "offline_data_available": "bewaarde gegevens beschikbaar",
+    "pending_sync": "Wacht op synchronisatie"
   },
   "entraSync": {
     "title": "Entra ID Synchronisatie",
@@ -3251,7 +3281,11 @@
     "syncPhotosDescription": "Synchroniseer profielfoto's van Microsoft 365.",
     "syncPhotosSuccess": "Foto's gesynchroniseerd",
     "gridView": "Tegelweergave",
-    "listView": "Lijstweergave"
+    "listView": "Lijstweergave",
+    "grid": "Tegels",
+    "list": "Lijst",
+    "chat": "Chat",
+    "sectionChat": "Stemgroepchat"
   },
   "voiceParts": {
     "title": "Partijenverdeling",
@@ -3447,7 +3481,8 @@
     "navigate": "navigeren",
     "select": "selecteren",
     "close": "sluiten",
-    "deleteRecent": "Verwijderen"
+    "deleteRecent": "Verwijderen",
+    "title": "Zoeken"
   },
   "favorites": {
     "addToFavorites": "Toevoegen aan favorieten",
@@ -3588,7 +3623,8 @@
       "practiceRemindersDesc": "Herinneringen om te oefenen",
       "concertReminders": "Concert herinneringen",
       "concertRemindersDesc": "Herinneringen voor aankomende concerten"
-    }
+    },
+    "unread": "Ongelezen"
   },
   "practiceSchedules": {
     "title": "Oefenschema's",
@@ -3939,7 +3975,12 @@
     "progress": "Voortgang",
     "dailyForecast": "Dagelijkse voorspelling",
     "predicted": "Voorspeld",
-    "actual": "Werkelijk"
+    "actual": "Werkelijk",
+    "factors": {
+      "historicalData": "Gebaseerd op historische verkoopdata",
+      "daysUntilConcert": "Dagen tot het concert: {{days}}",
+      "currentTrend": "Huidige verkooptrend"
+    }
   },
   "accessibility": {
     "skipToContent": "Ga naar inhoud",
@@ -3996,7 +4037,8 @@
     "testing": "Testen",
     "testingText": "We testen onze applicatie regelmatig met hulptechnologieën om compatibiliteit te waarborgen.",
     "understandable": "Begrijpelijk",
-    "understandableText": "Inhoud is leesbaar en de interface werkt op voorspelbare wijze."
+    "understandableText": "Inhoud is leesbaar en de interface werkt op voorspelbare wijze.",
+    "sortable": "sorteerbaar"
   },
   "seatSelection": {
     "title": "Stoelkeuze",
@@ -4882,7 +4924,9 @@
       "color": "Kleur",
       "icon": "Icoon",
       "dragHint": "Sleep categorieën om ze te herschikken",
-      "untitled": "Naamloze categorie"
+      "untitled": "Naamloze categorie",
+      "selectColor": "Kleur {{color}} kiezen",
+      "selectIcon": "Icoon {{icon}} kiezen"
     },
     "active": "Actief",
     "inactive": "Inactief",
@@ -5066,7 +5110,9 @@
       "create_task": "Taak aanmaken",
       "update_field": "Veld bijwerken",
       "webhook": "Webhook",
-      "delay": "Vertraging"
+      "delay": "Vertraging",
+      "add_to_group": "Aan groep toevoegen",
+      "remove_from_group": "Uit groep verwijderen"
     },
     "status": {
       "pending": "Wachtend",
@@ -5776,5 +5822,51 @@
       "excludedHelp": "Deze partijen blijven buiten elke deling, ook bij stukken die je wel openzet.",
       "noExclusions": "Geen uitzonderingen."
     }
+  },
+  "captcha": {
+    "verificationRequired": "Rond de CAPTCHA-verificatie af",
+    "javascriptRequired": "JavaScript is nodig om de CAPTCHA-verificatie af te ronden."
+  },
+  "offline": {
+    "manager": "Offline opslag",
+    "description": "Beheer de partituren en audio die offline beschikbaar zijn.",
+    "manage": "Offline opslag beheren",
+    "totalSize": "Totale grootte",
+    "noItems": "Geen items in de offline opslag",
+    "noItemsHint": "Bekijk een partituur en hij wordt vanzelf offline bewaard.",
+    "clearAll": "Alles wissen",
+    "deleted": "Items uit de offline opslag verwijderd",
+    "cleared": "Offline opslag gewist"
+  },
+  "shareTarget": {
+    "processing": "Bezig met verwerken...",
+    "processingMessage": "Je gedeelde bestand wordt verwerkt.",
+    "success": "Gelukt!",
+    "failed": "Mislukt",
+    "receivedText": "Gedeelde tekst ontvangen",
+    "filesUploaded": "Bestanden geüpload",
+    "noContent": "Geen gedeelde inhoud gevonden",
+    "error": "Verwerken van de gedeelde inhoud is niet gelukt"
+  },
+  "sync": {
+    "never": "Nog nooit",
+    "just_now": "Zojuist",
+    "minutes_ago_one": "{{count}} minuut geleden",
+    "minutes_ago_other": "{{count}} minuten geleden",
+    "hours_ago_one": "{{count}} uur geleden",
+    "hours_ago_other": "{{count}} uur geleden",
+    "days_ago_one": "{{count}} dag geleden",
+    "days_ago_other": "{{count}} dagen geleden",
+    "offline": "Offline",
+    "syncing": "Synchroniseren...",
+    "error": "Synchronisatiefout",
+    "pending": "{{count}} wachtend",
+    "synced": "Gesynchroniseerd",
+    "last_sync": "Laatste synchronisatie",
+    "manual_sync": "Nu synchroniseren",
+    "pending_changes_one": "{{count}} wijziging wacht op synchronisatie",
+    "pending_changes_other": "{{count}} wijzigingen wachten op synchronisatie",
+    "clear_offline_data": "Offline gegevens wissen",
+    "confirm_clear": "Weet je zeker dat je alle offline gegevens wilt wissen?"
   }
 }

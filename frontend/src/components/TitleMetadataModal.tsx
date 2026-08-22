@@ -5,6 +5,7 @@ import type { MusicaInfoSearchResult, MusicaInfoDetail } from '../api';
 import { parseDuration } from '../utils/format';
 import { searchSheetMusicWebsites } from '../utils/sheetMusic';
 import { Modal } from './Modal';
+import { FormField } from './FormField';
 import { Icon } from './Icon';
 import { MusicXMLUpload } from './MusicXMLUpload';
 import { InstrumentPicker } from './InstrumentPicker';
@@ -268,10 +269,21 @@ export function TitleMetadataModal({
       }
     >
       <form id="title-meta-form" onSubmit={handleSubmit}>
+        {/* Geen FormField: het veld zit samen met de zoekknop in een flex-omhulsel,
+            dus het kind van de form-group is niet het invoerveld zelf. */}
         <div className="form-group">
-          <label className="form-label">{t('myMusic.table.title')}</label>
+          <label className="form-label" htmlFor="title-meta-titel">
+            {t('myMusic.table.title')}
+          </label>
           <div className="flex gap-2">
-            <input type="text" className="form-control" value={title.title} disabled style={{ flex: 1 }} />
+            <input
+              id="title-meta-titel"
+              type="text"
+              className="form-control"
+              value={title.title}
+              disabled
+              style={{ flex: 1 }}
+            />
             <div className="dropdown" style={{ position: 'relative' }} ref={zoekmenuRef}>
               <button
                 type="button"
@@ -335,10 +347,9 @@ export function TitleMetadataModal({
           </div>
         </div>
         {title.arranger && (
-          <div className="form-group">
-            <label className="form-label">{t('titles.arranger')}</label>
+          <FormField label={t('titles.arranger')}>
             <input type="text" className="form-control" value={title.arranger} disabled />
-          </div>
+          </FormField>
         )}
 
         {/* WP5: Extended Music Metadata Section */}
@@ -382,10 +393,7 @@ export function TitleMetadataModal({
 
               {/* Work/Movement Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                    {t('metadata.workNumber')}
-                  </label>
+                <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.workNumber')}</span>}>
                   <input
                     type="text"
                     className="form-control"
@@ -394,11 +402,11 @@ export function TitleMetadataModal({
                     placeholder="Op. 21, BWV 1004"
                     style={{ fontSize: '0.875rem' }}
                   />
-                </div>
-                <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                    {t('metadata.movementNumber')}
-                  </label>
+                </FormField>
+                <FormField
+                  className=""
+                  label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.movementNumber')}</span>}
+                >
                   <input
                     type="number"
                     className="form-control"
@@ -407,12 +415,9 @@ export function TitleMetadataModal({
                     min="1"
                     style={{ fontSize: '0.875rem' }}
                   />
-                </div>
+                </FormField>
               </div>
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                  {t('metadata.movementTitle')}
-                </label>
+              <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.movementTitle')}</span>}>
                 <input
                   type="text"
                   className="form-control"
@@ -421,7 +426,7 @@ export function TitleMetadataModal({
                   placeholder="Allegro con brio"
                   style={{ fontSize: '0.875rem' }}
                 />
-              </div>
+              </FormField>
 
               {/* Instruments */}
               <div>
@@ -443,10 +448,7 @@ export function TitleMetadataModal({
               </div>
 
               {/* Additional Credits */}
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                  {t('metadata.lyricist')}
-                </label>
+              <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.lyricist')}</span>}>
                 <input
                   type="text"
                   className="form-control"
@@ -454,14 +456,11 @@ export function TitleMetadataModal({
                   onChange={(e) => setForm((f) => ({ ...f, lyricist: e.target.value }))}
                   style={{ fontSize: '0.875rem' }}
                 />
-              </div>
+              </FormField>
 
               {/* Rights & Source */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                    {t('metadata.rights')}
-                  </label>
+                <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.rights')}</span>}>
                   <input
                     type="text"
                     className="form-control"
@@ -470,11 +469,8 @@ export function TitleMetadataModal({
                     placeholder="Public Domain, CC BY-SA"
                     style={{ fontSize: '0.875rem' }}
                   />
-                </div>
-                <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                    {t('metadata.source')}
-                  </label>
+                </FormField>
+                <FormField className="" label={<span style={{ fontSize: '0.8rem' }}>{t('metadata.source')}</span>}>
                   <input
                     type="text"
                     className="form-control"
@@ -483,7 +479,7 @@ export function TitleMetadataModal({
                     placeholder="IMSLP, Archive.org"
                     style={{ fontSize: '0.875rem' }}
                   />
-                </div>
+                </FormField>
               </div>
             </div>
           )}
@@ -672,10 +668,14 @@ export function TitleMetadataModal({
           )}
         </div>
 
+        {/* Geen FormField: veld en ophaalknop zitten samen in een flex-omhulsel. */}
         <div className="form-group">
-          <label className="form-label">{t('titles.youtubeUrl')}</label>
+          <label className="form-label" htmlFor="title-meta-youtube">
+            {t('titles.youtubeUrl')}
+          </label>
           <div className="flex gap-2">
             <input
+              id="title-meta-youtube"
               type="url"
               className="form-control"
               value={form.youtubeUrl}
@@ -713,8 +713,7 @@ export function TitleMetadataModal({
             </div>
           )}
         </div>
-        <div className="form-group">
-          <label className="form-label">{t('titles.durationFormat')}</label>
+        <FormField label={t('titles.durationFormat')}>
           <input
             type="text"
             className="form-control"
@@ -723,9 +722,8 @@ export function TitleMetadataModal({
             placeholder="3:45"
             pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('titles.difficulty')}</label>
+        </FormField>
+        <FormField label={t('titles.difficulty')}>
           <input
             type="text"
             className="form-control"
@@ -733,10 +731,9 @@ export function TitleMetadataModal({
             onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value }))}
             placeholder={t('titles.difficultyPlaceholder')}
           />
-        </div>
+        </FormField>
         {extraFields}
-        <div className="form-group">
-          <label className="form-label">{t('titles.description')}</label>
+        <FormField label={t('titles.description')}>
           <textarea
             className="form-control"
             value={form.description}
@@ -744,10 +741,15 @@ export function TitleMetadataModal({
             rows={3}
             placeholder={t('titles.descriptionPlaceholder')}
           />
-        </div>
+        </FormField>
+        {/* Geen FormField: hulptekst naast het veld in dezelfde form-group. */}
         <div className="form-group">
-          <label className="form-label">{t('titles.internalNotes')}</label>
+          <label className="form-label" htmlFor="title-meta-notities">
+            {t('titles.internalNotes')}
+          </label>
           <textarea
+            id="title-meta-notities"
+            aria-describedby="title-meta-notities-hulp"
             className="form-control"
             value={form.internalNotes}
             onChange={(e) => setForm((f) => ({ ...f, internalNotes: e.target.value }))}
@@ -755,7 +757,9 @@ export function TitleMetadataModal({
             placeholder={t('titles.internalNotesPlaceholder')}
             style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
           />
-          <small className="text-light">{t('titles.internalNotesHelp')}</small>
+          <small id="title-meta-notities-hulp" className="text-light">
+            {t('titles.internalNotesHelp')}
+          </small>
         </div>
         <div className="form-group">
           <label className="form-label">{t('titles.genres')}</label>

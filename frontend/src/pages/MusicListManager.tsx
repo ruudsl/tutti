@@ -25,6 +25,7 @@ import type { MusicList, MusicTitle } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatDuration } from '../utils/format';
 import { FormModal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { showSuccess, showError } from '../utils/toast';
 import { TitleMetadataModal } from '../components/TitleMetadataModal';
@@ -693,8 +694,7 @@ export default function MusicListManager() {
           onSubmit={handleCreateList}
           submitLabel={t('common.add')}
         >
-          <div className="form-group">
-            <label className="form-label">{t('common.name')}</label>
+          <FormField label={t('common.name')}>
             <input
               type="text"
               className="form-control"
@@ -704,9 +704,8 @@ export default function MusicListManager() {
               autoFocus
               placeholder={t('lists.namePlaceholder')}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('lists.listType')}</label>
+          </FormField>
+          <FormField label={t('lists.listType')}>
             <select
               className="form-control"
               value={listFormType}
@@ -715,20 +714,18 @@ export default function MusicListManager() {
               <option value="regular">{t('lists.typeRegular')}</option>
               <option value="concert">{t('lists.typeConcert')}</option>
             </select>
-          </div>
+          </FormField>
           {listFormType === 'concert' && (
             <>
-              <div className="form-group">
-                <label className="form-label">{t('lists.concertDate')}</label>
+              <FormField label={t('lists.concertDate')}>
                 <input
                   type="date"
                   className="form-control"
                   value={listFormConcertDate}
                   onChange={(e) => setListFormConcertDate(e.target.value)}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('lists.concertLocation')}</label>
+              </FormField>
+              <FormField label={t('lists.concertLocation')}>
                 <input
                   type="text"
                   className="form-control"
@@ -736,7 +733,7 @@ export default function MusicListManager() {
                   onChange={(e) => setListFormConcertLocation(e.target.value)}
                   placeholder={t('lists.concertLocationPlaceholder')}
                 />
-              </div>
+              </FormField>
             </>
           )}
         </FormModal>
@@ -745,8 +742,7 @@ export default function MusicListManager() {
       {/* Edit List Modal */}
       {editingList && (
         <FormModal title={t('lists.renameList')} onClose={() => setEditingList(null)} onSubmit={handleUpdateList}>
-          <div className="form-group">
-            <label className="form-label">{t('common.name')}</label>
+          <FormField label={t('common.name')}>
             <input
               type="text"
               className="form-control"
@@ -754,9 +750,8 @@ export default function MusicListManager() {
               onChange={(e) => setListFormName(e.target.value)}
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('lists.listType')}</label>
+          </FormField>
+          <FormField label={t('lists.listType')}>
             <select
               className="form-control"
               value={listFormType}
@@ -765,20 +760,18 @@ export default function MusicListManager() {
               <option value="regular">{t('lists.typeRegular')}</option>
               <option value="concert">{t('lists.typeConcert')}</option>
             </select>
-          </div>
+          </FormField>
           {listFormType === 'concert' && (
             <>
-              <div className="form-group">
-                <label className="form-label">{t('lists.concertDate')}</label>
+              <FormField label={t('lists.concertDate')}>
                 <input
                   type="date"
                   className="form-control"
                   value={listFormConcertDate}
                   onChange={(e) => setListFormConcertDate(e.target.value)}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('lists.concertLocation')}</label>
+              </FormField>
+              <FormField label={t('lists.concertLocation')}>
                 <input
                   type="text"
                   className="form-control"
@@ -786,7 +779,7 @@ export default function MusicListManager() {
                   onChange={(e) => setListFormConcertLocation(e.target.value)}
                   placeholder={t('lists.concertLocationPlaceholder')}
                 />
-              </div>
+              </FormField>
             </>
           )}
         </FormModal>

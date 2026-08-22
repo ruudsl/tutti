@@ -276,15 +276,13 @@ describe('de verkoopdata van een kaartsoort', () => {
   }
 
   /**
-   * De labels in dit formulier wijzen hun veld niet aan (geen `htmlFor`), dus
-   * `getByLabelText` vindt niets. Daarom via het label naar de omringende
-   * `form-group` en het invoerveld daarbinnen.
+   * Dit liep eerder via de omringende `form-group`, omdat de labels hun veld
+   * niet aanwezen en `getByLabelText` dus niets vond. Sinds de velden via
+   * `FormField` lopen, is het label wél aan het veld gekoppeld en kan het veld
+   * gewoon op zijn labeltekst opgezocht worden.
    */
   function veldBij(label: string): HTMLInputElement {
-    const groep = screen.getByText(label).closest('.form-group');
-    const veld = groep?.querySelector('input');
-    if (!veld) throw new Error(`geen invoerveld bij "${label}"`);
-    return veld as HTMLInputElement;
+    return screen.getByLabelText(label) as HTMLInputElement;
   }
 
   it('zet het tijdstip in het veld zoals de gebruiker het kent, niet in UTC', async () => {
@@ -313,5 +311,90 @@ describe('de verkoopdata van een kaartsoort', () => {
         }),
       ),
     );
+  });
+});
+
+/**
+ * De labels van de concertformulieren wezen hun veld niet aan: `<label
+ * className="form-label">` stond náást de `<input>`, zonder `htmlFor` en zonder
+ * `id`. Een schermlezer meldde dan wel een bewerkbaar veld maar niet waarvoor,
+ * een klik op het label zette de aanwijzer nergens, en een test kon het veld
+ * niet op naam vinden. De formulieren lopen nu via `FormField`.
+ *
+ * Eén veld doet het met de hand: de servicekosten hebben een hulptekst in
+ * dezelfde `form-group` staan en FormField neemt maar één kind aan. Dat veld
+ * staat hier apart in, want handwerk raakt eerder zoek dan een component.
+ */
+describe('de labels van de concertformulieren', () => {
+  beforeEach(() => {
+    vi.mocked(api.getConcerts).mockResolvedValue({ data: [CONCERT], total: 1, page: 1, limit: 50 });
+    vi.mocked(api.getConcert).mockResolvedValue({
+      ...CONCERT,
+      program: [],
+      media: [],
+      attendance: [],
+    });
+    vi.mocked(api.getConcertTickets).mockResolvedValue({
+      concert: {
+        id: CONCERT.id,
+        name: CONCERT.name,
+        date: CONCERT.date,
+        endDate: null,
+        location: CONCERT.location,
+        description: null,
+        concertType: null,
+      },
+      ticketTypes: [KAARTSOORT],
+      paymentMethods: [],
+    });
+  });
+
+  /** Opent het venster voor een nieuw concert via de knop in de kop. */
+  async function openConcertvenster(gebruiker: ReturnType<typeof userEvent.setup>): Promise<void> {
+    render(<Concerts />, { wrapper: wikkel });
+    await wachtTotGeladen();
+
+    // De knop staat twee keer op de pagina: in de kop en als zwevende knop
+    // voor smalle schermen.
+    await gebruiker.click(screen.getAllByRole('button', { name: 'concerts.newConcert' })[0]);
+    await screen.findByText('concerts.newConcert', { selector: 'h2, h3' });
+  }
+
+  it('vindt elk veld van het concertvenster op zijn labeltekst', async () => {
+    const gebruiker = userEvent.setup();
+    await openConcertvenster(gebruiker);
+
+    expect(screen.getByLabelText('concerts.concertName *')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('concerts.date *')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('concerts.endDate')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('concerts.location')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('concerts.concertType').tagName).toBe('SELECT');
+    expect(screen.getByLabelText('concerts.description').tagName).toBe('TEXTAREA');
+  });
+
+  it('zet de aanwijzer in het veld bij een klik op het label', async () => {
+    const gebruiker = userEvent.setup();
+    await openConcertvenster(gebruiker);
+
+    // De tabelkop draagt dezelfde tekst, dus hier gericht het label pakken.
+    await gebruiker.click(screen.getByText('concerts.location', { selector: 'label' }));
+    await gebruiker.keyboard('Dorpskerk');
+
+    expect(screen.getByLabelText('concerts.location')).toHaveValue('Dorpskerk');
+  });
+
+  it('koppelt de servicekosten met de hand, mét verwijzing naar de hulptekst', async () => {
+    const gebruiker = userEvent.setup();
+    render(<Concerts />, { wrapper: wikkel });
+    await wachtTotGeladen();
+
+    await gebruiker.click(screen.getByTestId('icon-eye').closest('button') as HTMLElement);
+    const rij = (await screen.findByText('Voorverkoop')).closest('tr') as HTMLElement;
+    await gebruiker.click(within(rij).getByTestId('icon-pencil').closest('button') as HTMLElement);
+    await screen.findByText('tickets.editTicketType');
+
+    const veld = screen.getByLabelText('tickets.ticketTypeServiceFee');
+    expect(veld).toHaveAttribute('id', 'ticket-service-fee');
+    expect(veld).toHaveAccessibleDescription('tickets.ticketTypeServiceFeeHelp');
   });
 });

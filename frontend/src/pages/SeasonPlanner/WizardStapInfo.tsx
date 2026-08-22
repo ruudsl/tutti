@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { SeasonTemplate } from '../../api';
 import type { WizardState } from './types';
 
@@ -27,8 +28,7 @@ export function WizardStapInfo({
     <div>
       <h2 className="card-title mb-3">{t('seasonPlanner.wizard.infoTitle')}</h2>
 
-      <div className="form-group">
-        <label className="form-label">{t('seasonPlanner.fields.name')} *</label>
+      <FormField label={<>{t('seasonPlanner.fields.name')} *</>}>
         <input
           type="text"
           className="form-control"
@@ -36,32 +36,29 @@ export function WizardStapInfo({
           onChange={(e) => setWizardState((prev) => ({ ...prev, name: e.target.value }))}
           placeholder={t('seasonPlanner.fields.namePlaceholder')}
         />
-      </div>
+      </FormField>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div className="form-group">
-          <label className="form-label">{t('seasonPlanner.fields.startDate')} *</label>
+        <FormField label={<>{t('seasonPlanner.fields.startDate')} *</>}>
           <input
             type="date"
             className="form-control"
             value={wizardState.startDate}
             onChange={(e) => setWizardState((prev) => ({ ...prev, startDate: e.target.value }))}
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('seasonPlanner.fields.endDate')} *</label>
+        </FormField>
+        <FormField label={<>{t('seasonPlanner.fields.endDate')} *</>}>
           <input
             type="date"
             className="form-control"
             value={wizardState.endDate}
             onChange={(e) => setWizardState((prev) => ({ ...prev, endDate: e.target.value }))}
           />
-        </div>
+        </FormField>
       </div>
 
       {templates.length > 0 && (
-        <div className="form-group">
-          <label className="form-label">{t('seasonPlanner.fields.template')}</label>
+        <FormField label={t('seasonPlanner.fields.template')}>
           <select
             className="form-control form-select"
             value={wizardState.templateId}
@@ -81,11 +78,10 @@ export function WizardStapInfo({
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
       )}
 
-      <div className="form-group">
-        <label className="form-label">{t('seasonPlanner.fields.budgetTotal')}</label>
+      <FormField label={t('seasonPlanner.fields.budgetTotal')}>
         <input
           type="number"
           className="form-control"
@@ -99,17 +95,16 @@ export function WizardStapInfo({
           placeholder="0.00"
           step="0.01"
         />
-      </div>
+      </FormField>
 
-      <div className="form-group">
-        <label className="form-label">{t('common.notes')}</label>
+      <FormField label={t('common.notes')}>
         <textarea
           className="form-control"
           value={wizardState.notes}
           onChange={(e) => setWizardState((prev) => ({ ...prev, notes: e.target.value }))}
           rows={3}
         />
-      </div>
+      </FormField>
     </div>
   );
 }

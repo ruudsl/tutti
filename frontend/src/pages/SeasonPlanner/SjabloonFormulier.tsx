@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import { WEEKDAYS } from './types';
 import type { TemplateFormState } from './types';
 
@@ -33,27 +34,24 @@ export function SjabloonFormulier({
         <h2 className="card-title">{t('seasonPlanner.newTemplate')}</h2>
       </div>
       <div className="card-body">
-        <div className="form-group">
-          <label className="form-label">{t('common.name')} *</label>
+        <FormField label={<>{t('common.name')} *</>}>
           <input
             type="text"
             className="form-control"
             value={templateForm.name}
             onChange={(e) => setTemplateForm((prev) => ({ ...prev, name: e.target.value }))}
           />
-        </div>
-        <div className="form-group">
-          <label className="form-label">{t('common.description')}</label>
+        </FormField>
+        <FormField label={t('common.description')}>
           <textarea
             className="form-control"
             value={templateForm.description}
             onChange={(e) => setTemplateForm((prev) => ({ ...prev, description: e.target.value }))}
             rows={2}
           />
-        </div>
+        </FormField>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">{t('seasonPlanner.fields.defaultRehearsalDay')}</label>
+          <FormField label={t('seasonPlanner.fields.defaultRehearsalDay')}>
             <select
               className="form-control form-select"
               value={templateForm.defaultRehearsalDay}
@@ -65,18 +63,16 @@ export function SjabloonFormulier({
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('seasonPlanner.fields.defaultRehearsalTime')}</label>
+          </FormField>
+          <FormField label={t('seasonPlanner.fields.defaultRehearsalTime')}>
             <input
               type="time"
               className="form-control"
               value={templateForm.defaultRehearsalTime}
               onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultRehearsalTime: e.target.value }))}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('seasonPlanner.fields.typicalConcerts')}</label>
+          </FormField>
+          <FormField label={t('seasonPlanner.fields.typicalConcerts')}>
             <input
               type="number"
               className="form-control"
@@ -84,17 +80,16 @@ export function SjabloonFormulier({
               onChange={(e) => setTemplateForm((prev) => ({ ...prev, typicalConcertsCount: Number(e.target.value) }))}
               min={0}
             />
-          </div>
+          </FormField>
         </div>
-        <div className="form-group">
-          <label className="form-label">{t('seasonPlanner.fields.defaultRehearsalLocation')}</label>
+        <FormField label={t('seasonPlanner.fields.defaultRehearsalLocation')}>
           <input
             type="text"
             className="form-control"
             value={templateForm.defaultRehearsalLocation}
             onChange={(e) => setTemplateForm((prev) => ({ ...prev, defaultRehearsalLocation: e.target.value }))}
           />
-        </div>
+        </FormField>
         <div className="flex gap-2 mt-3">
           <button className="btn btn-primary" onClick={onOpslaan} disabled={!templateForm.name || opslaanBezig}>
             {opslaanBezig ? t('common.loading') : t('common.save')}

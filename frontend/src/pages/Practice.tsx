@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import {
   getPracticeLogs,
@@ -27,6 +28,13 @@ export default function Practice() {
   useDocumentTitle('pageTitle.practice');
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+
+  // Twee blokken op deze pagina passen niet in FormField, dat precies één
+  // kindveld verwacht: bij de duur staan een schuifregelaar en een getalveld
+  // naast elkaar, en onder het zoekveld voor het stuk hangt de resultatenlijst.
+  // Die twee krijgen hier hun eigen id, dat het label met htmlFor aanwijst.
+  const duurVeldId = useId();
+  const stukZoekVeldId = useId();
 
   // Log practice form
   const [showLogForm, setShowLogForm] = useState(false);
@@ -275,8 +283,7 @@ export default function Practice() {
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              <div className="form-group">
-                <label className="form-label">{t('practice.goalType')}</label>
+              <FormField label={t('practice.goalType')}>
                 <select
                   className="form-control form-select"
                   value={goalType}
@@ -285,9 +292,8 @@ export default function Practice() {
                   <option value="daily">{t('practice.daily')}</option>
                   <option value="weekly">{t('practice.weekly')}</option>
                 </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('practice.targetMinutes')}</label>
+              </FormField>
+              <FormField label={t('practice.targetMinutes')}>
                 <input
                   type="number"
                   className="form-control"
@@ -297,7 +303,7 @@ export default function Practice() {
                   max={1440}
                   style={{ width: '100px' }}
                 />
-              </div>
+              </FormField>
               <button className="btn btn-primary" onClick={handleSetGoal} disabled={savingGoal}>
                 {savingGoal ? t('common.loading') : t('common.save')}
               </button>
@@ -551,8 +557,11 @@ export default function Practice() {
           }
         >
           <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label className="form-label">{t('practice.selectPiece')}</label>
+            <label className="form-label" htmlFor={stukZoekVeldId}>
+              {t('practice.selectPiece')}
+            </label>
             <input
+              id={stukZoekVeldId}
               type="text"
               className="form-control"
               placeholder={t('practice.searchPiece')}
@@ -601,7 +610,9 @@ export default function Practice() {
           </div>
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label className="form-label">{t('practice.duration')}</label>
+            <label className="form-label" htmlFor={duurVeldId}>
+              {t('practice.duration')}
+            </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="range"
@@ -613,6 +624,7 @@ export default function Practice() {
                 style={{ flex: 1 }}
               />
               <input
+                id={duurVeldId}
                 type="number"
                 className="form-control"
                 value={duration}
@@ -624,8 +636,7 @@ export default function Practice() {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label className="form-label">{t('practice.notes')}</label>
+          <FormField label={t('practice.notes')} style={{ marginBottom: '1rem' }}>
             <textarea
               className="form-control"
               value={notes}
@@ -633,7 +644,7 @@ export default function Practice() {
               rows={2}
               placeholder={t('practice.notesPlaceholder')}
             />
-          </div>
+          </FormField>
         </BottomSheet>
       ) : (
         showLogForm && (
@@ -655,8 +666,11 @@ export default function Practice() {
               </div>
               <div className="card-body">
                 <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label">{t('practice.selectPiece')}</label>
+                  <label className="form-label" htmlFor={stukZoekVeldId}>
+                    {t('practice.selectPiece')}
+                  </label>
                   <input
+                    id={stukZoekVeldId}
                     type="text"
                     className="form-control"
                     placeholder={t('practice.searchPiece')}
@@ -708,7 +722,9 @@ export default function Practice() {
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label">{t('practice.duration')}</label>
+                  <label className="form-label" htmlFor={duurVeldId}>
+                    {t('practice.duration')}
+                  </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input
                       type="range"
@@ -720,6 +736,7 @@ export default function Practice() {
                       style={{ flex: 1 }}
                     />
                     <input
+                      id={duurVeldId}
                       type="number"
                       className="form-control"
                       value={duration}
@@ -731,8 +748,7 @@ export default function Practice() {
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label">{t('practice.notes')}</label>
+                <FormField label={t('practice.notes')} style={{ marginBottom: '1rem' }}>
                   <textarea
                     className="form-control"
                     value={notes}
@@ -740,7 +756,7 @@ export default function Practice() {
                     rows={2}
                     placeholder={t('practice.notesPlaceholder')}
                   />
-                </div>
+                </FormField>
 
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                   <button className="btn btn-outline" onClick={() => setShowLogForm(false)}>

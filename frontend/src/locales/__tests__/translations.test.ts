@@ -60,6 +60,25 @@ function resolve(translations: unknown, key: string): unknown {
 }
 
 /**
+ * Bestaat de sleutel, meervoudsvormen meegerekend?
+ *
+ * Een sleutel met een aantal erbij staat niet onder zijn eigen naam in het
+ * vertaalbestand maar onder `_one` en `_other`: `sync.days_ago` is er als
+ * `sync.days_ago_one` en `sync.days_ago_other`. i18next kiest de juiste zodra
+ * het `count` binnenkrijgt, dus voor de gebruiker bestaat `sync.days_ago`
+ * gewoon. Zonder deze stap zou elke meervoudssleutel hier als gat binnenkomen -
+ * `modules.hiddenPages` stond daarom een tijdlang ten onrechte op de lijst
+ * hieronder.
+ *
+ * `_other` is genoeg om te kijken: dat is de vorm die elke taal heeft. Talen
+ * met meer vormen (`_few`, `_many`) hebben hem er ook, dus wie `_other` heeft
+ * heeft de sleutel.
+ */
+function bestaat(key: string): boolean {
+  return resolve(nl, key) !== undefined || resolve(nl, `${key}_other`) !== undefined;
+}
+
+/**
  * Leegt de regels die alleen commentaar zijn, met behoud van het regelnummer.
  *
  * In de uitleg boven `FormField` en `useConfirm` staat een voorbeeldaanroep met
@@ -114,92 +133,36 @@ describe('vertaalsleutels in de broncode', () => {
  *
  * Dit is bestaande achterstand, geen goedkeuring. Elke sleutel hieronder is een
  * plek waar de gebruiker de Engelse terugvalzin ziet, of - waar er geen
- * terugvalzin staat - de kale sleutel zelf. `locale` is de vervelendste van de
- * lijst: `pages/Availability.tsx` geeft de uitkomst door aan
- * `toLocaleDateString`, en die krijgt dus de letterlijke tekst 'locale' als
- * taalcode voorgeschoteld.
+ * terugvalzin staat - de kale sleutel zelf.
  *
  * De lijst staat hier zodat de controle hieronder vandaag groen is en morgen
  * rood wordt bij een níeuw gat. Wie een van deze sleutels vertaalt, haalt hem
  * hier weg; de tweede test hieronder dwingt dat af.
+ *
+ * Wat er nog op staat heeft steeds dezelfde reden: de aanroep zet de tekst zelf
+ * al in elkaar met een sjabloonstring als terugvalwaarde, en geeft er géén
+ * waarden bij. Een vertaling met {{...}} erin zou daar letterlijk als
+ * "{{title}}" op het scherm komen, en een vertaling zónder de waarden laat de
+ * gebruiker juist het enige weg wat de melding iets zegt - welke poster, welke
+ * setlijst, hoeveel minuten. Deze drie zijn dus pas te vertalen samen met een
+ * wijziging in het aanroepende bestand, en die valt buiten deze ronde:
+ *
+ *   pages/Concerts/PosterGeneratorTab.tsx:15
+ *     t('concerts.posterDownloaded', `Poster "${data.title}" gedownload als ...`)
+ *   pages/Concerts/SetlistBuilderTab.tsx:24
+ *     t('concerts.setlistSaved', `Setlist "${setlist.name}" opgeslagen`)
+ *   pages/Practice.tsx:213
+ *     t('practice.timerSessionEnded', `Oefensessie van ${durationMinutes} minuten...`)
+ *
+ * Twee sleutels zijn van de lijst gegaan zonder dat er een tekst bij kwam.
+ * `locale` wordt niet meer opgevraagd: `pages/Availability.tsx` gaf de uitkomst
+ * door aan `toLocaleDateString` en kreeg dus de letterlijke tekst 'locale' als
+ * taalcode voorgeschoteld; daar staat nu `currentLocale()`. En
+ * `modules.hiddenPages` stond er ten onrechte op - die bestaat al als
+ * `hiddenPages_one` en `hiddenPages_other`, wat `bestaat()` hierboven nu
+ * meerekent.
  */
-const ACHTERSTAND = [
-  'accessibility.sortable',
-  'captcha.javascriptRequired',
-  'captcha.verificationRequired',
-  'common.apply',
-  'common.deselectAll',
-  'common.dismiss',
-  'common.selectAll',
-  'common.showingOf',
-  'common.user',
-  'concerts.posterDownloaded',
-  'concerts.posterGenerator',
-  'concerts.setlistBuilder',
-  'concerts.setlistSaved',
-  'emailCampaigns.deliveredAt',
-  'emailCampaigns.openedAt',
-  'locale',
-  'memberDirectory.chat',
-  'memberDirectory.grid',
-  'memberDirectory.list',
-  'memberDirectory.sectionChat',
-  'modules.hiddenPages',
-  'myMusic.gridView',
-  'myMusic.swipeView',
-  'nav.mobileMenu',
-  'notifications.unread',
-  'offline.clearAll',
-  'offline.cleared',
-  'offline.deleted',
-  'offline.description',
-  'offline.manage',
-  'offline.manager',
-  'offline.noItems',
-  'offline.noItemsHint',
-  'offline.totalSize',
-  'practice.quickLog',
-  'practice.timerSessionEnded',
-  'predictions.factors.currentTrend',
-  'predictions.factors.daysUntilConcert',
-  'predictions.factors.historicalData',
-  'pwa.back_online',
-  'pwa.offline_data_available',
-  'pwa.pending_sync',
-  'rehearsals.attendanceDashboard',
-  'resources.categories.selectColor',
-  'resources.categories.selectIcon',
-  'search.title',
-  'settings.support.description',
-  'settings.support.title',
-  'shareTarget.error',
-  'shareTarget.failed',
-  'shareTarget.filesUploaded',
-  'shareTarget.noContent',
-  'shareTarget.processing',
-  'shareTarget.processingMessage',
-  'shareTarget.receivedText',
-  'shareTarget.success',
-  'sync.clear_offline_data',
-  'sync.confirm_clear',
-  'sync.days_ago',
-  'sync.error',
-  'sync.hours_ago',
-  'sync.just_now',
-  'sync.last_sync',
-  'sync.manual_sync',
-  'sync.minutes_ago',
-  'sync.never',
-  'sync.offline',
-  'sync.pending',
-  'sync.pending_changes',
-  'sync.synced',
-  'sync.syncing',
-  'tickets.offlineMode',
-  'tickets.onlineMode',
-  'workflows.actionType.add_to_group',
-  'workflows.actionType.remove_from_group',
-];
+const ACHTERSTAND = ['concerts.posterDownloaded', 'concerts.setlistSaved', 'practice.timerSessionEnded'];
 
 /**
  * WAT DEZE CONTROLE WEL EN NIET ZIET.
@@ -226,7 +189,7 @@ const ACHTERSTAND = [
  * het Duits, dan valt dat daar op.
  */
 describe('elke opgevraagde sleutel bestaat ook', () => {
-  const ontbrekend = calls.filter(({ key }) => resolve(nl, key) === undefined);
+  const ontbrekend = calls.filter(({ key }) => !bestaat(key));
 
   it('kent geen gat buiten de bekende achterstand', () => {
     const nieuw = ontbrekend
@@ -240,7 +203,7 @@ describe('elke opgevraagde sleutel bestaat ook', () => {
     // Een sleutel die inmiddels vertaald is hoort niet meer in de lijst. Zonder
     // deze test groeit de lijst wel maar krimpt hij nooit, en dan dekt hij op
     // den duur gaten af die allang gedicht zijn.
-    const overbodig = ACHTERSTAND.filter((key) => resolve(nl, key) !== undefined);
+    const overbodig = ACHTERSTAND.filter((key) => bestaat(key));
 
     expect(overbodig).toEqual([]);
   });
