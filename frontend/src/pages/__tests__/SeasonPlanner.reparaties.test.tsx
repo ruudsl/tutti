@@ -7,7 +7,9 @@
  *   - het budgetbedrag kwam bij het verkeerde concert terecht doordat de
  *     budgetstap op de index in de gefilterde lijst schreef;
  *   - de queries draaiden ook voor iemand die de pagina niet mag zien;
- *   - een mislukte afronding van de wizard liet niets op het scherm zien.
+ *   - een mislukte afronding van de wizard liet niets op het scherm zien;
+ *   - en een tweede poging na een mislukt genereren maakte een tweede seizoen
+ *     aan, want het al aangemaakte seizoen werd niet onthouden.
  */
 
 import '@testing-library/jest-dom';
@@ -246,5 +248,185 @@ describe('seizoensplanner - mislukte afronding van de wizard', () => {
 
     await waitFor(() => expect(api.generateSeasonEvents).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+});
+
+describe('seizoensplanner - een tweede poging maakt geen tweede seizoen', () => {
+  /**
+   * Loopt de wizard tot en met het overzicht en drukt daar op afronden.
+   *
+   * De naam en de periode zijn overal dezelfde, zodat de tests zich op het
+   * afronden kunnen richten.
+   */
+  async function loopWizardDoorEnRondAf(gebruiker: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await openWizardEnVulInfoIn(gebruiker);
+    for (let stap = 0; stap < 4; stap++) {
+      await gebruiker.click(volgendeKnop());
+    }
+
+    expect(await screen.findByText('seasonPlanner.wizard.reviewTitle')).toBeInTheDocument();
+    await gebruiker.click(screen.getByText('seasonPlanner.wizard.finish'));
+  }
+
+  // De kern van de reparatie. Het aanmaken lukt, het genereren niet: het
+  // seizoen staat dan al op de server. Drukt de gebruiker nog eens op
+  // afronden, dan hoort alleen het genereren overgedaan te worden. Zonder de
+  // reparatie begon de tweede poging weer bij het aanmaken en stonden er twee
+  // seizoenen met dezelfde naam en periode.
+  it('maakt het seizoen één keer aan als het genereren de eerste keer mislukt', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.generateSeasonEvents).mockRejectedValueOnce(new Error('Netwerkfout')).mockResolvedValue({
+      message: 'aangemaakt',
+      rehearsalCount: 0,
+      concertCount: 0,
+      rehearsalDates: [],
+      concertNames: [],
+    });
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Netwerkfout');
+
+    await gebruiker.click(screen.getByText('seasonPlanner.wizard.finish'));
+
+    await waitFor(() => expect(api.generateSeasonEvents).toHaveBeenCalledTimes(2));
+    expect(api.createSeason).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(api.generateSeasonEvents).mock.calls[1][0]).toBe('nieuw');
+  });
+
+  // En de gebruiker hoort na die geslaagde tweede poging in het seizoen te
+  // belanden dat de eerste poging al aanmaakte. De aanmaakroute geeft hier twee
+  // verschillende nummers terug: kwam de gebruiker in 'tweede' uit, dan is er
+  // toch een tweede seizoen aangemaakt. Zo stond het vóór de reparatie.
+  it('brengt de gebruiker na de geslaagde tweede poging in het al aangemaakte seizoen', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.createSeason)
+      .mockResolvedValueOnce({ id: 'eerste', message: 'aangemaakt' })
+      .mockResolvedValue({ id: 'tweede', message: 'aangemaakt' });
+    vi.mocked(api.generateSeasonEvents).mockRejectedValueOnce(new Error('Netwerkfout')).mockResolvedValue({
+      message: 'aangemaakt',
+      rehearsalCount: 0,
+      concertCount: 0,
+      rehearsalDates: [],
+      concertNames: [],
+    });
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Netwerkfout');
+
+    await gebruiker.click(screen.getByText('seasonPlanner.wizard.finish'));
+
+    // De detailweergave van dat ene seizoen: de wizard is weg en het seizoen
+    // wordt opgehaald.
+    await waitFor(() => expect(api.getSeason).toHaveBeenCalledWith('eerste'));
+    expect(api.getSeason).not.toHaveBeenCalledWith('tweede');
+    expect(await screen.findByText('Seizoen 2027')).toBeInTheDocument();
+    expect(screen.queryByText('seasonPlanner.wizard.reviewTitle')).not.toBeInTheDocument();
+  });
+
+  // Wie na de mislukking terugloopt en een ander seizoen gaat maken, hoort een
+  // nieuw seizoen te krijgen. Het onthouden nummer hoort dan niet gebruikt te
+  // worden: anders komen de evenementen in het seizoen van de vorige poging
+  // terecht.
+  //
+  // Deze twee tests waren groen vóór de reparatie - de oude code maakte immers
+  // altijd een nieuw seizoen aan. Ze staan er tegen de reparatie zelf: het
+  // onthouden nummer mag niet blijven plakken als de gebruiker opnieuw begint.
+  it('maakt een nieuw seizoen aan als naam of periode intussen veranderd is', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.createSeason)
+      .mockResolvedValueOnce({ id: 'eerste', message: 'aangemaakt' })
+      .mockResolvedValue({ id: 'tweede', message: 'aangemaakt' });
+    vi.mocked(api.generateSeasonEvents).mockRejectedValueOnce(new Error('Netwerkfout')).mockResolvedValue({
+      message: 'aangemaakt',
+      rehearsalCount: 0,
+      concertCount: 0,
+      rehearsalDates: [],
+      concertNames: [],
+    });
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Netwerkfout');
+
+    // Terug naar de eerste stap en een andere naam intypen.
+    for (let stap = 0; stap < 4; stap++) {
+      await gebruiker.click(knopMetTekst('common.previous'));
+    }
+    const naamveld = await screen.findByPlaceholderText('seasonPlanner.fields.namePlaceholder');
+    await gebruiker.clear(naamveld);
+    await gebruiker.type(naamveld, 'Seizoen 2028');
+
+    for (let stap = 0; stap < 4; stap++) {
+      await gebruiker.click(volgendeKnop());
+    }
+    await gebruiker.click(await screen.findByText('seasonPlanner.wizard.finish'));
+
+    await waitFor(() => expect(api.createSeason).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.createSeason).mock.calls[1][0]).toMatchObject({ name: 'Seizoen 2028' });
+    await waitFor(() => expect(api.generateSeasonEvents).toHaveBeenCalledTimes(2));
+    // De evenementen horen bij het tweede seizoen, niet bij het eerste.
+    expect(vi.mocked(api.generateSeasonEvents).mock.calls[1][0]).toBe('tweede');
+  });
+
+  // En wie de wizard verlaat en opnieuw begint, hoort ook een nieuw seizoen te
+  // krijgen, zelfs met precies dezelfde naam en periode.
+  it('vergeet het aangemaakte seizoen als de wizard gesloten en opnieuw geopend wordt', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.createSeason)
+      .mockResolvedValueOnce({ id: 'eerste', message: 'aangemaakt' })
+      .mockResolvedValue({ id: 'tweede', message: 'aangemaakt' });
+    vi.mocked(api.generateSeasonEvents).mockRejectedValueOnce(new Error('Netwerkfout')).mockResolvedValue({
+      message: 'aangemaakt',
+      rehearsalCount: 0,
+      concertCount: 0,
+      rehearsalDates: [],
+      concertNames: [],
+    });
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Netwerkfout');
+
+    await gebruiker.click(knopMetTekst('common.back'));
+    await loopWizardDoorEnRondAf(gebruiker);
+
+    await waitFor(() => expect(api.createSeason).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.generateSeasonEvents).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.generateSeasonEvents).mock.calls[1][0]).toBe('tweede');
+  });
+
+  // De melding zelf: staat het seizoen al op de server, dan moet dat erbij
+  // staan. Anders leest de gebruiker alleen dat er iets misging en snapt hij
+  // niet waarom zijn seizoen even later toch in de lijst staat.
+  it('zegt erbij dat het seizoen al aangemaakt is, en alleen dan', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.generateSeasonEvents).mockRejectedValue(new Error('Netwerkfout'));
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+
+    const melding = await screen.findByRole('alert');
+    expect(melding).toHaveTextContent('Netwerkfout');
+    expect(melding).toHaveTextContent('seasonPlanner.wizard.seasonAlreadyCreated');
+  });
+
+  it('zegt dat niet als het aanmaken zelf al mislukte', async () => {
+    const gebruiker = userEvent.setup();
+    vi.mocked(api.createSeason).mockRejectedValue(new Error('Server onbereikbaar'));
+
+    render(<SeasonPlanner />, { wrapper: wikkel });
+
+    await loopWizardDoorEnRondAf(gebruiker);
+
+    const melding = await screen.findByRole('alert');
+    expect(melding).toHaveTextContent('Server onbereikbaar');
+    expect(melding).not.toHaveTextContent('seasonPlanner.wizard.seasonAlreadyCreated');
   });
 });

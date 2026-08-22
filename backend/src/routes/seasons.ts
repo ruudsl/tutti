@@ -702,9 +702,37 @@ router.post(
 
     // Generate concerts
     if (generateConcerts && concerts && Array.isArray(concerts)) {
+      // Welke concerten staan er al binnen deze periode? Voor repetities gebeurt
+      // dit hierboven al; voor concerten stond het er niet, en dat maakte deze
+      // route maar half herhaalbaar.
+      //
+      // Dat is geen theoretisch geval. Het uitrollen gebeurt vanuit de wizard
+      // meteen na het aanmaken van het seizoen, en mislukt die tweede stap
+      // halverwege, dan is een nieuwe poging precies wat de gebruiker hoort te
+      // doen - de frontend moedigt hem daar sinds kort ook toe aan. Zonder deze
+      // controle leverde die tweede poging dubbele concerten op én werd
+      // budget_allocated er nog een keer bovenop geteld, zodat het toegewezen
+      // budget niet meer klopte met wat er in de agenda stond.
+      //
+      // Ontdubbeld wordt op naam plus datum binnen de vereniging, want dat is
+      // wat de wizard meestuurt en wat een mens als "hetzelfde concert" leest.
+      const bestaandeConcerten = db
+        .prepare(
+          `
+        SELECT name, date FROM concerts WHERE association_id = ? AND date >= ? AND date <= ?
+      `,
+        )
+        .all(req.user!.associationId, season.start_date, season.end_date) as { name: string; date: string }[];
+      const bestaandeSleutels = new Set(bestaandeConcerten.map((c) => `${c.name}\u0000${c.date}`));
+
       for (const concert of concerts) {
         if (!concert.name || !concert.date) continue;
         if (excludeSet.has(concert.date)) continue;
+        if (bestaandeSleutels.has(`${concert.name}\u0000${concert.date}`)) continue;
+
+        // Meteen bijhouden, zodat twee identieke concerten binnen één verzoek
+        // elkaar ook niet dubbel opleveren.
+        bestaandeSleutels.add(`${concert.name}\u0000${concert.date}`);
 
         const concertId = uuidv4();
         db.prepare(

@@ -2199,7 +2199,16 @@
     "invalidDate": "Bitte geben Sie ein gültiges Datum ein",
     "invalidNumber": "Bitte geben Sie eine gültige Zahl ein",
     "minLength": "Mindestens {{min}} Zeichen erforderlich",
-    "maxLength": "Maximal {{max}} Zeichen erlaubt"
+    "maxLength": "Maximal {{max}} Zeichen erlaubt",
+    "invalidType": "Bitte geben Sie einen gültigen Wert ein",
+    "invalidUrl": "Bitte geben Sie eine gültige Webadresse ein",
+    "invalidUuid": "Bitte geben Sie eine gültige ID ein",
+    "invalidFormat": "Bitte geben Sie den Wert im geforderten Format ein",
+    "invalidSelection": "Bitte wählen Sie eine der verfügbaren Optionen",
+    "minValue": "Bitte geben Sie einen Wert von mindestens {{min}} ein",
+    "maxValue": "Bitte geben Sie einen Wert von höchstens {{max}} ein",
+    "minItems": "Bitte wählen Sie mindestens {{min}} Einträge aus",
+    "maxItems": "Bitte wählen Sie höchstens {{max}} Einträge aus"
   },
   "equipment": {
     "title": "Ausrüstung",
@@ -5351,7 +5360,8 @@
       "noBudgetSet": "Kein Gesamtbudget festgelegt. Gehe zurück zu Schritt 1, um ein Budget festzulegen.",
       "rehearsalsToCreate": "Zu erstellende Proben",
       "concertsToCreate": "Zu erstellende Konzerte",
-      "plannedConcerts": "Geplante Konzerte"
+      "plannedConcerts": "Geplante Konzerte",
+      "seasonAlreadyCreated": "Die Saison selbst wurde bereits angelegt; nur das Erzeugen der Proben und Konzerte ist fehlgeschlagen. Ein erneuter Versuch legt keine zweite Saison an."
     },
     "fields": {
       "name": "Name",

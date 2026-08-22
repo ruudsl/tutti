@@ -62,6 +62,40 @@ export function SeizoenWizard({
    */
   const [afrondFout, setAfrondFout] = useState<string | null>(null);
 
+  /**
+   * Het seizoen dat al bij de server staat, met het kenmerk waarmee het daar
+   * is aangemaakt.
+   *
+   * Afronden zijn twee aanroepen achter elkaar: eerst het seizoen aanmaken, dan
+   * de evenementen erin genereren. Mislukte die tweede, dan sprong de code naar
+   * de catch en verdween het verse seizoensnummer, terwijl het seizoen op dat
+   * moment al op de server stond. Een tweede druk op afronden begon dus weer
+   * vooraan en maakte een tweede seizoen aan met dezelfde naam en dezelfde
+   * periode; drie keer drukken gaf drie seizoenen. Daarom wordt het nummer hier
+   * bewaard en doet een volgende poging alleen het genereren nog over.
+   *
+   * Er staat een kenmerk bij en niet alleen het nummer, want hergebruiken mag
+   * alleen zolang de gebruiker hetzelfde seizoen aan het maken is. Loopt hij na
+   * de mislukking terug naar stap 1 en typt hij een andere naam of periode, dan
+   * hoort daar een nieuw seizoen bij; gebruikten we het onthouden nummer dan
+   * toch, dan plakten we de evenementen aan het seizoen van de vorige poging -
+   * evenementen in een seizoen waar ze niet horen, en dat is erger dan het
+   * dubbele seizoen dat we net weghaalden. Het kenmerk is precies de tekstvorm
+   * van de velden die naar de aanmaakroute gaan, dus zodra daar iets aan
+   * verandert, wordt er weer een seizoen aangemaakt.
+   *
+   * Het seizoen van die eerste poging blijft dan wel staan, leeg en zonder
+   * evenementen. Dat laten we zo: het weggooien is een verwijdering die de
+   * gebruiker niet gevraagd heeft, en hij ziet het gewoon in de seizoenenlijst
+   * terug.
+   *
+   * De tweede manier om opnieuw te beginnen is de wizard verlaten en opnieuw
+   * openen. Die is vanzelf gedekt: SeasonPlanner koppelt de wizard dan los, en
+   * met de wizard verdwijnt ook deze toestand - net als de rest van de
+   * wizardgegevens.
+   */
+  const [aangemaaktSeizoen, setAangemaaktSeizoen] = useState<{ id: string; kenmerk: string } | null>(null);
+
   // Calculated rehearsal preview
   const rehearsalPreview = useMemo(() => {
     if (!wizardState.startDate || !wizardState.endDate || !wizardState.generateRehearsals) {
@@ -168,22 +202,34 @@ export function SeizoenWizard({
 
   const handleFinishWizard = async () => {
     setAfrondFout(null);
+
+    const seizoensgegevens = {
+      name: wizardState.name,
+      startDate: wizardState.startDate,
+      endDate: wizardState.endDate,
+      templateId: wizardState.templateId || undefined,
+      budgetTotal: wizardState.budgetTotal || undefined,
+      notes: wizardState.notes || undefined,
+    };
+    const kenmerk = JSON.stringify(seizoensgegevens);
+
+    // Al een seizoen van een vorige poging, en gaat het nog om hetzelfde
+    // seizoen? Dan is aanmaken al gebeurd en hoeft alleen het genereren nog.
+    let seizoenId = aangemaaktSeizoen && aangemaaktSeizoen.kenmerk === kenmerk ? aangemaaktSeizoen.id : null;
+
     try {
       // Create the season
-      const result = await createSeason.mutateAsync({
-        name: wizardState.name,
-        startDate: wizardState.startDate,
-        endDate: wizardState.endDate,
-        templateId: wizardState.templateId || undefined,
-        budgetTotal: wizardState.budgetTotal || undefined,
-        notes: wizardState.notes || undefined,
-      });
+      if (!seizoenId) {
+        const result = await createSeason.mutateAsync(seizoensgegevens);
+        seizoenId = result.id;
+        setAangemaaktSeizoen({ id: result.id, kenmerk });
+      }
 
       // Generate events
       const validConcerts = wizardState.concerts.filter((c) => c.name && c.date);
 
       await generateEvents.mutateAsync({
-        seasonId: result.id,
+        seasonId: seizoenId,
         params: {
           generateRehearsals: wizardState.generateRehearsals,
           generateConcerts: wizardState.generateConcerts && validConcerts.length > 0,
@@ -197,12 +243,17 @@ export function SeizoenWizard({
         },
       });
 
-      onKlaar(result.id);
+      onKlaar(seizoenId);
     } catch (error) {
       // De toast komt van de mutatie zelf; hier blijft de melding staan zolang
       // de gebruiker op de overzichtsstap is, zodat zichtbaar is dat er iets
       // misging en wat.
-      setAfrondFout(getErrorMessage(error));
+      //
+      // Staat het seizoen al op de server, dan komt daar een zin bij. Anders
+      // leest de gebruiker alleen dat er iets misging, ziet hij zijn seizoen
+      // even later toch in de lijst staan en begrijpt hij er niets van.
+      const melding = getErrorMessage(error);
+      setAfrondFout(seizoenId ? `${melding} ${t('seasonPlanner.wizard.seasonAlreadyCreated')}` : melding);
     }
   };
 
