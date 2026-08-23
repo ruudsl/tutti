@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { EntityType, FieldType, FieldValueMeta, getFieldValues, setFieldValues } from '../api/custom-fields';
@@ -148,6 +148,12 @@ export function CustomFieldFormSection({
   const [localValues, setLocalValues] = useState<Record<string, any>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
+  // De laatst ingevulde waarden, buiten de tekening om. De tijdklok van het
+  // vanzelf opslaan leest hieruit, want wat in de sluiting van `handleChange`
+  // staat is een momentopname van voor de wijziging.
+  const laatsteWaarden = useRef<Record<string, any>>({});
+  const opslaanKlok = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ['custom-field-values', entityType, entityId],
     queryFn: () => getFieldValues(entityType, entityId),
@@ -156,10 +162,23 @@ export function CustomFieldFormSection({
 
   useEffect(() => {
     if (data) {
+      laatsteWaarden.current = data.values;
       setLocalValues(data.values);
       setHasChanges(false);
     }
   }, [data]);
+
+  // Een lopende tijdklok hoort niet af te gaan als het formulier al van het
+  // scherm is; anders vertrekt er een seconde na het sluiten alsnog een
+  // opslagverzoek.
+  useEffect(() => {
+    return () => {
+      if (opslaanKlok.current) {
+        clearTimeout(opslaanKlok.current);
+        opslaanKlok.current = null;
+      }
+    };
+  }, []);
 
   const saveMutation = useMutation({
     mutationFn: (values: Record<string, any>) => setFieldValues(entityType, entityId, values),
@@ -175,14 +194,25 @@ export function CustomFieldFormSection({
   });
 
   const handleChange = (key: string, value: any) => {
-    setLocalValues((prev) => ({ ...prev, [key]: value }));
+    const volgende = { ...laatsteWaarden.current, [key]: value };
+    laatsteWaarden.current = volgende;
+    setLocalValues(volgende);
     setHasChanges(true);
 
     if (autoSave) {
-      const timeoutId = setTimeout(() => {
-        saveMutation.mutate({ ...localValues, [key]: value });
+      // Wachten tot het typen een seconde stilligt. De vorige klok moet dus
+      // weg: hier stond `return () => clearTimeout(timeoutId)`, maar een
+      // gewone afhandelaar is geen effect en React doet niets met wat eruit
+      // komt. Er werd nooit iets afgebroken, dus elke toetsaanslag stuurde een
+      // eigen opslagverzoek - en elk van die verzoeken vertrok met de
+      // momentopname van de waarden van voor die toetsaanslag.
+      if (opslaanKlok.current) {
+        clearTimeout(opslaanKlok.current);
+      }
+      opslaanKlok.current = setTimeout(() => {
+        opslaanKlok.current = null;
+        saveMutation.mutate(laatsteWaarden.current);
       }, 1000);
-      return () => clearTimeout(timeoutId);
     }
   };
 
