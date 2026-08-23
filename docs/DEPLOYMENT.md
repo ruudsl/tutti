@@ -29,8 +29,14 @@
    - **Region:** Frankfurt (EU Central)
    - **Root Directory:** `backend`
    - **Runtime:** Node
-   - **Build Command:** `npm install && npm run build`
+   - **Build Command:** `npm install --include=dev && npm run build`
    - **Start Command:** `npm start`
+
+   `--include=dev` is geen overbodigheid. Hieronder staat `NODE_ENV` op
+   `production`, en daarmee laat `npm install` de devDependencies weg. De
+   build is `tsc`, en typescript staat juist daar. Zonder deze vlag valt de
+   build om met `tsc: not found` — en pas bij de eerstvolgende schone
+   install, dus lang nadat je de instelling koos.
 
 5. **Add Environment Variables:**
 
@@ -88,18 +94,18 @@ op een tweede service levert een kopie op die naar dezelfde database wijst.
 
 Neem de instellingen over van de productie-service, met deze verschillen:
 
-| Instelling        | Waarde                                                              |
-| ----------------- | ------------------------------------------------------------------- |
-| Name              | `harmonie-staging`                                                  |
-| Branch            | `main`                                                              |
-| Root Directory    | `backend`                                                           |
-| Build Command     | `cp ../CHANGELOG*.md . && npm install && npm run build`             |
-| Start Command     | `npm start`                                                         |
-| Health Check Path | `/api/health`                                                       |
-| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer |
-| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                              |
-| `DB_PATH`         | een eigen pad, nooit dat van productie                              |
-| `FRONTEND_URL`    | de staging-URL van de frontend                                      |
+| Instelling        | Waarde                                                                |
+| ----------------- | --------------------------------------------------------------------- |
+| Name              | `harmonie-staging`                                                    |
+| Branch            | `main`                                                                |
+| Root Directory    | `backend`                                                             |
+| Build Command     | `cp ../CHANGELOG*.md . && npm install --include=dev && npm run build` |
+| Start Command     | `npm start`                                                           |
+| Health Check Path | `/api/health`                                                         |
+| Auto-Deploy       | **Off** — de workflow start de uitrol, anders gebeurt het twee keer   |
+| `JWT_SECRET`      | **een nieuwe**, `openssl rand -hex 32`                                |
+| `DB_PATH`         | een eigen pad, nooit dat van productie                                |
+| `FRONTEND_URL`    | de staging-URL van de frontend                                        |
 
 Twee daarvan zijn geen smaakkwestie. **Auto-Deploy uit**, anders rolt Render zelf
 óók uit bij elke push en gebeurt het twee keer; die twee lopen elkaar in de weg.

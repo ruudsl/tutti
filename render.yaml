@@ -10,7 +10,7 @@
 # Of handmatig:
 # 1. New → Web Service → Connect repo
 # 2. Root Directory: backend
-# 3. Build Command: npm install && npm run build
+# 3. Build Command: npm install --include=dev && npm run build
 # 4. Start Command: npm start
 # 5. Voeg Environment Variables toe (zie onder)
 # 6. Voeg een Disk toe: /opt/render/project/data (1 GB)
@@ -22,7 +22,11 @@ services:
     region: frankfurt
     plan: free
     rootDir: backend
-    buildCommand: cp ../CHANGELOG*.md . && npm install && npm run build
+    # --include=dev is geen overbodigheid: NODE_ENV hieronder staat op
+    # production, en daarmee laat npm de devDependencies weg. De build is
+    # `tsc`, en typescript staat juist daar. Zonder deze vlag valt de build
+    # om met `tsc: not found`, en pas bij de eerstvolgende schone install.
+    buildCommand: cp ../CHANGELOG*.md . && npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
