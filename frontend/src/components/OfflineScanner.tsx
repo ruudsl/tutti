@@ -3,8 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
 import { Icon } from './Icon';
 import { isIndexedDBAvailable } from '../lib/offlineStorage';
-import { getOfflineTickets, syncOfflineScans } from '../api/ticket-scanning';
+import {
+  getOfflineTickets,
+  syncOfflineScans,
+  type OfflineTicket,
+  type OfflineScanWaarschuwing,
+} from '../api/ticket-scanning';
 import { validateTicket } from '../api/tickets';
+
+// De voorraad kwam eerder in twee vormen voor: één hier en één in
+// api/ticket-scanning.ts. Toen de server minder velden ging meesturen liep dat
+// meteen uit elkaar, en de scanner leek velden te tonen die er niet meer waren.
+// Er is nu één beschrijving; deze re-export houdt de bestaande invoer werkend.
+export type { OfflineTicket };
 
 export interface OfflineScannerProps {
   concertId: string;
@@ -18,15 +29,6 @@ export interface ScanResult {
   message: string;
 }
 
-export interface OfflineTicket {
-  qrCode: string;
-  buyerName: string;
-  ticketType: string;
-  status: 'valid' | 'used';
-  seatInfo?: string;
-  usedAt?: string;
-}
-
 interface OfflineScan {
   id: string;
   qrCode: string;
@@ -34,6 +36,16 @@ interface OfflineScan {
   result: string;
   synced: boolean;
 }
+
+/**
+ * Vanaf wanneer een opgehaalde voorraad als verouderd geldt.
+ *
+ * Er wordt niets geweigerd als die grens voorbij is: aan de deur is een oude
+ * lijst altijd beter dan geen lijst. Er staat alleen een melding bij, want een
+ * kaart die ná het ophalen is verkocht staat er niet in en wordt dan onterecht
+ * als onbekend afgewezen.
+ */
+const VOORRAAD_HOUDBAAR_MS = 24 * 60 * 60 * 1000;
 
 const DB_NAME = 'harmonie-offline-scanner';
 const DB_VERSION = 1;
@@ -51,6 +63,11 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [scanInput, setScanInput] = useState('');
   const [opslagOnbruikbaar, setOpslagOnbruikbaar] = useState(false);
+  // De botsingen die de server bij het nasturen terugmeldde. Ze blijven op het
+  // scherm staan in plaats van als melding voorbij te schieten: iemand moet ze
+  // ná afloop nog kunnen nalopen.
+  const [scanBotsingen, setScanBotsingen] = useState<OfflineScanWaarschuwing[]>([]);
+  const [voorraadVerouderd, setVoorraadVerouderd] = useState(false);
   const dbRef = useRef<IDBDatabase | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -128,6 +145,25 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
     };
   }, [t]);
 
+  /**
+   * Bepaalt of de opgehaalde lijst te oud is om nog op te vertrouwen.
+   *
+   * Er wordt niets geblokkeerd als dat zo is: aan de deur is een oude lijst
+   * beter dan geen lijst. Er komt alleen een melding bij, want een kaart die ná
+   * het ophalen is verkocht staat er niet in en wordt dan onterecht geweigerd.
+   */
+  const beoordeelVoorraad = useCallback((samengesteldOp: string | null) => {
+    setVoorraadVerouderd(!!samengesteldOp && Date.now() - new Date(samengesteldOp).getTime() > VOORRAAD_HOUDBAAR_MS);
+  }, []);
+
+  // De scanner staat een hele avond open en de lijst wordt intussen vanzelf
+  // ouder. Zonder deze tikker verschijnt de melding pas bij de eerstvolgende
+  // keer dat er iets anders verandert - op een rustig moment een half uur later.
+  useEffect(() => {
+    const tikker = setInterval(() => beoordeelVoorraad(lastSync), 60 * 1000);
+    return () => clearInterval(tikker);
+  }, [lastSync, beoordeelVoorraad]);
+
   const loadOfflineData = useCallback(() => {
     if (!dbRef.current) return;
 
@@ -153,8 +189,9 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
     const storedLastSync = localStorage.getItem(`offline-scanner-last-sync-${concertId}`);
     if (storedLastSync) {
       setLastSync(storedLastSync);
+      beoordeelVoorraad(storedLastSync);
     }
-  }, [concertId]);
+  }, [concertId, beoordeelVoorraad]);
 
   const downloadTickets = async () => {
     if (!isOnline) {
@@ -187,9 +224,14 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
       }
 
       tx.oncomplete = () => {
-        const now = new Date().toISOString();
-        localStorage.setItem(`offline-scanner-last-sync-${concertId}`, now);
-        setLastSync(now);
+        // Het tijdstip komt van de server en niet van deze telefoon. De
+        // waarschuwing over een verouderde voorraad hangt er rechtstreeks aan,
+        // en een geleende telefoon met een verkeerd ingestelde klok zou die
+        // waarschuwing anders altijd of nooit laten zien.
+        const samengesteldOp = data.generatedAt ?? new Date().toISOString();
+        localStorage.setItem(`offline-scanner-last-sync-${concertId}`, samengesteldOp);
+        setLastSync(samengesteldOp);
+        beoordeelVoorraad(samengesteldOp);
         setTickets(data.tickets);
         showSuccess(t('offlineScanner.downloadComplete', { count: data.tickets.length }));
       };
@@ -286,11 +328,13 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
           // bij past valt terug op "niet gevonden", zoals voorheen ook gebeurde
           // voor alles wat geen 'valid' of 'used' was.
           status: data.status === 'valid' || data.status === 'used' ? data.status : 'not_found',
+          // Alleen wat dit scherm gebruikt. De server stuurt online meer mee -
+          // naam van de koper, kaartsoort - maar dat wordt hier nergens
+          // getoond, en het zou via de offline-voorraad op het apparaat
+          // achterblijven.
           ticket: data.ticket
             ? {
                 qrCode: data.ticket.code,
-                buyerName: data.ticket.buyerName,
-                ticketType: data.ticket.ticketType,
                 status: data.ticket.usedAt ? 'used' : 'valid',
                 usedAt: data.ticket.usedAt,
               }
@@ -299,7 +343,14 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
         };
       } catch {
         result = validateTicketOffline(cleanCode);
-        markTicketUsedLocally(cleanCode);
+        // Alleen een kaart die de offline-controle goedkeurde gaat lokaal op
+        // 'gebruikt'. Deze tak deed dat eerder ook bij een onbekende of al
+        // gebruikte kaart, anders dan de offline tak hieronder: het tijdstip
+        // van de eerste scan werd dan overschreven door dat van de weigering,
+        // en daarmee was niet meer te zien wanneer de bezoeker echt binnenkwam.
+        if (result.valid) {
+          markTicketUsedLocally(cleanCode);
+        }
         queueScan(cleanCode, result.status);
       }
     } else {
@@ -328,7 +379,12 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
 
     setIsSyncing(true);
     try {
-      await syncOfflineScans(concertId, pendingScans);
+      const uitslag = await syncOfflineScans(concertId, pendingScans);
+
+      // Botsingen blijven staan tot de volgende poging. Ze zijn geen fout: de
+      // scan is verwerkt, maar een tweede scanner was er eerder of later bij,
+      // en dat hoort iemand ná afloop te kunnen nakijken.
+      setScanBotsingen(uitslag?.warnings ?? []);
 
       if (dbRef.current) {
         const tx = dbRef.current.transaction(SCANS_STORE, 'readwrite');
@@ -364,6 +420,23 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
   const validTickets = tickets.filter((t) => t.status === 'valid').length;
   const usedTickets = tickets.filter((t) => t.status === 'used').length;
 
+  const voorraadSamengesteldOp = lastSync ? new Date(lastSync) : null;
+
+  const tijdstip = (moment?: string) => (moment ? new Date(moment).toLocaleString() : '?');
+
+  const botsingTekst = (botsing: OfflineScanWaarschuwing): string => {
+    switch (botsing.reason) {
+      case 'earlier_scan_kept':
+        return t('offlineScanner.conflictKeptEarlier', { code: botsing.code, time: tijdstip(botsing.keptScanAt) });
+      case 'offline_scan_kept':
+        return t('offlineScanner.conflictOfflineKept', { code: botsing.code, time: tijdstip(botsing.keptScanAt) });
+      case 'refused_offline':
+        return t('offlineScanner.conflictRefusedOffline', { code: botsing.code });
+      default:
+        return t('offlineScanner.conflictNotProcessed', { code: botsing.code, reason: botsing.message });
+    }
+  };
+
   return (
     <div className="offline-scanner card">
       <div className="card-body">
@@ -378,6 +451,12 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
         {opslagOnbruikbaar && (
           <div className="alert alert-danger mb-4" role="alert">
             {t('offlineScanner.storageUnavailable')}
+          </div>
+        )}
+
+        {voorraadVerouderd && voorraadSamengesteldOp && (
+          <div className="alert alert-warning mb-4">
+            {t('offlineScanner.stockStale', { time: voorraadSamengesteldOp.toLocaleString() })}
           </div>
         )}
 
@@ -429,6 +508,22 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
                 {isSyncing ? t('common.loading') : t('offlineScanner.syncNow')}
               </button>
             </div>
+          </div>
+        )}
+
+        {scanBotsingen.length > 0 && (
+          <div className="alert alert-warning mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <strong>{t('offlineScanner.conflictsTitle', { count: scanBotsingen.length })}</strong>
+              <button className="btn btn-sm btn-outline" onClick={() => setScanBotsingen([])}>
+                {t('common.close')}
+              </button>
+            </div>
+            <ul className="mb-0">
+              {scanBotsingen.map((botsing) => (
+                <li key={botsing.id}>{botsingTekst(botsing)}</li>
+              ))}
+            </ul>
           </div>
         )}
 

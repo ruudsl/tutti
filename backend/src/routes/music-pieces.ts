@@ -17,6 +17,7 @@ import {
   bulkDeletePiecesSchema,
 } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
+import { bijlageKopregel } from '../utils/contentDisposition';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 import { notifyOrchestra } from './notifications';
@@ -1730,12 +1731,11 @@ router.get(
       throw new ApiError(404, 'Geen MusicXML bestand opgeslagen voor deze titel.');
     }
 
-    // Sanitize filename
-    const safeTitle = metadata.title.replace(/[^a-zA-Z0-9-_\s]/g, '').substring(0, 50);
-    const filename = `${safeTitle}.musicxml`;
-
+    // Het kaalslaan van de titel (`[^a-zA-Z0-9-_\s]` eruit) kan weg nu de
+    // kodering klopt: dat leverde bij "Espanita" met tilde "Espaita" op, en bij
+    // een titel in bijvoorbeeld Cyrillisch alleen nog ".musicxml".
     res.setHeader('Content-Type', 'application/vnd.recordare.musicxml+xml');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(`${metadata.title}.musicxml`, 'titel.musicxml'));
     res.send(metadata.musicxml_raw);
   }),
 );
@@ -3115,7 +3115,9 @@ router.post(
     const timestamp = new Date().toISOString().slice(0, 10);
     const zipFilename = `muziekstukken-export-${timestamp}.zip`;
 
-    // Send ZIP file
+    // Deze naam is een vaste tekst met een datum erin en bevat geen invoer van
+    // de gebruiker, dus hier valt niets te verminken; bijlageKopregel is hier
+    // niet nodig. Komt er ooit een titel in de naam, dan wel.
     res.set({
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="${zipFilename}"`,
@@ -3230,10 +3232,12 @@ router.post(
     // Add metadata file
     zip.addFile('metadata.json', Buffer.from(JSON.stringify(metadata, null, 2), 'utf8'));
 
-    // Generate safe filename
-    const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    // `[^a-zA-Z0-9]` vervangen door een liggend streepje maakte van
+    // "Fruhlingsstimmen" met umlaut "Fr_hlingsstimmen" en van elke spatie ook
+    // een streepje. Dat kan weg nu de kodering klopt; het weren van stuurtekens
+    // - title komt hier rechtstreeks uit req.body - doet bijlageKopregel zelf.
     const timestamp = new Date().toISOString().slice(0, 10);
-    const zipFilename = `${safeTitle}-${timestamp}.zip`;
+    const zipFilename = `${title}-${timestamp}.zip`;
 
     // Sanitize user input for log safety (prevent log injection via CR/LF)
     const safeTitleForLog = String(title).replace(/[\r\n]/g, '');
@@ -3243,7 +3247,7 @@ router.post(
 
     res.set({
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="${zipFilename}"`,
+      'Content-Disposition': bijlageKopregel(zipFilename, `export-${timestamp}.zip`),
     });
 
     res.send(zip.toBuffer());

@@ -2763,7 +2763,13 @@
     "ticketNotFound": "Ticket not found",
     "alreadyUsed": "Already used at {{time}}",
     "validTicket": "Valid ticket!",
-    "storageUnavailable": "This browser’s offline storage is unavailable. Tickets cannot be downloaded in advance and scans are not stored — use another browser or allow site data."
+    "storageUnavailable": "This browser’s offline storage is unavailable. Tickets cannot be downloaded in advance and scans are not stored — use another browser or allow site data.",
+    "stockStale": "The downloaded ticket list is from {{time}} and therefore over 24 hours old. Scanning still works, but tickets sold after that are missing — download the list again once you have a connection.",
+    "conflictsTitle": "{{count}} scan(s) clashed with a scan from another device",
+    "conflictKeptEarlier": "{{code}}: already scanned at {{time}}; that earlier scan is kept.",
+    "conflictOfflineKept": "{{code}}: your scan at {{time}} was the first and now counts; the later scan was replaced.",
+    "conflictRefusedOffline": "{{code}}: refused at the door, but this ticket is valid — the offline list was out of date.",
+    "conflictNotProcessed": "{{code}}: not marked as used ({{reason}})."
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",

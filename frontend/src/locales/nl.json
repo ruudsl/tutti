@@ -3938,7 +3938,13 @@
     "ticketNotFound": "Ticket niet gevonden",
     "alreadyUsed": "Ticket al gebruikt om {{time}}",
     "validTicket": "Ticket is geldig",
-    "storageUnavailable": "De offline-opslag van deze browser is niet beschikbaar. Kaarten kunnen niet vooraf worden opgehaald en scans worden niet bewaard - gebruik een andere browser of zet sitegegevens aan."
+    "storageUnavailable": "De offline-opslag van deze browser is niet beschikbaar. Kaarten kunnen niet vooraf worden opgehaald en scans worden niet bewaard - gebruik een andere browser of zet sitegegevens aan.",
+    "stockStale": "De opgehaalde kaartlijst is van {{time}} en dus ouder dan 24 uur. Scannen werkt gewoon door, maar kaarten die daarna zijn verkocht staan er niet in - haal de lijst opnieuw op zodra er verbinding is.",
+    "conflictsTitle": "{{count}} scan(s) botsten met een scan door een ander apparaat",
+    "conflictKeptEarlier": "{{code}}: was al gescand om {{time}}; die eerdere scan blijft staan.",
+    "conflictOfflineKept": "{{code}}: jouw scan om {{time}} was de eerste en telt nu; de latere scan is vervangen.",
+    "conflictRefusedOffline": "{{code}}: aan de deur geweigerd, maar deze kaart is geldig - de offline lijst was verouderd.",
+    "conflictNotProcessed": "{{code}}: niet afgestempeld ({{reason}})."
   },
   "predictions": {
     "title": "Verkoopvoorspelling",

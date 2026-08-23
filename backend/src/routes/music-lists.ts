@@ -15,6 +15,7 @@ import {
   reorderPiecesInListSchema,
 } from '../validation/schemas';
 import { withTransaction } from '../utils/database';
+import { bijlageKopregel } from '../utils/contentDisposition';
 import logger from '../utils/logger';
 import { logAuditEvent } from './audit-logs';
 
@@ -489,9 +490,12 @@ router.get(
       return res.status(404).json({ error: 'Geen bestanden gevonden voor deze lijst.' });
     }
 
-    const safeName = list.name.replace(/[/\\?%*:|"<>]/g, '_');
+    // De naam van de lijst ging hier ongefilterd de kopregel in. Bij een lijst
+    // "Cafe Chantant" (met e-accent) kreeg de gebruiker "Caf\uFFFD Chantant.zip"
+    // aangeboden; bij "Dvorak" (met r-hacek) mislukte de download helemaal met
+    // een 500, omdat Node dat teken niet in een kopregel wil schrijven.
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.zip"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(`${list.name}.zip`, 'muzieklijst.zip'));
 
     const archive = archiver('zip', { zlib: { level: 5 } });
     archive.pipe(res);
@@ -1354,9 +1358,11 @@ router.get(
 
     const pdfBytes = await pdfDoc.save();
 
-    const filename = `${list.name.replace(/[^a-zA-Z0-9\s-]/g, '').trim()}.pdf`;
+    // Het kaalslaan van de naam (`[^a-zA-Z0-9\s-]` eruit) kan weg nu de kodering
+    // klopt: dat maakte van "Fruhlingsstimmen" met umlaut "Frhlingsstimmen", en
+    // van een lijst met alleen niet-ASCII tekens in de naam ".pdf".
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', bijlageKopregel(`${list.name}.pdf`, 'programma.pdf'));
     res.send(Buffer.from(pdfBytes));
   }),
 );

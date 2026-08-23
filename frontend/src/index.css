@@ -148,7 +148,26 @@
   border: 0;
 }
 
-/* Form error states with enhanced visibility */
+/* Afgekeurde velden.
+ *
+ * Twee selectors voor hetzelfde uiterlijk, en dat is met opzet:
+ *
+ * - [aria-invalid='true'] is het kenmerk dat ook in de toegankelijkheidsboom
+ *   belandt. Dat is de enige van de twee die een schermlezer iets vertelt.
+ * - .has-error is puur visueel en zegt een schermlezer niets.
+ *
+ * Beide blijven omdat useFormValidation .has-error rechtstreeks op het element
+ * zet wanneer hij naar het eerste foute veld springt. Bij een formulier dat door
+ * React getekend wordt is dat een dubbeling van wat de JSX toch al zet (zie
+ * veldKenmerken in hooks/useFormValidation.ts); bij een formulier dat niet door
+ * React getekend wordt, is het de enige markering die er komt. Zonder deze
+ * regels zou zo'n veld dus helemaal niet rood worden.
+ *
+ * Er stond hier eerder geen enkele regel voor .is-invalid, terwijl drie
+ * formulieren die klasse wél zetten. Die velden werden dus niet eens rood - de
+ * fout was alleen te zien aan de tekst eronder. Sinds die formulieren
+ * aria-invalid zetten komt .is-invalid nergens meer voor.
+ */
 .form-control.has-error,
 .form-control[aria-invalid='true'],
 input.has-error,

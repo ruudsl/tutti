@@ -72,9 +72,20 @@ export const getMyConsents = async (): Promise<PrivacyConsent[]> => {
   return data;
 };
 
+/**
+ * Legt vast dat dit lid met deze versie van de privacyverklaring akkoord is.
+ *
+ * `id` is optioneel, en dat is geen slordigheid: de server heeft twee
+ * antwoorden. Bij een nieuwe toestemming komt er 201 met een id terug, maar
+ * had het lid al eerder met deze versie ingestemd, dan antwoordt hij met
+ * 200 en alleen `{ message, alreadyConsented: true }` - zonder id. Zolang het
+ * type een id beloofde, kon een aanroeper dat zonder klacht van de compiler
+ * doorgeven, om het pas in de praktijk als `undefined` terug te zien op de
+ * plek waar het gebruikt werd.
+ */
 export const recordConsent = async (
   consentVersion: string,
-): Promise<{ id: string; message: string; alreadyConsented?: boolean }> => {
+): Promise<{ id?: string; message: string; alreadyConsented?: boolean }> => {
   const { data } = await api.post('/privacy-settings/consent', { consentVersion });
   return data;
 };

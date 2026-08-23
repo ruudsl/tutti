@@ -4041,7 +4041,13 @@
     "ticketNotFound": "Ticket nicht gefunden",
     "alreadyUsed": "Bereits verwendet um {{time}}",
     "validTicket": "Gültiges Ticket!",
-    "storageUnavailable": "Der Offline-Speicher dieses Browsers ist nicht verfügbar. Tickets können nicht im Voraus geladen werden und Scans werden nicht gespeichert – nutze einen anderen Browser oder erlaube Websitedaten."
+    "storageUnavailable": "Der Offline-Speicher dieses Browsers ist nicht verfügbar. Tickets können nicht im Voraus geladen werden und Scans werden nicht gespeichert – nutze einen anderen Browser oder erlaube Websitedaten.",
+    "stockStale": "Die geladene Ticketliste ist vom {{time}} und damit älter als 24 Stunden. Das Scannen funktioniert weiter, aber danach verkaufte Tickets fehlen – lade die Liste erneut, sobald eine Verbindung besteht.",
+    "conflictsTitle": "{{count}} Scan(s) kollidierten mit einem Scan von einem anderen Gerät",
+    "conflictKeptEarlier": "{{code}}: wurde bereits um {{time}} gescannt; dieser frühere Scan bleibt bestehen.",
+    "conflictOfflineKept": "{{code}}: dein Scan um {{time}} war der erste und zählt jetzt; der spätere Scan wurde ersetzt.",
+    "conflictRefusedOffline": "{{code}}: an der Tür abgewiesen, aber dieses Ticket ist gültig – die Offline-Liste war veraltet.",
+    "conflictNotProcessed": "{{code}}: nicht entwertet ({{reason}})."
   },
   "seatSelection": {
     "title": "Sitzplatzauswahl",

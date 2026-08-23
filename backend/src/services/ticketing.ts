@@ -174,8 +174,20 @@ export interface TicketValidationResult {
  * echte bezoeker staat dan bij de deur met een kaart die al gescand heet te
  * zijn. Blijft optioneel voor aanroepen zonder gebruiker (de publieke
  * kaartpagina).
+ *
+ * opMoment is het tijdstip waarop de kaart daadwerkelijk aan de deur is
+ * aangeboden. Dat is standaard nu, maar niet bij een scan die offline is
+ * gemaakt en pas later wordt nagestuurd: die is aan de deur tijdens het
+ * concert gedaan, terwijl het nasturen de volgende ochtend kan gebeuren.
+ * Zonder dit tijdstip valt zo'n scan onder 'expired' - de kaart wordt dan
+ * nooit afgestempeld en de bezoeker die er wél was ontbreekt in de telling.
  */
-export function validateTicket(qrCode: string, concertId?: string, associationId?: string): TicketValidationResult {
+export function validateTicket(
+  qrCode: string,
+  concertId?: string,
+  associationId?: string,
+  opMoment?: Date,
+): TicketValidationResult {
   // Look up the ticket
   const ticket = db
     .prepare(
@@ -299,7 +311,7 @@ export function validateTicket(qrCode: string, concertId?: string, associationId
   const endDate = new Date(concertEndDate);
   endDate.setDate(endDate.getDate() + 1); // Allow entry until day after concert
 
-  if (new Date() > endDate) {
+  if ((opMoment ?? new Date()) > endDate) {
     return {
       valid: false,
       status: 'expired',
@@ -339,13 +351,21 @@ export function validateTicket(qrCode: string, concertId?: string, associationId
  * associationId begrenst dezelfde zoekopdracht als in validateTicket; de
  * bijwerking hieronder gaat op qr_code, dus zonder die controle vooraf zou een
  * kaart van een andere vereniging alsnog worden weggeschreven.
+ *
+ * usedAt is het tijdstip waarop de kaart aan de deur is gescand. Bij een scan
+ * die het apparaat offline maakte en pas later nastuurt is dat niet hetzelfde
+ * als nu: zou hier het moment van nasturen worden weggeschreven, dan staat op
+ * elke kaart de tijd waarop de telefoon weer bereik kreeg, en is niet meer na
+ * te gaan wie er als eerste door de deur ging. Ook de geldigheidstoets gaat
+ * dan over dat latere moment.
  */
 export function markTicketAsUsed(
   qrCode: string,
   validatedBy: string,
   associationId?: string,
+  usedAt?: string,
 ): { success: boolean; message: string } {
-  const validation = validateTicket(qrCode, undefined, associationId);
+  const validation = validateTicket(qrCode, undefined, associationId, usedAt ? new Date(usedAt) : undefined);
 
   if (!validation.valid) {
     return {
@@ -354,7 +374,7 @@ export function markTicketAsUsed(
     };
   }
 
-  const now = new Date().toISOString();
+  const now = usedAt ?? new Date().toISOString();
 
   const result = db
     .prepare(

@@ -87,10 +87,22 @@ export const createFieldDefinition = async (
   return data;
 };
 
-export const updateFieldDefinition = async (
-  id: string,
-  definition: Partial<CreateFieldDefinitionData>,
-): Promise<void> => {
+/**
+ * Wat je van een bestaande velddefinitie nog mag wijzigen.
+ *
+ * `entityType` en `fieldKey` staan er bewust niet in. De server laat de
+ * wijzigingsbody door een zod-schema gaan dat die twee expliciet weglaat
+ * (`.omit({ entityType: true, fieldKey: true })`), en zod verwijdert onbekende
+ * sleutels zonder klacht. Wie ze toch meestuurde, kreeg een 200 terug terwijl
+ * er niets veranderde - een hernoemde veldsleutel die stilzwijgend de oude
+ * bleef. Het type sluit dat nu uit in plaats van het toe te staan.
+ *
+ * Een sleutel achteraf wijzigen kan trouwens ook echt niet: alle opgeslagen
+ * waarden hangen aan die sleutel.
+ */
+export type UpdateFieldDefinitionData = Partial<Omit<CreateFieldDefinitionData, 'entityType' | 'fieldKey'>>;
+
+export const updateFieldDefinition = async (id: string, definition: UpdateFieldDefinitionData): Promise<void> => {
   await api.patch(`/custom-fields/definitions/${id}`, definition);
 };
 
