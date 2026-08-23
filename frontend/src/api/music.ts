@@ -434,3 +434,105 @@ export const uploadSharedPdf = async (bestand: File): Promise<{ id?: string; fil
   const { data } = await api.post('/upload/pdf', formData);
   return data;
 };
+
+/**
+ * Deze drie stonden alleen in src/api.ts en hadden nog geen module-thuis.
+ * Verhuisd bij het opheffen van dat bestand.
+ *
+ * De twee batch-exports lazen de bestandsnaam met een eigen regex die
+ * `filename*` niet kende - dezelfde fout die downloadMusicPiece had. Ze
+ * gebruiken nu leesBestandsnaam hierboven, met hun eigen terugvalnaam.
+ */
+// Upload with progress tracking
+export const uploadMusicPiecesWithProgress = async (
+  files: File[],
+  options: {
+    listId?: string;
+    youtubeUrls?: Record<string, string>;
+    onProgress?: (progress: number) => void;
+    onUploadStart?: () => void;
+    onUploadComplete?: () => void;
+  } = {},
+): Promise<{ uploaded: any[]; errors?: any[] }> => {
+  const { listId, youtubeUrls, onProgress, onUploadStart, onUploadComplete } = options;
+
+  const formData = new FormData();
+  files.forEach((file) => formData.append('files', file));
+  if (listId) formData.append('listId', listId);
+  if (youtubeUrls) formData.append('youtubeUrls', JSON.stringify(youtubeUrls));
+
+  onUploadStart?.();
+
+  const { data } = await api.post('/music-pieces/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress?.(percentCompleted);
+      }
+    },
+  });
+
+  onUploadComplete?.();
+
+  return data;
+};
+
+// Batch export music pieces as ZIP
+export const batchExportMusicPieces = async (pieceIds: string[], includeMetadata = true): Promise<void> => {
+  const response = await api.post(
+    '/music-pieces/batch-export',
+    {
+      pieceIds,
+      includeMetadata,
+    },
+    {
+      responseType: 'blob',
+    },
+  );
+
+  const filename = leesBestandsnaam(
+    response.headers['content-disposition'],
+    `muziekstukken-export-${new Date().toISOString().slice(0, 10)}.zip`,
+  );
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// Batch export all pieces for a specific title as ZIP
+export const batchExportByTitle = async (title: string, arranger?: string): Promise<void> => {
+  const response = await api.post(
+    '/music-pieces/batch-export-by-title',
+    {
+      title,
+      arranger,
+    },
+    {
+      responseType: 'blob',
+    },
+  );
+
+  const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+  const filename = leesBestandsnaam(
+    response.headers['content-disposition'],
+    `${safeTitle}-${new Date().toISOString().slice(0, 10)}.zip`,
+  );
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
