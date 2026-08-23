@@ -200,6 +200,42 @@ describe('downloadMusicPiece', () => {
 
     expect(document.querySelectorAll('a[download]')).toHaveLength(0);
   });
+
+  /**
+   * Een bestandsnaam met een letter buiten ASCII erin - en dat is bij
+   * bladmuziek eerder regel dan uitzondering: Frühlingsstimmen, Españita, Café
+   * Chantant.
+   *
+   * `res.download` van Express zet dan twee vormen in de kopregel. `filename`
+   * krijgt een vraagteken op de plek van elk bijzonder teken, en `filename*`
+   * draagt de echte naam in UTF-8 (RFC 5987). Wie alleen naar de eerste keek,
+   * bood "Fr?hlingsstimmen.pdf" aan. Windows accepteert een vraagteken niet
+   * eens in een bestandsnaam.
+   */
+  it('gebruikt filename* als de naam letters buiten ASCII bevat', async () => {
+    antwoordMet(new Blob(['%PDF']), {
+      headers: {
+        'Content-Disposition':
+          'attachment; filename="Fr?hlingsstimmen.pdf"; filename*=UTF-8\'\'Fr%C3%BChlingsstimmen.pdf',
+      },
+    });
+    await downloadMusicPiece('p1');
+
+    expect(laatsteBestandsnaam()).toBe('Frühlingsstimmen.pdf');
+  });
+
+  it('valt terug op de gewone naam als filename* onleesbaar is', async () => {
+    // Een half gecodeerde naam mag de download niet tegenhouden; dan is een
+    // naam met vraagtekens nog altijd beter dan een mislukking.
+    antwoordMet(new Blob(['%PDF']), {
+      headers: {
+        'Content-Disposition': 'attachment; filename="Mars.pdf"; filename*=UTF-8\'\'Mars%A.pdf',
+      },
+    });
+    await downloadMusicPiece('p1');
+
+    expect(laatsteBestandsnaam()).toBe('Mars.pdf');
+  });
 });
 
 describe('batchExportMusicPieces', () => {

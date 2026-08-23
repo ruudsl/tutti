@@ -582,18 +582,46 @@ export const batchExportByTitle = async (title: string, arranger?: string): Prom
   window.URL.revokeObjectURL(url);
 };
 
+/**
+ * De bestandsnaam uit een Content-Disposition-kopregel.
+ *
+ * Deze functie stond al in src/api/music.ts, maar die module wordt niet
+ * bereikt: `import ... from '../api'` komt bij dit bestand uit, niet bij de map
+ * ernaast. De reparatie draaide daardoor nergens. Hier staat hij nu ook, tot
+ * de twee lagen zijn samengevoegd.
+ *
+ * Express stuurt bij een naam met niet-ASCII tekens twee vormen mee: `filename`
+ * met een vraagteken op de plek van elk bijzonder teken, en `filename*` met de
+ * echte naam in UTF-8 (RFC 5987). Wie alleen naar `filename` keek, bood
+ * "Fr?hlingsstimmen.pdf" aan - een naam die Windows niet eens accepteert.
+ * `filename*` wint daarom, met `filename` als terugval.
+ */
+const leesBestandsnaam = (contentDisposition?: string): string => {
+  const standaard = 'muziekstuk.pdf';
+  if (!contentDisposition) return standaard;
+
+  const gecodeerd = contentDisposition.match(/filename\*=\s*[^']*'[^']*'([^;]+)/i);
+  if (gecodeerd) {
+    try {
+      return decodeURIComponent(gecodeerd[1].trim());
+    } catch {
+      // Een half gecodeerde naam mag de download niet tegenhouden; val terug
+      // op de gewone vorm hieronder.
+    }
+  }
+
+  const gewoon = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/i);
+  if (gewoon) return gewoon[1] || gewoon[2];
+
+  return standaard;
+};
+
 export const downloadMusicPiece = async (id: string): Promise<void> => {
   const response = await api.get(`/music-pieces/${id}/download`, {
     responseType: 'blob',
   });
 
-  // Get filename from Content-Disposition header or use default
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = 'muziekstuk.pdf';
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename="([^"]+)"|filename=([^\s;]+)/);
-    if (match) filename = match[1] || match[2];
-  }
+  const filename = leesBestandsnaam(response.headers['content-disposition']);
 
   // Create download link
   const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -740,13 +768,17 @@ export const getGenres = async (): Promise<Genre[]> => {
   return data;
 };
 
-export const createGenre = async (name: string): Promise<{ id: string }> => {
-  const { data } = await api.post('/genres', { name });
+// De hoofdgenre-parameter stond alleen in src/api/genres.ts, en die module
+// wordt niet bereikt. De aanroepers geven hem op dit moment nog niet mee, dus
+// er ging geen gegeven verloren - maar zodra de twee lagen samengaan moeten ze
+// hetzelfde doen, anders verdwijnt de mogelijkheid alsnog.
+export const createGenre = async (name: string, parentId?: string): Promise<{ id: string }> => {
+  const { data } = await api.post('/genres', { name, parentId });
   return data;
 };
 
-export const updateGenre = async (id: string, name: string): Promise<void> => {
-  await api.put(`/genres/${id}`, { name });
+export const updateGenre = async (id: string, name: string, parentId?: string | null): Promise<void> => {
+  await api.put(`/genres/${id}`, { name, parentId });
 };
 
 export const deleteGenre = async (id: string): Promise<void> => {
