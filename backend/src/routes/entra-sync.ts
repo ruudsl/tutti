@@ -23,7 +23,9 @@ interface MicrosoftConfig {
 
 interface EntraUser {
   id: string;
-  displayName: string;
+  // Optioneel, en dat is geen theorie: gast-, service- en pas aangemaakte
+  // accounts komen bij Microsoft Graph geregeld zonder weergavenaam terug.
+  displayName: string | null;
   givenName: string | null;
   surname: string | null;
   mail: string | null;
@@ -109,6 +111,20 @@ async function fetchEntraUsers(accessToken: string): Promise<EntraUser[]> {
     }
 
     const data = (await response.json()) as GraphUsersResponse;
+
+    // `value` is geen gegarandeerd veld. Komt er met status 200 iets anders
+    // terug - een foutobject dat een tussenliggende proxy erin heeft gezet, of
+    // een gewijzigd antwoordformaat - dan deed `users.push(...data.value)` een
+    // spread over undefined. Dat is een TypeError, en de beheerder kreeg een
+    // kale 500 zonder enige aanwijzing waar het aan lag.
+    if (!Array.isArray(data?.value)) {
+      logger.error('Graph API gaf een antwoord zonder ledenlijst', { keys: Object.keys(data ?? {}) });
+      throw new ApiError(
+        502,
+        'Microsoft gaf een antwoord dat geen ledenlijst bevat. Waarschijnlijk is er tijdelijk iets mis aan hun kant; probeer het straks opnieuw.',
+      );
+    }
+
     users.push(...data.value);
     nextLink = data['@odata.nextLink'] || null;
   }
@@ -166,6 +182,34 @@ function parseDepartments(department: string | null): string[] {
     .split(',')
     .map((d) => d.trim())
     .filter((d) => d.length > 0);
+}
+
+/**
+ * Voor- en achternaam afleiden uit wat Entra teruggeeft.
+ *
+ * Hier zat een fout. De code deed onvoorwaardelijk
+ * `entraUser.displayName.split(' ')` zodra givenName leeg was. displayName is
+ * in het antwoord van Graph optioneel, dus dat is bij zo'n account geen lege
+ * naam maar een TypeError.
+ *
+ * Het gevolg reikte verder dan die ene persoon. Bij POST /entra/users/sync
+ * staat die regel binnen de withTransaction(): een enkel account zonder
+ * weergavenaam draaide de hele synchronisatie terug, waarna er niemand werd
+ * bijgewerkt en de knop keer op keer een kale 500 gaf. Bij GET /entra/users
+ * liep hetzelfde mis in het sorteren, en was daarmee de complete ledenlijst
+ * onbereikbaar - er viel dan niemand meer te importeren.
+ *
+ * Terugvallen op userPrincipalName is niet mooi, maar wel bruikbaar: dat veld
+ * is in Entra verplicht, en een beheerder herkent er de persoon aan.
+ */
+function naamUitEntra(entraUser: EntraUser): { displayName: string; firstName: string; lastName: string } {
+  const displayName = entraUser.displayName || entraUser.userPrincipalName || entraUser.mail || '';
+  const delen = displayName.split(' ').filter((d) => d.length > 0);
+  return {
+    displayName,
+    firstName: entraUser.givenName || delen[0] || 'Onbekend',
+    lastName: entraUser.surname || delen.slice(1).join(' ') || '',
+  };
 }
 
 /**
@@ -444,7 +488,7 @@ router.get(
 
         return {
           id: user.id,
-          displayName: user.displayName,
+          displayName: naamUitEntra(user).displayName,
           firstName: user.givenName || '',
           lastName: user.surname || '',
           email,
@@ -555,8 +599,7 @@ router.post(
         const passwordHash = bcrypt.hashSync(randomPassword, 10);
 
         const userId = uuidv4();
-        const firstName = entraUser.givenName || entraUser.displayName.split(' ')[0] || 'Onbekend';
-        const lastName = entraUser.surname || entraUser.displayName.split(' ').slice(1).join(' ') || '';
+        const { firstName, lastName } = naamUitEntra(entraUser);
 
         // Insert user
         db.prepare(
@@ -672,8 +715,7 @@ router.post(
 
         if (existing) {
           // Update existing user
-          const firstName = entraUser.givenName || entraUser.displayName.split(' ')[0] || 'Onbekend';
-          const lastName = entraUser.surname || entraUser.displayName.split(' ').slice(1).join(' ') || '';
+          const { firstName, lastName } = naamUitEntra(entraUser);
 
           db.prepare(
             `
@@ -711,8 +753,7 @@ router.post(
           const passwordHash = bcrypt.hashSync(randomPassword, 10);
 
           const userId = uuidv4();
-          const firstName = entraUser.givenName || entraUser.displayName.split(' ')[0] || 'Onbekend';
-          const lastName = entraUser.surname || entraUser.displayName.split(' ').slice(1).join(' ') || '';
+          const { firstName, lastName } = naamUitEntra(entraUser);
 
           db.prepare(
             `
