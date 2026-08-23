@@ -11,6 +11,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
 import { Modal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'badge-warning',
@@ -159,6 +160,7 @@ export default function Issues() {
             <div className="flex gap-2">
               <select
                 className="form-control form-select"
+                aria-label={t('issues.filterStatus')}
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 style={{ maxWidth: '200px' }}
@@ -247,6 +249,7 @@ export default function Issues() {
                       {isMusicCommittee && issue.status !== 'resolved' && issue.status !== 'rejected' ? (
                         <select
                           className={`form-control form-select ${STATUS_COLORS[issue.status]}`}
+                          aria-label={t('issues.changeStatusFor', { title: issue.piece_title })}
                           value={issue.status}
                           onChange={(e) => handleStatusChange(issue, e.target.value)}
                           style={{ minWidth: '140px' }}
@@ -327,20 +330,20 @@ export default function Issues() {
             </>
           }
         >
+          {/* Opschriften boven een uitgelezen waarde, geen veldlabels: er staat
+              geen bedienbaar veld onder, dus een <label> beloofde hier iets wat
+              er niet is. */}
           <div className="form-group">
-            <label className="form-label">{t('issues.table.piece')}</label>
+            <span className="form-label">{t('issues.table.piece')}</span>
             <p>
               <strong>{selectedIssue.piece_title}</strong>
             </p>
           </div>
           <div className="form-group">
-            <label className="form-label">{t('issues.originalIssue')}</label>
+            <span className="form-label">{t('issues.originalIssue')}</span>
             <p style={{ whiteSpace: 'pre-wrap' }}>{selectedIssue.description}</p>
           </div>
-          <div className="form-group">
-            <label className="form-label">
-              {t('issues.responseNotes')} ({t('common.optional')})
-            </label>
+          <FormField label={`${t('issues.responseNotes')} (${t('common.optional')})`}>
             <textarea
               className="form-control"
               value={resolutionNotes}
@@ -348,7 +351,7 @@ export default function Issues() {
               rows={3}
               placeholder={t('issues.responseNotesPlaceholder')}
             />
-          </div>
+          </FormField>
         </Modal>
       )}
     </div>

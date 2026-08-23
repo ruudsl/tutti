@@ -3,114 +3,19 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon } from '../components/Icon';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface DeletionRequest {
-  id: string;
-  userId: string;
-  email: string;
-  name: string;
-  reason?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-  requestedAt: string;
-  processedAt?: string;
-  processedBy?: string;
-}
-
-interface RetentionSetting {
-  dataType: string;
-  retentionDays: number;
-  description: string;
-}
-
-interface RetentionSettings {
-  settings: RetentionSetting[];
-  lastCleanup?: string;
-  nextCleanup?: string;
-}
-
-async function fetchDeletionRequests(): Promise<DeletionRequest[]> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/deletion-requests`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch deletion requests');
-  const data = await res.json();
-  return data.requests.map((r: any) => ({
-    id: r.id,
-    userId: r.user_id,
-    email: r.email,
-    name: `${r.first_name} ${r.last_name}`,
-    reason: r.reason,
-    status: r.status,
-    requestedAt: r.created_at,
-    processedAt: r.processed_at,
-    processedBy: r.processed_by_name,
-  }));
-}
-
-async function processDeletionRequest(requestId: string, action: 'approve' | 'reject', notes?: string): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/deletion-requests/${requestId}/process`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ action, notes }),
-  });
-  if (!res.ok) throw new Error('Failed to process deletion request');
-}
-
-async function fetchRetentionSettings(): Promise<RetentionSettings> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/retention-settings`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch retention settings');
-  const data = await res.json();
-  return {
-    settings: data.settings.map((s: any) => ({
-      dataType: s.data_type,
-      retentionDays: s.retention_days,
-      description: s.description || '',
-    })),
-  };
-}
-
-async function updateRetentionSettings(settings: RetentionSetting[]): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/retention-settings`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      settings: settings.map((s) => ({
-        data_type: s.dataType,
-        retention_days: s.retentionDays,
-        auto_delete: s.retentionDays > 0,
-      })),
-    }),
-  });
-  if (!res.ok) throw new Error('Failed to update retention settings');
-}
-
-async function runCleanup(): Promise<{ deleted: Record<string, number> }> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/gdpr/cleanup`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to run cleanup');
-  const data = await res.json();
-  return { deleted: data.deletedCounts || {} };
-}
+import {
+  getDeletionRequests,
+  processDeletionRequest,
+  getRetentionSettings,
+  updateRetentionSettings,
+  runCleanup,
+  type DeletionRequest,
+  type RetentionSetting,
+} from '../api/gdpr';
 
 export default function GdprAdmin() {
   const { t } = useTranslation();
@@ -125,12 +30,12 @@ export default function GdprAdmin() {
 
   const { data: requests, isLoading: loadingRequests } = useQuery({
     queryKey: ['gdpr-deletion-requests'],
-    queryFn: fetchDeletionRequests,
+    queryFn: getDeletionRequests,
   });
 
   const { data: retentionData, isLoading: loadingRetention } = useQuery({
     queryKey: ['gdpr-retention-settings'],
-    queryFn: fetchRetentionSettings,
+    queryFn: getRetentionSettings,
   });
 
   const processMutation = useMutation({
@@ -351,13 +256,21 @@ export default function GdprAdmin() {
                   {editingSettings ? (
                     <div>
                       {editingSettings.map((setting, index) => (
+                        // Met de hand gekoppeld: tussen label en veld staat de
+                        // uitleg, en het veld zit met de eenheid in een eigen
+                        // omhulsel. FormField kloont maar één kind. De uitleg
+                        // hangt via aria-describedby aan het veld.
                         <div key={setting.dataType} className="form-group">
-                          <label className="form-label">
+                          <label className="form-label" htmlFor={`bewaartermijn-${setting.dataType}`}>
                             {t(`gdprAdmin.dataTypes.${setting.dataType}`, setting.dataType)}
                           </label>
-                          <p className="text-muted text-sm mb-2">{setting.description}</p>
+                          <p id={`bewaartermijn-${setting.dataType}-uitleg`} className="text-muted text-sm mb-2">
+                            {setting.description}
+                          </p>
                           <div className="flex items-center gap-2">
                             <input
+                              id={`bewaartermijn-${setting.dataType}`}
+                              aria-describedby={`bewaartermijn-${setting.dataType}-uitleg`}
                               type="number"
                               className="form-control"
                               style={{ width: '120px' }}
@@ -475,10 +388,13 @@ export default function GdprAdmin() {
               <div className="alert alert-info mb-3">
                 <strong>{selectedRequest.name}</strong> ({selectedRequest.email})
               </div>
-              <div className="form-group">
-                <label className="form-label">
-                  {t('gdprAdmin.notes', 'Notities')} ({t('common.optional')})
-                </label>
+              <FormField
+                label={
+                  <>
+                    {t('gdprAdmin.notes', 'Notities')} ({t('common.optional')})
+                  </>
+                }
+              >
                 <textarea
                   className="form-control"
                   rows={3}
@@ -486,7 +402,7 @@ export default function GdprAdmin() {
                   onChange={(e) => setProcessNotes(e.target.value)}
                   placeholder={t('gdprAdmin.notesPlaceholder', 'Voeg eventuele notities toe...')}
                 />
-              </div>
+              </FormField>
             </div>
           }
           confirmLabel={

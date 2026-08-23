@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
@@ -7,6 +7,7 @@ import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
 import type { TicketType } from '../types';
 import CaptchaWidget from './CaptchaWidget';
+import { FormField } from './FormField';
 
 interface TicketPurchaseProps {
   concertId: string;
@@ -18,6 +19,7 @@ type Step = 'select' | 'checkout' | 'payment' | 'complete';
 
 export default function TicketPurchase({ concertId, onClose, onSuccess }: TicketPurchaseProps) {
   const { t } = useTranslation();
+  const kopersEmailId = useId();
 
   const [step, setStep] = useState<Step>('select');
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
@@ -379,8 +381,7 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
       {/* Step 2: Checkout Form */}
       {step === 'checkout' && (
         <form onSubmit={handleSubmitOrder} className="ticket-checkout">
-          <div className="form-group">
-            <label className="form-label">{t('tickets.buyerName')} *</label>
+          <FormField label={`${t('tickets.buyerName')} *`}>
             <input
               type="text"
               className="form-control"
@@ -388,27 +389,36 @@ export default function TicketPurchase({ concertId, onClose, onSuccess }: Ticket
               onChange={(e) => setBuyerInfo({ ...buyerInfo, name: e.target.value })}
               required
             />
-          </div>
+          </FormField>
+          {/* Met de hand gekoppeld: in deze form-group staat naast label en veld
+              ook nog een hulptekst, en FormField kloont maar één kind. De
+              hulptekst hangt via aria-describedby aan het veld, anders valt hij
+              buiten beeld voor een schermlezer. */}
           <div className="form-group">
-            <label className="form-label">{t('tickets.buyerEmail')} *</label>
+            <label className="form-label" htmlFor={kopersEmailId}>
+              {t('tickets.buyerEmail')} *
+            </label>
             <input
+              id={kopersEmailId}
+              aria-describedby={`${kopersEmailId}-hulp`}
               type="email"
               className="form-control"
               value={buyerInfo.email}
               onChange={(e) => setBuyerInfo({ ...buyerInfo, email: e.target.value })}
               required
             />
-            <small style={{ color: 'var(--text-light)' }}>{t('tickets.emailDescription')}</small>
+            <small id={`${kopersEmailId}-hulp`} style={{ color: 'var(--text-light)' }}>
+              {t('tickets.emailDescription')}
+            </small>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('tickets.buyerPhone')}</label>
+          <FormField label={t('tickets.buyerPhone')}>
             <input
               type="tel"
               className="form-control"
               value={buyerInfo.phone}
               onChange={(e) => setBuyerInfo({ ...buyerInfo, phone: e.target.value })}
             />
-          </div>
+          </FormField>
 
           {/* Order Summary */}
           <div

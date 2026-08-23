@@ -11,7 +11,7 @@
  * seed, dan hoort het hier ook te veranderen.
  */
 
-import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
 export const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'e2e-admin@test.local';
 export const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'E2eTest!2026';
@@ -199,18 +199,16 @@ export function lijstDatum(datum: string): string {
   return `${dag}-${maand}-${jaar}`;
 }
 
-/**
- * Het invoerveld dat bij dit label hoort.
- *
- * Normaal zou dit `getByLabel(...)` zijn. Dat kan hier niet: de formulieren van
- * de applicatie zetten hun label neer als `<label class="form-label">` zonder
- * `for`, en het veld staat ernaast in plaats van erin. Er is dus geen enkele
+/*
+ * Hier stond `veldBijLabel()`: die zocht een invoerveld via de omhullende
+ * `.form-group`, omdat de formulieren hun label als `<label class="form-label">`
+ * zonder `for` neerzetten en het veld ernaast in plaats van erin. Er was dus geen
  * koppeling tussen label en veld - niet voor Playwright, en niet voor een
- * schermlezer. Dat is een gebrek in de applicatie (zie het rapport), niet iets
- * wat een test hoort te verbergen; tot het verholpen is zoeken we het veld via
- * de omhullende `.form-group`, zodat de test in elk geval nog leest als "het
- * veld Voornaam".
+ * schermlezer.
+ *
+ * De formulieren lopen nu via `components/FormField`, die het label met
+ * `htmlFor`/`id` aan het veld hangt. Daarmee doet `getByLabel()` weer wat het
+ * hoort te doen, en vragen de spec-bestanden gewoon om "het veld Voornaam" zoals
+ * een gebruiker het zou aanwijzen. Blijft de koppeling ergens achterwege, dan
+ * valt de test daarop om - en dat is precies de bedoeling.
  */
-export function veldBijLabel(gebied: Locator | Page, label: string): Locator {
-  return gebied.locator('.form-group').filter({ hasText: label }).locator('input, textarea').first();
-}

@@ -1,8 +1,9 @@
 import { currentLocale } from '../utils/locale';
-import { useState, useMemo } from 'react';
+import { useId, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import {
   useHolidays,
   useHolidaySettings,
@@ -23,6 +24,10 @@ export default function HolidaySettings() {
   useDocumentTitle('pageTitle.holidaySettings');
 
   const isAdmin = user?.role === ROLES.ADMIN;
+
+  // Ids voor de twee gevallen die niet via FormField lopen; zie de opmerkingen daar.
+  const regioVeldId = useId();
+  const weergaveKopId = useId();
 
   // Get current year and next year for display
   const currentYear = new Date().getFullYear();
@@ -182,9 +187,17 @@ export default function HolidaySettings() {
         <div className="card-body">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
             {/* Region Selection */}
+            {/* Met de hand gekoppeld in plaats van via FormField: naast label en
+                veld staat hier ook nog een hulptekst in dezelfde form-group.
+                FormField neemt één kindelement, en zonder aria-describedby valt
+                die uitleg buiten beeld voor een schermlezer. */}
             <div className="form-group">
-              <label className="form-label">{t('holidays.region')}</label>
+              <label className="form-label" htmlFor={regioVeldId}>
+                {t('holidays.region')}
+              </label>
               <select
+                id={regioVeldId}
+                aria-describedby={`${regioVeldId}-hulp`}
                 className="form-control form-select"
                 value={settings.region}
                 onChange={(e) => handleRegionChange(e.target.value)}
@@ -196,12 +209,19 @@ export default function HolidaySettings() {
                   </option>
                 ))}
               </select>
-              <small style={{ color: 'var(--text-light)' }}>{t('holidays.regionDescription')}</small>
+              <small id={`${regioVeldId}-hulp`} style={{ color: 'var(--text-light)' }}>
+                {t('holidays.regionDescription')}
+              </small>
             </div>
 
             {/* Toggle Options */}
-            <div>
-              <label className="form-label">{t('holidays.displayOptions')}</label>
+            {/* Geen veldlabel maar een kop boven twee aankruisvakjes. Die vakjes
+                dragen hun eigen naam al (het label eromheen), dus hier hoort een
+                groepskop: een <span> waar de role="group" naar wijst. */}
+            <div role="group" aria-labelledby={weergaveKopId}>
+              <span id={weergaveKopId} className="form-label">
+                {t('holidays.displayOptions')}
+              </span>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <label
@@ -284,8 +304,7 @@ export default function HolidaySettings() {
             >
               <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>{t('holidays.addCustomHoliday')}</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '1rem', alignItems: 'end' }}>
-                <div className="form-group">
-                  <label className="form-label">{t('common.name')}</label>
+                <FormField label={t('common.name')}>
                   <input
                     type="text"
                     className="form-control"
@@ -293,25 +312,23 @@ export default function HolidaySettings() {
                     onChange={(e) => setNewHoliday({ ...newHoliday, name: e.target.value })}
                     placeholder={t('holidays.namePlaceholder')}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('holidays.startDate')}</label>
+                </FormField>
+                <FormField label={t('holidays.startDate')}>
                   <input
                     type="date"
                     className="form-control"
                     value={newHoliday.startDate}
                     onChange={(e) => setNewHoliday({ ...newHoliday, startDate: e.target.value })}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('holidays.endDate')}</label>
+                </FormField>
+                <FormField label={t('holidays.endDate')}>
                   <input
                     type="date"
                     className="form-control"
                     value={newHoliday.endDate}
                     onChange={(e) => setNewHoliday({ ...newHoliday, endDate: e.target.value })}
                   />
-                </div>
+                </FormField>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     className="btn btn-primary"

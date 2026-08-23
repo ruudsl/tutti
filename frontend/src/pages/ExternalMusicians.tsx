@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { Modal, FormModal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FormField } from '../components/FormField';
 import { SkeletonTable } from '../components/Skeleton';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ROLES } from '../utils/constants';
@@ -95,6 +96,11 @@ export default function ExternalMusicians() {
   const { user } = useAuth();
   const { t } = useTranslation();
   useDocumentTitle('externalMusicians.title');
+
+  // Koppen boven een groep bedieningselementen; zie de opmerkingen daar.
+  const veldId = useId();
+  const beoordelingLabelId = `${veldId}-beoordeling`;
+  const instrumentenLabelId = `${veldId}-instrumenten`;
 
   // Filters
   const [filterType, setFilterType] = useState<string>('');
@@ -255,17 +261,30 @@ export default function ExternalMusicians() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="grid grid-cols-4 gap-2">
+            {/* De filterbalk kreeg zijn namen via aria-label in plaats van een
+                zichtbaar label: vier labels boven vier smalle velden maken de
+                balk twee keer zo hoog, terwijl de eerste optie ("alle soorten")
+                voor wie het scherm ziet al vertelt waar het filter over gaat.
+                Voor een schermlezer vertelt die optie niets - die leest alleen
+                de gekozen waarde voor - dus zonder naam waren dit vier keer
+                "keuzelijst" achter elkaar. */}
             <div className="form-group mb-0">
               <input
                 type="text"
                 className="form-control"
+                aria-label={t('externalMusicians.filterSearch')}
                 placeholder={t('common.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="form-group mb-0">
-              <select className="form-control" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <select
+                className="form-control"
+                aria-label={t('externalMusicians.filterType')}
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
                 <option value="">{t('externalMusicians.allTypes')}</option>
                 <option value="alumni">{MUSICIAN_TYPE_LABELS.alumni}</option>
                 <option value="guest">{MUSICIAN_TYPE_LABELS.guest}</option>
@@ -276,6 +295,7 @@ export default function ExternalMusicians() {
             <div className="form-group mb-0">
               <select
                 className="form-control"
+                aria-label={t('externalMusicians.filterInstrument')}
                 value={filterInstrument}
                 onChange={(e) => setFilterInstrument(e.target.value)}
               >
@@ -290,6 +310,7 @@ export default function ExternalMusicians() {
             <div className="form-group mb-0">
               <select
                 className="form-control"
+                aria-label={t('externalMusicians.filterStatus')}
                 value={filterActive === undefined ? '' : filterActive ? 'true' : 'false'}
                 onChange={(e) => {
                   if (e.target.value === '') setFilterActive(undefined);
@@ -392,6 +413,11 @@ export default function ExternalMusicians() {
       </div>
 
       {/* View Modal */}
+      {/* Dit venster toont alleen uitgelezen waarden; er valt niets te bedienen.
+          De kopjes erboven waren <label>-elementen, maar een label belooft een
+          veld dat hier niet bestaat: een schermlezer kondigde "label" aan zonder
+          dat er iets bij hoorde. Het zijn <span>'s met dezelfde klasse, dus het
+          ziet er hetzelfde uit en de lege belofte is weg. */}
       {viewingMusician && musicianDetail && (
         <Modal
           title={`${musicianDetail.firstName} ${musicianDetail.lastName}`}
@@ -400,13 +426,13 @@ export default function ExternalMusicians() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.type')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.type')}</span>
                 <p>
                   <span className="badge badge-info">{MUSICIAN_TYPE_LABELS[musicianDetail.musicianType]}</span>
                 </p>
               </div>
               <div>
-                <label className="form-label text-muted">{t('common.status')}</label>
+                <span className="form-label text-muted">{t('common.status')}</span>
                 <p>
                   <span className={`badge ${musicianDetail.isActive ? 'badge-success' : 'badge-secondary'}`}>
                     {musicianDetail.isActive ? t('externalMusicians.active') : t('externalMusicians.inactive')}
@@ -419,7 +445,7 @@ export default function ExternalMusicians() {
               <div className="grid grid-cols-2 gap-3">
                 {musicianDetail.email && (
                   <div>
-                    <label className="form-label text-muted">{t('common.email')}</label>
+                    <span className="form-label text-muted">{t('common.email')}</span>
                     <p>
                       <a href={`mailto:${musicianDetail.email}`}>{musicianDetail.email}</a>
                     </p>
@@ -427,7 +453,7 @@ export default function ExternalMusicians() {
                 )}
                 {musicianDetail.phone && (
                   <div>
-                    <label className="form-label text-muted">{t('common.phone')}</label>
+                    <span className="form-label text-muted">{t('common.phone')}</span>
                     <p>
                       <a href={`tel:${musicianDetail.phone}`}>{musicianDetail.phone}</a>
                     </p>
@@ -438,11 +464,11 @@ export default function ExternalMusicians() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.rating')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.rating')}</span>
                 <StarRating rating={musicianDetail.rating} readOnly />
               </div>
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.performances')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.performances')}</span>
                 <p>
                   {musicianDetail.totalPerformances} {t('externalMusicians.total')}
                 </p>
@@ -451,14 +477,14 @@ export default function ExternalMusicians() {
 
             {musicianDetail.lastPlayedDate && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.lastPlayed')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.lastPlayed')}</span>
                 <p>{new Date(musicianDetail.lastPlayedDate).toLocaleDateString()}</p>
               </div>
             )}
 
             {musicianDetail.instruments.length > 0 && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.instruments')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.instruments')}</span>
                 <div className="flex flex-wrap gap-2">
                   {musicianDetail.instruments.map((i) => (
                     <span key={i.id} className={`badge ${i.isPrimary ? 'badge-primary' : 'badge-secondary'}`}>
@@ -473,14 +499,14 @@ export default function ExternalMusicians() {
 
             {musicianDetail.notes && (
               <div>
-                <label className="form-label text-muted">{t('common.notes')}</label>
+                <span className="form-label text-muted">{t('common.notes')}</span>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{musicianDetail.notes}</p>
               </div>
             )}
 
             {musicianDetail.recentAssignments.length > 0 && (
               <div>
-                <label className="form-label text-muted">{t('externalMusicians.recentAssignments')}</label>
+                <span className="form-label text-muted">{t('externalMusicians.recentAssignments')}</span>
                 <table className="table table-sm">
                   <thead>
                     <tr>
@@ -537,8 +563,7 @@ export default function ExternalMusicians() {
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         >
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.firstName')} *</label>
+            <FormField label={`${t('externalMusicians.firstName')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -546,9 +571,8 @@ export default function ExternalMusicians() {
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.lastName')} *</label>
+            </FormField>
+            <FormField label={`${t('externalMusicians.lastName')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -556,33 +580,30 @@ export default function ExternalMusicians() {
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 required
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('common.email')}</label>
+            <FormField label={t('common.email')}>
               <input
                 type="email"
                 className="form-control"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('common.phone')}</label>
+            </FormField>
+            <FormField label={t('common.phone')}>
               <input
                 type="tel"
                 className="form-control"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.type')} *</label>
+            <FormField label={`${t('externalMusicians.type')} *`}>
               <select
                 className="form-control"
                 value={formData.musicianType}
@@ -594,15 +615,25 @@ export default function ExternalMusicians() {
                 <option value="substitute">{MUSICIAN_TYPE_LABELS.substitute}</option>
                 <option value="friend">{MUSICIAN_TYPE_LABELS.friend}</option>
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('externalMusicians.rating')}</label>
+            </FormField>
+            {/* Geen veld maar vijf sterknoppen: een <label> kan daar niet naartoe
+                wijzen. Dus een groepskop met een <span>. */}
+            <div className="form-group" role="group" aria-labelledby={beoordelingLabelId}>
+              <span id={beoordelingLabelId} className="form-label">
+                {t('externalMusicians.rating')}
+              </span>
               <StarRating rating={formData.rating} onChange={(r) => setFormData({ ...formData, rating: r })} />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('externalMusicians.instruments')}</label>
+          {/* Geen veld maar een rij per instrument, elk met twee keuzelijsten, een
+              aankruisvakje en een knop. Een <label> hoort bij één veld; dit is een
+              groepskop. De keuzelijsten in de rijen dragen zelf nog geen naam - zie
+              het rapport. */}
+          <div className="form-group" role="group" aria-labelledby={instrumentenLabelId}>
+            <span id={instrumentenLabelId} className="form-label">
+              {t('externalMusicians.instruments')}
+            </span>
             {formData.instruments.map((inst, index) => (
               <div key={index} className="flex gap-2 mb-2 items-center">
                 <select
@@ -649,15 +680,14 @@ export default function ExternalMusicians() {
             </button>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">{t('common.notes')}</label>
+          <FormField label={t('common.notes')}>
             <textarea
               className="form-control"
               rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 

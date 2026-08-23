@@ -5,6 +5,7 @@ import { searchImslp, getImslpWorkDetails, importFromImslp } from '../api';
 import type { ImslpWork, ImslpWorkDetail, ImslpScore } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { SkeletonCard } from '../components/Skeleton';
 import { Icon } from '../components/Icon';
 
@@ -100,8 +101,7 @@ export default function ImslpBrowser() {
         <div className="card-body">
           <form onSubmit={handleSearch}>
             <div className="grid grid-3 gap-1">
-              <div className="form-group mb-0">
-                <label className="form-label">{t('imslp.workTitle')}</label>
+              <FormField className="form-group mb-0" label={t('imslp.workTitle')}>
                 <input
                   type="text"
                   className="form-control"
@@ -109,9 +109,8 @@ export default function ImslpBrowser() {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t('imslp.workTitlePlaceholder')}
                 />
-              </div>
-              <div className="form-group mb-0">
-                <label className="form-label">{t('imslp.composer')}</label>
+              </FormField>
+              <FormField className="form-group mb-0" label={t('imslp.composer')}>
                 <input
                   type="text"
                   className="form-control"
@@ -119,7 +118,7 @@ export default function ImslpBrowser() {
                   onChange={(e) => setComposer(e.target.value)}
                   placeholder={t('imslp.composerPlaceholder')}
                 />
-              </div>
+              </FormField>
               <div className="form-group mb-0" style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button
                   type="submit"

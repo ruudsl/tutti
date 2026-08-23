@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { saveMicrosoftConfig, removeMicrosoftConfig } from '../../api';
@@ -20,6 +20,7 @@ import { foutmelding } from './foutmelding';
  */
 export function MicrosoftSectie({ config }: { config: MicrosoftConfig | null }) {
   const { t } = useTranslation();
+  const omleidingId = useId();
   const queryClient = useQueryClient();
   const [msClientId, setMsClientId] = useState('');
   const [msClientSecret, setMsClientSecret] = useState('');
@@ -137,15 +138,25 @@ export function MicrosoftSectie({ config }: { config: MicrosoftConfig | null }) 
 
             {config?.configured && (
               <div className="form-group">
-                <label className="form-label">{t('settings.microsoft.redirectUri')}</label>
+                {/* Met de hand gekoppeld: naast label en veld staat hier ook een
+                    hulptekst, en FormField kloont maar één kind. */}
+                <label className="form-label" htmlFor={omleidingId}>
+                  {t('settings.microsoft.redirectUri')}
+                </label>
                 <input
+                  id={omleidingId}
+                  aria-describedby={`${omleidingId}-hulp`}
                   type="text"
                   className="form-control"
                   value={config.redirectUri}
                   readOnly
                   style={{ background: 'var(--bg)', fontSize: '0.85rem' }}
                 />
-                <p className="piece-meta" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                <p
+                  id={`${omleidingId}-hulp`}
+                  className="piece-meta"
+                  style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}
+                >
                   {t('settings.microsoft.redirectUriHelp')}
                 </p>
               </div>

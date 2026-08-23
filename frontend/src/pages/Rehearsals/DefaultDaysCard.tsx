@@ -1,6 +1,7 @@
 /** De kaart met de vaste repetitiedagen, inclusief het invoerformulier. Letterlijk overgenomen uit Rehearsals.tsx. */
 
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { Orchestra, RehearsalDefaultDay } from '../../types';
 import type { DefaultDayFormState } from './hulpfuncties';
 
@@ -37,8 +38,7 @@ export function DefaultDaysCard({
         <p className="piece-meta mb-2">{t('rehearsals.defaultDaysDescription')}</p>
         {showDefaultForm && (
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'end' }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('rehearsals.date')}</label>
+            <FormField label={t('rehearsals.date')} style={{ flex: 1 }}>
               <select
                 className="form-control form-select"
                 value={defaultForm.dayOfWeek}
@@ -50,36 +50,32 @@ export function DefaultDaysCard({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.startTime')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.startTime')}>
               <input
                 type="time"
                 className="form-control"
                 value={defaultForm.startTime}
                 onChange={(e) => setDefaultForm({ ...defaultForm, startTime: e.target.value })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.endTime')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.endTime')}>
               <input
                 type="time"
                 className="form-control"
                 value={defaultForm.endTime}
                 onChange={(e) => setDefaultForm({ ...defaultForm, endTime: e.target.value })}
               />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('rehearsals.location')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.location')} style={{ flex: 1 }}>
               <input
                 type="text"
                 className="form-control"
                 value={defaultForm.location}
                 onChange={(e) => setDefaultForm({ ...defaultForm, location: e.target.value })}
               />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('rehearsals.orchestra')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.orchestra')} style={{ flex: 1 }}>
               <select
                 className="form-control form-select"
                 value={defaultForm.orchestraId}
@@ -92,7 +88,7 @@ export function DefaultDaysCard({
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
             <button className="btn btn-primary" onClick={handleAddDefaultDay}>
               {t('common.save')}
             </button>

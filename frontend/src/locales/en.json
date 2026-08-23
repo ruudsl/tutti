@@ -95,7 +95,13 @@
     "selectOptional": "Select (optional)",
     "startDate": "Start date",
     "viewAll": "View all",
-    "warnings": "Warnings"
+    "warnings": "Warnings",
+    "apply": "Apply",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "dismiss": "Dismiss",
+    "showingOf": "Showing {{from}}-{{to}} of {{total}}",
+    "user": "User"
   },
   "lazyImage": {
     "notLoaded": "Not loaded"
@@ -273,7 +279,8 @@
     "attendanceAnalytics": "Attendance Analytics",
     "externalMusicians": "External Musicians",
     "replacementRequests": "Replacement Requests",
-    "musicSharing": "Share music"
+    "musicSharing": "Share music",
+    "mobileMenu": "Menu"
   },
   "roles": {
     "admin": "Administrator",
@@ -486,7 +493,9 @@
     "offlineReady": "Available offline",
     "cachedPieces": "{{count}} pieces cached",
     "compactView": "Compact view",
-    "fullView": "Full view"
+    "fullView": "Full view",
+    "gridView": "Grid",
+    "swipeView": "Swipe"
   },
   "tools": {
     "title": "Music Tools",
@@ -582,7 +591,9 @@
     "statusUpdated": "Status updated",
     "errorUpdateStatus": "Error updating status",
     "deleted": "Issue deleted",
-    "errorDelete": "Error deleting"
+    "errorDelete": "Error deleting",
+    "filterStatus": "Filter by status",
+    "changeStatusFor": "Change status of \"{{title}}\""
   },
   "contacts": {
     "title": "Contacts",
@@ -996,7 +1007,9 @@
     "recipientName": "Name",
     "recipientStatusLabel": "Status",
     "searchRecipients": "Search recipients",
-    "viewRecipients": "View recipients"
+    "viewRecipients": "View recipients",
+    "openedAt": "Opened at {{date}}",
+    "deliveredAt": "Delivered at {{date}}"
   },
   "customFields": {
     "title": "Custom Fields",
@@ -1833,6 +1846,16 @@
       "errorUpdating": "Error updating mapping",
       "errorDeleting": "Error deleting mapping",
       "deleteConfirm": "Are you sure you want to delete the mapping to '{{groupName}}'?"
+    },
+    "support": {
+      "title": "Support & help",
+      "description": "Report problems, read the user guide or see what is arranged for accessibility.",
+      "reportIssue": "Report issue",
+      "reportIssueDesc": "Report problems with sheet music",
+      "userGuide": "User guide",
+      "userGuideDesc": "Learn how to use the app",
+      "accessibility": "Accessibility",
+      "accessibilityDesc": "Accessibility information"
     }
   },
   "theme": {
@@ -2001,7 +2024,8 @@
       "create": "Create {{count}} rehearsals",
       "created": "{{count}} recurring rehearsals created"
     },
-    "deleteTitle": "Delete rehearsal"
+    "deleteTitle": "Delete rehearsal",
+    "attendanceDashboard": "Overview"
   },
   "availability": {
     "title": "Availability",
@@ -2064,7 +2088,8 @@
     "typeToSearch": "Type to search",
     "log": "Log",
     "deleteGoalTitle": "Delete goal",
-    "deleteLogTitle": "Delete session"
+    "deleteLogTitle": "Delete session",
+    "quickLog": "Log"
   },
   "accessibility": {
     "skipToContent": "Skip to content",
@@ -2121,7 +2146,8 @@
     "testing": "Testing",
     "testingText": "We regularly test our application with assistive technologies to ensure compatibility.",
     "understandable": "Understandable",
-    "understandableText": "Content is readable and the interface operates in predictable ways."
+    "understandableText": "Content is readable and the interface operates in predictable ways.",
+    "sortable": "sortable"
   },
   "accessibilityInfo": {
     "title": "Accessibility Information",
@@ -2512,7 +2538,9 @@
       "history": "History",
       "disclaimer": "Predictions are based on historical attendance data and may differ from actual attendance."
     },
-    "instrument": "Instrument"
+    "instrument": "Instrument",
+    "setlistBuilder": "Setlist",
+    "posterGenerator": "Poster"
   },
   "tickets": {
     "title": "Tickets",
@@ -2707,7 +2735,9 @@
       "yourTickets": "Your Tickets",
       "findQRInAccount": "You can find the QR code in the HTML version of this email or in your account under \"My Tickets\".",
       "lookForward": "We look forward to seeing you!"
-    }
+    },
+    "offlineMode": "Offline mode",
+    "onlineMode": "Online mode"
   },
   "offlineScanner": {
     "title": "Offline Scanner",
@@ -2732,7 +2762,8 @@
     "lastSync": "Last sync",
     "ticketNotFound": "Ticket not found",
     "alreadyUsed": "Already used at {{time}}",
-    "validTicket": "Valid ticket!"
+    "validTicket": "Valid ticket!",
+    "storageUnavailable": "This browser’s offline storage is unavailable. Tickets cannot be downloaded in advance and scans are not stored — use another browser or allow site data."
   },
   "ticketDashboard": {
     "title": "Ticket Dashboard",
@@ -2832,7 +2863,12 @@
     "progress": "Progress",
     "dailyForecast": "Daily forecast",
     "predicted": "Predicted",
-    "actual": "Actual"
+    "actual": "Actual",
+    "factors": {
+      "historicalData": "Based on historical sales data",
+      "daysUntilConcert": "Days until the concert: {{days}}",
+      "currentTrend": "Current sales trend"
+    }
   },
   "guestList": {
     "title": "Guest List",
@@ -3133,7 +3169,10 @@
     "pending_changes": "{{count}} change(s) pending sync",
     "syncing": "Syncing...",
     "sync_complete": "Sync complete",
-    "sync_failed": "Sync failed"
+    "sync_failed": "Sync failed",
+    "back_online": "You are back online",
+    "offline_data_available": "cached data available",
+    "pending_sync": "Waiting to sync"
   },
   "entraSync": {
     "title": "Entra ID Synchronization",
@@ -3312,7 +3351,11 @@
     "syncPhotosDescription": "Sync profile photos from Microsoft 365.",
     "syncPhotosSuccess": "Photos synchronized",
     "gridView": "Grid view",
-    "listView": "List view"
+    "listView": "List view",
+    "grid": "Grid",
+    "list": "List",
+    "chat": "Chat",
+    "sectionChat": "Section chat"
   },
   "voiceParts": {
     "title": "Voice Parts",
@@ -3520,7 +3563,8 @@
       "practiceRemindersDesc": "Reminders to practice",
       "concertReminders": "Concert reminders",
       "concertRemindersDesc": "Reminders for upcoming concerts"
-    }
+    },
+    "unread": "Unread"
   },
   "practiceSchedules": {
     "title": "Practice schedules",
@@ -3653,7 +3697,8 @@
     "navigate": "navigate",
     "select": "select",
     "close": "close",
-    "deleteRecent": "Delete"
+    "deleteRecent": "Delete",
+    "title": "Search"
   },
   "health": {
     "title": "System Health",
@@ -4882,7 +4927,9 @@
       "color": "Color",
       "icon": "Icon",
       "dragHint": "Drag categories to reorder them",
-      "untitled": "Untitled Category"
+      "untitled": "Untitled Category",
+      "selectColor": "Select color {{color}}",
+      "selectIcon": "Select icon {{icon}}"
     },
     "active": "Active",
     "inactive": "Inactive",
@@ -5066,7 +5113,9 @@
       "create_task": "Create task",
       "update_field": "Update field",
       "webhook": "Webhook",
-      "delay": "Delay"
+      "delay": "Delay",
+      "add_to_group": "Add to group",
+      "remove_from_group": "Remove from group"
     },
     "status": {
       "pending": "Pending",
@@ -5477,7 +5526,11 @@
     "addInstrument": "Add instrument",
     "lastPlayed": "Last played",
     "recentAssignments": "Recent assignments",
-    "event": "Event"
+    "event": "Event",
+    "filterSearch": "Search",
+    "filterType": "Filter by type",
+    "filterInstrument": "Filter by instrument",
+    "filterStatus": "Filter by status"
   },
   "replacementRequests": {
     "title": "Replacement Requests",
@@ -5510,7 +5563,10 @@
     "inviteNotesPlaceholder": "Add any details about the performance...",
     "invite": "Invite",
     "cancelRequest": "Cancel Request",
-    "cancelConfirm": "Are you sure you want to cancel this request?"
+    "cancelConfirm": "Are you sure you want to cancel this request?",
+    "filterStatus": "Filter by status",
+    "filterUrgency": "Filter by urgency",
+    "filterEventType": "Filter by event type"
   },
   "replacementFinder": {
     "title": "Find Replacement",
@@ -5776,5 +5832,51 @@
       "excludedHelp": "These parts stay out of every share, even for pieces you do open up.",
       "noExclusions": "No exclusions."
     }
+  },
+  "captcha": {
+    "verificationRequired": "Please complete the CAPTCHA verification",
+    "javascriptRequired": "JavaScript is required to complete the CAPTCHA verification."
+  },
+  "offline": {
+    "manager": "Offline storage",
+    "description": "Manage the sheet music and audio available offline.",
+    "manage": "Manage offline storage",
+    "totalSize": "Total size",
+    "noItems": "No items in offline storage",
+    "noItemsHint": "Open sheet music and it is kept offline automatically.",
+    "clearAll": "Clear all",
+    "deleted": "Items removed from offline storage",
+    "cleared": "Offline storage cleared"
+  },
+  "shareTarget": {
+    "processing": "Processing...",
+    "processingMessage": "Your shared file is being processed.",
+    "success": "Done!",
+    "failed": "Failed",
+    "receivedText": "Shared text received",
+    "filesUploaded": "Files uploaded",
+    "noContent": "No shared content found",
+    "error": "Could not process the shared content"
+  },
+  "sync": {
+    "never": "Never",
+    "just_now": "Just now",
+    "minutes_ago_one": "{{count}} minute ago",
+    "minutes_ago_other": "{{count}} minutes ago",
+    "hours_ago_one": "{{count}} hour ago",
+    "hours_ago_other": "{{count}} hours ago",
+    "days_ago_one": "{{count}} day ago",
+    "days_ago_other": "{{count}} days ago",
+    "offline": "Offline",
+    "syncing": "Syncing...",
+    "error": "Sync error",
+    "pending": "{{count}} pending",
+    "synced": "Synced",
+    "last_sync": "Last sync",
+    "manual_sync": "Sync now",
+    "pending_changes_one": "{{count}} change is waiting to sync",
+    "pending_changes_other": "{{count}} changes are waiting to sync",
+    "clear_offline_data": "Clear offline data",
+    "confirm_clear": "Are you sure you want to clear all offline data?"
   }
 }

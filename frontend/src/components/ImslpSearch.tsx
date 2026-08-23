@@ -5,6 +5,7 @@ import { searchImslp, getImslpWorkDetails, importFromImslp } from '../api';
 import type { ImslpWork, ImslpWorkDetail, ImslpScore } from '../api';
 import { showSuccess, showError } from '../utils/toast';
 import { Modal } from './Modal';
+import { FormField } from './FormField';
 
 interface ImslpSearchProps {
   onClose: () => void;
@@ -88,8 +89,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
     <Modal title={t('imslp.searchTitle')} onClose={onClose} size="large">
       <form onSubmit={handleSearch} className="mb-2">
         <div className="grid grid-2 gap-1">
-          <div className="form-group mb-0">
-            <label className="form-label">{t('imslp.workTitle')}</label>
+          <FormField className="form-group mb-0" label={t('imslp.workTitle')}>
             <input
               type="text"
               className="form-control"
@@ -98,9 +98,8 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
               placeholder={t('imslp.workTitlePlaceholder')}
               autoFocus
             />
-          </div>
-          <div className="form-group mb-0">
-            <label className="form-label">{t('imslp.composer')}</label>
+          </FormField>
+          <FormField className="form-group mb-0" label={t('imslp.composer')}>
             <input
               type="text"
               className="form-control"
@@ -108,7 +107,7 @@ export function ImslpSearch({ onClose, initialQuery = '', initialComposer = '', 
               onChange={(e) => setComposer(e.target.value)}
               placeholder={t('imslp.composerPlaceholder')}
             />
-          </div>
+          </FormField>
         </div>
         <div className="flex gap-1 mt-1">
           <button type="submit" className="btn btn-primary" disabled={!query.trim() || searching}>

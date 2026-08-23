@@ -95,7 +95,13 @@
     "selectOptional": "Auswählen (optional)",
     "startDate": "Startdatum",
     "viewAll": "Alle anzeigen",
-    "warnings": "Warnungen"
+    "warnings": "Warnungen",
+    "apply": "Übernehmen",
+    "selectAll": "Alle auswählen",
+    "deselectAll": "Auswahl aufheben",
+    "dismiss": "Ausblenden",
+    "showingOf": "Zeigt {{from}}-{{to}} von {{total}}",
+    "user": "Benutzer"
   },
   "lazyImage": {
     "notLoaded": "Nicht geladen"
@@ -273,7 +279,8 @@
     "externalMusicians": "Externe Musiker",
     "replacementRequests": "Vertretungsanfragen",
     "stageDesigner": "Bühnenaufstellung",
-    "musicSharing": "Musik teilen"
+    "musicSharing": "Musik teilen",
+    "mobileMenu": "Menü"
   },
   "roles": {
     "admin": "Administrator",
@@ -458,7 +465,9 @@
     "offlineReady": "Offline verfügbar",
     "cachedPieces": "{{count}} Stücke gespeichert",
     "compactView": "Kompakte Ansicht",
-    "fullView": "Vollständige Ansicht"
+    "fullView": "Vollständige Ansicht",
+    "gridView": "Kacheln",
+    "swipeView": "Wischen"
   },
   "annotations": {
     "title": "Anmerkungen",
@@ -600,7 +609,9 @@
     "statusUpdated": "Status aktualisiert",
     "errorUpdateStatus": "Fehler beim Aktualisieren des Status",
     "deleted": "Meldung gelöscht",
-    "errorDelete": "Fehler beim Löschen"
+    "errorDelete": "Fehler beim Löschen",
+    "filterStatus": "Nach Status filtern",
+    "changeStatusFor": "Status von „{{title}}\" ändern"
   },
   "contacts": {
     "title": "Kontakte",
@@ -1014,7 +1025,9 @@
     "recipientName": "Name",
     "recipientStatusLabel": "Status",
     "searchRecipients": "Empfänger durchsuchen",
-    "viewRecipients": "Empfänger anzeigen"
+    "viewRecipients": "Empfänger anzeigen",
+    "openedAt": "Geöffnet am {{date}}",
+    "deliveredAt": "Zugestellt am {{date}}"
   },
   "customFields": {
     "title": "Benutzerdefinierte Felder",
@@ -1851,6 +1864,16 @@
       "errorUpdating": "Fehler beim Aktualisieren der Zuordnung",
       "errorDeleting": "Fehler beim Löschen der Zuordnung",
       "deleteConfirm": "Möchten Sie die Zuordnung zu '{{groupName}}' wirklich löschen?"
+    },
+    "support": {
+      "title": "Support & Hilfe",
+      "description": "Melden Sie Probleme, lesen Sie das Benutzerhandbuch oder sehen Sie, was zur Barrierefreiheit geregelt ist.",
+      "reportIssue": "Fehler melden",
+      "reportIssueDesc": "Probleme mit Noten melden",
+      "userGuide": "Benutzerhandbuch",
+      "userGuideDesc": "Erfahren Sie, wie Sie die App nutzen",
+      "accessibility": "Barrierefreiheit",
+      "accessibilityDesc": "Informationen zur Barrierefreiheit"
     }
   },
   "theme": {
@@ -2019,7 +2042,8 @@
       "created": "{{count}} Proben erstellt",
       "more": "+{{count}} weitere"
     },
-    "deleteTitle": "Probe löschen"
+    "deleteTitle": "Probe löschen",
+    "attendanceDashboard": "Übersicht"
   },
   "availability": {
     "title": "Verfügbarkeit",
@@ -2098,7 +2122,8 @@
     "testing": "Testen",
     "testingText": "Wir testen unsere Anwendung regelmäßig mit unterstützenden Technologien, um Kompatibilität sicherzustellen.",
     "understandable": "Verständlich",
-    "understandableText": "Inhalte sind lesbar und die Benutzeroberfläche verhält sich vorhersehbar."
+    "understandableText": "Inhalte sind lesbar und die Benutzeroberfläche verhält sich vorhersehbar.",
+    "sortable": "sortierbar"
   },
   "accessibilityInfo": {
     "title": "Informationen zur Barrierefreiheit",
@@ -2489,7 +2514,9 @@
       "disclaimer": "Diese Prognose basiert auf historischen Anwesenheitsdaten.",
       "error": "Prognose konnte nicht geladen werden"
     },
-    "instrument": "Instrument"
+    "instrument": "Instrument",
+    "setlistBuilder": "Setlist",
+    "posterGenerator": "Poster"
   },
   "onboarding": {
     "menuItem": "Rundgang starten",
@@ -2623,7 +2650,10 @@
     "pending_changes": "{{count}} Änderung(en) warten auf Synchronisierung",
     "syncing": "Synchronisieren...",
     "sync_complete": "Synchronisierung abgeschlossen",
-    "sync_failed": "Synchronisierung fehlgeschlagen"
+    "sync_failed": "Synchronisierung fehlgeschlagen",
+    "back_online": "Sie sind wieder online",
+    "offline_data_available": "gespeicherte Daten verfügbar",
+    "pending_sync": "Wartet auf Synchronisierung"
   },
   "entraSync": {
     "title": "Entra ID Synchronisierung",
@@ -2802,7 +2832,11 @@
     "syncPhotosDescription": "Profilfotos von Microsoft 365 synchronisieren.",
     "syncPhotosSuccess": "Fotos synchronisiert",
     "gridView": "Kachelansicht",
-    "listView": "Listenansicht"
+    "listView": "Listenansicht",
+    "grid": "Kacheln",
+    "list": "Liste",
+    "chat": "Chat",
+    "sectionChat": "Registerchat"
   },
   "voiceParts": {
     "title": "Stimmenzuordnung",
@@ -2909,7 +2943,8 @@
     "navigate": "navigieren",
     "select": "auswählen",
     "close": "schließen",
-    "deleteRecent": "Löschen"
+    "deleteRecent": "Löschen",
+    "title": "Suchen"
   },
   "health": {
     "title": "Systemgesundheit",
@@ -2996,7 +3031,12 @@
     "progress": "Voortgang",
     "dailyForecast": "Dagelijkse voorspelling",
     "predicted": "Voorspeld",
-    "actual": "Werkelijk"
+    "actual": "Werkelijk",
+    "factors": {
+      "historicalData": "Basierend auf historischen Verkaufsdaten",
+      "daysUntilConcert": "Tage bis zum Konzert: {{days}}",
+      "currentTrend": "Aktueller Verkaufstrend"
+    }
   },
   "guestList": {
     "title": "Gästeliste",
@@ -3341,7 +3381,9 @@
     "refundReasonPlaceholder": "Optional: Grund für die Rückerstattung",
     "refundSuccess": "Rückerstattung erfolgreich verarbeitet.",
     "refund": "Erstattung",
-    "exportSuccess": "Export erfolgreich heruntergeladen."
+    "exportSuccess": "Export erfolgreich heruntergeladen.",
+    "offlineMode": "Offline-Modus",
+    "onlineMode": "Online-Modus"
   },
   "bulk": {
     "title": "Massenaktionen",
@@ -3693,7 +3735,8 @@
     "typeToSearch": "Zum Suchen tippen",
     "log": "Protokollieren",
     "deleteGoalTitle": "Ziel löschen",
-    "deleteLogTitle": "Sitzung löschen"
+    "deleteLogTitle": "Sitzung löschen",
+    "quickLog": "Erfassen"
   },
   "recent": {
     "title": "Zuletzt angesehen",
@@ -3795,7 +3838,8 @@
       "practiceRemindersDesc": "Erinnerungen zum Üben",
       "concertReminders": "Konzerterinnerungen",
       "concertRemindersDesc": "Erinnerungen an bevorstehende Konzerte"
-    }
+    },
+    "unread": "Ungelesen"
   },
   "practiceSchedules": {
     "title": "Übungspläne",
@@ -3996,7 +4040,8 @@
     "syncFailed": "Synchronisierung der Scans fehlgeschlagen",
     "ticketNotFound": "Ticket nicht gefunden",
     "alreadyUsed": "Bereits verwendet um {{time}}",
-    "validTicket": "Gültiges Ticket!"
+    "validTicket": "Gültiges Ticket!",
+    "storageUnavailable": "Der Offline-Speicher dieses Browsers ist nicht verfügbar. Tickets können nicht im Voraus geladen werden und Scans werden nicht gespeichert – nutze einen anderen Browser oder erlaube Websitedaten."
   },
   "seatSelection": {
     "title": "Sitzplatzauswahl",
@@ -4882,7 +4927,9 @@
       "color": "Farbe",
       "icon": "Symbol",
       "dragHint": "Kategorien ziehen, um sie neu zu ordnen",
-      "untitled": "Unbenannte Kategorie"
+      "untitled": "Unbenannte Kategorie",
+      "selectColor": "Farbe {{color}} auswählen",
+      "selectIcon": "Symbol {{icon}} auswählen"
     },
     "active": "Aktiv",
     "inactive": "Inaktiv",
@@ -5066,7 +5113,9 @@
       "create_task": "Aufgabe erstellen",
       "update_field": "Feld aktualisieren",
       "webhook": "Webhook",
-      "delay": "Verzögerung"
+      "delay": "Verzögerung",
+      "add_to_group": "Zur Gruppe hinzufügen",
+      "remove_from_group": "Aus Gruppe entfernen"
     },
     "status": {
       "pending": "Ausstehend",
@@ -5442,7 +5491,11 @@
     "addInstrument": "Instrument hinzufügen",
     "lastPlayed": "Zuletzt gespielt",
     "recentAssignments": "Letzte Einsätze",
-    "event": "Veranstaltung"
+    "event": "Veranstaltung",
+    "filterSearch": "Suchen",
+    "filterType": "Nach Art filtern",
+    "filterInstrument": "Nach Instrument filtern",
+    "filterStatus": "Nach Status filtern"
   },
   "replacementRequests": {
     "title": "Vertretungsanfragen",
@@ -5475,7 +5528,10 @@
     "inviteNotesPlaceholder": "Details zum Auftritt hinzufügen...",
     "invite": "Einladen",
     "cancelRequest": "Anfrage stornieren",
-    "cancelConfirm": "Bist du sicher, dass du diese Anfrage stornieren möchtest?"
+    "cancelConfirm": "Bist du sicher, dass du diese Anfrage stornieren möchtest?",
+    "filterStatus": "Nach Status filtern",
+    "filterUrgency": "Nach Dringlichkeit filtern",
+    "filterEventType": "Nach Aktivitätsart filtern"
   },
   "replacementFinder": {
     "title": "Vertretung finden",
@@ -5776,5 +5832,51 @@
       "excludedHelp": "Diese Stimmen bleiben von jeder Freigabe ausgenommen, auch bei Stücken, die ihr freigebt.",
       "noExclusions": "Keine Ausnahmen."
     }
+  },
+  "captcha": {
+    "verificationRequired": "Bitte schließen Sie die CAPTCHA-Verifizierung ab",
+    "javascriptRequired": "JavaScript wird benötigt, um die CAPTCHA-Verifizierung abzuschließen."
+  },
+  "offline": {
+    "manager": "Offline-Speicher",
+    "description": "Verwalten Sie die Noten und Audiodateien, die offline verfügbar sind.",
+    "manage": "Offline-Speicher verwalten",
+    "totalSize": "Gesamtgröße",
+    "noItems": "Keine Elemente im Offline-Speicher",
+    "noItemsHint": "Öffnen Sie Noten, dann werden sie automatisch offline gespeichert.",
+    "clearAll": "Alles löschen",
+    "deleted": "Elemente aus dem Offline-Speicher entfernt",
+    "cleared": "Offline-Speicher geleert"
+  },
+  "shareTarget": {
+    "processing": "Wird verarbeitet...",
+    "processingMessage": "Ihre geteilte Datei wird verarbeitet.",
+    "success": "Geschafft!",
+    "failed": "Fehlgeschlagen",
+    "receivedText": "Geteilter Text empfangen",
+    "filesUploaded": "Dateien hochgeladen",
+    "noContent": "Keine geteilten Inhalte gefunden",
+    "error": "Der geteilte Inhalt konnte nicht verarbeitet werden"
+  },
+  "sync": {
+    "never": "Noch nie",
+    "just_now": "Gerade eben",
+    "minutes_ago_one": "vor {{count}} Minute",
+    "minutes_ago_other": "vor {{count}} Minuten",
+    "hours_ago_one": "vor {{count}} Stunde",
+    "hours_ago_other": "vor {{count}} Stunden",
+    "days_ago_one": "vor {{count}} Tag",
+    "days_ago_other": "vor {{count}} Tagen",
+    "offline": "Offline",
+    "syncing": "Synchronisieren...",
+    "error": "Synchronisierungsfehler",
+    "pending": "{{count}} ausstehend",
+    "synced": "Synchronisiert",
+    "last_sync": "Letzte Synchronisierung",
+    "manual_sync": "Jetzt synchronisieren",
+    "pending_changes_one": "{{count}} Änderung wartet auf Synchronisierung",
+    "pending_changes_other": "{{count}} Änderungen warten auf Synchronisierung",
+    "clear_offline_data": "Offline-Daten löschen",
+    "confirm_clear": "Möchten Sie wirklich alle Offline-Daten löschen?"
   }
 }

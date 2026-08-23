@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
@@ -32,6 +32,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 export default function PaymentSettings() {
   const { t } = useTranslation();
+  const sleutelId = useId();
   useDocumentTitle('pageTitle.paymentSettings');
 
   const queryClient = useQueryClient();
@@ -512,9 +513,15 @@ export default function PaymentSettings() {
               connectMutation.mutate({ key: apiKey, mode: connectModalMode });
             }}
           >
+            {/* Met de hand gekoppeld: naast label en veld staat hier ook een
+                hulptekst, en FormField kloont maar één kind. */}
             <div className="form-group">
-              <label className="form-label">{t('paymentSettings.apiKey')}</label>
+              <label className="form-label" htmlFor={sleutelId}>
+                {t('paymentSettings.apiKey')}
+              </label>
               <input
+                id={sleutelId}
+                aria-describedby={`${sleutelId}-hulp`}
                 type="password"
                 className="form-control"
                 value={apiKey}
@@ -522,7 +529,7 @@ export default function PaymentSettings() {
                 placeholder={connectModalMode === 'live' ? 'live_xxxxxxxxxxxxxxxxxx' : 'test_xxxxxxxxxxxxxxxxxx'}
                 required
               />
-              <small style={{ color: 'var(--text-light)' }}>
+              <small id={`${sleutelId}-hulp`} style={{ color: 'var(--text-light)' }}>
                 {connectModalMode === 'live'
                   ? t(
                       'paymentSettings.liveKeyHelp',

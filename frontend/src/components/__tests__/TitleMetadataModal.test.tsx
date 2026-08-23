@@ -65,11 +65,11 @@ function maakTitel(overschrijving: Partial<MusicTitle> = {}): MusicTitle {
   } as MusicTitle;
 }
 
-function toon() {
+function toon(genres: { id: string; name: string }[] = []) {
   return render(
     <TitleMetadataModal
       title={maakTitel()}
-      genres={[]}
+      genres={genres as never}
       onClose={vi.fn()}
       onSave={vi.fn().mockResolvedValue(undefined)}
     />,
@@ -184,5 +184,119 @@ describe('TitleMetadataModal - kleuren in het MusicaInfo-blok', () => {
     const vlak = (await screen.findByText('titles.musicaInfoApply')).closest('div')!.parentElement!;
     expect(vlak.style.background).toBe('var(--surface)');
     expect(vlak.getAttribute('style')).not.toMatch(/white|#fff/i);
+  });
+});
+
+/**
+ * De labels van dit venster wezen hun veld niet aan: `<label
+ * className="form-label">` stond náást het veld, zonder `htmlFor` en zonder
+ * `id`. Een schermlezer meldde dan een bewerkbaar veld zonder te zeggen wat
+ * erin moet, en een test kon het veld niet op naam vinden. De gewone velden
+ * lopen nu via `FormField`.
+ *
+ * Drie velden zijn met de hand gekoppeld, omdat er meer in de `form-group`
+ * staat dan label plus veld: bij de titel en bij de YouTube-verwijzing zit het
+ * veld samen met een knop in een flex-omhulsel, en onder de interne notities
+ * staat een hulptekst. Die drie staan hier apart in, want handwerk raakt eerder
+ * zoek dan een component.
+ */
+describe('TitleMetadataModal - labels gekoppeld aan hun veld', () => {
+  it('vindt de velden van het venster op hun labeltekst', async () => {
+    toon();
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText('titles.durationFormat')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('titles.difficulty')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('titles.description').tagName).toBe('TEXTAREA');
+  });
+
+  it('koppelt ook het arrangeursveld, dat er alleen bij een arrangeur is', async () => {
+    render(
+      <TitleMetadataModal
+        title={maakTitel({ arranger: 'Johan de Meij' })}
+        genres={[]}
+        onClose={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText('titles.arranger')).toHaveValue('Johan de Meij');
+  });
+
+  it('koppelt de velden in het uitgeklapte metagegevensblok', async () => {
+    const gebruiker = userEvent.setup();
+    toon();
+    const venster = await screen.findByRole('dialog');
+
+    await gebruiker.click(within(venster).getByText('metadata.extendedMetadata'));
+
+    expect(screen.getByLabelText('metadata.workNumber')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('metadata.movementNumber')).toHaveAttribute('type', 'number');
+    expect(screen.getByLabelText('metadata.movementTitle')).toBeInTheDocument();
+    expect(screen.getByLabelText('metadata.lyricist')).toBeInTheDocument();
+    expect(screen.getByLabelText('metadata.rights')).toBeInTheDocument();
+    expect(screen.getByLabelText('metadata.source')).toBeInTheDocument();
+  });
+
+  it('zet de aanwijzer in het veld bij een klik op het label', async () => {
+    const gebruiker = userEvent.setup();
+    toon();
+    await screen.findByRole('dialog');
+
+    await gebruiker.click(screen.getByText('titles.difficulty'));
+    await gebruiker.keyboard('4');
+
+    expect(screen.getByLabelText('titles.difficulty')).toHaveValue('4');
+  });
+
+  it('koppelt de drie handmatige velden, met verwijzing naar de hulptekst', async () => {
+    toon();
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText('myMusic.table.title')).toHaveValue('Also sprach Zarathustra');
+    expect(screen.getByLabelText('titles.youtubeUrl')).toHaveAttribute('type', 'url');
+
+    const notities = screen.getByLabelText('titles.internalNotes');
+    expect(notities.tagName).toBe('TEXTAREA');
+    expect(notities).toHaveAccessibleDescription('titles.internalNotesHelp');
+  });
+});
+
+/**
+ * De kop boven de genrevakjes is geen veldlabel.
+ *
+ * Er stond een `<label className="form-label">` boven een raster met
+ * aankruisvakjes. Zo'n kop kan geen `htmlFor` krijgen: er is niet één veld om
+ * naar te wijzen, en elk vakje heeft binnenin al zijn eigen label. Een
+ * schermlezer kondigde daar dus "label" aan zonder dat er iets te bedienen
+ * viel, en de vakjes hoorden bij niets.
+ *
+ * De kop is een `<span>` geworden - dezelfde klasse, dus dezelfde opmaak - en
+ * benoemt nu de groep als geheel, via `role="group"` met `aria-labelledby`.
+ */
+describe('TitleMetadataModal - de kop boven de genrevakjes', () => {
+  const GENRES = [
+    { id: 'gen-1', name: 'Marsen' },
+    { id: 'gen-2', name: 'Filmmuziek' },
+  ];
+
+  it('zet geen <label> boven het vakjesraster', async () => {
+    toon(GENRES);
+    const venster = await screen.findByRole('dialog');
+
+    const kop = within(venster).getByText('titles.genres');
+    expect(kop.tagName).toBe('SPAN');
+    expect(kop.closest('label')).toBeNull();
+    // Maar het ziet er nog precies hetzelfde uit.
+    expect(kop).toHaveClass('form-label');
+  });
+
+  it('benoemt in plaats daarvan de groep vakjes als geheel', async () => {
+    toon(GENRES);
+    const venster = await screen.findByRole('dialog');
+
+    const groep = within(venster).getByRole('group', { name: 'titles.genres' });
+    expect(within(groep).getAllByRole('checkbox', { hidden: true })).toHaveLength(GENRES.length);
   });
 });

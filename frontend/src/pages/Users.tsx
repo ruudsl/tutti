@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller, type UseFormReturn } from 'react-hook-form';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/useUsers';
@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { useInstruments } from '../hooks/useInstruments';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { FormModal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SkeletonTable } from '../components/Skeleton';
 import { CustomFieldFormSection } from '../components/CustomFields';
@@ -244,8 +245,7 @@ export default function Users() {
       <div className="card mb-2">
         <div className="card-body">
           <div className="filter-bar">
-            <div className="form-group filter-search">
-              <label className="form-label">{t('common.search')}</label>
+            <FormField label={t('common.search')} className="form-group filter-search">
               <input
                 type="text"
                 className="form-control"
@@ -253,9 +253,8 @@ export default function Users() {
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('orchestras.title')}</label>
+            </FormField>
+            <FormField label={t('orchestras.title')}>
               <select
                 className="form-control"
                 value={filterOrchestra}
@@ -268,9 +267,8 @@ export default function Users() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('instruments.title')}</label>
+            </FormField>
+            <FormField label={t('instruments.title')}>
               <select
                 className="form-control"
                 value={filterInstrument}
@@ -289,7 +287,7 @@ export default function Users() {
                   );
                 })}
               </select>
-            </div>
+            </FormField>
             {(filterSearch || filterOrchestra || filterInstrument) && (
               <button
                 type="button"
@@ -585,12 +583,33 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
     formState: { errors },
   } = form;
 
+  // Deze vier velden lopen niet via FormField: in dezelfde form-group staat naast
+  // label en veld ook nog een foutmelding (en bij het wachtwoord een hulptekst).
+  // FormField neemt één kindelement, en die melding buiten de form-group zetten
+  // zou hem onder de ondermarge van 1rem laten wegzakken - los van het veld waar
+  // hij bij hoort. Vandaar met de hand, mét aria-describedby zodat een
+  // schermlezer de melding ook echt bij het veld voorleest.
+  const veldId = useId();
+  const voornaamId = `${veldId}-voornaam`;
+  const achternaamId = `${veldId}-achternaam`;
+  const emailId = `${veldId}-email`;
+  const wachtwoordId = `${veldId}-wachtwoord`;
+
+  // De groepskoppen van de aankruisvakjes labelen geen veld maar een groep; zie
+  // de opmerking daar.
+  const instrumentenLabelId = `${veldId}-instrumenten`;
+  const orkestenLabelId = `${veldId}-orkesten`;
+
   return (
     <>
       <div className="grid grid-2">
         <div className="form-group">
-          <label className="form-label">{t('users.firstName')} *</label>
+          <label className="form-label" htmlFor={voornaamId}>
+            {t('users.firstName')} *
+          </label>
           <input
+            id={voornaamId}
+            aria-describedby={errors.firstName ? `${voornaamId}-fout` : undefined}
             type="text"
             className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
             {...register('firstName', {
@@ -599,11 +618,19 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
               maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
             })}
           />
-          {errors.firstName && <span className="form-error">{errors.firstName.message}</span>}
+          {errors.firstName && (
+            <span id={`${voornaamId}-fout`} className="form-error">
+              {errors.firstName.message}
+            </span>
+          )}
         </div>
         <div className="form-group">
-          <label className="form-label">{t('users.lastName')} *</label>
+          <label className="form-label" htmlFor={achternaamId}>
+            {t('users.lastName')} *
+          </label>
           <input
+            id={achternaamId}
+            aria-describedby={errors.lastName ? `${achternaamId}-fout` : undefined}
             type="text"
             className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
             {...register('lastName', {
@@ -612,13 +639,21 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
               maxLength: { value: 100, message: t('errors.maxLength', { max: 100 }) },
             })}
           />
-          {errors.lastName && <span className="form-error">{errors.lastName.message}</span>}
+          {errors.lastName && (
+            <span id={`${achternaamId}-fout`} className="form-error">
+              {errors.lastName.message}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="form-group">
-        <label className="form-label">{t('users.email')} *</label>
+        <label className="form-label" htmlFor={emailId}>
+          {t('users.email')} *
+        </label>
         <input
+          id={emailId}
+          aria-describedby={errors.email ? `${emailId}-fout` : undefined}
           type="email"
           className={`form-control ${errors.email ? 'is-invalid' : ''}`}
           {...register('email', {
@@ -629,12 +664,20 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
             },
           })}
         />
-        {errors.email && <span className="form-error">{errors.email.message}</span>}
+        {errors.email && (
+          <span id={`${emailId}-fout`} className="form-error">
+            {errors.email.message}
+          </span>
+        )}
       </div>
 
       <div className="form-group">
-        <label className="form-label">{isEditing ? t('users.passwordHint') : `${t('users.password')} *`}</label>
+        <label className="form-label" htmlFor={wachtwoordId}>
+          {isEditing ? t('users.passwordHint') : `${t('users.password')} *`}
+        </label>
         <input
+          id={wachtwoordId}
+          aria-describedby={errors.password ? `${wachtwoordId}-fout` : !isEditing ? `${wachtwoordId}-hulp` : undefined}
           type="password"
           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
           {...register('password', {
@@ -642,14 +685,19 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
             minLength: !isEditing ? { value: 8, message: t('errors.passwordTooShort', { min: 8 }) } : undefined,
           })}
         />
-        {errors.password && <span className="form-error">{errors.password.message}</span>}
+        {errors.password && (
+          <span id={`${wachtwoordId}-fout`} className="form-error">
+            {errors.password.message}
+          </span>
+        )}
         {!isEditing && !errors.password && (
-          <span className="form-hint">{t('errors.passwordTooShort', { min: 8 })}</span>
+          <span id={`${wachtwoordId}-hulp`} className="form-hint">
+            {t('errors.passwordTooShort', { min: 8 })}
+          </span>
         )}
       </div>
 
-      <div className="form-group">
-        <label className="form-label">{t('users.role')}</label>
+      <FormField label={t('users.role')}>
         <select className="form-control form-select" {...register('role')}>
           <option value="member">{t('roles.member')}</option>
           <option value="conductor">{t('roles.conductor')}</option>
@@ -658,14 +706,20 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
           <option value="uniforms_committee">{t('roles.uniforms_committee')}</option>
           <option value="admin">{t('roles.admin')}</option>
         </select>
-      </div>
+      </FormField>
 
+      {/* Geen FormField hieronder: daar staat geen veld maar een groep aankruisvakjes,
+          die elk hun eigen label om zich heen hebben. Een <label> die naar niets wijst
+          is voor een schermlezer een lege belofte; het is een groepskop. Daarom een
+          <span> met dezelfde klasse, en de groep verwijst ernaar. */}
       <Controller
         name="instrumentIds"
         control={control}
         render={({ field }) => (
-          <div className="form-group">
-            <label className="form-label">{t('users.instruments')}</label>
+          <div className="form-group" role="group" aria-labelledby={instrumentenLabelId}>
+            <span id={instrumentenLabelId} className="form-label">
+              {t('users.instruments')}
+            </span>
             <div className="checkbox-group">
               {instruments.map((instrument) => {
                 const clefLabel = instrument.clef === 'fa' ? 'fa' : instrument.clef === 'ut' ? 'ut' : 'sol';
@@ -694,12 +748,15 @@ function UserForm({ form, instruments, orchestras, isEditing }: UserFormProps) {
         )}
       />
 
+      {/* Zie de opmerking bij de instrumenten: groepskop, geen veldlabel. */}
       <Controller
         name="orchestraIds"
         control={control}
         render={({ field }) => (
-          <div className="form-group">
-            <label className="form-label">{t('users.orchestras')}</label>
+          <div className="form-group" role="group" aria-labelledby={orkestenLabelId}>
+            <span id={orkestenLabelId} className="form-label">
+              {t('users.orchestras')}
+            </span>
             <div className="checkbox-group">
               {orchestras.map((orchestra) => (
                 <label key={orchestra.id} className="checkbox-item">

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import { FormModal } from '../../components/Modal';
 
 /**
@@ -37,8 +38,7 @@ export function BumaStemraModal({
     >
       <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>{t('concerts.bumaStemraDescription')}</p>
       <div className="flex gap-2">
-        <div className="form-group" style={{ flex: 1 }}>
-          <label className="form-label">{t('concerts.startDate')}</label>
+        <FormField style={{ flex: 1 }} label={t('concerts.startDate')}>
           <input
             type="date"
             className="form-control"
@@ -46,9 +46,8 @@ export function BumaStemraModal({
             onChange={(e) => setBumaStemraStartDate(e.target.value)}
             required
           />
-        </div>
-        <div className="form-group" style={{ flex: 1 }}>
-          <label className="form-label">{t('concerts.endDateExport')}</label>
+        </FormField>
+        <FormField style={{ flex: 1 }} label={t('concerts.endDateExport')}>
           <input
             type="date"
             className="form-control"
@@ -56,7 +55,7 @@ export function BumaStemraModal({
             onChange={(e) => setBumaStemraEndDate(e.target.value)}
             required
           />
-        </div>
+        </FormField>
       </div>
     </FormModal>
   );

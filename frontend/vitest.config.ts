@@ -53,11 +53,17 @@ export default defineConfig({
       // Drempels net onder de gemeten stand, zodat ze een terugval vangen
       // zonder bij de eerste de beste meetruis af te gaan. Verhoog ze als er
       // tests bij komen - dat is het hele punt van een ratel.
-      // Bijgewerkt op 22-08-2026, na de restpuntenronde. Gemeten:
-      //   statements 28,81 (7225/25070)
-      //   branches   15,70 (2599/16544)
-      //   functions  27,26 (2416/8860)
-      //   lines      29,40 (6929/23563)
+      // Bijgewerkt op 22-08-2026, na het koppelen van de formulierlabels.
+      // Gemeten:
+      //   statements 35,35 (8881/25116)
+      //   branches   23,45 (3885/16566)
+      //   functions  30,79 (2729/8861)
+      //   lines      36,28 (8567/23609)
+      //
+      // De sprong is groter dan het aantal nieuwe tests doet vermoeden: die
+      // tests zoeken velden op label, en daarvoor moet de hele pagina getekend
+      // worden. Dat raakt onderweg veel code die nog nergens door een test
+      // aangeraakt werd.
       //
       // Branches is bijna verdubbeld (8,68 -> 14,01) terwijl statements maar
       // drie punten steeg. Dat bevestigt waarom de pagina's eerst opgeknipt
@@ -65,10 +71,10 @@ export default defineConfig({
       // geen enkele hoeveelheid api- en hooktests kon dat getal meetillen.
       // De 122 karakteriseringstests op zeven pagina's doen dat wel.
       thresholds: {
-        statements: 28,
-        branches: 15,
-        functions: 27,
-        lines: 29,
+        statements: 35,
+        branches: 23,
+        functions: 30,
+        lines: 36,
       },
     },
   },

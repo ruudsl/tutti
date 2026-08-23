@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -26,6 +26,7 @@ import { Icon } from '../../components/Icon';
 import { useMusicTitles } from '../../hooks/useMusicTitles';
 import { useDebounce } from '../../hooks/useDebounce';
 import { Modal, FormModal } from '../../components/Modal';
+import { FormField } from '../../components/FormField';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SkeletonTable } from '../../components/Skeleton';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -56,6 +57,7 @@ import { naarDatumTijdVeld, naarIsoDatumTijd } from './datumTijd';
 
 export default function Concerts() {
   const { t } = useTranslation();
+  const ledenKopId = useId();
   useDocumentTitle('pageTitle.concerts');
 
   // Tab state
@@ -576,8 +578,7 @@ export default function Concerts() {
           onSubmit={editingConcert ? handleUpdate : handleCreate}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('concerts.concertName')} *</label>
+          <FormField label={<>{t('concerts.concertName')} *</>}>
             <input
               type="text"
               className="form-control"
@@ -585,10 +586,9 @@ export default function Concerts() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
-          </div>
+          </FormField>
           <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.date')} *</label>
+            <FormField label={<>{t('concerts.date')} *</>} style={{ flex: 1 }}>
               <input
                 type="date"
                 className="form-control"
@@ -596,28 +596,25 @@ export default function Concerts() {
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('concerts.endDate')}</label>
+            </FormField>
+            <FormField label={t('concerts.endDate')} style={{ flex: 1 }}>
               <input
                 type="date"
                 className="form-control"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
               />
-            </div>
+            </FormField>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.location')}</label>
+          <FormField label={t('concerts.location')}>
             <input
               type="text"
               className="form-control"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.concertType')}</label>
+          </FormField>
+          <FormField label={t('concerts.concertType')}>
             <select
               className="form-control"
               value={formData.concertType}
@@ -630,16 +627,15 @@ export default function Concerts() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.description')}</label>
+          </FormField>
+          <FormField label={t('concerts.description')}>
             <textarea
               className="form-control"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
             />
-          </div>
+          </FormField>
           {editingConcert && (
             <>
               <div className="divider my-4">{t('customFields.additionalFields')}</div>
@@ -937,8 +933,7 @@ export default function Concerts() {
           onSubmit={handleAddProgram}
           isSubmitting={addProgramMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('concerts.selectFromRepertoire')}</label>
+          <FormField label={t('concerts.selectFromRepertoire')}>
             <select
               className="form-control"
               value={programFormData.musicTitleId}
@@ -967,9 +962,8 @@ export default function Concerts() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.programTitle')} *</label>
+          </FormField>
+          <FormField label={<>{t('concerts.programTitle')} *</>}>
             <input
               type="text"
               className="form-control"
@@ -977,18 +971,16 @@ export default function Concerts() {
               onChange={(e) => setProgramFormData({ ...programFormData, title: e.target.value })}
               required
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.programArranger')}</label>
+          </FormField>
+          <FormField label={t('concerts.programArranger')}>
             <input
               type="text"
               className="form-control"
               value={programFormData.arranger}
               onChange={(e) => setProgramFormData({ ...programFormData, arranger: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.programPartOfSet')}</label>
+          </FormField>
+          <FormField label={t('concerts.programPartOfSet')}>
             <input
               type="text"
               className="form-control"
@@ -996,7 +988,7 @@ export default function Concerts() {
               onChange={(e) => setProgramFormData({ ...programFormData, partOfSet: e.target.value })}
               placeholder={t('concerts.programPartOfSetPlaceholder')}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -1008,8 +1000,7 @@ export default function Concerts() {
           onSubmit={handleAddMedia}
           isSubmitting={addMediaMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('concerts.mediaType')} *</label>
+          <FormField label={<>{t('concerts.mediaType')} *</>}>
             <select
               className="form-control"
               value={mediaFormData.mediaType}
@@ -1022,9 +1013,8 @@ export default function Concerts() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.mediaUrl')}</label>
+          </FormField>
+          <FormField label={t('concerts.mediaUrl')}>
             <input
               type="url"
               className="form-control"
@@ -1032,16 +1022,15 @@ export default function Concerts() {
               onChange={(e) => setMediaFormData({ ...mediaFormData, url: e.target.value })}
               placeholder={t('concerts.mediaUrlPlaceholder')}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('concerts.mediaDescription')}</label>
+          </FormField>
+          <FormField label={t('concerts.mediaDescription')}>
             <input
               type="text"
               className="form-control"
               value={mediaFormData.description}
               onChange={(e) => setMediaFormData({ ...mediaFormData, description: e.target.value })}
             />
-          </div>
+          </FormField>
         </FormModal>
       )}
 
@@ -1057,8 +1046,15 @@ export default function Concerts() {
           isSubmitting={addAttendanceMutation.isPending}
         >
           <div className="form-group">
-            <label className="form-label">{t('users.title')}</label>
+            {/* Kop boven een groep aankruisvakjes, geen veldlabel: elk vakje
+                heeft zijn eigen label al. De groep krijgt een naam via
+                role="group" en aria-labelledby. */}
+            <span className="form-label" id={ledenKopId}>
+              {t('users.title')}
+            </span>
             <div
+              role="group"
+              aria-labelledby={ledenKopId}
               style={{
                 maxHeight: '300px',
                 overflow: 'auto',
@@ -1130,8 +1126,7 @@ export default function Concerts() {
           onSubmit={editingTicketType ? handleUpdateTicketType : handleCreateTicketType}
           isSubmitting={createTicketTypeMutation.isPending || updateTicketTypeMutation.isPending}
         >
-          <div className="form-group">
-            <label className="form-label">{t('common.name')} *</label>
+          <FormField label={<>{t('common.name')} *</>}>
             <input
               type="text"
               className="form-control"
@@ -1140,10 +1135,9 @@ export default function Concerts() {
               placeholder={t('tickets.ticketTypePlaceholder')}
               required
             />
-          </div>
+          </FormField>
           <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('tickets.price')} (EUR) *</label>
+            <FormField label={<>{t('tickets.price')} (EUR) *</>} style={{ flex: 1 }}>
               <input
                 type="number"
                 step="0.01"
@@ -1153,9 +1147,8 @@ export default function Concerts() {
                 onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, price: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('tickets.quantity')} *</label>
+            </FormField>
+            <FormField label={<>{t('tickets.quantity')} *</>} style={{ flex: 1 }}>
               <input
                 type="number"
                 min="1"
@@ -1164,10 +1157,9 @@ export default function Concerts() {
                 onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, quantity: e.target.value })}
                 required
               />
-            </div>
+            </FormField>
           </div>
-          <div className="form-group">
-            <label className="form-label">{t('common.description')}</label>
+          <FormField label={t('common.description')}>
             <input
               type="text"
               className="form-control"
@@ -1175,9 +1167,8 @@ export default function Concerts() {
               onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, description: e.target.value })}
               placeholder={t('tickets.ticketTypeDescPlaceholder')}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('tickets.maxPerOrder')}</label>
+          </FormField>
+          <FormField label={t('tickets.maxPerOrder')}>
             <input
               type="number"
               min="1"
@@ -1186,31 +1177,36 @@ export default function Concerts() {
               value={ticketTypeFormData.maxPerOrder}
               onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, maxPerOrder: e.target.value })}
             />
-          </div>
+          </FormField>
           <div className="flex gap-2">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('tickets.saleStart')}</label>
+            <FormField label={t('tickets.saleStart')} style={{ flex: 1 }}>
               <input
                 type="datetime-local"
                 className="form-control"
                 value={ticketTypeFormData.saleStart}
                 onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, saleStart: e.target.value })}
               />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">{t('tickets.saleEnd')}</label>
+            </FormField>
+            <FormField label={t('tickets.saleEnd')} style={{ flex: 1 }}>
               <input
                 type="datetime-local"
                 className="form-control"
                 value={ticketTypeFormData.saleEnd}
                 onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, saleEnd: e.target.value })}
               />
-            </div>
+            </FormField>
           </div>
           <hr style={{ margin: '1rem 0' }} />
+          {/* Geen FormField: naast het veld staat ook nog een hulptekst in de
+              form-group, en FormField neemt maar een kind aan. Dus met de hand
+              gekoppeld, plus aria-describedby zodat de hulptekst meegelezen wordt. */}
           <div className="form-group">
-            <label className="form-label">{t('tickets.ticketTypeServiceFee')}</label>
+            <label className="form-label" htmlFor="ticket-service-fee">
+              {t('tickets.ticketTypeServiceFee')}
+            </label>
             <input
+              id="ticket-service-fee"
+              aria-describedby="ticket-service-fee-hulp"
               type="number"
               step="0.01"
               min="0"
@@ -1219,7 +1215,9 @@ export default function Concerts() {
               onChange={(e) => setTicketTypeFormData({ ...ticketTypeFormData, serviceFee: e.target.value })}
               placeholder="0.00"
             />
-            <small style={{ color: 'var(--text-light)' }}>{t('tickets.ticketTypeServiceFeeHelp')}</small>
+            <small id="ticket-service-fee-hulp" style={{ color: 'var(--text-light)' }}>
+              {t('tickets.ticketTypeServiceFeeHelp')}
+            </small>
           </div>
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>

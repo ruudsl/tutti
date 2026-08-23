@@ -1,6 +1,8 @@
 /** De kaart met de spond-koppeling, inclusief het instelformulier. Letterlijk overgenomen uit Rehearsals.tsx. */
 
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { SpondConfig, SpondGroup } from '../../types';
 import type { SpondFormState } from './hulpfuncties';
 
@@ -36,6 +38,8 @@ export function SpondCard({
   setRemovingSpondConfig: (waarde: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const wachtwoordId = useId();
+  const groepId = useId();
 
   return (
     <div className="card mb-3">
@@ -111,31 +115,46 @@ export function SpondCard({
             }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">{t('rehearsals.spond.username')}</label>
+              <FormField label={t('rehearsals.spond.username')}>
                 <input
                   type="email"
                   className="form-control"
                   value={spondForm.username}
                   onChange={(e) => setSpondForm({ ...spondForm, username: e.target.value })}
                 />
-              </div>
+              </FormField>
+              {/* Met de hand gekoppeld: onder het veld staat soms nog een
+                  hulptekst, en FormField kloont maar één kind. De hulptekst
+                  hangt via aria-describedby aan het veld. */}
               <div className="form-group">
-                <label className="form-label">{t('rehearsals.spond.password')}</label>
+                <label className="form-label" htmlFor={wachtwoordId}>
+                  {t('rehearsals.spond.password')}
+                </label>
                 <input
+                  id={wachtwoordId}
+                  aria-describedby={spondWachtwoordBekend ? `${wachtwoordId}-hulp` : undefined}
                   type="password"
                   className="form-control"
                   value={spondForm.password}
                   onChange={(e) => setSpondForm({ ...spondForm, password: e.target.value })}
                   placeholder={spondConfig?.configured ? '••••••••' : ''}
                 />
-                {spondWachtwoordBekend && <span className="form-help">{t('rehearsals.spond.passwordKeepHint')}</span>}
+                {spondWachtwoordBekend && (
+                  <span id={`${wachtwoordId}-hulp`} className="form-help">
+                    {t('rehearsals.spond.passwordKeepHint')}
+                  </span>
+                )}
               </div>
             </div>
             <div className="form-group" style={{ marginTop: '0.75rem' }}>
-              <label className="form-label">{t('rehearsals.spond.selectGroup')}</label>
+              {/* Met de hand gekoppeld: keuzelijst en knop staan samen in een
+                  eigen omhulsel onder het label, dus FormField past hier niet. */}
+              <label className="form-label" htmlFor={groepId}>
+                {t('rehearsals.spond.selectGroup')}
+              </label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <select
+                  id={groepId}
                   className="form-control form-select"
                   value={spondForm.groupId}
                   onChange={(e) => setSpondForm({ ...spondForm, groupId: e.target.value })}

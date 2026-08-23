@@ -1,6 +1,7 @@
 /** Het formulier voor een reeks herhalende repetities. Letterlijk overgenomen uit Rehearsals.tsx. */
 
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { Orchestra } from '../../types';
 import { formatDate, type RecurringFormState } from './hulpfuncties';
 
@@ -33,8 +34,7 @@ export function RecurringForm({
       <div className="card-body">
         <p className="piece-meta mb-2">{t('rehearsals.recurring.description')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.recurring.dayOfWeek')}</label>
+          <FormField label={t('rehearsals.recurring.dayOfWeek')}>
             <select
               className="form-control form-select"
               value={recurringForm.dayOfWeek}
@@ -46,9 +46,8 @@ export function RecurringForm({
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.recurring.interval')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.recurring.interval')}>
             <select
               className="form-control form-select"
               value={recurringForm.interval}
@@ -59,38 +58,34 @@ export function RecurringForm({
               <option value={3}>{t('rehearsals.recurring.every3weeks')}</option>
               <option value={4}>{t('rehearsals.recurring.every4weeks')}</option>
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.startTime')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.startTime')}>
             <input
               type="time"
               className="form-control"
               value={recurringForm.startTime}
               onChange={(e) => setRecurringForm({ ...recurringForm, startTime: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.endTime')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.endTime')}>
             <input
               type="time"
               className="form-control"
               value={recurringForm.endTime}
               onChange={(e) => setRecurringForm({ ...recurringForm, endTime: e.target.value })}
             />
-          </div>
+          </FormField>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.location')}</label>
+          <FormField label={t('rehearsals.location')}>
             <input
               type="text"
               className="form-control"
               value={recurringForm.location}
               onChange={(e) => setRecurringForm({ ...recurringForm, location: e.target.value })}
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.orchestra')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.orchestra')}>
             <select
               className="form-control form-select"
               value={recurringForm.orchestraId}
@@ -103,16 +98,15 @@ export function RecurringForm({
                 </option>
               ))}
             </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('rehearsals.recurring.until')}</label>
+          </FormField>
+          <FormField label={t('rehearsals.recurring.until')}>
             <input
               type="date"
               className="form-control"
               value={recurringForm.until}
               onChange={(e) => setRecurringForm({ ...recurringForm, until: e.target.value })}
             />
-          </div>
+          </FormField>
         </div>
 
         {/* Preview */}

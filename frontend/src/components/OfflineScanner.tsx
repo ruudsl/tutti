@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showSuccess, showError, toast } from '../utils/toast';
 import { Icon } from './Icon';
+import { isIndexedDBAvailable } from '../lib/offlineStorage';
 
 export interface OfflineScannerProps {
   concertId: string;
@@ -39,6 +40,7 @@ const SCANS_STORE = 'scans';
 
 export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProps) {
   const { t } = useTranslation();
+  const scanVeldId = useId();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [tickets, setTickets] = useState<OfflineTicket[]>([]);
   const [pendingScans, setPendingScans] = useState<OfflineScan[]>([]);
@@ -46,19 +48,42 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [scanInput, setScanInput] = useState('');
+  const [opslagOnbruikbaar, setOpslagOnbruikbaar] = useState(false);
   const dbRef = useRef<IDBDatabase | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize IndexedDB
   useEffect(() => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // In een browser waar de opslag geblokkeerd is - privémodus, of
+    // sitegegevens uitgezet - bestaat `indexedDB` niet. Zonder deze controle
+    // klapt de regel hieronder en verdwijnt de hele scanner van het scherm.
+    // Juist deze knop wordt aan de deur gebruikt, vaak op een geleende
+    // telefoon, dus dat is precies het verkeerde moment.
+    if (!isIndexedDBAvailable()) {
+      setOpslagOnbruikbaar(true);
+      return;
+    }
+
+    let request: IDBOpenDBRequest;
+    try {
+      request = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch {
+      // Sommige browsers hebben `indexedDB` wél, maar laten `open` alsnog
+      // struikelen als de gebruiker opslag heeft geweigerd.
+      setOpslagOnbruikbaar(true);
+      return;
+    }
 
     request.onerror = () => {
-      console.error('Failed to open IndexedDB');
+      // Dit bleef eerder bij een regel in de console. Op het scherm was er dan
+      // niets aan de hand, terwijl de scanner geen enkele kaart meer kende en
+      // dus elke bezoeker aan de deur afwees.
+      setOpslagOnbruikbaar(true);
     };
 
     request.onsuccess = () => {
       dbRef.current = request.result;
+      setOpslagOnbruikbaar(false);
       loadOfflineData();
     };
 
@@ -358,6 +383,12 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
           </div>
         </div>
 
+        {opslagOnbruikbaar && (
+          <div className="alert alert-danger mb-4" role="alert">
+            {t('offlineScanner.storageUnavailable')}
+          </div>
+        )}
+
         <div className="scanner-stats grid grid-cols-3 gap-4 mb-4">
           <div className="stat-card">
             <div className="stat-value">{tickets.length}</div>
@@ -374,10 +405,15 @@ export function OfflineScanner({ concertId, onScanComplete }: OfflineScannerProp
         </div>
 
         <form onSubmit={handleInputSubmit} className="mb-4">
+          {/* Met de hand gekoppeld: veld en knop staan samen in een eigen
+              omhulsel onder het label, dus FormField past hier niet. */}
           <div className="form-group">
-            <label className="form-label">{t('offlineScanner.scanOrEnter')}</label>
+            <label className="form-label" htmlFor={scanVeldId}>
+              {t('offlineScanner.scanOrEnter')}
+            </label>
             <div className="flex gap-2">
               <input
+                id={scanVeldId}
                 ref={inputRef}
                 type="text"
                 className="form-control"

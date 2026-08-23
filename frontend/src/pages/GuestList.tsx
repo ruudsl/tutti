@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
@@ -14,6 +14,7 @@ import {
 } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { Modal } from '../components/Modal';
+import { FormField } from '../components/FormField';
 import { SkeletonTable } from '../components/Skeleton';
 import { showSuccess, showError } from '../utils/toast';
 import { getErrorMessage } from '../utils/errors';
@@ -25,6 +26,9 @@ export default function GuestList() {
   useDocumentTitle('pageTitle.guestList');
 
   const queryClient = useQueryClient();
+
+  // Vast id voor het enige veld dat niet via FormField loopt (zie de opmerking daar)
+  const ticketTypeVeldId = useId();
 
   // State
   const [page, setPage] = useState(1);
@@ -250,8 +254,9 @@ export default function GuestList() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="form-label">{t('common.search')}</label>
+            {/* className="" houdt de omhullende div zonder klasse, zoals hij hier stond:
+                dit is een rasterkolom, geen form-group met eigen ondermarge. */}
+            <FormField label={t('common.search')} className="">
               <input
                 type="text"
                 className="form-control"
@@ -262,9 +267,8 @@ export default function GuestList() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
-              <label className="form-label">{t('common.status')}</label>
+            </FormField>
+            <FormField label={t('common.status')} className="">
               <select
                 className="form-control"
                 value={ticketsSentFilter}
@@ -277,7 +281,7 @@ export default function GuestList() {
                 <option value="true">{t('guestList.sent')}</option>
                 <option value="false">{t('guestList.pending')}</option>
               </select>
-            </div>
+            </FormField>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Link to={`/tickets/sales?concertId=${concertId}`} className="btn btn-outline">
                 {t('guestList.viewPaidTickets')}
@@ -448,8 +452,7 @@ export default function GuestList() {
               addMutation.mutate(formData);
             }}
           >
-            <div className="form-group">
-              <label className="form-label">{t('guestList.organisation')}</label>
+            <FormField label={t('guestList.organisation')}>
               <input
                 type="text"
                 className="form-control"
@@ -457,9 +460,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
                 placeholder={t('guestList.organisationPlaceholder')}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.name')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.name')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -467,9 +469,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.email')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.email')} *`}>
               <input
                 type="email"
                 className="form-control"
@@ -477,9 +478,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.ticketCount')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.ticketCount')} *`}>
               <input
                 type="number"
                 className="form-control"
@@ -489,11 +489,20 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
                 required
               />
-            </div>
+            </FormField>
+            {/* Met de hand gekoppeld in plaats van via FormField: naast label en veld
+                staat hier ook nog een hulptekst in dezelfde form-group. FormField neemt
+                één kindelement, en de hulptekst buiten de form-group zetten zou hem
+                onder de ondermarge van 1rem laten wegzakken - los van het veld waar
+                hij bij hoort. De aria-describedby leest de schermlezer nu wel voor. */}
             {ticketTypes.length > 0 && (
               <div className="form-group">
-                <label className="form-label">{t('guestList.ticketType')}</label>
+                <label className="form-label" htmlFor={ticketTypeVeldId}>
+                  {t('guestList.ticketType')}
+                </label>
                 <select
+                  id={ticketTypeVeldId}
+                  aria-describedby={`${ticketTypeVeldId}-hulp`}
                   className="form-control"
                   value={formData.ticketTypeId || ''}
                   onChange={(e) => setFormData({ ...formData, ticketTypeId: e.target.value || null })}
@@ -505,11 +514,12 @@ export default function GuestList() {
                     </option>
                   ))}
                 </select>
-                <small style={{ color: 'var(--text-light)' }}>{t('guestList.ticketTypeHelp')}</small>
+                <small id={`${ticketTypeVeldId}-hulp`} style={{ color: 'var(--text-light)' }}>
+                  {t('guestList.ticketTypeHelp')}
+                </small>
               </div>
             )}
-            <div className="form-group">
-              <label className="form-label">{t('guestList.notes')}</label>
+            <FormField label={t('guestList.notes')}>
               <textarea
                 className="form-control"
                 rows={2}
@@ -517,7 +527,7 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder={t('guestList.notesPlaceholder')}
               />
-            </div>
+            </FormField>
             <div className="flex justify-end gap-2 mt-3">
               <button
                 type="button"
@@ -553,8 +563,7 @@ export default function GuestList() {
               if (selectedEntry) updateMutation.mutate({ id: selectedEntry.id, ...formData });
             }}
           >
-            <div className="form-group">
-              <label className="form-label">{t('guestList.organisation')}</label>
+            <FormField label={t('guestList.organisation')}>
               <input
                 type="text"
                 className="form-control"
@@ -562,9 +571,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, organisation: e.target.value })}
                 placeholder={t('guestList.organisationPlaceholder')}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.name')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.name')} *`}>
               <input
                 type="text"
                 className="form-control"
@@ -572,9 +580,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.email')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.email')} *`}>
               <input
                 type="email"
                 className="form-control"
@@ -582,9 +589,8 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('guestList.ticketCount')} *</label>
+            </FormField>
+            <FormField label={`${t('guestList.ticketCount')} *`}>
               <input
                 type="number"
                 className="form-control"
@@ -594,10 +600,9 @@ export default function GuestList() {
                 onChange={(e) => setFormData({ ...formData, ticketCount: parseInt(e.target.value) || 1 })}
                 required
               />
-            </div>
+            </FormField>
             {ticketTypes.length > 0 && (
-              <div className="form-group">
-                <label className="form-label">{t('guestList.ticketType')}</label>
+              <FormField label={t('guestList.ticketType')}>
                 <select
                   className="form-control"
                   value={formData.ticketTypeId || ''}
@@ -610,17 +615,16 @@ export default function GuestList() {
                     </option>
                   ))}
                 </select>
-              </div>
+              </FormField>
             )}
-            <div className="form-group">
-              <label className="form-label">{t('guestList.notes')}</label>
+            <FormField label={t('guestList.notes')}>
               <textarea
                 className="form-control"
                 rows={2}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
-            </div>
+            </FormField>
             <div className="flex justify-end gap-2 mt-3">
               <button
                 type="button"

@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 import type { Orchestra } from '../../types';
 import { formatDate } from './formatteer';
 import { WEEKDAYS } from './types';
@@ -45,8 +46,7 @@ export function WizardStapRepetities({
       {wizardState.generateRehearsals && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">{t('seasonPlanner.fields.rehearsalDay')}</label>
+            <FormField label={t('seasonPlanner.fields.rehearsalDay')}>
               <select
                 className="form-control form-select"
                 value={wizardState.rehearsalDay}
@@ -58,39 +58,35 @@ export function WizardStapRepetities({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.startTime')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.startTime')}>
               <input
                 type="time"
                 className="form-control"
                 value={wizardState.rehearsalTime}
                 onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalTime: e.target.value }))}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.endTime')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.endTime')}>
               <input
                 type="time"
                 className="form-control"
                 value={wizardState.rehearsalEndTime}
                 onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalEndTime: e.target.value }))}
               />
-            </div>
+            </FormField>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.location')}</label>
+            <FormField label={t('rehearsals.location')}>
               <input
                 type="text"
                 className="form-control"
                 value={wizardState.rehearsalLocation}
                 onChange={(e) => setWizardState((prev) => ({ ...prev, rehearsalLocation: e.target.value }))}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('rehearsals.orchestra')}</label>
+            </FormField>
+            <FormField label={t('rehearsals.orchestra')}>
               <select
                 className="form-control form-select"
                 value={wizardState.orchestraId}
@@ -103,7 +99,7 @@ export function WizardStapRepetities({
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
           </div>
 
           {/* Preview */}

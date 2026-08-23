@@ -1,6 +1,7 @@
 /** Het formulier dat repetities genereert uit de vaste repetitiedagen. Letterlijk overgenomen uit Rehearsals.tsx. */
 
 import { useTranslation } from 'react-i18next';
+import { FormField } from '../../components/FormField';
 
 export function GenerateForm({
   genFrom,
@@ -27,14 +28,12 @@ export function GenerateForm({
       <div className="card-body">
         <p className="piece-meta mb-2">{t('rehearsals.generateDescription')}</p>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'end' }}>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">{t('rehearsals.generateFrom')}</label>
+          <FormField style={{ flex: 1 }} label={t('rehearsals.generateFrom')}>
             <input type="date" className="form-control" value={genFrom} onChange={(e) => setGenFrom(e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">{t('rehearsals.generateTo')}</label>
+          </FormField>
+          <FormField style={{ flex: 1 }} label={t('rehearsals.generateTo')}>
             <input type="date" className="form-control" value={genTo} onChange={(e) => setGenTo(e.target.value)} />
-          </div>
+          </FormField>
           <button className="btn btn-primary" onClick={handleGenerate} disabled={!genFrom || !genTo || isGenerating}>
             {isGenerating ? t('common.loading') : t('rehearsals.generateButton')}
           </button>

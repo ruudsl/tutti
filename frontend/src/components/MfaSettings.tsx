@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { setupMfa, enableMfa, disableMfa } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
+import { FormField } from './FormField';
 import { showSuccess, showError } from '../utils/toast';
 
 export function MfaSettings() {
@@ -200,8 +201,7 @@ export function MfaSettings() {
               <code style={{ userSelect: 'all', fontSize: '0.8rem' }}>{secret}</code>
             </p>
 
-            <div className="form-group">
-              <label className="form-label">{t('mfa.verificationCode')}</label>
+            <FormField label={t('mfa.verificationCode')}>
               <input
                 type="text"
                 className="form-control"
@@ -212,7 +212,7 @@ export function MfaSettings() {
                 inputMode="numeric"
                 style={{ fontSize: '1.5rem', textAlign: 'center', letterSpacing: '0.5rem' }}
               />
-            </div>
+            </FormField>
 
             <div className="flex gap-1 justify-end">
               <button
@@ -248,8 +248,7 @@ export function MfaSettings() {
         >
           <p style={{ marginBottom: '1rem' }}>{t('mfa.disablePrompt')}</p>
 
-          <div className="form-group">
-            <label className="form-label">{t('mfa.password')}</label>
+          <FormField label={t('mfa.password')}>
             <input
               type="password"
               className="form-control"
@@ -257,7 +256,7 @@ export function MfaSettings() {
               onChange={(e) => setDisablePassword(e.target.value)}
               autoFocus
             />
-          </div>
+          </FormField>
 
           <div className="flex gap-1 justify-end">
             <button

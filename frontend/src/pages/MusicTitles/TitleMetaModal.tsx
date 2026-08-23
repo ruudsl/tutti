@@ -5,6 +5,7 @@ import { getMp3Url } from '../../api';
 import type { MusicaInfoDetail } from '../../api';
 import { Icon } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
+import { FormField } from '../../components/FormField';
 import { StreamingLinks } from '../../components/StreamingLinks';
 import { searchSheetMusicWebsites } from '../../utils/sheetMusic';
 import type { Genre, MusicTitle } from '../../types';
@@ -100,10 +101,21 @@ export function TitleMetaModal({
       }
     >
       <form id="edit-title-meta-form" onSubmit={onSubmit}>
+        {/* Geen FormField: het veld zit samen met de zoekknop in een flex-omhulsel,
+            dus het kind van de form-group is niet het invoerveld zelf. */}
         <div className="form-group">
-          <label className="form-label">{t('myMusic.table.title')}</label>
+          <label className="form-label" htmlFor="edit-title-meta-titel">
+            {t('myMusic.table.title')}
+          </label>
           <div className="flex gap-2">
-            <input type="text" className="form-control" value={editingTitle.title} disabled style={{ flex: 1 }} />
+            <input
+              id="edit-title-meta-titel"
+              type="text"
+              className="form-control"
+              value={editingTitle.title}
+              disabled
+              style={{ flex: 1 }}
+            />
             <div className="dropdown" style={{ position: 'relative' }} ref={zoekmenuRef}>
               <button
                 type="button"
@@ -191,10 +203,9 @@ export function TitleMetaModal({
           </div>
         </div>
         {editingTitle.arranger && (
-          <div className="form-group">
-            <label className="form-label">{t('titles.arranger')}</label>
+          <FormField label={t('titles.arranger')}>
             <input type="text" className="form-control" value={editingTitle.arranger} disabled />
-          </div>
+          </FormField>
         )}
 
         {/* MusicaInfo.net lookup section */}
@@ -211,10 +222,14 @@ export function TitleMetaModal({
           onReset={() => dispatch({ type: 'MUSICAINFO_RESET' })}
         />
 
+        {/* Geen FormField: veld en ophaalknop zitten samen in een flex-omhulsel. */}
         <div className="form-group">
-          <label className="form-label">{t('titles.youtubeUrl')}</label>
+          <label className="form-label" htmlFor="edit-title-meta-youtube">
+            {t('titles.youtubeUrl')}
+          </label>
           <div className="flex gap-2">
             <input
+              id="edit-title-meta-youtube"
               type="url"
               className="form-control"
               value={titleMetaForm.youtubeUrl}
@@ -253,8 +268,7 @@ export function TitleMetaModal({
           )}
         </div>
         <div className="grid grid-2">
-          <div className="form-group">
-            <label className="form-label">{t('titles.durationFormat')}</label>
+          <FormField label={t('titles.durationFormat')}>
             <input
               type="text"
               className="form-control"
@@ -263,9 +277,8 @@ export function TitleMetaModal({
               placeholder="3:45"
               pattern="[0-9]{1,2}:[0-9]{2}(:[0-9]{2})?"
             />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('titles.difficulty')}</label>
+          </FormField>
+          <FormField label={t('titles.difficulty')}>
             <input
               type="text"
               className="form-control"
@@ -273,10 +286,13 @@ export function TitleMetaModal({
               onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { grade: e.target.value } })}
               placeholder={t('titles.difficultyPlaceholder')}
             />
-          </div>
+          </FormField>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('titles.mp3Preview')}</label>
+          {/* Bijschrift, geen veldlabel: hieronder staat een <audio>, een
+              bijlagestrook of een verborgen bestandsveld achter een knop. Geen
+              van drieën is een bedienbaar veld om een label aan te hangen. */}
+          <span className="form-label">{t('titles.mp3Preview')}</span>
           {currentMp3Path ? (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <audio controls src={getMp3Url(currentMp3Path)} style={{ flex: 1, height: '40px' }} />
@@ -354,8 +370,7 @@ export function TitleMetaModal({
             </div>
           )}
         </div>
-        <div className="form-group">
-          <label className="form-label">{t('titles.description')}</label>
+        <FormField label={t('titles.description')}>
           <textarea
             className="form-control"
             value={titleMetaForm.description}
@@ -363,10 +378,15 @@ export function TitleMetaModal({
             rows={3}
             placeholder={t('titles.descriptionPlaceholder')}
           />
-        </div>
+        </FormField>
+        {/* Geen FormField: hulptekst naast het veld in dezelfde form-group. */}
         <div className="form-group">
-          <label className="form-label">{t('titles.internalNotes')}</label>
+          <label className="form-label" htmlFor="edit-title-meta-notities">
+            {t('titles.internalNotes')}
+          </label>
           <textarea
+            id="edit-title-meta-notities"
+            aria-describedby="edit-title-meta-notities-hulp"
             className="form-control"
             value={titleMetaForm.internalNotes}
             onChange={(e) => dispatch({ type: 'UPDATE_TITLE_META_FORM', payload: { internalNotes: e.target.value } })}
@@ -374,11 +394,23 @@ export function TitleMetaModal({
             placeholder={t('titles.internalNotesPlaceholder')}
             style={{ background: 'var(--warning-bg, #fff8e1)', borderColor: 'var(--warning, #ffc107)' }}
           />
-          <small className="text-light">{t('titles.internalNotesHelp')}</small>
+          <small id="edit-title-meta-notities-hulp" className="text-light">
+            {t('titles.internalNotesHelp')}
+          </small>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('titles.genres')}</label>
-          <div className="checkbox-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {/* Kop boven een groep aankruisvakjes, geen veldlabel: elk vakje heeft
+              zijn eigen label al. De groep krijgt hier een naam via role="group"
+              en aria-labelledby. */}
+          <span className="form-label" id="edit-title-meta-genres-kop">
+            {t('titles.genres')}
+          </span>
+          <div
+            className="checkbox-grid"
+            role="group"
+            aria-labelledby="edit-title-meta-genres-kop"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}
+          >
             {genres.map((genre) => (
               <label
                 key={genre.id}

@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState, useRef } from 'react';
+import { useId, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -7,6 +7,7 @@ import { useInstruments } from '../hooks/useInstruments';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { FormField } from '../components/FormField';
 import {
   onboardMember,
   getPendingSpondLinks,
@@ -45,6 +46,14 @@ export default function Onboarding() {
   const { t } = useTranslation();
   useDocumentTitle('pageTitle.onboarding');
   const queryClient = useQueryClient();
+
+  // Ids voor de velden die niet via FormField lopen; zie de opmerkingen daar.
+  const veldId = useId();
+  const emailId = `${veldId}-email`;
+  const priveEmailId = `${veldId}-prive-email`;
+  const instrumentenId = `${veldId}-instrumenten`;
+  const orkestenLabelId = `${veldId}-orkesten`;
+  const fotoLabelId = `${veldId}-foto`;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('onboard');
   const [wizardStep, setWizardStep] = useState<WizardStep>('form');
@@ -345,37 +354,64 @@ export default function Onboarding() {
                 <p className="piece-meta mb-3">{t('memberOnboarding.newMemberDescription')}</p>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="form-group">
-                    <label className="form-label">{t('memberOnboarding.firstName')} *</label>
+                  <FormField label={`${t('memberOnboarding.firstName')} *`}>
                     <input type="text" className="form-control" {...form.register('firstName', { required: true })} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('memberOnboarding.lastName')} *</label>
+                  </FormField>
+                  <FormField label={`${t('memberOnboarding.lastName')} *`}>
                     <input type="text" className="form-control" {...form.register('lastName', { required: true })} />
-                  </div>
+                  </FormField>
                 </div>
 
+                {/* Met de hand gekoppeld: onder het veld staat een hulptekst die binnen
+                    dezelfde form-group hoort te blijven, en FormField neemt één kind. */}
                 <div className="form-group">
-                  <label className="form-label">{t('memberOnboarding.email')} *</label>
-                  <input type="email" className="form-control" {...form.register('email', { required: true })} />
-                  <small className="text-secondary">{t('memberOnboarding.emailHint')}</small>
+                  <label className="form-label" htmlFor={emailId}>
+                    {t('memberOnboarding.email')} *
+                  </label>
+                  <input
+                    id={emailId}
+                    aria-describedby={`${emailId}-hulp`}
+                    type="email"
+                    className="form-control"
+                    {...form.register('email', { required: true })}
+                  />
+                  <small id={`${emailId}-hulp`} className="text-secondary">
+                    {t('memberOnboarding.emailHint')}
+                  </small>
                 </div>
 
                 {msConfig?.configured && (
                   <div className="form-group">
-                    <label className="form-label">{t('memberOnboarding.privateEmail')}</label>
-                    <input type="email" className="form-control" {...form.register('privateEmail')} />
-                    <small className="text-secondary">{t('memberOnboarding.privateEmailHint')}</small>
+                    <label className="form-label" htmlFor={priveEmailId}>
+                      {t('memberOnboarding.privateEmail')}
+                    </label>
+                    <input
+                      id={priveEmailId}
+                      aria-describedby={`${priveEmailId}-hulp`}
+                      type="email"
+                      className="form-control"
+                      {...form.register('privateEmail')}
+                    />
+                    <small id={`${priveEmailId}-hulp`} className="text-secondary">
+                      {t('memberOnboarding.privateEmailHint')}
+                    </small>
                   </div>
                 )}
 
+                {/* Met de hand gekoppeld: het kind is hier een <Controller>, en die geeft
+                    een id niet door aan de <select> eronder. Bovendien staat er nog een
+                    hulptekst in dezelfde form-group. */}
                 <div className="form-group">
-                  <label className="form-label">{t('memberOnboarding.instruments')}</label>
+                  <label className="form-label" htmlFor={instrumentenId}>
+                    {t('memberOnboarding.instruments')}
+                  </label>
                   <Controller
                     name="instrumentIds"
                     control={form.control}
                     render={({ field }) => (
                       <select
+                        id={instrumentenId}
+                        aria-describedby={`${instrumentenId}-hulp`}
                         multiple
                         className="form-control"
                         style={{ height: '120px' }}
@@ -393,11 +429,18 @@ export default function Onboarding() {
                       </select>
                     )}
                   />
-                  <small className="text-secondary">{t('memberOnboarding.instrumentsHint')}</small>
+                  <small id={`${instrumentenId}-hulp`} className="text-secondary">
+                    {t('memberOnboarding.instrumentsHint')}
+                  </small>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">{t('memberOnboarding.orchestras')}</label>
+                {/* Geen veld maar een groep aankruisvakjes die elk hun eigen label om
+                    zich heen hebben: een groepskop, dus een <span> in plaats van een
+                    <label> die naar niets wijst. */}
+                <div className="form-group" role="group" aria-labelledby={orkestenLabelId}>
+                  <span id={orkestenLabelId} className="form-label">
+                    {t('memberOnboarding.orchestras')}
+                  </span>
                   <Controller
                     name="orchestraIds"
                     control={form.control}
@@ -446,8 +489,14 @@ export default function Onboarding() {
                   </>
                 )}
 
-                <div className="form-group">
-                  <label className="form-label">{t('memberOnboarding.profilePhoto')}</label>
+                {/* Ook hier geen veldlabel: het bestandsveld staat op display:none en
+                    wordt door de knop eronder geopend. Een <label> ernaartoe zou naar
+                    iets wijzen wat een schermlezer niet eens ziet staan; de knop draagt
+                    zijn eigen naam. Dus een groepskop. */}
+                <div className="form-group" role="group" aria-labelledby={fotoLabelId}>
+                  <span id={fotoLabelId} className="form-label">
+                    {t('memberOnboarding.profilePhoto')}
+                  </span>
                   <div className="flex items-center gap-3">
                     {photoPreview ? (
                       <div style={{ position: 'relative' }}>
@@ -782,8 +831,7 @@ export default function Onboarding() {
             >
               <h4 style={{ marginTop: 0 }}>{t('memberOnboarding.m365Settings.addMapping')}</h4>
               <div className="grid grid-cols-3 gap-2" style={{ alignItems: 'end' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{t('memberOnboarding.m365Settings.instrument')}</label>
+                <FormField label={t('memberOnboarding.m365Settings.instrument')} style={{ marginBottom: 0 }}>
                   <select
                     className="form-control"
                     value={newMappingInstrumentId}
@@ -798,9 +846,8 @@ export default function Onboarding() {
                         </option>
                       ))}
                   </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{t('memberOnboarding.m365Settings.jobTitle')}</label>
+                </FormField>
+                <FormField label={t('memberOnboarding.m365Settings.jobTitle')} style={{ marginBottom: 0 }}>
                   <input
                     type="text"
                     className="form-control"
@@ -808,7 +855,7 @@ export default function Onboarding() {
                     value={newMappingJobTitle}
                     onChange={(e) => setNewMappingJobTitle(e.target.value)}
                   />
-                </div>
+                </FormField>
                 <button
                   className="btn btn-primary"
                   disabled={

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { changePassword, setupMfa, enableMfa, disableMfa } from '../api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { FormField } from '../components/FormField';
 import { SessionsManager } from '../components/SessionsManager';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { GdprExport } from '../components/GdprExport';
@@ -146,8 +147,7 @@ export default function Profile() {
             {passwordError && <div className="alert alert-error mb-2">{passwordError}</div>}
             {passwordSuccess && <div className="alert alert-success mb-2">{passwordSuccess}</div>}
             <form onSubmit={handlePasswordChange}>
-              <div className="form-group">
-                <label className="form-label">{t('profile.changePassword.current')}</label>
+              <FormField label={t('profile.changePassword.current')}>
                 <input
                   type="password"
                   className="form-control"
@@ -155,9 +155,8 @@ export default function Profile() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('profile.changePassword.new')}</label>
+              </FormField>
+              <FormField label={t('profile.changePassword.new')}>
                 <input
                   type="password"
                   className="form-control"
@@ -166,9 +165,8 @@ export default function Profile() {
                   required
                   minLength={8}
                 />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('profile.changePassword.confirm')}</label>
+              </FormField>
+              <FormField label={t('profile.changePassword.confirm')}>
                 <input
                   type="password"
                   className="form-control"
@@ -177,7 +175,7 @@ export default function Profile() {
                   required
                   minLength={8}
                 />
-              </div>
+              </FormField>
               <button type="submit" className="btn btn-primary" disabled={isChangingPassword}>
                 {isChangingPassword ? t('profile.changePassword.changing') : t('profile.changePassword.button')}
               </button>
@@ -220,8 +218,7 @@ export default function Profile() {
                     </small>
                   </p>
                   <form onSubmit={handleEnableMfa}>
-                    <div className="form-group">
-                      <label className="form-label">{t('profile.mfa.verificationCode')}</label>
+                    <FormField label={t('profile.mfa.verificationCode')}>
                       <input
                         type="text"
                         className="form-control"
@@ -231,7 +228,7 @@ export default function Profile() {
                         maxLength={6}
                         required
                       />
-                    </div>
+                    </FormField>
                     <div className="flex gap-1">
                       <button type="submit" className="btn btn-primary">
                         {t('profile.mfa.enableButton')}
@@ -251,8 +248,7 @@ export default function Profile() {
                 {t('profile.mfa.disableTitle')}
               </p>
               <form onSubmit={handleDisableMfa}>
-                <div className="form-group">
-                  <label className="form-label">{t('profile.mfa.disablePassword')}</label>
+                <FormField label={t('profile.mfa.disablePassword')}>
                   <input
                     type="password"
                     className="form-control"
@@ -260,7 +256,7 @@ export default function Profile() {
                     onChange={(e) => setDisablePassword(e.target.value)}
                     required
                   />
-                </div>
+                </FormField>
                 <button type="submit" className="btn btn-danger" disabled={isDisablingMfa}>
                   {isDisablingMfa ? t('profile.mfa.disabling') : t('profile.mfa.disableButton')}
                 </button>

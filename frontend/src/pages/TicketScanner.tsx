@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
@@ -11,6 +11,7 @@ import type { TicketValidationResult } from '../types';
 
 export default function TicketScanner() {
   const { t } = useTranslation();
+  const concertKeuzeId = useId();
   useDocumentTitle('pageTitle.ticketScanner');
   const queryClient = useQueryClient();
 
@@ -253,9 +254,15 @@ export default function TicketScanner() {
       {/* Concert Selection */}
       <div className="card mb-3">
         <div className="card-body">
+          {/* Met de hand gekoppeld: naast label en veld staat hier ook een
+              hulptekst, en FormField kloont maar één kind. */}
           <div className="form-group mb-0">
-            <label className="form-label">{t('tickets.selectConcert')}</label>
+            <label className="form-label" htmlFor={concertKeuzeId}>
+              {t('tickets.selectConcert')}
+            </label>
             <select
+              id={concertKeuzeId}
+              aria-describedby={`${concertKeuzeId}-hulp`}
               className="form-control"
               value={selectedConcertId}
               onChange={(e) => setSelectedConcertId(e.target.value)}
@@ -268,7 +275,9 @@ export default function TicketScanner() {
                 </option>
               ))}
             </select>
-            <small style={{ color: 'var(--text-light)' }}>{t('tickets.selectConcertDescription')}</small>
+            <small id={`${concertKeuzeId}-hulp`} style={{ color: 'var(--text-light)' }}>
+              {t('tickets.selectConcertDescription')}
+            </small>
           </div>
         </div>
       </div>
