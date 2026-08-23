@@ -105,6 +105,18 @@ const invoicePaymentSchema = z.object({
     .optional(),
 });
 
+/**
+ * De soorten relatie die accounting_relations.relation_type toelaat.
+ *
+ * De kolom heeft een CHECK-beperking op deze drie waarden, maar de routes
+ * namen relationType ongecontroleerd uit de aanvraag over. Alles daarbuiten
+ * liep daardoor stuk op die beperking, en dat komt als 500 naar buiten in
+ * plaats van als 400: een fout van de aanvraag werd gemeld als een fout van de
+ * server. 'debtor' en 'creditor' liggen bovendien voor de hand - zo heet het
+ * scherm - en gaven precies dat.
+ */
+const RELATIESOORTEN = ['customer', 'supplier', 'both'] as const;
+
 const transactionSchema = z.object({
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ongeldige datum.'),
   transactionType: z.enum(['journal', 'payment', 'receipt', 'bank', 'transfer']),
@@ -155,6 +167,7 @@ const EIGENDOMSCONTROLES = {
   relation: 'SELECT id FROM accounting_relations WHERE id = ? AND association_id = ?',
   user: 'SELECT id FROM users WHERE id = ? AND association_id = ?',
   contact: 'SELECT id FROM contacts WHERE id = ? AND association_id = ?',
+  orchestra: 'SELECT id FROM orchestras WHERE id = ? AND association_id = ?',
   // memberships kent zelf geen vereniging; die loopt via het lid.
   membership: 'SELECT m.id FROM memberships m JOIN users u ON m.user_id = u.id WHERE m.id = ? AND u.association_id = ?',
 } as const;
@@ -495,6 +508,14 @@ router.put(
 
     const data = accountSchema.partial().parse(req.body);
 
+    // POST /accounts controleert de moederrekening wel; dat het hier ontbrak
+    // was een omissie, geen keuze. Zonder deze regel hing een beheerder van
+    // vereniging A zijn rekening alsnog onder een moederrekening van B - hij
+    // maakte hem eerst zonder ouder aan en verzette hem daarna. Het
+    // rekeningschema loopt dan over de verenigingsgrens heen, en GET /accounts
+    // geeft de naam en de code van die moederrekening van B gewoon terug.
+    eisEigenId('account', data.parentId, associationId, 'Onbekende moederrekening.');
+
     if (data.code && data.code !== existing.code) {
       const duplicate = db
         .prepare('SELECT id FROM accounts WHERE association_id = ? AND code = ? AND id != ?')
@@ -728,6 +749,12 @@ router.put(
     if (!existing) throw new ApiError(404, 'Contributiecategorie niet gevonden.');
 
     const data = membershipFeeTypeSchema.partial().parse(req.body);
+
+    // POST /membership-fee-types controleert de opbrengstrekening wel; dat het
+    // hier ontbrak was een omissie, geen keuze. De contributie van vereniging A
+    // wees anders na een wijziging naar een opbrengstrekening van B, en GET
+    // /membership-fee-types gaf code en naam van die rekening van B terug.
+    eisEigenId('account', data.incomeAccountId, associationId, 'Onbekende opbrengstrekening.');
 
     if (data.isDefault) {
       db.prepare('UPDATE membership_fee_types SET is_default = 0 WHERE association_id = ?').run(associationId);
@@ -2521,7 +2548,15 @@ router.post(
     } else if (data.format === 'mt940') {
       // Simplified MT940 parsing - in production use a proper library
       const statementRegex = /:61:(\d{6})(\d{4})?(C|D)(\d+,\d{2})/g;
-      const descriptionRegex = /:86:(.*?)(?=:6[01]|$)/gs;
+      // Een :86:-omschrijving loopt door tot het volgende veld. Dat "volgende
+      // veld" was hier :60 of :61, en dus niet :62F - het eindsaldo, dat in elk
+      // MT940-bestand direct achter de laatste :86: staat. De laatste
+      // banktransactie kreeg daardoor stelselmatig ":62F:C260331EUR1984,56"
+      // achter zijn omschrijving geplakt. Dat staat zo in het scherm van de
+      // penningmeester en gaat zo de CSV-export in, en het breekt het zoeken op
+      // omschrijving. Elk MT940-veld begint met een dubbele punt, twee cijfers
+      // en soms een letter, dus daar stopt de omschrijving.
+      const descriptionRegex = /:86:(.*?)(?=:\d{2}[A-Z]?:|$)/gs;
 
       let match;
       const amounts: Array<{ date: string; type: string; amount: number }> = [];
@@ -2898,6 +2933,9 @@ router.post(
     if (!relationType || !name) {
       throw new ApiError(400, 'Type en naam zijn verplicht.');
     }
+    if (!(RELATIESOORTEN as readonly string[]).includes(relationType)) {
+      throw new ApiError(400, `Onbekend relatiesoort. Kies uit: ${RELATIESOORTEN.join(', ')}.`);
+    }
 
     // Een relatie koppelen aan een lid of contact van een andere vereniging
     // maakt van hun naam- en adresgegevens daar een lek.
@@ -2996,6 +3034,13 @@ router.put(
       .prepare('SELECT id FROM accounting_relations WHERE id = ? AND association_id = ?')
       .get(req.params.id, associationId);
     if (!relation) throw new ApiError(404, 'Relatie niet gevonden.');
+
+    // Zelfde reden als bij POST /relations: relation_type gaat hieronder
+    // ongezien de UPDATE in, en een waarde buiten de CHECK-beperking kwam als
+    // 500 naar buiten.
+    if (req.body.relationType !== undefined && !(RELATIESOORTEN as readonly string[]).includes(req.body.relationType)) {
+      throw new ApiError(400, `Onbekend relatiesoort. Kies uit: ${RELATIESOORTEN.join(', ')}.`);
+    }
 
     const updates: string[] = [];
     const params: any[] = [];
@@ -3116,6 +3161,13 @@ router.post(
       throw new ApiError(400, 'Code en naam zijn verplicht.');
     }
 
+    // Een kostenplaats aan een orkest van een andere vereniging hangen laat de
+    // naam van dat orkest via GET /cost-centers naar buiten lopen: die route
+    // haalt orchestra_name met een LEFT JOIN op en geeft hem terug. De
+    // sleutelcontrole van de database vindt de rij wel, maar kijkt niet naar de
+    // vereniging.
+    eisEigenId('orchestra', orchestraId, associationId, 'Onbekend orkest.');
+
     const costCenterId = uuidv4();
     const now = new Date().toISOString();
 
@@ -3178,6 +3230,11 @@ router.put(
     if (!cc) throw new ApiError(404, 'Kostenplaats niet gevonden.');
 
     const { code, name, description, orchestraId, budgetAmount, isActive } = req.body;
+
+    // Zelfde reden als bij POST /cost-centers: anders wordt de kostenplaats na
+    // aanmaken alsnog aan een orkest van een andere vereniging gehangen.
+    eisEigenId('orchestra', orchestraId, associationId, 'Onbekend orkest.');
+
     const updates: string[] = [];
     const params: any[] = [];
 
@@ -3683,7 +3740,13 @@ router.get(
     const { fiscalYearId, format = 'csv' } = req.query;
 
     let balanceQuery = '';
-    const params: any[] = [associationId];
+    // Leeg, niet [associationId]: de vereniging van de buitenste WHERE wordt
+    // hieronder bij .all() al apart meegegeven, achter de parameters van de
+    // LEFT JOIN aan. Stond hij hier ook, dan kreeg de query steevast een
+    // parameter te veel - een zonder boekjaar en twee met - en liep elke
+    // aanroep van deze export stuk. Niet soms: altijd, in beide takken. Dat
+    // bleef staan omdat geen enkele test deze route ooit aanriep.
+    const params: any[] = [];
 
     if (fiscalYearId) {
       balanceQuery = `
