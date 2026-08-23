@@ -95,10 +95,14 @@ export default defineConfig({
       // en dat leert niemand iets. Een ratel moet een terugval vangen, geen
       // afrondingsverschil.
       thresholds: {
-        statements: 34,
-        branches: 23,
-        functions: 29,
-        lines: 35,
+        // Gemeten op 23-08-2026 na drie golven: 81,58 / 72,94 / 76,21 / 82,36.
+        // De drempels staan een punt of twee daaronder - hoog genoeg om een
+        // terugval te vangen, laag genoeg om niet af te gaan op een
+        // afrondingsverschil. Een ratel moet een terugval vangen, geen ruis.
+        statements: 80,
+        branches: 71,
+        functions: 74,
+        lines: 80,
       },
     },
   },
