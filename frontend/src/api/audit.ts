@@ -8,7 +8,12 @@ export interface AuditLog {
   entityType: string;
   entityId: string;
   entityName?: string;
-  changes?: string;
+  /**
+   * De server ontleedt dit veld voor het verstuurt (routes/audit-logs.ts),
+   * dus hier komt een object binnen - niet de tekst die hier eerder stond.
+   * Oudere regels kunnen nog tekst zijn, vandaar de unie.
+   */
+  changes?: unknown;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;

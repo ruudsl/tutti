@@ -64,19 +64,42 @@ export default function AuditLogs() {
     return ACTION_ICONS[action] || 'clipboard';
   };
 
-  const formatChanges = (changes?: string) => {
-    if (!changes) return null;
-    try {
-      const parsed = JSON.parse(changes);
-      return (
-        <details className="audit-changes">
-          <summary>{t('auditLogs.viewChanges')}</summary>
-          <pre>{JSON.stringify(parsed, null, 2)}</pre>
-        </details>
-      );
-    } catch {
-      return <span className="text-light text-sm">{changes}</span>;
+  /**
+   * De server geeft `changes` al geparsed terug - routes/audit-logs.ts doet
+   * `JSON.parse` voordat het antwoord de deur uit gaat. Hier stond nog een
+   * tweede JSON.parse overheen, en die kan een object niet aan: JSON.parse
+   * dwingt zijn argument eerst naar tekst af, een object wordt
+   * "[object Object]", en daar slaat hij op af. De catch viel dan terug op het
+   * kale object in een span, waar React de hele pagina op omgooit - niet alleen
+   * die ene rij.
+   *
+   * Beide vormen worden nu verdragen: het object dat de server werkelijk
+   * stuurt, en tekst die nog JSON is.
+   */
+  const formatChanges = (changes?: unknown) => {
+    if (changes === null || changes === undefined || changes === '') return null;
+
+    const ontleed = (): unknown => {
+      if (typeof changes !== 'string') return changes;
+      try {
+        return JSON.parse(changes);
+      } catch {
+        // Geen JSON: dan is het gewone tekst en tonen we die zoals hij is.
+        return undefined;
+      }
+    };
+
+    const inhoud = ontleed();
+    if (inhoud === undefined) {
+      return <span className="text-light text-sm">{String(changes)}</span>;
     }
+
+    return (
+      <details className="audit-changes">
+        <summary>{t('auditLogs.viewChanges')}</summary>
+        <pre>{JSON.stringify(inhoud, null, 2)}</pre>
+      </details>
+    );
   };
 
   return (

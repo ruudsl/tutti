@@ -1,5 +1,6 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { withTranslation, WithTranslation } from 'react-i18next';
+import { useInRouterContext, useLocation } from 'react-router-dom';
 import { Icon } from './Icon';
 
 interface OwnProps {
@@ -17,6 +18,12 @@ interface OwnProps {
   showRetry?: boolean;
   /** Custom retry handler */
   onRetry?: () => void;
+  /**
+   * Wijzigt deze waarde, dan vergeet de grens zijn fout en probeert hij zijn
+   * kind opnieuw. De verpakking hieronder vult hier het huidige pad in, zodat
+   * een nieuwe pagina een schone kans krijgt.
+   */
+  resetKey?: string;
 }
 
 type Props = OwnProps & WithTranslation;
@@ -100,6 +107,17 @@ class SectionErrorBoundaryComponent extends Component<Props, State> {
     this.props.onError?.(error, errorInfo, this.props.sectionName);
   }
 
+  componentDidUpdate(vorige: Props): void {
+    // Een fout hoort bij de pagina waarop hij ontstond. Zonder deze reset
+    // bleef hasError staan bij een routewissel - dezelfde instantie blijft
+    // immers op dezelfde plek in de boom - en kreeg de volgende pagina de
+    // melding van de vorige over zich heen, zonder enige aanwijzing waar de
+    // fout vandaan kwam.
+    if (this.state.hasError && vorige.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   handleRetry = (): void => {
     this.setState({ hasError: false, error: null });
     this.props.onRetry?.();
@@ -153,9 +171,28 @@ class SectionErrorBoundaryComponent extends Component<Props, State> {
   }
 }
 
-const SectionErrorBoundaryWithTranslation = withTranslation()(SectionErrorBoundaryComponent);
+const SectionErrorBoundaryWithTranslation = withTranslation()(
+  SectionErrorBoundaryComponent,
+) as unknown as React.ComponentType<OwnProps>;
 
-export const SectionErrorBoundary = SectionErrorBoundaryWithTranslation as React.ComponentType<OwnProps>;
+/** Geeft het huidige pad door als resetKey. Alleen bruikbaar binnen een router. */
+function MetPad(props: OwnProps): React.ReactElement {
+  const { pathname } = useLocation();
+  return <SectionErrorBoundaryWithTranslation {...props} resetKey={pathname} />;
+}
+
+/**
+ * De grens wordt ook buiten een router gebruikt (en in tests). useLocation
+ * gooit daar, dus het pad wordt alleen opgehaald als er echt een router omheen
+ * staat. Een expliciete resetKey van de aanroeper gaat voor.
+ */
+export const SectionErrorBoundary: React.ComponentType<OwnProps> = (props) => {
+  const inRouter = useInRouterContext();
+  if (props.resetKey !== undefined || !inRouter) {
+    return <SectionErrorBoundaryWithTranslation {...props} />;
+  }
+  return <MetPad {...props} />;
+};
 
 /**
  * Higher-order component to wrap a component with SectionErrorBoundary
