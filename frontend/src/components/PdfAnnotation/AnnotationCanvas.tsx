@@ -607,16 +607,25 @@ export const AnnotationCanvas: React.FC<
     setShapeStart(null);
   };
 
+  // De laag ligt over de bladzijde zoals die op het scherm staat, en die is
+  // `width * scale` bij `height * scale` groot (zie PdfAnnotation/index.tsx).
+  // Stond hier de ongeschaalde maat, dan bedekte de laag bij zoom 2 nog maar
+  // een kwart van de bladzijde en verscheen alles wat je tekende op de halve
+  // afstand van de linkerbovenhoek. Doekpunten zijn en blijven ongeschaald;
+  // het invoerveld voor tekst hieronder rekent ze met dezelfde `* scale` om.
+  const displayWidth = width * scale;
+  const displayHeight = height * scale;
+
   return (
-    <div style={{ position: 'relative', width, height }}>
+    <div style={{ position: 'relative', width: displayWidth, height: displayHeight }}>
       <canvas
         ref={canvasRef}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: width,
-          height: height,
+          width: displayWidth,
+          height: displayHeight,
           cursor: CURSOR_STYLES[activeTool] || 'crosshair',
           touchAction: 'none',
         }}
