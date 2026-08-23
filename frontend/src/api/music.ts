@@ -204,8 +204,7 @@ export const restoreMusicPiece = async (id: string): Promise<void> => {
  * "Ma?ana.pdf" aan - een naam die Windows niet eens accepteert. `filename*`
  * wint daarom, met `filename` als terugval.
  */
-function leesBestandsnaam(contentDisposition?: string): string {
-  const standaard = 'muziekstuk.pdf';
+function leesBestandsnaam(contentDisposition: string | undefined, standaard = 'muziekstuk.pdf'): string {
   if (!contentDisposition) return standaard;
 
   const gecodeerd = contentDisposition.match(/filename\*=\s*[^']*'[^']*'([^;]+)/i);
@@ -231,6 +230,39 @@ export const downloadMusicPiece = async (id: string): Promise<void> => {
 
   const filename = leesBestandsnaam(response.headers['content-disposition']);
 
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * De pdf van een stuk als blob, voor de ingebouwde bladmuziekweergave.
+ *
+ * `downloadMusicPiece` hiernaast start een download; deze geeft alleen de
+ * inhoud terug, zodat de aanroeper er zelf een blob-adres van kan maken. Stond
+ * als kale fetch in MyMusic.tsx.
+ */
+export const getMusicPieceBlob = async (id: string): Promise<Blob> => {
+  const response = await api.get(`/music-pieces/${id}/download`, { responseType: 'blob' });
+  return response.data;
+};
+
+/**
+ * Alle stukken van een muzieklijst in één zip.
+ *
+ * Stond als kale fetch in MyMusic.tsx, met een eigen regex voor de
+ * bestandsnaam die `filename*` niet kende. Hier loopt hij via dezelfde lezer
+ * als de andere downloads.
+ */
+export const downloadMusicListZip = async (listId: string): Promise<void> => {
+  const response = await api.get(`/music-lists/${listId}/download-zip`, { responseType: 'blob' });
+
+  const filename = leesBestandsnaam(response.headers['content-disposition'], 'muziek.zip');
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
@@ -385,4 +417,20 @@ export const revokeBlobUrl = (url: string): void => {
   if (url.startsWith('blob:')) {
     URL.revokeObjectURL(url);
   }
+};
+
+/**
+ * Een pdf die vanuit een ander programma is gedeeld (de share target van de
+ * geïnstalleerde app).
+ *
+ * Stond als kale fetch in ShareTarget.tsx. Juist hier is de afhandeling van
+ * een 401 belangrijk: wie een bestand deelt vanuit een andere app komt op deze
+ * pagina binnen zonder eerst iets van de applicatie gezien te hebben, en een
+ * verlopen sessie gaf dan alleen "Fout bij verwerken".
+ */
+export const uploadSharedPdf = async (bestand: File): Promise<{ id?: string; filename?: string }> => {
+  const formData = new FormData();
+  formData.append('file', bestand);
+  const { data } = await api.post('/upload/pdf', formData);
+  return data;
 };

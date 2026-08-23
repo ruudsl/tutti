@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardWidget, WidgetType } from '../hooks/useDashboardWidgets';
-import { getUpcomingRehearsals } from '../api';
+import {
+  getUpcomingRehearsals,
+  getActivityStats,
+  getMyMusicLists,
+  getPracticeStats,
+  getFavorites,
+  getMusicPiecesPaginated,
+} from '../api';
 import { getTaskSummary, type TaskPriority } from '../api/tasks';
 import { Icon, type IconName } from './Icon';
 import type { Rehearsal } from '../types';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 interface WidgetContainerProps {
   widget: DashboardWidget;
@@ -149,33 +154,42 @@ export function DashboardEditToggle({
 }
 
 // Stats Widget
+/**
+ * De drie tellers op het dashboard.
+ *
+ * Deze widget las `totalPieces`, `totalPracticeMinutes` en `downloadsThisMonth`
+ * uit het antwoord van /activity/stats. Geen van die drie velden bestaat daar:
+ * die route stuurt topPieces, recentActivity, userActivity, totals en period.
+ * Alle drie de tellers stonden dus permanent op nul. Met een kale fetch is het
+ * antwoord `any`, dus de typecontrole zei er niets over - dat kwam pas boven
+ * water toen deze aanroepen via de api-laag gingen lopen.
+ *
+ * De getallen komen nu van waar ze echt staan. Het aantal stukken vraagt één
+ * rij op met pageSize 1; het gaat om de telling ernaast, niet om de rij zelf.
+ */
 function StatsWidget() {
   const { t } = useTranslation();
-  const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/activity/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => getActivityStats() });
+  const { data: oefening } = useQuery({ queryKey: ['dashboard-practice'], queryFn: () => getPracticeStats() });
+  const { data: stukken } = useQuery({
+    queryKey: ['dashboard-piece-count'],
+    queryFn: () => getMusicPiecesPaginated({ page: 1, pageSize: 1 }),
   });
 
   return (
     <div className="widget widget-stats">
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-value">{stats?.totalPieces || 0}</div>
+          <div className="stat-value">{stukken?.total ?? 0}</div>
           <div className="stat-label">{t('dashboard.totalPieces')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats?.totalPracticeMinutes || 0}</div>
+          <div className="stat-value">{oefening?.totalMinutes ?? 0}</div>
           <div className="stat-label">{t('dashboard.practiceMinutes')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{stats?.downloadsThisMonth || 0}</div>
+          {/* De periode is standaard 30 dagen, wat bij het label "deze maand" past. */}
+          <div className="stat-value">{stats?.totals?.total_downloads ?? 0}</div>
           <div className="stat-label">{t('dashboard.downloadsThisMonth')}</div>
         </div>
       </div>
@@ -273,12 +287,11 @@ function MusicListsWidget() {
   const { data: lists = [] } = useQuery({
     queryKey: ['my-music-lists'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/music-lists/my`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      return res.json();
+      // Dit haalde '/music-lists/my' op. Die route bestaat niet: de server
+      // kent '/my-lists', en '/my' viel daardoor in de route '/:id' met "my"
+      // als lijstnummer - dus een 404. Met `if (!res.ok) return []` erboven
+      // bleef deze widget stilzwijgend altijd leeg.
+      return getMyMusicLists();
     },
   });
 
@@ -319,17 +332,14 @@ function PracticeProgressWidget() {
   const { data: progress } = useQuery({
     queryKey: ['practice-progress'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/practice/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return null;
-      return res.json();
+      return getPracticeStats();
     },
   });
 
   const weeklyGoal = 120; // 2 hours
-  const percentage = progress ? Math.min((progress.weeklyMinutes / weeklyGoal) * 100, 100) : 0;
+  // Dit las `weeklyMinutes`; de server stuurt `weekMinutes`. De voortgangsbalk
+  // stond daardoor altijd op nul procent.
+  const percentage = progress ? Math.min((progress.weekMinutes / weeklyGoal) * 100, 100) : 0;
 
   return (
     <div className="widget">
@@ -344,7 +354,7 @@ function PracticeProgressWidget() {
           <div className="progress-bar" style={{ width: `${percentage}%` }} />
         </div>
         <p className="text-sm text-center mt-1">
-          {progress?.weeklyMinutes || 0} / {weeklyGoal} {t('widgets.minutesThisWeek')}
+          {progress?.weekMinutes || 0} / {weeklyGoal} {t('widgets.minutesThisWeek')}
         </p>
       </div>
     </div>
@@ -357,12 +367,7 @@ function FavoritesWidget() {
   const { data: favorites = [] } = useQuery({
     queryKey: ['favorites'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/favorites`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      return res.json();
+      return getFavorites();
     },
   });
 

@@ -10,23 +10,20 @@ import { useInstruments } from '../hooks/useInstruments';
 import { savePdfAsMusicPiece } from '../api';
 import { withDownloadToken } from '../utils/downloadUrl';
 
+import {
+  getPdfInfo,
+  splitPdf,
+  splitPdfA3,
+  mergePdfs,
+  downloadPdfZip,
+  type PdfInfo,
+  type PdfSplitDeel,
+  type PdfA3Resultaat,
+} from '../api/pdf-tools';
+
+// Blijft nodig voor de downloadkoppeling hieronder: die opent een adres
+// rechtstreeks in de browser en kan dus geen kopregel meedragen.
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface PageInfo {
-  pageNumber: number;
-  width: number;
-  height: number;
-  widthMm: number;
-  heightMm: number;
-  paperSize: string;
-  isLandscape: boolean;
-}
-
-interface PdfInfo {
-  pageCount: number;
-  pages: PageInfo[];
-  filename: string;
-}
 
 interface SplitRange {
   start: number;
@@ -42,22 +39,6 @@ interface InstrumentOption {
   name: string;
   tuning: string;
   clef: string;
-}
-
-interface SplitResult {
-  name: string;
-  displayName: string;
-  filename?: string;
-  filepath?: string;
-  pageCount?: number;
-  error?: string;
-  saved?: boolean;
-  title?: string;
-  arranger?: string;
-  instrumentId?: string;
-  tuning?: string;
-  groupNumber?: string;
-  clef?: string;
 }
 
 /**
@@ -95,13 +76,8 @@ export default function PdfTools() {
   ]);
   const [splitTitle, setSplitTitle] = useState('');
   const [splitArranger, setSplitArranger] = useState('');
-  const [splitResults, setSplitResults] = useState<SplitResult[]>([]);
-  const [a3Result, setA3Result] = useState<{
-    filepath: string;
-    filename: string;
-    splitCount: number;
-    newPageCount: number;
-  } | null>(null);
+  const [splitResults, setPdfSplitDeels] = useState<PdfSplitDeel[]>([]);
+  const [a3Result, setA3Result] = useState<PdfA3Resultaat | null>(null);
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
   const [mergeResult, setMergeResult] = useState<{ filepath: string; filename: string; pageCount: number } | null>(
     null,
@@ -132,11 +108,6 @@ export default function PdfTools() {
     }));
   }, [instruments]);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return { Authorization: `Bearer ${token}` };
-  };
-
   // Extract clean base name from filename (remove extension, make human-readable)
   const getBaseFilename = (filename: string): string => {
     // Remove .pdf extension
@@ -156,25 +127,16 @@ export default function PdfTools() {
 
     setPdfFile(file);
     setPdfInfo(null);
-    setSplitResults([]);
+    setPdfSplitDeels([]);
     setA3Result(null);
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      const response = await fetch(`${API_BASE}/pdf-tools/info`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      if (!response.ok) {
+      // De api-laag laat de fout van de server gewoon door; de melding die de
+      // gebruiker ziet blijft hier staan, zoals hij hiervoor ook deed.
+      const info = await getPdfInfo(file).catch(() => {
         throw new Error(t('pdfTools.couldNotReadPdf'));
-      }
-
-      const info = await response.json();
+      });
       setPdfInfo(info);
 
       // Initialize split ranges based on page count
@@ -195,7 +157,7 @@ export default function PdfTools() {
     if (!pdfFile || splitRanges.length === 0) return;
 
     setProcessing(true);
-    setSplitResults([]);
+    setPdfSplitDeels([]);
 
     try {
       // Transform ranges to include generated filenames and display names
@@ -210,19 +172,11 @@ export default function PdfTools() {
       formData.append('pdf', pdfFile);
       formData.append('ranges', JSON.stringify(rangesWithNames));
 
-      const response = await fetch(`${API_BASE}/pdf-tools/split`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      if (!response.ok) {
+      const data = await splitPdf(pdfFile, rangesWithNames).catch(() => {
         throw new Error(t('pdfTools.splitFailed'));
-      }
-
-      const data = await response.json();
+      });
       // Enrich results with display names and metadata
-      const enrichedResults = data.results.map((result: SplitResult, index: number) => {
+      const enrichedResults = data.results.map((result: PdfSplitDeel, index: number) => {
         const range = splitRanges[index];
         const instrument = range ? instrumentOptions.find((i) => i.id === range.instrumentId) : null;
         return {
@@ -237,7 +191,7 @@ export default function PdfTools() {
           clef: instrument?.clef || undefined,
         };
       });
-      setSplitResults(enrichedResults);
+      setPdfSplitDeels(enrichedResults);
       showSuccess(t('pdfTools.pdfSplitSuccess', { count: data.results.length }));
     } catch (error: any) {
       showError(error.message || t('pdfTools.errorSplitting'));
@@ -253,20 +207,9 @@ export default function PdfTools() {
     setA3Result(null);
 
     try {
-      const formData = new FormData();
-      formData.append('pdf', pdfFile);
-
-      const response = await fetch(`${API_BASE}/pdf-tools/split-a3`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      if (!response.ok) {
+      const data = await splitPdfA3(pdfFile).catch(() => {
         throw new Error(t('pdfTools.a3SplitFailed'));
-      }
-
-      const data = await response.json();
+      });
       setA3Result(data);
 
       if (data.splitCount > 0) {
@@ -291,20 +234,9 @@ export default function PdfTools() {
     setMergeResult(null);
 
     try {
-      const formData = new FormData();
-      mergeFiles.forEach((file) => formData.append('pdfs', file));
-
-      const response = await fetch(`${API_BASE}/pdf-tools/merge`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: formData,
-      });
-
-      if (!response.ok) {
+      const data = await mergePdfs(mergeFiles).catch(() => {
         throw new Error(t('pdfTools.mergeFailed'));
-      }
-
-      const data = await response.json();
+      });
       setMergeResult(data);
       showSuccess(t('pdfTools.mergeSuccess', { count: mergeFiles.length }));
     } catch (error: any) {
@@ -331,7 +263,7 @@ export default function PdfTools() {
     }
   };
 
-  const handleSaveAsMusicPiece = async (filepath: string, filename: string, resultItem?: SplitResult) => {
+  const handleSaveAsMusicPiece = async (filepath: string, filename: string, resultItem?: PdfSplitDeel) => {
     if (!selectedOrchestra) {
       showError(t('pdfTools.selectOrchestraFirst'));
       return;
@@ -354,7 +286,7 @@ export default function PdfTools() {
       if (result.success) {
         showSuccess(t('pdfTools.savedAsMusicPiece', { title: result.title }));
         // Mark as saved instead of removing
-        setSplitResults((prev) => prev.map((r) => (r.filepath === filepath ? { ...r, saved: true } : r)));
+        setPdfSplitDeels((prev) => prev.map((r) => (r.filepath === filepath ? { ...r, saved: true } : r)));
       }
     } catch (error: any) {
       showError(error.response?.data?.error || t('pdfTools.errorSavingAsMusicPiece'));
@@ -380,28 +312,9 @@ export default function PdfTools() {
         return;
       }
 
-      const response = await fetch(`${API_BASE}/pdf-tools/download-zip`, {
-        method: 'POST',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filepaths }),
-      });
-
-      if (!response.ok) {
+      await downloadPdfZip(filepaths, `${splitTitle.replace(/\s+/g, '_') || 'split'}_parts.zip`).catch(() => {
         throw new Error(t('pdfTools.downloadFailed'));
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${splitTitle.replace(/\s+/g, '_') || 'split'}_parts.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      });
     } catch (error: any) {
       showError(error.message || t('pdfTools.downloadFailed'));
     } finally {
@@ -450,7 +363,7 @@ export default function PdfTools() {
     if (savedCount > 0) {
       showSuccess(t('pdfTools.allSavedAsMusicPieces', { count: savedCount }));
       // Mark as saved instead of removing
-      setSplitResults((prev) => prev.map((r) => (savedFilepaths.includes(r.filepath!) ? { ...r, saved: true } : r)));
+      setPdfSplitDeels((prev) => prev.map((r) => (savedFilepaths.includes(r.filepath!) ? { ...r, saved: true } : r)));
     }
     setSavingAll(false);
   };

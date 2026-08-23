@@ -24,6 +24,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import PdfTools from '../PdfTools';
+import { getPdfInfo } from '../../api/pdf-tools';
 
 vi.mock('../../hooks/useDocumentTitle', () => ({ useDocumentTitle: () => {} }));
 
@@ -36,6 +37,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../components/PdfPagePreview', () => ({ default: () => <div data-testid="pdf-voorbeeld" /> }));
 
 vi.mock('../../api', () => ({ savePdfAsMusicPiece: async () => ({}) }));
+vi.mock('../../api/pdf-tools');
 
 vi.mock('../../hooks/useOrchestras', () => ({ useOrchestras: () => ({ data: [] }) }));
 vi.mock('../../hooks/useMusicLists', () => ({ useMusicLists: () => ({ data: [] }) }));
@@ -58,6 +60,10 @@ const PDF_INFO = {
     widthMm: 210,
     heightMm: 297,
     paperSize: 'A4',
+    // De server stuurt dit veld echt mee (backend/src/routes/pdf-tools.ts,
+    // width > height). Het ontbrak hier zolang deze opstelling `fetch`
+    // nabootste en dus nergens tegen een type werd gehouden.
+    isLandscape: false,
   })),
 };
 
@@ -65,11 +71,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   // De pagina stuurt het bestand naar de server om te weten hoeveel pagina's
-  // erin zitten; hier antwoordt de server meteen.
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => ({ ok: true, json: async () => PDF_INFO })),
-  );
+  // erin zitten; hier antwoordt de api-laag meteen.
+  //
+  // Dit bootste eerder `fetch` zelf na. Sinds die aanroep via src/api/pdf-tools
+  // loopt, hoort de nabootsing daar te zitten: de test gaat over de labels op
+  // deze pagina, niet over hoe het verzoek over de lijn gaat.
+  vi.mocked(getPdfInfo).mockResolvedValue(PDF_INFO);
 });
 
 /** Kies een pdf op het geopende tabblad, zodat de rest van het formulier verschijnt. */

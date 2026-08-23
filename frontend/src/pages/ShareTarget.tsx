@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { showSuccess, showError } from '../utils/toast';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { uploadSharedPdf } from '../api/music';
 
 export default function ShareTarget() {
   const { t } = useTranslation();
@@ -85,27 +84,7 @@ export default function ShareTarget() {
   }
 
   async function uploadFile(file: File) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_BASE}/upload/pdf`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Upload failed');
-    }
-
-    return response.json();
+    return uploadSharedPdf(file);
   }
 
   return (

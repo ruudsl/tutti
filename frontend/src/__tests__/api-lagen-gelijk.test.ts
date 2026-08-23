@@ -55,6 +55,26 @@ function functies(pad: string): Map<string, string> {
   return uit;
 }
 
+/** Hetzelfde, maar dan voor geexporteerde interfaces en type-aliassen. */
+function typen(pad: string): Map<string, string> {
+  const regels = readFileSync(pad, 'utf-8').split('\n');
+  const uit = new Map<string, string>();
+  regels.forEach((regel, i) => {
+    const m = /^export (?:interface|type) (\w+)/.exec(regel);
+    if (!m) return;
+    // Een type-alias op één regel sluit met een puntkomma, een interface met
+    // een accolade op kolom 0.
+    if (/;\s*$/.test(regel) && !regel.includes('{')) {
+      uit.set(m[1], regel);
+      return;
+    }
+    let j = i;
+    while (j < regels.length && !/^\}[;,]?\s*$/.test(regels[j])) j++;
+    uit.set(m[1], regels.slice(i, j + 1).join('\n'));
+  });
+  return uit;
+}
+
 /**
  * Commentaar weg, witruimte gelijk, en de naam van de axios-instantie gelijk:
  * api.ts noemt hem `api`, sommige modules `client`. Een verschil in naamgeving
@@ -113,6 +133,27 @@ describe('de twee api-lagen beloven hetzelfde', () => {
       .filter(({ hier, daar }) => genormaliseerd(hier) !== genormaliseerd(daar))
       .map(({ sleutel }) => sleutel);
 
+    expect(uiteen).toEqual([]);
+  });
+
+  /**
+   * Types lopen net zo goed uit elkaar als functies, en dat kwam hier aan het
+   * licht: `ActivityStats` miste in beide lagen de velden `totals` en `period`
+   * die de server wél stuurt. Het dashboard had ze nodig, kon ze niet krijgen,
+   * en haalde die route daarom met een kale fetch op - waar alles `any` is.
+   * Zolang alleen de functies vergeleken werden, bleef dat onzichtbaar.
+   */
+  it('houdt elke dubbele interface in beide lagen gelijk', () => {
+    const typesInApiBestand = typen(API_BESTAND);
+    const uiteen: string[] = [];
+    for (const module of modules) {
+      for (const [naam, tekst] of typen(join(API_MAP, module))) {
+        const inBestand = typesInApiBestand.get(naam);
+        if (inBestand && genormaliseerd(inBestand) !== genormaliseerd(tekst)) {
+          uiteen.push(`${module}::${naam}`);
+        }
+      }
+    }
     expect(uiteen).toEqual([]);
   });
 

@@ -6,46 +6,12 @@ import { showSuccess, showError } from '../utils/toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon, type IconName } from '../components/Icon';
 import { UAParser } from 'ua-parser-js';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-interface Session {
-  id: string;
-  ipAddress: string | null;
-  userAgent: string | null;
-  lastActive: string;
-  createdAt: string;
-  expiresAt: string;
-  isCurrent: boolean;
-}
-
-async function getSessions(): Promise<Session[]> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/sessions`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch sessions');
-  return res.json();
-}
-
-async function revokeSession(sessionId: string): Promise<void> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to revoke session');
-}
-
-async function revokeAllSessions(): Promise<{ revokedCount: number }> {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_BASE}/sessions/all`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Failed to revoke sessions');
-  return res.json();
-}
+// Deze drie functies en het type stonden hier opnieuw geschreven, met een
+// eigen fetch en een eigen token uit localStorage - terwijl ze al in de
+// api-laag staan. Dat was niet alleen dubbel: een kale fetch gaat langs de
+// afhandeling van een 401 heen, en dat is op een pagina over sessiebeheer een
+// bijzonder ongelukkige plek om een verlopen sessie te missen.
+import { getSessions, revokeSession, revokeAllSessions, type UserSession } from '../api';
 
 function parseUserAgent(userAgent: string | null): {
   device: string;
@@ -100,7 +66,7 @@ export default function SessionManagement() {
   const queryClient = useQueryClient();
 
   const [confirmRevokeAll, setConfirmRevokeAll] = useState(false);
-  const [sessionToRevoke, setSessionToRevoke] = useState<Session | null>(null);
+  const [sessionToRevoke, setSessionToRevoke] = useState<UserSession | null>(null);
 
   const {
     data: sessions = [],
