@@ -183,3 +183,21 @@ export * from './replacement-requests';
 
 // Attendance Analytics
 export * from './attendance-analytics';
+
+// Seizoensplanning, vakanties, podiumindelingen en mislukte imports.
+// Deze vier stonden alleen in src/api.ts en hadden nog geen module-thuis;
+// verhuisd bij het opheffen van dat bestand.
+export * from './seasons';
+export * from './holidays';
+export * from './stage-layouts';
+export * from './failed-imports';
+
+/**
+ * De axios-instantie zelf.
+ *
+ * `import api from '../api'` kwam vroeger bij src/api.ts uit, dat zijn eigen
+ * instantie aanmaakte. Nu dat bestand weg is, wijst dezelfde regel hierheen -
+ * en dat hoort dezelfde instantie te zijn als de modules gebruiken, anders
+ * heeft de helft van de applicatie weer een eigen interceptor.
+ */
+export { default } from './client';
