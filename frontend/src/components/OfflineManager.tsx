@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { showSuccess, showError } from '../utils/toast';
+import { clearAllData } from '../lib/offlineStorage';
 
 interface CachedItem {
   url: string;
@@ -139,6 +140,15 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
         }
       }
 
+      // De bestandscache is maar de helft van de offline opslag. In IndexedDB
+      // staan het profiel van het ingelogde lid, de gegevens van zijn
+      // vereniging en de nog niet verstuurde synchronisatiewachtrij. Die bleven
+      // hier staan terwijl het scherm "offline opslag gewist" meldde - op een
+      // gedeelde tablet zag de volgende gebruiker ze dus gewoon terug.
+      // Mislukt dit, dan komt er geen succesmelding maar een foutmelding: wie
+      // het apparaat doorgeeft moet weten dat er nog gegevens op staan.
+      await clearAllData();
+
       showSuccess(t('offline.cleared', 'Offline opslag gewist'));
       setCachedItems([]);
       setTotalSize(0);
@@ -223,7 +233,13 @@ export function OfflineManager({ isOpen, onClose }: OfflineManagerProps) {
                       <input
                         type="checkbox"
                         checked={selectedItems.has(item.url)}
-                        onChange={() => {}}
+                        // Het vinkje deed niets: een lege onChange, en de
+                        // stopPropagation hield ook de klik op de regel tegen.
+                        // Wie op het vinkje mikte, zag het aanslaan en meteen
+                        // terugspringen. De stopPropagation blijft nodig, anders
+                        // telt de regel eronder de klik ook mee en heffen de
+                        // twee elkaar op.
+                        onChange={() => toggleSelect(item.url)}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <Icon name={item.type === 'pdf' ? 'fileText' : 'music'} size={20} />

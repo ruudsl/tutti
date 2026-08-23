@@ -67,6 +67,10 @@ export function CalendarSync() {
       setSettings(data);
     } catch (error: any) {
       console.error('Failed to load calendar settings:', error);
+      // Zonder melding toont dit scherm een leeg feed-veld en de knop "koppel
+      // Google", precies alsof het lid nog niets had ingesteld. Dat is niet te
+      // onderscheiden van een echte lege stand, dus zeg dat het ophalen misging.
+      showError(t('common.error'));
     } finally {
       setIsLoading(false);
     }
