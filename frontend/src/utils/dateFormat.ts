@@ -166,10 +166,25 @@ export function formatRelative(date: Date | string | number): string {
 
   // Future dates (negative diff)
   if (diffMs < 0) {
-    const futureDiffMin = Math.abs(diffMin);
-    const futureDiffHours = Math.abs(diffHours);
-    const futureDiffDays = Math.abs(diffDays);
-    const futureDiffWeeks = Math.abs(diffWeeks);
+    // De eenheden voor de toekomst worden opnieuw uitgerekend vanuit het
+    // absolute verschil, en niet als Math.abs() van de waarden hierboven.
+    //
+    // Math.floor rondt naar beneden, dus bij een negatief verschil rondt het
+    // van nul af: floor(-25/24) is -2, niet -1. Math.abs() daarvan gaf 2, en
+    // daarmee las een moment 25 uur vooruit als "overmorgen" in plaats van
+    // "morgen", acht dagen vooruit als "over 2 weken", en negentig seconden
+    // vooruit als "over 2 minuten". De tak `futureDiffMin < 1` was zelfs
+    // onbereikbaar: elk negatief verschil, ook van een milliseconde, leverde
+    // minstens 1 op, dus "nu" kwam nooit uit deze tak.
+    //
+    // Het verleden had dat probleem niet: daar is het verschil positief en
+    // rondt Math.floor naar nul toe. Deze vier regels maken de toekomst
+    // symmetrisch met het verleden.
+    const aheadSec = Math.floor(-diffMs / 1000);
+    const futureDiffMin = Math.floor(aheadSec / 60);
+    const futureDiffHours = Math.floor(futureDiffMin / 60);
+    const futureDiffDays = Math.floor(futureDiffHours / 24);
+    const futureDiffWeeks = Math.floor(futureDiffDays / 7);
 
     const rtf = relativeFormatter();
     if (futureDiffMin < 1) return rtf.format(0, 'second');
@@ -388,6 +403,49 @@ export function isYesterday(date: Date | string | number): boolean {
     d.getMonth() === yesterday.getMonth() &&
     d.getFullYear() === yesterday.getFullYear()
   );
+}
+
+/**
+ * Zet een datum om naar de waarde van een `<input type="date">`.
+ *
+ * @description Levert JJJJ-MM-DD in de tijdzone van de gebruiker, niet in UTC.
+ *
+ * Op het eerste gezicht doet `new Date().toISOString().split('T')[0]` hetzelfde,
+ * en negen van de tien keer klopt dat ook. Alleen rekent `toISOString()` in UTC.
+ * In Nederland loopt de klok een of twee uur voor, dus tussen middernacht en
+ * 01:00 (zomertijd 02:00) staat daar de dag ervóór. Een formulier dat op
+ * 1 januari om half een geopend wordt, stelt dan 31 december voor - een andere
+ * dag, een andere maand en een ander boekjaar.
+ *
+ * @param {Date} [date=new Date()] - Datum om om te zetten; standaard vandaag
+ * @returns {string} Datum als JJJJ-MM-DD, of "" voor een ongeldige datum
+ * @example
+ * toDateInputValue(new Date(2026, 0, 1)); // "2026-01-01"
+ */
+export function toDateInputValue(date: Date = new Date()): string {
+  if (!isValidDate(date)) return '';
+
+  const jaar = date.getFullYear();
+  const maand = String(date.getMonth() + 1).padStart(2, '0');
+  const dag = String(date.getDate()).padStart(2, '0');
+  return `${jaar}-${maand}-${dag}`;
+}
+
+/**
+ * Telt hele dagen op bij een datum, in kalenderdagen.
+ *
+ * @description Rekent met `setDate`, niet met een aantal milliseconden. Dertig
+ * keer 24 uur optellen komt rond de overgang naar of van zomertijd een uur
+ * naast de kalender uit, en dat scheelt bij een vervaldatum een hele dag.
+ *
+ * @param {Date} date - Begindatum
+ * @param {number} days - Aantal dagen erbij (mag negatief)
+ * @returns {Date} Nieuwe datum; de meegegeven datum blijft ongemoeid
+ */
+export function addDays(date: Date, days: number): Date {
+  const resultaat = new Date(date.getTime());
+  resultaat.setDate(resultaat.getDate() + days);
+  return resultaat;
 }
 
 // Helper functions

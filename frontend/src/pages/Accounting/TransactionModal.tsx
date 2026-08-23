@@ -5,6 +5,7 @@ import { createTransaction, updateTransaction } from '../../api/accounting';
 import type { Account, CostCenter, CreateTransactionData, Transaction, TransactionType } from '../../api/accounting';
 import { Icon } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
+import { toDateInputValue } from '../../utils/dateFormat';
 import { showError, showSuccess } from '../../utils/toast';
 
 // =====================================================
@@ -41,7 +42,11 @@ export function TransactionModal({
           })),
         }
       : {
-          transactionDate: new Date().toISOString().split('T')[0],
+          // In de tijdzone van de gebruiker, niet in UTC: zie de toelichting bij
+          // toDateInputValue. Een boeking die vlak na middernacht wordt
+          // ingevoerd, kreeg hier de dag ervóór - en op de jaargrens het
+          // vorige boekjaar.
+          transactionDate: toDateInputValue(),
           transactionType: 'journal',
           description: '',
           lines: [

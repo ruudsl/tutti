@@ -55,6 +55,15 @@ export function BottomSheet({
   const dragOffsetRef = useRef(0);
   const previousActiveElement = useRef<Element | null>(null);
 
+  // `onClose` staat in een ref omdat het aandachtseffect hieronder er anders
+  // aan zou moeten hangen. Vrijwel elke aanroeper geeft een verse pijlfunctie
+  // mee, en dan liep dat effect bij elke tekening van het bovenliggende scherm
+  // opnieuw: de aandacht sprong midden in het typen terug naar de sluitknop.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Handle swipe to dismiss
   const handleSwipeDown = useCallback(() => {
     if (swipeToDismiss) {
@@ -117,7 +126,7 @@ export function BottomSheet({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -160,7 +169,7 @@ export function BottomSheet({
         previousActiveElement.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

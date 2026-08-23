@@ -396,6 +396,11 @@ export const PdfAnnotator: React.FC<PdfAnnotatorProps> = ({
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      // De stapels horen bij de bladzijde die in beeld staat. Bleven ze staan,
+      // dan zette ongedaan maken na het doorbladeren de aantekeningen van de
+      // vorige bladzijde op deze.
+      setUndoStack([]);
+      setRedoStack([]);
       try {
         const [annotationsRes, stampsRes] = await Promise.all([
           api.get(`/annotations/${musicPieceId}/${pageNumber}`).catch(() => null),

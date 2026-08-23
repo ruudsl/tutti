@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -44,6 +44,15 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
     description: '',
     color: DEFAULT_COLORS[0],
   });
+
+  /**
+   * Of de slug van de beheerder zelf komt.
+   *
+   * Zolang dit onwaar is volgt de slug de naam; zodra er met de hand in het
+   * slugveld getikt is, blijft hij staan. Zie `handleNameChange` voor waarom
+   * dat een aparte toestand moet zijn en niet uit de slug zelf af te leiden is.
+   */
+  const [slugHandmatig, setSlugHandmatig] = useState(false);
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['post-categories'],
@@ -95,6 +104,7 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
       description: '',
       color: DEFAULT_COLORS[0],
     });
+    setSlugHandmatig(false);
   };
 
   const generateSlug = (name: string): string => {
@@ -104,12 +114,30 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
       .replace(/^-|-$/g, '');
   };
 
+  /**
+   * GEREPAREERD. Hier stond `slug: prev.slug || generateSlug(name)`.
+   *
+   * De bedoeling was goed - een slug die de beheerder zelf heeft ingetikt niet
+   * overschrijven - maar de maatstaf deugde niet. `prev.slug` is na de eerste
+   * toetsaanslag al gevuld, met de slug van die ene letter. Wie 'Nieuwsbrief'
+   * intikt kreeg daarom slug 'n': bij de N was `prev.slug` nog leeg, en vanaf
+   * de i was hij dat niet meer. Het veld stond gevuld, dus het viel niemand op,
+   * maar het webadres van de categorie werd /n.
+   *
+   * Of de beheerder de slug zelf heeft gezet is niet uit de slug af te lezen;
+   * dat is aparte kennis, en die staat nu in `slugHandmatig`.
+   */
   const handleNameChange = (name: string) => {
     setFormData((prev) => ({
       ...prev,
       name,
-      slug: prev.slug || generateSlug(name),
+      slug: slugHandmatig ? prev.slug : generateSlug(name),
     }));
+  };
+
+  const handleSlugChange = (slug: string) => {
+    setSlugHandmatig(true);
+    setFormData((prev) => ({ ...prev, slug }));
   };
 
   const handleCreate = (e: React.FormEvent) => {
@@ -134,6 +162,9 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
 
   const openEditModal = (category: PostCategory) => {
     setEditingCategory(category);
+    // Een bestaande slug staat in webadressen die al gedeeld zijn; hernoemen
+    // mag die niet stilzwijgend meenemen.
+    setSlugHandmatig(true);
     setFormData({
       name: category.name,
       slug: category.slug,
@@ -237,7 +268,12 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
           isSubmitting={createMutation.isPending}
           submitDisabled={!canSubmit}
         >
-          <CategoryForm formData={formData} setFormData={setFormData} onNameChange={handleNameChange} />
+          <CategoryForm
+            formData={formData}
+            setFormData={setFormData}
+            onNameChange={handleNameChange}
+            onSlugChange={handleSlugChange}
+          />
         </FormModal>
       )}
 
@@ -253,7 +289,12 @@ export function PostCategoriesManager({ onClose }: PostCategoriesManagerProps) {
           isSubmitting={updateMutation.isPending}
           submitDisabled={!canSubmit}
         >
-          <CategoryForm formData={formData} setFormData={setFormData} onNameChange={handleNameChange} />
+          <CategoryForm
+            formData={formData}
+            setFormData={setFormData}
+            onNameChange={handleNameChange}
+            onSlugChange={handleSlugChange}
+          />
         </FormModal>
       )}
 
@@ -278,20 +319,29 @@ function CategoryForm({
   formData,
   setFormData,
   onNameChange,
+  onSlugChange,
 }: {
   formData: CreateCategoryData;
   setFormData: React.Dispatch<React.SetStateAction<CreateCategoryData>>;
   onNameChange: (name: string) => void;
+  onSlugChange: (slug: string) => void;
 }) {
   const { t } = useTranslation();
+  // De opschriften stonden náást hun veld zonder eraan gekoppeld te zijn: een
+  // schermlezer las een invoerveld zonder naam voor, en het aanklikken van het
+  // opschrift zette de aandacht niet in het veld.
+  const naamId = useId();
+  const slugId = useId();
+  const omschrijvingId = useId();
 
   return (
     <div className="space-y-4">
       <div className="form-control">
-        <label className="label">
+        <label className="label" htmlFor={naamId}>
           <span className="label-text">{t('posts.categories.name')} *</span>
         </label>
         <input
+          id={naamId}
           type="text"
           className="input input-bordered"
           value={formData.name}
@@ -303,14 +353,15 @@ function CategoryForm({
       </div>
 
       <div className="form-control">
-        <label className="label">
+        <label className="label" htmlFor={slugId}>
           <span className="label-text">{t('posts.categories.slug')}</span>
         </label>
         <input
+          id={slugId}
           type="text"
           className="input input-bordered"
           value={formData.slug}
-          onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
+          onChange={(e) => onSlugChange(e.target.value)}
           placeholder={t('posts.categories.slugPlaceholder')}
         />
         <label className="label">
@@ -319,10 +370,11 @@ function CategoryForm({
       </div>
 
       <div className="form-control">
-        <label className="label">
+        <label className="label" htmlFor={omschrijvingId}>
           <span className="label-text">{t('posts.categories.descriptionLabel')}</span>
         </label>
         <textarea
+          id={omschrijvingId}
           className="textarea textarea-bordered"
           value={formData.description}
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}

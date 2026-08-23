@@ -6,6 +6,7 @@ import type { Account, AccountingRelation, CostCenter, CreateInvoiceData } from 
 import { Icon } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { addDays, toDateInputValue } from '../../utils/dateFormat';
 import { showError, showSuccess } from '../../utils/toast';
 
 // =====================================================
@@ -29,8 +30,16 @@ export function InvoiceModal({
   const [formData, setFormData] = useState<CreateInvoiceData>({
     invoiceType: 'sales',
     relationId: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    // toDateInputValue rekent in de tijdzone van de gebruiker. Hier stond
+    // toISOString(), en dat rekent in UTC: een factuur die in Nederland tussen
+    // middernacht en 01:00 (zomertijd 02:00) wordt aangemaakt, kreeg de dag
+    // ervóór als factuurdatum. Op 1 januari om half een is dat een ander
+    // boekjaar.
+    invoiceDate: toDateInputValue(),
+    // En de vervaldatum met addDays in plaats van dertig keer 24 uur: over de
+    // overgang naar of van zomertijd komt dat laatste een uur naast de
+    // kalender uit, en dan valt de vervaldatum een dag te vroeg of te laat.
+    dueDate: toDateInputValue(addDays(new Date(), 30)),
     lines: [{ description: '', quantity: 1, unitPrice: 0 }],
   });
 

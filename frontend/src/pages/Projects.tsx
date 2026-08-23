@@ -178,7 +178,15 @@ export default function Projects() {
                   </span>
                 </div>
 
-                <div className="card-actions justify-end mt-2">
+                {/*
+                  De hele kaart is klikbaar en opent het detailvenster. Alles
+                  in dit blok is een handeling op zichzelf, dus de klik mag
+                  daar niet doorheen zakken: zonder deze rem opende
+                  "Archiveren" behalve de statuswijziging ook nog het
+                  detailvenster, en na "Verwijderen" sprong het venster van het
+                  zojuist verwijderde project open.
+                */}
+                <div className="card-actions justify-end mt-2" onClick={(e) => e.stopPropagation()}>
                   <div className="dropdown dropdown-end">
                     <label tabIndex={0} className="btn btn-ghost btn-sm">
                       <Icon name="menu" size={16} />

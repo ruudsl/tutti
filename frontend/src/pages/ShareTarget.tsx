@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
@@ -11,9 +11,35 @@ export default function ShareTarget() {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('');
 
+  // Elke afloop van deze pagina eindigt in een doorverwijzing na een paar
+  // tellen. Die tellers moeten opgeruimd worden: klikt iemand binnen die
+  // seconden zelf een menu-item aan, dan sleurde de wachtende timer hem
+  // alsnog naar /my-music of naar de startpagina - een sprong waar hij niet
+  // om gevraagd heeft, op een pagina die hij al verlaten had.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const verlatenRef = useRef(false);
+
   useEffect(() => {
     handleSharedContent();
+    return () => {
+      verlatenRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
+
+  /**
+   * Plant een doorverwijzing.
+   *
+   * De vlag is er naast de clearTimeout omdat de laatste teller pas gezet
+   * wordt nadat het uploaden klaar is: op dat moment kan de opruiming van het
+   * effect al gedraaid hebben, en dan valt er niets meer te wissen.
+   */
+  function verwijsDoorNa(ms: number, doel: string, opties?: { state: unknown }) {
+    timerRef.current = setTimeout(() => {
+      if (verlatenRef.current) return;
+      navigate(doel, opties);
+    }, ms);
+  }
 
   async function handleSharedContent() {
     try {
@@ -26,11 +52,9 @@ export default function ShareTarget() {
         setMessage(t('shareTarget.receivedText', 'Gedeelde tekst ontvangen'));
         setStatus('success');
 
-        setTimeout(() => {
-          navigate('/my-music', {
-            state: { sharedContent: { title, text, url: sharedUrl } },
-          });
-        }, 1500);
+        verwijsDoorNa(1500, '/my-music', {
+          state: { sharedContent: { title, text, url: sharedUrl } },
+        });
         return;
       }
 
@@ -66,20 +90,26 @@ export default function ShareTarget() {
           }
         }
 
+        // De melding hoorde ook in de kaart te staan. Zonder deze regel bleef
+        // `message` leeg en las de gebruiker alleen "Gelukt!" met een lege
+        // regel eronder; wat er gelukt was stond dan uitsluitend in de toast,
+        // die na een paar tellen weg is.
+        const gelukt = t('shareTarget.filesUploaded', 'Bestanden geüpload');
+        setMessage(gelukt);
         setStatus('success');
-        showSuccess(t('shareTarget.filesUploaded', 'Bestanden geüpload'));
-        setTimeout(() => navigate('/my-music'), 2000);
+        showSuccess(gelukt);
+        verwijsDoorNa(2000, '/my-music');
       } else {
         setMessage(t('shareTarget.noContent', 'Geen gedeelde inhoud gevonden'));
         setStatus('error');
-        setTimeout(() => navigate('/'), 2000);
+        verwijsDoorNa(2000, '/');
       }
     } catch (error) {
       console.error('Share target error:', error);
       setStatus('error');
       setMessage(t('shareTarget.error', 'Fout bij verwerken'));
       showError(t('errors.generic'));
-      setTimeout(() => navigate('/'), 2000);
+      verwijsDoorNa(2000, '/');
     }
   }
 

@@ -158,6 +158,18 @@ export const PdfThumbnail = memo(function PdfThumbnail({
     }
   }, [src, width]);
 
+  // Een andere bron betekent een ander voorbeeldje. Zonder deze stap bleef
+  // het component op 'loaded' staan en bleef het oude voorblad in beeld,
+  // terwijl er allang een ander bestand onder hing.
+  const srcCacheKey = getCacheKey(src);
+  const previousCacheKey = useRef(srcCacheKey);
+  useEffect(() => {
+    if (previousCacheKey.current === srcCacheKey) return;
+    previousCacheKey.current = srcCacheKey;
+    setThumbnailUrl(null);
+    setLoadState('idle');
+  }, [srcCacheKey]);
+
   // Start rendering when visible
   useEffect(() => {
     if (isVisible && loadState === 'idle') {

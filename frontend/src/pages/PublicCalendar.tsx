@@ -17,6 +17,52 @@ interface PublicEvent {
   city?: string;
   ticketPrice?: number;
   description?: string;
+  // Kenmerken die zeggen dat iets niet naar buiten mag. Ze staan hier los van
+  // de rest omdat deze pagina ze niet toont maar alleen leest: zie isOpenbaar.
+  status?: string;
+  visibility?: string;
+  isPublic?: boolean;
+  internal?: boolean;
+}
+
+/**
+ * Wat een agendaregel kan meedragen aan zichtbaarheidskenmerken.
+ *
+ * `id` staat er alleen in omdat TypeScript een type waarvan alles optioneel is
+ * niet wil koppelen aan een concert of een repetitie: zonder één gedeeld veld
+ * meldt hij dat de twee niets met elkaar te maken hebben.
+ */
+type Zichtbaarheid = {
+  id: string;
+  status?: string;
+  visibility?: string;
+  isPublic?: boolean;
+  internal?: boolean;
+};
+
+/**
+ * Hoort deze regel op een pagina die iedereen zonder inloggen kan opvragen?
+ *
+ * Deze agenda staat op de website van de vereniging en wordt door zoekmachines
+ * ingelezen. Wat hier eenmaal in stond is niet meer terug te halen, dus wordt
+ * er niet gevraagd wat verborgen moet blijven maar wat naar buiten mag: alles
+ * wat als concept, intern of niet-openbaar is aangemerkt valt af.
+ *
+ * De filtering staat bewust ook hier en niet alleen aan de serverkant. De
+ * server bepaalt vandaag zelf welke velden hij meestuurt, maar deze pagina
+ * tekent klakkeloos wat er binnenkomt: één route die er later een veld bij
+ * doet, of een andere bron achter dezelfde url, en het staat op straat.
+ */
+function isOpenbaar(regel: Zichtbaarheid): boolean {
+  const status = regel.status?.toLowerCase();
+  const zichtbaarheid = regel.visibility?.toLowerCase();
+
+  if (status === 'draft' || status === 'concept') return false;
+  if (zichtbaarheid && zichtbaarheid !== 'public') return false;
+  if (regel.isPublic === false) return false;
+  if (regel.internal === true) return false;
+
+  return true;
 }
 
 interface CalendarData {
@@ -178,8 +224,12 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
     return time.substring(0, 5);
   };
 
+  // Eerst zeven, dan pas groeperen: een concept mag ook geen maandkop
+  // opleveren waaruit valt af te leiden dát er iets gepland staat.
+  const openbareEvents = data.events.filter(isOpenbaar);
+
   const groupedEvents: Record<string, PublicEvent[]> = {};
-  data.events.forEach((event) => {
+  openbareEvents.forEach((event) => {
     const month = new Date(event.date).toLocaleDateString(currentLocale(), { month: 'long', year: 'numeric' });
     if (!groupedEvents[month]) groupedEvents[month] = [];
     groupedEvents[month].push(event);
@@ -193,7 +243,7 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
           <p className="text-base-content/70">{t('publicCalendar.upcomingEvents')}</p>
         </header>
 
-        {data.events.length === 0 ? (
+        {openbareEvents.length === 0 ? (
           <div className="card bg-base-100 p-8 text-center">
             <Icon name="calendar" size={48} className="mx-auto mb-4 opacity-50" />
             <p className="text-base-content/70">{t('publicCalendar.noUpcomingEvents')}</p>
@@ -266,6 +316,11 @@ function CalendarEmbed({ data }: { data: CalendarData }) {
 
 function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: Date }) {
   const { t } = useTranslation();
+
+  // Het infoscherm hangt in de hal en iedereen die binnenloopt leest mee, dus
+  // hier geldt dezelfde zeef als op de openbare agenda.
+  const komendConcert = data.nextConcert && isOpenbaar(data.nextConcert) ? data.nextConcert : null;
+  const komendeConcerten = data.upcomingConcerts.filter(isOpenbaar);
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(currentLocale(), {
       weekday: 'long',
@@ -296,30 +351,30 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Next Concert Highlight */}
-        {data.nextConcert && (
+        {komendConcert && (
           <div className="card bg-primary text-primary-content shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-primary-content/80">
                 <Icon name="music2" size={20} />
                 <span className="uppercase text-sm font-semibold tracking-wider">Next Concert</span>
               </div>
-              <h2 className="card-title text-3xl mt-2">{data.nextConcert.name}</h2>
-              <div className="text-xl mt-2">{formatDate(data.nextConcert.date)}</div>
-              {data.nextConcert.startTime && <div className="text-lg">{formatTime(data.nextConcert.startTime)}</div>}
-              {data.nextConcert.venue && (
+              <h2 className="card-title text-3xl mt-2">{komendConcert.name}</h2>
+              <div className="text-xl mt-2">{formatDate(komendConcert.date)}</div>
+              {komendConcert.startTime && <div className="text-lg">{formatTime(komendConcert.startTime)}</div>}
+              {komendConcert.venue && (
                 <div className="flex items-center gap-1 mt-2">
                   <Icon name="mapPin" size={16} />
-                  {data.nextConcert.venue}
-                  {data.nextConcert.city && `, ${data.nextConcert.city}`}
+                  {komendConcert.venue}
+                  {komendConcert.city && `, ${komendConcert.city}`}
                 </div>
               )}
               <div className="mt-4">
                 <span className="badge badge-lg bg-primary-content/20 border-0 text-primary-content">
-                  {data.nextConcert.daysUntil === 0
+                  {komendConcert.daysUntil === 0
                     ? 'Today!'
-                    : data.nextConcert.daysUntil === 1
+                    : komendConcert.daysUntil === 1
                       ? 'Tomorrow!'
-                      : `In ${data.nextConcert.daysUntil} days`}
+                      : `In ${komendConcert.daysUntil} days`}
                 </span>
               </div>
             </div>
@@ -352,7 +407,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
         )}
 
         {/* Upcoming Concerts List */}
-        {data.upcomingConcerts.length > 0 && (
+        {komendeConcerten.length > 0 && (
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <div className="flex items-center gap-2 text-base-content/60">
@@ -360,7 +415,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
                 <span className="uppercase text-sm font-semibold tracking-wider">Coming Up</span>
               </div>
               <div className="space-y-3 mt-2">
-                {data.upcomingConcerts.slice(0, 4).map((concert) => (
+                {komendeConcerten.slice(0, 4).map((concert) => (
                   <div
                     key={concert.id}
                     className="flex justify-between items-center py-2 border-b border-base-200 last:border-0"
@@ -398,7 +453,7 @@ function InfoScreen({ data, currentTime }: { data: InfoScreenData; currentTime: 
       </div>
 
       {/* Empty state when no content */}
-      {!data.nextConcert && !data.nextRehearsal && data.upcomingConcerts.length === 0 && (
+      {!komendConcert && !data.nextRehearsal && komendeConcerten.length === 0 && (
         <div className="text-center py-20">
           <Icon name="calendar" size={64} className="mx-auto mb-4 opacity-30" />
           <p className="text-xl text-base-content/50">{t('publicCalendar.noUpcomingEvents')}</p>

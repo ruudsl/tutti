@@ -173,8 +173,13 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         return;
       }
 
+      // Een cijfer met Ctrl, Cmd of Alt erbij is niet voor deze balk: Cmd+1
+      // tot Cmd+7 springen in elke browser naar een tabblad, en die mag deze
+      // balk niet opslokken.
+      const metModifier = e.ctrlKey || e.metaKey || e.altKey;
+
       // Tool shortcuts (1-7)
-      const tool = TOOL_SHORTCUTS[e.key];
+      const tool = metModifier ? undefined : TOOL_SHORTCUTS[e.key];
       if (tool) {
         e.preventDefault();
         onToolChange(tool);
@@ -190,12 +195,16 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
         }
       }
 
-      // Undo/Redo shortcuts
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      // Undo/Redo shortcuts. De toets wordt kleingeletterd: met Shift erbij
+      // (Cmd+Shift+Z, de gebruikelijke "opnieuw" op een Mac) levert de browser
+      // een hoofdletter Z, en dan kwam de vergelijking hieronder nooit uit.
+      // Hetzelfde geldt voor Caps Lock.
+      const toets = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && toets === 'z' && !e.shiftKey) {
         e.preventDefault();
         onUndo();
       }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      if ((e.ctrlKey || e.metaKey) && (toets === 'y' || (toets === 'z' && e.shiftKey))) {
         e.preventDefault();
         onRedo();
       }

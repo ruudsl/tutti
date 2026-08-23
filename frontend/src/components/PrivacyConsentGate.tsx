@@ -92,10 +92,17 @@ export function PrivacyConsentGate({ children }: PrivacyConsentGateProps) {
     consentMutation.mutate();
   };
 
+  /**
+   * GEREPAREERD. Hier ging het veld-id van een aangepast veld verloren; zie de
+   * uitleg bij dezelfde reparatie in pages/PrivacySettings.tsx. Op dit scherm
+   * weegt het zwaarder, want dit is de eerste keer dat het lid kiest, en die
+   * eerste keuze is degene die daarna geldt.
+   */
   const handleSavePrivacy = () => {
     const settings = Object.entries(privacySettings).map(([fieldName, visibility]) => ({
       fieldName,
       visibility,
+      customFieldId: currentSettings?.[fieldName]?.customFieldId,
     }));
     saveSettingsMutation.mutate(settings);
   };

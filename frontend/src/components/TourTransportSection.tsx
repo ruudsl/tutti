@@ -17,6 +17,26 @@ interface TourTransportSectionProps {
 
 const TRANSPORT_TYPES = ['bus', 'train', 'plane', 'ferry', 'car', 'other'] as const;
 
+/**
+ * Het label van een vervoersoort, met een bruikbare terugval.
+ *
+ * `tours.transportTypes` bestaat in geen van de drie vertaalbestanden. De
+ * bedoelde terugval stond er wel - `t(sleutel) || soort` - maar die kan nooit
+ * aanslaan: i18next geeft bij een ontbrekende sleutel de sleutel zélf terug,
+ * en die is niet leeg. Het gevolg stond op het scherm: in de badge bij elk
+ * vervoermiddel en in de keuzelijst van het venster las de gebruiker
+ * "tours.transportTypes.bus" in plaats van een woord.
+ *
+ * Vandaar de vergelijking met de sleutel: komt die er onvertaald uit, dan is
+ * de kale soort ("bus", "train") in elk geval leesbaar. Zodra de sleutels in
+ * de vertaalbestanden staan, wint de vertaling hier vanzelf.
+ */
+function vervoersoortLabel(vertaal: (sleutel: string) => string, soort: string): string {
+  const sleutel = `tours.transportTypes.${soort}`;
+  const tekst = vertaal(sleutel);
+  return tekst === sleutel ? soort : tekst;
+}
+
 const TRANSPORT_ICONS: Record<string, 'truck' | 'globe'> = {
   bus: 'truck',
   train: 'truck',
@@ -84,9 +104,7 @@ export function TourTransportSection({ tourId, transport, onRefresh }: TourTrans
                         className="text-primary"
                         aria-hidden={true}
                       />
-                      <span className="badge badge-primary">
-                        {t(`tours.transportTypes.${tr.transportType}`) || tr.transportType}
-                      </span>
+                      <span className="badge badge-primary">{vervoersoortLabel(t, tr.transportType)}</span>
                       {tr.provider && <span className="text-base-content/70">{tr.provider}</span>}
                     </div>
 
@@ -207,7 +225,7 @@ function AddTransportModal({
           >
             {TRANSPORT_TYPES.map((type) => (
               <option key={type} value={type}>
-                {t(`tours.transportTypes.${type}`) || type}
+                {vervoersoortLabel(t, type)}
               </option>
             ))}
           </select>
