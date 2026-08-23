@@ -70,11 +70,35 @@ export default defineConfig({
       // moesten worden: daar zat het overgrote deel van de vertakkingen, en
       // geen enkele hoeveelheid api- en hooktests kon dat getal meetillen.
       // De 122 karakteriseringstests op zeven pagina's doen dat wel.
+      // Bijgewerkt op 23-08-2026, na het opheffen van src/api.ts.
+      // Gemeten:
+      //   statements 35,06 (8412/23987)
+      //   branches   23,42 (3846/16421)
+      //   functions  30,24 (2580/8531)
+      //   lines      36,00 (8106/22514)
+      //
+      // Deze getallen zijn LAGER dan de vorige meting, en dat is geen terugval
+      // in de tests. Er is 4.149 regel verdwenen doordat src/api.ts is
+      // opgeheven, en die code was 44 procent gedekt tegen een codebasegemiddelde
+      // van 35. Wie boven het gemiddelde gedekte code weghaalt, verlaagt het
+      // gemiddelde - zuiver rekenkunde.
+      //
+      // De behoefte die die code invulde wordt nog steeds getest: de zes
+      // api-*.test.ts-bestanden mikken op '../api', en dat komt nu bij de
+      // modules uit in plaats van bij het opgeheven bestand. src/api staat als
+      // geheel op 87 procent.
+      //
+      // De drempels gaan mee omlaag, met ruimte. Ze stonden op statements 35 en
+      // lines 36, en de meting kwam uit op 35,06 en precies 36,00 - dat laatste
+      // is nul speling. Dan maakt de eerstvolgende commit met één ongedekte
+      // regel de bouw rood om een reden die niets met die commit te maken heeft,
+      // en dat leert niemand iets. Een ratel moet een terugval vangen, geen
+      // afrondingsverschil.
       thresholds: {
-        statements: 35,
+        statements: 34,
         branches: 23,
-        functions: 30,
-        lines: 36,
+        functions: 29,
+        lines: 35,
       },
     },
   },

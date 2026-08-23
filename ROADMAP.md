@@ -262,17 +262,18 @@ Gestructureerde GDPR / privacy-by-design review:
 
 ### Huidige Status
 
-Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
+Gemeten 23-08-2026, over de **hele** backend respectievelijk frontend:
 
 |          | statements              | branches | functions | lines |
 | -------- | ----------------------- | -------- | --------- | ----- |
 | Backend  | **64,7%** (14740/22775) | 55,7%    | 68,3%     | 65,0% |
-| Frontend | **35,4%** (8881/25116)  | 23,5%    | 30,8%     | 36,3% |
+| Frontend | **35,1%** (8412/23987)  | 23,4%    | 30,2%     | 36,0% |
 
-- CI-drempels: backend 64 / 55 / 68 / 64, frontend 35 / 23 / 30 / 36 (statements / branches / functions / lines). Die staan bewust net onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- CI-drempels: backend 64 / 55 / 68 / 64, frontend 34 / 23 / 29 / 35 (statements / branches / functions / lines). Die staan bewust onder de gemeten stand: hoog genoeg om een terugval te vangen, laag genoeg om niet af te gaan op meetruis
+- Het frontendcijfer is op 23-08-2026 licht gedaald (van 35,4 naar 35,1) doordat `src/api.ts` is opgeheven. Dat is geen terugval: die 4.149 regels waren 44% gedekt tegen een codebasegemiddelde van 35, en wie boven het gemiddelde gedekte code weghaalt verlaagt het gemiddelde. Dezelfde behoefte wordt nog steeds getest — `src/api` staat als geheel op 87%
 - De backend ging in drie PR's (#160, #161, #162, #163) van 46,4% naar 64,4%; het aantal tests van 2.895 naar 4.629 over 173 bestanden. De frontend van ~273 naar 774 tests over 32 bestanden
 - Onderweg zijn er ruim veertig echte fouten gevonden en gerepareerd, elk met een test die zonder de reparatie rood is. De zwaarste: de nepbetaalprovider draaide gewoon door in productie (en meldde een terugbetaling als geslaagd), uitloggen wiste IndexedDB niet (op een gedeelde tablet zag de volgende gebruiker de gegevens van de vorige vereniging, inclusief de synchronisatiewachtrij), SQL-injectie via `?lang=`, een Telegram-bottoken in de logregels, elk CIDR-bereik in de IP-witlijst kwam stilzwijgend met niets overeen, `connection.ts` stopte na één mislukte rollback stilletjes met naar schijf schrijven, een SEPA-incasso werd als overboeking aangemaakt, en elke verenigingsbeheerder was platformbeheerder
-- De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32). `src/api.ts` - 3.967 regels, 741 exports, eerder zonder ook maar één test - staat nu op 99,9%
+- De frontend ging op 22-08-2026 van 6,9% naar 24,2%, met 2.641 tests over 93 bestanden (was 774 over 32), en staat nu op 3.010 tests over 138 bestanden. `src/api.ts` - 4.149 regels, eerder zonder ook maar één test - is op 23-08-2026 opgeheven: dat bestand schaduwde de map `src/api/` ernaast, waardoor die map jarenlang onbereikbaar was. De api-laag staat nu op 87%
 - Op 22-08-2026 zijn de grote pagina's opgeknipt, met per pagina eerst een karakteriseringstest als vangnet. **Branches ging daarmee van 8,7% naar 14,0%** terwijl statements maar drie punten steeg - dat bevestigt dat daar het overgrote deel van de vertakkingen zat, en dat geen enkele hoeveelheid api- en hooktests dat getal kon meetillen:
 
 | pagina        | was   | index nu                  |
@@ -302,7 +303,7 @@ Gemeten 22-08-2026, over de **hele** backend respectievelijk frontend:
 
 ### Deliverables
 
-- [~] Unit tests: >80% coverage — _backend 64,8%, frontend 35,4%_
+- [~] Unit tests: >80% coverage — _backend 64,8%, frontend 35,1%_
   - **De 50 uur die hiervoor begroot staat is niet realistisch.** De backend is in drie PR's van 12,9% naar 64,4% gegaan; dat alleen al was meer werk dan de hele post. De frontend staat nog vrijwel op nul
   - De api-laag en de hooks zijn nu grotendeels gedekt. Wat resteert zijn de pagina's, en dat is bewust nog niet aangeraakt: `Accounting.tsx` is 2.680 regels, `Rehearsals.tsx` 1.950, `Concerts.tsx` 1.655. Tests schrijven tegen zo'n bestand betekent ze vastzetten aan een structuur die toch moet wijken — opknippen hoort eerst
   - Overweging voor de planning: de backend haalt 80% met nog een ronde van deze omvang. De frontend niet, zolang de pagina's staan zoals ze staan
