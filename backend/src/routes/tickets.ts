@@ -2324,6 +2324,286 @@ router.post(
 );
 
 // =============================================
+// OFFLINE SCANNEN AAN DE DEUR
+// =============================================
+
+/**
+ * Wat de scanner van een kaart meekrijgt om offline mee te werken.
+ *
+ * Bewust alleen deze drie velden. De voorraad wordt in de browser van een
+ * telefoon gezet die de zaal uit gaat en soms geleend is; alles wat erin zit
+ * ligt daarna buiten ons bereik. Naam van de koper, e-mailadres, kaartsoort en
+ * stoel staan er dus niet in - niet omdat ze onbruikbaar zouden zijn, maar
+ * omdat OfflineScanner.tsx ze nergens toont. Hij telt geldig en gebruikt, zoekt
+ * op de code, en zet in zijn melding het tijdstip van een eerdere scan. Meer
+ * heeft hij niet nodig, en meer meesturen is persoonsgegevens weggeven zonder
+ * dat er iemand iets aan heeft.
+ */
+interface OfflineVoorraadKaart {
+  qrCode: string;
+  status: 'valid' | 'used';
+  usedAt?: string;
+}
+
+const offlineScanSchema = z.object({
+  id: z.string().min(1).max(100),
+  qrCode: z.string().min(1).max(100),
+  scannedAt: z.string().datetime(),
+  // Wat het apparaat zélf concludeerde. Alleen 'offline_valid' betekent dat de
+  // bezoeker daadwerkelijk naar binnen is gelaten; bij de andere uitkomsten
+  // stond hij aan de deur te wachten en hoort de kaart hier niet alsnog
+  // afgestempeld te worden. Verplicht, en niet met een aanname erachter: zonder
+  // dit veld valt niet vast te stellen of er iemand naar binnen is gegaan, en
+  // een kaart afstempelen op een gok telt een bezoeker die er nooit was.
+  result: z.string().min(1).max(50),
+  synced: z.boolean().optional(),
+});
+
+const offlineScansSchema = z.object({
+  // Bovengrens tegen een verzoek dat de server minutenlang bezet houdt. Ruim
+  // boven wat één deur op een avond scant, dus een echte lijst raakt hem niet.
+  scans: z.array(offlineScanSchema).max(2000),
+});
+
+/**
+ * Het concert van de eigen vereniging, of een 404.
+ *
+ * Zonder deze grens levert een geraden concert-id de complete kaartlijst van
+ * een andere vereniging op - inclusief welke kaarten nog niet gebruikt zijn,
+ * precies wat je nodig hebt om bij hun deur naar binnen te komen.
+ */
+function eigenConcertOfNiets(concertId: string, associationId: string | null | undefined): void {
+  const concert = db
+    .prepare(`SELECT id FROM concerts WHERE id = ? AND association_id = ? AND deleted_at IS NULL`)
+    .get(concertId, associationId ?? null) as { id: string } | undefined;
+
+  if (!concert) {
+    throw new ApiError(404, 'Concert not found');
+  }
+}
+
+/**
+ * @swagger
+ * /concerts/{id}/tickets/offline-sync:
+ *   get:
+ *     summary: Download the ticket stock for offline scanning
+ *     tags: [Tickets]
+ */
+router.get(
+  '/concerts/:id/tickets/offline-sync',
+  authenticateToken,
+  // Dezelfde rollen als POST /tickets/:code/validate: wie aan de deur mag
+  // afstempelen mag de lijst vooraf ophalen, en verder niemand.
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+    eigenConcertOfNiets(concertId, req.user!.associationId);
+
+    // Ook de al gebruikte kaarten gaan mee. Zonder die kan de scanner offline
+    // niet meer zeggen "deze is al binnen", en komt iedereen met een gekopieerd
+    // kaartje er een tweede keer doorheen. Geannuleerde en terugbetaalde
+    // kaarten blijven eruit: die horen niet binnen te komen, en een code die
+    // niet in de voorraad staat wordt aan de deur vanzelf geweigerd.
+    const rijen = db
+      .prepare(
+        `
+        SELECT t.qr_code, t.status, t.used_at
+        FROM tickets t
+        JOIN ticket_types tt ON t.ticket_type_id = tt.id
+        WHERE tt.concert_id = ?
+          AND t.status IN ('valid', 'used')
+        ORDER BY t.qr_code
+    `,
+      )
+      .all(concertId) as Array<{ qr_code: string; status: string; used_at: string | null }>;
+
+    const kaarten: OfflineVoorraadKaart[] = rijen.map((rij) => ({
+      qrCode: rij.qr_code,
+      status: rij.status === 'used' ? 'used' : 'valid',
+      usedAt: rij.used_at || undefined,
+    }));
+
+    res.json({
+      concertId,
+      // Het moment waarop deze lijst is samengesteld, van de serverklok. De
+      // scanner beoordeelt hiermee zelf of zijn voorraad verouderd is; zou hij
+      // daarvoor zijn eigen klok gebruiken, dan hangt de waarschuwing af van de
+      // tijdinstelling van een geleende telefoon. Hij weigert daarna niets: aan
+      // de deur is een oude lijst beter dan geen lijst.
+      generatedAt: new Date().toISOString(),
+      ticketCount: kaarten.length,
+      tickets: kaarten,
+    });
+  }),
+);
+
+/**
+ * @swagger
+ * /concerts/{id}/tickets/sync-offline-scans:
+ *   post:
+ *     summary: Submit scans that were made while offline
+ *     tags: [Tickets]
+ */
+router.post(
+  '/concerts/:id/tickets/sync-offline-scans',
+  authenticateToken,
+  requireRole('admin', 'music_committee', 'conductor'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id: concertId } = req.params;
+    const associationId = req.user!.associationId ?? undefined;
+    eigenConcertOfNiets(concertId, req.user!.associationId);
+
+    const gecontroleerd = offlineScansSchema.safeParse(req.body);
+    if (!gecontroleerd.success) {
+      throw new ApiError(400, gecontroleerd.error.issues[0].message);
+    }
+
+    const resultaten: Array<{ id: string; code: string; status: string }> = [];
+    const waarschuwingen: Array<{
+      id: string;
+      code: string;
+      reason: string;
+      keptScanAt?: string;
+      rejectedScanAt?: string;
+      message: string;
+    }> = [];
+    let verwerkt = 0;
+    let overgeslagen = 0;
+
+    const alBekend = db.prepare(`SELECT outcome FROM ticket_offline_scans WHERE concert_id = ? AND scan_id = ?`);
+    const legVast = db.prepare(
+      `INSERT INTO ticket_offline_scans
+         (id, concert_id, scan_id, qr_code, scanned_at, device_result, outcome, synced_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    const nu = new Date();
+
+    for (const scan of gecontroleerd.data.scans) {
+      // De scanner stuurt de hele wachtrij opnieuw zodra een poging hapert.
+      // Zonder deze controle wordt dezelfde regel dan een tweede keer verwerkt
+      // en meldt de kaart die net netjes is afgestempeld zichzelf als botsing -
+      // een waarschuwing waar niemand iets achter vindt.
+      const eerder = alBekend.get(concertId, scan.id) as { outcome: string } | undefined;
+      if (eerder) {
+        overgeslagen++;
+        resultaten.push({ id: scan.id, code: scan.qrCode, status: eerder.outcome });
+        continue;
+      }
+
+      // Een telefoon die een half uur voorloopt zou anders een scan in de
+      // toekomst wegschrijven, en die wint bij gelijke stand nooit meer van een
+      // latere echte scan. Vooruitlopen knippen we af op nu; achterlopen laten
+      // we staan, want dat is niet van een echte eerdere scan te onderscheiden.
+      const gescandOp = new Date(scan.scannedAt) > nu ? nu.toISOString() : scan.scannedAt;
+
+      const controle = validateTicket(scan.qrCode, concertId, associationId, new Date(gescandOp));
+      const bezoekerIsBinnengelaten = scan.result === 'offline_valid' || scan.result === 'valid';
+
+      let uitkomst: string;
+
+      if (!bezoekerIsBinnengelaten) {
+        // Het apparaat wees deze bezoeker aan de deur af, dus de kaart hoort
+        // hier niet alsnog op 'gebruikt' te komen. Wél melden als de kaart bij
+        // ons gewoon geldig is: dan werkte de scanner met een verouderde
+        // voorraad en stond er iemand met een geldig kaartje buiten.
+        uitkomst = controle.valid ? 'refused_offline' : `refused_${controle.status}`;
+        if (controle.valid) {
+          waarschuwingen.push({
+            id: scan.id,
+            code: scan.qrCode,
+            reason: 'refused_offline',
+            rejectedScanAt: gescandOp,
+            message: 'Ticket was refused at the door but is valid here; the offline stock was out of date',
+          });
+        }
+      } else if (controle.valid) {
+        // markTicketAsUsed doet de controle en de bijwerking, met de vereniging
+        // als grens. Het tijdstip van de scan gaat mee, niet dat van nu: het
+        // nasturen kan uren later gebeuren.
+        const gestempeld = markTicketAsUsed(scan.qrCode, req.user!.id, associationId, gescandOp);
+        uitkomst = gestempeld.success ? 'used' : 'failed';
+        if (!gestempeld.success) {
+          waarschuwingen.push({
+            id: scan.id,
+            code: scan.qrCode,
+            reason: 'not_processed',
+            rejectedScanAt: gescandOp,
+            message: gestempeld.message,
+          });
+        }
+      } else if (controle.status === 'used') {
+        // De kaart is intussen ook door een tweede scanner afgestempeld. De
+        // vroegste scan wint - dat is degene die de bezoeker echt binnenliet;
+        // de tweede stond voor een deur die al open was.
+        const staandeScan = controle.ticket?.usedAt;
+        const offlineWasEerder = !!staandeScan && new Date(gescandOp) < new Date(staandeScan);
+
+        if (offlineWasEerder) {
+          // De offline scan was eerder en wordt dus de geldende. De kaart staat
+          // al op 'used', dus markTicketAsUsed doet hier niets meer; alleen het
+          // tijdstip en de scanner worden teruggezet. De grens is hierboven al
+          // getrokken - validateTicket vond deze kaart mét associationId, en
+          // qr_code is uniek, dus dit raakt geen kaart van een andere
+          // vereniging.
+          db.prepare(`UPDATE tickets SET used_at = ?, validated_by = ? WHERE qr_code = ? AND status = 'used'`).run(
+            gescandOp,
+            req.user!.id,
+            scan.qrCode,
+          );
+          uitkomst = 'used_earlier';
+          waarschuwingen.push({
+            id: scan.id,
+            code: scan.qrCode,
+            reason: 'offline_scan_kept',
+            keptScanAt: gescandOp,
+            rejectedScanAt: staandeScan,
+            message: 'This ticket was also scanned online; the earlier offline scan is now the recorded one',
+          });
+        } else {
+          uitkomst = 'already_used';
+          waarschuwingen.push({
+            id: scan.id,
+            code: scan.qrCode,
+            reason: 'earlier_scan_kept',
+            keptScanAt: staandeScan,
+            rejectedScanAt: gescandOp,
+            message: 'This ticket was already scanned earlier; that scan is kept',
+          });
+        }
+      } else {
+        // not_found, wrong_concert, cancelled, refunded, expired: niets
+        // afstempelen, wel melden. Stil weggooien betekent dat er aan de deur
+        // iemand is binnengelaten waar niemand later nog iets van terugziet.
+        uitkomst = controle.status;
+        waarschuwingen.push({
+          id: scan.id,
+          code: scan.qrCode,
+          reason: 'not_processed',
+          rejectedScanAt: gescandOp,
+          message: controle.message,
+        });
+      }
+
+      legVast.run(uuidv4(), concertId, scan.id, scan.qrCode, gescandOp, scan.result, uitkomst, req.user!.id);
+      verwerkt++;
+      resultaten.push({ id: scan.id, code: scan.qrCode, status: uitkomst });
+    }
+
+    logger.info(
+      `Offline scans nagestuurd voor concert ${concertId}: ${verwerkt} verwerkt, ${overgeslagen} al bekend, ${waarschuwingen.length} met een waarschuwing`,
+    );
+
+    res.json({
+      processed: verwerkt,
+      skipped: overgeslagen,
+      results: resultaten,
+      warnings: waarschuwingen,
+    });
+  }),
+);
+
+// =============================================
 // ADMIN ROUTES
 // =============================================
 
