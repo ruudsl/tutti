@@ -1,8 +1,9 @@
 import { formatCurrency } from '../utils/format';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import {
   getEquipment,
@@ -37,6 +38,14 @@ export default function Equipment() {
   const { t } = useTranslation();
   useDocumentTitle('equipment.title');
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // De backend laat aanmaken, verwijderen, uitlenen, innemen, onderhoud en
+  // schade alleen toe voor deze twee rollen (requireRole('admin',
+  // 'equipment_committee') in backend/src/routes/equipment.ts). Zonder deze
+  // grens zag een gewoon lid al die knoppen wel staan en kreeg het pas na het
+  // invullen van het hele formulier een 403 terug.
+  const magBeheren = user?.role === 'admin' || user?.role === 'equipment_committee';
 
   // Filters live in the URL so filtered views can be linked/bookmarked;
   // default values are omitted from the URL to keep it clean.
@@ -68,7 +77,11 @@ export default function Equipment() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
   const [deletingItem, setDeletingItem] = useState<EquipmentItem | null>(null);
 
-  const { data: equipmentData, isLoading } = useQuery({
+  const {
+    data: equipmentData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['equipment', search, statusFilter, typeFilter],
     queryFn: () =>
       getEquipment({
@@ -99,10 +112,12 @@ export default function Equipment() {
     <div className="page">
       <div className="page-header">
         <h1 className="text-2xl font-bold">{t('equipment.title')}</h1>
-        <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
-          <Icon name="plus" size={18} />
-          {t('equipment.new')}
-        </button>
+        {magBeheren && (
+          <button className="btn btn-primary gap-2" onClick={() => setShowCreateModal(true)}>
+            <Icon name="plus" size={18} />
+            {t('equipment.new')}
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -152,13 +167,20 @@ export default function Equipment() {
             <SkeletonCard key={i} />
           ))}
         </div>
+      ) : isError ? (
+        // Zonder deze tak liep een mislukte aanroep uit op dezelfde lege staat
+        // als een leeg magazijn: `equipmentData` blijft undefined en
+        // `equipment` wordt een lege lijst. "Geen apparatuur gevonden" is dan
+        // onwaar, en de uitnodiging om het eerste apparaat toe te voegen staat
+        // er terwijl de inventaris gewoon niet opgehaald kon worden.
+        <EmptyState variant="error" title={t('common.error')} />
       ) : equipment.length === 0 ? (
         <EmptyState
           icon="package"
           title={t('equipment.noEquipment')}
           description={t('equipment.noEquipmentDescription')}
-          actionLabel={t('equipment.new')}
-          onAction={() => setShowCreateModal(true)}
+          actionLabel={magBeheren ? t('equipment.new') : undefined}
+          onAction={magBeheren ? () => setShowCreateModal(true) : undefined}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -230,16 +252,18 @@ export default function Equipment() {
                       <li>
                         <button>{t('equipment.recordMaintenance')}</button>
                       </li>
-                      <li className="text-error">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingItem(item);
-                          }}
-                        >
-                          {t('common.delete')}
-                        </button>
-                      </li>
+                      {magBeheren && (
+                        <li className="text-error">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingItem(item);
+                            }}
+                          >
+                            {t('common.delete')}
+                          </button>
+                        </li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -263,6 +287,7 @@ export default function Equipment() {
       {selectedEquipmentId && (
         <EquipmentDetailModal
           equipmentId={selectedEquipmentId}
+          magBeheren={magBeheren}
           onClose={() => setSelectedEquipmentId(null)}
           onRefresh={() => queryClient.invalidateQueries({ queryKey: ['equipment'] })}
         />
@@ -297,6 +322,7 @@ function EquipmentModal({
   equipmentTypes: string[];
 }) {
   const { t } = useTranslation();
+  const veldId = useId();
   const [formData, setFormData] = useState({
     instrumentType: '',
     brandModel: '',
@@ -336,10 +362,11 @@ function EquipmentModal({
     <Modal onClose={onClose} title={t('equipment.new')}>
       <div className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-instrumentType`} className="label">
             <span className="label-text font-medium">{t('equipment.instrumentType')} *</span>
           </label>
           <input
+            id={`${veldId}-instrumentType`}
             type="text"
             className="input input-bordered"
             list="equipment-types"
@@ -355,10 +382,11 @@ function EquipmentModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-brandModel`} className="label">
               <span className="label-text font-medium">{t('equipment.brandModel')}</span>
             </label>
             <input
+              id={`${veldId}-brandModel`}
               type="text"
               className="input input-bordered"
               value={formData.brandModel}
@@ -366,10 +394,11 @@ function EquipmentModal({
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-serialNumber`} className="label">
               <span className="label-text font-medium">{t('equipment.serialNumber')}</span>
             </label>
             <input
+              id={`${veldId}-serialNumber`}
               type="text"
               className="input input-bordered"
               value={formData.serialNumber}
@@ -380,10 +409,11 @@ function EquipmentModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-yearOfManufacture`} className="label">
               <span className="label-text font-medium">{t('equipment.yearOfManufacture')}</span>
             </label>
             <input
+              id={`${veldId}-yearOfManufacture`}
               type="number"
               className="input input-bordered"
               min="1800"
@@ -393,10 +423,11 @@ function EquipmentModal({
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-status`} className="label">
               <span className="label-text font-medium">{t('common.status')}</span>
             </label>
             <select
+              id={`${veldId}-status`}
               className="select select-bordered"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -411,10 +442,11 @@ function EquipmentModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-purchasePrice`} className="label">
               <span className="label-text font-medium">{t('equipment.purchasePrice')}</span>
             </label>
             <input
+              id={`${veldId}-purchasePrice`}
               type="number"
               className="input input-bordered"
               step="0.01"
@@ -424,10 +456,11 @@ function EquipmentModal({
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-currentValue`} className="label">
               <span className="label-text font-medium">{t('equipment.currentValue')}</span>
             </label>
             <input
+              id={`${veldId}-currentValue`}
               type="number"
               className="input input-bordered"
               step="0.01"
@@ -439,10 +472,11 @@ function EquipmentModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-notes`} className="label">
             <span className="label-text font-medium">{t('common.notes')}</span>
           </label>
           <textarea
+            id={`${veldId}-notes`}
             className="textarea textarea-bordered"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -473,10 +507,12 @@ const DAMAGE_STATUS_COLORS: Record<string, string> = {
 
 function EquipmentDetailModal({
   equipmentId,
+  magBeheren,
   onClose,
   onRefresh,
 }: {
   equipmentId: string;
+  magBeheren: boolean;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -531,28 +567,30 @@ function EquipmentDetailModal({
         </div>
 
         {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2">
-          {equipment.status === 'available' && (
-            <button className="btn btn-primary btn-sm" onClick={() => setShowLoanModal(true)}>
-              <Icon name="user" size={14} />
-              {t('equipment.assignLoan')}
+        {magBeheren && (
+          <div className="flex flex-wrap gap-2">
+            {equipment.status === 'available' && (
+              <button className="btn btn-primary btn-sm" onClick={() => setShowLoanModal(true)}>
+                <Icon name="user" size={14} />
+                {t('equipment.assignLoan')}
+              </button>
+            )}
+            {activeLoan && (
+              <button className="btn btn-warning btn-sm" onClick={() => setReturnLoanId(activeLoan.id)}>
+                <Icon name="check" size={14} />
+                {t('equipment.returnLoan')}
+              </button>
+            )}
+            <button className="btn btn-info btn-sm" onClick={() => setShowMaintenanceModal(true)}>
+              <Icon name="wrench" size={14} />
+              {t('equipment.recordMaintenance')}
             </button>
-          )}
-          {activeLoan && (
-            <button className="btn btn-warning btn-sm" onClick={() => setReturnLoanId(activeLoan.id)}>
-              <Icon name="check" size={14} />
-              {t('equipment.returnLoan')}
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowDamageModal(true)}>
+              <Icon name="warning" size={14} />
+              {t('equipment.reportDamage')}
             </button>
-          )}
-          <button className="btn btn-info btn-sm" onClick={() => setShowMaintenanceModal(true)}>
-            <Icon name="wrench" size={14} />
-            {t('equipment.recordMaintenance')}
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowDamageModal(true)}>
-            <Icon name="warning" size={14} />
-            {t('equipment.reportDamage')}
-          </button>
-        </div>
+          </div>
+        )}
 
         {/* Current User */}
         {equipment.currentUser && (
@@ -813,6 +851,7 @@ function LoanModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
+  const veldId = useId();
   const [formData, setFormData] = useState({
     userId: '',
     loanDate: new Date().toISOString().split('T')[0],
@@ -833,10 +872,11 @@ function LoanModal({
     <Modal onClose={onClose} title={t('equipment.assignLoan')}>
       <div className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-borrowerId`} className="label">
             <span className="label-text font-medium">{t('equipment.borrowerId')} *</span>
           </label>
           <input
+            id={`${veldId}-borrowerId`}
             type="text"
             className="input input-bordered"
             placeholder={t('equipment.enterUserId')}
@@ -845,10 +885,11 @@ function LoanModal({
           />
         </div>
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-loanDate`} className="label">
             <span className="label-text font-medium">{t('equipment.loanDate')} *</span>
           </label>
           <input
+            id={`${veldId}-loanDate`}
             type="date"
             className="input input-bordered"
             value={formData.loanDate}
@@ -856,10 +897,11 @@ function LoanModal({
           />
         </div>
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-conditionAtLoan`} className="label">
             <span className="label-text font-medium">{t('equipment.conditionAtLoan')}</span>
           </label>
           <input
+            id={`${veldId}-conditionAtLoan`}
             type="text"
             className="input input-bordered"
             value={formData.conditionAtLoan}
@@ -896,6 +938,7 @@ function ReturnLoanModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
+  const veldId = useId();
   const [formData, setFormData] = useState({
     returnDate: new Date().toISOString().split('T')[0],
     conditionAtReturn: '',
@@ -914,10 +957,11 @@ function ReturnLoanModal({
     <Modal onClose={onClose} title={t('equipment.returnLoan')}>
       <div className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-returnDate`} className="label">
             <span className="label-text font-medium">{t('equipment.returnDate')} *</span>
           </label>
           <input
+            id={`${veldId}-returnDate`}
             type="date"
             className="input input-bordered"
             value={formData.returnDate}
@@ -925,10 +969,11 @@ function ReturnLoanModal({
           />
         </div>
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-conditionAtReturn`} className="label">
             <span className="label-text font-medium">{t('equipment.conditionAtReturn')}</span>
           </label>
           <input
+            id={`${veldId}-conditionAtReturn`}
             type="text"
             className="input input-bordered"
             value={formData.conditionAtReturn}
@@ -963,6 +1008,7 @@ function MaintenanceModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
+  const veldId = useId();
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     notes: '',
@@ -981,10 +1027,11 @@ function MaintenanceModal({
     <Modal onClose={onClose} title={t('equipment.recordMaintenance')}>
       <div className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-maintenanceDate`} className="label">
             <span className="label-text font-medium">{t('equipment.maintenanceDate')}</span>
           </label>
           <input
+            id={`${veldId}-maintenanceDate`}
             type="date"
             className="input input-bordered"
             value={formData.date}
@@ -992,10 +1039,11 @@ function MaintenanceModal({
           />
         </div>
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-notes`} className="label">
             <span className="label-text font-medium">{t('common.notes')}</span>
           </label>
           <textarea
+            id={`${veldId}-notes`}
             className="textarea textarea-bordered"
             rows={3}
             value={formData.notes}
@@ -1030,6 +1078,7 @@ function DamageModal({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
+  const veldId = useId();
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -1056,10 +1105,11 @@ function DamageModal({
     <Modal onClose={onClose} title={t('equipment.reportDamage')}>
       <div className="space-y-4">
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-date`} className="label">
             <span className="label-text font-medium">{t('common.date')} *</span>
           </label>
           <input
+            id={`${veldId}-date`}
             type="date"
             className="input input-bordered"
             value={formData.date}
@@ -1067,10 +1117,11 @@ function DamageModal({
           />
         </div>
         <div className="form-control">
-          <label className="label">
+          <label htmlFor={`${veldId}-description`} className="label">
             <span className="label-text font-medium">{t('common.description')} *</span>
           </label>
           <textarea
+            id={`${veldId}-description`}
             className="textarea textarea-bordered"
             rows={3}
             value={formData.description}
@@ -1079,10 +1130,11 @@ function DamageModal({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-repairCost`} className="label">
               <span className="label-text font-medium">{t('equipment.repairCost')}</span>
             </label>
             <input
+              id={`${veldId}-repairCost`}
               type="number"
               className="input input-bordered"
               step="0.01"
@@ -1092,10 +1144,11 @@ function DamageModal({
             />
           </div>
           <div className="form-control">
-            <label className="label">
+            <label htmlFor={`${veldId}-status`} className="label">
               <span className="label-text font-medium">{t('common.status')}</span>
             </label>
             <select
+              id={`${veldId}-status`}
               className="select select-bordered"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}

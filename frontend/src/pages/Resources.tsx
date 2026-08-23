@@ -55,7 +55,12 @@ export default function Resources() {
     return monday;
   });
 
-  const { data: resources = [], isLoading } = useQuery({
+  const {
+    data: resources = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['resources', typeFilter],
     queryFn: () => getResources(typeFilter ? { type: typeFilter } : undefined),
   });
@@ -168,6 +173,20 @@ export default function Resources() {
               {[1, 2, 3].map((i) => (
                 <SkeletonCard key={i} />
               ))}
+            </div>
+          ) : isError ? (
+            /* Deze tak stond er niet. Bij een mislukte aanroep bleef `resources`
+               op de lege terugval staan, en dus toonde de pagina "er zijn nog
+               geen middelen" - een mededeling over de inhoud terwijl er niets
+               over de inhoud bekend is. */
+            <div className="card bg-base-200 p-8 text-center" role="alert">
+              <Icon name="warning" size={48} className="mx-auto opacity-50 mb-4" />
+              <p className="text-base-content/70">{t('errors.generic')}</p>
+              <div className="mt-4">
+                <button className="btn btn-outline btn-sm" onClick={() => refetch()}>
+                  {t('common.retry')}
+                </button>
+              </div>
             </div>
           ) : resources.length === 0 ? (
             <div className="card bg-base-200 p-8 text-center">

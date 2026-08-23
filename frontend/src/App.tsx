@@ -572,7 +572,14 @@ function AppRoutes() {
           <Route
             path="concerts"
             element={
-              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE]}>
+              // De dirigent hoort hier ook bij. Het menu in Layout.tsx toont
+              // "Concerten" al aan [ADMIN, MUSIC_COMMITTEE, CONDUCTOR], en de
+              // podiumopstelling per concert hieronder laat de dirigent ook
+              // toe - maar die begint bij deze lijst. De dirigent klikte dus op
+              // een menu-item en belandde zonder uitleg op het dashboard. De
+              // backend was het met het menu eens: concerts.ts en alle routes
+              // in stage-layouts.ts noemen 'conductor'. Alleen deze regel niet.
+              <PrivateRoute roles={[ROLES.ADMIN, ROLES.MUSIC_COMMITTEE, ROLES.CONDUCTOR]}>
                 <Concerts />
               </PrivateRoute>
             }

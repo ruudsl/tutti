@@ -83,7 +83,11 @@ export default function MyMusic() {
   });
 
   // Fetch selected list details with React Query (cached)
-  const { data: selectedList, isLoading: listLoading } = useQuery({
+  const {
+    data: selectedList,
+    isLoading: listLoading,
+    refetch: refetchList,
+  } = useQuery({
     queryKey: ['musicList', listId],
     queryFn: async () => {
       const data = await getMusicList(listId!);
@@ -344,12 +348,31 @@ export default function MyMusic() {
             ← {t('myMusic.backToOverview')}
           </button>
 
-          {isLoading || !selectedList ? (
+          {isLoading ? (
             <div className="card">
               <div className="card-body">
                 <div className="loading" role="status">
                   <div className="spinner" aria-hidden="true"></div>
                   <span className="sr-only">{t('common.loading')}</span>
+                </div>
+              </div>
+            </div>
+          ) : !selectedList ? (
+            /* Deze tak stond er niet: de keuze hierboven was
+               `isLoading || !selectedList`, en dus bleef de draaier staan
+               zodra het ophalen mislukte. Een draaier die nooit weggaat is
+               voor de gebruiker niet van een trage verbinding te
+               onderscheiden; hij blijft wachten op iets dat niet komt. */
+            <div className="card">
+              <div className="card-body">
+                <div className="empty-state" role="alert">
+                  <div className="empty-icon" aria-hidden="true">
+                    <Icon name="warning" size={48} />
+                  </div>
+                  <p>{t('errors.generic')}</p>
+                  <button className="btn btn-outline" onClick={() => refetchList()}>
+                    {t('common.retry')}
+                  </button>
                 </div>
               </div>
             </div>

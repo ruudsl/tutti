@@ -18,6 +18,24 @@ interface StageCanvasProps {
 
 const GRID_SIZE = 20;
 
+/**
+ * Komt deze toetsaanslag uit een invoerveld?
+ *
+ * Het doek luistert op vensterniveau mee naar Delete, Backspace en de
+ * pijltjestoetsen, want die horen te werken zodra er iets geselecteerd is -
+ * ook als de aandacht nergens in het bijzonder ligt. Maar naast het doek staat
+ * de eigenschappenbalk vol tekstvelden. Zonder deze controle veegde Backspace
+ * in het naam- of labelveld niet een letter weg maar de geselecteerde stoel,
+ * en liep de gebruiker met de pijltjestoetsen niet door zijn tekst maar schoof
+ * hij het element over het podium.
+ */
+function isInvoerveld(doel: EventTarget | null): boolean {
+  const element = doel as HTMLElement | null;
+  if (!element || typeof element.tagName !== 'string') return false;
+  const naam = element.tagName.toLowerCase();
+  return naam === 'input' || naam === 'textarea' || naam === 'select' || element.isContentEditable === true;
+}
+
 // Position type colors
 const POSITION_COLORS: Record<StagePositionType, string> = {
   chair: '#4CAF50',
@@ -278,7 +296,7 @@ export default function StageCanvas({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (readOnly) return;
+      if (readOnly || isInvoerveld(e.target)) return;
 
       // Delete selected elements
       if (e.key === 'Delete' || e.key === 'Backspace') {

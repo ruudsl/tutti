@@ -303,8 +303,16 @@ export const SelectionCheckbox = memo(function SelectionCheckbox({
       <input
         type="checkbox"
         checked={checked}
+        // Hier stond naast deze `onChange` ook een `onClick`, en allebei riepen
+        // ze `toggleItem` aan. Voor een vinkje leidt React `onChange` af van
+        // hetzelfde native click-event als `onClick`, dus één muisklik schakelde
+        // twee keer: aan en meteen weer uit. Het vakje deed daardoor niets -
+        // aanvinken was onmogelijk. Zie de bewijstest in
+        // __tests__/BulkSelection.test.tsx.
+        //
+        // `e.nativeEvent` is dat click-event, dus shift+klik voor een bereik
+        // blijft werken.
         onChange={(e) => toggleItem(itemId, e.nativeEvent as unknown as React.MouseEvent)}
-        onClick={(e) => toggleItem(itemId, e)}
         style={{
           position: 'absolute',
           opacity: 0,

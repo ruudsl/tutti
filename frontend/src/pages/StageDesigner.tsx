@@ -14,6 +14,7 @@ import {
 import StageCanvas from '../components/StageCanvas';
 import type { StageLayoutData, StagePosition, StageShape, StageSection } from '../types';
 import { showError } from '../utils/toast';
+import { getErrorMessage } from '../utils/errors';
 import { SkeletonTable } from '../components/Skeleton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import './StageDesigner.css';
@@ -35,8 +36,18 @@ export default function StageDesigner() {
   const layoutId = searchParams.get('id');
 
   // Queries
-  const { data: layouts = [], isLoading: layoutsLoading } = useStageLayouts(true);
-  const { data: layout, isLoading: layoutLoading } = useStageLayout(layoutId || '');
+  const {
+    data: layouts = [],
+    isLoading: layoutsLoading,
+    isError: layoutsFailed,
+    refetch: refetchLayouts,
+  } = useStageLayouts(true);
+  const {
+    data: layout,
+    isLoading: layoutLoading,
+    isError: layoutFailed,
+    error: layoutError,
+  } = useStageLayout(layoutId || '');
   const { data: instruments = [] } = useInstruments();
 
   // Mutations
@@ -177,6 +188,13 @@ export default function StageDesigner() {
     }
   };
 
+  // Terug naar het overzicht: de gekozen indeling loslaten en de editor legen.
+  const goToList = () => {
+    setSearchParams({});
+    setActiveTab('list');
+    resetEditor();
+  };
+
   // Reset editor state
   const resetEditor = () => {
     setLayoutName('');
@@ -308,16 +326,11 @@ export default function StageDesigner() {
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  const goBack = () => {
-                    setSearchParams({});
-                    setActiveTab('list');
-                    resetEditor();
-                  };
                   if (hasChanges) {
-                    setPendingDiscardAction(() => goBack);
+                    setPendingDiscardAction(() => goToList);
                     return;
                   }
-                  goBack();
+                  goToList();
                 }}
               >
                 {t('common.back', 'Terug')}
@@ -350,11 +363,6 @@ export default function StageDesigner() {
         <button
           className={`tab ${activeTab === 'list' ? 'active' : ''}`}
           onClick={() => {
-            const goToList = () => {
-              setActiveTab('list');
-              setSearchParams({});
-              resetEditor();
-            };
             if (hasChanges) {
               setPendingDiscardAction(() => goToList);
               return;
@@ -371,17 +379,48 @@ export default function StageDesigner() {
               showError(t('stageDesigner.selectLayoutFirst', 'Selecteer eerst een indeling'));
             }
           }}
-          disabled={!layoutId}
+          disabled={!layoutId || layoutFailed}
         >
           {t('stageDesigner.tabs.editor', 'Editor')}
         </button>
       </div>
 
+      {/*
+        De gevraagde indeling kwam niet binnen: verwijderd, of van een andere
+        vereniging - de server geeft daar 404 op, want hij zoekt binnen de
+        vereniging van de ingelogde gebruiker. Zonder deze melding bleef de
+        gebruiker op het overzicht staan zonder dat er iets gebeurde, terwijl
+        het tabblad Editor wel aanklikbaar was en niets deed.
+      */}
+      {layoutId && layoutFailed && (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <div className="card-body empty-state">
+            <p>{getErrorMessage(layoutError)}</p>
+            <button className="btn btn-secondary" onClick={goToList}>
+              {t('common.back', 'Terug')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* List View */}
       {activeTab === 'list' && (
         <div className="card">
           <div className="card-body">
-            {layouts.length === 0 ? (
+            {/*
+              Een mislukte aanvraag is niet hetzelfde als een lege lijst. Ging
+              het ophalen mis, dan stond hier eerder 'Nog geen podiumindelingen'
+              met een knop om er een te maken - de gebruiker las dat zijn
+              indelingen weg waren, terwijl de server alleen niet antwoordde.
+            */}
+            {layoutsFailed ? (
+              <div className="empty-state">
+                <p>{t('errors.generic')}</p>
+                <button className="btn btn-secondary" onClick={() => refetchLayouts()}>
+                  {t('common.retry', 'Opnieuw proberen')}
+                </button>
+              </div>
+            ) : layouts.length === 0 ? (
               <div className="empty-state">
                 <p>{t('stageDesigner.noLayouts', 'Nog geen podiumindelingen.')}</p>
                 <button

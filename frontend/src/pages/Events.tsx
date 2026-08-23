@@ -1,5 +1,5 @@
 import { currentLocale } from '../utils/locale';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -25,6 +25,7 @@ import {
 } from '../hooks/useEvents';
 import { useOrchestras } from '../hooks/useOrchestras';
 import { useInstruments } from '../hooks/useInstruments';
+import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { FormModal } from '../components/FormModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -71,7 +72,21 @@ export default function Events() {
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'schedule' | 'transport' | 'packing' | 'weather'>('details');
 
-  const { data: eventsData, isLoading } = useEvents({
+  const { user } = useAuth();
+
+  // De rollen volgen de backend, zodat er geen knop op het scherm staat die
+  // achter de schermen een 403 oplevert:
+  //   POST/PUT /events        -> requireRole('board', 'admin')
+  //   DELETE /events/:id      -> requireRole('admin')
+  // Aanwezigheid doorgeven mag iedereen; die knoppen blijven dus staan.
+  const magBeheren = user?.role === 'admin' || user?.role === 'board';
+  const magVerwijderen = user?.role === 'admin';
+
+  const {
+    data: eventsData,
+    isLoading,
+    isError,
+  } = useEvents({
     search: search || undefined,
     status: statusFilter || undefined,
     upcoming: !statusFilter,
@@ -189,13 +204,15 @@ export default function Events() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingEvent(eventDetail)}
-                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Icon name="pencil" className="w-4 h-4" />
-                  Bewerken
-                </button>
+                {magBeheren && (
+                  <button
+                    onClick={() => setEditingEvent(eventDetail)}
+                    className="px-3 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Icon name="pencil" className="w-4 h-4" />
+                    Bewerken
+                  </button>
+                )}
               </div>
             </div>
 
@@ -254,6 +271,7 @@ export default function Events() {
             {activeTab === 'schedule' && (
               <EventScheduleTab
                 eventId={viewingEventId}
+                magBeheren={magBeheren}
                 schedule={schedule || []}
                 onCreateItem={createScheduleItem.mutateAsync}
                 onDeleteItem={deleteScheduleItem.mutateAsync}
@@ -263,6 +281,7 @@ export default function Events() {
             {activeTab === 'transport' && (
               <EventTransportTab
                 eventId={viewingEventId}
+                magBeheren={magBeheren}
                 transport={transport || []}
                 meetingPoints={meetingPoints || []}
                 onDeleteTransport={deleteTransport.mutateAsync}
@@ -273,6 +292,7 @@ export default function Events() {
             {activeTab === 'packing' && (
               <EventPackingTab
                 eventId={viewingEventId}
+                magBeheren={magBeheren}
                 packingLists={packingLists || []}
                 templates={packingTemplates || []}
                 onCreateList={createPackingList.mutateAsync}
@@ -290,13 +310,15 @@ export default function Events() {
     <div className="p-6">
       <div className="page-header">
         <h1 className="text-2xl font-bold">Evenementen & Optredens</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Icon name="plus" className="w-5 h-5" />
-          Nieuw Evenement
-        </button>
+        {magBeheren && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Icon name="plus" className="w-5 h-5" />
+            Nieuw Evenement
+          </button>
+        )}
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -326,6 +348,17 @@ export default function Events() {
       {isLoading ? (
         <div role="status" className="text-center py-12 text-gray-500">
           {t('common.loading')}
+        </div>
+      ) : isError ? (
+        // Zonder deze tak toonde een mislukte aanroep dezelfde lege staat als
+        // een lege agenda: `eventsData` blijft dan undefined en `events` wordt
+        // een lege lijst. "Geen evenementen gevonden" is dan onwaar - er staat
+        // misschien van alles gepland, alleen de server antwoordde niet - en
+        // niemand komt op het idee te herladen.
+        <div role="alert" className="text-center py-12 text-red-600">
+          <Icon name="warning" className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>De evenementen konden niet worden opgehaald.</p>
+          <p className="text-sm mt-2 text-gray-500">Controleer je verbinding en probeer het opnieuw.</p>
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
@@ -367,24 +400,30 @@ export default function Events() {
                       {event.attendingCount} aanwezig
                     </span>
                   )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingEvent(event);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded"
-                  >
-                    <Icon name="pencil" className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingEvent(event);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded text-red-600"
-                  >
-                    <Icon name="trash" className="w-4 h-4" />
-                  </button>
+                  {magBeheren && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingEvent(event);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded"
+                      aria-label={`Bewerk ${event.name}`}
+                    >
+                      <Icon name="pencil" className="w-4 h-4" />
+                    </button>
+                  )}
+                  {magVerwijderen && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingEvent(event);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded text-red-600"
+                      aria-label={`Verwijder ${event.name}`}
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -450,6 +489,12 @@ function EventFormModal({
   onClose: () => void;
   isLoading: boolean;
 }) {
+  // De labels stonden hier los naast hun veld: geen `htmlFor`, geen `id`. Een
+  // schermlezer kondigde dan "bewerkbaar veld" aan zonder te zeggen wat erin
+  // moest, en klikken op het label zette de aanwijzer niet in het veld. `useId`
+  // geeft per formulier een eigen reeks, zodat het aanmaak- en het
+  // bewerkformulier elkaars ids niet overnemen.
+  const veldId = useId();
   const [formData, setFormData] = useState({
     name: event?.name || '',
     eventType: event?.eventType || 'performance',
@@ -489,8 +534,11 @@ function EventFormModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Naam *</label>
+          <label htmlFor={`${veldId}-naam`} className="block text-sm font-medium text-gray-700 mb-1">
+            Naam *
+          </label>
           <input
+            id={`${veldId}-naam`}
             type="text"
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -501,8 +549,11 @@ function EventFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <label htmlFor={`${veldId}-type`} className="block text-sm font-medium text-gray-700 mb-1">
+              Type
+            </label>
             <select
+              id={`${veldId}-type`}
               value={formData.eventType}
               onChange={(e) => setFormData((prev) => ({ ...prev, eventType: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg"
@@ -515,8 +566,11 @@ function EventFormModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label htmlFor={`${veldId}-status`} className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
             <select
+              id={`${veldId}-status`}
               value={formData.status}
               onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as any }))}
               className="w-full px-3 py-2 border rounded-lg"
@@ -532,8 +586,11 @@ function EventFormModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start *</label>
+            <label htmlFor={`${veldId}-start`} className="block text-sm font-medium text-gray-700 mb-1">
+              Start *
+            </label>
             <input
+              id={`${veldId}-start`}
               type="datetime-local"
               value={formData.startDatetime}
               onChange={(e) => setFormData((prev) => ({ ...prev, startDatetime: e.target.value }))}
@@ -542,8 +599,11 @@ function EventFormModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Einde</label>
+            <label htmlFor={`${veldId}-einde`} className="block text-sm font-medium text-gray-700 mb-1">
+              Einde
+            </label>
             <input
+              id={`${veldId}-einde`}
               type="datetime-local"
               value={formData.endDatetime}
               onChange={(e) => setFormData((prev) => ({ ...prev, endDatetime: e.target.value }))}
@@ -553,8 +613,11 @@ function EventFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Locatie</label>
+          <label htmlFor={`${veldId}-locatie`} className="block text-sm font-medium text-gray-700 mb-1">
+            Locatie
+          </label>
           <select
+            id={`${veldId}-locatie`}
             value={formData.locationId}
             onChange={(e) => handleLocationChange(e.target.value)}
             className="w-full px-3 py-2 border rounded-lg"
@@ -571,8 +634,11 @@ function EventFormModal({
         {!formData.locationId && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Locatienaam</label>
+              <label htmlFor={`${veldId}-locatienaam`} className="block text-sm font-medium text-gray-700 mb-1">
+                Locatienaam
+              </label>
               <input
+                id={`${veldId}-locatienaam`}
                 type="text"
                 value={formData.locationName}
                 onChange={(e) => setFormData((prev) => ({ ...prev, locationName: e.target.value }))}
@@ -580,8 +646,11 @@ function EventFormModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stad</label>
+              <label htmlFor={`${veldId}-stad`} className="block text-sm font-medium text-gray-700 mb-1">
+                Stad
+              </label>
               <input
+                id={`${veldId}-stad`}
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
@@ -620,8 +689,11 @@ function EventFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dresscode</label>
+          <label htmlFor={`${veldId}-dresscode`} className="block text-sm font-medium text-gray-700 mb-1">
+            Dresscode
+          </label>
           <input
+            id={`${veldId}-dresscode`}
             type="text"
             value={formData.dressCode}
             onChange={(e) => setFormData((prev) => ({ ...prev, dressCode: e.target.value }))}
@@ -631,8 +703,11 @@ function EventFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Beschrijving</label>
+          <label htmlFor={`${veldId}-beschrijving`} className="block text-sm font-medium text-gray-700 mb-1">
+            Beschrijving
+          </label>
           <textarea
+            id={`${veldId}-beschrijving`}
             value={formData.description}
             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             className="w-full px-3 py-2 border rounded-lg"
@@ -788,11 +863,13 @@ function EventDetailsTab({
 
 function EventScheduleTab({
   eventId,
+  magBeheren,
   schedule,
   onCreateItem,
   onDeleteItem,
 }: {
   eventId: string;
+  magBeheren: boolean;
   schedule: EventScheduleItem[];
   onCreateItem: (args: { eventId: string; data: any }) => Promise<any>;
   onDeleteItem: (args: { eventId: string; itemId: string }) => Promise<any>;
@@ -811,12 +888,14 @@ function EventScheduleTab({
     <div>
       <div className="page-header">
         <h3 className="font-semibold">Tijdschema</h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-        >
-          + Toevoegen
-        </button>
+        {magBeheren && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            + Toevoegen
+          </button>
+        )}
       </div>
 
       {showAddForm && (
@@ -874,12 +953,15 @@ function EventScheduleTab({
                   {item.description && <div className="text-sm text-gray-500">{item.description}</div>}
                 </div>
               </div>
-              <button
-                onClick={() => onDeleteItem({ eventId, itemId: item.id })}
-                className="p-1 text-red-600 hover:bg-red-50 rounded"
-              >
-                <Icon name="trash" className="w-4 h-4" />
-              </button>
+              {magBeheren && (
+                <button
+                  onClick={() => onDeleteItem({ eventId, itemId: item.id })}
+                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                  aria-label={`Verwijder ${item.title}`}
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -890,12 +972,14 @@ function EventScheduleTab({
 
 function EventTransportTab({
   eventId,
+  magBeheren,
   transport,
   meetingPoints,
   onDeleteTransport,
   onDeleteMeetingPoint,
 }: {
   eventId: string;
+  magBeheren: boolean;
   transport: EventTransport[];
   meetingPoints: EventMeetingPoint[];
   onDeleteTransport: (args: { eventId: string; transportId: string }) => Promise<any>;
@@ -909,12 +993,15 @@ function EventTransportTab({
       <div>
         <div className="page-header">
           <h3 className="font-semibold">Vervoer</h3>
-          <button
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-            title="Functie binnenkort beschikbaar"
-          >
-            + Vervoer toevoegen
-          </button>
+          {magBeheren && (
+            <button
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+              title="Functie binnenkort beschikbaar"
+              disabled
+            >
+              + Vervoer toevoegen
+            </button>
+          )}
         </div>
 
         {transport.length === 0 ? (
@@ -951,12 +1038,15 @@ function EventTransportTab({
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => onDeleteTransport({ eventId, transportId: t.id })}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Icon name="trash" className="w-4 h-4" />
-                  </button>
+                  {magBeheren && (
+                    <button
+                      onClick={() => onDeleteTransport({ eventId, transportId: t.id })}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      aria-label={`Verwijder ${t.vehicleDescription || t.transportType}`}
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
                 {t.passengers && t.passengers.length > 0 && (
                   <div className="mt-3 pt-3 border-t">
@@ -979,12 +1069,15 @@ function EventTransportTab({
       <div>
         <div className="page-header">
           <h3 className="font-semibold">Verzamelpunten</h3>
-          <button
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-            title="Functie binnenkort beschikbaar"
-          >
-            + Verzamelpunt
-          </button>
+          {magBeheren && (
+            <button
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+              title="Functie binnenkort beschikbaar"
+              disabled
+            >
+              + Verzamelpunt
+            </button>
+          )}
         </div>
 
         {meetingPoints.length === 0 ? (
@@ -1006,12 +1099,15 @@ function EventTransportTab({
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => onDeleteMeetingPoint({ eventId, pointId: point.id })}
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <Icon name="trash" className="w-4 h-4" />
-                </button>
+                {magBeheren && (
+                  <button
+                    onClick={() => onDeleteMeetingPoint({ eventId, pointId: point.id })}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    aria-label={`Verwijder ${point.name}`}
+                  >
+                    <Icon name="trash" className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -1023,11 +1119,13 @@ function EventTransportTab({
 
 function EventPackingTab({
   eventId,
+  magBeheren,
   packingLists,
   templates,
   onCreateList,
 }: {
   eventId: string;
+  magBeheren: boolean;
   packingLists: EventPackingList[];
   templates: any[];
   onCreateList: (args: { eventId: string; data: any }) => Promise<any>;
@@ -1052,12 +1150,14 @@ function EventPackingTab({
     <div>
       <div className="page-header">
         <h3 className="font-semibold">Paklijsten</h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-        >
-          + Paklijst
-        </button>
+        {magBeheren && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            + Paklijst
+          </button>
+        )}
       </div>
 
       {showAddForm && (

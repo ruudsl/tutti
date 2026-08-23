@@ -186,13 +186,17 @@ export default function SeatingEditor({ sections, assignments, users, orchestraI
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const assignmentsList = Array.from(localAssignments.entries()).map(([userId, { sectionId, position }]) => ({
-        userId,
-        sectionId,
-        positionInSection: position,
-      }));
-      await onSave(assignmentsList);
+      await onSave(numberedAssignments());
       setHasChanges(false);
+    } catch {
+      // Weigert de server de indeling - sinds de bewaking op dubbele stoelen
+      // gebeurt dat ook echt - dan blijven de wijzigingen staan en wordt de
+      // knop hieronder weer klikbaar, zodat de gebruiker het opnieuw kan
+      // proberen. De melding zelf komt van de aanroeper.
+      //
+      // Zonder deze tak liep de afwijzing als 'unhandled rejection' het
+      // venster in: de gebruiker zag geen verschil, maar elke foutmelder die
+      // aan window.onunhandledrejection hangt las het als een crash.
     } finally {
       setIsSaving(false);
     }
@@ -233,6 +237,50 @@ export default function SeatingEditor({ sections, assignments, users, orchestraI
   }, [orchestraMembers, sections]);
 
   const sortedSections = useMemo(() => [...sections].sort((a, b) => a.rowNumber - b.rowNumber), [sections]);
+
+  /**
+   * De indeling zoals hij de deur uit gaat, met per sectie doorlopende
+   * plaatsnummers vanaf 0.
+   *
+   * De server bewaakte alleen dat één lid maar één plek kreeg, niet dat één
+   * plek maar aan één lid vergeven werd; dat is aan de serverkant gerepareerd.
+   * Er staan dus indelingen in de database waarin twee leden dezelfde positie
+   * in dezelfde sectie hebben, en die weigert de server nu in zijn geheel -
+   * inclusief de verplaatsing die de gebruiker net deed en die met de botsing
+   * niets te maken had. De posities die uit een verplaatsing komen zijn
+   * bovendien niet aaneengesloten: wie uit een sectie vertrekt, laat een gat
+   * achter.
+   *
+   * Hier wordt daarom hernummerd in precies de volgorde die op het scherm
+   * staat, zodat wat de gebruiker ziet ook is wat er wordt opgeslagen.
+   */
+  const numberedAssignments = () => {
+    const list: { userId: string; sectionId: string; positionInSection: number }[] = [];
+    const nextPosition = new Map<string, number>();
+    const onScreen = new Set<string>();
+
+    sortedSections.forEach((section) => {
+      const members = membersBySection.get(section.id) || [];
+      members.forEach((member, index) => {
+        list.push({ userId: member.userId, sectionId: section.id, positionInSection: index });
+        onScreen.add(member.userId);
+      });
+      nextPosition.set(section.id, members.length);
+    });
+
+    // Toewijzingen van leden die niet in de ledenlijst staan - bijvoorbeeld
+    // iemand die inmiddels uit het orkest is - horen niet op het scherm maar
+    // mogen ook niet stilzwijgend verdwijnen. Zij krijgen de plekken achter de
+    // zichtbare leden.
+    localAssignments.forEach(({ sectionId, position }, userId) => {
+      if (onScreen.has(userId)) return;
+      const position0 = nextPosition.get(sectionId) ?? position;
+      list.push({ userId, sectionId, positionInSection: position0 });
+      nextPosition.set(sectionId, position0 + 1);
+    });
+
+    return list;
+  };
 
   // Keyboard alternative for drag-and-drop:
   // Left/Right move within a section, Up/Down move between sections

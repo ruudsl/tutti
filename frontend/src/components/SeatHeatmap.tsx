@@ -68,6 +68,15 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 // Unsold seat color
 const UNSOLD_COLOR = '#E2E8F0';
 
+/**
+ * Aandeel in hele procenten. Een concert zonder stoelen heeft capaciteit nul,
+ * en de deling die daaruit volgt zette 'NaN% verkocht' in beeld.
+ */
+function percentage(deel: number, geheel: number): number {
+  if (!geheel) return 0;
+  return Math.round((deel / geheel) * 100);
+}
+
 interface SeatTooltipData {
   seatLabel: string;
   rowLabel: string;
@@ -184,7 +193,13 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
       currentY += maxRowHeight + SECTION_GAP;
     }
 
-    const totalWidth = Math.max(...sectionPositions.map((s) => s.x + s.width)) + PADDING;
+    // Zonder vakken levert Math.max(...[]) -Infinity op, en dat kwam
+    // ongefilterd in het viewBox en in de breedte van de achtergrond terecht:
+    // een zaal waarvan de indeling nog gemaakt moet worden tekende zichzelf op
+    // min oneindig breed. Een lege tekening van één blok breed is dan het
+    // eerlijke antwoord.
+    const totalWidth =
+      sectionPositions.length > 0 ? Math.max(...sectionPositions.map((s) => s.x + s.width)) + PADDING : PADDING * 4;
     const totalHeight = currentY + PADDING;
 
     return {
@@ -323,7 +338,7 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
           <p style={{ margin: 0, color: 'var(--text-light-color, #666)', fontSize: '0.875rem' }}>
             {t('heatmap.soldCount', { sold: heatmapData.totalSold, total: heatmapData.totalCapacity })}
             {' - '}
-            {Math.round((heatmapData.totalSold / heatmapData.totalCapacity) * 100)}% {t('heatmap.sold')}
+            {percentage(heatmapData.totalSold, heatmapData.totalCapacity)}% {t('heatmap.sold')}
           </p>
         </div>
 
@@ -573,7 +588,7 @@ export default function SeatHeatmap({ concertId, layout, mode }: SeatHeatmapProp
                     <td style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>
                       {section.sold}/{section.capacity}
                       <span style={{ color: 'var(--text-light-color)', marginLeft: '0.25rem' }}>
-                        ({Math.round((section.sold / section.capacity) * 100)}%)
+                        ({percentage(section.sold, section.capacity)}%)
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>

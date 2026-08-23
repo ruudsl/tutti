@@ -113,7 +113,12 @@ export default function Tasks() {
 
   const canManageLists = user?.role === ROLES.ADMIN || user?.role === ROLES.MUSIC_COMMITTEE;
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['tasks', filterStatus, filterPriority, filterList, filterAssignee, searchTerm, showCompleted],
     queryFn: () =>
       getTasks({
@@ -318,6 +323,23 @@ export default function Tasks() {
       {/* Task list */}
       {isLoading ? (
         <SkeletonTable rows={5} columns={5} />
+      ) : isError ? (
+        /*
+          Zonder deze tak valt een storing samen met een lege lijst: `useQuery`
+          geeft bij een mislukt verzoek de standaardwaarde terug, en de pagina
+          meldde dan "nog geen taken". Wie zijn taken kwijt is door een storing
+          hoort dat te zien, en het opnieuw te kunnen proberen.
+        */
+        <div className="card bg-base-200 p-8 text-center">
+          <div className="alert alert-error mb-4">
+            <Icon name="warning" size={20} />
+            {t('common.error')}
+          </div>
+          <button className="btn btn-secondary mx-auto gap-2" onClick={() => refetch()}>
+            <Icon name="refresh" size={16} />
+            {t('common.retry')}
+          </button>
+        </div>
       ) : tasks.length === 0 ? (
         <div className="card bg-base-200 p-8 text-center">
           <Icon name="checkCircle" size={48} className="mx-auto opacity-50 mb-4" />
@@ -337,12 +359,20 @@ export default function Tasks() {
                   {getPriorityIcon(task.priority)}
 
                   {/* Status checkbox */}
+                  {/*
+                    De klik moet hier tegengehouden worden, niet de wijziging.
+                    Een muisklik op een vakje levert in React twee losse
+                    gebeurtenissen op - onClick en onChange - en de klik wordt
+                    als eerste afgehandeld. `stopPropagation` op de wijziging
+                    houdt de klik dus niet tegen, waardoor het afvinken van een
+                    taak ook het detailvenster van de kaart eromheen opende.
+                  */}
                   <input
                     type="checkbox"
                     className="checkbox"
                     checked={task.status === 'done'}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
-                      e.stopPropagation();
                       updateMutation.mutate({
                         id: task.id,
                         data: { status: e.target.checked ? 'done' : 'todo' },

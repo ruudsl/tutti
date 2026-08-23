@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useUniformItems,
@@ -80,7 +80,12 @@ export default function Uniforms() {
   });
 
   // Data fetching
-  const { data: itemsData, isLoading } = useUniformItems({
+  const {
+    data: itemsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useUniformItems({
     search: search || undefined,
     status: statusFilter || undefined,
     itemType: typeFilter || undefined,
@@ -263,7 +268,27 @@ export default function Uniforms() {
     return type?.label || value;
   };
 
-  if (isLoading) {
+  /**
+   * De skeletweergave hieronder vervangt de héle pagina, en hoort dus alleen
+   * bij het openen ervan.
+   *
+   * Elke wijziging van een filter geeft de query een nieuwe sleutel, en onder
+   * die sleutel is er nog niets: `isLoading` wordt dan opnieuw waar. Wie op dat
+   * moment de hele pagina door het skelet vervangt, haalt het zoekveld weg
+   * onder de cursor die erin staat. Je typte één letter, het veld verdween en
+   * kwam leeg-van-focus terug, en de tweede letter kwam nergens aan. Zoeken op
+   * meer dan één teken was daarmee onmogelijk zonder na elke letter opnieuw in
+   * het veld te klikken.
+   *
+   * Na de eerste keer laden blijft de pagina daarom staan; dat de lijst even
+   * aan het bijwerken is, staat in de tabel zelf.
+   */
+  const heeftGeladen = useRef(false);
+  useEffect(() => {
+    if (!isLoading) heeftGeladen.current = true;
+  }, [isLoading]);
+
+  if (isLoading && !heeftGeladen.current) {
     return (
       <div>
         <div className="page-header">
@@ -420,7 +445,26 @@ export default function Uniforms() {
                   {items.length === 0 && (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                        {t('uniforms.noItems')}
+                        {/*
+                          Een mislukte aanvraag en een lege kast zagen er
+                          hetzelfde uit: `items` is in beide gevallen leeg, en
+                          hier stond alleen 'nog geen onderdelen'. Wie dat leest
+                          terwijl de server onbereikbaar is, denkt dat de
+                          voorraad weg is en gaat onderdelen opnieuw invoeren
+                          die er allang zijn.
+                        */}
+                        {isLoading ? (
+                          t('common.loading')
+                        ) : isError ? (
+                          <div className="flex gap-2 items-center justify-center">
+                            <span>{t('errors.generic')}</span>
+                            <button className="btn btn-outline btn-sm" onClick={() => refetch()}>
+                              {t('common.retry')}
+                            </button>
+                          </div>
+                        ) : (
+                          t('uniforms.noItems')
+                        )}
                       </td>
                     </tr>
                   )}
