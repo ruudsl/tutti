@@ -89,11 +89,25 @@ function standaardTenant(): Tenant {
   return {
     token: antwoord(200, { access_token: 'app-token' }),
     organisatie: antwoord(200, {
-      value: [{ verifiedDomains: [{ name: 'harmonie.onmicrosoft.com', isDefault: false }, { name: DOMEIN, isDefault: true }] }],
+      value: [
+        {
+          verifiedDomains: [
+            { name: 'harmonie.onmicrosoft.com', isDefault: false },
+            { name: DOMEIN, isDefault: true },
+          ],
+        },
+      ],
     }),
     gebruikerAanmaken: antwoord(201, { id: M365_ID }),
     licenties: antwoord(200, {
-      value: [{ skuId: 'sku-basic', skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC', consumedUnits: 3, prepaidUnits: { enabled: 10 } }],
+      value: [
+        {
+          skuId: 'sku-basic',
+          skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC',
+          consumedUnits: 3,
+          prepaidUnits: { enabled: 10 },
+        },
+      ],
     }),
     licentieToekennen: antwoord(200, { id: M365_ID }),
     groepZoeken: antwoord(200, { value: [{ id: 'groep-1', displayName: 'Harmonie' }] }),
@@ -204,7 +218,7 @@ describe('in- en uitschrijven met Microsoft 365', () => {
   function aanroepen(): { methode: string; adres: string; body: any }[] {
     return nep.mock.calls.map(([url, opties]) => {
       const o = (opties || {}) as { method?: string; body?: string };
-      let body: any = null;
+      let body: any;
       try {
         body = o.body && typeof o.body === 'string' ? JSON.parse(o.body) : null;
       } catch {
@@ -220,8 +234,7 @@ describe('in- en uitschrijven met Microsoft 365', () => {
   /** Onthoud een lokaal weggeschreven profielfoto zodat afterEach hem opruimt. */
   function onthoudFoto(userId: string) {
     const rij = db.prepare('SELECT profile_photo_path FROM users WHERE id = ?').get(userId) as
-      | { profile_photo_path: string | null }
-      | undefined;
+      { profile_photo_path: string | null } | undefined;
     if (rij?.profile_photo_path) fotos.push(rij.profile_photo_path);
   }
 
@@ -359,7 +372,12 @@ describe('in- en uitschrijven met Microsoft 365', () => {
     it('slaat een licentie over waarvan alle plaatsen bezet zijn', async () => {
       tenant.licenties = antwoord(200, {
         value: [
-          { skuId: 'sku-vol', skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC', consumedUnits: 10, prepaidUnits: { enabled: 10 } },
+          {
+            skuId: 'sku-vol',
+            skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC',
+            consumedUnits: 10,
+            prepaidUnits: { enabled: 10 },
+          },
           { skuId: 'sku-vrij', skuPartNumber: 'ENTERPRISEPACK', consumedUnits: 1, prepaidUnits: { enabled: 5 } },
         ],
       });
@@ -371,7 +389,14 @@ describe('in- en uitschrijven met Microsoft 365', () => {
 
     it('waarschuwt als er geen enkele plaats vrij is', async () => {
       tenant.licenties = antwoord(200, {
-        value: [{ skuId: 'sku-vol', skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC', consumedUnits: 10, prepaidUnits: { enabled: 10 } }],
+        value: [
+          {
+            skuId: 'sku-vol',
+            skuPartNumber: 'MICROSOFT_365_BUSINESS_BASIC',
+            consumedUnits: 10,
+            prepaidUnits: { enabled: 10 },
+          },
+        ],
       });
       const res = await nieuwLid();
 
@@ -381,7 +406,9 @@ describe('in- en uitschrijven met Microsoft 365', () => {
 
     it('waarschuwt als de tenant geen ondersteunde licentie heeft', async () => {
       tenant.licenties = antwoord(200, {
-        value: [{ skuId: 'sku-x', skuPartNumber: 'ONBEKENDE_LICENTIE', consumedUnits: 0, prepaidUnits: { enabled: 5 } }],
+        value: [
+          { skuId: 'sku-x', skuPartNumber: 'ONBEKENDE_LICENTIE', consumedUnits: 0, prepaidUnits: { enabled: 5 } },
+        ],
       });
       const res = await nieuwLid();
 
@@ -625,7 +652,9 @@ describe('in- en uitschrijven met Microsoft 365', () => {
 
       const res = await metPriveadres();
       const taak = db
-        .prepare("SELECT status, metadata FROM onboarding_tasks WHERE user_id = ? AND task_type = 'email_forwarding_pending'")
+        .prepare(
+          "SELECT status, metadata FROM onboarding_tasks WHERE user_id = ? AND task_type = 'email_forwarding_pending'",
+        )
         .get(res.body.userId) as { status: string; metadata: string } | undefined;
 
       expect(taak?.status).toBe('pending');
@@ -767,7 +796,9 @@ describe('in- en uitschrijven met Microsoft 365', () => {
 
     it('laat het lid niet half achter', async () => {
       await nieuwLid({ orchestraIds: [anderOrkest.id] });
-      expect(db.prepare('SELECT COUNT(*) as n FROM users WHERE email = ?').get('nieuw@vereniging.nl')).toEqual({ n: 0 });
+      expect(db.prepare('SELECT COUNT(*) as n FROM users WHERE email = ?').get('nieuw@vereniging.nl')).toEqual({
+        n: 0,
+      });
     });
 
     it('maakt ook geen M365-account aan voor een adres dat al bestaat', async () => {
@@ -910,7 +941,12 @@ describe('in- en uitschrijven met Microsoft 365', () => {
       db.prepare(
         `INSERT INTO onboarding_tasks (id, user_id, association_id, task_type, status, metadata)
          VALUES (?, ?, ?, 'email_forwarding_pending', 'pending', ?)`,
-      ).run('taak-1', lid.id, vereniging.id, JSON.stringify({ nextRetryAfter: new Date(Date.now() + 600000).toISOString() }));
+      ).run(
+        'taak-1',
+        lid.id,
+        vereniging.id,
+        JSON.stringify({ nextRetryAfter: new Date(Date.now() + 600000).toISOString() }),
+      );
 
       const res = await opnieuw(lid.id);
       expect(res.body.error).toMatch(/Automatische retry gepland over \d+ minuten/);

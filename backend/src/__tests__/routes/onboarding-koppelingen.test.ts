@@ -81,7 +81,11 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
     const maak = (token: string, body: Record<string, unknown>) => als(token, 'post', '/m365-groups').send(body);
 
     it('maakt een mapping voor een orkest van de eigen vereniging', async () => {
-      const antwoord = await maak(beheerderToken, { orchestraId: orkest.id, groupName: 'Harmonie', groupType: 'orchestra' });
+      const antwoord = await maak(beheerderToken, {
+        orchestraId: orkest.id,
+        groupName: 'Harmonie',
+        groupType: 'orchestra',
+      });
       expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(201);
 
       const rij = db
@@ -214,11 +218,15 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
       });
 
       it('weigert een mapping die niet bestaat', async () => {
-        expect((await als(beheerderToken, 'put', `/m365-groups/${ONBEKEND}`).send({ groupName: 'X' })).status).toBe(404);
+        expect((await als(beheerderToken, 'put', `/m365-groups/${ONBEKEND}`).send({ groupName: 'X' })).status).toBe(
+          404,
+        );
       });
 
       it('weigert een mapping van een andere vereniging', async () => {
-        const antwoord = await als(andereBeheerderToken, 'put', `/m365-groups/${mappingId}`).send({ groupName: 'Gekaapt' });
+        const antwoord = await als(andereBeheerderToken, 'put', `/m365-groups/${mappingId}`).send({
+          groupName: 'Gekaapt',
+        });
         expect(antwoord.status).toBe(404);
 
         const rij = db.prepare('SELECT group_name FROM m365_group_mappings WHERE id = ?').get(mappingId) as {
@@ -314,7 +322,9 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
       });
 
       it('past hem aan', async () => {
-        expect((await als(beheerderToken, 'put', `/job-titles/${mappingId}`).send({ jobTitle: 'Solotrompet' })).status).toBe(200);
+        expect(
+          (await als(beheerderToken, 'put', `/job-titles/${mappingId}`).send({ jobTitle: 'Solotrompet' })).status,
+        ).toBe(200);
         const rij = db.prepare('SELECT job_title FROM instrument_job_title_mappings WHERE id = ?').get(mappingId) as {
           job_title: string;
         };
@@ -330,7 +340,9 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
       });
 
       it('weigert een mapping van een andere vereniging en laat hem ongemoeid', async () => {
-        expect((await als(andereBeheerderToken, 'put', `/job-titles/${mappingId}`).send({ jobTitle: 'Gekaapt' })).status).toBe(404);
+        expect(
+          (await als(andereBeheerderToken, 'put', `/job-titles/${mappingId}`).send({ jobTitle: 'Gekaapt' })).status,
+        ).toBe(404);
         const rij = db.prepare('SELECT job_title FROM instrument_job_title_mappings WHERE id = ?').get(mappingId) as {
           job_title: string;
         };
@@ -521,7 +533,9 @@ describe('de koppeltabellen rond in- en uitschrijven', () => {
     it('vult ontbrekende lijsten aan met niets', async () => {
       const antwoord = await nieuwLid({});
       expect(antwoord.status).toBe(201);
-      expect(db.prepare('SELECT COUNT(*) as n FROM user_orchestras WHERE user_id = ?').get(antwoord.body.userId)).toEqual({ n: 0 });
+      expect(
+        db.prepare('SELECT COUNT(*) as n FROM user_orchestras WHERE user_id = ?').get(antwoord.body.userId),
+      ).toEqual({ n: 0 });
     });
 
     it('bewaart het prive-emailadres apart van het verenigingsadres', async () => {

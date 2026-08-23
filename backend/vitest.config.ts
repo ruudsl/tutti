@@ -93,10 +93,15 @@ export default defineConfig({
       // vangen, laag genoeg om niet af te gaan op meetruis. Het doel van >80
       // procent uit WP8 is daarmee in zicht maar nog niet gehaald.
       thresholds: {
-        statements: 64,
-        branches: 55,
-        functions: 68,
-        lines: 64,
+        // Gemeten op 23-08-2026: 83,38 / 75,69 / 84,42 / 83,60.
+        // De drempels staan een punt of twee daaronder: hoog genoeg om een
+        // terugval te vangen, laag genoeg om niet af te gaan op meetruis.
+        // Een enkele test die wegvalt hoort geen rode CI op te leveren; een
+        // hele route die niet meer geraakt wordt wel.
+        statements: 82,
+        branches: 74,
+        functions: 83,
+        lines: 82,
       },
     },
   },

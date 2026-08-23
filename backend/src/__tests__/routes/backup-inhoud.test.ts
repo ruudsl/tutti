@@ -466,9 +466,7 @@ describe('inhoud van de reservekopie', () => {
       // in de plaats, dus voor alle verenigingen op de installatie tegelijk.
       fs.writeFileSync(tijdelijk.databasePad, nepDatabase('de bestaande installatie'));
 
-      const antwoord = await terugzetten(
-        bouwZip({ 'database/harmonie.db': nepDatabase('meegebrachte database') }),
-      );
+      const antwoord = await terugzetten(bouwZip({ 'database/harmonie.db': nepDatabase('meegebrachte database') }));
 
       expect(antwoord.status, JSON.stringify(antwoord.body)).toBe(200);
       expect(antwoord.body.restored.database).toBe(true);

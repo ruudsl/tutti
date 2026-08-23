@@ -21,13 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import '../setup';
 import testDb from '../testDb';
 import { sendEmail } from '../../utils/email';
-import {
-  createTestAssociation,
-  createTestEnvironment,
-  createTestUser,
-  TestAssociation,
-  TestUser,
-} from '../testUtils';
+import { createTestAssociation, createTestEnvironment, createTestUser, TestAssociation, TestUser } from '../testUtils';
 import { executeWorkflow, processScheduledWorkflows, processDateFieldWorkflows } from '../../services/workflowEngine';
 
 function zetModuleAan(associationId: string, userId: string): void {
@@ -180,9 +174,9 @@ describe('workflowmotor', () => {
 
       await executeWorkflow(werkstroom, vereniging.id, 'manual', beheerder.id);
 
-      const taken = testDb
-        .prepare('SELECT title FROM tasks WHERE association_id = ?')
-        .all(vereniging.id) as { title: string }[];
+      const taken = testDb.prepare('SELECT title FROM tasks WHERE association_id = ?').all(vereniging.id) as {
+        title: string;
+      }[];
       expect(taken.map((t) => t.title)).toEqual(['Blijft staan']);
     });
 
@@ -259,7 +253,9 @@ describe('workflowmotor', () => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date('2026-09-01T12:00:00Z'));
 
-      const werkstroom = maakWorkflow([{ type: 'create_task', config: { title: 'Over drie dagen', dueDaysFromNow: 3 } }]);
+      const werkstroom = maakWorkflow([
+        { type: 'create_task', config: { title: 'Over drie dagen', dueDaysFromNow: 3 } },
+      ]);
       await executeWorkflow(werkstroom, vereniging.id, 'manual', beheerder.id);
 
       const taak = testDb.prepare('SELECT due_date FROM tasks').get() as { due_date: string };
@@ -313,7 +309,12 @@ describe('workflowmotor', () => {
       const werkstroom = maakWorkflow([
         {
           type: 'send_notification',
-          config: { recipientType: 'specific', recipientUserId: lid.id, title: 'Let op', message: 'Repetitie valt uit' },
+          config: {
+            recipientType: 'specific',
+            recipientUserId: lid.id,
+            title: 'Let op',
+            message: 'Repetitie valt uit',
+          },
         },
       ]);
       await executeWorkflow(werkstroom, vereniging.id, 'manual', beheerder.id);
@@ -544,9 +545,9 @@ describe('workflowmotor', () => {
 
     it('kent groter dan en kleiner dan', async () => {
       testDb.prepare('UPDATE users SET failed_login_attempts = 5 WHERE id = ?').run(lid.id);
-      expect(await draaiOpLid(metVoorwaarde({ field: 'failed_login_attempts', operator: 'greater_than', value: 3 }))).toBe(
-        1,
-      );
+      expect(
+        await draaiOpLid(metVoorwaarde({ field: 'failed_login_attempts', operator: 'greater_than', value: 3 })),
+      ).toBe(1);
     });
 
     it('kent leeg en niet leeg', async () => {
@@ -653,9 +654,9 @@ describe('workflowmotor', () => {
     /** Wacht tot er ten minste zoveel uitvoeringen klaar zijn. */
     async function wachtOpAfgerond(aantal: number): Promise<void> {
       for (let poging = 0; poging < 200; poging++) {
-        const rij = testDb
-          .prepare("SELECT COUNT(*) as n FROM workflow_executions WHERE status <> 'running'")
-          .get() as { n: number };
+        const rij = testDb.prepare("SELECT COUNT(*) as n FROM workflow_executions WHERE status <> 'running'").get() as {
+          n: number;
+        };
         if (rij.n >= aantal) return;
         await new Promise((klaar) => setTimeout(klaar, 5));
       }
@@ -767,9 +768,9 @@ describe('workflowmotor', () => {
   describe('regels die op een datumveld afgaan', () => {
     async function wachtOpAfgerond(aantal: number): Promise<void> {
       for (let poging = 0; poging < 200; poging++) {
-        const rij = testDb
-          .prepare("SELECT COUNT(*) as n FROM workflow_executions WHERE status <> 'running'")
-          .get() as { n: number };
+        const rij = testDb.prepare("SELECT COUNT(*) as n FROM workflow_executions WHERE status <> 'running'").get() as {
+          n: number;
+        };
         if (rij.n >= aantal) return;
         await new Promise((klaar) => setTimeout(klaar, 5));
       }
@@ -806,7 +807,10 @@ describe('workflowmotor', () => {
       maakTaak('Loopt af', '2026-09-01');
 
       const werkstroom = maakWorkflow([
-        { type: 'send_notification', config: { recipientType: 'specific', recipientUserId: lid.id, title: 'Herinner' } },
+        {
+          type: 'send_notification',
+          config: { recipientType: 'specific', recipientUserId: lid.id, title: 'Herinner' },
+        },
       ]);
       legDatumTriggerNeer(werkstroom, 'task', 'due_date');
 

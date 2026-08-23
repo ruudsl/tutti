@@ -258,7 +258,11 @@ describe('een bestand uit de cloud binnenhalen', () => {
     });
 
     it('weigert een adres binnen het eigen netwerk', async () => {
-      for (const url of ['https://127.0.0.1/admin', 'https://169.254.169.254/latest/meta-data/', 'https://localhost/']) {
+      for (const url of [
+        'https://127.0.0.1/admin',
+        'https://169.254.169.254/latest/meta-data/',
+        'https://localhost/',
+      ]) {
         expect((await foutBij(url)).fout, url).toMatch(/host is not allowed/);
       }
     });

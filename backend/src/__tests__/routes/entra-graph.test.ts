@@ -160,9 +160,9 @@ describe('synchroniseren met Microsoft Entra', () => {
   afterEach(() => {
     // Foto's worden echt naar de uploadmap geschreven; die weer opruimen zodat
     // de map niet volloopt met testrommel.
-    const paden = db
-      .prepare('SELECT profile_photo_path FROM users WHERE profile_photo_path IS NOT NULL')
-      .all() as { profile_photo_path: string }[];
+    const paden = db.prepare('SELECT profile_photo_path FROM users WHERE profile_photo_path IS NOT NULL').all() as {
+      profile_photo_path: string;
+    }[];
     for (const p of [...paden.map((r) => r.profile_photo_path), ...opgeruimdeBestanden]) {
       try {
         if (fs.existsSync(p)) fs.unlinkSync(p);
@@ -189,8 +189,7 @@ describe('synchroniseren met Microsoft Entra', () => {
 
   const gebruikerMetEmail = (email: string) =>
     db.prepare('SELECT id, first_name, last_name, microsoft_id, role FROM users WHERE email = ?').get(email) as
-      | { id: string; first_name: string; last_name: string; microsoft_id: string | null; role: string }
-      | undefined;
+      { id: string; first_name: string; last_name: string; microsoft_id: string | null; role: string } | undefined;
 
   // ================================================================
   // De koppeling zelf: half ingevuld telt niet als ingesteld
@@ -366,7 +365,9 @@ describe('synchroniseren met Microsoft Entra', () => {
       ];
 
       const res = await als(beheerderToken, 'get', '/users');
-      const perId = Object.fromEntries(res.body.users.map((u: { id: string; isImported: boolean }) => [u.id, u.isImported]));
+      const perId = Object.fromEntries(
+        res.body.users.map((u: { id: string; isImported: boolean }) => [u.id, u.isImported]),
+      );
       expect(perId['e-mail']).toBe(true);
       expect(perId['entra-op-id']).toBe(true);
       expect(perId['nieuw']).toBe(false);
@@ -385,10 +386,7 @@ describe('synchroniseren met Microsoft Entra', () => {
 
       const res = await als(beheerderToken, 'get', '/users');
       const perId = Object.fromEntries(
-        res.body.users.map((u: { id: string; hasMapping: boolean; mappedInstrumentId: string | null }) => [
-          u.id,
-          u,
-        ]),
+        res.body.users.map((u: { id: string; hasMapping: boolean; mappedInstrumentId: string | null }) => [u.id, u]),
       );
       expect(perId['met'].hasMapping).toBe(true);
       expect(perId['met'].mappedInstrumentId).toBe(instrumentId);
@@ -408,9 +406,7 @@ describe('synchroniseren met Microsoft Entra', () => {
     it('splitst de afdeling in orkesten en meldt welke er nog niet zijn', async () => {
       zetMicrosoftAan(vereniging.id);
       createTestOrchestra(vereniging.id, { name: 'Harmonieorkest' });
-      gebruikersPaginas = [
-        ledenlijst([graafGebruiker({ department: 'harmonieorkest, Slagwerkgroep ,  ' })]),
-      ];
+      gebruikersPaginas = [ledenlijst([graafGebruiker({ department: 'harmonieorkest, Slagwerkgroep ,  ' })])];
 
       const res = await als(beheerderToken, 'get', '/users');
       expect(res.body.users[0].departments).toEqual(['harmonieorkest', 'Slagwerkgroep']);
@@ -475,8 +471,7 @@ describe('synchroniseren met Microsoft Entra', () => {
   // POST /entra/users/import
   // ================================================================
   describe('leden importeren', () => {
-    const importeer = (token: string, body: Record<string, unknown>) =>
-      als(token, 'post', '/users/import').send(body);
+    const importeer = (token: string, body: Record<string, unknown>) => als(token, 'post', '/users/import').send(body);
 
     it('vraagt om een selectie', async () => {
       zetMicrosoftAan(vereniging.id);
@@ -575,9 +570,9 @@ describe('synchroniseren met Microsoft Entra', () => {
       await importeer(beheerderToken, { userIds: ['e1'] });
 
       const nieuw = gebruikerMetEmail('a@vereniging.nl')!;
-      const instrumenten = db
-        .prepare('SELECT instrument_id FROM user_instruments WHERE user_id = ?')
-        .all(nieuw.id) as { instrument_id: string }[];
+      const instrumenten = db.prepare('SELECT instrument_id FROM user_instruments WHERE user_id = ?').all(nieuw.id) as {
+        instrument_id: string;
+      }[];
       expect(instrumenten.map((i) => i.instrument_id)).toEqual([instrumentId]);
     });
 
@@ -736,9 +731,9 @@ describe('synchroniseren met Microsoft Entra', () => {
 
       const nieuw = gebruikerMetEmail('nieuw@vereniging.nl')!;
       expect(nieuw.role).toBe('member');
-      const orkesten = db
-        .prepare('SELECT COUNT(*) as aantal FROM user_orchestras WHERE user_id = ?')
-        .get(nieuw.id) as { aantal: number };
+      const orkesten = db.prepare('SELECT COUNT(*) as aantal FROM user_orchestras WHERE user_id = ?').get(nieuw.id) as {
+        aantal: number;
+      };
       expect(orkesten.aantal).toBe(1);
     });
 
@@ -753,17 +748,15 @@ describe('synchroniseren met Microsoft Entra', () => {
       expect(res.body.created).toBe(1);
 
       const nieuw = gebruikerMetEmail('nieuw@vereniging.nl')!;
-      const instrumenten = db
-        .prepare('SELECT instrument_id FROM user_instruments WHERE user_id = ?')
-        .all(nieuw.id) as { instrument_id: string }[];
+      const instrumenten = db.prepare('SELECT instrument_id FROM user_instruments WHERE user_id = ?').all(nieuw.id) as {
+        instrument_id: string;
+      }[];
       expect(instrumenten.map((i) => i.instrument_id)).toEqual([instrumentId]);
     });
 
     it('slaat leden zonder e-mailadres over', async () => {
       zetMicrosoftAan(vereniging.id);
-      gebruikersPaginas = [
-        ledenlijst([graafGebruiker({ id: 'leeg', mail: null, userPrincipalName: '' })]),
-      ];
+      gebruikersPaginas = [ledenlijst([graafGebruiker({ id: 'leeg', mail: null, userPrincipalName: '' })])];
 
       const res = await synchroniseer(beheerderToken, { createNew: true });
       expect(res.body.skipped).toBe(1);
@@ -823,9 +816,7 @@ describe('synchroniseren met Microsoft Entra', () => {
         lastName: 'Staan',
       });
       gebruikersPaginas = [
-        ledenlijst([
-          graafGebruiker({ id: 'e1', mail: 'zelfde@vereniging.nl', givenName: 'Nieuw', surname: 'Naam' }),
-        ]),
+        ledenlijst([graafGebruiker({ id: 'e1', mail: 'zelfde@vereniging.nl', givenName: 'Nieuw', surname: 'Naam' })]),
       ];
 
       const res = await synchroniseer(beheerderToken);

@@ -241,9 +241,9 @@ describe('Een overdracht starten', () => {
     expect(res.body.transfer.transferCode).toBeTruthy();
     expect(res.body.transfer.status).toBe('pending');
 
-    const rij = db.prepare('SELECT recipient_email, from_email FROM ticket_transfers WHERE id = ?').get(
-      res.body.transfer.id,
-    ) as { recipient_email: string; from_email: string };
+    const rij = db
+      .prepare('SELECT recipient_email, from_email FROM ticket_transfers WHERE id = ?')
+      .get(res.body.transfer.id) as { recipient_email: string; from_email: string };
     expect(rij).toEqual({ recipient_email: ontvanger.email, from_email: verkoper.email });
   });
 
@@ -476,9 +476,9 @@ describe('Een overdracht aannemen', () => {
     const res = await als(ontvangerToken, 'post', `/tickets/transfers/${overdracht.code}/accept`);
     expect(res.status).toBe(400);
     expect(overdrachtStatus(overdracht.id)).toBe('expired');
-    expect(
-      (db.prepare('SELECT user_id FROM tickets WHERE id = ?').get(kaart.id) as { user_id: string }).user_id,
-    ).toBe(verkoper.id);
+    expect((db.prepare('SELECT user_id FROM tickets WHERE id = ?').get(kaart.id) as { user_id: string }).user_id).toBe(
+      verkoper.id,
+    );
   });
 
   it('neemt dezelfde overdracht geen tweede keer aan', async () => {

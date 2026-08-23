@@ -471,7 +471,8 @@ describe('bewerkingen op bladmuziek', () => {
   });
 
   describe('draaien', () => {
-    const rotate = (token: string) => request(app).post('/api/pdf-tools/rotate').set('Authorization', `Bearer ${token}`);
+    const rotate = (token: string) =>
+      request(app).post('/api/pdf-tools/rotate').set('Authorization', `Bearer ${token}`);
 
     it('is niet voor een gewoon lid', async () => {
       expect((await rotate(lidToken)).status).toBe(403);
@@ -646,7 +647,9 @@ describe('bewerkingen op bladmuziek', () => {
     });
 
     it('is niet voor iemand zonder token', async () => {
-      const antwoord = await request(app).post('/api/pdf-tools/save-as-music-piece').send({ filepath: 'x', filename: 'y' });
+      const antwoord = await request(app)
+        .post('/api/pdf-tools/save-as-music-piece')
+        .send({ filepath: 'x', filename: 'y' });
       expect(antwoord.status).toBe(401);
     });
   });

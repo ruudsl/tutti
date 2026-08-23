@@ -288,9 +288,11 @@ describe('aanwezigheid synchroniseren met Spond', () => {
       // als er niets meer over is heeft doorgaan geen zin.
       const repetitie = maakRepetitie();
       zetKoppeling(vereniging.id);
-      db.prepare(
-        'INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)',
-      ).run(uuidv4(), orkest.id, 'groep-orkest');
+      db.prepare('INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)').run(
+        uuidv4(),
+        orkest.id,
+        'groep-orkest',
+      );
       haalEvenementen.mockImplementation(async (groepId: string) => {
         if (groepId === 'groep-orkest') throw new Error('Spond API error: 429');
         return [evenement(repetitie.date)];
@@ -454,9 +456,11 @@ describe('aanwezigheid synchroniseren met Spond', () => {
     it('gebruikt de groep van het orkest boven de algemene groep', async () => {
       const repetitie = maakRepetitie({ orchestraId: orkest.id });
       zetKoppeling(vereniging.id);
-      db.prepare(
-        'INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)',
-      ).run(uuidv4(), orkest.id, 'groep-orkest');
+      db.prepare('INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)').run(
+        uuidv4(),
+        orkest.id,
+        'groep-orkest',
+      );
       haalEvenementen.mockImplementation(async (groepId: string) =>
         groepId === 'groep-orkest' ? [evenement(repetitie.date, { id: 'uit-orkestgroep' })] : [],
       );
@@ -473,9 +477,11 @@ describe('aanwezigheid synchroniseren met Spond', () => {
       const metGroep = maakRepetitie({ orchestraId: orkest.id });
       const zonderGroep = maakRepetitie({ orchestraId: tweedeOrkest.id });
       zetKoppeling(vereniging.id, { groupId: null });
-      db.prepare(
-        'INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)',
-      ).run(uuidv4(), orkest.id, 'groep-orkest');
+      db.prepare('INSERT INTO spond_orchestra_groups (id, orchestra_id, spond_group_id) VALUES (?, ?, ?)').run(
+        uuidv4(),
+        orkest.id,
+        'groep-orkest',
+      );
       haalEvenementen.mockResolvedValue([evenement(metGroep.date)]);
 
       const res = await als(beheerderToken, 'post', '/sync');
@@ -501,9 +507,9 @@ describe('aanwezigheid synchroniseren met Spond', () => {
 
     it('raakt de repetities van een andere vereniging niet aan', async () => {
       const eigen = maakRepetitie();
-      const andereBeheerder = db
-        .prepare('SELECT id FROM users WHERE association_id = ?')
-        .get(andereVereniging.id) as { id: string };
+      const andereBeheerder = db.prepare('SELECT id FROM users WHERE association_id = ?').get(andereVereniging.id) as {
+        id: string;
+      };
       const elders = createTestRehearsal(andereVereniging.id, andereBeheerder.id, { date: eigen.date });
       zetKoppeling(vereniging.id);
       haalEvenementen.mockResolvedValue([evenement(eigen.date)]);
@@ -875,8 +881,7 @@ describe('aanwezigheid synchroniseren met Spond', () => {
   // GET /spond/attendance/:rehearsalId/my-status
   // ================================================================
   describe('de eigen status opvragen', () => {
-    const status = (token: string, repetitieId: string) =>
-      als(token, 'get', `/attendance/${repetitieId}/my-status`);
+    const status = (token: string, repetitieId: string) => als(token, 'get', `/attendance/${repetitieId}/my-status`);
 
     it('geeft "unknown" als er nog niets is vastgelegd', async () => {
       const repetitie = maakRepetitie();

@@ -242,9 +242,9 @@ describe('Een kaart afstempelen', () => {
     const kaart = maakKaart(maakKaartsoort(elders), maakBestelling(elders));
 
     expect(markTicketAsUsed(kaart.code, adminId, associationId).success).toBe(false);
-    expect(
-      (db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaart.id) as { status: string }).status,
-    ).toBe('valid');
+    expect((db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaart.id) as { status: string }).status).toBe(
+      'valid',
+    );
   });
 
   it('stempelt een ingetrokken kaart niet af', () => {

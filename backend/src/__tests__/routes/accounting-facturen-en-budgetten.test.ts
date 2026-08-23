@@ -542,7 +542,11 @@ describe('Budgetten', () => {
   it('werkt naam, bedrag en notitie bij', async () => {
     const id = await maakBudget();
 
-    const res = await alsAdmin('put', `/budgets/${id}`).send({ name: 'Zaalhuur nieuw', amount: 1500, notes: 'Herzien' });
+    const res = await alsAdmin('put', `/budgets/${id}`).send({
+      name: 'Zaalhuur nieuw',
+      amount: 1500,
+      notes: 'Herzien',
+    });
     expect(res.status).toBe(200);
 
     const budget = (await alsAdmin('get', `/budgets/${id}`)).body;

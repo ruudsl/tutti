@@ -62,7 +62,9 @@ vi.mock('../../services/captcha', async (importOriginal) => {
   return {
     ...echt,
     shouldRequireCaptcha: (ip: string, totaal: number) =>
-      overgenomen.shouldRequireCaptcha ? overgenomen.shouldRequireCaptcha(ip, totaal) : echt.shouldRequireCaptcha(ip, totaal),
+      overgenomen.shouldRequireCaptcha
+        ? overgenomen.shouldRequireCaptcha(ip, totaal)
+        : echt.shouldRequireCaptcha(ip, totaal),
     verifyCaptcha: (token: string, ip?: string) =>
       overgenomen.verifyCaptcha
         ? (overgenomen.verifyCaptcha(token, ip) as ReturnType<typeof echt.verifyCaptcha>)
@@ -173,7 +175,9 @@ describe('Verkoopvenster', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('not started');
     // En er is niets gereserveerd.
-    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(0);
+    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(
+      0,
+    );
   });
 
   it('verkoopt niets meer nadat de voorverkoop is gesloten', async () => {
@@ -220,7 +224,9 @@ describe('CAPTCHA bij het bestellen', () => {
     const res = await bestel(kaartsoortId);
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('CAPTCHA');
-    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(0);
+    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(
+      0,
+    );
   });
 
   it('weigert een CAPTCHA die niet klopt', async () => {
@@ -261,7 +267,9 @@ describe('Webhook met Mollie erachter', () => {
   });
 
   it('weigert een betaalkenmerk dat geen tekst is', async () => {
-    const res = await request(app).post('/api/tickets/webhooks/payment').send({ id: { kwaad: true } });
+    const res = await request(app)
+      .post('/api/tickets/webhooks/payment')
+      .send({ id: { kwaad: true } });
     expect(res.status).toBe(400);
   });
 
@@ -279,7 +287,9 @@ describe('Webhook met Mollie erachter', () => {
     const res = await request(app).post('/api/tickets/webhooks/payment').send({ id: 'tr_van_de_aanvaller' });
     expect(res.status).toBe(200);
     expect(bestelstatus(orderId)).toBe('paid');
-    expect((db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n).toBe(2);
+    expect((db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n).toBe(
+      2,
+    );
   });
 
   it('geeft de kaarten vrij als Mollie meldt dat de betaling is mislukt', async () => {
@@ -290,7 +300,9 @@ describe('Webhook met Mollie erachter', () => {
     await request(app).post('/api/tickets/webhooks/payment').send({ id: 'tr_test' });
 
     expect(bestelstatus(orderId)).toBe('failed');
-    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(0);
+    expect((db.prepare('SELECT sold FROM ticket_types WHERE id = ?').get(kaartsoortId) as { sold: number }).sold).toBe(
+      0,
+    );
   });
 
   /**

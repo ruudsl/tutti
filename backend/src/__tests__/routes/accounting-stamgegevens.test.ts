@@ -450,9 +450,7 @@ describe('Contributiecategorieen', () => {
 
     await maakCategorie({ name: 'Standaard bij A', isDefault: true });
 
-    const bijBNa = (await alsB('get', '/membership-fee-types')).body.find(
-      (c: { id: string }) => c.id === bijB.body.id,
-    );
+    const bijBNa = (await alsB('get', '/membership-fee-types')).body.find((c: { id: string }) => c.id === bijB.body.id);
     expect(bijBNa.isDefault).toBe(true);
   });
 

@@ -231,8 +231,7 @@ function aanmakerVoor(context: ExecutionContext): string | null {
   if (context.userId) return context.userId;
 
   const rij = db.prepare('SELECT created_by FROM workflows WHERE id = ?').get(context.workflowId) as
-    | { created_by: string | null }
-    | undefined;
+    { created_by: string | null } | undefined;
   return rij?.created_by ?? null;
 }
 

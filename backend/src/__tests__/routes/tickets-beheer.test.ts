@@ -78,7 +78,10 @@ function maakConcert(vanVereniging = associationId, datum = datumOverEenJaar()) 
   return id;
 }
 
-function maakKaartsoort(vanConcert = concertId, overschrijf: { quantity?: number; sold?: number; price?: number } = {}) {
+function maakKaartsoort(
+  vanConcert = concertId,
+  overschrijf: { quantity?: number; sold?: number; price?: number } = {},
+) {
   const id = uuidv4();
   db.prepare(
     `INSERT INTO ticket_types (id, concert_id, name, price, quantity, sold, max_per_order)
@@ -413,9 +416,9 @@ describe('Kaart intrekken', () => {
 
     const res = await alsAdmin('post', `/tickets/${kaartId}/cancel`);
     expect(res.status).toBe(200);
-    expect(
-      (db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaartId) as { status: string }).status,
-    ).toBe('cancelled');
+    expect((db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaartId) as { status: string }).status).toBe(
+      'cancelled',
+    );
     expect(verkocht(kaartsoortId)).toBe(0);
   });
 
@@ -448,9 +451,9 @@ describe('Kaart intrekken', () => {
 
     const res = await alsAdmin('post', `/tickets/${kaartElders}/cancel`);
     expect(res.status).toBe(404);
-    expect(
-      (db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaartElders) as { status: string }).status,
-    ).toBe('valid');
+    expect((db.prepare('SELECT status FROM tickets WHERE id = ?').get(kaartElders) as { status: string }).status).toBe(
+      'valid',
+    );
   });
 });
 
@@ -602,9 +605,9 @@ describe('Nepbetalingen', () => {
     const res = await request(app).post('/api/tickets/webhooks/payment').send({ orderId });
     expect(res.status).toBe(200);
     expect(bestelstatus(orderId)).toBe('paid');
-    expect(
-      (db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n,
-    ).toBe(2);
+    expect((db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n).toBe(
+      2,
+    );
   });
 
   it('weigert de webhook in productie zolang er geen betaaldienst is ingesteld', async () => {
@@ -628,9 +631,9 @@ describe('Nepbetalingen', () => {
     await request(app).post('/api/tickets/webhooks/payment').send({ orderId });
     await request(app).post('/api/tickets/webhooks/payment').send({ orderId });
 
-    expect(
-      (db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n,
-    ).toBe(1);
+    expect((db.prepare('SELECT COUNT(*) as n FROM tickets WHERE order_id = ?').get(orderId) as { n: number }).n).toBe(
+      1,
+    );
   });
 
   it('antwoordt met OK op een webhook zonder bestelnummer, in plaats van om te vallen', async () => {
@@ -696,10 +699,7 @@ describe('Module kaartverkoop uit', () => {
     clearModuleCache();
   });
 
-  it.each([
-    ['/tickets/sales'],
-    ['/ticket-types/00000000-0000-0000-0000-000000000000'],
-  ])('verbergt %s', async (pad) => {
+  it.each([['/tickets/sales'], ['/ticket-types/00000000-0000-0000-0000-000000000000']])('verbergt %s', async (pad) => {
     const res = await alsAdmin('get', pad);
     expect(res.status).toBe(404);
   });
